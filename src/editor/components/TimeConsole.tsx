@@ -3,7 +3,7 @@
  *
  * Mode-aware time control console that replaces the linear timeline scrubber.
  * Switches between three UI modes based on TimeModel.kind:
- * - finite: Bounded progress bar with start/end
+ * - finite: Bounded progress bar with start/end + loop mode toggle
  * - cyclic: Phase ring (stub for now)
  * - infinite: Sliding window (stub for now)
  *
@@ -41,6 +41,9 @@ export interface TimeConsoleProps {
   // Infinite mode state
   viewOffset?: number;
 
+  // Finite mode state
+  finiteLoopMode?: boolean;
+
   // Collapse state (controlled or internal)
   collapseLevel?: CollapseLevel;
   onCollapseLevelChange?: (level: CollapseLevel) => void;
@@ -55,6 +58,7 @@ export interface TimeConsoleProps {
   onSeedChange: (seed: number) => void;
   onViewOffsetChange?: (offset: number) => void;
   onWindowChange?: (windowMs: number) => void;
+  onFiniteLoopModeChange?: (enabled: boolean) => void;
 }
 
 interface FiniteControlsProps {
@@ -62,6 +66,8 @@ interface FiniteControlsProps {
   currentTime: number;
   onScrub: (tMs: number) => void;
   cuePoints: readonly CuePoint[];
+  loopMode: boolean;
+  onLoopModeChange: (enabled: boolean) => void;
 }
 
 interface InfiniteControlsProps {
@@ -108,12 +114,18 @@ const FiniteControls = memo(function FiniteControls({
   currentTime,
   onScrub,
   cuePoints,
+  loopMode,
+  onLoopModeChange,
 }: FiniteControlsProps) {
   const progress = durationMs > 0 ? (currentTime / durationMs) * 100 : 0;
   const isEnded = durationMs > 0 && currentTime >= durationMs;
 
   const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
     onScrub(Number(e.target.value));
+  };
+
+  const handleToggleLoop = () => {
+    onLoopModeChange(!loopMode);
   };
 
   return (
@@ -127,6 +139,14 @@ const FiniteControls = memo(function FiniteControls({
           Progress: {Math.round(progress)}%
           {isEnded && <span className="finite-ended-badge">ENDED</span>}
         </span>
+        {/* Loop Mode Toggle */}
+        <button
+          className={`finite-loop-toggle ${loopMode ? 'active' : ''}`}
+          onClick={handleToggleLoop}
+          title={loopMode ? 'Loop mode: will restart at end' : 'Once mode: will stop at end'}
+        >
+          {loopMode ? '🔁 Loop' : '▶️ Once'}
+        </button>
       </div>
 
       {/* Bounded Scrubber */}
@@ -403,6 +423,7 @@ export const TimeConsole = memo(function TimeConsole({
   seed,
   cuePoints,
   viewOffset = 0,
+  finiteLoopMode = false,
   collapseLevel: controlledCollapseLevel,
   onCollapseLevelChange,
   defaultCollapseLevel = 'expanded',
@@ -412,6 +433,7 @@ export const TimeConsole = memo(function TimeConsole({
   onReset,
   onSpeedChange,
   onSeedChange,
+  onFiniteLoopModeChange,
   onViewOffsetChange,
   onWindowChange,
 }: TimeConsoleProps) {
@@ -447,6 +469,10 @@ export const TimeConsole = memo(function TimeConsole({
     const newSeed = parseInt(e.target.value) || 0;
     onSeedChange(newSeed);
   };
+
+  const handleLoopModeChange = useCallback((enabled: boolean) => {
+    onFiniteLoopModeChange?.(enabled);
+  }, [onFiniteLoopModeChange]);
 
   // Cycle through collapse levels
   const handleCollapse = useCallback(() => {
@@ -583,6 +609,8 @@ export const TimeConsole = memo(function TimeConsole({
             currentTime={currentTime}
             onScrub={onScrub}
             cuePoints={cuePoints}
+            loopMode={finiteLoopMode}
+            onLoopModeChange={handleLoopModeChange}
           />
         )}
         {timeModel.kind === 'cyclic' && <CyclicControls />}

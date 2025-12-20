@@ -97,6 +97,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   // Speed and seed from store (with fallbacks)
   const speed = store.uiStore.settings.speed;
   const seed = store.uiStore.settings.seed;
+  const finiteLoopMode = store.uiStore.settings.finiteLoopMode;
 
   // Derive dimensions from viewport
   const { width, height } = viewport;
@@ -177,6 +178,14 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     }
   }, [isPlaying, playState]);
 
+  // Sync finiteLoopMode with player
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    player.setFiniteLoopMode(finiteLoopMode);
+  }, [finiteLoopMode]);
+
   // Watch for compiler service program and viewport changes
   useEffect(() => {
     if (!compilerService) return;
@@ -235,6 +244,10 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const handleSeedChange = useCallback((newSeed: number) => {
     store.uiStore.setSeed(newSeed);
     // Seed change triggers recompilation via autoCompile
+  }, [store]);
+
+  const handleFiniteLoopModeChange = useCallback((enabled: boolean) => {
+    store.uiStore.setFiniteLoopMode(enabled);
   }, [store]);
 
   // Infinite mode handlers
@@ -376,6 +389,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         seed={seed}
         cuePoints={cuePoints}
         viewOffset={viewOffset}
+        finiteLoopMode={finiteLoopMode}
         onScrub={handleScrub}
         onPlay={handlePlay}
         onPause={handlePause}
@@ -384,6 +398,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         onSeedChange={handleSeedChange}
         onViewOffsetChange={handleViewOffsetChange}
         onWindowChange={handleWindowChange}
+        onFiniteLoopModeChange={handleFiniteLoopModeChange}
       />
     </div>
   );

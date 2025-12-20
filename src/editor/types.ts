@@ -665,6 +665,7 @@ export interface Patch {
   settings: {
     seed: number;
     speed: number;
+    finiteLoopMode?: boolean;
     advancedLaneMode?: boolean;
     autoConnect?: boolean;
     showTypeHints?: boolean;

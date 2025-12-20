@@ -96,6 +96,9 @@ export class Player {
   // TimeModel from compiler (Phase 3: TimeRoot)
   private timeModel: TimeModel | null = null;
 
+  // Finite loop mode: if true, finite animations loop; if false, they stop at end
+  private finiteLoopMode = false;
+
   private onFrame: (tree: RenderTree, tMs: number) => void;
   private onStateChange?: (state: PlayState) => void;
   private onTimeChange?: (tMs: number) => void;
@@ -170,6 +173,22 @@ export class Player {
    */
   getLoopMode(): LoopMode {
     return this.loopMode;
+  }
+
+  /**
+   * Set finite loop mode.
+   * When true, finite animations loop back to start when they reach the end.
+   * When false, finite animations pause at the end (default behavior).
+   */
+  setFiniteLoopMode(enabled: boolean): void {
+    this.finiteLoopMode = enabled;
+  }
+
+  /**
+   * Get current finite loop mode.
+   */
+  getFiniteLoopMode(): boolean {
+    return this.finiteLoopMode;
   }
 
   /**
@@ -450,7 +469,7 @@ export class Player {
 
     // Time wrapping is determined by TimeModel, not loopMode.
     // - cyclic: wrap for continuous loop
-    // - finite: pause at end
+    // - finite: pause at end (or loop if finiteLoopMode is enabled)
     // - infinite: advance unbounded
     if (this.timeModel) {
       switch (this.timeModel.kind) {
@@ -464,10 +483,16 @@ export class Player {
           break;
 
         case 'finite':
-          // Finite animations pause at end (no player-level looping)
+          // Finite animations can loop or pause based on finiteLoopMode
           if (this.tMs >= this.maxTime) {
-            this.tMs = this.maxTime;
-            this.pause();
+            if (this.finiteLoopMode) {
+              // Loop mode: rewind to start and keep playing
+              this.tMs = 0;
+            } else {
+              // Once mode: pause at end
+              this.tMs = this.maxTime;
+              this.pause();
+            }
           } else if (this.tMs < 0) {
             this.tMs = 0;
           }

@@ -112,6 +112,7 @@ export class RootStore {
     this.uiStore.settings = {
       seed: patch.settings?.seed || 0,
       speed: patch.settings?.speed || 1,
+      finiteLoopMode: patch.settings?.finiteLoopMode || false,
       advancedLaneMode: patch.settings?.advancedLaneMode || false,
       autoConnect: patch.settings?.autoConnect || false,
       showTypeHints: patch.settings?.showTypeHints || false,
