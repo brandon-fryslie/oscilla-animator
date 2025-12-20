@@ -8,7 +8,7 @@
  * Think of it like a modular synth preset: you load it and see all the
  * modules and patch cables, ready to tweak.
  *
- * Legacy macros have been archived to .agent_planning/LEGACY-BLOCKS-ARCHIVE.md
+ * ALL MACROS USE ONLY PRIMITIVE BLOCKS - no composites.
  */
 
 import type { LaneKind, LensType } from './types';
@@ -91,7 +91,283 @@ export interface MacroExpansion {
  */
 export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // =============================================================================
-  // Domain-Based Macros (New System)
+  // Quick Start Macros - Simple, guaranteed-to-work patterns
+  // =============================================================================
+
+  // 1. Simple Grid - Just GridDomain + RenderInstances2D
+  'macro:simpleGrid': {
+    blocks: [
+      { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid Domain',
+        params: { rows: 10, cols: 10, spacing: 30, originX: 250, originY: 150 } },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
+    ],
+    connections: [
+      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
+    ],
+  },
+
+  // 2. Animated Circle Ring - Circle layout with oscillating radius
+  'macro:animatedCircleRing': {
+    blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '4s Loop',
+        params: { periodMs: 4000 } },
+      { ref: 'osc', type: 'Oscillator', laneKind: 'Phase', label: 'Size Wave',
+        params: { shape: 'sine', amplitude: 0.5, bias: 0.5 } },
+      { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
+        params: { n: 24, seed: 42 } },
+      { ref: 'circle', type: 'PositionMapCircle', laneKind: 'Fields', label: 'Circle',
+        params: { centerX: 400, centerY: 300, radius: 120 } },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
+    ],
+    connections: [
+      { fromRef: 'time', fromSlot: 'phase', toRef: 'osc', toSlot: 'phase' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'circle', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'circle', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
+    ],
+    publishers: [
+      { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
+    ],
+    listeners: [
+      { busName: 'energy', toRef: 'render', toSlot: 'radius',
+        lens: { type: 'scale', params: { scale: 10, offset: 4 } } },
+    ],
+  },
+
+  // 3. Line Wave - Line of dots with phase-offset oscillation
+  'macro:lineWave': {
+    blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '3s Loop',
+        params: { periodMs: 3000 } },
+      { ref: 'osc', type: 'Oscillator', laneKind: 'Phase', label: 'Wave',
+        params: { shape: 'sine', amplitude: 20, bias: 0 } },
+      { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
+        params: { n: 20, seed: 99 } },
+      { ref: 'line', type: 'PositionMapLine', laneKind: 'Fields', label: 'Line',
+        params: { ax: 100, ay: 300, bx: 700, by: 300 } },
+      { ref: 'hash', type: 'StableIdHash', laneKind: 'Fields', label: 'Phase Offset',
+        params: { salt: 123 } },
+      { ref: 'offsetField', type: 'FieldMapNumber', laneKind: 'Fields', label: 'Scale Offset',
+        params: { fn: 'scale', k: 6.28 } }, // 2*PI for full wave
+      { ref: 'broadcast', type: 'FieldFromSignalBroadcast', laneKind: 'Fields', label: 'Broadcast Phase' },
+      { ref: 'zip', type: 'FieldZipNumber', laneKind: 'Fields', label: 'Add Offset',
+        params: { op: 'add' } },
+      { ref: 'toVec', type: 'FieldMapNumber', laneKind: 'Fields', label: 'Sin Wave',
+        params: { fn: 'sin' } },
+      { ref: 'vecScale', type: 'FieldMapNumber', laneKind: 'Fields', label: 'Scale Y',
+        params: { fn: 'scale', k: 30 } },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
+    ],
+    connections: [
+      { fromRef: 'time', fromSlot: 'phase', toRef: 'osc', toSlot: 'phase' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'line', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'hash', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'broadcast', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'line', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
+      { fromRef: 'hash', fromSlot: 'u01', toRef: 'offsetField', toSlot: 'x' },
+      { fromRef: 'osc', fromSlot: 'out', toRef: 'broadcast', toSlot: 'signal' },
+      { fromRef: 'broadcast', fromSlot: 'field', toRef: 'zip', toSlot: 'a' },
+      { fromRef: 'offsetField', fromSlot: 'y', toRef: 'zip', toSlot: 'b' },
+    ],
+  },
+
+  // 4. Rainbow Grid - Grid with per-element color variation
+  'macro:rainbowGrid': {
+    blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '8s Loop',
+        params: { periodMs: 8000 } },
+      { ref: 'colorLfo', type: 'ColorLFO', laneKind: 'Phase', label: 'Rainbow',
+        params: { base: '#FF0000', hueSpan: 360, sat: 0.9, light: 0.6 } },
+      { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid',
+        params: { rows: 12, cols: 12, spacing: 25, originX: 200, originY: 100 } },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
+    ],
+    connections: [
+      { fromRef: 'time', fromSlot: 'phase', toRef: 'colorLfo', toSlot: 'phase' },
+      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
+    ],
+    publishers: [
+      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+    ],
+  },
+
+  // 5. Pulsing Grid - Grid with pulse-driven radius
+  'macro:pulsingGrid': {
+    blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '2s Loop',
+        params: { periodMs: 2000 } },
+      { ref: 'divider', type: 'PulseDivider', laneKind: 'Phase', label: '4 Pulses',
+        params: { divisions: 4 } },
+      { ref: 'envelope', type: 'EnvelopeAD', laneKind: 'Phase', label: 'Pulse Env',
+        params: { attack: 0.01, decay: 0.25, peak: 1.0 } },
+      { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid',
+        params: { rows: 8, cols: 8, spacing: 35, originX: 250, originY: 150 } },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
+    ],
+    connections: [
+      { fromRef: 'time', fromSlot: 'phase', toRef: 'divider', toSlot: 'phase' },
+      { fromRef: 'divider', fromSlot: 'tick', toRef: 'envelope', toSlot: 'trigger' },
+      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
+    ],
+    publishers: [
+      { fromRef: 'envelope', fromSlot: 'env', busName: 'energy' },
+    ],
+    listeners: [
+      { busName: 'energy', toRef: 'render', toSlot: 'radius',
+        lens: { type: 'scale', params: { scale: 8, offset: 3 } } },
+    ],
+  },
+
+  // 6. Drifting Circle - Circle layout with jitter motion
+  'macro:driftingCircle': {
+    blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '6s Loop',
+        params: { periodMs: 6000 } },
+      { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
+        params: { n: 30, seed: 789 } },
+      { ref: 'circle', type: 'PositionMapCircle', laneKind: 'Fields', label: 'Circle',
+        params: { centerX: 400, centerY: 300, radius: 140 } },
+      { ref: 'hash', type: 'StableIdHash', laneKind: 'Fields', label: 'Jitter Seed',
+        params: { salt: 456 } },
+      { ref: 'jitter', type: 'JitterFieldVec2', laneKind: 'Fields', label: 'Drift',
+        params: { amount: 10, frequency: 1.2 } },
+      { ref: 'posAdd', type: 'FieldAddVec2', laneKind: 'Fields', label: 'Add Drift' },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
+    ],
+    connections: [
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'circle', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'hash', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'hash', fromSlot: 'u01', toRef: 'jitter', toSlot: 'idRand' },
+      { fromRef: 'time', fromSlot: 'phase', toRef: 'jitter', toSlot: 'phase' },
+      { fromRef: 'circle', fromSlot: 'pos', toRef: 'posAdd', toSlot: 'a' },
+      { fromRef: 'jitter', fromSlot: 'drift', toRef: 'posAdd', toSlot: 'b' },
+      { fromRef: 'posAdd', fromSlot: 'out', toRef: 'render', toSlot: 'positions' },
+    ],
+    publishers: [
+      { fromRef: 'time', fromSlot: 'phase', busName: 'phaseA' },
+    ],
+  },
+
+  // 7. Multi-Ring - Multiple concentric circles
+  'macro:multiRing': {
+    blocks: [
+      { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
+        params: { n: 48, seed: 321 } },
+      { ref: 'circleInner', type: 'PositionMapCircle', laneKind: 'Fields', label: 'Inner Ring',
+        params: { centerX: 400, centerY: 300, radius: 80 } },
+      { ref: 'circleOuter', type: 'PositionMapCircle', laneKind: 'Fields', label: 'Outer Ring',
+        params: { centerX: 400, centerY: 300, radius: 160 } },
+      { ref: 'hash', type: 'StableIdHash', laneKind: 'Fields', label: 'Size Variation',
+        params: { salt: 654 } },
+      { ref: 'sizeField', type: 'FieldMapNumber', laneKind: 'Fields', label: 'Map Size',
+        params: { fn: 'scale', k: 6, a: 3, b: 9 } },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
+    ],
+    connections: [
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'circleOuter', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'hash', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'circleOuter', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
+      { fromRef: 'hash', fromSlot: 'u01', toRef: 'sizeField', toSlot: 'x' },
+      { fromRef: 'sizeField', fromSlot: 'y', toRef: 'render', toSlot: 'radius' },
+    ],
+  },
+
+  // 8. Breathing Line - Line with breathing animation
+  'macro:breathingLine': {
+    blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '5s Loop',
+        params: { periodMs: 5000 } },
+      { ref: 'osc', type: 'Oscillator', laneKind: 'Phase', label: 'Breath',
+        params: { shape: 'cosine', amplitude: 0.5, bias: 0.5 } },
+      { ref: 'shaper', type: 'Shaper', laneKind: 'Phase', label: 'Smooth',
+        params: { kind: 'smoothstep', amount: 1.0 } },
+      { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
+        params: { n: 25, seed: 111 } },
+      { ref: 'line', type: 'PositionMapLine', laneKind: 'Fields', label: 'Line',
+        params: { ax: 150, ay: 300, bx: 650, by: 300 } },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
+    ],
+    connections: [
+      { fromRef: 'time', fromSlot: 'phase', toRef: 'osc', toSlot: 'phase' },
+      { fromRef: 'osc', fromSlot: 'out', toRef: 'shaper', toSlot: 'in' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'line', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'line', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
+    ],
+    publishers: [
+      { fromRef: 'shaper', fromSlot: 'out', busName: 'energy' },
+    ],
+    listeners: [
+      { busName: 'energy', toRef: 'render', toSlot: 'radius',
+        lens: { type: 'scale', params: { scale: 12, offset: 3 } } },
+    ],
+  },
+
+  // 9. Color Pulse - Grid with animated color from ColorLFO
+  'macro:colorPulse': {
+    blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '10s Loop',
+        params: { periodMs: 10000 } },
+      { ref: 'colorLfo', type: 'ColorLFO', laneKind: 'Phase', label: 'Color Cycle',
+        params: { base: '#00FFFF', hueSpan: 180, sat: 0.85, light: 0.55 } },
+      { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid',
+        params: { rows: 9, cols: 9, spacing: 32, originX: 220, originY: 120 } },
+      { ref: 'radius', type: 'FieldConstNumber', laneKind: 'Fields', label: 'Size',
+        params: { value: 7 } },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render',
+        params: { opacity: 0.9 } },
+    ],
+    connections: [
+      { fromRef: 'time', fromSlot: 'phase', toRef: 'colorLfo', toSlot: 'phase' },
+      { fromRef: 'grid', fromSlot: 'domain', toRef: 'radius', toSlot: 'domain' },
+      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
+      { fromRef: 'radius', fromSlot: 'out', toRef: 'render', toSlot: 'radius' },
+    ],
+    publishers: [
+      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+    ],
+  },
+
+  // 10. Rhythmic Dots - Grid with PulseDivider envelope
+  'macro:rhythmicDots': {
+    blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '3s Loop',
+        params: { periodMs: 3000 } },
+      { ref: 'divider', type: 'PulseDivider', laneKind: 'Phase', label: '8 Beats',
+        params: { divisions: 8 } },
+      { ref: 'envelope', type: 'EnvelopeAD', laneKind: 'Phase', label: 'Accent',
+        params: { attack: 0.02, decay: 0.2, peak: 0.8 } },
+      { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid',
+        params: { rows: 10, cols: 10, spacing: 28, originX: 200, originY: 100 } },
+      { ref: 'hash', type: 'StableIdHash', laneKind: 'Fields', label: 'Per-Element Random',
+        params: { salt: 999 } },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
+    ],
+    connections: [
+      { fromRef: 'time', fromSlot: 'phase', toRef: 'divider', toSlot: 'phase' },
+      { fromRef: 'divider', fromSlot: 'tick', toRef: 'envelope', toSlot: 'trigger' },
+      { fromRef: 'grid', fromSlot: 'domain', toRef: 'hash', toSlot: 'domain' },
+      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
+    ],
+    publishers: [
+      { fromRef: 'envelope', fromSlot: 'env', busName: 'energy' },
+    ],
+    listeners: [
+      { busName: 'energy', toRef: 'render', toSlot: 'radius',
+        lens: { type: 'scale', params: { scale: 5, offset: 2 } } },
+    ],
+  },
+
+  // =============================================================================
+  // Slice Demo Macros - Existing macros (fixed and verified)
   // =============================================================================
 
   // Breathing Dots - Grid of dots with pulsing size animation
@@ -104,7 +380,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
 
       // Position layout - arranges elements in a grid
       { ref: 'grid', type: 'PositionMapGrid', laneKind: 'Fields', label: 'Grid Layout',
-        params: { rows: 5, cols: 5, spacing: 60, originX: 400, originY: 300, order: 'row-major' } },
+        params: { rows: 5, cols: 5, spacing: 60, originX: 400, originY: 300, order: 'rowMajor' } },
 
       // Phase clock - drives the breathing animation (0->1 over 2 seconds, looping)
       { ref: 'clock', type: 'PhaseClockLegacy', laneKind: 'Phase', label: 'Breathing Clock',
@@ -138,10 +414,6 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
     ],
   },
 
-  // =============================================================================
-  // Slice Demo Macros - Demonstrate new block capabilities
-  // =============================================================================
-
   // Slice 1: Breathing Wave - Oscillator + Shaper for smooth breathing
   'macro:breathingWave': {
     blocks: [
@@ -154,10 +426,6 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       // Shaper smooths the curve
       { ref: 'shaper', type: 'Shaper', laneKind: 'Phase', label: 'Smooth Curve',
         params: { kind: 'smoothstep', amount: 1 } },
-      // Add signals together
-      { ref: 'add', type: 'AddSignal', laneKind: 'Phase', label: 'Energy Sum' },
-      // Multiply for amplitude control
-      { ref: 'mul', type: 'MulSignal', laneKind: 'Phase', label: 'Amplitude' },
       // Domain for dots
       { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
         params: { n: 100, seed: 42 } },
@@ -213,7 +481,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
     ],
     listeners: [
       { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'clamp', params: { min: 0.1, max: 1.0 } } },
+        lens: { type: 'scale', params: { scale: 10, offset: 2 } } },
     ],
   },
 
@@ -288,7 +556,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
       { fromRef: 'hash', fromSlot: 'u01', toRef: 'zip', toSlot: 'field' },
-      { fromRef: 'osc', fromSlot: 'out', toRef: 'zip', toSlot: 'signal' },
+      { fromRef: 'osc', fromSlot: 'out', toRef: 'broadcast', toSlot: 'signal' },
+      { fromRef: 'broadcast', fromSlot: 'field', toRef: 'zip', toSlot: 'signal' },
       { fromRef: 'baseRadius', fromSlot: 'out', toRef: 'render', toSlot: 'radius' },
     ],
     publishers: [
@@ -334,14 +603,6 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
     publishers: [
       { fromRef: 'timeRoot', fromSlot: 'phase', busName: 'phaseA' },
     ],
-    listeners: [
-      {
-        busName: 'energy',
-        toRef: 'jitter',
-        toSlot: 'amplitude',
-        lens: { type: 'deadzone', params: { threshold: 0.15 } },
-      },
-    ],
   },
 
   // Slice 7: Styled Elements - FieldColorize + FieldOpacity for visual variety
@@ -366,6 +627,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
       { fromRef: 'hash', fromSlot: 'u01', toRef: 'colorize', toSlot: 'values' },
       { fromRef: 'hash', fromSlot: 'u01', toRef: 'opacity', toSlot: 'values' },
+      { fromRef: 'colorize', fromSlot: 'colors', toRef: 'render', toSlot: 'color' },
       { fromRef: 'radius', fromSlot: 'out', toRef: 'render', toSlot: 'radius' },
     ],
   },
@@ -458,178 +720,6 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'timeRoot', fromSlot: 'wrap', busName: 'pulse' },
       { fromRef: 'energyAdd', fromSlot: 'out', busName: 'energy' },
       { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-  },
-
-  // =============================================================================
-  // Composite Demo Macros - Use new composites from signal-composites.ts & domain-composites.ts
-  // =============================================================================
-
-  // 1. Rotating Grid - Uses RotationScatter composite
-  'macro:rotatingGrid': {
-    blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '4s Loop',
-        params: { periodMs: 4000 } },
-      { ref: 'grid', type: 'composite:GridPoints', laneKind: 'Fields', label: 'Grid Points',
-        params: { count: 64, seed: 42, rows: 8, cols: 8, spacing: 45, originX: 250, originY: 150 } },
-      { ref: 'rotation', type: 'composite:RotationScatter', laneKind: 'Fields', label: 'Rotation Variation',
-        params: { seed: 100, amount: 1.0 } },
-      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Rotating Dots' },
-    ],
-    connections: [
-      { fromRef: 'grid', fromSlot: 'domain', toRef: 'rotation', toSlot: 'domain' },
-      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
-      { fromRef: 'grid', fromSlot: 'positions', toRef: 'render', toSlot: 'positions' },
-      { fromRef: 'rotation', fromSlot: 'rotation', toRef: 'render', toSlot: 'rotation' },
-    ],
-    publishers: [
-      { fromRef: 'time', fromSlot: 'phase', busName: 'phaseA' },
-    ],
-  },
-
-  // 2. Breathing Pulse - Uses BreathingScale composite (bus-driven)
-  'macro:breathingPulse': {
-    blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '3s Breath',
-        params: { periodMs: 3000 } },
-      { ref: 'breathing', type: 'composite:BreathingScale', laneKind: 'Phase', label: 'Breathing Energy',
-        params: { curve: 'cosine', range: 10, min: 3 } },
-      { ref: 'grid', type: 'composite:GridPoints', laneKind: 'Fields', label: 'Grid',
-        params: { count: 49, seed: 42, rows: 7, cols: 7, spacing: 50, originX: 300, originY: 200 } },
-      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Breathing Dots' },
-    ],
-    connections: [
-      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
-      { fromRef: 'grid', fromSlot: 'positions', toRef: 'render', toSlot: 'positions' },
-    ],
-    publishers: [
-      { fromRef: 'time', fromSlot: 'phase', busName: 'phaseA' },
-    ],
-    // BreathingScale auto-subscribes to phaseA and publishes to energy
-    listeners: [
-      { busName: 'energy', toRef: 'render', toSlot: 'radius' },
-    ],
-  },
-
-  // 3. Color Evolution - Uses PaletteDrift composite (bus-driven)
-  'macro:colorEvolution': {
-    blocks: [
-      { ref: 'timeSlow', type: 'CycleTimeRoot', laneKind: 'Phase', label: '20s Slow Drift',
-        params: { periodMs: 20000 } },
-      { ref: 'palette', type: 'composite:PaletteDrift', laneKind: 'Phase', label: 'Palette Evolution',
-        params: { baseColor: '#8B5CF6', hueSpan: 240, saturation: 0.75, lightness: 0.6 } },
-      { ref: 'circle', type: 'composite:CirclePoints', laneKind: 'Fields', label: 'Circle',
-        params: { count: 30, seed: 55, centerX: 400, centerY: 300, radius: 120 } },
-      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Color Ring' },
-    ],
-    connections: [
-      { fromRef: 'circle', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
-      { fromRef: 'circle', fromSlot: 'positions', toRef: 'render', toSlot: 'positions' },
-    ],
-    publishers: [
-      { fromRef: 'timeSlow', fromSlot: 'phase', busName: 'phaseB' },
-    ],
-    // PaletteDrift auto-subscribes to phaseB and publishes to palette
-  },
-
-  // 4. Colorful Dots - Uses PerElementColorScatter composite
-  'macro:colorfulDots': {
-    blocks: [
-      { ref: 'grid', type: 'composite:GridPoints', laneKind: 'Fields', label: 'Grid',
-        params: { count: 100, seed: 42, rows: 10, cols: 10, spacing: 35, originX: 250, originY: 150 } },
-      { ref: 'colorScatter', type: 'composite:PerElementColorScatter', laneKind: 'Fields', label: 'Color Variation',
-        params: { seed: 200, hueShiftAmount: 360 } },
-      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Colorful Grid' },
-    ],
-    connections: [
-      { fromRef: 'grid', fromSlot: 'domain', toRef: 'colorScatter', toSlot: 'domain' },
-      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
-      { fromRef: 'grid', fromSlot: 'positions', toRef: 'render', toSlot: 'positions' },
-      { fromRef: 'colorScatter', fromSlot: 'fill', toRef: 'render', toSlot: 'color' },
-    ],
-  },
-
-  // 5. Rhythmic Accent - Uses PulseToEnvelope + PhaseWrapPulse composites
-  'macro:rhythmicAccent': {
-    blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '2s Loop',
-        params: { periodMs: 2000 } },
-      { ref: 'pulser', type: 'composite:PhaseWrapPulse', laneKind: 'Phase', label: 'Subdivide 4x',
-        params: { divisions: 4 } },
-      { ref: 'envelope', type: 'composite:PulseToEnvelope', laneKind: 'Phase', label: 'Envelope',
-        params: { attack: 0.01, decay: 0.2, peak: 1.0 } },
-      { ref: 'grid', type: 'composite:GridPoints', laneKind: 'Fields', label: 'Grid',
-        params: { count: 36, seed: 99, rows: 6, cols: 6, spacing: 60, originX: 300, originY: 200 } },
-      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Pulsing Dots' },
-    ],
-    connections: [
-      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
-      { fromRef: 'grid', fromSlot: 'positions', toRef: 'render', toSlot: 'positions' },
-    ],
-    publishers: [
-      { fromRef: 'time', fromSlot: 'phase', busName: 'phaseA' },
-    ],
-    // PhaseWrapPulse subscribes to phaseA and publishes to pulse
-    // PulseToEnvelope subscribes to pulse and publishes to energy
-    listeners: [
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 12, offset: 4 } } },
-    ],
-  },
-
-  // 6. Glyph Field - Uses GlyphRenderer composite
-  'macro:glyphField': {
-    blocks: [
-      { ref: 'line', type: 'composite:LinePoints', laneKind: 'Fields', label: 'Line Points',
-        params: { count: 20, seed: 77, ax: 100, ay: 200, bx: 700, by: 400, distribution: 'uniform' } },
-      { ref: 'rotation', type: 'composite:RotationScatter', laneKind: 'Fields', label: 'Glyph Rotation',
-        params: { seed: 88, amount: 0.5 } },
-      { ref: 'render', type: 'composite:GlyphRenderer', laneKind: 'Program', label: 'Glyphs',
-        params: { opacity: 0.9, glow: true, glowIntensity: 1.2 } },
-    ],
-    connections: [
-      { fromRef: 'line', fromSlot: 'domain', toRef: 'rotation', toSlot: 'domain' },
-      { fromRef: 'line', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
-      { fromRef: 'line', fromSlot: 'positions', toRef: 'render', toSlot: 'positions' },
-      { fromRef: 'rotation', fromSlot: 'rotation', toRef: 'render', toSlot: 'rotation' },
-    ],
-  },
-
-  // 7. Jittery Dots - Uses JitterMotion composite
-  'macro:jitteryDots': {
-    blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: '6s Loop',
-        params: { periodMs: 6000 } },
-      { ref: 'grid', type: 'composite:GridPoints', laneKind: 'Fields', label: 'Grid',
-        params: { count: 81, seed: 123, rows: 9, cols: 9, spacing: 40, originX: 250, originY: 150 } },
-      { ref: 'jitter', type: 'composite:JitterMotion', laneKind: 'Fields', label: 'Position Jitter',
-        params: { seed: 456, amount: 12, frequency: 1.5 } },
-      { ref: 'posAdd', type: 'FieldAddVec2', laneKind: 'Fields', label: 'Add Jitter' },
-      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Jittery Dots' },
-    ],
-    connections: [
-      { fromRef: 'time', fromSlot: 'phase', toRef: 'jitter', toSlot: 'phase' },
-      { fromRef: 'grid', fromSlot: 'domain', toRef: 'jitter', toSlot: 'domain' },
-      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
-      { fromRef: 'grid', fromSlot: 'positions', toRef: 'posAdd', toSlot: 'a' },
-      { fromRef: 'jitter', fromSlot: 'drift', toRef: 'posAdd', toSlot: 'b' },
-      { fromRef: 'posAdd', fromSlot: 'out', toRef: 'render', toSlot: 'positions' },
-    ],
-    publishers: [
-      { fromRef: 'time', fromSlot: 'phase', busName: 'phaseA' },
-    ],
-  },
-
-  // 8. SVG Path - Uses SVGSamplePoints composite
-  'macro:svgPath': {
-    blocks: [
-      { ref: 'svgPoints', type: 'composite:SVGSamplePoints', laneKind: 'Fields', label: 'SVG Samples',
-        params: { asset: 'path://M100,200 Q300,100 500,200 T900,200', sampleCount: 50, seed: 42, distribution: 'uniform' } },
-      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'SVG Dots' },
-    ],
-    connections: [
-      { fromRef: 'svgPoints', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
-      { fromRef: 'svgPoints', fromSlot: 'positions', toRef: 'render', toSlot: 'positions' },
     ],
   },
 };

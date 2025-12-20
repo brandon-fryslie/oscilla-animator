@@ -336,6 +336,7 @@ export type BlockFormCategory = (typeof BLOCK_FORMS)[number];
  */
 export const ALL_SUBCATEGORIES = [
   // Macro subcategories
+  'Quick Start',    // Simple, beginner-friendly starter macros
   'Animation Styles',
   'Effects',
   'Slice Demos',    // Demonstrates individual slice capabilities
@@ -360,6 +361,7 @@ export const ALL_SUBCATEGORIES = [
 ] as const;
 
 export type BlockSubcategory = (typeof ALL_SUBCATEGORIES)[number];
+
 
 /**
  * Legacy categories - kept for backwards compatibility during migration.
