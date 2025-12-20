@@ -9,6 +9,8 @@
  * - Events are scoped per RootStore instance
  */
 
+import type { TypeDescriptor } from '../types';
+
 /**
  * MacroExpanded event.
  *
@@ -109,6 +111,80 @@ export interface BlockRemovedEvent {
 }
 
 /**
+ * BindingAdded event.
+ *
+ * Emitted when a bus binding is added (publisher or listener).
+ * Emitted by: BusStore.addPublisher() or BusStore.addListener()
+ * When: After binding created and added to store
+ */
+export interface BindingAddedEvent {
+  type: 'BindingAdded';
+  /** ID of the binding (publisher or listener) */
+  bindingId: string;
+  /** ID of the bus */
+  busId: string;
+  /** ID of the block being connected */
+  blockId: string;
+  /** Port name on the block */
+  port: string;
+  /** Direction of binding: 'publish' for publishers, 'subscribe' for listeners */
+  direction: 'publish' | 'subscribe';
+}
+
+/**
+ * BindingRemoved event.
+ *
+ * Emitted when a bus binding is removed (publisher or listener).
+ * Emitted by: BusStore.removePublisher() or BusStore.removeListener()
+ * When: After binding removed from store
+ */
+export interface BindingRemovedEvent {
+  type: 'BindingRemoved';
+  /** ID of the binding (publisher or listener) */
+  bindingId: string;
+  /** ID of the bus */
+  busId: string;
+  /** ID of the block being disconnected */
+  blockId: string;
+  /** Port name on the block */
+  port: string;
+  /** Direction of binding: 'publish' for publishers, 'subscribe' for listeners */
+  direction: 'publish' | 'subscribe';
+}
+
+/**
+ * BusCreated event.
+ *
+ * Emitted when a new bus is created.
+ * Emitted by: BusStore.createBus()
+ * When: After bus added to store
+ */
+export interface BusCreatedEvent {
+  type: 'BusCreated';
+  /** ID of the created bus */
+  busId: string;
+  /** Name of the bus */
+  name: string;
+  /** Type descriptor of the bus */
+  type: TypeDescriptor;
+}
+
+/**
+ * BusDeleted event.
+ *
+ * Emitted when a bus is deleted.
+ * Emitted by: BusStore.deleteBus()
+ * When: BEFORE bus removed from store (so event contains bus data)
+ */
+export interface BusDeletedEvent {
+  type: 'BusDeleted';
+  /** ID of the deleted bus */
+  busId: string;
+  /** Name of the bus */
+  name: string;
+}
+
+/**
  * Union of all editor events (discriminated by 'type' field).
  */
 export type EditorEvent =
@@ -118,7 +194,11 @@ export type EditorEvent =
   | CompileSucceededEvent
   | CompileFailedEvent
   | BlockAddedEvent
-  | BlockRemovedEvent;
+  | BlockRemovedEvent
+  | BindingAddedEvent
+  | BindingRemovedEvent
+  | BusCreatedEvent
+  | BusDeletedEvent;
 
 /**
  * Event handler function type.

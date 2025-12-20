@@ -66,6 +66,13 @@ export class RootStore {
         this.logStore.clear();
       }
     });
+
+    // BusDeleted → Clear selection if deleted bus was selected
+    this.events.on('BusDeleted', (event) => {
+      if (this.uiStore.uiState.selectedBusId === event.busId) {
+        this.uiStore.uiState.selectedBusId = null;
+      }
+    });
   }
 
   generateId(prefix: string): string {

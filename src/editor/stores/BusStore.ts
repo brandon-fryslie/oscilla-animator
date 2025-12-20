@@ -106,6 +106,14 @@ export class BusStore {
       };
 
       this.buses.push(bus);
+
+      // Emit BusCreated event AFTER bus added to store
+      this.root.events.emit({
+        type: 'BusCreated',
+        busId: bus.id,
+        name: bus.name,
+        type: typeDesc,
+      });
     });
   }
 
@@ -135,6 +143,15 @@ export class BusStore {
     };
 
     this.buses.push(bus);
+
+    // Emit BusCreated event AFTER bus added to store
+    this.root.events.emit({
+      type: 'BusCreated',
+      busId: bus.id,
+      name: bus.name,
+      type: typeDesc,
+    });
+
     return bus.id;
   }
 
@@ -142,6 +159,19 @@ export class BusStore {
    * Delete a bus and all its routing.
    */
   deleteBus(busId: string): void {
+    // Get bus data before removal (for event)
+    const bus = this.buses.find(b => b.id === busId);
+    if (!bus) {
+      throw new Error(`Bus ${busId} not found`);
+    }
+
+    // Emit BusDeleted event BEFORE removing (so event contains bus data)
+    this.root.events.emit({
+      type: 'BusDeleted',
+      busId: bus.id,
+      name: bus.name,
+    });
+
     // Remove bus
     this.buses = this.buses.filter(b => b.id !== busId);
 
@@ -149,10 +179,8 @@ export class BusStore {
     this.publishers = this.publishers.filter(p => p.busId !== busId);
     this.listeners = this.listeners.filter(l => l.busId !== busId);
 
-    // Deselect if selected
-    if (this.root.uiStore.uiState.selectedBusId === busId) {
-      this.root.uiStore.uiState.selectedBusId = null;
-    }
+    // NOTE: Selection clearing moved to event listener in RootStore
+    // (decoupling BusStore from UIStateStore)
   }
 
   /**
@@ -202,6 +230,17 @@ export class BusStore {
     };
 
     this.publishers.push(publisher);
+
+    // Emit BindingAdded event AFTER publisher added to store
+    this.root.events.emit({
+      type: 'BindingAdded',
+      bindingId: publisher.id,
+      busId,
+      blockId,
+      port,
+      direction: 'publish',
+    });
+
     return publisher.id;
   }
 
@@ -222,7 +261,23 @@ export class BusStore {
    * Remove a publisher.
    */
   removePublisher(publisherId: string): void {
+    // Get publisher data before removal (for event)
+    const publisher = this.publishers.find(p => p.id === publisherId);
+    if (!publisher) {
+      return; // Silently ignore if not found (already removed)
+    }
+
     this.publishers = this.publishers.filter(p => p.id !== publisherId);
+
+    // Emit BindingRemoved event AFTER publisher removed
+    this.root.events.emit({
+      type: 'BindingRemoved',
+      bindingId: publisher.id,
+      busId: publisher.busId,
+      blockId: publisher.from.blockId,
+      port: publisher.from.port,
+      direction: 'publish',
+    });
   }
 
   /**
@@ -257,6 +312,17 @@ export class BusStore {
     };
 
     this.listeners.push(listener);
+
+    // Emit BindingAdded event AFTER listener added to store
+    this.root.events.emit({
+      type: 'BindingAdded',
+      bindingId: listener.id,
+      busId,
+      blockId,
+      port,
+      direction: 'subscribe',
+    });
+
     return listener.id;
   }
 
@@ -361,7 +427,23 @@ export class BusStore {
    * Remove a listener.
    */
   removeListener(listenerId: string): void {
+    // Get listener data before removal (for event)
+    const listener = this.listeners.find(l => l.id === listenerId);
+    if (!listener) {
+      return; // Silently ignore if not found (already removed)
+    }
+
     this.listeners = this.listeners.filter(l => l.id !== listenerId);
+
+    // Emit BindingRemoved event AFTER listener removed
+    this.root.events.emit({
+      type: 'BindingRemoved',
+      bindingId: listener.id,
+      busId: listener.busId,
+      blockId: listener.to.blockId,
+      port: listener.to.port,
+      direction: 'subscribe',
+    });
   }
 
   /**

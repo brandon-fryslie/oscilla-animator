@@ -1,0 +1,4 @@
+Agent: status-planner | 2025-12-20-145757
+Topic: event-system
+Files: PLAN-2025-12-20-145757.md, DOD-2025-12-20-145757.md
+Items: 7 (P0: 2, P1: 1, P2: 2, P3: 2)
