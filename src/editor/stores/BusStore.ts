@@ -112,7 +112,7 @@ export class BusStore {
         type: 'BusCreated',
         busId: bus.id,
         name: bus.name,
-        type: typeDesc,
+        busType: typeDesc,
       });
     });
   }
@@ -149,7 +149,7 @@ export class BusStore {
       type: 'BusCreated',
       busId: bus.id,
       name: bus.name,
-      type: typeDesc,
+      busType: typeDesc,
     });
 
     return bus.id;

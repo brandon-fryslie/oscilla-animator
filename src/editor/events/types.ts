@@ -166,7 +166,7 @@ export interface BusCreatedEvent {
   /** Name of the bus */
   name: string;
   /** Type descriptor of the bus */
-  type: TypeDescriptor;
+  busType: TypeDescriptor;
 }
 
 /**
