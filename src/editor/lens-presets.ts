@@ -150,6 +150,14 @@ export const LENS_PRESET_BIPOLAR: LensDefinition = {
   params: { inMin: 0, inMax: 1, outMin: -1, outMax: 1 },
 };
 
+/**
+ * Offset Half preset - shift values up by 0.5 (center around 0.5).
+ */
+export const LENS_PRESET_OFFSET_HALF: LensDefinition = {
+  type: 'offset',
+  params: { amount: 0.5 },
+};
+
 // =============================================================================
 // Preset Registry
 // =============================================================================
@@ -301,6 +309,13 @@ export const LENS_PRESETS: readonly LensPreset[] = [
     name: 'Bipolar',
     description: 'Map [0,1] to [-1,1]',
     lens: LENS_PRESET_BIPOLAR,
+    category: 'shaping',
+  },
+  {
+    id: 'offset-half',
+    name: 'Offset +0.5',
+    description: 'Shift values up by 0.5 (center around 0.5)',
+    lens: LENS_PRESET_OFFSET_HALF,
     category: 'shaping',
   },
 ] as const;

@@ -1,0 +1,34 @@
+Agent: iterative-implementer | 1766229823
+Mode: manual
+Completed: 8 composite demo macros | Files: 2 | Commits: 1
+Tests: N/A (manual validation mode)
+Cache invalidated: None (no eval cache present)
+Status: complete
+
+Summary:
+Added 8 new macros that demonstrate usage of composites from signal-composites.ts
+and domain-composites.ts. Each composite now has at least one macro showing how
+to use it in a complete working example.
+
+Macros created:
+1. macro:rotatingGrid - Uses RotationScatter composite
+2. macro:breathingPulse - Uses BreathingScale composite (bus-driven)
+3. macro:colorEvolution - Uses PaletteDrift composite (bus-driven)
+4. macro:colorfulDots - Uses PerElementColorScatter composite
+5. macro:rhythmicAccent - Uses PulseToEnvelope + PhaseWrapPulse composites
+6. macro:glyphField - Uses GlyphRenderer composite
+7. macro:jitteryDots - Uses JitterMotion composite
+8. macro:svgPath - Uses SVGSamplePoints composite
+
+Files modified:
+- src/editor/macros.ts (added macro expansion definitions)
+- src/editor/blocks/macros.ts (added macro block definitions)
+
+All macros:
+- Use 'Effects' subcategory for palette organization
+- Have priorities -60 to -53 for consistent ordering
+- Include proper bus wiring where needed
+- Wire composite ports correctly based on exposed inputs/outputs
+
+Typecheck: PASSED
+Commit: 7681c58 "feat(macros): add 8 composite demo macros"

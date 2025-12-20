@@ -95,7 +95,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // =============================================================================
 
   // Breathing Dots - Grid of dots with pulsing size animation
-  // Uses bus routing: PhaseClock -> phaseA bus -> RenderInstances2D radius (with scale lens)
+  // Uses bus routing: PhaseClock -> phaseA bus -> RenderInstances2D radius (with mapRange lens)
   'macro:breathingDots': {
     blocks: [
       // Domain source - creates N elements with sequential IDs
@@ -128,12 +128,12 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
     ],
     listeners: [
       // Listen on RenderInstances2D's radius input from phaseA bus
-      // Apply scale lens: phase 0-1 -> radius 3-15 (scale=12, offset=3)
+      // Apply mapRange lens: explicit mapping of phase [0,1] to radius [3,15]px
       {
         busName: 'phaseA',
         toRef: 'render',
         toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 12, offset: 3 } },
+        lens: { type: 'mapRange', params: { inMin: 0, inMax: 1, outMin: 3, outMax: 15 } },
       },
     ],
   },
@@ -213,7 +213,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
     ],
     listeners: [
       { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 15, offset: 5 } } },
+        lens: { type: 'clamp', params: { min: 0.1, max: 1.0 } } },
     ],
   },
 
@@ -294,6 +294,14 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
     publishers: [
       { fromRef: 'timeRoot', fromSlot: 'phase', busName: 'phaseA' },
     ],
+    listeners: [
+      {
+        busName: 'phaseA',
+        toRef: 'render',
+        toSlot: 'opacity',
+        lens: { type: 'offset', params: { amount: 0.3 } },
+      },
+    ],
   },
 
   // Slice 6: Drifting Dots - JitterFieldVec2 + FieldAddVec2 for position animation
@@ -325,6 +333,14 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
     ],
     publishers: [
       { fromRef: 'timeRoot', fromSlot: 'phase', busName: 'phaseA' },
+    ],
+    listeners: [
+      {
+        busName: 'energy',
+        toRef: 'jitter',
+        toSlot: 'amplitude',
+        lens: { type: 'deadzone', params: { threshold: 0.15 } },
+      },
     ],
   },
 

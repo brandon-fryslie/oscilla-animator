@@ -1,0 +1,44 @@
+Agent: iterative-implementer | 2025-12-20 04:25:45
+Mode: manual
+Completed: 4 lens integrations, 1 preset addition | Files: 2 | Commits: 0
+Cache invalidated: None (general infrastructure only, no macro/lens-specific cache)
+Status: complete
+
+## Summary
+
+Successfully integrated all 4 new lens types into macros for real-world usage demonstration:
+
+1. **clamp lens** -> macro:rhythmicPulse
+   - Applied to energy bus -> radius listener
+   - Purpose: Safety bounds on envelope output [0.1, 1.0]
+
+2. **offset lens** -> macro:phaseSpread
+   - Applied to phaseA bus -> opacity listener
+   - Purpose: Lift minimum opacity by +0.3 (prevent full disappearance)
+
+3. **deadzone lens** -> macro:driftingDots
+   - Applied to energy bus -> jitter amplitude listener
+   - Purpose: Create visual "rest zones" below 0.15 threshold
+
+4. **mapRange lens** -> macro:breathingDots
+   - Replaced existing scale lens on phaseA bus -> radius listener
+   - Purpose: Explicit range mapping [0,1] -> [3,15]px (clearer than scale+offset)
+
+5. **offset preset** -> lens-presets.ts
+   - Added LENS_PRESET_OFFSET_HALF constant
+   - Added to LENS_PRESETS registry array
+   - Category: shaping
+
+## Files Modified
+
+- /Users/bmf/code/oscilla-animator/src/editor/macros.ts
+- /Users/bmf/code/oscilla-animator/src/editor/lens-presets.ts
+
+## Validation
+
+- just typecheck: PASSED
+- just test: PASSED (384 tests, 1 skipped)
+
+## Next Steps
+
+All tasks in MACRO-INTEGRATION-PLAN.md completed. The new lens types are now demonstrated in real macro contexts.
