@@ -89,6 +89,20 @@ export interface BlockDefinition {
    * This is used for compiler integration and parameter resolution.
    */
   readonly compositeDefinition?: any; // CompositeDefinition imported to avoid circular dependency
+
+  /**
+   * Auto-bus subscriptions: map of input port IDs to bus names.
+   * When this block is added, these inputs automatically subscribe to the named buses.
+   * Example: { phase: 'phaseA' } means the 'phase' input auto-subscribes to 'phaseA' bus.
+   */
+  readonly autoBusSubscriptions?: Record<string, string>;
+
+  /**
+   * Auto-bus publications: map of output port IDs to bus names.
+   * When this block is added, these outputs automatically publish to the named buses.
+   * Example: { out: 'energy' } means the 'out' output auto-publishes to 'energy' bus.
+   */
+  readonly autoBusPublications?: Record<string, string>;
 }
 
 /**

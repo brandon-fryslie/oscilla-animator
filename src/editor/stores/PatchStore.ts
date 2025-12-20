@@ -17,6 +17,7 @@ import { getLayoutById, PRESET_LAYOUTS, DEFAULT_LAYOUT, mapLaneToLayout } from '
 import type { LaneLayout } from '../laneLayouts';
 import { getBlockDefinition } from '../blocks';
 import { getMacroKey, getMacroExpansion, type MacroExpansion } from '../macros';
+import { listCompositeDefinitions } from '../composites';
 import type { RootStore } from './RootStore';
 import { mapConnections, copyCompatibleParams, type ReplacementResult } from '../replaceUtils';
 
@@ -118,6 +119,60 @@ export class PatchStore {
   // =============================================================================
 
   /**
+   * Process auto-bus connections for a block based on its definition.
+   * This handles both primitive blocks with autoBusSubscriptions/autoBusPublications
+   * and composite blocks with busSubscriptions/busPublications in their graph.
+   */
+  private processAutoBusConnections(blockId: BlockId, blockType: string): void {
+    const definition = getBlockDefinition(blockType);
+    if (!definition) return;
+
+    // Check for primitive block auto-bus definitions
+    if (definition.autoBusSubscriptions) {
+      for (const [inputPort, busName] of Object.entries(definition.autoBusSubscriptions)) {
+        const bus = this.root.busStore.buses.find(b => b.name === busName);
+        if (bus) {
+          this.root.busStore.addListener(bus.id, blockId, inputPort);
+        }
+      }
+    }
+
+    if (definition.autoBusPublications) {
+      for (const [outputPort, busName] of Object.entries(definition.autoBusPublications)) {
+        const bus = this.root.busStore.buses.find(b => b.name === busName);
+        if (bus) {
+          this.root.busStore.addPublisher(bus.id, blockId, outputPort);
+        }
+      }
+    }
+
+    // Check for composite block bus definitions
+    if (blockType.startsWith('composite:')) {
+      const compositeId = blockType.slice('composite:'.length);
+      const composites = listCompositeDefinitions();
+      const compositeDef = composites.find(c => c.id === compositeId);
+
+      if (compositeDef?.graph.busSubscriptions) {
+        for (const [inputPort, busName] of Object.entries(compositeDef.graph.busSubscriptions)) {
+          const bus = this.root.busStore.buses.find(b => b.name === busName);
+          if (bus) {
+            this.root.busStore.addListener(bus.id, blockId, inputPort);
+          }
+        }
+      }
+
+      if (compositeDef?.graph.busPublications) {
+        for (const [outputPort, busName] of Object.entries(compositeDef.graph.busPublications)) {
+          const bus = this.root.busStore.buses.find(b => b.name === busName);
+          if (bus) {
+            this.root.busStore.addPublisher(bus.id, blockId, outputPort);
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Add a block to the patch.
    */
   addBlock(type: BlockType, laneId: LaneId, params?: Record<string, unknown>): BlockId {
@@ -160,6 +215,9 @@ export class PatchStore {
     if (laneObj) {
       laneObj.blockIds = [...laneObj.blockIds, id];
     }
+
+    // Process auto-bus connections for this block
+    this.processAutoBusConnections(id, type);
 
     return id;
   }
@@ -206,6 +264,14 @@ export class PatchStore {
       const toId = refToId.get(conn.toRef);
       if (fromId && toId) {
         this.connect(fromId, conn.fromSlot, toId, conn.toSlot);
+      }
+    }
+
+    // Process auto-bus connections for all blocks (handles both primitives and composites)
+    for (const macroBlock of expansion.blocks) {
+      const blockId = refToId.get(macroBlock.ref);
+      if (blockId) {
+        this.processAutoBusConnections(blockId, macroBlock.type);
       }
     }
 

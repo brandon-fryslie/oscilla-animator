@@ -34,7 +34,7 @@ export class UIStateStore {
   settings = {
     seed: 0,
     speed: 1.0,
-    finiteLoopMode: false, // false = 'once' (stop at end), true = 'loop' (rewind and continue)
+    finiteLoopMode: true, // false = 'once' (stop at end), true = 'loop' (rewind and continue)
     advancedLaneMode: false, // Controls lane visibility (Simple vs Detailed)
     autoConnect: false, // Auto-create connections on block drop
     showTypeHints: false, // Show type labels on ports
