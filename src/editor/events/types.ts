@@ -111,6 +111,40 @@ export interface BlockRemovedEvent {
 }
 
 /**
+ * WireAdded event.
+ *
+ * Emitted when a wire connection is created between two blocks.
+ * Emitted by: PatchStore.connect()
+ * When: After connection added to store
+ */
+export interface WireAddedEvent {
+  type: 'WireAdded';
+  /** ID of the wire connection */
+  wireId: string;
+  /** Source block and port */
+  from: { blockId: string; slotId: string };
+  /** Target block and port */
+  to: { blockId: string; slotId: string };
+}
+
+/**
+ * WireRemoved event.
+ *
+ * Emitted when a wire connection is removed.
+ * Emitted by: PatchStore.disconnect(), PatchStore.removeBlock() (cascade deletion)
+ * When: After connection removed from store
+ */
+export interface WireRemovedEvent {
+  type: 'WireRemoved';
+  /** ID of the wire connection */
+  wireId: string;
+  /** Source block and port */
+  from: { blockId: string; slotId: string };
+  /** Target block and port */
+  to: { blockId: string; slotId: string };
+}
+
+/**
  * BindingAdded event.
  *
  * Emitted when a bus binding is added (publisher or listener).
@@ -195,6 +229,8 @@ export type EditorEvent =
   | CompileFailedEvent
   | BlockAddedEvent
   | BlockRemovedEvent
+  | WireAddedEvent
+  | WireRemovedEvent
   | BindingAddedEvent
   | BindingRemovedEvent
   | BusCreatedEvent

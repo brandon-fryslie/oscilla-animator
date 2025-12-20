@@ -73,6 +73,13 @@ export class RootStore {
         this.uiStore.uiState.selectedBusId = null;
       }
     });
+
+    // BlockRemoved → Clear selection if removed block was selected
+    this.events.on('BlockRemoved', (event) => {
+      if (this.uiStore.uiState.selectedBlockId === event.blockId) {
+        this.uiStore.uiState.selectedBlockId = null;
+      }
+    });
   }
 
   generateId(prefix: string): string {

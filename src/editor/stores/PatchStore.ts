@@ -382,10 +382,13 @@ export class PatchStore {
     // Remove block
     this.blocks = this.blocks.filter((b) => b.id !== id);
 
-    // Remove connections to/from this block
-    this.connections = this.connections.filter(
-      (c) => c.from.blockId !== id && c.to.blockId !== id
+    // Remove connections to/from this block (with cascade event emission)
+    const connectionsToRemove = this.connections.filter(
+      (c) => c.from.blockId === id || c.to.blockId === id
     );
+    for (const conn of connectionsToRemove) {
+      this.disconnect(conn.id);
+    }
 
     // Remove from lanes
     for (const lane of this.lanes) {
@@ -395,11 +398,6 @@ export class PatchStore {
     // Remove publishers and listeners
     this.root.busStore.publishers = this.root.busStore.publishers.filter((p) => p.from.blockId !== id);
     this.root.busStore.listeners = this.root.busStore.listeners.filter((l) => l.to.blockId !== id);
-
-    // Deselect if selected
-    if (this.root.uiStore.uiState.selectedBlockId === id) {
-      this.root.uiStore.uiState.selectedBlockId = null;
-    }
 
     // Emit BlockRemoved event AFTER state changes committed
     this.root.events.emit({
@@ -574,17 +572,41 @@ export class PatchStore {
     };
 
     this.connections.push(connection);
+
+    // Emit WireAdded event AFTER connection created
+    this.root.events.emit({
+      type: 'WireAdded',
+      wireId: connection.id,
+      from: connection.from,
+      to: connection.to,
+    });
   }
 
   /**
    * Remove a connection (helper method).
    */
   disconnect(connectionId: string): void {
+    // Capture connection data BEFORE removal (for event)
+    const connection = this.connections.find((c) => c.id === connectionId);
+    if (!connection) return;
+
     this.connections = this.connections.filter((c) => c.id !== connectionId);
+
+    // Emit WireRemoved event AFTER removal
+    this.root.events.emit({
+      type: 'WireRemoved',
+      wireId: connection.id,
+      from: connection.from,
+      to: connection.to,
+    });
   }
 
+  /**
+   * Remove a connection by ID.
+   * Consolidated to use disconnect() for consistent event emission.
+   */
   removeConnection(id: string): void {
-    this.connections = this.connections.filter((c) => c.id !== id);
+    this.disconnect(id);
   }
 
   // =============================================================================

@@ -1,0 +1,69 @@
+Agent: iterative-implementer | 2025-12-20-151200
+Mode: manual
+Completed: Bus lifecycle and binding events | Files: 4 | Commits: 2
+Tests: 24 new tests passing (all 422 tests passing)
+Cache invalidated: None (no stale cache)
+Status: complete
+
+## Deliverables Completed
+
+### Deliverable 1: Bus Binding Events
+- Added BindingAddedEvent and BindingRemovedEvent types
+- Emit events from BusStore.addPublisher/addListener/removePublisher/removeListener
+- Events include: bindingId, busId, blockId, port, direction ('publish' | 'subscribe')
+- 11 unit tests covering all binding event scenarios
+
+### Deliverable 2: Bus Lifecycle Events
+- Added BusCreatedEvent and BusDeletedEvent types
+- Emit events from BusStore.createBus/deleteBus
+- BusDeleted emitted BEFORE bus removed (contains bus data)
+- Removed direct UIStateStore mutation from BusStore.deleteBus()
+- Added BusDeleted event listener in RootStore to clear selection
+- Zero UIStateStore imports in BusStore.ts (full decoupling achieved)
+- 13 unit tests covering bus lifecycle and decoupling
+
+## Implementation Details
+
+Event Types (src/editor/events/types.ts):
+- BindingAddedEvent: { type, bindingId, busId, blockId, port, direction }
+- BindingRemovedEvent: { type, bindingId, busId, blockId, port, direction }
+- BusCreatedEvent: { type, busId, name, busType: TypeDescriptor }
+- BusDeletedEvent: { type, busId, name }
+
+BusStore Changes (src/editor/stores/BusStore.ts):
+- addPublisher(): emits BindingAdded after publisher created
+- addListener(): emits BindingAdded after listener created  
+- removePublisher(): emits BindingRemoved after removal
+- removeListener(): emits BindingRemoved after removal
+- createBus(): emits BusCreated after bus added
+- deleteBus(): emits BusDeleted BEFORE bus removed, removed UIStore mutation
+- createDefaultBuses(): emits BusCreated for each default bus
+
+RootStore Changes (src/editor/stores/RootStore.ts):
+- setupEventListeners(): added BusDeleted handler to clear selection
+
+Tests (src/editor/stores/__tests__/):
+- BusStore.events.test.ts: 17 tests for event emission
+- RootStore.events.test.ts: 7 tests for event listeners and decoupling
+
+## Validation
+
+All acceptance criteria met:
+- Event types defined and added to EditorEvent union
+- Events emitted with correct payloads and timing
+- Direction field correctly distinguishes publish vs subscribe
+- BusStore fully decoupled from UIStateStore
+- Selection clearing works via event listener
+- All 422 tests passing (24 new, 398 existing)
+- Typecheck passes with no new errors
+- Lint passes with no new warnings
+
+## Next Steps
+
+Per PLAN-2025-12-20-145757.md, Phase B includes:
+- P1: ConnectionAdded/ConnectionRemoved events (deferred)
+- P2: Remove UIStore mutation from PatchStore.removeBlock (deferred)
+- P2: Compilation logging via events (deferred)
+- P3: BlockParamsUpdated, PlaybackStarted/Stopped events (deferred)
+
+Current sprint complete. Ready for next sprint or user evaluation.
