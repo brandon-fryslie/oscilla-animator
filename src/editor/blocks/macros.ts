@@ -126,4 +126,80 @@ export const MacroBreathingDots = createMacro({
   subcategory: 'Slice Demos',
 });
 
+// =============================================================================
+// Composite Demo Macros - Use new composites
+// =============================================================================
+
+export const MacroRotatingGrid = createMacro({
+  type: 'macro:rotatingGrid',
+  label: 'Rotating Grid',
+  description: 'Macro: Uses RotationScatter composite for per-element rotation variation.',
+  priority: -60,
+  color: '#EC4899',
+  subcategory: 'Effects',
+});
+
+export const MacroBreathingPulse = createMacro({
+  type: 'macro:breathingPulse',
+  label: 'Breathing Pulse',
+  description: 'Macro: Uses BreathingScale composite (bus-driven breathing energy).',
+  priority: -59,
+  color: '#3B82F6',
+  subcategory: 'Effects',
+});
+
+export const MacroColorEvolution = createMacro({
+  type: 'macro:colorEvolution',
+  label: 'Color Evolution',
+  description: 'Macro: Uses PaletteDrift composite for slow color evolution via ColorLFO.',
+  priority: -58,
+  color: '#F59E0B',
+  subcategory: 'Effects',
+});
+
+export const MacroColorfulDots = createMacro({
+  type: 'macro:colorfulDots',
+  label: 'Colorful Dots',
+  description: 'Macro: Uses PerElementColorScatter composite for hue variation.',
+  priority: -57,
+  color: '#EC4899',
+  subcategory: 'Effects',
+});
+
+export const MacroRhythmicAccent = createMacro({
+  type: 'macro:rhythmicAccent',
+  label: 'Rhythmic Accent',
+  description: 'Macro: Uses PulseToEnvelope + PhaseWrapPulse composites for rhythmic pulsing.',
+  priority: -56,
+  color: '#F59E0B',
+  subcategory: 'Effects',
+});
+
+export const MacroGlyphField = createMacro({
+  type: 'macro:glyphField',
+  label: 'Glyph Field',
+  description: 'Macro: Uses GlyphRenderer composite for path/glyph rendering.',
+  priority: -55,
+  color: '#EF4444',
+  subcategory: 'Effects',
+});
+
+export const MacroJitteryDots = createMacro({
+  type: 'macro:jitteryDots',
+  label: 'Jittery Dots',
+  description: 'Macro: Uses JitterMotion composite for phase-driven position jitter.',
+  priority: -54,
+  color: '#A855F7',
+  subcategory: 'Effects',
+});
+
+export const MacroSvgPath = createMacro({
+  type: 'macro:svgPath',
+  label: 'SVG Path',
+  description: 'Macro: Uses SVGSamplePoints composite to sample points from SVG path.',
+  priority: -53,
+  color: '#8B5CF6',
+  subcategory: 'Effects',
+});
+
 // Legacy macros have been archived to .agent_planning/LEGACY-BLOCKS-ARCHIVE.md
