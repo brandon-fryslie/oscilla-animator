@@ -66,6 +66,10 @@ export function LensSelector({ value, onChange, compact = false }: LensSelectorP
       warp: { power: 1 },
       broadcast: {},
       perElementOffset: { range: 1.0 },
+      clamp: { min: 0, max: 1 },
+      offset: { amount: 0 },
+      deadzone: { threshold: 0.05 },
+      mapRange: { inMin: 0, inMax: 1, outMin: 0, outMax: 1 },
     };
 
     onChange({ type, params: defaultParams[type] });

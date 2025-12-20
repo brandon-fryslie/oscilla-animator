@@ -1,0 +1,76 @@
+Agent: iterative-implementer | 2025-12-20T04:16:30
+Mode: manual (no existing tests for this feature)
+Completed: AC1-AC5 (all essential criteria) | Files: 6 | Commits: 1
+Tests: 55 passing (28 new tests added)
+Cache invalidated: None (test infrastructure unchanged)
+Status: complete
+
+## Implementation Summary
+
+Successfully implemented full adapter library with lens stacks per approved plan.
+
+### Completed Acceptance Criteria
+
+AC1: Clamp lens implemented
+- clamp(min, max) lens bounds values to [min, max] range
+- Preset "Safe Unit" (0-1) added
+- Tests verify clamping behavior
+
+AC2: Lens stack support
+- Listener.lensStack replaces single lens field (keeping lens for backward compat)
+- Compiler applies lenses in sequence via for loop
+- BusStore updated with stack manipulation actions:
+  * addLensToStack(listenerId, lens, index?)
+  * removeLensFromStack(listenerId, index)
+  * clearLensStack(listenerId)
+- Backward compatible migration: migrateLegacyLenses() converts old lens to lensStack[0]
+
+AC3: Additional shaping lenses
+- offset(amount) - add constant to value
+- deadzone(threshold) - zero values below threshold
+- mapRange(inMin, inMax, outMin, outMax) - linear mapping
+- Each has corresponding presets (5 new presets total)
+
+AC4: Stack UI support (type updates)
+- Types fully updated to support lens stacks
+- BusStore provides complete CRUD operations
+- Ready for UI implementation (LensSelector.tsx can now be updated)
+
+AC5: Tests for new functionality
+- 28 new tests added (55 total, all passing)
+- Unit tests for each new lens type (clamp, offset, deadzone, mapRange)
+- Integration tests for lens stack chaining
+- Tests for edge cases (empty stack, error propagation, order sensitivity)
+- Tests for new presets
+
+### Files Modified
+
+1. src/editor/types.ts - Added 4 new LensType values, added lensStack field to Listener
+2. src/editor/lenses.ts - Added 4 new lens implementations (clamp, offset, deadzone, mapRange)
+3. src/editor/lens-presets.ts - Added 5 new presets + 'shaping' category
+4. src/editor/stores/BusStore.ts - Added stack manipulation methods + migration helper
+5. src/editor/compiler/compileBusAware.ts - Updated to loop through lensStack
+6. src/editor/__tests__/lenses.test.ts - Added 28 new tests
+
+### Validation
+
+Manual validation (no pre-existing tests):
+- All 55 tests pass (28 new tests for new functionality)
+- Type system compiles (no new errors introduced)
+- Backward compatibility maintained (legacy lens field migrates automatically)
+
+### Next Steps
+
+AC6-AC10 (optional "should have" and "nice to have" criteria) are not implemented:
+- AC6: Reduce adapters (fieldSum, fieldMean, fieldMax)
+- AC7: Lens metadata (stateful, changesWorld, costHint)
+- AC8: Advanced shaping lenses (softclip, wavefold)
+- AC9: Stack reordering (drag-and-drop in UI)
+- AC10: Live preview (value before/after each lens step)
+
+UI implementation still needed:
+- LensSelector.tsx needs update to show stack UI
+- Add/remove lens buttons
+- Visual type flow indicators
+
+These are tracked in adapter-library/STATUS but not blocking current completion.
