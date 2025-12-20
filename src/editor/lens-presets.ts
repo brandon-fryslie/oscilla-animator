@@ -110,6 +110,46 @@ export const LENS_PRESET_INVERT: LensDefinition = {
   params: { scale: -1, offset: 1 },
 };
 
+/**
+ * Safe Unit preset - clamps values to [0, 1] range.
+ */
+export const LENS_PRESET_SAFE_UNIT: LensDefinition = {
+  type: 'clamp',
+  params: { min: 0, max: 1 },
+};
+
+/**
+ * 5% Deadzone preset - zeros values below 0.05 threshold.
+ */
+export const LENS_PRESET_DEADZONE_5PCT: LensDefinition = {
+  type: 'deadzone',
+  params: { threshold: 0.05 },
+};
+
+/**
+ * 10% Deadzone preset - zeros values below 0.1 threshold.
+ */
+export const LENS_PRESET_DEADZONE_10PCT: LensDefinition = {
+  type: 'deadzone',
+  params: { threshold: 0.1 },
+};
+
+/**
+ * Phase to Rotation preset - maps [0,1] to [0, 360] degrees.
+ */
+export const LENS_PRESET_PHASE_TO_ROTATION: LensDefinition = {
+  type: 'mapRange',
+  params: { inMin: 0, inMax: 1, outMin: 0, outMax: 360 },
+};
+
+/**
+ * Bipolar preset - maps [0,1] to [-1, 1].
+ */
+export const LENS_PRESET_BIPOLAR: LensDefinition = {
+  type: 'mapRange',
+  params: { inMin: 0, inMax: 1, outMin: -1, outMax: 1 },
+};
+
 // =============================================================================
 // Preset Registry
 // =============================================================================
@@ -128,7 +168,7 @@ export interface LensPreset {
   readonly lens: LensDefinition;
 
   /** Category for grouping in UI */
-  readonly category: 'easing' | 'timing' | 'scaling' | 'quantize';
+  readonly category: 'easing' | 'timing' | 'scaling' | 'quantize' | 'shaping';
 }
 
 /**
@@ -225,6 +265,43 @@ export const LENS_PRESETS: readonly LensPreset[] = [
     description: 'Invert 0-1 range',
     lens: LENS_PRESET_INVERT,
     category: 'scaling',
+  },
+
+  // Shaping presets
+  {
+    id: 'safe-unit',
+    name: 'Safe Unit',
+    description: 'Clamp to [0,1] range',
+    lens: LENS_PRESET_SAFE_UNIT,
+    category: 'shaping',
+  },
+  {
+    id: 'deadzone-5pct',
+    name: '5% Deadzone',
+    description: 'Zero values below 0.05',
+    lens: LENS_PRESET_DEADZONE_5PCT,
+    category: 'shaping',
+  },
+  {
+    id: 'deadzone-10pct',
+    name: '10% Deadzone',
+    description: 'Zero values below 0.1',
+    lens: LENS_PRESET_DEADZONE_10PCT,
+    category: 'shaping',
+  },
+  {
+    id: 'phase-to-rotation',
+    name: 'Phase → Rotation',
+    description: 'Map [0,1] to [0,360] degrees',
+    lens: LENS_PRESET_PHASE_TO_ROTATION,
+    category: 'shaping',
+  },
+  {
+    id: 'bipolar',
+    name: 'Bipolar',
+    description: 'Map [0,1] to [-1,1]',
+    lens: LENS_PRESET_BIPOLAR,
+    category: 'shaping',
   },
 ] as const;
 

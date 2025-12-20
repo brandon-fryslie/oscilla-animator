@@ -126,8 +126,4 @@ export const MacroBreathingDots = createMacro({
   subcategory: 'Slice Demos',
 });
 
-// =============================================================================
-// Legacy Animation Style Macros - Import from legacy file
-// =============================================================================
-
-export * from './legacy/macros';
+// Legacy macros have been archived to .agent_planning/LEGACY-BLOCKS-ARCHIVE.md

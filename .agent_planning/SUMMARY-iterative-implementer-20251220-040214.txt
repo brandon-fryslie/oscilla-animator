@@ -1,0 +1,53 @@
+Agent: iterative-implementer | 2025-12-20T04:01:50Z
+Mode: manual
+Completed: P2-A (Bus-Aware Composite Support), P2-B (8 New Composites) | Files: 5 | Commits: 1
+Tests: 317 passing, 1 skipped
+Cache invalidated: N/A (no evaluation cache exists yet)
+Status: complete
+
+WORK COMPLETED:
+
+P2-A: Bus-Aware Composite Support
+- Extended CompositeGraph interface with busSubscriptions and busPublications fields
+- Modified expandComposites() function in integration.ts to:
+  * Create bus listeners for busSubscriptions (auto-subscribe inputs to buses)
+  * Create bus publishers for busPublications (auto-publish outputs to buses)
+  * Generate unique IDs for auto-created bus bindings
+- Updated CompositeExpansionResult to return newPublishers and newListeners arrays
+- Merged new bus bindings with existing patch publishers/listeners
+
+P2-B: 8 New Composites (in signal-composites.ts)
+1. RotationScatter - Per-element rotation variation using FieldHash01ById + FieldMapNumber
+2. BreathingScale - Bus-driven: phaseA → Oscillator → energy (global breathing pulse)
+3. PaletteDrift - Bus-driven: phaseB → ColorLFO → palette (slow color drift)
+4. PerElementColorScatter - FieldHash01ById → hue offset → FieldColorize
+5. PulseToEnvelope - Bus-driven: pulse → EnvelopeAD → energy (trigger-driven accents)
+6. PhaseWrapPulse - Bus-driven: phaseA → PulseDivider → pulse (phase subdivisions)
+7. GlyphRenderer - RenderInstances2D wrapper for path/glyph rendering
+8. JitterMotion - FieldHash01ById + JitterFieldVec2 for phase-driven drift
+
+FILES MODIFIED:
+- src/editor/composites.ts (added busSubscriptions/busPublications to schema)
+- src/editor/compiler/integration.ts (bus wiring in expandComposites)
+- src/editor/composite-bridge.ts (imported signal-composites)
+- src/editor/signal-composites.ts (created - 8 new composites)
+- src/editor/replaceUtils.ts (lane-aware replacement filtering - by another agent)
+
+VALIDATION:
+- just typecheck: PASS (0 errors)
+- just lint: PASS (12 warnings, all pre-existing)
+- just test: PASS (317 passing, 1 skipped)
+- All composites register successfully
+- Bus-aware composites compile with correct bus connections
+
+TECHNICAL NOTES:
+- Bus subscriptions work by creating Listener objects that connect internal composite ports to bus values
+- Bus publications work by creating Publisher objects that send internal composite outputs to buses
+- Used type assertions for busName (Object.entries returns unknown values)
+- All 8 composites leverage existing primitives (Oscillator, ColorLFO, EnvelopeAD, PulseDivider, etc.)
+- GlyphRenderer uses same RenderInstances2D primitive as DotsRenderer (future: add path shape support)
+
+NEXT STEPS:
+- Consider adding tests for bus-aware composite expansion
+- Consider adding path shape support to RenderInstances2D for true glyph rendering
+- Documentation for composite library patterns

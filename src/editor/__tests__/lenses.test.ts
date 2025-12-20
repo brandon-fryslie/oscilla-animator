@@ -400,3 +400,289 @@ describe('Lens Error Handling', () => {
     expect(result.kind).toBe('Signal:number');
   });
 });
+
+// =============================================================================
+// Clamp Lens Tests
+// =============================================================================
+
+describe('ClampLens', () => {
+  it('clamps values to specified range', () => {
+    const input = createSignalArtifact(() => 1.5);
+    const lens: LensDefinition = { type: 'clamp', params: { min: 0, max: 1 } };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBe(1);
+  });
+
+  it('clamps negative values', () => {
+    const input = createSignalArtifact(() => -0.5);
+    const lens: LensDefinition = { type: 'clamp', params: { min: 0, max: 1 } };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBe(0);
+  });
+
+  it('preserves values within range', () => {
+    const input = createSignalArtifact(() => 0.5);
+    const lens: LensDefinition = { type: 'clamp', params: { min: 0, max: 1 } };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBe(0.5);
+  });
+
+  it('works with custom ranges', () => {
+    const input = createSignalArtifact(() => 50);
+    const lens: LensDefinition = { type: 'clamp', params: { min: 0, max: 100 } };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBe(50);
+  });
+});
+
+// =============================================================================
+// Offset Lens Tests
+// =============================================================================
+
+describe('OffsetLens', () => {
+  it('adds constant offset', () => {
+    const input = createSignalArtifact(() => 0.5);
+    const lens: LensDefinition = { type: 'offset', params: { amount: 0.3 } };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBeCloseTo(0.8, 5);
+  });
+
+  it('handles negative offsets', () => {
+    const input = createSignalArtifact(() => 0.8);
+    const lens: LensDefinition = { type: 'offset', params: { amount: -0.3 } };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBeCloseTo(0.5, 5);
+  });
+
+  it('defaults to zero offset', () => {
+    const input = createSignalArtifact(() => 0.5);
+    const lens: LensDefinition = { type: 'offset', params: {} };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBe(0.5);
+  });
+});
+
+// =============================================================================
+// Deadzone Lens Tests
+// =============================================================================
+
+describe('DeadzoneLens', () => {
+  it('zeros values below threshold', () => {
+    const input = createSignalArtifact(() => 0.03);
+    const lens: LensDefinition = { type: 'deadzone', params: { threshold: 0.05 } };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBe(0);
+  });
+
+  it('preserves values above threshold', () => {
+    const input = createSignalArtifact(() => 0.8);
+    const lens: LensDefinition = { type: 'deadzone', params: { threshold: 0.05 } };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBe(0.8);
+  });
+
+  it('handles negative values', () => {
+    const input = createSignalArtifact(() => -0.03);
+    const lens: LensDefinition = { type: 'deadzone', params: { threshold: 0.05 } };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBe(0);
+  });
+
+  it('uses absolute value for threshold comparison', () => {
+    const input = createSignalArtifact(() => -0.1);
+    const lens: LensDefinition = { type: 'deadzone', params: { threshold: 0.05 } };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBe(-0.1); // Preserved because abs(-0.1) >= 0.05
+  });
+});
+
+// =============================================================================
+// MapRange Lens Tests
+// =============================================================================
+
+describe('MapRangeLens', () => {
+  it('maps input range to output range', () => {
+    const input = createSignalArtifact(() => 0.5);
+    const lens: LensDefinition = {
+      type: 'mapRange',
+      params: { inMin: 0, inMax: 1, outMin: 0, outMax: 360 }
+    };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBeCloseTo(180, 5);
+  });
+
+  it('creates bipolar mapping', () => {
+    const input = createSignalArtifact(() => 0.5);
+    const lens: LensDefinition = {
+      type: 'mapRange',
+      params: { inMin: 0, inMax: 1, outMin: -1, outMax: 1 }
+    };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBeCloseTo(0, 5);
+  });
+
+  it('handles inverted mappings', () => {
+    const input = createSignalArtifact(() => 0.25);
+    const lens: LensDefinition = {
+      type: 'mapRange',
+      params: { inMin: 0, inMax: 1, outMin: 1, outMax: 0 }
+    };
+
+    const result = applyLens(input, lens);
+    expect(evalSignal(result, 0)).toBeCloseTo(0.75, 5);
+  });
+});
+
+// =============================================================================
+// Lens Stack Tests
+// =============================================================================
+
+describe('Lens Stacks', () => {
+  it('applies multiple lenses in sequence', () => {
+    const input = createSignalArtifact(() => 0.5);
+    
+    // First scale by 2, then offset by 0.1
+    const lens1: LensDefinition = { type: 'scale', params: { scale: 2, offset: 0 } };
+    const lens2: LensDefinition = { type: 'offset', params: { amount: 0.1 } };
+
+    let result = applyLens(input, lens1);
+    result = applyLens(result, lens2);
+
+    expect(evalSignal(result, 0)).toBeCloseTo(1.1, 5); // (0.5 * 2) + 0.1
+  });
+
+  it('order matters in stacks', () => {
+    const input = createSignalArtifact(() => 0.5);
+    
+    // Offset first, then scale
+    const lens1: LensDefinition = { type: 'offset', params: { amount: 0.1 } };
+    const lens2: LensDefinition = { type: 'scale', params: { scale: 2, offset: 0 } };
+
+    let result = applyLens(input, lens1);
+    result = applyLens(result, lens2);
+
+    expect(evalSignal(result, 0)).toBeCloseTo(1.2, 5); // (0.5 + 0.1) * 2
+  });
+
+  it('clamp after mapRange prevents overflow', () => {
+    const input = createSignalArtifact(() => 0.8);
+    
+    // Map to [0, 360] then clamp to [0, 180]
+    const lens1: LensDefinition = {
+      type: 'mapRange',
+      params: { inMin: 0, inMax: 1, outMin: 0, outMax: 360 }
+    };
+    const lens2: LensDefinition = { type: 'clamp', params: { min: 0, max: 180 } };
+
+    let result = applyLens(input, lens1);
+    result = applyLens(result, lens2);
+
+    expect(evalSignal(result, 0)).toBe(180); // 288 clamped to 180
+  });
+
+  it('deadzone before ease filters noise', () => {
+    const input = createSignalArtifact(() => 0.02);
+    
+    // Remove small values, then apply easing
+    const lens1: LensDefinition = { type: 'deadzone', params: { threshold: 0.05 } };
+    const lens2: LensDefinition = { type: 'ease', params: { easing: 'easeInOutSine' } };
+
+    let result = applyLens(input, lens1);
+    result = applyLens(result, lens2);
+
+    expect(evalSignal(result, 0)).toBeCloseTo(0, 5); // Deadzone zeroed it out
+  });
+
+  it('propagates errors through stack', () => {
+    const input: Artifact = { kind: 'Scalar:number', value: 0.5 };
+    const lens: LensDefinition = { type: 'scale', params: { scale: 2, offset: 0 } };
+
+    const result = applyLens(input, lens);
+    expect(result.kind).toBe('Error');
+  });
+});
+
+// =============================================================================
+// Lens Preset Tests
+// =============================================================================
+
+describe('New Lens Presets', () => {
+  it('safe-unit preset clamps to [0,1]', () => {
+    const preset = getLensPreset('safe-unit');
+    expect(preset).toBeDefined();
+    expect(preset?.lens.type).toBe('clamp');
+    expect(preset?.lens.params.min).toBe(0);
+    expect(preset?.lens.params.max).toBe(1);
+  });
+
+  it('deadzone-5pct preset zeros small values', () => {
+    const preset = getLensPreset('deadzone-5pct');
+    expect(preset).toBeDefined();
+    expect(preset?.lens.type).toBe('deadzone');
+    expect(preset?.lens.params.threshold).toBe(0.05);
+  });
+
+  it('phase-to-rotation preset maps [0,1] to [0,360]', () => {
+    const preset = getLensPreset('phase-to-rotation');
+    expect(preset).toBeDefined();
+    expect(preset?.lens.type).toBe('mapRange');
+    expect(preset?.lens.params.outMax).toBe(360);
+  });
+
+  it('bipolar preset creates [-1,1] range', () => {
+    const preset = getLensPreset('bipolar');
+    expect(preset).toBeDefined();
+    expect(preset?.lens.type).toBe('mapRange');
+    expect(preset?.lens.params.outMin).toBe(-1);
+    expect(preset?.lens.params.outMax).toBe(1);
+  });
+
+  it('shaping category includes new lenses', () => {
+    const shaping = getLensPresetsByCategory('shaping');
+    expect(shaping.length).toBeGreaterThanOrEqual(5);
+    expect(shaping.some(p => p.id === 'safe-unit')).toBe(true);
+    expect(shaping.some(p => p.id === 'bipolar')).toBe(true);
+  });
+});
+
+// =============================================================================
+// Lens Type Validation Tests
+// =============================================================================
+
+describe('Extended Lens Type Validation', () => {
+  it('validates new lens types', () => {
+    expect(isValidLensType('clamp')).toBe(true);
+    expect(isValidLensType('offset')).toBe(true);
+    expect(isValidLensType('deadzone')).toBe(true);
+    expect(isValidLensType('mapRange')).toBe(true);
+  });
+
+  it('still validates existing lens types', () => {
+    expect(isValidLensType('ease')).toBe(true);
+    expect(isValidLensType('slew')).toBe(true);
+    expect(isValidLensType('quantize')).toBe(true);
+    expect(isValidLensType('scale')).toBe(true);
+    expect(isValidLensType('warp')).toBe(true);
+    expect(isValidLensType('broadcast')).toBe(true);
+    expect(isValidLensType('perElementOffset')).toBe(true);
+  });
+
+  it('rejects invalid lens types', () => {
+    expect(isValidLensType('invalid')).toBe(false);
+    expect(isValidLensType('CLAMP')).toBe(false);
+    expect(isValidLensType('')).toBe(false);
+  });
+});

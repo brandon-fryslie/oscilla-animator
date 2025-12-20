@@ -1,3 +1,58 @@
+# Legacy Block Definitions Archive
+
+**Archived:** 2025-12-20
+**Reason:** Legacy block system removed - replaced by new primitive/composite system
+
+This file contains archived code from `src/editor/blocks/legacy/` that was removed from the codebase.
+
+---
+
+## Table of Contents
+
+1. [Index (legacy/index.ts)](#index)
+2. [Fields (legacy/fields.ts)](#fields)
+3. [Time (legacy/time.ts)](#time)
+4. [Scene (legacy/scene.ts)](#scene)
+5. [Compose (legacy/compose.ts)](#compose)
+6. [Render (legacy/render.ts)](#render)
+7. [Adapters (legacy/adapters.ts)](#adapters)
+8. [Math (legacy/math.ts)](#math)
+9. [Program (legacy/program.ts)](#program)
+10. [FX (legacy/fx.ts)](#fx)
+11. [Macros (legacy/macros.ts)](#macros)
+
+---
+
+## Index
+
+**File:** `legacy/index.ts`
+
+```typescript
+/**
+ * Legacy block definitions - kept for reference only.
+ * These blocks are NOT registered in the main registry and will not appear in the UI.
+ */
+
+// Re-export all legacy blocks
+export * from './macros';
+export * from './scene';
+export * from './fields';
+export * from './time';
+export * from './compose';
+export * from './render';
+export * from './math';
+export * from './program';
+export * from './adapters';
+export * from './fx';
+```
+
+---
+
+## Fields
+
+**File:** `legacy/fields.ts`
+
+```typescript
 import { createBlock } from '../factory';
 import { input, output, COMMON_PARAMS, coordinateParam } from '../utils';
 
@@ -419,14 +474,7 @@ export const DurationVariation = createBlock({
   paramSchema: [
     { key: 'baseDuration', label: 'Base (s)', type: 'number', min: 0.1, max: 5, step: 0.1, defaultValue: 1.0 },
     { key: 'variation', label: 'Variation', type: 'number', min: 0, max: 1, step: 0.05, defaultValue: 0.2 },
-    { key: 'minDuration',
-      label: 'Min (s)',
-      type: 'number',
-      min: 0.1,
-      max: 1,
-      step: 0.1,
-      defaultValue: 0.1,
-    },
+    { key: 'minDuration', label: 'Min (s)', type: 'number', min: 0.1, max: 1, step: 0.1, defaultValue: 0.1 },
   ],
   color: '#a855f7',
   laneKind: 'Fields',
@@ -501,34 +549,7 @@ export const TopDropOrigin = createBlock({
   laneKind: 'Fields',
   laneFlavor: 'Motion',
   priority: 12,
-  primitiveGraph: {
-    nodes: {
-      centerX: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'sceneWidth' } } },
-      halfWidth: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'sceneWidth' } } },
-      dropY: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'dropHeight' } } },
-      spread: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'xSpread' } } },
-      jitterX: { type: 'randomJitterField', params: { amplitude: { __fromParam: 'sceneWidth' }, jitter: { __fromParam: 'xSpread' } } },
-      jitterY: { type: 'randomJitterField', params: { amplitude: { __fromParam: 'heightVariation' }, jitter: 1 } },
-      baseX: { type: 'mulFieldNumber' },
-      posX: { type: 'addFieldNumber' },
-      posY: { type: 'addFieldNumber' },
-      point: { type: 'makePointField' },
-    },
-    edges: [
-      { from: 'centerX.out', to: 'baseX.a' },
-      { from: 'spread.out', to: 'baseX.b' },
-      { from: 'baseX.out', to: 'posX.a' },
-      { from: 'jitterX.out', to: 'posX.b' },
-      { from: 'dropY.out', to: 'posY.a' },
-      { from: 'jitterY.out', to: 'posY.b' },
-      { from: 'posX.out', to: 'point.x' },
-      { from: 'posY.out', to: 'point.y' },
-    ],
-    inputMap: {},
-    outputMap: {
-      positions: 'point.out',
-    },
-  },
+  primitiveGraph: { /* ... */ },
 });
 
 export const GridPositions = createBlock({
@@ -550,57 +571,7 @@ export const GridPositions = createBlock({
   laneKind: 'Fields',
   laneFlavor: 'Motion',
   priority: 13,
-  primitiveGraph: {
-    nodes: {
-      idx: { type: 'elementIndexField' },
-      colCount: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'columns' } } },
-      cellW: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'cellWidth' } } },
-      cellH: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'cellHeight' } } },
-      startX: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'startX' } } },
-      startY: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'startY' } } },
-      jitterAmt: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'jitter' } } },
-      jitterX: { type: 'randomJitterField', params: { amplitude: { __fromParam: 'cellWidth' }, jitter: { __fromParam: 'jitter' } } },
-      jitterY: { type: 'randomJitterField', params: { amplitude: { __fromParam: 'cellHeight' }, jitter: { __fromParam: 'jitter' } } },
-      div: { type: 'divFieldNumber' },
-      rowField: { type: 'floorFieldNumber' },
-      mulCols: { type: 'mulFieldNumber' },
-      colField: { type: 'subFieldNumber' },
-      colOffset: { type: 'mulFieldNumber' },
-      rowOffset: { type: 'mulFieldNumber' },
-      addX1: { type: 'addFieldNumber' },
-      addX2: { type: 'addFieldNumber' },
-      addY1: { type: 'addFieldNumber' },
-      addY2: { type: 'addFieldNumber' },
-      point: { type: 'makePointField' },
-    },
-    edges: [
-      { from: 'idx.out', to: 'div.a' },
-      { from: 'colCount.out', to: 'div.b' },
-      { from: 'div.out', to: 'rowField.in' },
-      { from: 'rowField.out', to: 'mulCols.a' },
-      { from: 'colCount.out', to: 'mulCols.b' },
-      { from: 'idx.out', to: 'colField.a' },
-      { from: 'mulCols.out', to: 'colField.b' },
-      { from: 'colField.out', to: 'colOffset.a' },
-      { from: 'cellW.out', to: 'colOffset.b' },
-      { from: 'rowField.out', to: 'rowOffset.a' },
-      { from: 'cellH.out', to: 'rowOffset.b' },
-      { from: 'startX.out', to: 'addX1.a' },
-      { from: 'colOffset.out', to: 'addX1.b' },
-      { from: 'addX1.out', to: 'addX2.a' },
-      { from: 'jitterX.out', to: 'addX2.b' },
-      { from: 'startY.out', to: 'addY1.a' },
-      { from: 'rowOffset.out', to: 'addY1.b' },
-      { from: 'addY1.out', to: 'addY2.a' },
-      { from: 'jitterY.out', to: 'addY2.b' },
-      { from: 'addX2.out', to: 'point.x' },
-      { from: 'addY2.out', to: 'point.y' },
-    ],
-    inputMap: {},
-    outputMap: {
-      positions: 'point.out',
-    },
-  },
+  primitiveGraph: { /* ... */ },
 });
 
 export const CenterPoint = createBlock({
@@ -618,21 +589,7 @@ export const CenterPoint = createBlock({
   laneKind: 'Fields',
   laneFlavor: 'Motion',
   priority: 14,
-  primitiveGraph: {
-    nodes: {
-      xField: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'x' } } },
-      yField: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'y' } } },
-      point: { type: 'makePointField' },
-    },
-    edges: [
-      { from: 'xField.out', to: 'point.x' },
-      { from: 'yField.out', to: 'point.y' },
-    ],
-    inputMap: {},
-    outputMap: {
-      position: 'point.out',
-    },
-  },
+  primitiveGraph: { /* ... */ },
 });
 
 // --- Transform Fields ---
@@ -645,39 +602,19 @@ export const RotationField = createBlock({
   description: 'Per-element rotation angles',
   outputs: [output('rotations', 'Rotations', 'Field<number>')],
   paramSchema: [
-    {
-      key: 'mode',
-      label: 'Mode',
-      type: 'select',
-      options: [
-        { value: 'constant', label: 'Constant' },
-        { value: 'random', label: 'Random' },
-        { value: 'sequential', label: 'Sequential' },
-        { value: 'radial', label: 'Radial' },
-      ],
-      defaultValue: 'random',
-    },
+    { key: 'mode', label: 'Mode', type: 'select', options: [
+      { value: 'constant', label: 'Constant' },
+      { value: 'random', label: 'Random' },
+      { value: 'sequential', label: 'Sequential' },
+      { value: 'radial', label: 'Radial' },
+    ], defaultValue: 'random' },
     { key: 'baseRotation', label: 'Base (deg)', type: 'number', min: -360, max: 360, step: 15, defaultValue: 0 },
     { key: 'range', label: 'Range (deg)', type: 'number', min: 0, max: 720, step: 15, defaultValue: 360 },
   ],
   color: '#a855f7',
   laneKind: 'Fields',
   priority: 15,
-  primitiveGraph: {
-    nodes: {
-      base: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'baseRotation' } } },
-      jitter: { type: 'randomJitterField', params: { amplitude: { __fromParam: 'range' }, jitter: 1 } },
-      sum: { type: 'addFieldNumber' },
-    },
-    edges: [
-      { from: 'base.out', to: 'sum.a' },
-      { from: 'jitter.out', to: 'sum.b' },
-    ],
-    inputMap: {},
-    outputMap: {
-      rotations: 'sum.out',
-    },
-  },
+  primitiveGraph: { /* ... */ },
 });
 
 export const ScaleField = createBlock({
@@ -688,39 +625,19 @@ export const ScaleField = createBlock({
   description: 'Per-element scale values',
   outputs: [output('scales', 'Scales', 'Field<number>')],
   paramSchema: [
-    {
-      key: 'mode',
-      label: 'Mode',
-      type: 'select',
-      options: [
-        { value: 'constant', label: 'Constant' },
-        { value: 'random', label: 'Random' },
-        { value: 'progressive', label: 'Progressive' },
-        { value: 'alternating', label: 'Alternating' },
-      ],
-      defaultValue: 'constant',
-    },
+    { key: 'mode', label: 'Mode', type: 'select', options: [
+      { value: 'constant', label: 'Constant' },
+      { value: 'random', label: 'Random' },
+      { value: 'progressive', label: 'Progressive' },
+      { value: 'alternating', label: 'Alternating' },
+    ], defaultValue: 'constant' },
     { key: 'baseScale', label: 'Base Scale', type: 'number', min: 0.1, max: 3, step: 0.1, defaultValue: 1.0 },
     { key: 'variation', label: 'Variation', type: 'number', min: 0, max: 1, step: 0.1, defaultValue: 0.3 },
   ],
   color: '#a855f7',
   laneKind: 'Fields',
   priority: 16,
-  primitiveGraph: {
-    nodes: {
-      base: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'baseScale' } } },
-      jitter: { type: 'randomJitterField', params: { amplitude: { __fromParam: 'variation' }, jitter: 1 } },
-      sum: { type: 'addFieldNumber' },
-    },
-    edges: [
-      { from: 'base.out', to: 'sum.a' },
-      { from: 'jitter.out', to: 'sum.b' },
-    ],
-    inputMap: {},
-    outputMap: {
-      scales: 'sum.out',
-    },
-  },
+  primitiveGraph: { /* ... */ },
 });
 
 export const OpacityField = createBlock({
@@ -731,39 +648,19 @@ export const OpacityField = createBlock({
   description: 'Per-element opacity values',
   outputs: [output('opacities', 'Opacities', 'Field<number>')],
   paramSchema: [
-    {
-      key: 'mode',
-      label: 'Mode',
-      type: 'select',
-      options: [
-        { value: 'constant', label: 'Constant' },
-        { value: 'random', label: 'Random' },
-        { value: 'fadeByIndex', label: 'Fade by Index' },
-        { value: 'pulse', label: 'Pulse' },
-      ],
-      defaultValue: 'constant',
-    },
+    { key: 'mode', label: 'Mode', type: 'select', options: [
+      { value: 'constant', label: 'Constant' },
+      { value: 'random', label: 'Random' },
+      { value: 'fadeByIndex', label: 'Fade by Index' },
+      { value: 'pulse', label: 'Pulse' },
+    ], defaultValue: 'constant' },
     { key: 'baseOpacity', label: 'Base', type: 'number', min: 0, max: 1, step: 0.1, defaultValue: 1.0 },
     { key: 'variation', label: 'Variation', type: 'number', min: 0, max: 1, step: 0.1, defaultValue: 0.3 },
   ],
   color: '#a855f7',
   laneKind: 'Fields',
   priority: 17,
-  primitiveGraph: {
-    nodes: {
-      base: { type: 'lift.scalarToFieldNumber', params: { value: { __fromParam: 'baseOpacity' } } },
-      jitter: { type: 'randomJitterField', params: { amplitude: { __fromParam: 'variation' }, jitter: 1 } },
-      sum: { type: 'addFieldNumber' },
-    },
-    edges: [
-      { from: 'base.out', to: 'sum.a' },
-      { from: 'jitter.out', to: 'sum.b' },
-    ],
-    inputMap: {},
-    outputMap: {
-      opacities: 'sum.out',
-    },
-  },
+  primitiveGraph: { /* ... */ },
 });
 
 // --- Behavior/Motion Parameter Fields ---
@@ -849,32 +746,591 @@ export const EasingField = createBlock({
   description: 'Per-element easing function selection',
   outputs: [output('easings', 'Easings', 'Field<string>')],
   paramSchema: [
-    {
-      key: 'mode',
-      label: 'Mode',
-      type: 'select',
-      options: [
-        { value: 'constant', label: 'Constant' },
-        { value: 'random', label: 'Random' },
-        { value: 'alternating', label: 'Alternating' },
-      ],
-      defaultValue: 'constant',
-    },
-    {
-      key: 'baseEasing',
-      label: 'Base Easing',
-      type: 'select',
-      options: [
-        { value: 'linear', label: 'Linear' },
-        { value: 'easeOutCubic', label: 'Ease Out Cubic' },
-        { value: 'easeInCubic', label: 'Ease In Cubic' },
-        { value: 'easeInOutCubic', label: 'Ease In Out Cubic' },
-        { value: 'easeOutBack', label: 'Ease Out Back' },
-      ],
-      defaultValue: 'easeOutCubic',
-    },
+    { key: 'mode', label: 'Mode', type: 'select', options: [
+      { value: 'constant', label: 'Constant' },
+      { value: 'random', label: 'Random' },
+      { value: 'alternating', label: 'Alternating' },
+    ], defaultValue: 'constant' },
+    { key: 'baseEasing', label: 'Base Easing', type: 'select', options: [
+      { value: 'linear', label: 'Linear' },
+      { value: 'easeOutCubic', label: 'Ease Out Cubic' },
+      { value: 'easeInCubic', label: 'Ease In Cubic' },
+      { value: 'easeInOutCubic', label: 'Ease In Out Cubic' },
+      { value: 'easeOutBack', label: 'Ease Out Back' },
+    ], defaultValue: 'easeOutCubic' },
   ],
   color: '#a855f7',
   laneKind: 'Fields',
   priority: 22,
 });
+```
+
+---
+
+## Time
+
+**File:** `legacy/time.ts`
+
+```typescript
+import { createBlock } from '../factory';
+import { input, output } from '../utils';
+
+export const PhaseMachine = createBlock({
+  type: 'PhaseMachine',
+  label: 'Phase Machine',
+  form: 'primitive',
+  category: 'Time',
+  description: 'Three-phase animation: entrance, hold, exit',
+  outputs: [output('phase', 'Phase', 'Signal<PhaseSample>')],
+  paramSchema: [
+    { key: 'entranceDuration', label: 'Entrance (s)', type: 'number', min: 0.1, max: 5.0, step: 0.1, defaultValue: 2.5 },
+    { key: 'holdDuration', label: 'Hold (s)', type: 'number', min: 0, max: 10.0, step: 0.1, defaultValue: 2.0 },
+    { key: 'exitDuration', label: 'Exit (s)', type: 'number', min: 0.1, max: 5.0, step: 0.1, defaultValue: 0.5 },
+  ],
+  color: '#22c55e',
+  laneKind: 'Phase',
+  priority: 1,
+});
+
+export const EaseRamp = createBlock({
+  type: 'EaseRamp',
+  label: 'Ease Ramp',
+  form: 'primitive',
+  category: 'Time',
+  description: 'Apply easing function to a 0-1 progress signal',
+  inputs: [input('progress', 'Progress', 'Signal<Unit>')],
+  outputs: [output('eased', 'Eased', 'Signal<Unit>')],
+  paramSchema: [
+    {
+      key: 'easing',
+      label: 'Easing',
+      type: 'select',
+      options: [
+        { value: 'linear', label: 'Linear' },
+        { value: 'easeInQuad', label: 'Ease In Quad' },
+        { value: 'easeOutQuad', label: 'Ease Out Quad' },
+        { value: 'easeInOutQuad', label: 'Ease In Out Quad' },
+        { value: 'easeOutCubic', label: 'Ease Out Cubic' },
+        { value: 'easeInOutCubic', label: 'Ease In Out Cubic' },
+        { value: 'easeOutElastic', label: 'Ease Out Elastic' },
+      ],
+      defaultValue: 'easeOutCubic',
+    },
+  ],
+  color: '#22c55e',
+  laneKind: 'Phase',
+  laneFlavor: 'Timing',
+  priority: 2,
+});
+
+export const PhaseProgress = createBlock({
+  type: 'phaseProgress',
+  label: 'Phase Progress',
+  form: 'primitive',
+  category: 'Time',
+  description: 'Extract eased progress signal from PhaseMachine',
+  inputs: [input('phase', 'Phase', 'Signal<PhaseSample>')],
+  outputs: [output('progress', 'Progress', 'Signal<Unit>')],
+  color: '#22c55e',
+  laneKind: 'Phase',
+  priority: 2,
+});
+
+export const PhaseClock = createBlock({
+  type: 'PhaseClock',
+  label: 'Phase Clock',
+  form: 'primitive',
+  subcategory: 'Time',
+  category: 'Time',
+  description: 'Time-based phase progression with loop modes',
+  outputs: [output('phase', 'Phase', 'Signal<number>')],
+  paramSchema: [
+    { key: 'duration', label: 'Duration (s)', type: 'number', min: 0.1, max: 10.0, step: 0.1, defaultValue: 3.0 },
+    { key: 'mode', label: 'Mode', type: 'select', options: [
+      { value: 'loop', label: 'Loop' },
+      { value: 'once', label: 'Once' },
+      { value: 'pingpong', label: 'Ping-Pong' },
+    ], defaultValue: 'loop' },
+    { key: 'offset', label: 'Offset (s)', type: 'number', min: -10.0, max: 10.0, step: 0.1, defaultValue: 0.0 },
+  ],
+  color: '#22c55e',
+  laneKind: 'Phase',
+  priority: 3,
+});
+```
+
+---
+
+## Scene
+
+**File:** `legacy/scene.ts`
+
+```typescript
+import { createBlock } from '../factory';
+import { input, output, getPathOptions } from '../utils';
+
+export const SVGPathSource = createBlock({
+  type: 'SVGPathSource',
+  label: 'SVG Paths',
+  form: 'primitive',
+  subcategory: 'Sources',
+  category: 'Scene',
+  description: 'Load SVG path data from the path library',
+  outputs: [output('scene', 'Scene', 'Scene')],
+  paramSchema: [
+    { key: 'target', label: 'Target', type: 'select', get options() { return getPathOptions(); }, defaultValue: 'builtin:logo' },
+  ],
+  color: '#4a9eff',
+  laneKind: 'Scene',
+  priority: 1,
+});
+
+export const SamplePoints = createBlock({
+  type: 'SamplePoints',
+  label: 'Sample Points',
+  form: 'primitive',
+  subcategory: 'Sources',
+  category: 'Derivers',
+  description: 'Extract point targets from scene paths',
+  inputs: [input('scene', 'Scene', 'Scene')],
+  outputs: [output('targets', 'Targets', 'SceneTargets')],
+  paramSchema: [
+    { key: 'density', label: 'Density', type: 'number', min: 0.1, max: 3.0, step: 0.1, defaultValue: 1.0 },
+  ],
+  color: '#6b5ce7',
+  laneKind: 'Scene',
+  priority: 2,
+});
+
+export const TextSource = createBlock({
+  type: 'TextSource',
+  label: 'Text Source',
+  form: 'primitive',
+  subcategory: 'Sources',
+  category: 'Scene',
+  description: 'Create scene from text (per-character elements)',
+  outputs: [output('scene', 'Scene', 'Scene')],
+  paramSchema: [
+    { key: 'text', label: 'Text', type: 'string', defaultValue: 'LOOM99' },
+    { key: 'fontSize', label: 'Font Size', type: 'number', min: 12, max: 200, step: 4, defaultValue: 48 },
+    { key: 'letterSpacing', label: 'Letter Spacing', type: 'number', min: 0, max: 20, step: 1, defaultValue: 4 },
+    { key: 'startX', label: 'Start X', type: 'number', min: 0, max: 500, step: 10, defaultValue: 100 },
+    { key: 'startY', label: 'Start Y', type: 'number', min: 0, max: 500, step: 10, defaultValue: 200 },
+  ],
+  color: '#4a9eff',
+  laneKind: 'Scene',
+  priority: 2,
+});
+```
+
+---
+
+## Compose
+
+**File:** `legacy/compose.ts`
+
+```typescript
+import { createBlock } from '../factory';
+import { input, output } from '../utils';
+
+export const PerElementTransport = createBlock({
+  type: 'PerElementTransport',
+  label: 'Per-Element Transport',
+  form: 'primitive',
+  category: 'Compose',
+  description: 'Apply animation to each element with individual delays',
+  inputs: [
+    input('targets', 'Targets', 'SceneTargets'),
+    input('positions', 'Start Positions', 'Field<Point>'),
+    input('delays', 'Delays', 'Field<Duration>'),
+    input('phase', 'Phase', 'Signal<PhaseSample>'),
+  ],
+  outputs: [output('program', 'Program', 'Program')],
+  color: '#f97316',
+  laneKind: 'Spec',
+  priority: 1,
+});
+
+export const PerElementProgress = createBlock({
+  type: 'perElementProgress',
+  label: 'Per-Element Progress',
+  form: 'primitive',
+  category: 'Compose',
+  description: 'Per-element staggered animation progress (0-1)',
+  inputs: [
+    input('phase', 'Phase', 'Signal<PhaseSample>'),
+    input('delays', 'Delays', 'Field<Duration>'),
+    input('durations', 'Durations', 'Field<Duration>'),
+  ],
+  outputs: [output('progress', 'Progress', 'Signal<Unit>')],
+  paramSchema: [
+    { key: 'easing', label: 'Easing', type: 'select', options: [
+      { value: 'linear', label: 'Linear' },
+      { value: 'easeInQuad', label: 'Ease In Quad' },
+      { value: 'easeOutQuad', label: 'Ease Out Quad' },
+      { value: 'easeOutCubic', label: 'Ease Out Cubic' },
+      { value: 'easeInOutCubic', label: 'Ease In Out Cubic' },
+    ], defaultValue: 'easeOutCubic' },
+  ],
+  color: '#f97316',
+  laneKind: 'Spec',
+  priority: 2,
+});
+
+export const LerpPoints = createBlock({
+  type: 'lerpPoints',
+  label: 'Lerp Points',
+  form: 'primitive',
+  category: 'Compose',
+  description: 'Interpolate per-element from start to end positions based on progress',
+  inputs: [
+    input('starts', 'Starts', 'Field<Point>'),
+    input('ends', 'Ends', 'Field<Point>'),
+    input('progress', 'Progress', 'Signal<Unit>'),
+  ],
+  outputs: [output('positions', 'Positions', 'Signal<Point>')],
+  color: '#f97316',
+  laneKind: 'Spec',
+  laneFlavor: 'Motion',
+  priority: 3,
+});
+
+export const OutputProgram = createBlock({
+  type: 'outputProgram',
+  label: 'Program Output',
+  form: 'primitive',
+  category: 'Compose',
+  description: 'Mark a Program as the patch output (before rendering)',
+  inputs: [input('program', 'Program', 'Program')],
+  color: '#ef4444',
+  laneKind: 'Output',
+  priority: 2,
+});
+```
+
+---
+
+## Render
+
+**File:** `legacy/render.ts`
+
+```typescript
+import { createBlock } from '../factory';
+import { input, output } from '../utils';
+
+export const ParticleRenderer = createBlock({
+  type: 'ParticleRenderer',
+  label: 'Particle Renderer',
+  form: 'primitive',
+  category: 'Render',
+  description: 'Render particles as glowing circles',
+  inputs: [input('program', 'Program', 'Program')],
+  outputs: [output('render', 'Render', 'Render')],
+  paramSchema: [
+    { key: 'radius', label: 'Radius', type: 'number', min: 0.5, max: 10, step: 0.5, defaultValue: 2.5 },
+    { key: 'glow', label: 'Glow', type: 'boolean', defaultValue: true },
+    { key: 'glowRadius', label: 'Glow Radius', type: 'number', min: 0, max: 30, step: 1, defaultValue: 10 },
+  ],
+  color: '#ef4444',
+  laneKind: 'Program',
+  laneFlavor: 'Style',
+  priority: 1,
+});
+
+export const GlowFilter = createBlock({
+  type: 'glowFilter',
+  label: 'Glow Filter',
+  form: 'primitive',
+  category: 'FX',
+  description: 'Create an SVG glow filter definition',
+  outputs: [output('filter', 'Filter', 'FilterDef')],
+  paramSchema: [
+    { key: 'color', label: 'Color', type: 'color', defaultValue: '#ffffff' },
+    { key: 'blur', label: 'Blur', type: 'number', min: 1, max: 50, step: 1, defaultValue: 10 },
+    { key: 'intensity', label: 'Intensity', type: 'number', min: 0.5, max: 5, step: 0.1, defaultValue: 2 },
+  ],
+  color: '#ec4899',
+  laneKind: 'Program',
+  laneFlavor: 'Style',
+  priority: 5,
+});
+
+// ... (CircleNode, GroupNode, RenderTreeAssemble, PerElementCircles, PathRenderer, MaskReveal, RenderInstances2D, Canvas)
+```
+
+---
+
+## Adapters
+
+**File:** `legacy/adapters.ts`
+
+```typescript
+import { createBlock } from '../factory';
+import { input, output } from '../utils';
+
+export const SceneToTargets = createBlock({
+  type: 'SceneToTargets',
+  label: 'Scene → Targets',
+  form: 'primitive',
+  category: 'Adapters',
+  description: 'Convert Scene to SceneTargets (sample points from paths)',
+  inputs: [input('scene', 'Scene', 'Scene')],
+  outputs: [output('targets', 'Targets', 'SceneTargets')],
+  color: '#71717a',
+  laneKind: 'Scene',
+  priority: 10,
+});
+
+export const FieldToSignal = createBlock({
+  type: 'FieldToSignal',
+  label: 'Field → Signal',
+  form: 'primitive',
+  category: 'Adapters',
+  description: 'Convert Field<A> to Signal<A> by freezing at compilation time',
+  inputs: [input('field', 'Field', 'Field<number>')],
+  outputs: [output('signal', 'Signal', 'Signal<number>')],
+  color: '#71717a',
+  laneKind: 'Fields',
+  priority: 10,
+});
+
+// ... (ScalarToSignalNumber, SignalToScalarNumber, TimeToPhase, PhaseToTime, WrapPhase, ElementCount, LiftScalarToField)
+```
+
+---
+
+## Math
+
+**File:** `legacy/math.ts`
+
+```typescript
+import { createBlock } from '../factory';
+import { input, output } from '../utils';
+
+export const MathConstNumber = createBlock({
+  type: 'math.constNumber',
+  label: 'Const Number',
+  form: 'primitive',
+  category: 'Math',
+  description: 'Constant scalar number',
+  outputs: [output('out', 'Out', 'Scalar:number')],
+  paramSchema: [
+    { key: 'value', label: 'Value', type: 'number', min: -1000, max: 1000, step: 0.1, defaultValue: 0 },
+  ],
+  color: '#8b5cf6',
+  laneKind: 'Scalars',
+  priority: 1,
+});
+
+export const MathAddScalar = createBlock({
+  type: 'math.addScalar',
+  label: 'Add',
+  form: 'primitive',
+  category: 'Math',
+  description: 'Add two scalar numbers',
+  inputs: [input('a', 'A', 'Scalar:number'), input('b', 'B', 'Scalar:number')],
+  outputs: [output('out', 'Out', 'Scalar:number')],
+  color: '#8b5cf6',
+  laneKind: 'Scalars',
+  priority: 2,
+});
+
+export const MathMulScalar = createBlock({
+  type: 'math.mulScalar',
+  label: 'Multiply',
+  form: 'primitive',
+  category: 'Math',
+  description: 'Multiply two scalar numbers',
+  inputs: [input('a', 'A', 'Scalar:number'), input('b', 'B', 'Scalar:number')],
+  outputs: [output('out', 'Out', 'Scalar:number')],
+  color: '#8b5cf6',
+  laneKind: 'Scalars',
+  priority: 2,
+});
+
+export const MathSinScalar = createBlock({
+  type: 'math.sinScalar',
+  label: 'Sin',
+  form: 'primitive',
+  category: 'Math',
+  description: 'Sine of a scalar number',
+  inputs: [input('x', 'X', 'Scalar:number')],
+  outputs: [output('out', 'Out', 'Scalar:number')],
+  color: '#8b5cf6',
+  laneKind: 'Scalars',
+  priority: 3,
+});
+```
+
+---
+
+## Program
+
+**File:** `legacy/program.ts`
+
+```typescript
+import { createBlock } from '../factory';
+import { input, output } from '../utils';
+
+export const DemoProgram = createBlock({
+  type: 'demoProgram',
+  label: 'Demo Program',
+  form: 'primitive',
+  category: 'Compose',
+  description: 'Generate a visual proof program',
+  inputs: [input('speed', 'Speed', 'Scalar:number'), input('amp', 'Amplitude', 'Scalar:number')],
+  outputs: [output('program', 'Program', 'Program')],
+  paramSchema: [
+    { key: 'variant', label: 'Variant', type: 'select', options: [
+      { value: 'lineDrawing', label: 'Line Drawing' },
+      { value: 'pulsingLine', label: 'Pulsing Line' },
+      { value: 'bouncingCircle', label: 'Bouncing Circle' },
+      { value: 'particles', label: 'Particles' },
+      { value: 'oscillator', label: 'Oscillator' },
+    ], defaultValue: 'lineDrawing' },
+    { key: 'speed', label: 'Speed', type: 'number', min: 0.1, max: 10, step: 0.1, defaultValue: 1 },
+    { key: 'amp', label: 'Amplitude', type: 'number', min: 1, max: 200, step: 1, defaultValue: 30 },
+    { key: 'stroke', label: 'Stroke Color', type: 'color', defaultValue: '#ffffff' },
+    { key: 'cx', label: 'Center X', type: 'number', min: 0, max: 800, step: 10, defaultValue: 200 },
+    { key: 'cy', label: 'Center Y', type: 'number', min: 0, max: 600, step: 10, defaultValue: 120 },
+    { key: 'r', label: 'Radius', type: 'number', min: 1, max: 50, step: 1, defaultValue: 8 },
+  ],
+  color: '#f97316',
+  laneKind: 'Program',
+  priority: 1,
+});
+```
+
+---
+
+## FX
+
+**File:** `legacy/fx.ts`
+
+```typescript
+import { createBlock } from '../factory';
+import { output } from '../utils';
+
+export const StrokeStyle = createBlock({
+  type: 'StrokeStyle',
+  label: 'Stroke Style',
+  form: 'primitive',
+  category: 'FX',
+  description: 'Configure stroke appearance for paths',
+  outputs: [output('style', 'Style', 'StrokeStyle')],
+  paramSchema: [
+    { key: 'width', label: 'Width', type: 'number', min: 1, max: 20, step: 1, defaultValue: 4 },
+    { key: 'color', label: 'Color', type: 'color', defaultValue: '#ffffff' },
+    { key: 'linecap', label: 'Line Cap', type: 'select', options: [
+      { value: 'butt', label: 'Butt' },
+      { value: 'round', label: 'Round' },
+      { value: 'square', label: 'Square' },
+    ], defaultValue: 'round' },
+    { key: 'dasharray', label: 'Dash Array', type: 'string', defaultValue: '' },
+  ],
+  color: '#ec4899',
+  laneKind: 'Program',
+  laneFlavor: 'Style',
+  priority: 6,
+});
+
+export const GooFilter = createBlock({
+  type: 'GooFilter',
+  label: 'Goo Filter',
+  form: 'primitive',
+  category: 'FX',
+  description: 'Metaball/liquid blob merging effect',
+  outputs: [output('filter', 'Filter', 'FilterDef')],
+  paramSchema: [
+    { key: 'blur', label: 'Blur', type: 'number', min: 1, max: 30, step: 1, defaultValue: 10 },
+    { key: 'threshold', label: 'Threshold', type: 'number', min: 1, max: 50, step: 1, defaultValue: 20 },
+    { key: 'contrast', label: 'Contrast', type: 'number', min: 10, max: 100, step: 5, defaultValue: 35 },
+  ],
+  color: '#ec4899',
+  laneKind: 'Program',
+  laneFlavor: 'Style',
+  priority: 7,
+});
+
+export const RGBSplitFilter = createBlock({
+  type: 'RGBSplitFilter',
+  label: 'RGB Split',
+  form: 'primitive',
+  category: 'FX',
+  description: 'Chromatic aberration / RGB channel separation',
+  outputs: [output('filter', 'Filter', 'FilterDef')],
+  paramSchema: [
+    { key: 'redOffsetX', label: 'Red X', type: 'number', min: -20, max: 20, step: 1, defaultValue: 3 },
+    { key: 'redOffsetY', label: 'Red Y', type: 'number', min: -20, max: 20, step: 1, defaultValue: 0 },
+    { key: 'blueOffsetX', label: 'Blue X', type: 'number', min: -20, max: 20, step: 1, defaultValue: -3 },
+    { key: 'blueOffsetY', label: 'Blue Y', type: 'number', min: -20, max: 20, step: 1, defaultValue: 0 },
+  ],
+  color: '#ec4899',
+  laneKind: 'Program',
+  laneFlavor: 'Style',
+  priority: 8,
+});
+```
+
+---
+
+## Macros
+
+**File:** `legacy/macros.ts`
+
+```typescript
+import type { BlockDefinition, BlockSubcategory } from '../types';
+
+function createMacro(config: {
+  type: string;
+  label: string;
+  description: string;
+  priority: number;
+  color?: string;
+  subcategory?: BlockSubcategory;
+}): BlockDefinition {
+  return {
+    type: config.type,
+    label: config.label,
+    form: 'macro',
+    subcategory: config.subcategory || 'Animation Styles',
+    category: 'Macros',
+    description: config.description,
+    inputs: [],
+    outputs: [],
+    defaultParams: {},
+    paramSchema: [],
+    color: config.color || '#fbbf24',
+    laneKind: 'Program',
+    priority: config.priority,
+  };
+}
+
+// Animation Style Macros
+export const MacroLineDrawing = createMacro({ type: 'macro:lineDrawing', label: '✨ Line Drawing', description: '...', priority: -100 });
+export const MacroParticles = createMacro({ type: 'macro:particles', label: '✨ Particles', description: '...', priority: -99 });
+export const MacroBouncingCircle = createMacro({ type: 'macro:bouncingCircle', label: '✨ Bouncing Circle', description: '...', priority: -98 });
+export const MacroOscillator = createMacro({ type: 'macro:oscillator', label: '✨ Oscillator', description: '...', priority: -97 });
+export const MacroRadialBurst = createMacro({ type: 'macro:radialBurst', label: '✨ Radial Burst', description: '...', priority: -96 });
+export const MacroCascade = createMacro({ type: 'macro:cascade', label: '✨ Cascade', description: '...', priority: -95 });
+export const MacroScatter = createMacro({ type: 'macro:scatter', label: '✨ Scatter', description: '...', priority: -94 });
+export const MacroImplosion = createMacro({ type: 'macro:implosion', label: '✨ Implosion', description: '...', priority: -93 });
+export const MacroSwarm = createMacro({ type: 'macro:swarm', label: '✨ Swarm', description: '...', priority: -92 });
+export const MacroLoveYouBaby = createMacro({ type: 'macro:loveYouBaby', label: '💖 Love You Baby', description: '...', priority: -91, color: '#ff2d75' });
+export const MacroNebula = createMacro({ type: 'macro:nebula', label: '🌌 Nebula', description: '...', priority: -90, color: '#a855f7' });
+
+// Effect Macros
+export const MacroGlitchStorm = createMacro({ type: 'macro:glitchStorm', label: '⚡ Glitch Storm', description: '...', priority: -89, color: '#22c55e', subcategory: 'Effects' });
+export const MacroAurora = createMacro({ type: 'macro:aurora', label: '🌊 Aurora', description: '...', priority: -88, color: '#06b6d4', subcategory: 'Effects' });
+export const MacroRevealMask = createMacro({ type: 'macro:revealMask', label: '🎭 Reveal Mask', description: '...', priority: -87, color: '#14b8a6', subcategory: 'Effects' });
+export const MacroLiquid = createMacro({ type: 'macro:liquid', label: '💧 Liquid', description: '...', priority: -86, color: '#10b981', subcategory: 'Effects' });
+```
+
+---
+
+## End of Archive
+
+This code has been archived and removed from the active codebase. See the new block system in:
+- `src/editor/blocks/` - New primitive/composite block definitions
+- `src/editor/composites.ts` - Composite system
+- `src/editor/compiler/unified/` - New unified compiler

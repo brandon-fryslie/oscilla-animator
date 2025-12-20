@@ -1,8 +1,8 @@
 /**
  * Block Compiler Registry
  *
- * Contains both domain primitives (new system) and legacy blocks.
- * Legacy blocks are needed for macro expansions to work.
+ * Contains domain primitives and signal blocks (new system).
+ * Legacy blocks have been archived to .agent_planning/LEGACY-BLOCKS-ARCHIVE.md
  */
 
 import type { BlockRegistry } from '../types';
@@ -58,107 +58,6 @@ import {
   PulseDividerBlock,
   EnvelopeADBlock,
 } from './rhythm';
-
-// Legacy blocks (needed for macros)
-import {
-  // Sources
-  SVGPathSourceBlock,
-  ConstantNumberBlock,
-  ConstantVec2Block,
-  TextSourceBlock,
-} from './legacy/sources';
-import {
-  // Fields
-  RadialOriginBlock,
-  LinearStaggerBlock,
-  AddFieldNumberBlock,
-  MulFieldNumberBlock,
-  ScaleFieldNumberBlock,
-  MapFieldNumberBlock,
-  StaggerFieldBlock,
-  NoiseFieldBlock,
-  RegionFieldBlock,
-  ConstantFieldDurationBlock,
-  WaveStaggerBlock,
-  SizeVariationBlock,
-  ColorFieldBlock,
-  ElementIndexFieldBlock,
-  RandomJitterFieldBlock,
-  SinFieldBlock,
-  SubFieldNumberBlock,
-  DivFieldNumberBlock,
-  FloorFieldNumberBlock,
-  MakePointFieldBlock,
-  RandomStaggerBlock,
-  IndexStaggerBlock,
-  DurationVariationBlock,
-  DecayEnvelopeBlock,
-  ExplosionOriginBlock,
-  TopDropOriginBlock,
-  GridPositionsBlock,
-  CenterPointBlock,
-  RotationFieldBlock,
-  ScaleFieldBlock,
-  OpacityFieldBlock,
-  WobbleParamsBlock,
-  SpiralParamsBlock,
-  WaveParamsBlock,
-  JitterParamsBlock,
-  EasingFieldBlock,
-} from './legacy/fields';
-import {
-  // Time
-  PhaseMachineBlock,
-  EaseRampBlock,
-  PhaseProgressBlock,
-} from './legacy/time';
-import {
-  // Compose
-  PerElementTransportBlock,
-  DemoProgramBlock,
-  PerElementProgressBlock,
-  LerpPointsBlock,
-} from './legacy/compose';
-import {
-  // Sinks
-  OutputProgramBlock,
-  DebugOutputBlock,
-} from './legacy/sinks';
-import {
-  // Adapters
-  SamplePointsBlock,
-  SceneToTargetsBlock,
-  FieldToSignalBlock,
-  LiftScalarToFieldNumberBlock,
-  ScalarToSignalNumberBlock,
-  SignalToScalarNumberBlock,
-  TimeToPhaseBlock,
-  PhaseToTimeBlock,
-  WrapPhaseBlock,
-  ElementCountBlock,
-} from './legacy/adapters';
-import {
-  // Render
-  ParticleRendererBlock,
-  CanvasBlock,
-  GlowFilterBlock,
-  CircleNodeBlock,
-  GroupNodeBlock,
-  RenderTreeAssembleBlock,
-  PerElementCirclesBlock,
-  PathRendererBlock,
-  StrokeStyleBlock,
-  GooFilterBlock,
-  RGBSplitFilterBlock,
-  MaskRevealBlock,
-} from './legacy/render';
-import {
-  // Math
-  MathConstNumberBlock,
-  MathAddScalarBlock,
-  MathMulScalarBlock,
-  MathSinScalarBlock,
-} from './legacy/math';
 
 // =============================================================================
 // Registry
@@ -217,97 +116,6 @@ export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   // Rhythm primitives (Slice 2: Rhythmic Accent System)
   PulseDivider: PulseDividerBlock,
   EnvelopeAD: EnvelopeADBlock,
-
-  // Legacy - Sources
-  SVGPathSource: SVGPathSourceBlock,
-  ConstantNumber: ConstantNumberBlock,
-  ConstantVec2: ConstantVec2Block,
-  TextSource: TextSourceBlock,
-
-  // Legacy - Fields
-  RadialOrigin: RadialOriginBlock,
-  LinearStagger: LinearStaggerBlock,
-  AddFieldNumber: AddFieldNumberBlock,
-  MulFieldNumber: MulFieldNumberBlock,
-  ScaleFieldNumber: ScaleFieldNumberBlock,
-  MapFieldNumber: MapFieldNumberBlock,
-  StaggerField: StaggerFieldBlock,
-  NoiseField: NoiseFieldBlock,
-  regionField: RegionFieldBlock,
-  constantFieldDuration: ConstantFieldDurationBlock,
-  WaveStagger: WaveStaggerBlock,
-  SizeVariation: SizeVariationBlock,
-  ColorField: ColorFieldBlock,
-  ElementIndexField: ElementIndexFieldBlock,
-  RandomJitterField: RandomJitterFieldBlock,
-  SinField: SinFieldBlock,
-  SubFieldNumber: SubFieldNumberBlock,
-  DivFieldNumber: DivFieldNumberBlock,
-  FloorFieldNumber: FloorFieldNumberBlock,
-  MakePointField: MakePointFieldBlock,
-  RandomStagger: RandomStaggerBlock,
-  IndexStagger: IndexStaggerBlock,
-  DurationVariation: DurationVariationBlock,
-  DecayEnvelope: DecayEnvelopeBlock,
-  ExplosionOrigin: ExplosionOriginBlock,
-  TopDropOrigin: TopDropOriginBlock,
-  GridPositions: GridPositionsBlock,
-  CenterPoint: CenterPointBlock,
-  RotationField: RotationFieldBlock,
-  ScaleField: ScaleFieldBlock,
-  OpacityField: OpacityFieldBlock,
-  WobbleParams: WobbleParamsBlock,
-  SpiralParams: SpiralParamsBlock,
-  WaveParams: WaveParamsBlock,
-  JitterParams: JitterParamsBlock,
-  EasingField: EasingFieldBlock,
-
-  // Legacy - Time
-  PhaseMachine: PhaseMachineBlock,
-  EaseRamp: EaseRampBlock,
-  phaseProgress: PhaseProgressBlock,
-
-  // Legacy - Compose
-  PerElementTransport: PerElementTransportBlock,
-  demoProgram: DemoProgramBlock,
-  perElementProgress: PerElementProgressBlock,
-  lerpPoints: LerpPointsBlock,
-
-  // Legacy - Sinks
-  outputProgram: OutputProgramBlock,
-  DebugOutput: DebugOutputBlock,
-
-  // Legacy - Adapters
-  SamplePoints: SamplePointsBlock,
-  SceneToTargets: SceneToTargetsBlock,
-  FieldToSignal: FieldToSignalBlock,
-  LiftScalarToFieldNumber: LiftScalarToFieldNumberBlock,
-  ScalarToSignalNumber: ScalarToSignalNumberBlock,
-  SignalToScalarNumber: SignalToScalarNumberBlock,
-  TimeToPhase: TimeToPhaseBlock,
-  PhaseToTime: PhaseToTimeBlock,
-  WrapPhase: WrapPhaseBlock,
-  elementCount: ElementCountBlock,
-
-  // Legacy - Render
-  ParticleRenderer: ParticleRendererBlock,
-  canvas: CanvasBlock,
-  glowFilter: GlowFilterBlock,
-  CircleNode: CircleNodeBlock,
-  GroupNode: GroupNodeBlock,
-  RenderTreeAssemble: RenderTreeAssembleBlock,
-  perElementCircles: PerElementCirclesBlock,
-  PathRenderer: PathRendererBlock,
-  StrokeStyle: StrokeStyleBlock,
-  GooFilter: GooFilterBlock,
-  RGBSplitFilter: RGBSplitFilterBlock,
-  MaskReveal: MaskRevealBlock,
-
-  // Legacy - Math
-  'math.constNumber': MathConstNumberBlock,
-  'math.addScalar': MathAddScalarBlock,
-  'math.mulScalar': MathMulScalarBlock,
-  'math.sinScalar': MathSinScalarBlock,
 };
 
 /**

@@ -328,6 +328,114 @@ function applyPerElementOffsetLens(
   return { kind: 'Field:number', value: offsetField };
 }
 
+/**
+ * Apply clamp lens to a Signal:number artifact.
+ * Bounds values to [min, max] range.
+ */
+function applyClampLens(
+  artifact: Artifact,
+  params: Record<string, unknown>
+): Artifact {
+  if (artifact.kind !== 'Signal:number' && artifact.kind !== 'Signal:Unit') {
+    return {
+      kind: 'Error',
+      message: `ClampLens requires Signal:number or Signal:Unit input, got ${artifact.kind}`,
+    };
+  }
+
+  const min = (params.min as number) ?? 0;
+  const max = (params.max as number) ?? 1;
+  const inputSignal = artifact.value as SignalNumber;
+
+  const lensedSignal: SignalNumber = (tMs, ctx) => {
+    const value = inputSignal(tMs, ctx);
+    return Math.max(min, Math.min(max, value));
+  };
+
+  return { kind: 'Signal:number', value: lensedSignal };
+}
+
+/**
+ * Apply offset lens to a Signal:number artifact.
+ * Adds a constant offset to the value.
+ */
+function applyOffsetLens(
+  artifact: Artifact,
+  params: Record<string, unknown>
+): Artifact {
+  if (artifact.kind !== 'Signal:number' && artifact.kind !== 'Signal:Unit') {
+    return {
+      kind: 'Error',
+      message: `OffsetLens requires Signal:number or Signal:Unit input, got ${artifact.kind}`,
+    };
+  }
+
+  const amount = (params.amount as number) ?? 0;
+  const inputSignal = artifact.value as SignalNumber;
+
+  const lensedSignal: SignalNumber = (tMs, ctx) => {
+    return inputSignal(tMs, ctx) + amount;
+  };
+
+  return { kind: 'Signal:number', value: lensedSignal };
+}
+
+/**
+ * Apply deadzone lens to a Signal:number artifact.
+ * Zeros out values below the threshold.
+ */
+function applyDeadzoneLens(
+  artifact: Artifact,
+  params: Record<string, unknown>
+): Artifact {
+  if (artifact.kind !== 'Signal:number' && artifact.kind !== 'Signal:Unit') {
+    return {
+      kind: 'Error',
+      message: `DeadzoneLens requires Signal:number or Signal:Unit input, got ${artifact.kind}`,
+    };
+  }
+
+  const threshold = (params.threshold as number) ?? 0.05;
+  const inputSignal = artifact.value as SignalNumber;
+
+  const lensedSignal: SignalNumber = (tMs, ctx) => {
+    const value = inputSignal(tMs, ctx);
+    return Math.abs(value) < threshold ? 0 : value;
+  };
+
+  return { kind: 'Signal:number', value: lensedSignal };
+}
+
+/**
+ * Apply mapRange lens to a Signal:number artifact.
+ * Maps input range to output range linearly.
+ */
+function applyMapRangeLens(
+  artifact: Artifact,
+  params: Record<string, unknown>
+): Artifact {
+  if (artifact.kind !== 'Signal:number' && artifact.kind !== 'Signal:Unit') {
+    return {
+      kind: 'Error',
+      message: `MapRangeLens requires Signal:number or Signal:Unit input, got ${artifact.kind}`,
+    };
+  }
+
+  const inMin = (params.inMin as number) ?? 0;
+  const inMax = (params.inMax as number) ?? 1;
+  const outMin = (params.outMin as number) ?? 0;
+  const outMax = (params.outMax as number) ?? 1;
+  const inputSignal = artifact.value as SignalNumber;
+
+  const lensedSignal: SignalNumber = (tMs, ctx) => {
+    const value = inputSignal(tMs, ctx);
+    const normalized = (value - inMin) / (inMax - inMin);
+    return outMin + normalized * (outMax - outMin);
+  };
+
+  return { kind: 'Signal:number', value: lensedSignal };
+}
+
 // =============================================================================
 // Main Lens Application
 // =============================================================================
@@ -354,6 +462,14 @@ export function applyLens(
       return applyBroadcastLens(artifact, lens.params);
     case 'perElementOffset':
       return applyPerElementOffsetLens(artifact, lens.params);
+    case 'clamp':
+      return applyClampLens(artifact, lens.params);
+    case 'offset':
+      return applyOffsetLens(artifact, lens.params);
+    case 'deadzone':
+      return applyDeadzoneLens(artifact, lens.params);
+    case 'mapRange':
+      return applyMapRangeLens(artifact, lens.params);
     default:
       return {
         kind: 'Error',
@@ -381,5 +497,9 @@ export function isValidLensType(type: string): type is LensType {
     'warp',
     'broadcast',
     'perElementOffset',
+    'clamp',
+    'offset',
+    'deadzone',
+    'mapRange',
   ].includes(type);
 }

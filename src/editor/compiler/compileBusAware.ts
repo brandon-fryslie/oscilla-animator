@@ -581,9 +581,16 @@ export function compileBusAwarePatch(
           // Input comes from a bus - get the bus value
           let busArtifact = getBusValue(busListener.busId, buses, publishers, compiledPortMap, errors);
 
-          // Apply lens transformation if configured
-          if (busListener.lens && busArtifact.kind !== 'Error') {
-            busArtifact = applyLens(busArtifact, busListener.lens);
+
+          // Apply lens stack transformations if configured
+          // Support both legacy single lens and new lens stack
+          const lensStack = busListener.lensStack || (busListener.lens ? [busListener.lens] : undefined);
+          if (lensStack && lensStack.length > 0 && busArtifact.kind !== 'Error') {
+            for (const lens of lensStack) {
+              if (busArtifact.kind !== 'Error') {
+                busArtifact = applyLens(busArtifact, lens);
+              }
+            }
           }
 
           inputs[p.name] = busArtifact;
