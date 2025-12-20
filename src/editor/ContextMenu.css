@@ -1,0 +1,184 @@
+/**
+ * ContextMenu Styles
+ */
+
+.context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.context-menu {
+  position: absolute;
+  min-width: 180px;
+  max-width: 280px;
+  background: #252525;
+  border: 1px solid #444;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 8px 0;
+  pointer-events: auto;
+  animation: context-menu-appear 0.1s ease-out;
+}
+
+@keyframes context-menu-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+  margin-bottom: 4px;
+}
+
+.context-menu-direction {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  color: #60a5fa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.context-menu-slot {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.context-menu-empty {
+  padding: 12px;
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.context-menu-section {
+  padding: 4px 0;
+}
+
+.context-menu-section:not(:last-child) {
+  border-bottom: 1px solid #333;
+}
+
+.context-menu-section-title {
+  padding: 4px 12px;
+  font-size: 9px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.context-menu-item {
+  padding: 0 4px;
+}
+
+.context-menu-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #ccc;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.context-menu-action:hover {
+  background: #333;
+  color: #fff;
+}
+
+.context-menu-action.disconnect-all {
+  color: #ef4444;
+}
+
+.context-menu-action.disconnect-all:hover {
+  background: #3a2020;
+  color: #f87171;
+}
+
+.context-menu-icon {
+  font-size: 14px;
+  color: #888;
+  width: 16px;
+  text-align: center;
+}
+
+.context-menu-action:hover .context-menu-icon {
+  color: #ef4444;
+}
+
+.context-menu-target-block {
+  flex: 1;
+  font-weight: 500;
+}
+
+.context-menu-target-slot {
+  color: #888;
+  font-size: 11px;
+}
+
+/* Confirmation state */
+.context-menu-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #2a2020;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #f87171;
+}
+
+.context-menu-confirm span:first-child {
+  flex: 1;
+}
+
+.context-menu-confirm-btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.context-menu-confirm-btn.confirm {
+  background: #ef4444;
+  color: #fff;
+}
+
+.context-menu-confirm-btn.confirm:hover {
+  background: #dc2626;
+}
+
+.context-menu-confirm-btn.cancel {
+  background: #333;
+  color: #aaa;
+}
+
+.context-menu-confirm-btn.cancel:hover {
+  background: #444;
+  color: #fff;
+}

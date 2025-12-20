@@ -1,0 +1,818 @@
+/**
+ * TimeConsole Styles
+ *
+ * Space-efficient time control console with three collapse levels:
+ * - expanded: Full controls (still compact)
+ * - minimal: Single-row compact bar
+ * - hidden: Tiny chip in corner
+ */
+
+/* =============================================================================
+   Container - Expanded Mode
+   ============================================================================= */
+
+.time-console {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  background: #1a1a1a;
+  border-top: 1px solid #333;
+  flex-shrink: 0;
+}
+
+/* =============================================================================
+   Header with Mode Badge
+   ============================================================================= */
+
+.time-console-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mode-badge {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.mode-badge.mode-finite {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.mode-badge.mode-cyclic {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196f3;
+  border: 1px solid rgba(33, 150, 243, 0.4);
+}
+
+.mode-badge.mode-infinite {
+  background: rgba(156, 39, 176, 0.2);
+  color: #9c27b0;
+  border: 1px solid rgba(156, 39, 176, 0.4);
+}
+
+/* Collapse button in header */
+.collapse-btn {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 3px;
+  color: #666;
+  font-size: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.collapse-btn:hover {
+  background: #333;
+  border-color: #666;
+  color: #999;
+}
+
+.header-collapse {
+  margin-left: auto;
+}
+
+/* =============================================================================
+   Body (Mode-Specific Controls)
+   ============================================================================= */
+
+.time-console-body {
+  min-height: 0;
+}
+
+/* =============================================================================
+   Finite Mode Controls
+   ============================================================================= */
+
+.finite-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.finite-readouts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.finite-time-display,
+.finite-progress-display {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 10px;
+  color: #888;
+}
+
+.finite-progress-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.finite-ended-badge {
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+  border: 1px solid rgba(255, 152, 0, 0.4);
+}
+
+.finite-scrubber {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.finite-time-label {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 9px;
+  color: #666;
+  min-width: 38px;
+}
+
+.finite-time-start {
+  text-align: left;
+}
+
+.finite-time-end {
+  text-align: right;
+}
+
+.finite-scrubber-container {
+  position: relative;
+  flex: 1;
+  height: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.finite-scrubber-input {
+  flex: 1;
+  height: 3px;
+  background: #333;
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.finite-scrubber-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  background: #4a9eff;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.finite-scrubber-input::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.finite-scrubber-input::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  background: #4a9eff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Cue point markers */
+.finite-cue-marker {
+  position: absolute;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.7;
+}
+
+.finite-cue-marker.cue-phase {
+  background: #ffd93d;
+  height: 14px;
+}
+
+.finite-cue-marker.cue-beat {
+  background: #ff6b6b;
+  height: 10px;
+}
+
+.finite-cue-marker.cue-marker {
+  background: #4ecdc4;
+  height: 8px;
+}
+
+/* Finite mini (for minimal mode) */
+.finite-mini {
+  display: flex;
+  align-items: center;
+}
+
+.finite-mini-time {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 10px;
+  color: #4caf50;
+}
+
+/* =============================================================================
+   Mode Placeholder (Cyclic stubs)
+   ============================================================================= */
+
+.mode-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed #444;
+  border-radius: 4px;
+}
+
+.mode-placeholder-icon {
+  font-size: 14px;
+  opacity: 0.5;
+}
+
+.mode-placeholder-text {
+  font-size: 10px;
+  color: #888;
+  font-weight: 500;
+}
+
+.mode-placeholder-hint {
+  font-size: 9px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Cyclic mini (for minimal mode) */
+.cyclic-mini-time {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 10px;
+  color: #2196f3;
+}
+
+/* =============================================================================
+   Always-Present Controls
+   ============================================================================= */
+
+.time-console-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid #333;
+}
+
+.tc-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tc-btn:hover {
+  background: #333;
+  border-color: #4a9eff;
+}
+
+.tc-btn:active {
+  transform: scale(0.95);
+}
+
+.tc-btn.active {
+  background: #4a9eff;
+  border-color: #4a9eff;
+}
+
+.tc-divider {
+  width: 1px;
+  height: 18px;
+  background: #444;
+  margin: 0 2px;
+}
+
+.tc-setting {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tc-setting-label {
+  font-size: 9px;
+  color: #666;
+}
+
+.tc-setting-input {
+  width: 40px;
+  padding: 2px 4px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 10px;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.tc-setting-input:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+/* Remove spinners from number inputs */
+.tc-setting-input::-webkit-inner-spin-button,
+.tc-setting-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.tc-setting-input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* =============================================================================
+   Infinite Mode Controls - Expanded
+   ============================================================================= */
+
+.infinite-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infinite-readouts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.infinite-now-display {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 10px;
+  color: #9c27b0;
+  font-weight: 600;
+}
+
+.infinite-offset-display {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 9px;
+  color: #ff9800;
+  padding: 1px 4px;
+  background: rgba(255, 152, 0, 0.15);
+  border-radius: 2px;
+}
+
+.infinite-window-display {
+  margin-left: auto;
+}
+
+.infinite-window-btn {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 9px;
+  color: #888;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 3px;
+  padding: 1px 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.infinite-window-btn:hover {
+  border-color: #9c27b0;
+  color: #9c27b0;
+}
+
+.infinite-window-input {
+  width: 40px;
+  padding: 1px 4px;
+  background: #2a2a2a;
+  border: 1px solid #9c27b0;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 9px;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.infinite-window-input:focus {
+  outline: none;
+}
+
+/* Remove spinners from number inputs */
+.infinite-window-input::-webkit-inner-spin-button,
+.infinite-window-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.infinite-window-input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Sliding Window Scope */
+.infinite-scope {
+  position: relative;
+  background: rgba(156, 39, 176, 0.05);
+  border: 1px solid rgba(156, 39, 176, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: grab;
+  user-select: none;
+}
+
+.infinite-scope.dragging {
+  cursor: grabbing;
+  border-color: rgba(156, 39, 176, 0.6);
+  background: rgba(156, 39, 176, 0.1);
+}
+
+.infinite-scope-track {
+  position: relative;
+  height: 20px;
+  background: linear-gradient(90deg,
+    rgba(156, 39, 176, 0.1) 0%,
+    rgba(156, 39, 176, 0.2) 50%,
+    rgba(156, 39, 176, 0.4) 100%
+  );
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.infinite-scope-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    transparent 85%,
+    rgba(156, 39, 176, 0.3) 100%
+  );
+  pointer-events: none;
+}
+
+/* Time tick marks */
+.infinite-scope-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(156, 39, 176, 0.3);
+}
+
+.infinite-scope-tick-label {
+  position: absolute;
+  bottom: 1px;
+  left: 3px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 8px;
+  color: rgba(156, 39, 176, 0.6);
+  white-space: nowrap;
+}
+
+/* "Now" marker */
+.infinite-now-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+}
+
+.infinite-now-line {
+  width: 2px;
+  flex: 1;
+  background: #9c27b0;
+  box-shadow: 0 0 4px rgba(156, 39, 176, 0.6);
+}
+
+.infinite-now-label {
+  position: absolute;
+  top: -1px;
+  font-size: 7px;
+  font-weight: 700;
+  color: #9c27b0;
+  background: #1a1a1a;
+  padding: 0 3px;
+  border-radius: 2px;
+  letter-spacing: 0.3px;
+}
+
+/* Drag hint */
+.infinite-scope-hint {
+  margin-top: 3px;
+  font-size: 8px;
+  color: #555;
+  text-align: center;
+}
+
+/* =============================================================================
+   Infinite Mode Controls - Minimal
+   ============================================================================= */
+
+.infinite-controls-minimal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: grab;
+  user-select: none;
+  padding: 0 4px;
+}
+
+.infinite-controls-minimal.dragging {
+  cursor: grabbing;
+}
+
+/* Mini track showing time position */
+.infinite-mini-track {
+  flex: 1;
+  height: 4px;
+  background: linear-gradient(90deg,
+    rgba(156, 39, 176, 0.2) 0%,
+    rgba(156, 39, 176, 0.4) 100%
+  );
+  border-radius: 2px;
+  position: relative;
+  min-width: 60px;
+}
+
+.infinite-mini-now {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 8px;
+  background: #9c27b0;
+  border-radius: 1px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 4px rgba(156, 39, 176, 0.5);
+}
+
+.infinite-mini-time {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 10px;
+  color: #9c27b0;
+  font-weight: 600;
+  min-width: 45px;
+}
+
+.infinite-mini-offset {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 9px;
+  color: #ff9800;
+  padding: 0 3px;
+  background: rgba(255, 152, 0, 0.15);
+  border-radius: 2px;
+}
+
+.infinite-mini-window {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 9px;
+  color: #666;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 3px;
+  padding: 1px 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.infinite-mini-window:hover {
+  border-color: #9c27b0;
+  color: #9c27b0;
+}
+
+.infinite-mini-window-input {
+  width: 35px;
+  padding: 1px 3px;
+  background: #2a2a2a;
+  border: 1px solid #9c27b0;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 9px;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.infinite-mini-window-input:focus {
+  outline: none;
+}
+
+.infinite-mini-window-input::-webkit-inner-spin-button,
+.infinite-mini-window-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.infinite-mini-window-input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* =============================================================================
+   Minimal Mode - Single Row Layout
+   ============================================================================= */
+
+.time-console-minimal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #1a1a1a;
+  border-top: 1px solid #333;
+  flex-shrink: 0;
+}
+
+/* Mini mode badge */
+.mode-badge-mini {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mode-badge-mini.mode-finite {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.mode-badge-mini.mode-cyclic {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196f3;
+  border: 1px solid rgba(33, 150, 243, 0.4);
+}
+
+.mode-badge-mini.mode-infinite {
+  background: rgba(156, 39, 176, 0.2);
+  color: #9c27b0;
+  border: 1px solid rgba(156, 39, 176, 0.4);
+}
+
+/* Mini transport controls */
+.mini-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.mini-btn {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mini-btn:hover {
+  background: #333;
+  border-color: #4a9eff;
+}
+
+.mini-btn.active {
+  background: #4a9eff;
+  border-color: #4a9eff;
+}
+
+/* Collapse buttons in minimal mode */
+.mini-collapse-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-left: auto;
+}
+
+.mini-collapse-btns .collapse-btn {
+  width: 16px;
+  height: 10px;
+  font-size: 7px;
+}
+
+/* =============================================================================
+   Hidden Mode - Corner Chip
+   ============================================================================= */
+
+.time-console-chip {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(26, 26, 26, 0.95);
+  border: 1px solid #444;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
+.time-console-chip:hover {
+  background: rgba(40, 40, 40, 0.95);
+  border-color: #666;
+}
+
+/* Chip badge */
+.chip-badge {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.chip-badge.chip-finite {
+  background: rgba(76, 175, 80, 0.3);
+  color: #4caf50;
+}
+
+.chip-badge.chip-cyclic {
+  background: rgba(33, 150, 243, 0.3);
+  color: #2196f3;
+}
+
+.chip-badge.chip-infinite {
+  background: rgba(156, 39, 176, 0.3);
+  color: #9c27b0;
+}
+
+.chip-time {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 10px;
+  color: #999;
+}
+
+.chip-play {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chip-play:hover {
+  background: #444;
+  border-color: #4a9eff;
+}
+
+.chip-play.active {
+  background: #4a9eff;
+  border-color: #4a9eff;
+}

@@ -1,0 +1,47 @@
+Agent: iterative-implementer | 2025-12-20-040000
+Mode: manual
+Completed: P0: SVGSampleDomain primitive + SVGSamplePoints composite | Files: 4 | Commits: 0 (no git repo)
+Cache invalidated: None (no eval cache yet)
+Status: in_progress
+
+=== WORK COMPLETED ===
+
+P0: SVGSampleDomain Primitive (TOP PRIORITY) - COMPLETE
+- Created SVGSampleDomain block definition in src/editor/blocks/domain.ts
+- Implemented compiler in src/editor/compiler/blocks/domain/SVGSampleDomain.ts
+  - Basic SVG path parser supporting M, L, C, Q, Z commands
+  - Even (arc-length) and parametric distribution modes
+  - Stable element IDs (sample-0, sample-1, etc.)
+  - Outputs domain + sampled positions Field<vec2>
+- Registered in compiler/blocks/domain/index.ts
+- Registered in compiler/blocks/index.ts (DEFAULT_BLOCK_REGISTRY)
+- Created SVGSamplePoints composite in src/editor/domain-composites.ts
+  - Simple wrapper around SVGSampleDomain primitive
+  - Exposes domain + positions outputs
+
+Files Modified:
+- src/editor/blocks/domain.ts (added SVGSampleDomain block)
+- src/editor/compiler/blocks/domain/SVGSampleDomain.ts (new file, ~370 lines)
+- src/editor/compiler/blocks/domain/index.ts (export SVGSampleDomainBlock)
+- src/editor/compiler/blocks/index.ts (import and register)
+- src/editor/domain-composites.ts (added SVGSamplePoints composite)
+
+Validation: just typecheck passes
+
+=== NEXT STEPS ===
+
+P1: Macro Expansion System (Must Complete)
+- Create src/editor/macros.ts with MACRO_REGISTRY
+- Define MacroTemplate types
+- Implement expandMacro() function
+- Wire into PatchStore.addBlock() to detect form='macro' and expand
+- Create 2-3 working macro templates
+
+Remaining from original plan:
+- P2: Bus-Aware Composite Support + 8 new composites
+- P3: Tests and Documentation
+- Deferred: Legacy macro migration
+
+=== BLOCKERS ===
+
+None currently. Ready to proceed with P1.

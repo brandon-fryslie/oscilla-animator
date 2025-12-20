@@ -1,0 +1,7 @@
+Agent: project-evaluator | 2025-12-20-033000
+Scope: composite-library/full
+Completion: 53% (9/17 spec composites) | Gaps: 8 composites, 34 orphaned primitives
+Reused: 0 findings | Fresh: 42 primitives cataloged, 9 composites analyzed, 15 legacy macros found
+Cache updated: None (no stable knowledge to cache)
+Ambiguities: 6 found (terminology, expansion timing, bus integration, legacy migration, primitive purpose, coverage goals)
+Workflow: PAUSE (4 questions need answers first)

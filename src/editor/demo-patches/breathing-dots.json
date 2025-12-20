@@ -1,0 +1,233 @@
+{
+  "version": 2,
+  "features": {
+    "buses": true
+  },
+  "blocks": [
+    {
+      "id": "block-1",
+      "type": "composite:GridPoints",
+      "label": "Grid Points",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "domain",
+          "label": "Domain",
+          "type": "Domain",
+          "direction": "output"
+        },
+        {
+          "id": "positions",
+          "label": "Positions",
+          "type": "Field<vec2>",
+          "direction": "output"
+        }
+      ],
+      "params": {
+        "count": 25,
+        "seed": 0,
+        "rows": 5,
+        "cols": 5,
+        "spacing": 60,
+        "originX": 400,
+        "originY": 300,
+        "order": "rowMajor"
+      },
+      "category": "Fields"
+    },
+    {
+      "id": "block-2",
+      "type": "PhaseClockLegacy",
+      "label": "Phase Clock",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "phase",
+          "label": "Phase",
+          "type": "Signal<number>",
+          "direction": "output"
+        }
+      ],
+      "params": {
+        "duration": 2,
+        "mode": "loop",
+        "offset": 0
+      },
+      "category": "Time"
+    },
+    {
+      "id": "block-3",
+      "type": "composite:DotsRenderer",
+      "label": "Dots Renderer",
+      "inputs": [
+        {
+          "id": "domain",
+          "label": "Domain",
+          "type": "Domain",
+          "direction": "input"
+        },
+        {
+          "id": "positions",
+          "label": "Positions",
+          "type": "Field<vec2>",
+          "direction": "input"
+        },
+        {
+          "id": "radius",
+          "label": "Radius",
+          "type": "Field<number>",
+          "direction": "input"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "render",
+          "label": "Render",
+          "type": "Render",
+          "direction": "output"
+        }
+      ],
+      "params": {
+        "sizeSeed": 42,
+        "sizeRange": 5,
+        "minSize": 8,
+        "color": "#00ccff",
+        "opacity": 0.9,
+        "glow": true,
+        "glowIntensity": 1.5
+      },
+      "category": "Render"
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-1",
+      "from": {
+        "blockId": "block-1",
+        "slotId": "domain"
+      },
+      "to": {
+        "blockId": "block-3",
+        "slotId": "domain"
+      }
+    },
+    {
+      "id": "conn-2",
+      "from": {
+        "blockId": "block-1",
+        "slotId": "positions"
+      },
+      "to": {
+        "blockId": "block-3",
+        "slotId": "positions"
+      }
+    }
+  ],
+  "lanes": [
+    {
+      "id": "lane-scene",
+      "kind": "Scene",
+      "label": "Scene",
+      "description": "Scene sources and targets",
+      "flavor": "General",
+      "flowStyle": "patchbay",
+      "blockIds": [],
+      "collapsed": false,
+      "pinned": false,
+      "name": "lane-scene"
+    },
+    {
+      "id": "lane-phase",
+      "kind": "Phase",
+      "label": "Phase",
+      "description": "Phase machines and time",
+      "flavor": "General",
+      "flowStyle": "patchbay",
+      "blockIds": ["block-2"],
+      "collapsed": false,
+      "pinned": false,
+      "name": "lane-phase"
+    },
+    {
+      "id": "lane-fields",
+      "kind": "Fields",
+      "label": "Fields",
+      "description": "Per-element values",
+      "flavor": "General",
+      "flowStyle": "chain",
+      "blockIds": ["block-1"],
+      "collapsed": false,
+      "pinned": false,
+      "name": "lane-fields"
+    },
+    {
+      "id": "lane-output",
+      "kind": "Output",
+      "label": "Output",
+      "description": "Renderers and output",
+      "flavor": "General",
+      "flowStyle": "chain",
+      "blockIds": ["block-3"],
+      "collapsed": false,
+      "pinned": false,
+      "name": "lane-output"
+    }
+  ],
+  "buses": [
+    {
+      "id": "bus-phaseA",
+      "name": "phaseA",
+      "type": {
+        "world": "signal",
+        "domain": "phase",
+        "category": "core",
+        "busEligible": true
+      },
+      "combineMode": "last",
+      "defaultValue": 0,
+      "sortKey": 0,
+      "origin": "built-in"
+    }
+  ],
+  "publishers": [
+    {
+      "id": "pub-1",
+      "busId": "bus-phaseA",
+      "from": {
+        "blockId": "block-2",
+        "port": "phase"
+      },
+      "enabled": true,
+      "sortKey": 0
+    }
+  ],
+  "listeners": [
+    {
+      "id": "listener-1",
+      "busId": "bus-phaseA",
+      "to": {
+        "blockId": "block-3",
+        "port": "radius"
+      },
+      "enabled": true,
+      "lens": {
+        "type": "scale",
+        "params": {
+          "scale": 12,
+          "offset": 8
+        }
+      }
+    }
+  ],
+  "settings": {
+    "seed": 0,
+    "speed": 1,
+    "advancedLaneMode": false,
+    "autoConnect": false,
+    "showTypeHints": true,
+    "highlightCompatible": true,
+    "warnBeforeDisconnect": true,
+    "filterByLane": false,
+    "filterByConnection": false
+  }
+}

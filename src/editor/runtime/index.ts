@@ -1,0 +1,73 @@
+/**
+ * Runtime Module Exports
+ *
+ * The execution substrate for animations:
+ * - RenderTree types and helpers
+ * - Player (RAF loop, hot swap, scrubbing)
+ * - SvgRenderer (keyed reconciliation)
+ */
+
+// RenderTree types and helpers
+export type {
+  // Geometry
+  SvgPathGeom,
+  CircleGeom,
+  RectGeom,
+  Geometry,
+
+  // Style
+  Style,
+
+  // Transform
+  Transform2D,
+  Transform3D,
+
+  // Effects
+  OpacityMulEffect,
+  Transform2DEffect,
+  Transform3DEffect,
+  FilterEffect,
+  ClipEffect,
+  DeformEffect,
+  Effect,
+
+  // Nodes
+  GroupNode,
+  ShapeNode,
+  EffectNode,
+  DrawNode,
+  RenderTree,
+} from './renderTree';
+
+export {
+  group,
+  path,
+  circle,
+  withOpacity,
+  withTransform2D,
+  withTransform3D,
+} from './renderTree';
+
+// Player
+export type {
+  ProgramFactory,
+  Scene,
+  PlayState,
+  LoopMode,
+  PlayerOptions,
+} from './player';
+
+export { Player, createPlayer } from './player';
+
+// Re-export timeline and time model types from compiler for convenience
+export type { TimelineHint, CuePoint, TimeModel, FiniteTimeModel, CyclicTimeModel, InfiniteTimeModel } from '../compiler/types';
+
+// SVG Renderer
+export {
+  SvgRenderer,
+  createSvgRenderer,
+  createSvgRendererWithElement,
+  transform2dToSvg,
+  transform3dToCss,
+} from './svgRenderer';
+

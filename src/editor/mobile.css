@@ -1,0 +1,391 @@
+/**
+ * Mobile Responsiveness
+ *
+ * CSS-only mobile optimizations with minimal investment
+ * Goal: Make editor usable on phones/tablets for viewing animations
+ */
+
+/* ============================================================================
+   Medium screens (1024px - 1400px): Adjust column sizes, preview above controls
+   ========================================================================= */
+
+@media (max-width: 1400px) {
+  /* Right panel: stack preview above controls */
+  .editor-right-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0;
+  }
+
+  /* Preview panel takes a fixed/min height at top */
+  .editor-right-panel .editor-preview-wrapper {
+    order: 1;
+    min-height: 200px;
+    max-height: 280px;
+    border-bottom: 1px solid #1a1a2e;
+  }
+
+  /* Controls take remaining space below */
+  .editor-right-panel .editor-control-surface {
+    order: 2;
+  }
+}
+
+/* ============================================================================
+   Tablet (768px - 1024px): Adjust column sizes
+   ========================================================================= */
+
+@media (max-width: 1024px) {
+  /* Narrow the sidebars on tablet */
+  .editor-main {
+    grid-template-columns: 220px minmax(0, 1fr) 280px;
+  }
+
+  /* Right panel: stack preview above controls */
+  .editor-right-panel .editor-preview-wrapper {
+    min-height: 180px;
+    max-height: 240px;
+  }
+}
+
+/* ============================================================================
+   Mobile Portrait (max-width: 768px): Stack layout
+   ========================================================================= */
+
+@media (max-width: 768px) {
+  /* Override desktop grid - switch to vertical stacking */
+  .editor-main {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+  }
+
+  /* Hide non-essential panels on mobile by default */
+  .editor-left {
+    display: none;
+  }
+
+  .editor-right-panel {
+    display: none;
+  }
+
+  /* Center panel takes full width */
+  .editor-center {
+    flex: 1;
+    border-right: none;
+  }
+
+  /* Preview panel - full width, larger on mobile */
+  .editor-preview {
+    min-height: 240px;
+  }
+
+  /* Make transport controls touch-friendly */
+  .preview-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+
+  /* Larger scrubber thumb for touch */
+  .preview-scrubber::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  .preview-scrubber::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Stack preview controls vertically if too narrow */
+  .preview-controls-buttons-row {
+    flex-wrap: wrap;
+  }
+
+  /* Toolbar - wrap on narrow screens */
+  .settings-toolbar {
+    height: auto;
+    min-height: 40px;
+    flex-wrap: wrap;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .toolbar-left,
+  .toolbar-right,
+  .toolbar-center {
+    min-width: 0;
+  }
+
+  /* Larger touch targets for toolbar buttons */
+  .toolbar-action-btn,
+  .toolbar-clear-btn,
+  .toolbar-help-btn {
+    padding: 8px 12px;
+    min-height: 44px;
+  }
+
+  /* Bay area - reduce minimum height */
+  .editor-bay {
+    min-height: 200px;
+  }
+
+  /* Patch bay - allow horizontal scroll */
+  .patch-bay-lanes {
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  /* Lanes - stack blocks more compactly */
+  .lane {
+    min-height: 60px;
+  }
+
+  .lane-header {
+    width: 140px;
+  }
+
+  /* Blocks - ensure touch-friendly minimum size */
+  .block {
+    min-width: 80px;
+    min-height: 44px;
+  }
+
+  /* Prevent text from being too small */
+  .block-label {
+    font-size: 13px;
+  }
+
+  /* BusBoard panel - allow scroll */
+  .busboard-body {
+    overflow-x: auto;
+  }
+
+  /* Panel headers - ensure touch-friendly */
+  .panel-header {
+    min-height: 48px;
+  }
+
+  /* Help modal - full screen on mobile */
+  .help-center-modal {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .editor-help-modal {
+    width: 95vw;
+    max-width: 95vw;
+  }
+}
+
+/* ============================================================================
+   Mobile Landscape (max-width: 768px, landscape orientation)
+   ========================================================================= */
+
+@media (max-width: 768px) and (orientation: landscape) {
+  /* In landscape, preview can be smaller to show more of bay */
+  .editor-preview {
+    min-height: 180px;
+  }
+
+  /* Toolbar can be more compact in landscape */
+  .settings-toolbar {
+    height: 40px;
+    flex-wrap: nowrap;
+  }
+}
+
+/* ============================================================================
+   Small Mobile (max-width: 480px): Maximum compactness
+   ========================================================================= */
+
+@media (max-width: 480px) {
+  /* Even more compact on small phones */
+  .editor-preview {
+    min-height: 200px;
+  }
+
+  /* Smaller padding throughout */
+  .patch-bay-lanes {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .lane {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .lane-header {
+    width: 100px;
+  }
+
+  .lane-label {
+    font-size: 12px;
+  }
+
+  /* Preview controls - smaller but still touch-friendly */
+  .preview-controls {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .preview-setting-label {
+    font-size: 10px;
+    min-width: 30px;
+  }
+
+  .preview-setting-input {
+    width: 45px;
+    font-size: 10px;
+  }
+
+  /* Toolbar - stack vertically on very small screens */
+  .settings-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-left,
+  .toolbar-right,
+  .toolbar-center {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Blocks - more compact */
+  .block {
+    padding: 6px 8px;
+    min-width: 70px;
+  }
+
+  .block-label {
+    font-size: 12px;
+  }
+
+  .block-type {
+    font-size: 8px;
+  }
+}
+
+/* ============================================================================
+   Touch-friendly enhancements (all mobile)
+   ========================================================================= */
+
+@media (max-width: 768px) {
+  /* Ensure all interactive elements are at least 44x44px (Apple HIG) */
+  .panel-icon-btn,
+  .panel-collapse-icon,
+  .panel-help-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Larger port targets for touch */
+  .port {
+    padding: 4px 8px;
+    font-size: 10px;
+    min-height: 32px;
+  }
+
+  /* Make resizers easier to grab on touch */
+  .vertical-resizer,
+  .horizontal-resizer,
+  .bay-resizer,
+  .horizontal-resizer-2x {
+    height: 12px;
+    width: 12px;
+  }
+
+  .vertical-resizer::after,
+  .horizontal-resizer::after {
+    height: 3px;
+    background: #4a9eff;
+  }
+
+  .bay-resizer::after,
+  .horizontal-resizer-2x::after {
+    width: 3px;
+    background: #4a9eff;
+  }
+
+  /* Prevent double-tap zoom on buttons */
+  button {
+    touch-action: manipulation;
+  }
+
+  /* Improve touch scrolling */
+  .patch-bay-lanes,
+  .library-categories,
+  .inspector-body,
+  .preview-panel-body,
+  .busboard-body {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ============================================================================
+   Prevent horizontal overflow (critical for mobile)
+   ========================================================================= */
+
+@media (max-width: 768px) {
+  /* Ensure nothing causes horizontal scroll */
+  .editor,
+  .editor-main,
+  .editor-center,
+  .editor-bay,
+  .patch-bay,
+  .preview-panel {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Allow intentional horizontal scroll only in specific containers */
+  .patch-bay-lanes,
+  .lane-content,
+  .busboard-body {
+    overflow-x: auto;
+  }
+}
+
+/* ============================================================================
+   Mobile-specific utility classes
+   ========================================================================= */
+
+/* Show/hide helpers for responsive design */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* Mobile menu toggle button (if needed in future) */
+.mobile-menu-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #aaa;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

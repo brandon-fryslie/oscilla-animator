@@ -1,0 +1,497 @@
+/**
+ * BusBoard Styles
+ *
+ * Vertical mixer-style panel for bus management.
+ */
+
+/* Bus Board Container */
+.bus-board {
+  display: flex;
+  flex-direction: column;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 10px;
+  min-width: 240px;
+  max-width: 400px;
+  width: 320px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.bus-board.collapsed {
+  width: 48px;
+  min-width: 48px;
+}
+
+/* Header */
+.bus-board-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #151515;
+  border-bottom: 1px solid #222;
+}
+
+.bus-board-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  font-weight: 600;
+}
+
+.bus-board-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bus-board-collapse-btn {
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: transparent;
+  color: #aaa;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.bus-board-collapse-btn:hover {
+  background: #222;
+  color: #fff;
+}
+
+/* Toolbar */
+.bus-board-toolbar {
+  padding: 8px 10px;
+  border-bottom: 1px solid #222;
+  background: #0f0f0f;
+}
+
+.bus-board-new-btn {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: linear-gradient(180deg, #1f1f1f, #181818);
+  color: #ccc;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bus-board-new-btn:hover {
+  background: linear-gradient(180deg, #2a2a2a, #202020);
+  border-color: #4a9eff;
+  color: #fff;
+}
+
+/* Filter Section */
+.bus-board-filter {
+  position: relative;
+  padding: 8px 10px;
+  border-bottom: 1px solid #222;
+  background: #0f0f0f;
+}
+
+.bus-board-filter-input {
+  width: 100%;
+  padding: 6px 28px 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #ccc;
+  font-size: 12px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.bus-board-filter-input::placeholder {
+  color: #555;
+}
+
+.bus-board-filter-input:focus {
+  border-color: #4a9eff;
+  background: #1f1f1f;
+}
+
+.bus-board-filter-clear {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.bus-board-filter-clear:hover {
+  color: #aaa;
+}
+
+/* Channels Container */
+.bus-board-channels {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Empty State */
+.bus-board-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: #555;
+  text-align: center;
+}
+
+.bus-board-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.bus-board-empty-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #444;
+}
+
+/* Bus Group */
+.bus-board-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Group Header */
+.bus-board-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: #181818;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.bus-board-group-header:hover {
+  background: #1f1f1f;
+  border-color: #3a3a3a;
+}
+
+.bus-board-group-icon {
+  font-size: 10px;
+  color: #888;
+  line-height: 1;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.bus-board-group-header:hover .bus-board-group-icon {
+  color: #aaa;
+}
+
+.bus-board-group-title {
+  flex: 1;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+  font-weight: 600;
+  user-select: none;
+}
+
+.bus-board-group-count {
+  font-size: 10px;
+  color: #666;
+  font-weight: 400;
+  user-select: none;
+}
+
+/* Group Buses */
+.bus-board-group-buses {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 8px;
+}
+
+/* Channel Strip */
+.bus-channel {
+  display: flex;
+  flex-direction: column;
+  background: #181818;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 10px;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bus-channel:hover {
+  border-color: #3a3a3a;
+  background: #1a1a1a;
+}
+
+.bus-channel.selected {
+  border-color: #4a9eff;
+  background: #1c1c28;
+  box-shadow: 0 0 8px rgba(74, 158, 255, 0.2);
+}
+
+/* Channel Header */
+.bus-channel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bus-channel-name {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-radius: 4px;
+  outline: none;
+  width: 100%;
+}
+
+.bus-channel-name:hover {
+  border-color: #333;
+  background: #1f1f1f;
+}
+
+.bus-channel-name:focus {
+  border-color: #4a9eff;
+  background: #1f1f1f;
+}
+
+.bus-channel-type-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #888;
+  padding: 2px 6px;
+  background: #1f1f1f;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.bus-type-icon {
+  font-size: 10px;
+  color: #4a9eff;
+}
+
+.bus-type-label {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+}
+
+.bus-channel-active-indicator {
+  font-size: 8px;
+  color: #555;
+  margin-top: 2px;
+}
+
+/* Visualization */
+.bus-channel-viz {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  background: #0f0f0f;
+  border: 1px solid #222;
+  border-radius: 4px;
+}
+
+.bus-viz-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.bus-viz-icon {
+  font-size: 12px;
+  color: #333;
+  opacity: 0.5;
+}
+
+/* Combine Mode */
+.bus-channel-combine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bus-channel-combine-label {
+  font-size: 11px;
+  color: #888;
+  font-weight: 500;
+}
+
+.bus-channel-combine-select {
+  flex: 1;
+  background: #1f1f1f;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #ccc;
+  padding: 4px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+}
+
+.bus-channel-combine-select:hover {
+  border-color: #444;
+  background: #252525;
+}
+
+.bus-channel-combine-select:focus {
+  border-color: #4a9eff;
+}
+
+/* Publishers Section */
+.bus-channel-publishers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bus-channel-section-header {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+  font-weight: 600;
+  padding: 2px 0;
+}
+
+.bus-channel-empty {
+  font-size: 11px;
+  color: #555;
+  font-style: italic;
+  padding: 4px 6px;
+}
+
+.bus-channel-publisher-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Publisher Row - Drag and Drop */
+.bus-channel-publisher-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  background: #1f1f1f;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  gap: 6px;
+  cursor: grab;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.bus-channel-publisher-row:hover {
+  background: #252525;
+  border-color: #333;
+}
+
+.bus-channel-publisher-row:active {
+  cursor: grabbing;
+}
+
+/* Drag handle */
+.bus-publisher-drag-handle {
+  font-size: 12px;
+  color: #555;
+  cursor: grab;
+  user-select: none;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.bus-channel-publisher-row:hover .bus-publisher-drag-handle {
+  color: #888;
+}
+
+.bus-channel-publisher-row:active .bus-publisher-drag-handle {
+  cursor: grabbing;
+}
+
+/* Dragging state */
+.bus-channel-publisher-row.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+  background: #2a2a2a;
+}
+
+/* Drop target state */
+.bus-channel-publisher-row.drop-target {
+  border-color: #4a9eff;
+  background: #1c1c28;
+  box-shadow: 0 0 6px rgba(74, 158, 255, 0.3);
+}
+
+.bus-publisher-label {
+  flex: 1;
+  font-size: 11px;
+  color: #aaa;
+  font-family: 'SF Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none; /* Prevent text selection during drag */
+}
+
+.bus-publisher-mute-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.bus-publisher-mute-btn:hover {
+  color: #aaa;
+}
+
+/* Subscribers */
+.bus-channel-subscribers {
+  padding-top: 6px;
+  border-top: 1px solid #222;
+}
+
+.bus-channel-subscriber-count {
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+}

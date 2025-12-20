@@ -1,0 +1,2 @@
+[servers."ChromeDevTools/chrome-devtools-mcp"]
+args = [ "-y", "chrome-devtools-mcp@latest", "--chromeArg=--disable-blink-features=AutomationControlled", "--chromeArg=--disable-infobars", "--chromeArg=--no-first-run",]

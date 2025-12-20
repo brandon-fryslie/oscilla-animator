@@ -1,0 +1,715 @@
+/**
+ * Inspector Styles
+ */
+
+.inspector {
+  flex: 1;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.inspector-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+  color: #666;
+}
+
+.inspector-empty p {
+  margin: 0 0 8px 0;
+}
+
+.inspector-hint {
+  font-size: 12px;
+  color: #555;
+}
+
+.inspector-header {
+  padding: 16px;
+  border-bottom: 1px solid #333;
+  border-left: 4px solid #666;
+}
+
+.inspector-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.block-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+
+.block-id {
+  color: #666;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
+.block-category {
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 500;
+  font-size: 10px;
+}
+
+.block-tier-badge,
+.block-subcategory-badge,
+.block-legacy-badge,
+.block-composite-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 10px;
+  color: #e5e7eb;
+  letter-spacing: 0.3px;
+}
+
+.block-tier-badge {
+  background: #1f2937;
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.block-subcategory-badge {
+  background: #0f172a;
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.block-legacy-badge {
+  background: #312e81;
+  color: #c7d2fe;
+  border: 1px solid rgba(124, 58, 237, 0.4);
+}
+
+.block-composite-badge {
+  background: #0ea5e9;
+  color: #ecfeff;
+  border: 1px solid rgba(14, 165, 233, 0.7);
+}
+
+.block-preview-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #4a9eff;
+  color: #fff;
+  font-weight: 500;
+  font-size: 10px;
+}
+
+.inspector-header-preview {
+  background: linear-gradient(135deg, #1a2a3a 0%, #1a1a1a 100%);
+}
+
+.inspector-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.inspector-section {
+  margin-bottom: 20px;
+}
+
+.inspector-section h3 {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.block-type-code {
+  display: block;
+  padding: 8px;
+  background: #252525;
+  border-radius: 4px;
+  color: #a855f7;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #1f1f1f;
+  border: 1px solid #2f2f2f;
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+.tag-key {
+  color: #9ca3af;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.tag-value {
+  color: #e5e7eb;
+  font-weight: 600;
+}
+
+.composite-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.composite-toggle {
+  padding: 4px 8px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  color: #67e8f9;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.composite-toggle:hover {
+  background: #1e293b;
+}
+
+.composite-graph {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background: #0f0f0f;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+}
+
+.composite-graph-section h4 {
+  margin: 0 0 4px 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #9ca3af;
+}
+
+.composite-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.composite-node-id {
+  color: #67e8f9;
+  margin-right: 6px;
+}
+
+.composite-node-type {
+  color: #e5e7eb;
+}
+
+.composite-arrow {
+  margin: 0 4px;
+  color: #6b7280;
+}
+
+.composite-ports {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.composite-ports h5 {
+  margin: 0 0 4px 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #9ca3af;
+}
+
+.block-description {
+  margin: 0;
+  font-size: 12px;
+  color: #aaa;
+  line-height: 1.5;
+}
+
+.param-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.param-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.param-label {
+  font-size: 11px;
+  color: #aaa;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.param-value input[type="number"],
+.param-value input[type="text"] {
+  width: 100%;
+  padding: 6px 8px;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
+.param-value input[type="number"]:focus,
+.param-value input[type="text"]:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.param-value input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.slot-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slot-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: #252525;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.slot-label {
+  color: #ccc;
+}
+
+.slot-type {
+  color: #22c55e;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 10px;
+}
+
+/* Actions */
+.inspector-actions {
+  padding-top: 12px;
+  border-top: 1px solid #333;
+}
+
+.delete-button {
+  width: 100%;
+  padding: 8px 12px;
+  background: #3a2020;
+  border: 1px solid #5a3030;
+  border-radius: 4px;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.delete-button:hover {
+  background: #4a2525;
+  border-color: #6a3535;
+}
+
+/* Parameter schema list (for definition preview) */
+.param-schema-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.param-schema-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: #252525;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.param-schema-key {
+  color: #ccc;
+  text-transform: capitalize;
+}
+
+.param-schema-type {
+  color: #f59e0b;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 10px;
+}
+
+/* =============================================================================
+   Port Wiring Panel
+   ============================================================================= */
+
+.port-wiring-panel {
+  flex: 1;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wiring-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px;
+  border-bottom: 1px solid #333;
+  border-left: 4px solid #666;
+  background: linear-gradient(135deg, #1a2a3a 0%, #1a1a1a 100%);
+}
+
+.wiring-panel-title {
+  flex: 1;
+}
+
+.wiring-port-direction {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: #60a5fa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.wiring-panel-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.wiring-close-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.1s, color 0.1s;
+}
+
+.wiring-close-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+.wiring-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.wiring-section {
+  margin-bottom: 20px;
+}
+
+.wiring-section h4 {
+  margin: 0 0 10px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wiring-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wiring-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: #252525;
+  border-radius: 4px;
+}
+
+.wiring-info-label {
+  font-size: 11px;
+  color: #888;
+}
+
+.wiring-info-value {
+  font-size: 12px;
+  color: #ccc;
+}
+
+code.wiring-info-value {
+  color: #a855f7;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.wiring-count {
+  background: #333;
+  color: #888;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.wiring-empty {
+  color: #555;
+  font-size: 12px;
+  font-style: italic;
+  padding: 8px;
+}
+
+/* Existing connections */
+.wiring-connection-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wiring-connection-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #2a3a2a;
+  border-radius: 4px;
+  border-left: 3px solid #4ade80;
+}
+
+.wiring-connection-item .wiring-target-block {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.wiring-connection-item .wiring-target-slot {
+  font-size: 11px;
+  color: #888;
+}
+
+.wiring-disconnect-btn {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  flex-shrink: 0;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.1s;
+}
+
+.wiring-disconnect-btn:hover {
+  background: #4a2525;
+  border-color: #6a3535;
+  color: #ef4444;
+}
+
+/* Compatible targets list */
+.wiring-target-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wiring-target-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.wiring-target-item:hover,
+.wiring-target-item.hovered {
+  background: #2a3a4a;
+  border-color: #60a5fa;
+}
+
+.wiring-target-item:active {
+  background: #2a4a3a;
+  border-color: #4ade80;
+}
+
+.wiring-target-block {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.wiring-target-slot {
+  flex: 1;
+  font-size: 11px;
+  color: #888;
+}
+
+.wiring-target-type {
+  font-size: 10px;
+  color: #22c55e;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  background: #1a2a1a;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Library blocks list (add new block section) */
+.wiring-library-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wiring-library-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.wiring-library-item:hover {
+  background: #2a3a2a;
+  border-color: #4ade80;
+}
+
+.wiring-library-item:active {
+  background: #2a4a3a;
+  border-color: #22c55e;
+}
+
+.wiring-hint {
+  margin: 4px 0 8px;
+  color: #aaa;
+  font-size: 11px;
+}
+
+.wiring-target-item.near-match {
+  opacity: 0.85;
+  border-style: dashed;
+}
+
+.wiring-adapter-btn {
+  margin-left: auto;
+  padding: 4px 8px;
+  border: 1px solid #4ade80;
+  background: #1f2f1f;
+  color: #bbf7d0;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.wiring-adapter-btn:hover {
+  background: #234123;
+  border-color: #22c55e;
+  color: #dcfce7;
+}
+
+.wiring-adapter-btn:active {
+  background: #1b341b;
+}
+
+.wiring-library-color {
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.wiring-library-block {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.wiring-library-slot {
+  flex: 1;
+  font-size: 11px;
+  color: #888;
+}
+
+.wiring-library-type {
+  font-size: 10px;
+  color: #22c55e;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  background: #1a2a1a;
+  padding: 2px 6px;
+  border-radius: 4px;
+}

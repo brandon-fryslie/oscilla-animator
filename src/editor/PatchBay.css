@@ -1,0 +1,464 @@
+/**
+ * PatchBay Styles
+ */
+
+.patch-bay {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #1a1a1a;
+}
+
+.patch-bay-lanes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.lane {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #222;
+  border-radius: 8px;
+  min-height: 80px;
+  transition: background 0.15s, box-shadow 0.15s, min-height 0.2s;
+}
+
+/* Collapsed lane - compact view */
+.lane.collapsed {
+  min-height: auto;
+  padding: 8px 12px;
+}
+
+.lane.collapsed .lane-header {
+  width: auto;
+  flex: 1;
+}
+
+/* Flow style visual indicators */
+.lane.chain {
+  border-left: 3px solid var(--lane-color, #666);
+}
+
+.lane.patchbay {
+  border-left: 3px dashed var(--lane-color, #666);
+}
+
+.lane.drop-target {
+  background: #2a2a2a;
+  box-shadow: inset 0 0 0 2px var(--lane-color, #666);
+}
+
+/* Suggested lane (matches dragging block's laneKind) */
+.lane.suggested {
+  background: #252525;
+  box-shadow: inset 0 0 0 2px var(--lane-color, #666);
+  animation: lane-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes lane-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 0 2px var(--lane-color, #666);
+  }
+  50% {
+    box-shadow: inset 0 0 0 2px var(--lane-color, #666), 0 0 12px 2px color-mix(in srgb, var(--lane-color, #666) 40%, transparent);
+  }
+}
+
+.lane-header {
+  flex-shrink: 0;
+  width: 180px;
+  display: flex;
+  gap: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px;
+  margin: -4px;
+  transition: background 0.1s;
+}
+
+.lane-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.lane-color-bar {
+  width: 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.lane-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.lane-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lane-chevron {
+  font-size: 10px;
+  color: #666;
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.lane-label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.lane-kind-badge {
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 500;
+  color: #fff;
+  opacity: 0.8;
+}
+
+.lane-pinned-badge {
+  font-size: 10px;
+}
+
+.lane-flow-badge {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #333;
+  color: #888;
+}
+
+.lane-flow-badge.chain {
+  color: #22c55e;
+}
+
+.lane-flow-badge.patchbay {
+  color: #a855f7;
+}
+
+.lane-block-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  background: #333;
+  padding: 2px 8px;
+  border-radius: 10px;
+  align-self: flex-start;
+}
+
+.lane-description {
+  margin: 4px 0 0 18px;
+  font-size: 10px;
+  color: #777;
+  line-height: 1.3;
+}
+
+.lane-content {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  align-content: flex-start;
+  padding: 8px;
+  background: #1a1a1a;
+  border-radius: 6px;
+  min-height: 56px;
+}
+
+.lane-empty {
+  color: #555;
+  font-size: 12px;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 8px;
+}
+
+.lane.drop-target .lane-empty {
+  color: var(--lane-color);
+  font-style: normal;
+  font-weight: 500;
+}
+
+/* Block rendering */
+.block {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 100px;
+}
+
+.block:hover {
+  border-color: #555;
+  background: #333;
+}
+
+.block.selected {
+  border-color: var(--block-color, #4a9eff);
+  background: #333;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--block-color, #4a9eff) 30%, transparent);
+}
+
+.block.dragging {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.block.drop-target {
+  outline: 1px dashed rgba(74, 158, 255, 0.7);
+  background: rgba(74, 158, 255, 0.08);
+}
+
+/* Block drag handle */
+.block-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  min-width: 16px;
+  margin: -8px 0 -8px -10px;
+  padding: 8px 4px;
+  border-radius: 6px 0 0 6px;
+  cursor: grab;
+}
+
+.block-drag-handle:active {
+  cursor: grabbing;
+}
+
+.block-grip {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: -2px;
+}
+
+.block-drag-handle:hover .block-grip {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.block-color-bar {
+  width: 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.block-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.block-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.block-type {
+  font-size: 9px;
+  color: #888;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Active lane (selected for palette filtering) */
+.lane.active {
+  background: #282828;
+  box-shadow: inset 0 0 0 1px var(--lane-color, #666);
+}
+
+.lane.active .lane-header {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.lane.active .lane-label::after {
+  content: ' •';
+  color: var(--lane-color, #666);
+}
+
+/* Type hints in lane header */
+.lane-type-hint {
+  font-size: 9px;
+  font-weight: 400;
+  color: #666;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Chevron click area */
+.lane-chevron {
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 2px;
+}
+
+.lane-chevron:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* =============================================================================
+   Port Rendering
+   ============================================================================= */
+
+/* Block with ports needs adjusted layout */
+.block.has-inputs {
+  padding-left: 4px;
+}
+
+.block.has-outputs {
+  padding-right: 4px;
+}
+
+/* Port container - vertical stack on each side */
+.block-ports {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  margin: -8px 0;
+}
+
+.block-ports.inputs {
+  margin-left: -4px;
+  padding-right: 4px;
+}
+
+.block-ports.outputs {
+  margin-right: -4px;
+  padding-left: 4px;
+}
+
+/* Individual port */
+.port {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: #333;
+  border: 2px solid #555;
+  border-radius: 10px;
+  font-size: 9px;
+  color: #aaa;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.port.input {
+  border-radius: 0 10px 10px 0;
+  padding-left: 4px;
+}
+
+.port.output {
+  border-radius: 10px 0 0 10px;
+  padding-right: 4px;
+}
+
+.port:hover {
+  background: #444;
+  border-color: #777;
+  color: #fff;
+}
+
+.port.connected {
+  background: #2a3a2a;
+}
+
+.port.hovered {
+  border-color: #4ade80;
+  background: #2a4a2a;
+}
+
+.port.selected {
+  border-color: #60a5fa;
+  background: #2a3a4a;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+}
+
+.port.compatible {
+  animation: port-pulse 1s ease-in-out infinite;
+}
+
+@keyframes port-pulse {
+  0%, 100% {
+    box-shadow: 0 0 4px 1px rgba(74, 222, 128, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 12px 3px rgba(74, 222, 128, 0.7);
+  }
+}
+
+.port-label {
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.port-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.port-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  border-radius: 6px;
+  background: #444;
+  color: #ddd;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.port-badge.world {
+  font-size: 9px;
+  min-width: 18px;
+}
+
+.port-badge.world.signal { background: #1d4ed8; }
+.port-badge.world.field { background: #9333ea; }
+.port-badge.world.scalar { background: #b45309; }
+.port-badge.world.event { background: #047857; }
+.port-badge.world.scene { background: #2563eb; }
+.port-badge.world.program { background: #b91c1c; }
+.port-badge.world.render { background: #0ea5e9; }
+.port-badge.world.filter { background: #7c3aed; }
+.port-badge.world.stroke { background: #334155; }
+.port-badge.world.unknown { background: #44403c; }
+
+.port-badge.domain {
+  background: #2f2f2f;
+  color: #b4b4b4;
+  font-weight: 600;
+  text-transform: none;
+}

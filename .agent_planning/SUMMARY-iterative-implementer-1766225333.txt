@@ -1,0 +1,61 @@
+Agent: iterative-implementer | 2025-12-20
+Mode: manual
+Completed: GridDomain and StableIdHash blocks | Files: 6 | Commits: 0 (no git repo)
+Tests: 4 passing
+Cache invalidated: None (no prior cache for new features)
+Status: complete
+
+## Implementation Summary
+
+Implemented Slice 4: Per-Element Identity System
+
+### Blocks Implemented
+
+**1. GridDomain** - Domain + Grid Layout in one block
+- Block definition: src/editor/blocks/domain.ts
+- Compiler: src/editor/compiler/blocks/domain/GridDomain.ts  
+- Outputs both `domain` (Domain) and `pos0` (Field<vec2>)
+- Stable element IDs: "row-R-col-C" format
+- Deterministic grid positions based on rows, cols, spacing, origin
+
+**2. StableIdHash** - Stable per-element hashing
+- Block definition: src/editor/blocks/domain.ts
+- Compiler: src/editor/compiler/blocks/domain/StableIdHash.ts
+- Hashes element.id + salt to [0,1) using simple hash function
+- Deterministic per-element random values
+- Output port: u01 (Field<number>)
+
+### Tests
+Created comprehensive test suite:
+- src/editor/compiler/blocks/domain/__tests__/GridDomain.test.ts
+- All 4 tests passing:
+  - GridDomain creates stable row/col IDs
+  - GridDomain produces correct grid positions
+  - StableIdHash produces stable hash values
+  - StableIdHash produces different values with different salt
+
+### Registry Updates
+- Added exports to src/editor/compiler/blocks/domain/index.ts
+- Registered blocks in src/editor/compiler/blocks/index.ts
+- Both blocks available in DEFAULT_BLOCK_REGISTRY
+
+### Key Design Decisions
+
+**GridDomain vs DomainN + PositionMapGrid:**
+- Spec requires GridDomain to output BOTH domain and pos0
+- This differs from existing separation (DomainN + PositionMapGrid)
+- Implemented as spec'd: single block with dual outputs
+- Element IDs are more descriptive: "row-R-col-C" vs "0", "1", "2"
+
+**StableIdHash vs FieldHash01ById:**
+- Both blocks exist and serve similar but distinct purposes
+- FieldHash01ById: uses element index + seed
+- StableIdHash: uses element.id string + salt (more explicit about stability)
+- Spec emphasizes stable ID hashing contract
+- Hash function: simple but effective string hash -> [0,1)
+
+### Validation
+- TypeScript compilation: clean (no errors in new code)
+- All tests passing (4/4)
+- Blocks registered and exported correctly
+- Ready for use in Golden Patch implementation

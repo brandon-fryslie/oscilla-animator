@@ -1,0 +1,281 @@
+/**
+ * PreviewPanel Styles
+ */
+
+.preview-panel {
+  display: flex;
+  flex-direction: column;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 100%;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+.preview-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.preview-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preview-help-btn {
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #aaa;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.preview-help-btn:hover {
+  background: #222;
+  border-color: #4a9eff;
+  color: #fff;
+}
+
+.preview-status {
+  font-size: 11px;
+  color: #666;
+}
+
+.preview-canvas {
+  position: relative;
+  background: #0a0a0a;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+}
+
+.preview-canvas svg {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.preview-svg {
+  display: block;
+  background: transparent;
+}
+
+/* Two-row controls layout */
+.preview-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #1a1a1a;
+  border-top: 1px solid #333;
+  flex-shrink: 0;
+}
+
+/* Top row: Scrubber + time displays */
+.preview-controls-scrubber-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+/* Bottom row: Playback buttons + settings */
+.preview-controls-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+/* Divider between buttons and settings */
+.preview-controls-divider {
+  width: 1px;
+  height: 24px;
+  background: #444;
+  margin: 0 4px;
+}
+
+/* Settings inputs (Speed/Seed) */
+.preview-setting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preview-setting-label {
+  font-size: 11px;
+  color: #888;
+  min-width: 35px;
+}
+
+.preview-setting-input {
+  width: 55px;
+  padding: 4px 6px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.preview-setting-input:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+/* Remove spinners from number inputs */
+.preview-setting-input::-webkit-inner-spin-button,
+.preview-setting-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.preview-setting-input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.preview-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.preview-btn:hover {
+  background: #333;
+  border-color: #4a9eff;
+}
+
+.preview-btn:active {
+  transform: scale(0.95);
+}
+
+.preview-btn.active {
+  background: #4a9eff;
+  border-color: #4a9eff;
+}
+
+.preview-time {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 11px;
+  color: #888;
+  min-width: 50px;
+  text-align: center;
+}
+
+.preview-scrubber {
+  flex: 1;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.preview-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #4a9eff;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.preview-scrubber::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.preview-scrubber::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #4a9eff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Scrubber container with cue point markers */
+.preview-scrubber-container {
+  position: relative;
+  flex: 1;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.preview-scrubber-container .preview-scrubber {
+  flex: 1;
+  z-index: 1;
+}
+
+/* Cue point markers */
+.cue-marker {
+  position: absolute;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.7;
+}
+
+.cue-marker.cue-phase {
+  background: #ffd93d;
+  height: 20px;
+}
+
+.cue-marker.cue-beat {
+  background: #ff6b6b;
+  height: 16px;
+}
+
+.cue-marker.cue-marker {
+  background: #4ecdc4;
+  height: 14px;
+}
+
+/* Timeline indicator */
+.timeline-indicator {
+  font-size: 14px;
+  color: #888;
+  padding: 0 4px;
+  cursor: default;
+}
+
+.timeline-indicator:hover {
+  color: #aaa;
+}

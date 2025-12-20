@@ -1,0 +1,75 @@
+/**
+ * BusViz Styles
+ *
+ * Styling for domain-specific bus visualizations.
+ */
+
+.bus-viz {
+  display: block;
+  /* SVG will scale naturally */
+}
+
+/* Number visualization */
+.bus-viz-number {
+  /* Horizontal bar style */
+}
+
+/* Vec2 visualization */
+.bus-viz-vec2 {
+  /* Crosshair style */
+}
+
+/* Color visualization */
+.bus-viz-color {
+  /* Color swatch style */
+}
+
+/* Phase visualization */
+.bus-viz-phase {
+  /* Circular ring style */
+}
+
+/* Time visualization */
+.bus-viz-time {
+  /* Clock icon style */
+}
+
+/* Rate visualization */
+.bus-viz-rate {
+  /* Speed gauge style */
+}
+
+/* Trigger visualization */
+.bus-viz-trigger {
+  /* Pulse LED style */
+}
+
+/* Boolean visualization */
+.bus-viz-boolean {
+  /* Toggle switch style */
+}
+
+/* Default visualization */
+.bus-viz-default {
+  /* Fallback style */
+}
+
+/* Hover states */
+.bus-viz:hover {
+  opacity: 1;
+}
+
+/* Animation stub for Phase 4+ */
+@keyframes bus-viz-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Trigger pulse animation (disabled in Phase 3) */
+.bus-viz-trigger.active {
+  /* animation: bus-viz-pulse 1s ease-in-out infinite; */
+}

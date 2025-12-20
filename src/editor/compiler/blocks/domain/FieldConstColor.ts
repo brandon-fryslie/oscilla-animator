@@ -1,0 +1,45 @@
+/**
+ * FieldConstColor Block Compiler
+ *
+ * Creates a constant color Field - same color for all elements.
+ * Takes a Domain and produces Field<color>.
+ */
+
+import type { BlockCompiler, Domain, Field } from '../../types';
+
+export const FieldConstColorBlock: BlockCompiler = {
+  type: 'FieldConstColor',
+
+  inputs: [
+    { name: 'domain', type: { kind: 'Domain' }, required: true },
+  ],
+
+  outputs: [
+    { name: 'out', type: { kind: 'Field:color' } },
+  ],
+
+  compile({ params, inputs }) {
+    const domainArtifact = inputs.domain;
+    if (!domainArtifact || domainArtifact.kind !== 'Domain') {
+      return {
+        out: {
+          kind: 'Error',
+          message: 'FieldConstColor requires a Domain input',
+        },
+      };
+    }
+
+    const domain = domainArtifact.value as Domain;
+    const color = String(params.color ?? '#3B82F6');
+
+    // Create constant field that returns the same color for all elements
+    const field: Field<unknown> = (_seed, n) => {
+      const count = Math.min(n, domain.elements.length);
+      return new Array(count).fill(color);
+    };
+
+    return {
+      out: { kind: 'Field:color', value: field },
+    };
+  },
+};

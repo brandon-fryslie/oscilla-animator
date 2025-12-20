@@ -1,0 +1,335 @@
+/**
+ * Bus Inspector Styles
+ */
+
+.bus-inspector {
+  /* Inherits from .inspector in Inspector.css */
+}
+
+.bus-name-input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 0;
+  width: 100%;
+  outline: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.bus-name-input:hover {
+  border-bottom-color: #444;
+}
+
+.bus-name-input:focus {
+  border-bottom-color: #4f46e5;
+}
+
+.bus-type-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #312e81;
+  color: #c7d2fe;
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+}
+
+.bus-property {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.bus-property label {
+  min-width: 120px;
+  font-size: 13px;
+  color: #999;
+  font-weight: 500;
+}
+
+.bus-type-readonly {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+  color: #a5b4fc;
+  background: #1f2937;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.bus-combine-select {
+  flex: 1;
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #e5e7eb;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.bus-combine-select:hover {
+  border-color: #4b5563;
+}
+
+.bus-combine-select:focus {
+  border-color: #4f46e5;
+}
+
+.default-value-editor {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.default-value-editor input[type="number"],
+.default-value-editor input[type="text"] {
+  flex: 1;
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #e5e7eb;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+}
+
+.default-value-editor input[type="number"]:hover,
+.default-value-editor input[type="text"]:hover {
+  border-color: #4b5563;
+}
+
+.default-value-editor input[type="number"]:focus,
+.default-value-editor input[type="text"]:focus {
+  border-color: #4f46e5;
+}
+
+.default-value-editor input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.default-value-editor input[type="color"] {
+  width: 40px;
+  height: 32px;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px;
+  background: #1f2937;
+}
+
+.value-unit {
+  font-size: 12px;
+  color: #666;
+  min-width: 40px;
+}
+
+.value-readonly {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+.vec2-editor {
+  flex-direction: row;
+  gap: 12px;
+}
+
+.vec2-editor label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.vec2-editor label span {
+  font-size: 12px;
+  color: #999;
+  min-width: 16px;
+}
+
+.vec2-editor input {
+  flex: 1;
+}
+
+.color-editor {
+  flex-direction: row;
+  gap: 8px;
+}
+
+.section-count {
+  font-size: 11px;
+  color: #666;
+  font-weight: 400;
+  margin-left: 8px;
+}
+
+.bus-routing-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bus-routing-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.bus-routing-item:hover {
+  background: #252d3b;
+  border-color: #4b5563;
+}
+
+.bus-routing-item.disabled {
+  opacity: 0.5;
+}
+
+.routing-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.routing-block-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e5e7eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.routing-port-name {
+  font-size: 11px;
+  color: #9ca3af;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.routing-item-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.routing-toggle-btn,
+.routing-jump-btn {
+  background: transparent;
+  border: 1px solid #374151;
+  color: #9ca3af;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s;
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.routing-toggle-btn:hover,
+.routing-jump-btn:hover {
+  background: #374151;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
+.routing-toggle-btn:active,
+.routing-jump-btn:active {
+  transform: scale(0.95);
+}
+
+/* Typography adjustments for bus inspector */
+.bus-inspector .inspector-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Expandable listener item with lens editing */
+.bus-routing-item {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.bus-routing-item .routing-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.bus-routing-item.expanded {
+  background: #252d3b;
+  border-color: #4f46e5;
+}
+
+.routing-item-info {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Lens button */
+.routing-lens-btn {
+  background: transparent;
+  border: 1px solid #374151;
+  color: #9ca3af;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.routing-lens-btn:hover {
+  background: #374151;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
+.routing-lens-btn.has-lens {
+  background: #312e81;
+  border-color: #4f46e5;
+  color: #c7d2fe;
+}
+
+.routing-lens-btn.has-lens:hover {
+  background: #3730a3;
+}
+
+/* Lens editor panel */
+.routing-item-lens-editor {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #374151;
+}

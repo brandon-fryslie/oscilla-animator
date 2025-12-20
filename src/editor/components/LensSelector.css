@@ -1,0 +1,170 @@
+/**
+ * LensSelector Styles
+ *
+ * Follows the dark theme pattern from Inspector.css
+ */
+
+.lens-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lens-selector--compact {
+  gap: 0;
+}
+
+/* Mode toggle */
+.lens-mode-toggle {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.lens-mode-btn {
+  flex: 1;
+  padding: 6px 12px;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #888;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lens-mode-btn:hover {
+  background: #2a2a2a;
+  color: #aaa;
+}
+
+.lens-mode-btn.active {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #fff;
+}
+
+.lens-clear-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lens-clear-btn:hover {
+  background: #3a3a3a;
+  color: #ff6b6b;
+}
+
+/* Preset panel */
+.lens-preset-panel {
+  padding: 4px 0;
+}
+
+.lens-preset-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.lens-preset-chip {
+  padding: 4px 10px;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 12px;
+  color: #aaa;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lens-preset-chip:hover {
+  background: #2a2a2a;
+  border-color: #4a4a4a;
+  color: #fff;
+}
+
+.lens-preset-chip.active {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #fff;
+}
+
+/* Custom panel */
+.lens-custom-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Param row */
+.lens-param-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lens-param-label {
+  width: 60px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #888;
+}
+
+.lens-param-input,
+.lens-type-select,
+.lens-preset-select {
+  flex: 1;
+  padding: 6px 8px;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.lens-param-input:focus,
+.lens-type-select:focus,
+.lens-preset-select:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.lens-param-unit {
+  font-size: 10px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.lens-param-hint {
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Lens badge (for compact display) */
+.lens-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #4f46e5;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* Compact mode overrides */
+.lens-selector--compact .lens-preset-select {
+  width: 100%;
+}
