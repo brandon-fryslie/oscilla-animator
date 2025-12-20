@@ -13,6 +13,9 @@ import { listCompositeDefinitions } from './composites';
 // Import domain composites to trigger registration
 import './domain-composites';
 
+// Import signal composites (P2: Bus-aware composites)
+import './signal-composites';
+
 // Import Golden Patch composites (Slice 9 validation)
 import './golden-patch-composites';
 

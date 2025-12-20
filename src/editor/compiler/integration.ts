@@ -116,6 +116,8 @@ function createRewriteMapBuilder(): {
 export interface CompositeExpansionResult {
   expandedPatch: CompilerPatch;
   rewriteMap: PortRefRewriteMap;
+  newPublishers: Publisher[];
+  newListeners: Listener[];
 }
 
 // =============================================================================
@@ -176,9 +178,17 @@ function resolveParamValue(value: unknown, parentParams: Record<string, unknown>
   return value;
 }
 
+/** Generate unique ID for auto-created bus publishers/listeners */
+let busBindingIdCounter = 0;
+function generateBusBindingId(compositeId: string, type: 'pub' | 'sub', port: string): string {
+  return `${compositeId}::${type}::${port}::${busBindingIdCounter++}`;
+}
+
 /**
  * Expand blocks that declare primitiveGraph into their internal nodes/edges.
  * External connections are rewired to exposed input/output maps.
+ *
+ * Additionally handles bus subscriptions/publications defined in composite graphs.
  *
  * Returns both the expanded patch and a PortRefRewriteMap that can be used
  * to remap bus publishers/listeners that target composite boundary ports.
@@ -190,6 +200,8 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
   let connections = [...patch.connections];
   const newBlocks = new Map<string, BlockInstance>();
   const newConnections: CompilerConnection[] = [];
+  const newPublishers: Publisher[] = [];
+  const newListeners: Listener[] = [];
 
   // Build the rewrite map as we expand composites
   const rewriteBuilder = createRewriteMapBuilder();
@@ -198,11 +210,13 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
     const [blockId, block] = queue.shift()!;
     const definition = getBlockDefinition(block.type);
     let graph = definition?.primitiveGraph;
+    let compositeDef = definition?.compositeDefinition;
 
     // Handle composite blocks (composite: prefix)
     if (block.type.startsWith('composite:') && definition?.compositeDefinition) {
       // Convert composite definition to primitive graph - use the stored primitiveGraph
       graph = definition.primitiveGraph;
+      compositeDef = definition.compositeDefinition;
     }
 
     if (graph) {
@@ -248,6 +262,55 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
             blockId: internalBlockId,
             port,
           });
+        }
+      }
+
+      // Handle bus subscriptions (composite inputs auto-subscribed to buses)
+      if (compositeDef?.graph.busSubscriptions) {
+        for (const [inputPort, busNameValue] of Object.entries(compositeDef.graph.busSubscriptions)) {
+          const busName = busNameValue as string;
+          const internalRef = graph.inputMap[inputPort];
+          if (internalRef) {
+            const [node, port] = internalRef.split('.');
+            const internalBlockId = idMap.get(node);
+            if (internalBlockId) {
+              const listener: Listener = {
+                id: generateBusBindingId(blockId, 'sub', inputPort),
+                busId: busName,
+                to: {
+                  blockId: internalBlockId,
+                  port,
+                },
+                enabled: true,
+              };
+              newListeners.push(listener);
+            }
+          }
+        }
+      }
+
+      // Handle bus publications (composite outputs auto-published to buses)
+      if (compositeDef?.graph.busPublications) {
+        for (const [outputPort, busNameValue] of Object.entries(compositeDef.graph.busPublications)) {
+          const busName = busNameValue as string;
+          const internalRef = graph.outputMap[outputPort];
+          if (internalRef) {
+            const [node, port] = internalRef.split('.');
+            const internalBlockId = idMap.get(node);
+            if (internalBlockId) {
+              const publisher: Publisher = {
+                id: generateBusBindingId(blockId, 'pub', outputPort),
+                busId: busName,
+                from: {
+                  blockId: internalBlockId,
+                  port,
+                },
+                enabled: true,
+                sortKey: 0, // Default sort key, can be customized if needed
+              };
+              newPublishers.push(publisher);
+            }
+          }
         }
       }
 
@@ -325,6 +388,8 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
   return {
     expandedPatch: { blocks: newBlocks, connections: newConnections },
     rewriteMap: rewriteBuilder.build(),
+    newPublishers,
+    newListeners,
   };
 }
 
@@ -546,15 +611,15 @@ export function createCompilerService(store: RootStore): CompilerService {
         let patch = editorToPatch(store);
 
         // Step 1: Expand composites and build rewrite map
-        const { expandedPatch, rewriteMap } = expandComposites(patch);
+        const { expandedPatch, rewriteMap, newPublishers, newListeners } = expandComposites(patch);
 
-        // Step 2: Apply rewrite map to bus publishers/listeners
+        // Step 2: Apply rewrite map to bus publishers/listeners and merge new bus bindings
         const { patch: rewrittenPatch, errors: rewriteErrors } = rewriteBusBindings(
           {
             ...expandedPatch,
             buses: patch.buses,
-            publishers: patch.publishers,
-            listeners: patch.listeners,
+            publishers: [...(patch.publishers ?? []), ...newPublishers],
+            listeners: [...(patch.listeners ?? []), ...newListeners],
           },
           rewriteMap
         );
@@ -586,6 +651,14 @@ export function createCompilerService(store: RootStore): CompilerService {
           logStore.debug(
             'compiler',
             `RewriteMap: ${mappingCount} port mappings from composite expansion`
+          );
+        }
+
+        // Log bus binding stats
+        if (newPublishers.length > 0 || newListeners.length > 0) {
+          logStore.debug(
+            'compiler',
+            `Bus bindings: ${newPublishers.length} publishers, ${newListeners.length} listeners from composite expansion`
           );
         }
 

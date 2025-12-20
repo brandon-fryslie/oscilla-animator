@@ -15,6 +15,20 @@ export interface CompositeGraph {
   edges: readonly { from: string; to: string }[];
   inputMap: Record<string, string>;
   outputMap: Record<string, string>;
+  /**
+   * Bus subscriptions - maps input port names to bus names.
+   * When the composite is expanded, these create bus listeners automatically.
+   * Format: { inputPort: busName }
+   * Example: { phase: 'phaseA' } means the 'phase' input subscribes to 'phaseA' bus
+   */
+  busSubscriptions?: Record<string, string>;
+  /**
+   * Bus publications - maps output port names to bus names.
+   * When the composite is expanded, these create bus publishers automatically.
+   * Format: { outputPort: busName }
+   * Example: { out: 'energy' } means the 'out' output publishes to 'energy' bus
+   */
+  busPublications?: Record<string, string>;
 }
 
 export interface CompositeDefinition {
