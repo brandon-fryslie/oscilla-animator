@@ -219,6 +219,14 @@ export class PatchStore {
     // Process auto-bus connections for this block
     this.processAutoBusConnections(id, type);
 
+    // Emit BlockAdded event AFTER state changes committed
+    this.root.events.emit({
+      type: 'BlockAdded',
+      blockId: id,
+      blockType: type,
+      laneId,
+    });
+
     return id;
   }
 
@@ -314,6 +322,13 @@ export class PatchStore {
       }
     }
 
+    // Emit MacroExpanded event AFTER all state changes committed
+    this.root.events.emit({
+      type: 'MacroExpanded',
+      macroType: expansion.blocks[0]?.type ?? 'unknown',
+      createdBlockIds: Array.from(refToId.values()),
+    });
+
     // Return the first block ID (for selection purposes)
     const firstRef = expansion.blocks[0]?.ref;
     return firstRef ? refToId.get(firstRef) ?? '' : '';
@@ -360,6 +375,10 @@ export class PatchStore {
   }
 
   removeBlock(id: BlockId): void {
+    // Capture block type before deletion (needed for event)
+    const block = this.blocks.find((b) => b.id === id);
+    const blockType = block?.type ?? 'unknown';
+
     // Remove block
     this.blocks = this.blocks.filter((b) => b.id !== id);
 
@@ -381,6 +400,13 @@ export class PatchStore {
     if (this.root.uiStore.uiState.selectedBlockId === id) {
       this.root.uiStore.uiState.selectedBlockId = null;
     }
+
+    // Emit BlockRemoved event AFTER state changes committed
+    this.root.events.emit({
+      type: 'BlockRemoved',
+      blockId: id,
+      blockType,
+    });
   }
 
   /**

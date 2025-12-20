@@ -6,7 +6,7 @@
 
 export { Editor } from './Editor';
 export type { RootStore } from './stores';
-export { LogStore, logStore } from './logStore';
+export { LogStore } from './logStore';
 export { LogWindow } from './LogWindow';
 export { StatusBadge } from './StatusBadge';
 export {

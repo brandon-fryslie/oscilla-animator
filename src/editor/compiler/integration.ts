@@ -673,6 +673,11 @@ export function createCompilerService(store: RootStore): CompilerService {
 
         if (result.ok) {
           store.logStore.info('compiler', `Compiled successfully (${elapsed}ms)`);
+          // Emit CompileSucceeded event AFTER state changes
+          store.events.emit({
+            type: 'CompileSucceeded',
+            durationMs: parseFloat(elapsed),
+          });
           lastDecorations = emptyDecorations();
         } else {
           // EmptyPatch is not an error - it's expected when the patch is cleared
@@ -690,6 +695,11 @@ export function createCompilerService(store: RootStore): CompilerService {
               store.logStore.error('compiler', `${err.code}: ${err.message}${location}`);
             }
             store.logStore.warn('compiler', `Compilation failed with ${result.errors.length} error(s)`);
+            // Emit CompileFailed event AFTER state changes
+            store.events.emit({
+              type: 'CompileFailed',
+              errorCount: result.errors.length,
+            });
             // Build decorations for UI display
             lastDecorations = buildDecorations(result.errors);
           }
