@@ -7,7 +7,7 @@
 
 import { observer } from 'mobx-react-lite';
 import { useEffect, useRef, useState } from 'react';
-import { logStore } from './logStore';
+import { useStore } from './stores';
 import type { LogLevel, LogComponent } from './logTypes';
 import {
   LOG_LEVELS,
@@ -73,6 +73,8 @@ function MultiSelect<T extends string>({
  * LogWindow - collapsible log viewer with filters.
  */
 export const LogWindow = observer(() => {
+  const store = useStore();
+  const logStore = store.logStore;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<LogSize>('compact');
 
@@ -81,7 +83,7 @@ export const LogWindow = observer(() => {
     if (logStore.autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = 0; // Newest at top
     }
-  }, [logStore.filteredEntries.length]);
+  }, [logStore.filteredEntries.length, logStore.autoScroll]);
 
   const handleToggleLevel = (level: LogLevel) => {
     logStore.toggleLevel(level);

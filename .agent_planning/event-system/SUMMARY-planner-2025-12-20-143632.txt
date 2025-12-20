@@ -1,0 +1,29 @@
+Agent: status-planner | 2025-12-20-143632
+Topic: event-system
+Files: PLAN-2025-12-20-143632.md, DOD-2025-12-20-143632.md
+Items: 7 (P0: 4, P1: 3, P2: 3)
+Design Doc: design-docs/4-Event-System/1-Events.md
+Status Source: STATUS-2025-12-20-143632.md
+
+Summary:
+Implement typed event system per design doc. Phase A includes 7 lifecycle events
+(MacroExpanded, PatchLoaded/Cleared, CompileSucceeded/Failed, BlockAdded/Removed).
+Immediate value: MacroExpanded event enables LogStore auto-clear without coupling.
+
+Key Deliverables:
+- EventDispatcher class with emit/on/subscribe API
+- Event type discriminated union (7 Phase A events)
+- LogStore converted from singleton to RootStore instance
+- Event emissions at 6 lifecycle points (patch, compile, block operations)
+- MacroExpanded → LogStore.clear() listener
+- Comprehensive test coverage (>80%)
+
+Architecture Impact:
+- Breaks LogStore singleton pattern (now owned by RootStore)
+- Decouples cross-store coordination (events replace direct imports)
+- Scoped event system (per RootStore instance)
+- Synchronous-only, error-isolated handlers
+
+Estimated Effort: 4-7 days (3 sprints)
+Risk: LOW (additive, well-specified, clear rollback)
+Immediate Use Case: Auto-clear logs when macro expanded

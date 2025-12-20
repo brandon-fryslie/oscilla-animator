@@ -3,6 +3,8 @@
  *
  * Observable state for the editor's logging system.
  * Manages log entries, filters, and system status.
+ *
+ * NOTE: This is NOT a singleton. It is instantiated by RootStore.
  */
 
 import { makeObservable, observable, action, computed } from 'mobx';
@@ -252,9 +254,3 @@ export class LogStore {
     this.autoClearOnMacro = enabled;
   }
 }
-
-/**
- * Singleton log store instance.
- * Use this for logging from anywhere in the editor.
- */
-export const logStore = new LogStore();

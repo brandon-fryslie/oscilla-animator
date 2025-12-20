@@ -7,18 +7,32 @@ import { PatchStore } from './PatchStore';
 import { BusStore } from './BusStore';
 import { UIStateStore } from './UIStateStore';
 import { CompositeStore } from './CompositeStore';
+import { LogStore } from '../logStore';
+import { EventDispatcher } from '../events';
 import type { Block, Bus, Lane, Patch, Slot } from '../types';
 import breathingDotsPatch from '../demo-patches/breathing-dots.json';
 
 export class RootStore {
+  // Event dispatcher (created first so stores can set up listeners)
+  events: EventDispatcher;
+
+  // Stores
   patchStore: PatchStore;
   busStore: BusStore;
   uiStore: UIStateStore;
   compositeStore: CompositeStore;
+  logStore: LogStore;
 
   private nextId = 1;
 
   constructor() {
+    // Create event dispatcher first so stores can subscribe in their constructors
+    this.events = new EventDispatcher();
+
+    // Create log store before other stores (they may want to log during init)
+    this.logStore = new LogStore();
+
+    // Create domain stores
     this.patchStore = new PatchStore(this);
     this.busStore = new BusStore(this);
     this.uiStore = new UIStateStore(this);
@@ -36,6 +50,22 @@ export class RootStore {
 
     // Initialize default buses for a new patch
     this.busStore.createDefaultBuses();
+
+    // Wire up event listeners
+    this.setupEventListeners();
+  }
+
+  /**
+   * Set up event listeners for cross-store coordination.
+   * This decouples stores from each other - they communicate via events.
+   */
+  private setupEventListeners(): void {
+    // MacroExpanded → Auto-clear logs if setting enabled
+    this.events.on('MacroExpanded', () => {
+      if (this.logStore.autoClearOnMacro) {
+        this.logStore.clear();
+      }
+    });
   }
 
   generateId(prefix: string): string {
@@ -147,6 +177,13 @@ export class RootStore {
       ...this.patchStore.connections.map((c) => parseInt(c.id.split('-')[1]) || 0)
     );
     this.nextId = maxId + 1;
+
+    // Emit PatchLoaded event AFTER all state changes committed
+    this.events.emit({
+      type: 'PatchLoaded',
+      blockCount: this.patchStore.blocks.length,
+      connectionCount: this.patchStore.connections.length,
+    });
   }
 
   private migrateBlockParams(type: string, params: Record<string, unknown>): Record<string, unknown> {
@@ -174,6 +211,9 @@ export class RootStore {
 
     // Create default buses for new empty patch
     this.busStore.createDefaultBuses();
+
+    // Emit PatchCleared event AFTER state changes committed
+    this.events.emit({ type: 'PatchCleared' });
   }
 
   loadDemoAnimation(): void {

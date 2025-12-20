@@ -7,7 +7,7 @@
 
 import { observer } from 'mobx-react-lite';
 import { useState, useRef, useEffect } from 'react';
-import { logStore } from './logStore';
+import { useStore } from './stores';
 import { STATUS_CONFIG, LOG_LEVEL_CONFIG, LOG_COMPONENT_CONFIG } from './logTypes';
 import './StatusBadge.css';
 
@@ -25,6 +25,8 @@ function formatTime(date: Date): string {
  * StatusBadge - shows ok/warning/error with popup for issues.
  */
 export const StatusBadge = observer(() => {
+  const store = useStore();
+  const logStore = store.logStore;
   const [showPopup, setShowPopup] = useState(false);
   const badgeRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);

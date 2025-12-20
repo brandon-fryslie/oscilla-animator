@@ -1,6 +1,5 @@
 import type { RootStore } from '../stores/RootStore';
 import type { Block, Connection, Bus, Publisher, Listener } from '../types';
-import { logStore } from '../logStore';
 import { compilePatch } from './compile';
 import { createCompileCtx } from './context';
 import { createBlockRegistry, registerDynamicBlock } from './blocks';
@@ -602,9 +601,9 @@ export function createCompilerService(store: RootStore): CompilerService {
       const startTime = performance.now();
       const flags = getFeatureFlags();
 
-      logStore.debug('compiler', 'Starting compilation...');
+      store.logStore.debug('compiler', 'Starting compilation...');
       if (flags.useUnifiedCompiler) {
-        logStore.info('compiler', 'Using UnifiedCompiler (feature flag enabled)');
+        store.logStore.info('compiler', 'Using UnifiedCompiler (feature flag enabled)');
       }
 
       try {
@@ -640,7 +639,7 @@ export function createCompilerService(store: RootStore): CompilerService {
 
         patch = rewrittenPatch;
 
-        logStore.debug(
+        store.logStore.debug(
           'compiler',
           `Patch has ${patch.blocks.size} blocks and ${patch.connections.length} connections`
         );
@@ -648,7 +647,7 @@ export function createCompilerService(store: RootStore): CompilerService {
         // Log rewrite map stats for debugging
         const mappingCount = rewriteMap.getAllMappings().size;
         if (mappingCount > 0) {
-          logStore.debug(
+          store.logStore.debug(
             'compiler',
             `RewriteMap: ${mappingCount} port mappings from composite expansion`
           );
@@ -656,7 +655,7 @@ export function createCompilerService(store: RootStore): CompilerService {
 
         // Log bus binding stats
         if (newPublishers.length > 0 || newListeners.length > 0) {
-          logStore.debug(
+          store.logStore.debug(
             'compiler',
             `Bus bindings: ${newPublishers.length} publishers, ${newListeners.length} listeners from composite expansion`
           );
@@ -673,7 +672,7 @@ export function createCompilerService(store: RootStore): CompilerService {
         const elapsed = (performance.now() - startTime).toFixed(1);
 
         if (result.ok) {
-          logStore.info('compiler', `Compiled successfully (${elapsed}ms)`);
+          store.logStore.info('compiler', `Compiled successfully (${elapsed}ms)`);
           lastDecorations = emptyDecorations();
         } else {
           // EmptyPatch is not an error - it's expected when the patch is cleared
@@ -688,9 +687,9 @@ export function createCompilerService(store: RootStore): CompilerService {
               const location = err.where?.blockId
                 ? ` [${err.where.blockId}${err.where.port ? '.' + err.where.port : ''}]`
                 : '';
-              logStore.error('compiler', `${err.code}: ${err.message}${location}`);
+              store.logStore.error('compiler', `${err.code}: ${err.message}${location}`);
             }
-            logStore.warn('compiler', `Compilation failed with ${result.errors.length} error(s)`);
+            store.logStore.warn('compiler', `Compilation failed with ${result.errors.length} error(s)`);
             // Build decorations for UI display
             lastDecorations = buildDecorations(result.errors);
           }
@@ -702,7 +701,7 @@ export function createCompilerService(store: RootStore): CompilerService {
         const message = e instanceof Error ? e.message : String(e);
         const stack = e instanceof Error ? e.stack : undefined;
 
-        logStore.error('compiler', `Unexpected error: ${message}`, stack);
+        store.logStore.error('compiler', `Unexpected error: ${message}`, stack);
 
         lastResult = {
           ok: false,
@@ -791,7 +790,7 @@ export function setupAutoCompile(
 
       // Schedule new compile
       timeoutId = setTimeout(() => {
-        logStore.debug('compiler', 'Auto-compile triggered');
+        store.logStore.debug('compiler', 'Auto-compile triggered');
         const result = service.compile();
         onCompile?.(result);
       }, debounce);

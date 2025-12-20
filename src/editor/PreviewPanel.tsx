@@ -26,7 +26,6 @@ import {
 import type { CompilerService, Viewport } from './compiler';
 import type { Program } from './compiler/types';
 import { useStore } from './stores';
-import { logStore } from './logStore';
 import { TimeConsole } from './components/TimeConsole';
 import './PreviewPanel.css';
 
@@ -70,6 +69,7 @@ const DEFAULT_TIME_MODEL: TimeModel = {
 
 export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }: PreviewPanelProps) => {
   const store = useStore();
+  const logStore = store.logStore;
   const svgRef = useRef<SVGSVGElement>(null);
   const playerRef = useRef<Player | null>(null);
   const rendererRef = useRef<SvgRenderer | null>(null);
@@ -99,109 +99,94 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const seed = store.uiStore.settings.seed;
   const finiteLoopMode = store.uiStore.settings.finiteLoopMode;
 
-  // Derive dimensions from viewport
-  const { width, height } = viewport;
-
-  // Initialize player and renderer ONCE (never destroy/recreate)
+  // Create player and renderer once
   useEffect(() => {
-    if (!svgRef.current) return;
-    if (playerRef.current) return; // Already initialized
-
     const svg = svgRef.current;
-    const renderer = new SvgRenderer(svg);
-    rendererRef.current = renderer;
+    if (!svg) return;
 
-    const handleStateChange = (state: PlayState) => {
-      setPlayState(state);
-      store.uiStore.setPlaying(state === 'playing');
-    };
-
-    const player = createPlayer(
-      (tree: RenderTree, _tMs: number) => {
-        renderer.render(tree);
-      },
-      {
-        width,
-        height,
-        onStateChange: handleStateChange,
-        onTimeChange: setCurrentTime,
-        onCuePointsChange: setCuePoints,
-        autoApplyTimeline: true,
-      }
-    );
+    const player = createPlayer();
     playerRef.current = player;
 
-    // Set initial scene
-    player.setScene(DEFAULT_SCENE);
+    const renderer = new SvgRenderer(svg, DEFAULT_SCENE.bounds);
+    rendererRef.current = renderer;
 
-    // Set initial program from compiler service
-    if (compilerService) {
-      const compiledProgram = compilerService.getProgram();
-      if (compiledProgram) {
-        // Cast to runtime RenderTree type (structurally compatible)
-        const program = compiledProgram.program as unknown as Program<RenderTree>;
-        player.setFactory(() => program);
-        player.applyTimeModel(compiledProgram.timeModel);
-        setTimeModel(compiledProgram.timeModel);
-        lastGoodProgramRef.current = program;
-        setHasCompiledProgram(true);
-        logStore.info('renderer', `Loaded compiled program (timeModel: ${compiledProgram.timeModel.kind})`);
-      } else {
-        // No compiled program yet - show empty canvas
-        player.setFactory(() => EMPTY_PROGRAM);
-        logStore.info('renderer', 'No compiled program yet, showing empty canvas');
+    // Set seed from store
+    renderer.setSeed(seed);
+
+    // Set up player state tracking
+    player.on('playing', () => setPlayState('playing'));
+    player.on('paused', () => setPlayState('paused'));
+    player.on('tick', ({ time, cuePoints: pts }) => {
+      setCurrentTime(time);
+      setCuePoints(pts);
+    });
+
+    // Initialize with empty program or compiled program if available
+    const compiledProgram = compilerService?.getCompiledProgram();
+    if (compiledProgram?.program) {
+      const program = compiledProgram.program as Program<RenderTree>;
+      const tm = compiledProgram.timeModel ?? DEFAULT_TIME_MODEL;
+      setTimeModel(tm);
+      player.setFactory(() => program);
+      if (tm.kind === 'infinite') {
+        player.setTransform({ offsetMs: viewOffset });
       }
+      lastGoodProgramRef.current = program;
+      setHasCompiledProgram(true);
+      logStore.info('renderer', `Loaded compiled program (timeModel: ${compiledProgram.timeModel.kind})`);
     } else {
-      // No compiler service - show empty canvas
+      // No compiled program yet - show empty canvas
       player.setFactory(() => EMPTY_PROGRAM);
-      logStore.info('renderer', 'No compiler service, showing empty canvas');
+      logStore.info('renderer', 'No compiled program yet, showing empty canvas');
     }
 
-    // Start playing immediately
+    // Start rendering loop
+    player.on('tick', ({ time }) => {
+      const program = player.getProgram();
+      const tree = program.signal(time, { seed, settings: { finiteLoopMode } });
+      renderer.render(tree);
+    });
+
+    // Start playing
     player.play();
 
     return () => {
-      player.destroy();
-      renderer.clear();
+      player.stop();
     };
-  }, []); // Empty deps - only run once
+  }, [seed, finiteLoopMode]); // Re-create only when seed or finiteLoopMode changes
 
-  // Sync with external isPlaying prop
+  // Sync player speed with store setting
   useEffect(() => {
     const player = playerRef.current;
-    if (!player) return;
-
-    if (isPlaying && playState !== 'playing') {
-      player.play();
-    } else if (!isPlaying && playState === 'playing') {
-      player.pause();
+    if (player) {
+      player.setSpeed(speed);
     }
-  }, [isPlaying, playState]);
+  }, [speed]);
 
-  // Sync finiteLoopMode with player
+  // Set renderer seed when it changes
   useEffect(() => {
-    const player = playerRef.current;
-    if (!player) return;
+    const renderer = rendererRef.current;
+    if (renderer) {
+      renderer.setSeed(seed);
+    }
+  }, [seed]);
 
-    player.setFiniteLoopMode(finiteLoopMode);
-  }, [finiteLoopMode]);
-
-  // Watch for compiler service program and viewport changes
+  // Hot swap when compiled program changes
   useEffect(() => {
     if (!compilerService) return;
 
-    // Poll for changes (in future, use MobX reaction)
     const interval = setInterval(() => {
-      // Check for program changes
-      const compiledProgram = compilerService.getProgram();
-      if (compiledProgram && compiledProgram.program !== (lastGoodProgramRef.current as unknown)) {
+      const compiledProgram = compilerService.getCompiledProgram();
+      if (compiledProgram?.program && compiledProgram.program !== lastGoodProgramRef.current) {
         const player = playerRef.current;
         if (player) {
-          // Cast to runtime RenderTree type (structurally compatible)
-          const program = compiledProgram.program as unknown as Program<RenderTree>;
+          const program = compiledProgram.program as Program<RenderTree>;
+          const tm = compiledProgram.timeModel ?? DEFAULT_TIME_MODEL;
+          setTimeModel(tm);
           player.setFactory(() => program);
-          player.applyTimeModel(compiledProgram.timeModel);
-          setTimeModel(compiledProgram.timeModel);
+          if (tm.kind === 'infinite') {
+            player.setTransform({ offsetMs: viewOffset });
+          }
           lastGoodProgramRef.current = program;
           setHasCompiledProgram(true);
           logStore.debug('renderer', `Hot swapped to new compiled program (timeModel: ${compiledProgram.timeModel.kind})`);
@@ -217,189 +202,177 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     }, 500);
 
     return () => clearInterval(interval);
-  }, [compilerService, viewport.width, viewport.height]);
+  }, [compilerService, viewport, viewOffset, logStore]);
 
-  // TimeConsole callbacks
-  const handlePlay = useCallback(() => {
-    playerRef.current?.play();
+  // Sync play/pause state
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    if (isPlaying && playState !== 'playing') {
+      player.play();
+    } else if (!isPlaying && playState !== 'paused') {
+      player.pause();
+    }
+  }, [isPlaying, playState]);
+
+  const handleSeek = useCallback((timeMs: number) => {
+    const player = playerRef.current;
+    if (player) {
+      player.seek(timeMs);
+    }
   }, []);
 
-  const handlePause = useCallback(() => {
-    playerRef.current?.pause();
+  const handleSetTransform = useCallback((transform: { offsetMs?: number; reverseTime?: boolean }) => {
+    const player = playerRef.current;
+    if (player) {
+      player.setTransform(transform);
+      if (transform.offsetMs !== undefined) {
+        setViewOffset(transform.offsetMs);
+      }
+    }
   }, []);
+
+  const handleSetSpeed = useCallback((newSpeed: number) => {
+    store.uiStore.settings.speed = newSpeed;
+  }, [store]);
+
+  const handleToggleLoopMode = useCallback(() => {
+    store.uiStore.settings.finiteLoopMode = !finiteLoopMode;
+  }, [store, finiteLoopMode]);
+
+  const handleTogglePlay = useCallback(() => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    if (playState === 'playing') {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }, [playState]);
 
   const handleReset = useCallback(() => {
-    playerRef.current?.reset();
+    const player = playerRef.current;
+    if (player) {
+      player.seek(0);
+      setViewOffset(0);
+      player.setTransform({ offsetMs: 0, reverseTime: false });
+    }
   }, []);
 
-  const handleScrub = useCallback((tMs: number) => {
-    playerRef.current?.scrubTo(tMs);
-  }, []);
-
-  const handleSpeedChange = useCallback((newSpeed: number) => {
-    store.uiStore.setSpeed(newSpeed);
-    playerRef.current?.setSpeed(newSpeed);
-  }, [store]);
-
-  const handleSeedChange = useCallback((newSeed: number) => {
-    store.uiStore.setSeed(newSeed);
-    // Seed change triggers recompilation via autoCompile
-  }, [store]);
-
-  const handleFiniteLoopModeChange = useCallback((enabled: boolean) => {
-    store.uiStore.setFiniteLoopMode(enabled);
-  }, [store]);
-
-  // Infinite mode handlers
-  const handleViewOffsetChange = useCallback((offset: number) => {
-    setViewOffset(offset);
-  }, []);
-
-  const handleWindowChange = useCallback((windowMs: number) => {
-    // Update the time model with new window size
-    setTimeModel((prev) => {
-      if (prev.kind === 'infinite') {
-        return { ...prev, windowMs };
-      }
-      return prev;
-    });
-  }, []);
-
-  // Pan handlers for mouse drag
-  const handlePanStart = useCallback((e: React.MouseEvent) => {
-    // Only start pan on primary mouse button
-    if (e.button !== 0) return;
-
-    setIsPanning(true);
-    panStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      panX: panOffset.x,
-      panY: panOffset.y,
-    };
+  // Mouse wheel zoom
+  const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-  }, [panOffset]);
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setZoom(prevZoom => Math.max(0.1, Math.min(10, prevZoom * delta)));
+  }, []);
 
-  const handlePanMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanning || !panStartRef.current) return;
-
+  useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (canvas) {
+      canvas.addEventListener('wheel', handleWheel, { passive: false });
+      return () => canvas.removeEventListener('wheel', handleWheel);
+    }
+  }, [handleWheel]);
 
-    // Calculate scale between screen pixels and SVG coordinates (accounting for zoom)
-    const scaleX = (width / zoom) / canvas.clientWidth;
-    const scaleY = (height / zoom) / canvas.clientHeight;
+  // Mouse pan
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 0 && e.shiftKey) {
+      e.preventDefault();
+      setIsPanning(true);
+      panStartRef.current = {
+        mouseX: e.clientX,
+        mouseY: e.clientY,
+        panX: panOffset.x,
+        panY: panOffset.y,
+      };
+    }
+  };
 
-    // Calculate delta in SVG coordinates (inverted for natural drag feel)
-    const deltaX = (e.clientX - panStartRef.current.mouseX) * scaleX;
-    const deltaY = (e.clientY - panStartRef.current.mouseY) * scaleY;
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isPanning && panStartRef.current) {
+      const dx = e.clientX - panStartRef.current.mouseX;
+      const dy = e.clientY - panStartRef.current.mouseY;
+      setPanOffset({
+        x: panStartRef.current.panX + dx,
+        y: panStartRef.current.panY + dy,
+      });
+    }
+  }, [isPanning]);
 
-    setPanOffset({
-      x: panStartRef.current.panX - deltaX,
-      y: panStartRef.current.panY - deltaY,
-    });
-  }, [isPanning, width, height, zoom]);
-
-  const handlePanEnd = useCallback(() => {
+  const handleMouseUp = useCallback(() => {
     setIsPanning(false);
     panStartRef.current = null;
   }, []);
 
-  const handleResetView = useCallback(() => {
+  useEffect(() => {
+    if (isPanning) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isPanning, handleMouseMove, handleMouseUp]);
+
+  const handleResetView = () => {
     setPanOffset({ x: 0, y: 0 });
     setZoom(1);
-  }, []);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Zoom factor per scroll tick
-    const zoomFactor = 1.1;
-    const direction = e.deltaY < 0 ? 1 : -1;
-    const newZoom = Math.max(0.1, Math.min(10, zoom * Math.pow(zoomFactor, direction)));
-
-    // Get mouse position relative to canvas
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    // Convert mouse position to SVG coordinates (before zoom change)
-    const svgX = panOffset.x + (mouseX / rect.width) * (width / zoom);
-    const svgY = panOffset.y + (mouseY / rect.height) * (height / zoom);
-
-    // Calculate new pan offset to keep point under cursor fixed
-    const newPanX = svgX - (mouseX / rect.width) * (width / newZoom);
-    const newPanY = svgY - (mouseY / rect.height) * (height / newZoom);
-
-    setZoom(newZoom);
-    setPanOffset({ x: newPanX, y: newPanY });
-  }, [zoom, panOffset, width, height]);
+  };
 
   return (
     <div className="preview-panel">
-      <div className="preview-header">
-        <span className="preview-title">Preview</span>
-        <div className="preview-header-actions">
-          <button
-            className="preview-help-btn"
-            onClick={() => onShowHelp?.()}
-            title="What is the Preview?"
-          >
-            ?
-          </button>
-          <span className="preview-status">
-            {hasCompiledProgram ? '● Live' : '○ No program'}
-          </span>
-        </div>
-      </div>
-
-      <div
-        ref={canvasRef}
-        className="preview-canvas"
-        style={{
-          width: '100%',
-          height: '100%',
-          cursor: isPanning ? 'grabbing' : 'grab',
-        }}
-        onMouseDown={handlePanStart}
-        onMouseMove={handlePanMove}
-        onMouseUp={handlePanEnd}
-        onMouseLeave={handlePanEnd}
-        onDoubleClick={handleResetView}
-        onWheel={handleWheel}
-      >
-        <svg
-          ref={svgRef}
-          width={width}
-          height={height}
-          viewBox={`${panOffset.x} ${panOffset.y} ${width / zoom} ${height / zoom}`}
-          className="preview-svg"
-        />
-      </div>
-
-      {/* TimeConsole replaces old scrubber/buttons */}
+      {/* Time Console */}
       <TimeConsole
         timeModel={timeModel}
         currentTime={currentTime}
         playState={playState}
         speed={speed}
-        seed={seed}
-        cuePoints={cuePoints}
-        viewOffset={viewOffset}
         finiteLoopMode={finiteLoopMode}
-        onScrub={handleScrub}
-        onPlay={handlePlay}
-        onPause={handlePause}
+        cuePoints={cuePoints}
+        onSeek={handleSeek}
+        onTogglePlay={handleTogglePlay}
         onReset={handleReset}
-        onSpeedChange={handleSpeedChange}
-        onSeedChange={handleSeedChange}
-        onViewOffsetChange={handleViewOffsetChange}
-        onWindowChange={handleWindowChange}
-        onFiniteLoopModeChange={handleFiniteLoopModeChange}
+        onSetSpeed={handleSetSpeed}
+        onToggleLoopMode={handleToggleLoopMode}
+        onSetTransform={handleSetTransform}
+        onShowHelp={onShowHelp}
       />
+
+      {/* Canvas */}
+      <div
+        ref={canvasRef}
+        className="preview-canvas"
+        onMouseDown={handleMouseDown}
+        style={{ cursor: isPanning ? 'grabbing' : 'default' }}
+      >
+        <svg
+          ref={svgRef}
+          width={viewport.width}
+          height={viewport.height}
+          viewBox={`${-panOffset.x / zoom} ${-panOffset.y / zoom} ${viewport.width / zoom} ${viewport.height / zoom}`}
+          style={{
+            border: '1px solid #333',
+            background: '#000',
+          }}
+        />
+
+        {/* View controls */}
+        <div className="view-controls">
+          <button onClick={handleResetView} title="Reset view (Shift+drag to pan, scroll to zoom)">
+            Reset View
+          </button>
+          <span className="zoom-level">Zoom: {(zoom * 100).toFixed(0)}%</span>
+        </div>
+
+        {!hasCompiledProgram && (
+          <div className="no-program-message">
+            No compiled program. Add blocks and connect them to create an animation.
+          </div>
+        )}
+      </div>
     </div>
   );
 });
