@@ -199,7 +199,7 @@ describe('Diagnostic Emission', () => {
   describe('ProgramMeta', () => {
     it('should include timelineHint and timeRootKind in programMeta on success', () => {
       // With requireTimeRoot: false (default), compiler should still infer from TimeRoot if present
-      // This test verifies TimeRoot inference works even without enforcement
+      // This test verifies TimeRoot inference works correctly
       const service = createCompilerService(store);
 
       // Create a complete, valid patch
@@ -218,13 +218,10 @@ describe('Diagnostic Emission', () => {
 
       const event = finishedEvents[0];
       expect(event.programMeta).toBeDefined();
-      // When requireTimeRoot is false, inference may fall back to legacy mode
-      // Just verify we get a valid timelineHint (the specific value depends on inference rules)
-      expect(['finite', 'cyclic', 'infinite']).toContain(event.programMeta?.timelineHint);
-      // timeRootKind may or may not be present depending on inference path
-      if (event.programMeta?.timelineHint === 'cyclic') {
-        expect(event.programMeta?.timeRootKind).toBe('cycle');
-      }
+      // With TimeRoot present, should correctly infer cyclic time
+      expect(event.programMeta?.timelineHint).toBe('cyclic');
+      // timeRootKind should match the block type
+      expect(event.programMeta?.timeRootKind).toBe('CycleTimeRoot');
     });
   });
 });

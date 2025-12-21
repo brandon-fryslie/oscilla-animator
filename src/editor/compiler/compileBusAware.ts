@@ -750,15 +750,48 @@ export function compileBusAwarePatch(
 /**
  * Infer TimeModel from the compiled patch.
  *
- * Inference rules (per PLAN-2024-12-19.md):
- * 1. If patch has PhaseClock with mode='loop' → CyclicTimeModel
- * 2. If patch has PhaseMachine → FiniteTimeModel with computed duration
- * 3. Otherwise → InfiniteTimeModel with 10s default window
- *
- * This is a simple heuristic until explicit TimeRoot blocks are implemented.
+ * Inference rules (priority order):
+ * 1. TimeRoot blocks (FiniteTimeRoot, CycleTimeRoot, InfiniteTimeRoot) - explicit time topology
+ * 2. PhaseMachine (legacy) → FiniteTimeModel with computed duration
+ * 3. PhaseClock with loop mode (legacy) → CyclicTimeModel
+ * 4. Default → InfiniteTimeModel with 10s window
  */
 function inferTimeModel(patch: CompilerPatch): TimeModel {
-  // Check for PhaseMachine first (implies finite duration)
+  // Priority 1: Check for TimeRoot blocks (explicit time topology)
+  for (const block of patch.blocks.values()) {
+    if (block.type === 'FiniteTimeRoot') {
+      const durationMs = Number(block.params.durationMs ?? 5000);
+      return {
+        kind: 'finite',
+        durationMs,
+        cuePoints: [
+          { tMs: 0, label: 'Start', kind: 'marker' },
+          { tMs: durationMs, label: 'End', kind: 'marker' },
+        ],
+      };
+    }
+
+    if (block.type === 'CycleTimeRoot') {
+      const periodMs = Number(block.params.periodMs ?? 3000);
+      const mode = String(block.params.mode ?? 'loop') as 'loop' | 'pingpong';
+      return {
+        kind: 'cyclic',
+        periodMs,
+        phaseDomain: '0..1',
+        mode,
+      };
+    }
+
+    if (block.type === 'InfiniteTimeRoot') {
+      const windowMs = Number(block.params.windowMs ?? 10000);
+      return {
+        kind: 'infinite',
+        windowMs,
+      };
+    }
+  }
+
+  // Priority 2: PhaseMachine (legacy - implies finite duration)
   for (const block of patch.blocks.values()) {
     if (block.type === 'PhaseMachine') {
       const entranceDuration = Number(block.params.entranceDuration ?? 2.5) * 1000;
@@ -779,7 +812,7 @@ function inferTimeModel(patch: CompilerPatch): TimeModel {
     }
   }
 
-  // Check for PhaseClock with loop mode (implies cyclic time)
+  // Priority 3: PhaseClock with loop mode (legacy - implies cyclic time)
   for (const block of patch.blocks.values()) {
     if (block.type === 'PhaseClock') {
       const mode = String(block.params.mode ?? 'loop');
@@ -797,7 +830,7 @@ function inferTimeModel(patch: CompilerPatch): TimeModel {
     }
   }
 
-  // Default: infinite time model
+  // Priority 4: Default fallback - infinite time model
   return {
     kind: 'infinite',
     windowMs: 10000, // 10 second default preview window
