@@ -176,6 +176,101 @@ describe('RootStore - Event Listeners', () => {
     });
   });
 
+  describe('BlockReplaced event listener', () => {
+    it('updates selectedBlockId when selected block is replaced', () => {
+      // Create and select a block
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const oldBlockId = root.patchStore.addBlock('Oscillator', laneId);
+
+      root.uiStore.selectBlock(oldBlockId);
+      expect(root.uiStore.uiState.selectedBlockId).toBe(oldBlockId);
+
+      // Replace the selected block
+      const result = root.patchStore.replaceBlock(oldBlockId, 'Shaper');
+
+      // Selection should be updated to new block ID by event listener
+      expect(result.success).toBe(true);
+      expect(root.uiStore.uiState.selectedBlockId).toBe(result.newBlockId);
+      expect(root.uiStore.uiState.selectedBlockId).not.toBe(oldBlockId);
+    });
+
+    it('preserves selectedBlockId when non-selected block is replaced', () => {
+      // Create two blocks
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const blockId1 = root.patchStore.addBlock('Constant', laneId);
+      const blockId2 = root.patchStore.addBlock('AddSignal', laneId);
+
+      // Select block1
+      root.uiStore.selectBlock(blockId1);
+
+      // Replace block2 (not selected)
+      const result = root.patchStore.replaceBlock(blockId2, 'MulSignal');
+
+      // Selection should remain on block1 (not updated)
+      expect(result.success).toBe(true);
+      expect(root.uiStore.uiState.selectedBlockId).toBe(blockId1);
+    });
+
+    it('does nothing when no block is selected', () => {
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const blockId = root.patchStore.addBlock('Oscillator', laneId);
+
+      root.uiStore.uiState.selectedBlockId = null;
+
+      // Replace block with no selection
+      const result = root.patchStore.replaceBlock(blockId, 'Shaper');
+
+      // Selection should remain null
+      expect(result.success).toBe(true);
+      expect(root.uiStore.uiState.selectedBlockId).toBeNull();
+    });
+
+    it('selection update is synchronous with block replacement', () => {
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const oldBlockId = root.patchStore.addBlock('Oscillator', laneId);
+
+      root.uiStore.selectBlock(oldBlockId);
+
+      // Replace block
+      const result = root.patchStore.replaceBlock(oldBlockId, 'Shaper');
+
+      // Selection should be updated immediately (synchronous event handling)
+      expect(root.uiStore.uiState.selectedBlockId).toBe(result.newBlockId);
+
+      // New block should exist in store
+      const newBlock = root.patchStore.blocks.find(b => b.id === result.newBlockId);
+      expect(newBlock).toBeDefined();
+      expect(newBlock?.type).toBe('Shaper');
+
+      // Old block should not exist
+      const oldBlock = root.patchStore.blocks.find(b => b.id === oldBlockId);
+      expect(oldBlock).toBeUndefined();
+    });
+
+    it('handles multiple replacements in sequence', () => {
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const blockId1 = root.patchStore.addBlock('Oscillator', laneId);
+
+      // Select and replace first time
+      root.uiStore.selectBlock(blockId1);
+      const result1 = root.patchStore.replaceBlock(blockId1, 'Shaper');
+      expect(root.uiStore.uiState.selectedBlockId).toBe(result1.newBlockId);
+
+      // Replace again (now replacing the Shaper block)
+      const result2 = root.patchStore.replaceBlock(result1.newBlockId!, 'ColorLFO');
+      expect(root.uiStore.uiState.selectedBlockId).toBe(result2.newBlockId);
+
+      // Replace a third time
+      const result3 = root.patchStore.replaceBlock(result2.newBlockId!, 'Oscillator');
+      expect(root.uiStore.uiState.selectedBlockId).toBe(result3.newBlockId);
+
+      // Verify final block exists and has correct type
+      const finalBlock = root.patchStore.blocks.find(b => b.id === result3.newBlockId);
+      expect(finalBlock).toBeDefined();
+      expect(finalBlock?.type).toBe('Oscillator');
+    });
+  });
+
   describe('Event listener invariants', () => {
     it('event handlers do not throw errors', () => {
       const busId = root.busStore.createBus(
@@ -227,6 +322,29 @@ describe('RootStore - Event Listeners', () => {
 
       // Selection should already be cleared (not waiting for async)
       expect(root.uiStore.uiState.selectedBlockId).toBeNull();
+    });
+
+    it('block replacement event handler does not throw errors', () => {
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const blockId = root.patchStore.addBlock('Oscillator', laneId);
+
+      root.uiStore.selectBlock(blockId);
+
+      // Should not throw
+      expect(() => root.patchStore.replaceBlock(blockId, 'Shaper')).not.toThrow();
+    });
+
+    it('block replacement event handler is non-blocking', () => {
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const blockId = root.patchStore.addBlock('Oscillator', laneId);
+
+      root.uiStore.selectBlock(blockId);
+
+      // Replace should complete synchronously
+      const result = root.patchStore.replaceBlock(blockId, 'Shaper');
+
+      // Selection should already be updated (not waiting for async)
+      expect(root.uiStore.uiState.selectedBlockId).toBe(result.newBlockId);
     });
   });
 

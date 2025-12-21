@@ -509,13 +509,21 @@ export class PatchStore {
       }
     }
 
-    // Remove old block (this also removes its connections and bus routing)
-    this.removeBlock(oldBlockId);
+    // Emit BlockReplaced event BEFORE removing old block
+    // This allows listeners to see the current selection state and update accordingly
+    this.root.events.emit({
+      type: 'BlockReplaced',
+      oldBlockId,
+      oldBlockType: oldBlock.type,
+      newBlockId,
+      newBlockType,
+      preservedConnections: mapping.preserved.length,
+      droppedConnections: mapping.dropped,
+    });
 
-    // Update selection to new block
-    if (this.root.uiStore.uiState.selectedBlockId === oldBlockId) {
-      this.root.uiStore.selectBlock(newBlockId);
-    }
+    // Remove old block (this also removes its connections and bus routing)
+    // This will emit BlockRemoved event, but BlockReplaced listeners have already run
+    this.removeBlock(oldBlockId);
 
     return {
       success: true,

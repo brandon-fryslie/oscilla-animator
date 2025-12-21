@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RootStore } from '../RootStore';
-import type { WireAddedEvent, WireRemovedEvent } from '../../events/types';
+import type { WireAddedEvent, WireRemovedEvent, BlockReplacedEvent } from '../../events/types';
 
 describe('PatchStore - Wire Events', () => {
   let root: RootStore;
@@ -307,6 +307,140 @@ describe('PatchStore - Wire Events', () => {
       root.patchStore.disconnect(wireId);
 
       expect(connectionExistsAtEventTime).toBe(false);
+    });
+  });
+});
+
+describe('PatchStore - BlockReplaced Events', () => {
+  let root: RootStore;
+
+  beforeEach(() => {
+    root = new RootStore();
+  });
+
+  describe('BlockReplaced event', () => {
+    it('emits BlockReplaced when block successfully replaced', () => {
+      const listener = vi.fn();
+      root.events.on('BlockReplaced', listener);
+
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const oldBlockId = root.patchStore.addBlock('Oscillator', laneId);
+      const oldBlock = root.patchStore.blocks.find(b => b.id === oldBlockId);
+      const oldType = oldBlock?.type ?? '';
+
+      // Replace block with another signal block
+      const result = root.patchStore.replaceBlock(oldBlockId, 'Shaper');
+
+      // Event should be emitted
+      expect(listener).toHaveBeenCalledTimes(1);
+      const event = listener.mock.calls[0][0] as BlockReplacedEvent;
+      expect(event.type).toBe('BlockReplaced');
+      expect(event.oldBlockId).toBe(oldBlockId);
+      expect(event.oldBlockType).toBe(oldType);
+      expect(event.newBlockId).toBe(result.newBlockId);
+      expect(event.newBlockType).toBe('Shaper');
+      expect(event.preservedConnections).toBeDefined();
+      expect(event.droppedConnections).toBeDefined();
+    });
+
+    it('does NOT emit BlockReplaced when replacement fails (block not found)', () => {
+      const listener = vi.fn();
+      root.events.on('BlockReplaced', listener);
+
+      // Try to replace non-existent block
+      root.patchStore.replaceBlock('block-99999', 'Shaper');
+
+      // Event should NOT be emitted
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('does NOT emit BlockReplaced when replacement fails (invalid new type)', () => {
+      const listener = vi.fn();
+      root.events.on('BlockReplaced', listener);
+
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const oldBlockId = root.patchStore.addBlock('Constant', laneId);
+
+      // Try to replace with invalid block type
+      root.patchStore.replaceBlock(oldBlockId, 'NonExistentBlockType' as any);
+
+      // Event should NOT be emitted
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('includes correct connection metrics in event payload', () => {
+      const listener = vi.fn();
+      root.events.on('BlockReplaced', listener);
+
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const block1 = root.patchStore.addBlock('Constant', laneId);
+      const block2 = root.patchStore.addBlock('AddSignal', laneId);
+      const block3 = root.patchStore.addBlock('Constant', laneId);
+
+      // Connect blocks: block1 -> block2 -> block3
+      root.patchStore.connect(block1, 'value', block2, 'a');
+      root.patchStore.connect(block2, 'value', block3, 'value');
+
+      // Replace block2 with MulSignal (compatible slots)
+      const result = root.patchStore.replaceBlock(block2, 'MulSignal');
+
+      const event = listener.mock.calls[0][0] as BlockReplacedEvent;
+
+      // Verify event matches replacement result
+      expect(event.preservedConnections).toBe(result.preservedConnections);
+      expect(event.droppedConnections.length).toBe(result.droppedConnections.length);
+    });
+
+    it('emits event before removing old block (allows listeners to see selection)', () => {
+      let newBlockExistsAtEventTime = false;
+      let oldBlockExistsAtEventTime = false;
+
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const oldBlockId = root.patchStore.addBlock('Oscillator', laneId);
+
+      root.events.on('BlockReplaced', (event) => {
+        // New block should exist
+        newBlockExistsAtEventTime = root.patchStore.blocks.some(b => b.id === event.newBlockId);
+        // Old block should STILL exist (event fires before removal)
+        oldBlockExistsAtEventTime = root.patchStore.blocks.some(b => b.id === event.oldBlockId);
+      });
+
+      root.patchStore.replaceBlock(oldBlockId, 'Shaper');
+
+      expect(newBlockExistsAtEventTime).toBe(true);
+      expect(oldBlockExistsAtEventTime).toBe(true); // Still exists at event time
+
+      // But after the full replacement, old block should be gone
+      const oldBlockStillExists = root.patchStore.blocks.some(b => b.id === oldBlockId);
+      expect(oldBlockStillExists).toBe(false);
+    });
+
+    it('event payload includes dropped connections with reasons', () => {
+      const listener = vi.fn();
+      root.events.on('BlockReplaced', listener);
+
+      const laneId = root.patchStore.lanes[0]?.id ?? '';
+      const block1 = root.patchStore.addBlock('Constant', laneId);
+      const block2 = root.patchStore.addBlock('AddSignal', laneId);
+
+      // Connect to a slot that won't exist on the new block type
+      root.patchStore.connect(block1, 'value', block2, 'a');
+
+      // Replace with a block type that has different slots
+      root.patchStore.replaceBlock(block2, 'Oscillator');
+
+      const event = listener.mock.calls[0][0] as BlockReplacedEvent;
+
+      // Should have dropped connections
+      expect(event.droppedConnections.length).toBeGreaterThan(0);
+
+      // Each dropped connection should have a connectionId and reason
+      event.droppedConnections.forEach(dropped => {
+        expect(dropped.connectionId).toBeDefined();
+        expect(typeof dropped.connectionId).toBe('string');
+        expect(dropped.reason).toBeDefined();
+        expect(typeof dropped.reason).toBe('string');
+      });
     });
   });
 });

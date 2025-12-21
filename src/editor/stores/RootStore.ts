@@ -80,6 +80,13 @@ export class RootStore {
         this.uiStore.uiState.selectedBlockId = null;
       }
     });
+
+    // BlockReplaced → Update selection if replaced block was selected
+    this.events.on('BlockReplaced', (event) => {
+      if (this.uiStore.uiState.selectedBlockId === event.oldBlockId) {
+        this.uiStore.selectBlock(event.newBlockId);
+      }
+    });
   }
 
   generateId(prefix: string): string {

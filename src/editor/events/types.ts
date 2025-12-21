@@ -111,6 +111,35 @@ export interface BlockRemovedEvent {
 }
 
 /**
+ * BlockReplaced event.
+ *
+ * Emitted when a block is replaced with a different block type while preserving compatible connections.
+ * Emitted by: PatchStore.replaceBlock()
+ * When: After new block created, old block removed, and compatible connections re-wired
+ *
+ * Payload structure:
+ * - oldBlockId/oldBlockType: The block that was removed
+ * - newBlockId/newBlockType: The replacement block that was created
+ * - preservedConnections: Number of connections successfully re-wired to the new block
+ * - droppedConnections: Connections that could not be preserved with their IDs and reasons
+ */
+export interface BlockReplacedEvent {
+  type: 'BlockReplaced';
+  /** ID of the block that was replaced */
+  oldBlockId: string;
+  /** Type of the block that was replaced */
+  oldBlockType: string;
+  /** ID of the newly created replacement block */
+  newBlockId: string;
+  /** Type of the newly created replacement block */
+  newBlockType: string;
+  /** Number of connections successfully preserved and re-wired to the new block */
+  preservedConnections: number;
+  /** Connections that were dropped (incompatible or slots not present on new block) with reasons */
+  droppedConnections: Array<{ connectionId: string; reason: string }>;
+}
+
+/**
  * WireAdded event.
  *
  * Emitted when a wire connection is created between two blocks.
@@ -229,6 +258,7 @@ export type EditorEvent =
   | CompileFailedEvent
   | BlockAddedEvent
   | BlockRemovedEvent
+  | BlockReplacedEvent
   | WireAddedEvent
   | WireRemovedEvent
   | BindingAddedEvent

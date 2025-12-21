@@ -1,0 +1,6 @@
+Agent: status-planner | 2025-12-20-161838
+Topic: event-system
+Files: PLAN-2025-12-20-161838.md, DOD-2025-12-20-161838.md, STATUS-2025-12-20-161838.md
+Items: 6 (P0: 4, P1: 2)
+Phase: D (BlockReplaced event + final decoupling)
+Milestone: Complete PatchStore decoupling from UIStateStore
