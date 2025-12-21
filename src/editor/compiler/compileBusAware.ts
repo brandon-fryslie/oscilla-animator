@@ -31,8 +31,13 @@ import type {
 import type { Bus, Publisher, Listener } from '../types';
 import { applyLens } from '../lenses';
 import { validateTimeRootConstraint } from './compile';
+import { extractTimeRootAutoPublications } from './blocks/domain/TimeRoot';
 // CRITICAL: Use busSemantics for ordering - single source of truth for UI and compiler
 import { getSortedPublishers, combineSignalArtifacts, combineFieldArtifacts } from '../semantic/busSemantics';
+import {
+  validateReservedBus,
+  isReservedBusName,
+} from '../semantic/busContracts';
 
 // =============================================================================
 // Type Guards
@@ -190,6 +195,64 @@ function topoSortBlocksWithBuses(
 }
 
 // =============================================================================
+// WP0 Reserved Bus Validation
+// =============================================================================
+
+/**
+ * Validate WP0 reserved bus contracts.
+ * Ensures canonical buses have correct types and combine modes.
+ */
+function validateReservedBuses(
+  buses: Bus[],
+  publishers: Publisher[],
+  blocks: Map<string, any>
+): CompileError[] {
+  const errors: CompileError[] = [];
+
+  for (const bus of buses) {
+    if (!isReservedBusName(bus.name)) {
+      continue; // Skip non-reserved buses
+    }
+
+    // Validate bus type and combine mode against reserved contract
+    const validationErrors = validateReservedBus(
+      bus.name,
+      bus.type,
+      bus.combineMode
+    );
+
+    for (const validationError of validationErrors) {
+      errors.push({
+        code: 'PortTypeMismatch', // Use existing error code for type mismatches
+        message: validationError.message,
+        where: { busId: bus.id },
+      });
+    }
+
+    // Additional check: Ensure TimeRoot blocks are the only publishers to reserved buses
+    if (isReservedBusName(bus.name)) {
+      const timeRootPublishers = publishers.filter(
+        pub => pub.busId === bus.id && pub.enabled
+      );
+
+      // Check if any non-TimeRoot block is publishing to a reserved bus
+      for (const pub of timeRootPublishers) {
+        const block = blocks.get(pub.from.blockId);
+        if (block && !['FiniteTimeRoot', 'CycleTimeRoot', 'InfiniteTimeRoot'].includes(block.type)) {
+          errors.push({
+            code: 'MultipleWriters', // Use existing error code for violations
+            message: `Only TimeRoot blocks may publish to reserved bus "${bus.name}"`,
+            where: { blockId: pub.from.blockId },
+          });
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
+// =============================================================================
 // Main Bus-Aware Compiler
 // =============================================================================
 
@@ -205,7 +268,7 @@ export function compileBusAwarePatch(
 ): CompileResult {
   const errors: CompileError[] = [];
   const buses = patch.buses ?? [];
-  const publishers = patch.publishers ?? [];
+  let publishers = patch.publishers ?? [];
   const listeners = patch.listeners ?? [];
 
   // =============================================================================
@@ -227,14 +290,80 @@ export function compileBusAwarePatch(
   }
 
   // =============================================================================
-  // 1. Validate combine modes (different for Signal vs Field buses)
+  // 1. WP0 Reserved Bus Validation
+  // =============================================================================
+  const reservedBusErrors = validateReservedBuses(buses, publishers, patch.blocks);
+  if (reservedBusErrors.length > 0) {
+    return { ok: false, errors: reservedBusErrors };
+  }
+
+  // =============================================================================
+  // 2. Extract and inject TimeRoot auto-publications
+  // =============================================================================
+  const autoPublications: Publisher[] = [];
+
+  for (const [blockId, block] of patch.blocks.entries()) {
+    if (['FiniteTimeRoot', 'CycleTimeRoot', 'InfiniteTimeRoot'].includes(block.type)) {
+      // Compile the TimeRoot block to get its outputs
+      const compiler = registry[block.type];
+      if (!compiler) {
+        errors.push({
+          code: 'CompilerMissing',
+          message: `Compiler missing for TimeRoot: ${block.type}`,
+          where: { blockId },
+        });
+        continue;
+      }
+
+      // Compile TimeRoot to get outputs for auto-publication extraction
+      const timeRootOutputs = compiler.compile({
+        id: blockId,
+        params: block.params,
+        inputs: {},
+        ctx
+      });
+
+      // Extract auto-publications from TimeRoot outputs
+      const autoPubs = extractTimeRootAutoPublications(block.type, timeRootOutputs);
+
+      // Convert AutoPublication to Publisher format
+      for (const autoPub of autoPubs) {
+        // Find the bus ID for this auto-published bus name
+        const targetBus = buses.find(b => b.name === autoPub.busName);
+        if (!targetBus) {
+          errors.push({
+            code: 'PortMissing', // Use existing error code for missing buses
+            message: `TimeRoot auto-publication requires canonical bus "${autoPub.busName}" to exist`,
+            where: { blockId },
+          });
+          continue;
+        }
+
+        autoPublications.push({
+          id: `auto-${blockId}-${autoPub.busName}`,
+          enabled: true,
+          busId: targetBus.id,
+          from: { blockId, slotId: autoPub.artifactKey, dir: 'output' },
+          sortKey: autoPub.sortKey,
+        });
+      }
+    }
+  }
+
+  if (errors.length) return { ok: false, errors };
+
+  // Merge auto-publications with existing publishers
+  publishers = [...publishers, ...autoPublications];
+
+  // =============================================================================
+  // 3. Validate combine modes (different for Signal vs Field buses)
   // =============================================================================
   for (const bus of buses) {
     if (isFieldBus(bus)) {
       // Field buses support more combine modes
       if (!(FIELD_COMBINE_MODES as readonly string[]).includes(bus.combineMode)) {
         errors.push({
-          code: 'UnsupportedCombineMode',
+          code: 'PortTypeMismatch',
           message: `Combine mode "${bus.combineMode}" not supported for Field bus. Supported: ${FIELD_COMBINE_MODES.join(', ')}.`,
           where: { busId: bus.id },
         });
@@ -243,7 +372,7 @@ export function compileBusAwarePatch(
       // Signal buses only support last and sum
       if (!(SIGNAL_COMBINE_MODES as readonly string[]).includes(bus.combineMode)) {
         errors.push({
-          code: 'UnsupportedCombineMode',
+          code: 'PortTypeMismatch',
           message: `Combine mode "${bus.combineMode}" not supported for Signal bus. Supported: ${SIGNAL_COMBINE_MODES.join(', ')}.`,
           where: { busId: bus.id },
         });
@@ -253,7 +382,7 @@ export function compileBusAwarePatch(
   if (errors.length) return { ok: false, errors };
 
   // =============================================================================
-  // 2. Validate block types exist in registry
+  // 4. Validate block types exist in registry
   // =============================================================================
   for (const [id, b] of patch.blocks.entries()) {
     if (!registry[b.type]) {
@@ -267,7 +396,7 @@ export function compileBusAwarePatch(
   if (errors.length) return { ok: false, errors };
 
   // =============================================================================
-  // 3. Build wire connection indices
+  // 5. Build wire connection indices
   // =============================================================================
   const incoming = indexIncoming(patch.connections);
 
@@ -284,7 +413,7 @@ export function compileBusAwarePatch(
   if (errors.length) return { ok: false, errors };
 
   // =============================================================================
-  // 3.5. Validate port existence (fail fast before compilation)
+  // 5.5. Validate port existence (fail fast before compilation)
   // =============================================================================
   // Validate wire connection source ports
   for (const conn of patch.connections) {
@@ -325,13 +454,13 @@ export function compileBusAwarePatch(
   if (errors.length) return { ok: false, errors };
 
   // =============================================================================
-  // 4. Topological sort blocks (wire AND bus dependencies)
+  // 6. Topological sort blocks (wire AND bus dependencies)
   // =============================================================================
   const order = topoSortBlocksWithBuses(patch, publishers, listeners, errors);
   if (errors.length) return { ok: false, errors };
 
   // =============================================================================
-  // 5. Compile blocks in topo order
+  // 7. Compile blocks in topo order
   // =============================================================================
   const compiledPortMap = new Map<string, Artifact>();
 
@@ -457,7 +586,7 @@ export function compileBusAwarePatch(
   }
 
   // =============================================================================
-  // 6. Resolve final output port
+  // 8. Resolve final output port
   // =============================================================================
   const outputRef = patch.output ?? inferOutputPort(patch, registry, compiledPortMap);
   if (!outputRef) {

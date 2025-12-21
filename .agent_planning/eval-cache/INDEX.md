@@ -2,7 +2,7 @@
 
 Reusable knowledge extracted from project evaluations. Use this to avoid re-discovering the same information.
 
-**Last Updated**: 2025-12-21 14:35:00
+**Last Updated**: 2025-12-21 16:30:00
 
 ---
 
@@ -11,7 +11,6 @@ Reusable knowledge extracted from project evaluations. Use this to avoid re-disc
 | Topic | File | Cached | Source | Confidence |
 |-------|------|--------|--------|------------|
 | Replace Block Feature | replace-block-feature.md | 2025-12-21 14:35 | replace-block eval | HIGH |
-| WP1 Implementation Status | wp1-implementation-status.md | 2025-12-21 13:35 | project-evaluator (WP1 eval) | HIGH |
 | Time Architecture | time-architecture.md | 2025-12-21 12:31 | wp1-timeroot-compilers eval | HIGH |
 | Layout Architecture | layout-architecture.md | 2025-12-21 12:31 | wp1-timeroot-compilers eval | HIGH |
 | Bus Compiler Architecture | bus-compiler-architecture.md | 2025-12-21 13:35 | wp2-bus-aware-compiler eval | HIGH |

@@ -1,0 +1,8 @@
+Agent: work-evaluator | 2025-12-21 16:25
+Scope: wp1-timeroot-compilers
+Verdict: INCOMPLETE
+Criteria: 6/9 working | Breaks found: 3 | Ambiguities: 3
+Previous issues: N/A (fresh evaluation)
+Missing checks: 3 specified
+Cache updated: [Updated 2 files | No updates needed]
+-> Fix auto-publication wiring, implement WP0 validation, remove legacy code

@@ -345,7 +345,7 @@ function compilePatchWireOnly(
   }
 
   // Infer TimeModel from the patch
-  const timeModel = inferTimeModel(patch, compiledPortMap);
+  const timeModel = inferTimeModel(patch);
 
   // Accept both RenderTreeProgram and RenderTree (wrap RenderTree into a Program)
   if (outArt.kind === 'RenderTreeProgram') {
@@ -465,66 +465,25 @@ function inferTimeModelFromTimeRoot(block: BlockInstance): TimeModel {
 /**
  * Infer TimeModel from the compiled patch.
  *
- * Inference rules (in priority order):
- * 1. TimeRoot blocks → Use explicit TimeRoot configuration
- * 2. PhaseMachine → FiniteTimeModel (duration = entrance + hold + exit)
- * 3. PhaseClock with loop mode → CyclicTimeModel
- * 4. Otherwise → InfiniteTimeModel with 10s default window
+ * IMPORTANT: WP1 eliminates legacy inference paths. Only TimeRoot blocks
+ * should determine TimeModel. This is enforced by the requireTimeRoot flag.
+ *
+ * Legacy inference for PhaseMachine and PhaseClock has been removed.
+ * Patches without TimeRoot blocks will fail validation when requireTimeRoot is enabled.
  */
-function inferTimeModel(
-  patch: CompilerPatch,
-  _compiledPortMap: Map<string, Artifact>
-): TimeModel {
+function inferTimeModel(patch: CompilerPatch): TimeModel {
   // Check for explicit TimeRoot blocks first (Phase 3: TimeRoot)
   const timeRootBlocks = findTimeRootBlocks(patch);
   if (timeRootBlocks.length === 1) {
     return inferTimeModelFromTimeRoot(timeRootBlocks[0]!);
   }
 
-  // Legacy inference: Check for PhaseMachine (implies finite duration)
-  for (const block of patch.blocks.values()) {
-    if (block.type === 'PhaseMachine') {
-      const entranceDuration = Number(block.params.entranceDuration ?? 2.5) * 1000;
-      const holdDuration = Number(block.params.holdDuration ?? 2.0) * 1000;
-      const exitDuration = Number(block.params.exitDuration ?? 0.5) * 1000;
-      const totalDuration = entranceDuration + holdDuration + exitDuration;
-
-      return {
-        kind: 'finite',
-        durationMs: totalDuration,
-        cuePoints: [
-          { tMs: 0, label: 'Entrance Start', kind: 'phase' },
-          { tMs: entranceDuration, label: 'Hold Start', kind: 'phase' },
-          { tMs: entranceDuration + holdDuration, label: 'Exit Start', kind: 'phase' },
-          { tMs: totalDuration, label: 'End', kind: 'phase' },
-        ],
-      };
-    }
-  }
-
-  // Legacy inference: Check for PhaseClock with loop mode (implies cyclic time)
-  for (const block of patch.blocks.values()) {
-    if (block.type === 'PhaseClock') {
-      const mode = String(block.params.mode ?? 'loop');
-      const durationSec = Number(block.params.duration ?? 3.0);
-      const periodMs = durationSec * 1000;
-
-      if (mode === 'loop' || mode === 'pingpong') {
-        return {
-          kind: 'cyclic',
-          periodMs,
-          phaseDomain: '0..1',
-          mode: mode as 'loop' | 'pingpong',
-        };
-      }
-    }
-  }
-
-  // Default: infinite time model
-  return {
-    kind: 'infinite',
-    windowMs: 10000, // 10 second default preview window
-  };
+  // No TimeRoot found - this should be caught by validation (requireTimeRoot flag).
+  // If we reach here, it means validation was bypassed or there's a bug.
+  throw new Error(
+    'E_TIME_ROOT_MISSING: No TimeRoot block found. ' +
+      'Every patch must have exactly one TimeRoot (FiniteTimeRoot, CycleTimeRoot, or InfiniteTimeRoot).'
+  );
 }
 
 // =============================================================================
