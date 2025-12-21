@@ -159,14 +159,18 @@ export interface AdapterStep {
 }
 
 /**
- * Endpoint reference for routing.
+ * Endpoint reference for routing (bus publishers/listeners).
+ * Uses canonical slotId + direction for stable identity.
  */
 export interface BindingEndpoint {
   /** Block ID */
   readonly blockId: BlockId;
 
-  /** Port name */
-  readonly port: string;
+  /** Canonical slot ID (stable across renames) */
+  readonly slotId: string;
+
+  /** Port direction */
+  readonly dir: 'input' | 'output';
 }
 
 /**
@@ -485,7 +489,7 @@ export interface Composite {
 }
 
 /**
- * Connection within a composite (has port instead of slotId).
+ * Connection within a composite.
  */
 export interface CompositeConnection {
   /** Connection identifier */
@@ -494,13 +498,13 @@ export interface CompositeConnection {
   /** Source endpoint */
   readonly from: {
     readonly blockId: BlockId;
-    readonly port: string;
+    readonly slotId: string;
   };
 
   /** Destination endpoint */
   readonly to: {
     readonly blockId: BlockId;
-    readonly port: string;
+    readonly slotId: string;
   };
 }
 

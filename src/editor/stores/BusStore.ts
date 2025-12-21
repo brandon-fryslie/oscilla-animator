@@ -207,7 +207,7 @@ export class BusStore {
   addPublisher(
     busId: string,
     blockId: BlockId,
-    port: string,
+    slotId: string,
     adapterChain?: AdapterStep[]
   ): string {
     const bus = this.buses.find(b => b.id === busId);
@@ -223,7 +223,7 @@ export class BusStore {
     const publisher: Publisher = {
       id: this.root.generateId('pub'),
       busId,
-      from: { blockId, port },
+      from: { blockId, slotId, dir: 'output' },
       adapterChain,
       enabled: true,
       sortKey: maxSortKey + 10,
@@ -237,7 +237,7 @@ export class BusStore {
       bindingId: publisher.id,
       busId,
       blockId,
-      port,
+      port: slotId,
       direction: 'publish',
     });
 
@@ -275,7 +275,7 @@ export class BusStore {
       bindingId: publisher.id,
       busId: publisher.busId,
       blockId: publisher.from.blockId,
-      port: publisher.from.port,
+      port: publisher.from.slotId,
       direction: 'publish',
     });
   }
@@ -287,7 +287,7 @@ export class BusStore {
   addListener(
     busId: string,
     blockId: BlockId,
-    port: string,
+    slotId: string,
     adapterChain?: AdapterStep[],
     lensOrStack?: LensDefinition | LensDefinition[]
   ): string {
@@ -305,7 +305,7 @@ export class BusStore {
     const listener: Listener = {
       id: this.root.generateId('list'),
       busId,
-      to: { blockId, port },
+      to: { blockId, slotId, dir: 'input' },
       adapterChain,
       enabled: true,
       lensStack,
@@ -319,7 +319,7 @@ export class BusStore {
       bindingId: listener.id,
       busId,
       blockId,
-      port,
+      port: slotId,
       direction: 'subscribe',
     });
 
@@ -441,7 +441,7 @@ export class BusStore {
       bindingId: listener.id,
       busId: listener.busId,
       blockId: listener.to.blockId,
-      port: listener.to.port,
+      port: listener.to.slotId,
       direction: 'subscribe',
     });
   }
@@ -512,18 +512,18 @@ export class BusStore {
   /**
    * Get publishers for a specific block output port.
    */
-  getPublishersByOutput(blockId: BlockId, port: string): Publisher[] {
+  getPublishersByOutput(blockId: BlockId, slotId: string): Publisher[] {
     return this.publishers.filter(
-      p => p.from.blockId === blockId && p.from.port === port
+      p => p.from.blockId === blockId && p.from.slotId === slotId
     );
   }
 
   /**
    * Get listeners for a specific block input port.
    */
-  getListenersByInput(blockId: BlockId, port: string): Listener[] {
+  getListenersByInput(blockId: BlockId, slotId: string): Listener[] {
     return this.listeners.filter(
-      l => l.to.blockId === blockId && l.to.port === port
+      l => l.to.blockId === blockId && l.to.slotId === slotId
     );
   }
 

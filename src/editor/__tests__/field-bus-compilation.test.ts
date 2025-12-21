@@ -157,7 +157,7 @@ describe('Field Bus Compilation', () => {
       {
         id: 'pub1',
         busId: 'fieldBus1',
-        from: { blockId: 'source1', port: 'field' },
+        from: { blockId: 'source1', slotId: 'field', dir: 'output' },
         enabled: true,
         sortKey: 0,
       },
@@ -167,7 +167,7 @@ describe('Field Bus Compilation', () => {
       {
         id: 'list1',
         busId: 'fieldBus1',
-        to: { blockId: 'sink1', port: 'field' },
+        to: { blockId: 'sink1', slotId: 'field', dir: 'input' },
         enabled: true,
       },
     ];
@@ -214,12 +214,12 @@ describe('Field Bus Compilation', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', port: 'field' }, enabled: true, sortKey: 0 },
-      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', port: 'field' }, enabled: true, sortKey: 1 },
+      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 1 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', port: 'field' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
@@ -261,12 +261,12 @@ describe('Field Bus Compilation', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', port: 'field' }, enabled: true, sortKey: 10 },
-      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', port: 'field' }, enabled: true, sortKey: 20 }, // Wins
+      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 20 }, // Wins
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', port: 'field' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
@@ -304,7 +304,7 @@ describe('Field Bus Compilation', () => {
     };
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', port: 'field' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
@@ -344,12 +344,12 @@ describe('Field Bus Compilation', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', port: 'field' }, enabled: true, sortKey: 0 },
-      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', port: 'field' }, enabled: true, sortKey: 1 },
+      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 1 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', port: 'field' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
@@ -391,12 +391,12 @@ describe('Field Bus Compilation', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', port: 'field' }, enabled: true, sortKey: 0 },
-      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', port: 'field' }, enabled: true, sortKey: 1 },
+      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 1 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', port: 'field' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
@@ -438,12 +438,12 @@ describe('Field Bus Compilation', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', port: 'field' }, enabled: true, sortKey: 0 },
-      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', port: 'field' }, enabled: true, sortKey: 1 },
+      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 1 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', port: 'field' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
@@ -516,13 +516,13 @@ describe('Mixed Signal and Field Buses', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'phaseA', from: { blockId: 'phaseSource', port: 'phase' }, enabled: true, sortKey: 0 },
-      { id: 'pub2', busId: 'positions', from: { blockId: 'fieldSource', port: 'field' }, enabled: true, sortKey: 0 },
+      { id: 'pub1', busId: 'phaseA', from: { blockId: 'phaseSource', slotId: 'phase', dir: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub2', busId: 'positions', from: { blockId: 'fieldSource', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 0 },
     ];
 
     const listeners: Listener[] = [
       // Sink listens to positions field bus
-      { id: 'list1', busId: 'positions', to: { blockId: 'sink1', port: 'field' }, enabled: true },
+      { id: 'list1', busId: 'positions', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {

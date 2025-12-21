@@ -195,7 +195,8 @@
       "busId": "bus-phaseA",
       "from": {
         "blockId": "block-2",
-        "port": "phase"
+        "slotId": "phase",
+        "dir": "output"
       },
       "enabled": true,
       "sortKey": 0
@@ -207,7 +208,8 @@
       "busId": "bus-phaseA",
       "to": {
         "blockId": "block-3",
-        "port": "radius"
+        "slotId": "radius",
+        "dir": "input"
       },
       "enabled": true,
       "lens": {

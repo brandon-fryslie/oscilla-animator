@@ -361,7 +361,8 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
                 busId: busName,
                 to: {
                   blockId: internalBlockId,
-                  port,
+                  slotId: port,
+                  dir: 'input',
                 },
                 enabled: true,
               };
@@ -385,7 +386,8 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
                 busId: busName,
                 from: {
                   blockId: internalBlockId,
-                  port,
+                  slotId: port,
+                  dir: 'output',
                 },
                 enabled: true,
                 sortKey: 0, // Default sort key, can be customized if needed
@@ -489,15 +491,15 @@ function rewriteBusBindings(
 
   // Rewrite publishers
   const rewrittenPublishers = patch.publishers?.map((pub) => {
-    const ref: PortRef = { blockId: pub.from.blockId, port: pub.from.port };
+    const ref: PortRef = { blockId: pub.from.blockId, port: pub.from.slotId };
     const rewritten = rewriteMap.rewrite(ref);
 
     if (rewritten === null) {
       // Port not exposed by composite boundary
       errors.push({
         code: 'PortMissing',
-        message: `Publisher port not exposed by composite boundary: ${pub.from.blockId}.${pub.from.port}`,
-        where: { blockId: pub.from.blockId, port: pub.from.port },
+        message: `Publisher port not exposed by composite boundary: ${pub.from.blockId}.${pub.from.slotId}`,
+        where: { blockId: pub.from.blockId, port: pub.from.slotId },
       });
       return pub; // Return unchanged, error will prevent compilation
     }
@@ -505,21 +507,21 @@ function rewriteBusBindings(
     // Return publisher with rewritten port reference
     return {
       ...pub,
-      from: { blockId: rewritten.blockId, port: rewritten.port },
+      from: { blockId: rewritten.blockId, slotId: rewritten.port, dir: 'output' as const },
     };
   });
 
   // Rewrite listeners
   const rewrittenListeners = patch.listeners?.map((listener) => {
-    const ref: PortRef = { blockId: listener.to.blockId, port: listener.to.port };
+    const ref: PortRef = { blockId: listener.to.blockId, port: listener.to.slotId };
     const rewritten = rewriteMap.rewrite(ref);
 
     if (rewritten === null) {
       // Port not exposed by composite boundary
       errors.push({
         code: 'PortMissing',
-        message: `Listener port not exposed by composite boundary: ${listener.to.blockId}.${listener.to.port}`,
-        where: { blockId: listener.to.blockId, port: listener.to.port },
+        message: `Listener port not exposed by composite boundary: ${listener.to.blockId}.${listener.to.slotId}`,
+        where: { blockId: listener.to.blockId, port: listener.to.slotId },
       });
       return listener; // Return unchanged, error will prevent compilation
     }
@@ -527,7 +529,7 @@ function rewriteBusBindings(
     // Return listener with rewritten port reference
     return {
       ...listener,
-      to: { blockId: rewritten.blockId, port: rewritten.port },
+      to: { blockId: rewritten.blockId, slotId: rewritten.port, dir: 'input' as const },
     };
   });
 
@@ -573,7 +575,7 @@ function toUnifiedPatchDef(patch: CompilerPatch): UnifiedPatchDef {
         id: pub.id,
         blockId: pub.from.blockId,
         busId: pub.busId,
-        port: pub.from.port,
+        port: pub.from.slotId,
         sortKey: pub.sortKey,
         disabled: !pub.enabled,
       }))
@@ -585,7 +587,7 @@ function toUnifiedPatchDef(patch: CompilerPatch): UnifiedPatchDef {
         id: listener.id,
         blockId: listener.to.blockId,
         busId: listener.busId,
-        port: listener.to.port,
+        port: listener.to.slotId,
         disabled: !listener.enabled,
       }))
     : [];

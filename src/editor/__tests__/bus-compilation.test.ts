@@ -99,7 +99,7 @@ describe('Bus Compilation - Happy Path', () => {
       {
         id: 'pub1',
         busId: 'bus1',
-        from: { blockId: 'source1', port: 'value' },
+        from: { blockId: 'source1', slotId: 'value', dir: 'output' },
         enabled: true,
         sortKey: 0,
       },
@@ -109,7 +109,7 @@ describe('Bus Compilation - Happy Path', () => {
       {
         id: 'list1',
         busId: 'bus1',
-        to: { blockId: 'sink1', port: 'input' },
+        to: { blockId: 'sink1', slotId: 'input', dir: 'input' },
         enabled: true,
       },
     ];
@@ -148,7 +148,7 @@ describe('Bus Compilation - Happy Path', () => {
       {
         id: 'list1',
         busId: 'bus1',
-        to: { blockId: 'sink1', port: 'input' },
+        to: { blockId: 'sink1', slotId: 'input', dir: 'input' },
         enabled: true,
       },
     ];
@@ -190,13 +190,13 @@ describe('Bus Compilation - Happy Path', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', port: 'value' }, enabled: true, sortKey: 10 },
-      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', port: 'value' }, enabled: true, sortKey: 20 },
-      { id: 'pub3', busId: 'bus1', from: { blockId: 'source3', port: 'value' }, enabled: true, sortKey: 30 }, // Highest - should win
+      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 20 },
+      { id: 'pub3', busId: 'bus1', from: { blockId: 'source3', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 30 }, // Highest - should win
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', port: 'input' }, enabled: true },
+      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', dir: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
@@ -236,13 +236,13 @@ describe('Bus Compilation - Happy Path', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', port: 'value' }, enabled: true, sortKey: 10 },
-      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', port: 'value' }, enabled: true, sortKey: 20 },
-      { id: 'pub3', busId: 'bus1', from: { blockId: 'source3', port: 'value' }, enabled: true, sortKey: 30 },
+      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 20 },
+      { id: 'pub3', busId: 'bus1', from: { blockId: 'source3', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 30 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', port: 'input' }, enabled: true },
+      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', dir: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
@@ -288,12 +288,12 @@ describe('Bus Compilation - sortKey Determinism', () => {
 
     // Same sortKey - id tie-breaker should make pub2 win (alphabetically later)
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', port: 'value' }, enabled: true, sortKey: 10 },
-      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', port: 'value' }, enabled: true, sortKey: 10 },
+      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', port: 'input' }, enabled: true },
+      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', dir: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
@@ -333,12 +333,12 @@ describe('Bus Compilation - sortKey Determinism', () => {
 
     // First configuration: pub1 higher sortKey
     const publishers1: Publisher[] = [
-      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', port: 'value' }, enabled: true, sortKey: 20 },
-      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', port: 'value' }, enabled: true, sortKey: 10 },
+      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 20 },
+      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', port: 'input' }, enabled: true },
+      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', dir: 'input' }, enabled: true },
     ];
 
     const patch1: CompilerPatch = {
@@ -361,8 +361,8 @@ describe('Bus Compilation - sortKey Determinism', () => {
 
     // Second configuration: swap sortKeys
     const publishers2: Publisher[] = [
-      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', port: 'value' }, enabled: true, sortKey: 10 },
-      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', port: 'value' }, enabled: true, sortKey: 20 },
+      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 20 },
     ];
 
     const patch2: CompilerPatch = {

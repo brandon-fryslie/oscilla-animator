@@ -43,7 +43,7 @@ function isPortSubscribedToBus(store: RootStore, portRef: PortRef, busId: string
     (l: Listener) =>
       l.busId === busId &&
       l.to.blockId === portRef.blockId &&
-      l.to.port === portRef.slotId
+      l.to.slotId === portRef.slotId
   );
 }
 

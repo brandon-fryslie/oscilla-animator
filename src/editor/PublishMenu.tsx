@@ -39,7 +39,7 @@ function getPortPublishers(store: RootStore, portRef: PortRef): Publisher[] {
   return store.busStore.publishers.filter(
     (p: Publisher) =>
       p.from.blockId === portRef.blockId &&
-      p.from.port === portRef.slotId
+      p.from.slotId === portRef.slotId
   );
 }
 
@@ -51,7 +51,7 @@ function isPortPublishingToBus(store: RootStore, portRef: PortRef, busId: string
     (p: Publisher) =>
       p.busId === busId &&
       p.from.blockId === portRef.blockId &&
-      p.from.port === portRef.slotId
+      p.from.slotId === portRef.slotId
   );
 }
 

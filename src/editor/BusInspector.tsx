@@ -125,7 +125,7 @@ function PublisherItem({
   const store = useStore();
   const block = store.patchStore.blocks.find(b => b.id === publisher.from.blockId);
   const blockName = block?.label ?? 'Unknown Block';
-  const portName = publisher.from.port;
+  const portName = publisher.from.slotId;
 
   const handleJumpToBlock = () => {
     store.uiStore.selectBlock(publisher.from.blockId);
@@ -174,7 +174,7 @@ function ListenerItem({
   const [isEditingLens, setIsEditingLens] = useState(false);
   const block = store.patchStore.blocks.find(b => b.id === listener.to.blockId);
   const blockName = block?.label ?? 'Unknown Block';
-  const portName = listener.to.port;
+  const portName = listener.to.slotId;
 
   const handleJumpToBlock = () => {
     store.uiStore.selectBlock(listener.to.blockId);

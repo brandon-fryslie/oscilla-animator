@@ -569,12 +569,12 @@ export function compileBusAwarePatch(
         inputs[p.name] = src ?? {
           kind: 'Error',
           message: `Missing upstream artifact for ${srcKey}`,
-          where: { blockId: wireConn.from.blockId, port: wireConn.from.port },
+          where: { blockId: wireConn.from.blockId, port: wireConn.from.slotId },
         };
       } else {
         // Check for bus listener
         const busListener = listeners.find(
-          l => l.enabled && l.to.blockId === blockId && l.to.port === p.name
+          l => l.enabled && l.to.blockId === blockId && l.to.slotId === p.name
         );
 
         if (busListener) {
@@ -795,14 +795,14 @@ function getBusValue(
   // Collect artifacts from publishers
   const artifacts: Artifact[] = [];
   for (const pub of sortedPublishers) {
-    const key = keyOf(pub.from.blockId, pub.from.port);
+    const key = keyOf(pub.from.blockId, pub.from.slotId);
     const artifact = compiledPortMap.get(key);
 
     if (!artifact) {
       errors.push({
         code: 'BusEvaluationError',
         message: `Publisher ${pub.id} references missing artifact ${key}`,
-        where: { busId, blockId: pub.from.blockId, port: pub.from.port },
+        where: { busId, blockId: pub.from.blockId, port: pub.from.slotId },
       });
       continue;
     }
@@ -811,7 +811,7 @@ function getBusValue(
       errors.push({
         code: 'BusEvaluationError',
         message: `Publisher ${pub.id} has error artifact: ${artifact.message}`,
-        where: { busId, blockId: pub.from.blockId, port: pub.from.port },
+        where: { busId, blockId: pub.from.blockId, port: pub.from.slotId },
       });
       continue;
     }

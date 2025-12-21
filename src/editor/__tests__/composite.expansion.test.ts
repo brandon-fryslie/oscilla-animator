@@ -207,7 +207,7 @@ describe('Bus bindings through composites (Test Matrix Section B)', () => {
     expect(store.busStore.listeners.length).toBeGreaterThan(0);
     const listener = store.busStore.listeners[0];
     expect(listener.to.blockId).toBe('block-3'); // Targets composite
-    expect(listener.to.port).toBe('radius');
+    expect(listener.to.slotId).toBe('radius');
 
     // Compile
     const compiler = createCompilerService(store);

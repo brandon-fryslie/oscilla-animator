@@ -215,13 +215,13 @@ export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelPro
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, index)}
-                  title={`Drag to reorder | ${blockLabel}.${pub.from.port}`}
+                  title={`Drag to reorder | ${blockLabel}.${pub.from.slotId}`}
                 >
                   <span className="bus-publisher-drag-handle" title="Drag to reorder">
                     ⋮⋮
                   </span>
-                  <span className="bus-publisher-label" title={`${blockLabel}.${pub.from.port}`}>
-                    {blockLabel}.{pub.from.port}
+                  <span className="bus-publisher-label" title={`${blockLabel}.${pub.from.slotId}`}>
+                    {blockLabel}.{pub.from.slotId}
                   </span>
                   <button
                     className="bus-publisher-mute-btn"

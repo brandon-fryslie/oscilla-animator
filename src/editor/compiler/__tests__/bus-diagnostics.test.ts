@@ -52,7 +52,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-1',
         busId: 'custom-bus',
-        from: { blockId: domainBlock, port: 'domain' },
+        from: { blockId: domainBlock, slotId: 'domain', dir: 'output' },
         enabled: true,
         sortKey: 0,
       });
@@ -96,7 +96,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-1',
         busId: 'custom-bus',
-        from: { blockId: domainBlock, port: 'domain' },
+        from: { blockId: domainBlock, slotId: 'domain', dir: 'output' },
         enabled: true,
         sortKey: 0,
       });
@@ -104,7 +104,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.listeners.push({
         id: 'lis-1',
         busId: 'custom-bus',
-        to: { blockId: renderBlock, port: 'radius' },
+        to: { blockId: renderBlock, slotId: 'radius', dir: 'input' },
         enabled: true,
       });
 
@@ -199,7 +199,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-pos0',
         busId: 'phaseA', // Use existing bus
-        from: { blockId: domainBlock, port: 'pos0' },
+        from: { blockId: domainBlock, slotId: 'pos0', dir: 'output' },
         enabled: true,
         sortKey: 0,
       });
