@@ -14,6 +14,7 @@
 
 import type { RenderTree } from './renderTree';
 import type { CompileCtx, RuntimeCtx, Program, Seed, TimelineHint, CuePoint, TimeModel } from '../compiler/types';
+import type { EventDispatcher } from '../events/EventDispatcher';
 
 // =============================================================================
 // Types
@@ -62,6 +63,8 @@ export interface PlayerOptions {
   onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
   /** If true, automatically apply timeline hints from programs */
   autoApplyTimeline?: boolean;
+  /** Optional event dispatcher for runtime health snapshots */
+  events?: EventDispatcher;
 }
 
 // =============================================================================
@@ -106,6 +109,18 @@ export class Player {
   private onTimelineChange?: (hint: TimelineHint | null) => void;
   private onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
 
+  // Event dispatcher for runtime health snapshots
+  private events?: EventDispatcher;
+
+  // Runtime health tracking
+  private activePatchRevision = 0;
+  private lastHealthEmitMs = 0;
+  private frameTimes: number[] = [];
+  private nanCount = 0;
+  private infCount = 0;
+  private static readonly FRAME_TIME_WINDOW = 60; // Keep last 60 frames
+  private static readonly HEALTH_EMIT_INTERVAL_MS = 250; // 4 Hz
+
   constructor(opts: PlayerOptions) {
     this.compileCtx = opts.compileCtx;
     this.runtimeCtx = opts.runtimeCtx;
@@ -116,6 +131,7 @@ export class Player {
     this.onTimelineChange = opts.onTimelineChange;
     this.onCuePointsChange = opts.onCuePointsChange;
     this.autoApplyTimeline = opts.autoApplyTimeline ?? true;
+    this.events = opts.events;
   }
 
   // ===========================================================================
@@ -262,6 +278,20 @@ export class Player {
    */
   setAutoApplyTimeline(enabled: boolean): void {
     this.autoApplyTimeline = enabled;
+  }
+
+  /**
+   * Set the active patch revision for runtime health tracking.
+   */
+  setActivePatchRevision(revision: number): void {
+    this.activePatchRevision = revision;
+  }
+
+  /**
+   * Get the active patch revision.
+   */
+  getActivePatchRevision(): number {
+    return this.activePatchRevision;
   }
 
   private instantiateProgram(): void {
@@ -463,9 +493,13 @@ export class Player {
     if (this.playState !== 'playing') return;
 
     const now = performance.now();
-    const dt = (now - this.lastFrameMs) * this.speed * this.playDirection;
+    const realDt = now - this.lastFrameMs; // Real frame time in ms
+    const dt = realDt * this.speed * this.playDirection;
     this.lastFrameMs = now;
     this.tMs += dt;
+
+    // Track frame time for health monitoring
+    this.trackFrameTime(realDt);
 
     // Time wrapping is determined by TimeModel, not loopMode.
     // - cyclic: wrap for continuous loop
@@ -535,6 +569,9 @@ export class Player {
     this.onTimeChange?.(this.tMs);
     this.renderOnce();
 
+    // Emit health snapshot if interval elapsed
+    this.emitHealthSnapshot(now);
+
     this.rafId = requestAnimationFrame(this.tick);
   };
 
@@ -542,7 +579,107 @@ export class Player {
     if (!this.program) return;
 
     const tree = this.program.signal(this.tMs, this.runtimeCtx);
+
+    // Basic health check for NaN/Infinity
+    this.checkRenderHealth(tree);
+
     this.onFrame(tree, this.tMs);
+  }
+
+  // ===========================================================================
+  // Runtime Health Tracking
+  // ===========================================================================
+
+  /**
+   * Track frame time in rolling window.
+   */
+  private trackFrameTime(frameMs: number): void {
+    this.frameTimes.push(frameMs);
+
+    // Keep only the last N frames
+    if (this.frameTimes.length > Player.FRAME_TIME_WINDOW) {
+      this.frameTimes.shift();
+    }
+  }
+
+  /**
+   * Perform basic health check on render tree.
+   */
+  private checkRenderHealth(tree: RenderTree): void {
+    // For now, just check if tree exists and is valid
+    // Future: could add deep traversal to check for NaN/Infinity in coordinates
+    if (!tree || typeof tree !== 'object') {
+      this.nanCount++;
+    }
+  }
+
+  /**
+   * Emit RuntimeHealthSnapshot event if interval has elapsed.
+   */
+  private emitHealthSnapshot(nowMs: number): void {
+    if (!this.events) return;
+
+    const elapsed = nowMs - this.lastHealthEmitMs;
+    if (elapsed < Player.HEALTH_EMIT_INTERVAL_MS) return;
+
+    // Calculate frame statistics
+    const fpsEstimate = this.calculateFPS();
+    const avgFrameMs = this.calculateAvgFrameTime();
+    const worstFrameMs = this.calculateWorstFrameTime();
+
+    // Emit the event
+    this.events.emit({
+      type: 'RuntimeHealthSnapshot',
+      patchId: 'patch', // For now, use constant ID
+      activePatchRevision: this.activePatchRevision,
+      tMs: this.tMs,
+      frameBudget: {
+        fpsEstimate,
+        avgFrameMs,
+        worstFrameMs,
+      },
+      evalStats: {
+        nanCount: this.nanCount,
+        infCount: this.infCount,
+        fieldMaterializations: 0, // Not tracked yet
+      },
+    });
+
+    // Reset counters and update last emit time
+    this.nanCount = 0;
+    this.infCount = 0;
+    this.lastHealthEmitMs = nowMs;
+  }
+
+  /**
+   * Calculate FPS estimate from frame times.
+   */
+  private calculateFPS(): number {
+    if (this.frameTimes.length === 0) return 0;
+
+    const avgFrameMs = this.calculateAvgFrameTime();
+    if (avgFrameMs === 0) return 0;
+
+    return 1000 / avgFrameMs;
+  }
+
+  /**
+   * Calculate average frame time.
+   */
+  private calculateAvgFrameTime(): number {
+    if (this.frameTimes.length === 0) return 0;
+
+    const sum = this.frameTimes.reduce((acc, t) => acc + t, 0);
+    return sum / this.frameTimes.length;
+  }
+
+  /**
+   * Calculate worst (maximum) frame time.
+   */
+  private calculateWorstFrameTime(): number | undefined {
+    if (this.frameTimes.length === 0) return undefined;
+
+    return Math.max(...this.frameTimes);
   }
 }
 
@@ -564,6 +701,7 @@ export function createPlayer(
     onTimelineChange?: (hint: TimelineHint | null) => void;
     onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
     autoApplyTimeline?: boolean;
+    events?: EventDispatcher;
   }
 ): Player {
   const compileCtx: CompileCtx = {
@@ -592,5 +730,6 @@ export function createPlayer(
     onTimelineChange: opts?.onTimelineChange,
     onCuePointsChange: opts?.onCuePointsChange,
     autoApplyTimeline: opts?.autoApplyTimeline,
+    events: opts?.events,
   });
 }
