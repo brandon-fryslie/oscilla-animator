@@ -126,6 +126,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         onTimeChange: setCurrentTime,
         onCuePointsChange: setCuePoints,
         autoApplyTimeline: true,
+        events: store.events, // Pass EventDispatcher for runtime health snapshots
       }
     );
     playerRef.current = player;
@@ -141,6 +142,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         const program = compiledProgram.program as unknown as Program<RenderTree>;
         player.setFactory(() => program);
         player.applyTimeModel(compiledProgram.timeModel);
+        player.setActivePatchRevision(store.patchStore.patchRevision);
         setTimeModel(compiledProgram.timeModel);
         lastGoodProgramRef.current = program;
         setHasCompiledProgram(true);
@@ -200,6 +202,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
           const program = compiledProgram.program as unknown as Program<RenderTree>;
           player.setFactory(() => program);
           player.applyTimeModel(compiledProgram.timeModel);
+          player.setActivePatchRevision(store.patchStore.patchRevision);
           setTimeModel(compiledProgram.timeModel);
           lastGoodProgramRef.current = program;
           setHasCompiledProgram(true);
@@ -216,7 +219,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     }, 500);
 
     return () => clearInterval(interval);
-  }, [compilerService, viewport.width, viewport.height]);
+  }, [compilerService, viewport.width, viewport.height, store.patchStore.patchRevision]);
 
   // TimeConsole callbacks
   const handlePlay = useCallback(() => {
