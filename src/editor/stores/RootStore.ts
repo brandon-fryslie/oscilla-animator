@@ -7,8 +7,10 @@ import { PatchStore } from './PatchStore';
 import { BusStore } from './BusStore';
 import { UIStateStore } from './UIStateStore';
 import { CompositeStore } from './CompositeStore';
+import { DiagnosticStore } from './DiagnosticStore';
 import { LogStore } from '../logStore';
 import { EventDispatcher } from '../events';
+import { DiagnosticHub } from '../diagnostics/DiagnosticHub';
 import type { Block, Bus, Lane, Patch, Slot } from '../types';
 import breathingDotsPatch from '../demo-patches/breathing-dots.json';
 
@@ -22,6 +24,10 @@ export class RootStore {
   uiStore: UIStateStore;
   compositeStore: CompositeStore;
   logStore: LogStore;
+
+  // Diagnostics
+  diagnosticHub: DiagnosticHub;
+  diagnosticStore: DiagnosticStore;
 
   private nextId = 1;
 
@@ -37,6 +43,10 @@ export class RootStore {
     this.busStore = new BusStore(this);
     this.uiStore = new UIStateStore(this);
     this.compositeStore = new CompositeStore(this);
+
+    // Create diagnostic infrastructure (after patchStore)
+    this.diagnosticHub = new DiagnosticHub(this.events, this.patchStore);
+    this.diagnosticStore = new DiagnosticStore(this.diagnosticHub);
 
     makeObservable(this, {
       selectedBlock: computed,
@@ -87,6 +97,12 @@ export class RootStore {
         this.uiStore.selectBlock(event.newBlockId);
       }
     });
+
+    // Invalidate diagnostic store on key lifecycle events
+    this.events.on('CompileFinished', () => this.diagnosticStore.invalidate());
+    this.events.on('ProgramSwapped', () => this.diagnosticStore.invalidate());
+    this.events.on('GraphCommitted', () => this.diagnosticStore.invalidate());
+    this.events.on('RuntimeHealthSnapshot', () => this.diagnosticStore.invalidate());
   }
 
   generateId(prefix: string): string {

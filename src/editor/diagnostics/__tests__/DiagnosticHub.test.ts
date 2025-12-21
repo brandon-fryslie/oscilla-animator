@@ -407,4 +407,237 @@ describe('DiagnosticHub', () => {
       expect(authoring).toEqual([]);
     });
   });
+
+  describe('Mute/Unmute', () => {
+    beforeEach(() => {
+      // Set up test data with a diagnostic
+      const diag = createCompileDiagnostic(1, 'E_TYPE_MISMATCH');
+      events.emit({
+        type: 'CompileFinished',
+        compileId: 'compile-1',
+        patchId: 'test-patch',
+        patchRevision: 1,
+        status: 'failed',
+        durationMs: 42,
+        diagnostics: [diag],
+      });
+      // Set active revision to 1
+      events.emit({
+        type: 'ProgramSwapped',
+        patchId: 'test-patch',
+        patchRevision: 1,
+        compileId: 'compile-1',
+        swapMode: 'hard',
+        swapLatencyMs: 10,
+      });
+    });
+
+    it('should exclude muted diagnostics from getActive() by default', () => {
+      const diags = hub.getActive();
+      expect(diags).toHaveLength(1);
+
+      const diagId = diags[0].id;
+      hub.muteDiagnostic(diagId);
+
+      // After muting, should be excluded
+      const afterMute = hub.getActive();
+      expect(afterMute).toHaveLength(0);
+    });
+
+    it('should include muted diagnostics with includeMuted parameter', () => {
+      const diags = hub.getActive();
+      const diagId = diags[0].id;
+      hub.muteDiagnostic(diagId);
+
+      // With includeMuted = true
+      const withMuted = hub.getActive(true);
+      expect(withMuted).toHaveLength(1);
+    });
+
+    it('should restore diagnostic when unmuted', () => {
+      const diags = hub.getActive();
+      const diagId = diags[0].id;
+
+      hub.muteDiagnostic(diagId);
+      expect(hub.getActive()).toHaveLength(0);
+
+      hub.unmuteDiagnostic(diagId);
+      expect(hub.getActive()).toHaveLength(1);
+    });
+
+    it('should report correct muted count', () => {
+      expect(hub.getMutedCount()).toBe(0);
+
+      const diags = hub.getActive();
+      hub.muteDiagnostic(diags[0].id);
+      expect(hub.getMutedCount()).toBe(1);
+
+      hub.clearMuted();
+      expect(hub.getMutedCount()).toBe(0);
+    });
+
+    it('should correctly report isMuted status', () => {
+      const diags = hub.getActive();
+      const diagId = diags[0].id;
+
+      expect(hub.isMuted(diagId)).toBe(false);
+      hub.muteDiagnostic(diagId);
+      expect(hub.isMuted(diagId)).toBe(true);
+    });
+
+    it('should exclude muted diagnostics from getAll() by default', () => {
+      const diags = hub.getActive();
+      hub.muteDiagnostic(diags[0].id);
+
+      const all = hub.getAll();
+      expect(all).toHaveLength(0);
+    });
+
+    it('should include muted diagnostics in getAll() with filter', () => {
+      const diags = hub.getActive();
+      hub.muteDiagnostic(diags[0].id);
+
+      const all = hub.getAll({ includeMuted: true });
+      expect(all).toHaveLength(1);
+    });
+  });
+
+  describe('RuntimeHealthSnapshot Handling', () => {
+    beforeEach(() => {
+      // Set active revision
+      events.emit({
+        type: 'ProgramSwapped',
+        patchId: 'test-patch',
+        patchRevision: 1,
+        compileId: 'compile-1',
+        swapMode: 'hard',
+        swapLatencyMs: 10,
+      });
+    });
+
+    it('should create P_NAN_DETECTED diagnostic when nanCount > 0', () => {
+      events.emit({
+        type: 'RuntimeHealthSnapshot',
+        patchId: 'test-patch',
+        activePatchRevision: 1,
+        tMs: 1000,
+        frameBudget: { fpsEstimate: 60, avgFrameMs: 10 },
+        evalStats: { nanCount: 5, infCount: 0, fieldMaterializations: 0 },
+      });
+
+      const runtime = hub.getRuntimeDiagnostics();
+      expect(runtime).toHaveLength(1);
+      expect(runtime[0].code).toBe('P_NAN_DETECTED');
+      expect(runtime[0].domain).toBe('runtime');
+      expect(runtime[0].message).toContain('5 NaN');
+    });
+
+    it('should create P_INFINITY_DETECTED diagnostic when infCount > 0', () => {
+      events.emit({
+        type: 'RuntimeHealthSnapshot',
+        patchId: 'test-patch',
+        activePatchRevision: 1,
+        tMs: 1000,
+        frameBudget: { fpsEstimate: 60, avgFrameMs: 10 },
+        evalStats: { nanCount: 0, infCount: 3, fieldMaterializations: 0 },
+      });
+
+      const runtime = hub.getRuntimeDiagnostics();
+      expect(runtime).toHaveLength(1);
+      expect(runtime[0].code).toBe('P_INFINITY_DETECTED');
+    });
+
+    it('should create P_FRAME_BUDGET_EXCEEDED when avgFrameMs > 16.67', () => {
+      events.emit({
+        type: 'RuntimeHealthSnapshot',
+        patchId: 'test-patch',
+        activePatchRevision: 1,
+        tMs: 1000,
+        frameBudget: { fpsEstimate: 30, avgFrameMs: 33.3 },
+        evalStats: { nanCount: 0, infCount: 0, fieldMaterializations: 0 },
+      });
+
+      const runtime = hub.getRuntimeDiagnostics();
+      expect(runtime).toHaveLength(1);
+      expect(runtime[0].code).toBe('P_FRAME_BUDGET_EXCEEDED');
+      expect(runtime[0].domain).toBe('perf');
+    });
+
+    it('should update occurrence count for repeated diagnostics', () => {
+      // First snapshot
+      events.emit({
+        type: 'RuntimeHealthSnapshot',
+        patchId: 'test-patch',
+        activePatchRevision: 1,
+        tMs: 1000,
+        frameBudget: { fpsEstimate: 60, avgFrameMs: 10 },
+        evalStats: { nanCount: 1, infCount: 0, fieldMaterializations: 0 },
+      });
+
+      let runtime = hub.getRuntimeDiagnostics();
+      expect(runtime[0].metadata.occurrenceCount).toBe(1);
+
+      // Second snapshot with same issue
+      events.emit({
+        type: 'RuntimeHealthSnapshot',
+        patchId: 'test-patch',
+        activePatchRevision: 1,
+        tMs: 2000,
+        frameBudget: { fpsEstimate: 60, avgFrameMs: 10 },
+        evalStats: { nanCount: 2, infCount: 0, fieldMaterializations: 0 },
+      });
+
+      runtime = hub.getRuntimeDiagnostics();
+      expect(runtime).toHaveLength(1);
+      expect(runtime[0].metadata.occurrenceCount).toBe(2);
+    });
+
+    it('should expire runtime diagnostics after timeout', () => {
+      // Create a runtime diagnostic
+      events.emit({
+        type: 'RuntimeHealthSnapshot',
+        patchId: 'test-patch',
+        activePatchRevision: 1,
+        tMs: 1000,
+        frameBudget: { fpsEstimate: 60, avgFrameMs: 10 },
+        evalStats: { nanCount: 1, infCount: 0, fieldMaterializations: 0 },
+      });
+
+      expect(hub.getRuntimeDiagnostics()).toHaveLength(1);
+
+      // Simulate time passing (> 5 seconds)
+      const futureTime = Date.now() + 6000;
+      hub.expireRuntimeDiagnostics(futureTime);
+
+      expect(hub.getRuntimeDiagnostics()).toHaveLength(0);
+    });
+
+    it('should include runtime diagnostics in getActive()', () => {
+      events.emit({
+        type: 'RuntimeHealthSnapshot',
+        patchId: 'test-patch',
+        activePatchRevision: 1,
+        tMs: 1000,
+        frameBudget: { fpsEstimate: 60, avgFrameMs: 10 },
+        evalStats: { nanCount: 1, infCount: 0, fieldMaterializations: 0 },
+      });
+
+      const active = hub.getActive();
+      expect(active.some((d) => d.code === 'P_NAN_DETECTED')).toBe(true);
+    });
+
+    it('should not create diagnostics when values are healthy', () => {
+      events.emit({
+        type: 'RuntimeHealthSnapshot',
+        patchId: 'test-patch',
+        activePatchRevision: 1,
+        tMs: 1000,
+        frameBudget: { fpsEstimate: 60, avgFrameMs: 10 },
+        evalStats: { nanCount: 0, infCount: 0, fieldMaterializations: 0 },
+      });
+
+      const runtime = hub.getRuntimeDiagnostics();
+      expect(runtime).toHaveLength(0);
+    });
+  });
 });
