@@ -1,19 +1,51 @@
 /**
- * Semantic Type System
+ * Semantic Kernel
  *
- * Single source of truth for type compatibility across editor and compiler.
+ * Single source of truth for type compatibility and graph validation.
  * This module provides:
  * - TypeDesc as the canonical type representation
  * - isAssignable() for all type compatibility checks
+ * - SemanticGraph for derived graph indices
+ * - Validator for all validation rules
  * - Adapter path resolution for conversions
  *
- * BOTH the UI (wiring) and compiler MUST use this module for type checks.
+ * BOTH the UI (wiring) and compiler MUST use this module for type checks and validation.
  * This eliminates divergence between what the UI allows and what compiles.
+ *
+ * Reference: design-docs/10-Refactor-for-UI-prep/5-DivergentTypes.md
  */
 
 import type { TypeDesc, SlotType, AdapterPath } from '../types';
 import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import type { ValueKind, PortType } from '../compiler/types';
+
+// =============================================================================
+// Re-exports from submodules
+// =============================================================================
+
+export { SemanticGraph } from './graph';
+export { Validator } from './validator';
+export type {
+  ValidationResult,
+  SuggestedFix,
+  PatchDocument,
+  PortKey,
+  GraphNode,
+  GraphEdge,
+  WireEdge,
+  PublisherEdge,
+  ListenerEdge,
+  BlockNode,
+  PortNode,
+  BusNode,
+} from './types';
+export {
+  portKeyToString,
+  stringToPortKey,
+  portKeyFromConnection,
+  portKeyFromPublisher,
+  portKeyFromListener,
+} from './types';
 
 // =============================================================================
 // Type Compatibility
