@@ -11,6 +11,7 @@ import { DiagnosticStore } from './DiagnosticStore';
 import { LogStore } from '../logStore';
 import { EventDispatcher } from '../events';
 import { DiagnosticHub } from '../diagnostics/DiagnosticHub';
+import { ActionExecutor } from '../diagnostics/ActionExecutor';
 import type { Block, Bus, Lane, Patch, Slot } from '../types';
 import breathingDotsPatch from '../demo-patches/breathing-dots.json';
 
@@ -28,6 +29,7 @@ export class RootStore {
   // Diagnostics
   diagnosticHub: DiagnosticHub;
   diagnosticStore: DiagnosticStore;
+  actionExecutor: ActionExecutor;
 
   private nextId = 1;
 
@@ -47,6 +49,14 @@ export class RootStore {
     // Create diagnostic infrastructure (after patchStore)
     this.diagnosticHub = new DiagnosticHub(this.events, this.patchStore);
     this.diagnosticStore = new DiagnosticStore(this.diagnosticHub);
+
+    // Create action executor (after stores and diagnostic hub)
+    this.actionExecutor = new ActionExecutor(
+      this.patchStore,
+      
+      this.uiStore,
+      this.diagnosticHub
+    );
 
     makeObservable(this, {
       selectedBlock: computed,

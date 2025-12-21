@@ -5,13 +5,37 @@
  * Also shows block definition preview when clicking unplaced blocks.
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
-import type { PortRef, Block, Slot, BlockForm } from './types';
+import type { PortRef, Block, Slot, BlockForm, Connection } from './types';
 import { getBlockDefinition, getBlockTags, getBlockDefinitions, type BlockDefinition, type BlockTags, type CompoundGraph } from './blocks';
 import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint } from './portUtils';
 import './Inspector.css';
+
+/**
+ * Check if two blocks have compatible port signatures for replacement.
+ */
+function getPortCompatibility(
+  currentBlock: Block,
+  candidateDef: BlockDefinition
+): boolean {
+  // Check all current inputs have a compatible match
+  for (const currentInput of currentBlock.inputs) {
+    const candidateInput = candidateDef.inputs.find(i => i.id === currentInput.id);
+    if (!candidateInput || !areTypesCompatible(candidateInput.type, currentInput.type)) {
+      return false;
+    }
+  }
+  // Check all current outputs have a compatible match
+  for (const currentOutput of currentBlock.outputs) {
+    const candidateOutput = candidateDef.outputs.find(o => o.id === currentOutput.id);
+    if (!candidateOutput || !areTypesCompatible(currentOutput.type, candidateOutput.type)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 function formatFormLabel(form: BlockForm): string {
   
@@ -663,19 +687,181 @@ function DefinitionPreview({ definition }: { definition: BlockDefinition }) {
 }
 
 /**
+ * Port item with connection indicator and navigation
+ */
+const PortItem = observer(({
+  slot,
+  blockId,
+  direction,
+  connections,
+  blocks,
+  onNavigate
+}: {
+  slot: Slot;
+  blockId: string;
+  direction: 'input' | 'output';
+  connections: readonly Connection[];
+  blocks: readonly Block[];
+  onNavigate: (blockId: string) => void;
+}) => {
+  // Find connection for this port
+  const connection = connections.find(c =>
+    direction === 'input'
+      ? (c.to.blockId === blockId && c.to.slotId === slot.id)
+      : (c.from.blockId === blockId && c.from.slotId === slot.id)
+  );
+
+  const connectedBlockId = connection
+    ? (direction === 'input' ? connection.from.blockId : connection.to.blockId)
+    : null;
+  const connectedBlock = connectedBlockId
+    ? blocks.find(b => b.id === connectedBlockId)
+    : null;
+
+  return (
+    <div className="port-item">
+      <span className="port-item-label">{slot.label}</span>
+      {connection ? (
+        <span
+          className="port-connected-icon"
+          title={`Connected to: ${connectedBlock?.label ?? 'Unknown'}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (connectedBlockId) onNavigate(connectedBlockId);
+          }}
+        >
+          ●
+        </span>
+      ) : (
+        <span className="port-disconnected-icon" title="Not connected">○</span>
+      )}
+    </div>
+  );
+});
+
+/**
+ * Compatible blocks section - shows blocks that can replace the current one
+ */
+const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
+  const store = useStore();
+  const [expanded, setExpanded] = useState(false);
+
+  const compatibleBlocks = useMemo(() => {
+    const results: BlockDefinition[] = [];
+    for (const def of getBlockDefinitions()) {
+      if (def.type === block.type) continue;
+      if (def.form === 'macro') continue;
+      if (getPortCompatibility(block, def)) {
+        results.push(def);
+      }
+    }
+    return results.sort((a, b) => a.label.localeCompare(b.label));
+  }, [block.type, block.inputs, block.outputs]);
+
+  const handleReplace = useCallback((newDef: BlockDefinition) => {
+    const incoming = store.patchStore.connections.filter(c => c.to.blockId === block.id);
+    const outgoing = store.patchStore.connections.filter(c => c.from.blockId === block.id);
+    const lane = store.patchStore.lanes.find(l => l.blockIds.includes(block.id));
+    if (!lane) return;
+
+    const savedIn = incoming.map(c => ({ from: c.from.blockId, fromSlot: c.from.slotId, toSlot: c.to.slotId }));
+    const savedOut = outgoing.map(c => ({ to: c.to.blockId, toSlot: c.to.slotId, fromSlot: c.from.slotId }));
+
+    store.patchStore.removeBlock(block.id);
+    const newId = store.patchStore.addBlock(newDef.type, lane.id, newDef.defaultParams);
+
+    for (const c of savedIn) {
+      const newBlock = store.patchStore.blocks.find(b => b.id === newId);
+      if (newBlock?.inputs.find(i => i.id === c.toSlot)) {
+        store.patchStore.connect(c.from, c.fromSlot, newId, c.toSlot);
+      }
+    }
+    for (const c of savedOut) {
+      const newBlock = store.patchStore.blocks.find(b => b.id === newId);
+      if (newBlock?.outputs.find(o => o.id === c.fromSlot)) {
+        store.patchStore.connect(newId, c.fromSlot, c.to, c.toSlot);
+      }
+    }
+    store.uiStore.selectBlock(newId);
+  }, [block, store]);
+
+  if (compatibleBlocks.length === 0) return null;
+
+  return (
+    <div className="insp-section">
+      <div className="insp-section-header" onClick={() => setExpanded(!expanded)}>
+        <span className="insp-section-title">Replace</span>
+        <span className="insp-count">{compatibleBlocks.length}</span>
+        <span className="insp-toggle">{expanded ? '−' : '+'}</span>
+      </div>
+      {expanded && (
+        <div className="replace-list">
+          {compatibleBlocks.map(def => (
+            <div
+              key={def.type}
+              className="replace-item"
+              onDoubleClick={() => handleReplace(def)}
+              title="Double-click to replace"
+            >
+              <span className="replace-color" style={{ background: def.color }} />
+              <span className="replace-label">{def.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+/**
+ * Bus connections section
+ */
+const BusConnectionsSection = observer(({ block }: { block: Block }) => {
+  const store = useStore();
+
+  // Find bus publications from this block
+  const publications = store.busStore.publishers.filter(p => p.from.blockId === block.id);
+  // Find bus subscriptions to this block
+  const subscriptions = store.busStore.listeners.filter(l => l.to.blockId === block.id);
+
+  if (publications.length === 0 && subscriptions.length === 0) return null;
+
+  return (
+    <div className="insp-section">
+      <span className="insp-section-title">Buses</span>
+      {publications.length > 0 && (
+        <div className="bus-group">
+          <span className="bus-direction">Publishes:</span>
+          {publications.map(p => (
+            <span key={p.id} className="bus-tag publish">{p.busId}</span>
+          ))}
+        </div>
+      )}
+      {subscriptions.length > 0 && (
+        <div className="bus-group">
+          <span className="bus-direction">Listens:</span>
+          {subscriptions.map(l => (
+            <span key={l.id} className="bus-tag listen">{l.busId}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+/**
  * Inspector displays and edits parameters of selected block.
- * Also shows port wiring panel when a port is selected.
+ * Compact, Ableton-style layout.
  */
 export const Inspector = observer(() => {
   const store = useStore();
   const block = store.selectedBlock;
   const previewedDefinition = store.uiStore.previewedDefinition;
   const selectedPortInfo = store.selectedPortInfo;
-  const [showCompositeGraph, setShowCompositeGraph] = useState(false);
 
-  useEffect(() => {
-    setShowCompositeGraph(false);
-  }, [block?.type, previewedDefinition?.type]);
+  const navigateToBlock = useCallback((blockId: string) => {
+    store.uiStore.selectBlock(blockId);
+  }, [store]);
 
   // Show port wiring panel if a port is selected
   if (selectedPortInfo) {
@@ -695,10 +881,9 @@ export const Inspector = observer(() => {
 
   if (!block) {
     return (
-      <div className="inspector">
+      <div className="inspector insp-compact">
         <div className="inspector-empty">
           <p>No block selected</p>
-          <p className="inspector-hint">Click a block to see its details, or click a port to wire it</p>
         </div>
       </div>
     );
@@ -706,177 +891,122 @@ export const Inspector = observer(() => {
 
   const definition = getBlockDefinition(block.type);
   const blockColor = definition?.color ?? '#666';
-  const tags = definition ? getBlockTags(definition) : null;
-  const isComposite = definition?.form === 'composite' && definition.primitiveGraph;
 
   return (
-    <div className="inspector">
-      <div className="inspector-header" style={{ borderLeftColor: blockColor }}>
-        <h2>{block.label}</h2>
-        <div className="block-meta">
-          <span className="block-id">{block.id}</span>
-          {definition && (
-            <>
-              <span className="block-tier-badge">{formatFormLabel(definition.form)}</span>
-              <span className="block-subcategory-badge">{definition.subcategory}</span>
-            </>
-          )}
-          <span
-            className="block-category"
-            style={{ backgroundColor: blockColor }}
-          >
-            {block.category}
-          </span>
+    <div className="inspector insp-compact">
+      {/* Compact header */}
+      <div className="insp-header" style={{ borderLeftColor: blockColor }}>
+        <div className="insp-title-row">
+          <span className="insp-title">{block.label}</span>
+          <span className="insp-category" style={{ background: blockColor }}>{block.category}</span>
         </div>
+        <code className="insp-type">{block.type}</code>
       </div>
 
-      <div className="inspector-body">
-        {/* Block type and description */}
-        <div className="inspector-section">
-          <h3>Type</h3>
-          <code className="block-type-code">{block.type}</code>
+      <div className="insp-body">
+        {/* Side-by-side Inputs/Outputs */}
+        <div className="ports-row">
+          <div className="ports-col">
+            <span className="ports-header">Inputs</span>
+            {block.inputs.length === 0
+              ? <span className="ports-none">None</span>
+              : block.inputs.map(slot => (
+                  <PortItem
+                    key={slot.id}
+                    slot={slot}
+                    blockId={block.id}
+                    direction="input"
+                    connections={store.patchStore.connections}
+                    blocks={store.patchStore.blocks}
+                    onNavigate={navigateToBlock}
+                  />
+                ))
+            }
+          </div>
+          <div className="ports-col">
+            <span className="ports-header">Outputs</span>
+            {block.outputs.length === 0
+              ? <span className="ports-none">None</span>
+              : block.outputs.map(slot => (
+                  <PortItem
+                    key={slot.id}
+                    slot={slot}
+                    blockId={block.id}
+                    direction="output"
+                    connections={store.patchStore.connections}
+                    blocks={store.patchStore.blocks}
+                    onNavigate={navigateToBlock}
+                  />
+                ))
+            }
+          </div>
         </div>
 
-        {isComposite && definition?.primitiveGraph && (
-          <div className="inspector-section">
-            <div className="composite-header">
-              <h3>Composite Internals</h3>
-              <button
-                className="composite-toggle"
-                onClick={() => setShowCompositeGraph((v) => !v)}
-              >
-                {showCompositeGraph ? 'Hide' : 'Show'}
-              </button>
-            </div>
-            {showCompositeGraph && <CompositeGraphView graph={definition.primitiveGraph} />}
-          </div>
-        )}
-
-        {tags && (
-          <div className="inspector-section">
-            <h3>Tags</h3>
-            <TagPills tags={tags} hideKeys={['form', 'subcategory']} />
-          </div>
-        )}
-
-        {block.description && (
-          <div className="inspector-section">
-            <h3>Description</h3>
-            <p className="block-description">{block.description}</p>
-          </div>
-        )}
-
         {/* Parameters */}
-        <div className="inspector-section">
-          <h3>Parameters</h3>
-          {Object.keys(block.params).length === 0 ? (
-            <p className="inspector-hint">No parameters</p>
-          ) : (
-            <div className="param-list">
+        {Object.keys(block.params).length > 0 && (
+          <div className="insp-section">
+            <span className="insp-section-title">Parameters</span>
+            <div className="param-grid">
               {Object.entries(block.params).map(([key, value]) => {
-                // Look up paramSchema for this key to determine input type
                 const schema = definition?.paramSchema.find(s => s.key === key);
                 const label = schema?.label ?? key;
-
                 return (
-                  <div key={key} className="param-item">
-                    <label className="param-label">{label}</label>
-                    <div className="param-value">
-                      {schema?.type === 'select' && schema.options ? (
-                        <select
-                          value={String(value)}
-                          onChange={(e) =>
-                            store.patchStore.updateBlockParams(block.id, {
-                              [key]: e.target.value,
-                            })
-                          }
-                        >
-                          {schema.options.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : typeof value === 'boolean' ? (
-                        <input
-                          type="checkbox"
-                          checked={value}
-                          onChange={(e) =>
-                            store.patchStore.updateBlockParams(block.id, {
-                              [key]: e.target.checked,
-                            })
-                          }
-                        />
-                      ) : typeof value === 'number' ? (
-                        <input
-                          type="number"
-                          value={value}
-                          step={schema?.step ?? (value < 1 ? 0.1 : 1)}
-                          min={schema?.min}
-                          max={schema?.max}
-                          onChange={(e) =>
-                            store.patchStore.updateBlockParams(block.id, {
-                              [key]: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                        />
-                      ) : (
-                        <input
-                          type="text"
-                          value={String(value)}
-                          onChange={(e) =>
-                            store.patchStore.updateBlockParams(block.id, {
-                              [key]: e.target.value,
-                            })
-                          }
-                        />
-                      )}
-                    </div>
+                  <div key={key} className="param-row">
+                    <label className="param-key">{label}</label>
+                    {schema?.type === 'select' && schema.options ? (
+                      <select
+                        className="param-input"
+                        value={String(value)}
+                        onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.value })}
+                      >
+                        {schema.options.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    ) : typeof value === 'boolean' ? (
+                      <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.checked })}
+                      />
+                    ) : typeof value === 'number' ? (
+                      <input
+                        type="number"
+                        className="param-input"
+                        value={value}
+                        step={schema?.step ?? (value < 1 ? 0.1 : 1)}
+                        min={schema?.min}
+                        max={schema?.max}
+                        onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: parseFloat(e.target.value) || 0 })}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        className="param-input"
+                        value={String(value)}
+                        onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.value })}
+                      />
+                    )}
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
-
-        {/* Slots info */}
-        {block.inputs.length > 0 && (
-          <div className="inspector-section">
-            <h3>Inputs</h3>
-            <ul className="slot-list">
-              {block.inputs.map((slot) => (
-                <li key={slot.id}>
-                  <span className="slot-label">{slot.label}</span>
-                  <code className="slot-type">{slot.type}</code>
-                </li>
-              ))}
-            </ul>
           </div>
         )}
 
-        {block.outputs.length > 0 && (
-          <div className="inspector-section">
-            <h3>Outputs</h3>
-            <ul className="slot-list">
-              {block.outputs.map((slot) => (
-                <li key={slot.id}>
-                  <span className="slot-label">{slot.label}</span>
-                  <code className="slot-type">{slot.type}</code>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* Bus connections */}
+        <BusConnectionsSection block={block} />
 
-        {/* Delete button */}
-        <div className="inspector-section inspector-actions">
-          <button
-            className="delete-button"
-            onClick={() => store.patchStore.removeBlock(block.id)}
-          >
-            Delete Block
-          </button>
-        </div>
+        {/* Compatible replacement blocks */}
+        <CompatibleBlocksSection block={block} />
+
+        {/* Delete */}
+        <button
+          className="insp-delete"
+          onClick={() => store.patchStore.removeBlock(block.id)}
+        >
+          Delete
+        </button>
       </div>
     </div>
   );

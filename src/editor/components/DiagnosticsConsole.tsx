@@ -6,7 +6,7 @@
  *
  * Features:
  * - Severity counts header
- * - Click to "go to target" (logs to console for now - action execution is Phase D)
+ * - Click to "go to target" (navigates to the entity)
  * - Mute/unmute individual diagnostics
  * - Empty state when patch is healthy
  */
@@ -174,13 +174,18 @@ export const DiagnosticsConsole = observer(function DiagnosticsConsole({
   collapsed = false,
   onCollapsedChange,
 }: DiagnosticsConsoleProps) {
-  const { diagnosticStore } = useStore();
+  const { diagnosticStore, actionExecutor } = useStore();
 
-  const handleGoToTarget = useCallback((target: TargetRef) => {
-    // Phase D will implement actual navigation
-    // For now, log to console
-    console.log('[DiagnosticsConsole] Go to target:', target);
-  }, []);
+  const handleGoToTarget = useCallback(
+    (target: TargetRef) => {
+      // Execute goToTarget action via ActionExecutor
+      const success = actionExecutor.execute({ kind: 'goToTarget', target });
+      if (!success) {
+        console.warn('[DiagnosticsConsole] Failed to navigate to target:', target);
+      }
+    },
+    [actionExecutor]
+  );
 
   const handleMute = useCallback(
     (id: string) => {
