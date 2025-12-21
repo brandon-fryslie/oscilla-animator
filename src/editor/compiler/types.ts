@@ -235,7 +235,8 @@ export type ValueKind =
 
   // Additional artifact kinds (can be produced by compilers)
   | 'ElementCount'  // Number of elements from scene
-  | 'FieldExpr';    // Lazy field expression (Phase 2)
+  | 'FieldExpr'    // Lazy field expression (Phase 2)
+  | 'Event';      // TimeRoot wrap/end events
 
 /**
  * PortType can be extended with refinements (units, constraints, etc.)
@@ -383,6 +384,9 @@ export type Artifact =
 
   // Phase 3: Domain for per-element identity
   | { kind: 'Domain'; value: Domain }
+  
+  // Event artifacts for TimeRoot wrap/end events
+  | { kind: 'Event'; value: (tMs: number, lastTMs: number, ctx: RuntimeCtx) => boolean }
 
   | { kind: 'Error'; message: string; where?: { blockId?: string; port?: string } };
 
@@ -462,3 +466,51 @@ export interface CompileResult {
   errors: readonly CompileError[];
   compiledPortMap?: Map<string, Artifact>;
 }
+
+// =============================================================================
+// WP1: TimeRoot Bundle Interface and Auto-Publication
+// =============================================================================
+
+/**
+ * Standardized outputs from all TimeRoot blocks.
+ * Auto-published to canonical buses by compiler.
+ */
+export interface TimeOutputs {
+  time: Artifact;      // Signal<time> - monotonic
+  phaseA: Artifact;    // Signal<phase> - primary phase (0..1)
+  wrap: Artifact;      // Event - fires on wrap/direction flip
+  energy: Artifact;    // Signal<number> - speed/intensity
+}
+
+/**
+ * Auto-publication configuration for TimeRoot outputs to canonical buses.
+ * Generated at compile time, NOT persisted in patch data.
+ */
+export interface AutoPublication {
+  busName: string;     // 'phaseA', 'pulse', 'energy', etc.
+  artifactKey: string; // Key in the TimeOutputs bundle
+  sortKey: number;     // Priority: 0 = system (highest), 100 = manual
+}
+
+/**
+ * Extended TimeRoot compiler result that includes auto-publications.
+ */
+export interface TimeRootCompileResult {
+  artifacts: Record<string, Artifact>;
+  autoPublications: AutoPublication[];
+}
+
+/**
+ * Reserved bus contracts for WP0 validation.
+ * These are the canonical buses that TimeRoot blocks auto-publish to.
+ */
+export const RESERVED_BUSES = {
+  phaseA: { type: 'Signal<phase>', combine: 'last' },
+  pulse: { type: 'Event', combine: 'or' },
+  energy: { type: 'Signal<number>', combine: 'sum' },
+  palette: { type: 'Signal<color>', combine: 'last' },
+  progress: { type: 'Signal<number>', combine: 'last' },
+} as const;
+
+export type ReservedBusName = keyof typeof RESERVED_BUSES;
+export type ReservedBusContract = typeof RESERVED_BUSES[ReservedBusName];

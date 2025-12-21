@@ -41,6 +41,8 @@ export const FiniteTimeRoot = createBlock({
   outputs: [
     output('systemTime', 'System Time', 'Signal<time>'),
     output('progress', 'Progress', 'Signal<number>'),
+    output('end', 'End Event', 'Event<any>'),
+    output('energy', 'Energy', 'Signal<number>'),
   ],
   // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
@@ -99,7 +101,11 @@ export const CycleTimeRoot = createBlock({
   ],
   outputs: [
     output('systemTime', 'System Time', 'Signal<time>'),
+    output('cycleT', 'Cycle Time', 'Signal<time>'),
     output('phase', 'Phase', 'Signal<phase>'),
+    output('wrap', 'Wrap Event', 'Event<any>'),
+    output('cycleIndex', 'Cycle Index', 'Signal<number>'),
+    output('energy', 'Energy', 'Signal<number>'),
   ],
   // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
@@ -154,6 +160,7 @@ export const InfiniteTimeRoot = createBlock({
   ],
   outputs: [
     output('systemTime', 'System Time', 'Signal<time>'),
+    output('energy', 'Energy', 'Signal<number>'),
   ],
   // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
