@@ -282,9 +282,24 @@ export class Player {
 
   /**
    * Set the active patch revision for runtime health tracking.
+   * Emits ProgramSwapped event to sync diagnostic hub.
    */
   setActivePatchRevision(revision: number): void {
+    const previousRevision = this.activePatchRevision;
     this.activePatchRevision = revision;
+
+    // Emit ProgramSwapped event to sync DiagnosticHub's active revision
+    if (this.events && revision !== previousRevision) {
+      this.events.emit({
+        type: 'ProgramSwapped',
+        patchId: 'default',
+        patchRevision: revision,
+        compileId: crypto.randomUUID(),
+        swapMode: previousRevision === 0 ? 'hard' : 'soft',
+        swapLatencyMs: 0,
+        stateBridgeUsed: false,
+      });
+    }
   }
 
   /**
@@ -501,39 +516,38 @@ export class Player {
     // Track frame time for health monitoring
     this.trackFrameTime(realDt);
 
-    // Time wrapping is determined by TimeModel, not loopMode.
-    // - cyclic: wrap for continuous loop
-    // - finite: pause at end (or loop if finiteLoopMode is enabled)
-    // - infinite: advance unbounded
+    // Time advancement is now monotonic for cyclic and infinite modes.
+    // TimeRoot blocks handle phase derivation via modulo arithmetic.
+    // Player only provides unbounded time and clamps to non-negative.
     if (this.timeModel) {
       switch (this.timeModel.kind) {
         case 'cyclic':
-          // Cyclic time models wrap continuously
-          if (this.tMs >= this.maxTime) {
-            this.tMs = this.tMs % this.maxTime;
-          } else if (this.tMs < 0) {
-            this.tMs = this.maxTime + (this.tMs % this.maxTime);
+          // Cyclic: TimeRoot handles phase derivation via modulo
+          // Player provides monotonic time - just clamp to non-negative
+          if (this.tMs < 0) {
+            this.tMs = 0;
           }
           break;
 
         case 'finite':
-          // Finite animations can loop or pause based on finiteLoopMode
+          // Finite: pause at end if not in loop mode
           if (this.tMs >= this.maxTime) {
             if (this.finiteLoopMode) {
-              // Loop mode: rewind to start and keep playing
-              this.tMs = 0;
+              // Loop mode: wrap back to start
+              this.tMs = this.tMs % this.maxTime;
             } else {
               // Once mode: pause at end
               this.tMs = this.maxTime;
               this.pause();
             }
-          } else if (this.tMs < 0) {
+          }
+          if (this.tMs < 0) {
             this.tMs = 0;
           }
           break;
 
         case 'infinite':
-          // Infinite: time advances unbounded, no wrapping
+          // Infinite: time advances unbounded
           // Just clamp to non-negative
           if (this.tMs < 0) {
             this.tMs = 0;
