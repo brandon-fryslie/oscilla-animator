@@ -1,0 +1,410 @@
+# Diagnostics System Implementation Plan (Phase 1)
+
+**Generated:** 2025-12-20-172314
+**Source STATUS:** STATUS-2025-12-20-172314.md
+**Topic:** Diagnostics System Foundation
+**Sprint Focus:** Core types, hub, store, events, compiler integration
+
+---
+
+## Executive Summary
+
+This plan implements the **Phase 1 foundation** for the Oscilla Animator diagnostics system. The goal is to establish the core infrastructure (types, hub, store, events) and integrate it with **one subsystem (compiler)** to validate the architecture before expanding to runtime and UI.
+
+**Total Work Items:** 8 (P0: 5, P1: 3)
+**Estimated Complexity:** Medium (7-10 complexity points)
+**Dependencies:** EventDispatcher (operational), MobX stores (established pattern)
+**Design Authority:** `design-docs/4-Event-System/` (3-Diagnostics.md, 5-DiagnosticPayloadSpec.md, 6-DiagnosticsPolish.md)
+
+---
+
+## Work Items by Priority
+
+---
+
+## [P0] Core Diagnostic Types
+
+**Status:** Not Started
+**Effort:** Small (1-2 complexity points)
+**Dependencies:** None
+**Spec Reference:** design-docs/4-Event-System/5-DiagnosticPayloadSpec.md §1-3 • **Status Reference:** STATUS-2025-12-20-172314.md "What Does NOT Exist > Core Diagnostic Types"
+
+### Description
+
+Define the foundational TypeScript types for the diagnostics system in a new file `src/editor/diagnostics/types.ts`. These types establish the contract for all diagnostic operations and must match the spec exactly to ensure stability and actionability.
+
+Key types:
+- **`Diagnostic`**: The complete diagnostic record with identity, severity, domain, targets, content, data, and actions
+- **`TargetRef`**: Discriminated union for addressing blocks, ports, buses, bindings, composites, timeRoots, and graphSpans
+- **`DiagnosticCode`**: String literal union of canonical codes (E_TIME_ROOT_MISSING, E_TYPE_MISMATCH, W_BUS_EMPTY, etc.)
+- **`Severity`**: `'hint' | 'info' | 'warn' | 'error' | 'fatal'`
+- **`Domain`**: `'authoring' | 'compile' | 'runtime' | 'export' | 'perf'`
+- **`DiagnosticStatus`**: `'active' | 'resolved' | 'muted'`
+- **`FixAction`**: Action metadata (id, label, kind, target, params, risk, applyMode)
+
+### Acceptance Criteria (REQUIRED)
+
+- [ ] `Diagnostic` interface has all fields from spec §1 (id, status, timestamps, severity, domain, code, primaryTarget, relatedTargets, title, summary, details, data, actions, scope)
+- [ ] `TargetRef` discriminated union supports all 7 kinds: block, port, bus, binding, composite, timeRoot, graphSpan
+- [ ] `DiagnosticCode` includes starter set (minimum 8 codes): E_TIME_ROOT_MISSING, E_TIME_ROOT_MULTIPLE, E_TYPE_MISMATCH, W_BUS_EMPTY, W_GRAPH_UNUSED_OUTPUT, E_RUNTIME_NAN, E_RUNTIME_INF, E_GRAPH_CYCLE_ILLEGAL
+- [ ] `FixAction` interface supports all required fields (id, label, kind, target, params, risk, requiresConfirmation, applyMode)
+- [ ] All types are exported from `src/editor/diagnostics/index.ts`
+
+### Technical Notes
+
+- Use discriminated unions for `TargetRef` (discriminator: `kind`)
+- `DiagnosticCode` should be string literal union for extensibility (not enum)
+- `data` field in `Diagnostic` is `Record<string, unknown>` (type-specific payloads handled per code)
+- Follow existing type patterns from `src/editor/types.ts` and `src/editor/events/types.ts`
+
+---
+
+## [P0] DiagnosticHub Implementation
+
+**Status:** Not Started
+**Effort:** Medium (2-3 complexity points)
+**Dependencies:** Core Diagnostic Types (P0)
+**Spec Reference:** design-docs/4-Event-System/5-DiagnosticPayloadSpec.md §2, §5 • **Status Reference:** STATUS-2025-12-20-172314.md "What Does NOT Exist > DiagnosticHub"
+
+### Description
+
+Implement the `DiagnosticHub` class in `src/editor/diagnostics/DiagnosticHub.ts`. This is the **stateful registry** that manages the current set of diagnostics, handles deduplication via stable ID generation, and supports namespace separation (compile/runtime/authoring/export).
+
+The hub is NOT MobX observable (that's DiagnosticStore's job). It's a pure TypeScript class with deterministic methods.
+
+Key responsibilities:
+- **Stable ID generation**: `hash(code + primaryTarget.key + signature)` using a simple hash function
+- **Deduplication**: `add()` updates existing diagnostic if ID matches, increments `occurrences`
+- **Namespace management**: Separate maps for compile, runtime, authoring, export scopes
+- **Lifecycle**: `resolve(id)`, `clear(scope?)`, `get(id)`, `getAll(filters?)`
+
+### Acceptance Criteria (REQUIRED)
+
+- [ ] `add(diagnostic: Diagnostic): string` method returns the stable diagnostic ID (generated or existing)
+- [ ] `add()` deduplicates by ID: if diagnostic with same ID exists, update `lastSeenAt` and increment `occurrences` instead of creating duplicate
+- [ ] `resolve(id: string): boolean` marks diagnostic as `status: 'resolved'` and returns true if found
+- [ ] `clear(scope?: Domain): void` removes diagnostics (all if no scope, or filtered by domain)
+- [ ] `get(id: string): Diagnostic | undefined` returns diagnostic by ID
+- [ ] `getAll(filters?: { domain?: Domain; severity?: Severity; status?: DiagnosticStatus }): Diagnostic[]` returns filtered diagnostics
+- [ ] Stable ID generation uses canonical target keys (e.g., `block:block-123`, `port:block-123:radius`)
+- [ ] Unit tests cover dedupe, resolve, clear, and filtering
+
+### Technical Notes
+
+- Use a simple hash function (e.g., `hashCode()` on string concatenation) for ID generation - doesn't need to be cryptographic
+- Store diagnostics in `Map<string, Diagnostic>` for O(1) lookups
+- For namespace separation, use separate maps or filter by `diagnostic.scope.domain`
+- Follow design doc §2 for signature rules (include only identity-defining fields, exclude timestamps/occurrences)
+
+---
+
+## [P0] DiagnosticStore (MobX Observable)
+
+**Status:** Not Started
+**Effort:** Small (1-2 complexity points)
+**Dependencies:** DiagnosticHub (P0), Diagnostic Events (P0)
+**Spec Reference:** design-docs/4-Event-System/3-Diagnostics.md §4 • **Status Reference:** STATUS-2025-12-20-172314.md "What Does NOT Exist > DiagnosticStore"
+
+### Description
+
+Create `src/editor/stores/DiagnosticStore.ts` as a MobX observable wrapper around `DiagnosticHub`. This store integrates with the RootStore pattern and provides reactive UI access to diagnostics.
+
+The store owns a `DiagnosticHub` instance and exposes MobX actions/computed values. It also emits events via `RootStore.events` for cross-store coordination.
+
+Key features:
+- **Observable diagnostics**: Computed property that returns `hub.getAll()`
+- **Actions**: `addDiagnostic()`, `resolveDiagnostic()`, `clearDiagnostics()`
+- **Event emission**: Emit `DiagnosticAdded`, `DiagnosticResolved`, `DiagnosticCleared` events
+- **Computed summaries**: `errorCount`, `warningCount`, `activeDiagnostics`
+
+### Acceptance Criteria (REQUIRED)
+
+- [ ] `DiagnosticStore` class created with MobX `makeObservable()` in constructor
+- [ ] `addDiagnostic(diagnostic: Omit<Diagnostic, 'id' | 'firstSeenAt' | 'lastSeenAt' | 'occurrences'>): string` action adds diagnostic to hub and emits `DiagnosticAdded` event
+- [ ] `resolveDiagnostic(id: string): void` action resolves diagnostic and emits `DiagnosticResolved` event
+- [ ] `clearDiagnostics(scope?: Domain): void` action clears diagnostics and emits `DiagnosticCleared` event
+- [ ] Computed `diagnostics` property returns all active diagnostics from hub
+- [ ] Computed `errorCount` returns count of diagnostics with severity 'error' or 'fatal'
+- [ ] Computed `warningCount` returns count of diagnostics with severity 'warn'
+- [ ] Integrated into `RootStore` constructor (instantiated and stored in `this.diagnosticStore`)
+
+### Technical Notes
+
+- Follow `LogStore` pattern from `src/editor/logStore.ts` for MobX setup
+- Store holds a `DiagnosticHub` instance: `private hub = new DiagnosticHub()`
+- `addDiagnostic()` fills in `id`, `firstSeenAt`, `lastSeenAt`, `occurrences`, `status: 'active'` before passing to hub
+- Emit events **after** hub operations complete (same pattern as `RootStore.loadPatch()`)
+
+---
+
+## [P0] Diagnostic Event Types
+
+**Status:** Not Started
+**Effort:** Small (1 complexity point)
+**Dependencies:** Core Diagnostic Types (P0)
+**Spec Reference:** design-docs/4-Event-System/5-DiagnosticPayloadSpec.md • **Status Reference:** STATUS-2025-12-20-172314.md "What Does NOT Exist > Diagnostic Events"
+
+### Description
+
+Add three new event types to the existing event system (`src/editor/events/types.ts`) to support diagnostic lifecycle tracking. These events enable cross-store coordination and future UI reactivity.
+
+Events to add:
+- **`DiagnosticAddedEvent`**: Emitted when a diagnostic is added or updated (dedupe)
+- **`DiagnosticResolvedEvent`**: Emitted when a diagnostic is resolved
+- **`DiagnosticClearedEvent`**: Emitted when diagnostics are cleared (batch operation)
+
+### Acceptance Criteria (REQUIRED)
+
+- [ ] `DiagnosticAddedEvent` interface added with fields: `type: 'DiagnosticAdded'`, `diagnosticId: string`, `code: DiagnosticCode`, `severity: Severity`, `primaryTarget: TargetRef`
+- [ ] `DiagnosticResolvedEvent` interface added with fields: `type: 'DiagnosticResolved'`, `diagnosticId: string`
+- [ ] `DiagnosticClearedEvent` interface added with fields: `type: 'DiagnosticCleared'`, `scope?: Domain`, `count: number`
+- [ ] All three events added to `EditorEvent` union type
+- [ ] Exported from `src/editor/events/index.ts`
+
+### Technical Notes
+
+- Follow existing event patterns in `src/editor/events/types.ts` (see `CompileSucceededEvent`, `BlockAddedEvent`)
+- Keep payloads minimal (per design doc principle: "events are emitted AFTER state changes")
+- `DiagnosticAddedEvent` includes key fields for telemetry/logging (code, severity, target) but not full diagnostic
+
+---
+
+## [P0] Compiler Diagnostic Integration (Starter Set)
+
+**Status:** Not Started
+**Effort:** Medium (2-3 complexity points)
+**Dependencies:** DiagnosticStore (P0), Diagnostic Events (P0)
+**Spec Reference:** design-docs/4-Event-System/5-DiagnosticPayloadSpec.md §6, §7 • **Status Reference:** STATUS-2025-12-20-172314.md "What Does NOT Exist > Compiler Integration"
+
+### Description
+
+Replace existing `logStore.warn()` / `logStore.error()` calls in `src/editor/compiler/integration.ts` with diagnostic emission via `DiagnosticStore`. Implement **5 starter diagnostic codes** to validate the architecture:
+
+1. **E_TIME_ROOT_MISSING**: No TimeRoot block found
+2. **E_TIME_ROOT_MULTIPLE**: Multiple TimeRoot blocks detected
+3. **E_TYPE_MISMATCH**: Port type mismatch (signal vs field, domain mismatch)
+4. **W_BUS_EMPTY**: Bus has no publishers (using silent value)
+5. **W_GRAPH_UNUSED_OUTPUT**: Block output port has no connections
+
+Each diagnostic must include:
+- Stable ID (auto-generated by hub)
+- Correct severity/domain/code
+- Target reference (block, port, bus)
+- Structured data payload (per spec §7)
+- Actionable title/summary
+
+### Acceptance Criteria (REQUIRED)
+
+- [ ] `CompilerService.compile()` method accepts `diagnosticStore: DiagnosticStore` parameter (passed from RootStore)
+- [ ] Compiler emits `E_TIME_ROOT_MISSING` diagnostic if no TimeRoot blocks found (primaryTarget: `{ kind: 'graphSpan', nodes: [] }`)
+- [ ] Compiler emits `E_TIME_ROOT_MULTIPLE` diagnostic if multiple TimeRoot blocks found (primaryTarget: `{ kind: 'graphSpan', nodes: [timeRootTargets] }`)
+- [ ] Compiler emits `E_TYPE_MISMATCH` diagnostic for port type mismatches (primaryTarget: receiving port, relatedTargets: source port/bus, data includes expected/actual TypeDesc)
+- [ ] Compiler emits `W_BUS_EMPTY` diagnostic for buses with no publishers (primaryTarget: bus, data includes silentValue/combineMode)
+- [ ] Compiler emits `W_GRAPH_UNUSED_OUTPUT` diagnostic for unconnected output ports (primaryTarget: port)
+- [ ] All diagnostics cleared at start of compilation (call `diagnosticStore.clearDiagnostics('compile')`)
+- [ ] `CompileFailedEvent` emitted if any 'error' or 'fatal' diagnostics exist (instead of current `logStore.error()` logic)
+
+### Technical Notes
+
+- Identify existing validation points in `src/editor/compiler/integration.ts` (grep for `logStore.warn`, `logStore.error`)
+- Structured payloads per spec §7:
+  - `E_TYPE_MISMATCH`: `{ expected: TypeDesc, actual: TypeDesc, from: TargetRef, to: TargetRef }`
+  - `W_BUS_EMPTY`: `{ busId: string, silentValue: unknown, combineMode: string, publisherCount: 0, listenerCount: number }`
+- Target references:
+  - Port: `{ kind: 'port', blockId, portId, direction }`
+  - Bus: `{ kind: 'bus', busId }`
+  - GraphSpan: `{ kind: 'graphSpan', nodes: TargetRef[] }`
+
+---
+
+## [P1] DiagnosticHub Unit Tests
+
+**Status:** Not Started
+**Effort:** Small (1-2 complexity points)
+**Dependencies:** DiagnosticHub (P0)
+**Spec Reference:** design-docs/4-Event-System/5-DiagnosticPayloadSpec.md §2 • **Status Reference:** STATUS-2025-12-20-172314.md "Quantitative Metrics > Test files"
+
+### Description
+
+Create comprehensive unit tests for `DiagnosticHub` in `src/editor/diagnostics/__tests__/DiagnosticHub.test.ts`. Tests validate stable ID generation, deduplication, namespace management, and filtering.
+
+Test coverage:
+- Stable ID generation (same inputs → same ID)
+- Deduplication (add same diagnostic twice → single entry, updated occurrences)
+- Resolve diagnostic (status changes to 'resolved')
+- Clear diagnostics (all, or by scope)
+- Filtering (by domain, severity, status)
+
+### Acceptance Criteria (REQUIRED)
+
+- [ ] Test: Adding a diagnostic returns a stable ID
+- [ ] Test: Adding the same diagnostic twice (same code + target) updates `lastSeenAt` and increments `occurrences` (does not create duplicate)
+- [ ] Test: Resolving a diagnostic changes status to 'resolved'
+- [ ] Test: Clearing all diagnostics removes all entries
+- [ ] Test: Clearing by scope (e.g., 'compile') removes only matching diagnostics
+- [ ] Test: Filtering by severity returns only matching diagnostics
+- [ ] Test: Filtering by domain returns only matching diagnostics
+- [ ] All tests pass with `just test`
+
+### Technical Notes
+
+- Use Vitest (existing test framework)
+- Mock diagnostic creation helper: `createTestDiagnostic(code, target, overrides?)`
+- Test stable ID by comparing IDs from two diagnostics with same code/target/data
+
+---
+
+## [P1] DiagnosticStore Unit Tests
+
+**Status:** Not Started
+**Effort:** Small (1-2 complexity points)
+**Dependencies:** DiagnosticStore (P0), Diagnostic Events (P0)
+**Spec Reference:** design-docs/4-Event-System/3-Diagnostics.md §4 • **Status Reference:** STATUS-2025-12-20-172314.md "Quantitative Metrics > Test files"
+
+### Description
+
+Create unit tests for `DiagnosticStore` in `src/editor/stores/__tests__/DiagnosticStore.test.ts`. Tests validate MobX reactivity, event emission, and integration with `DiagnosticHub`.
+
+Test coverage:
+- `addDiagnostic()` action adds diagnostic and emits event
+- `resolveDiagnostic()` action resolves and emits event
+- `clearDiagnostics()` action clears and emits event
+- Computed properties (`diagnostics`, `errorCount`, `warningCount`) are reactive
+
+### Acceptance Criteria (REQUIRED)
+
+- [ ] Test: `addDiagnostic()` adds diagnostic to hub and emits `DiagnosticAdded` event
+- [ ] Test: `addDiagnostic()` for duplicate diagnostic updates existing entry (dedupe via hub)
+- [ ] Test: `resolveDiagnostic()` resolves diagnostic and emits `DiagnosticResolved` event
+- [ ] Test: `clearDiagnostics()` clears diagnostics and emits `DiagnosticCleared` event with correct count
+- [ ] Test: Computed `diagnostics` property returns all diagnostics from hub
+- [ ] Test: Computed `errorCount` returns count of 'error' and 'fatal' diagnostics
+- [ ] Test: Computed `warningCount` returns count of 'warn' diagnostics
+- [ ] All tests pass with `just test`
+
+### Technical Notes
+
+- Follow test patterns from `src/editor/stores/__tests__/BusStore.test.ts`
+- Mock `EventDispatcher` to capture emitted events
+- Use MobX `reaction()` to test computed property reactivity
+
+---
+
+## [P1] Compiler Integration Tests
+
+**Status:** Not Started
+**Effort:** Medium (2-3 complexity points)
+**Dependencies:** Compiler Diagnostic Integration (P0)
+**Spec Reference:** design-docs/4-Event-System/5-DiagnosticPayloadSpec.md §6, §7 • **Status Reference:** STATUS-2025-12-20-172314.md "Quantitative Metrics > Test files"
+
+### Description
+
+Create integration tests in `src/editor/compiler/__tests__/diagnostics.test.ts` that validate compiler diagnostic emission for the 5 starter codes. Tests ensure diagnostics have correct targets, payloads, and severity.
+
+Test coverage:
+- E_TIME_ROOT_MISSING emitted for patches with no TimeRoot
+- E_TIME_ROOT_MULTIPLE emitted for patches with multiple TimeRoots
+- E_TYPE_MISMATCH emitted for port type mismatches
+- W_BUS_EMPTY emitted for buses with no publishers
+- W_GRAPH_UNUSED_OUTPUT emitted for unconnected output ports
+
+### Acceptance Criteria (REQUIRED)
+
+- [ ] Test: Compiling empty patch emits `E_TIME_ROOT_MISSING` diagnostic
+- [ ] Test: Compiling patch with 2 TimeRoots emits `E_TIME_ROOT_MULTIPLE` diagnostic
+- [ ] Test: Compiling patch with signal->field type mismatch emits `E_TYPE_MISMATCH` diagnostic with correct expected/actual TypeDesc in data
+- [ ] Test: Compiling patch with empty bus emits `W_BUS_EMPTY` diagnostic with correct busId/silentValue in data
+- [ ] Test: Compiling patch with unconnected output port emits `W_GRAPH_UNUSED_OUTPUT` diagnostic
+- [ ] Test: All diagnostics have correct `primaryTarget` TargetRef (block/port/bus)
+- [ ] Test: Diagnostics are cleared at start of each compilation
+- [ ] All tests pass with `just test`
+
+### Technical Notes
+
+- Create minimal test patches that trigger each diagnostic
+- Assert diagnostic count, code, severity, and target fields
+- Use `diagnosticStore.diagnostics` computed property to read emitted diagnostics
+- Follow existing compiler test patterns from `src/editor/compiler/__tests__/`
+
+---
+
+## Dependency Graph
+
+```
+Core Diagnostic Types (P0)
+├─→ DiagnosticHub (P0)
+│   └─→ DiagnosticStore (P0)
+│       └─→ Compiler Integration (P0)
+│           └─→ Compiler Integration Tests (P1)
+│   └─→ DiagnosticHub Tests (P1)
+└─→ Diagnostic Events (P0)
+    └─→ DiagnosticStore (P0)
+        └─→ DiagnosticStore Tests (P1)
+```
+
+**Critical Path:** Core Types → DiagnosticHub → DiagnosticStore → Compiler Integration
+
+---
+
+## Recommended Implementation Order
+
+1. **Core Diagnostic Types** (P0) - Foundation, no blockers
+2. **Diagnostic Events** (P0) - Parallel to types, simple addition
+3. **DiagnosticHub** (P0) - Depends on types
+4. **DiagnosticHub Tests** (P1) - Validate hub before integrating
+5. **DiagnosticStore** (P0) - Depends on hub and events
+6. **DiagnosticStore Tests** (P1) - Validate store before compiler work
+7. **Compiler Integration** (P0) - Depends on store
+8. **Compiler Integration Tests** (P1) - Validate end-to-end
+
+---
+
+## Out of Scope (Phase 2 / Future)
+
+- **Runtime diagnostics**: NaN detection, performance monitors, field materialization warnings
+- **FixAction execution system**: UI handlers for InsertBlock, CreateTimeRoot, etc.
+- **UI components**: Diagnostic console, block/port/bus badges, fix buttons
+- **Advanced polish**: Semantic addressing (path-based TargetRef), diagnostic grouping/coalescing
+- **LogStore migration**: Deprecation strategy for legacy logging (keep LogStore for now)
+
+---
+
+## Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Stable ID collisions | Low | Medium | Use hash function with sufficient entropy; validate with tests |
+| DiagnosticHub namespace complexity | Low | Low | Start with simple domain filter, iterate if needed |
+| Compiler integration breaks builds | Low | High | Test each diagnostic code independently; use feature flag if needed |
+| MobX reactivity issues | Low | Medium | Follow established store patterns; test computed properties |
+
+---
+
+## Success Criteria
+
+**Phase 1 Complete When:**
+1. All P0 and P1 work items marked complete
+2. All tests pass (`just test`)
+3. Type checking passes (`just typecheck`)
+4. Compiler emits diagnostics instead of logStore calls for 5 starter codes
+5. DiagnosticStore integrated into RootStore
+6. No breaking changes to existing functionality (logStore still works for non-compiler code)
+
+**Validation:**
+- Compile a patch with no TimeRoot → see `E_TIME_ROOT_MISSING` diagnostic in store
+- Compile a patch with type mismatch → see `E_TYPE_MISMATCH` diagnostic with correct payload
+- Check `diagnosticStore.errorCount` and `warningCount` reflect emitted diagnostics
+
+---
+
+## Next Steps (Post-Phase 1)
+
+1. **Phase 2A: Runtime Diagnostics** - NaN detection, performance monitors
+2. **Phase 2B: UI Components** - Diagnostic console, badges
+3. **Phase 2C: FixAction System** - Action execution framework
+4. **Phase 2D: Polish** - Semantic addressing, grouping, LogStore deprecation
+
+---
+
+**Plan Status:** Ready for implementation
+**Approval:** Auto-approved (low risk, fresh plan with clear criteria per user instructions)

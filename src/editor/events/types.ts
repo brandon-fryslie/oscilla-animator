@@ -10,6 +10,7 @@
  */
 
 import type { TypeDescriptor } from '../types';
+import type { Diagnostic } from '../diagnostics/types';
 
 /**
  * MacroExpanded event.
@@ -247,15 +248,282 @@ export interface BusDeletedEvent {
   name: string;
 }
 
+// ============================================================================
+// DIAGNOSTIC LIFECYCLE EVENTS
+// These events provide clean boundaries for diagnostic state updates.
+// Reference: design-docs/4-Event-System/3.5-Events-and-Payloads-Schema.md
+// ============================================================================
+
+/**
+ * Reason for a graph mutation.
+ * Helps diagnostics and UX understand why the graph changed.
+ */
+export type GraphCommitReason =
+  | 'userEdit'
+  | 'macroExpand'
+  | 'compositeSave'
+  | 'migration'
+  | 'import'
+  | 'undo'
+  | 'redo';
+
+/**
+ * Summary of changes in a graph mutation.
+ */
+export interface GraphDiffSummary {
+  /** Number of blocks added in this mutation */
+  blocksAdded: number;
+  /** Number of blocks removed in this mutation */
+  blocksRemoved: number;
+  /** Number of buses added in this mutation */
+  busesAdded: number;
+  /** Number of buses removed in this mutation */
+  busesRemoved: number;
+  /** Number of bindings changed (added or removed) */
+  bindingsChanged: number;
+  /** Whether the TimeRoot block was added/removed/modified */
+  timeRootChanged: boolean;
+}
+
+/**
+ * GraphCommitted event.
+ *
+ * Emitted exactly once after any user operation that changes the patch graph
+ * (blocks/buses/bindings/time root/composites), after the mutation is fully
+ * applied and undo state is committed.
+ *
+ * This replaces the granular events (BlockAdded, BlockRemoved, WireAdded, etc.)
+ * for diagnostic purposes - it provides a single stable "recompute point".
+ *
+ * Emitted by: PatchStore (after all mutation methods)
+ * When: After mutation fully applied, before recompilation
+ *
+ * Reference: design-docs/4-Event-System/3.5-Events-and-Payloads-Schema.md §1
+ */
+export interface GraphCommittedEvent {
+  type: 'GraphCommitted';
+  /** Unique identifier for this patch */
+  patchId: string;
+  /** Monotonic revision number (increments on every committed graph edit) */
+  patchRevision: number;
+  /** Reason for the mutation */
+  reason: GraphCommitReason;
+  /** Summary of what changed */
+  diffSummary: GraphDiffSummary;
+  /** IDs of blocks affected by this mutation (best effort, bounded) */
+  affectedBlockIds?: string[];
+  /** IDs of buses affected by this mutation (best effort, bounded) */
+  affectedBusIds?: string[];
+}
+
+/**
+ * Trigger for a compilation.
+ */
+export type CompileTrigger =
+  | 'graphCommitted'
+  | 'manual'
+  | 'startup'
+  | 'hotReload';
+
+/**
+ * CompileStarted event.
+ *
+ * Emitted when compilation begins for a specific graph revision.
+ *
+ * Emitted by: CompilerService.compile()
+ * When: At start of compilation
+ *
+ * Diagnostic use: Clears/marks "stale compile diagnostics" state, shows "compiling..." badges.
+ *
+ * Reference: design-docs/4-Event-System/3.5-Events-and-Payloads-Schema.md §2
+ */
+export interface CompileStartedEvent {
+  type: 'CompileStarted';
+  /** Unique ID for this compilation (UUID) */
+  compileId: string;
+  /** ID of the patch being compiled */
+  patchId: string;
+  /** Revision of the patch being compiled */
+  patchRevision: number;
+  /** What triggered the compilation */
+  trigger: CompileTrigger;
+}
+
+/**
+ * Status of a compilation.
+ */
+export type CompileStatus = 'ok' | 'failed';
+
+/**
+ * Metadata about the compiled program (only present on success).
+ */
+export interface CompiledProgramMeta {
+  /** Timeline hint: finite, cyclic, or infinite */
+  timelineHint: 'finite' | 'cyclic' | 'infinite';
+  /** Kind of TimeRoot used */
+  timeRootKind: 'FiniteTimeRoot' | 'CycleTimeRoot' | 'InfiniteTimeRoot' | 'none';
+  /** Optional bus usage summary */
+  busUsageSummary?: Record<string, { publishers: number; listeners: number }>;
+}
+
+/**
+ * CompileFinished event.
+ *
+ * Emitted when compilation completes (SUCCESS OR FAILURE - single event, not split).
+ * The diagnostics array contains the authoritative compile-time diagnostics snapshot.
+ *
+ * Emitted by: CompilerService.compile()
+ * When: After compilation completes (regardless of success/failure)
+ *
+ * Diagnostic use: Replace compile diagnostics snapshot for that patchRevision.
+ *
+ * Reference: design-docs/4-Event-System/3.5-Events-and-Payloads-Schema.md §3
+ */
+export interface CompileFinishedEvent {
+  type: 'CompileFinished';
+  /** ID of this compilation (matches CompileStarted.compileId) */
+  compileId: string;
+  /** ID of the patch that was compiled */
+  patchId: string;
+  /** Revision of the patch that was compiled */
+  patchRevision: number;
+  /** Compilation result status */
+  status: CompileStatus;
+  /** Compilation duration in milliseconds */
+  durationMs: number;
+  /** Authoritative diagnostics snapshot from compilation */
+  diagnostics: Diagnostic[];
+  /** Program metadata (only present if status === 'ok') */
+  programMeta?: CompiledProgramMeta;
+}
+
+/**
+ * Swap mode for program activation.
+ */
+export type ProgramSwapMode =
+  | 'hard'     // Immediate swap
+  | 'soft'     // Crossfade / state-bridge
+  | 'deferred'; // Applied on boundary (pulse/loop seam)
+
+/**
+ * ProgramSwapped event.
+ *
+ * Emitted when the runtime actually begins using a new compiled program.
+ *
+ * Emitted by: Player (when activating a new program)
+ * When: After program is active in runtime
+ *
+ * Diagnostic use: Set "active revision" pointer, attach runtime diagnostics to active revision.
+ *
+ * Reference: design-docs/4-Event-System/3.5-Events-and-Payloads-Schema.md §4
+ */
+export interface ProgramSwappedEvent {
+  type: 'ProgramSwapped';
+  /** ID of the patch */
+  patchId: string;
+  /** Revision of the patch now active */
+  patchRevision: number;
+  /** ID of the compilation that produced this program */
+  compileId: string;
+  /** How the swap was performed */
+  swapMode: ProgramSwapMode;
+  /** Time between CompileFinished and swap (ms) */
+  swapLatencyMs: number;
+  /** Whether state bridging was used (for soft swaps) */
+  stateBridgeUsed?: boolean;
+}
+
+/**
+ * Frame budget statistics.
+ */
+export interface FrameBudgetStats {
+  /** Estimated FPS */
+  fpsEstimate: number;
+  /** Average frame time over window (ms) */
+  avgFrameMs: number;
+  /** Worst frame time in window (ms) */
+  worstFrameMs?: number;
+}
+
+/**
+ * Evaluation statistics.
+ */
+export interface EvalStats {
+  /** Number of field materializations */
+  fieldMaterializations: number;
+  /** Top K worst offenders (block IDs) */
+  worstOffenders?: Array<{ blockId: string; count: number }>;
+  /** Estimated allocation bytes (optional) */
+  allocBytesEstimate?: number;
+  /** Count of NaN values detected */
+  nanCount: number;
+  /** Count of Infinity values detected */
+  infCount: number;
+}
+
+/**
+ * RuntimeHealthSnapshot event.
+ *
+ * Emitted at a fixed low frequency (2-5 Hz), NOT per frame.
+ * Provides runtime health information for performance diagnostics.
+ *
+ * Emitted by: Player/Runtime (throttled)
+ * When: Every 200-500ms during playback
+ *
+ * Diagnostic use: Update runtime diagnostics (dedupe/expire), perf warnings.
+ *
+ * Reference: design-docs/4-Event-System/3.5-Events-and-Payloads-Schema.md §5
+ */
+export interface RuntimeHealthSnapshotEvent {
+  type: 'RuntimeHealthSnapshot';
+  /** ID of the patch */
+  patchId: string;
+  /** Currently active revision */
+  activePatchRevision: number;
+  /** Current runtime time in ms */
+  tMs: number;
+  /** Frame budget statistics */
+  frameBudget: FrameBudgetStats;
+  /** Evaluation statistics */
+  evalStats: EvalStats;
+  /** Runtime diagnostics delta (raised/resolved IDs) or full snapshot */
+  diagnosticsDelta?: {
+    raised: Diagnostic[];
+    resolved: string[]; // diagnostic IDs that are now resolved
+  };
+}
+
+// ============================================================================
+
 /**
  * Union of all editor events (discriminated by 'type' field).
+ *
+ * DIAGNOSTIC LIFECYCLE EVENTS (new):
+ * - GraphCommitted: Single mutation boundary event
+ * - CompileStarted: Compilation begins
+ * - CompileFinished: Compilation complete with diagnostics snapshot
+ * - ProgramSwapped: Runtime activated new program
+ * - RuntimeHealthSnapshot: Throttled runtime health stats
+ *
+ * LEGACY EVENTS (kept for backward compatibility, may be removed):
+ * - CompileSucceeded/CompileFailed: Replaced by CompileFinished
+ * - BlockAdded/BlockRemoved/WireAdded/etc: Replaced by GraphCommitted for diagnostics
  */
 export type EditorEvent =
+  // Lifecycle events
   | MacroExpandedEvent
   | PatchLoadedEvent
   | PatchClearedEvent
+  // Diagnostic lifecycle events (new)
+  | GraphCommittedEvent
+  | CompileStartedEvent
+  | CompileFinishedEvent
+  | ProgramSwappedEvent
+  | RuntimeHealthSnapshotEvent
+  // Legacy compile events (kept for backward compatibility)
   | CompileSucceededEvent
   | CompileFailedEvent
+  // Legacy granular events (kept for backward compatibility)
   | BlockAddedEvent
   | BlockRemovedEvent
   | BlockReplacedEvent

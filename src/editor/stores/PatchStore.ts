@@ -20,6 +20,7 @@ import { getMacroKey, getMacroExpansion, type MacroExpansion } from '../macros';
 import { listCompositeDefinitions } from '../composites';
 import type { RootStore } from './RootStore';
 import { mapConnections, copyCompatibleParams, type ReplacementResult } from '../replaceUtils';
+import type { GraphCommitReason, GraphDiffSummary } from '../events/types';
 
 // =============================================================================
 // Migration Helpers
@@ -52,6 +53,20 @@ export class PatchStore {
   /** Lane definitions with block assignments */
   lanes: Lane[] = this.createLanesFromLayout(DEFAULT_LAYOUT);
 
+  /**
+   * Unique identifier for this patch.
+   * Generated once when the patch is created, persisted across saves.
+   */
+  patchId: string = crypto.randomUUID();
+
+  /**
+   * Monotonic revision number that increments on every committed graph edit.
+   * Used for diagnostic state keying, staleness detection, and event correlation.
+   *
+   * Design: design-docs/4-Event-System/3.5-Events-and-Payloads-Schema.md
+   */
+  patchRevision: number = 0;
+
   root: RootStore;
 
   constructor(root: RootStore) {
@@ -61,6 +76,8 @@ export class PatchStore {
       connections: observable,
       lanes: observable,
       currentLayoutId: observable,
+      patchId: observable,
+      patchRevision: observable,
 
       // Computed
       currentLayout: computed,
@@ -85,7 +102,68 @@ export class PatchStore {
       moveBlockToLane: action,
       reorderBlockInLane: action,
       switchLayout: action,
+      resetPatchId: action,
+      incrementRevision: action,
     });
+  }
+
+  // =============================================================================
+  // Patch Lifecycle
+  // =============================================================================
+
+  /**
+   * Reset the patch ID (called when loading a new patch or clearing).
+   */
+  resetPatchId(newId?: string): void {
+    this.patchId = newId ?? crypto.randomUUID();
+    this.patchRevision = 0;
+  }
+
+  /**
+   * Increment the patch revision (called after every graph mutation).
+   * @returns The new revision number
+   */
+  incrementRevision(): number {
+    this.patchRevision += 1;
+    return this.patchRevision;
+  }
+
+  /**
+   * Emit a GraphCommitted event with the given diff summary.
+   * This is the single mutation boundary event that diagnostics use to recompute.
+   *
+   * @param reason - Why the graph changed
+   * @param diff - Summary of what changed
+   * @param affectedBlockIds - IDs of blocks affected (optional, best effort)
+   * @param affectedBusIds - IDs of buses affected (optional, best effort)
+   */
+  emitGraphCommitted(
+    reason: GraphCommitReason,
+    diff: GraphDiffSummary,
+    affectedBlockIds?: string[],
+    affectedBusIds?: string[]
+  ): void {
+    const revision = this.incrementRevision();
+    this.root.events.emit({
+      type: 'GraphCommitted',
+      patchId: this.patchId,
+      patchRevision: revision,
+      reason,
+      diffSummary: diff,
+      affectedBlockIds,
+      affectedBusIds,
+    });
+  }
+
+  /**
+   * Helper to check if a block is a TimeRoot block.
+   */
+  private isTimeRootBlock(blockType: string): boolean {
+    return (
+      blockType === 'FiniteTimeRoot' ||
+      blockType === 'CycleTimeRoot' ||
+      blockType === 'InfiniteTimeRoot'
+    );
   }
 
   // =============================================================================
@@ -227,6 +305,20 @@ export class PatchStore {
       laneId,
     });
 
+    // Emit GraphCommitted for diagnostics
+    this.emitGraphCommitted(
+      'userEdit',
+      {
+        blocksAdded: 1,
+        blocksRemoved: 0,
+        busesAdded: 0,
+        busesRemoved: 0,
+        bindingsChanged: 0,
+        timeRootChanged: this.isTimeRootBlock(type),
+      },
+      [id]
+    );
+
     return id;
   }
 
@@ -266,12 +358,12 @@ export class PatchStore {
       refToId.set(macroBlock.ref, id);
     }
 
-    // Create all connections
+    // Create all connections (suppress GraphCommitted - we emit one at the end)
     for (const conn of expansion.connections) {
       const fromId = refToId.get(conn.fromRef);
       const toId = refToId.get(conn.toRef);
       if (fromId && toId) {
-        this.connect(fromId, conn.fromSlot, toId, conn.toSlot);
+        this.connect(fromId, conn.fromSlot, toId, conn.toSlot, { suppressGraphCommitted: true });
       }
     }
 
@@ -329,6 +421,25 @@ export class PatchStore {
       createdBlockIds: Array.from(refToId.values()),
     });
 
+    // Emit GraphCommitted for diagnostics
+    const createdBlockIds = Array.from(refToId.values());
+    const hasTimeRoot = expansion.blocks.some((b) => this.isTimeRootBlock(b.type));
+    const publisherCount = expansion.publishers?.length ?? 0;
+    const listenerCount = expansion.listeners?.length ?? 0;
+
+    this.emitGraphCommitted(
+      'macroExpand',
+      {
+        blocksAdded: createdBlockIds.length,
+        blocksRemoved: 0,
+        busesAdded: 0,
+        busesRemoved: 0,
+        bindingsChanged: publisherCount + listenerCount,
+        timeRootChanged: hasTimeRoot,
+      },
+      createdBlockIds
+    );
+
     // Return the first block ID (for selection purposes)
     const firstRef = expansion.blocks[0]?.ref;
     return firstRef ? refToId.get(firstRef) ?? '' : '';
@@ -374,20 +485,31 @@ export class PatchStore {
     Object.assign(block, updates);
   }
 
-  removeBlock(id: BlockId): void {
+  /**
+   * Remove a block from the patch.
+   * @param id - The block ID to remove
+   * @param options - Optional settings
+   * @param options.suppressGraphCommitted - If true, don't emit GraphCommitted (used by replaceBlock)
+   */
+  removeBlock(id: BlockId, options?: { suppressGraphCommitted?: boolean }): void {
     // Capture block type before deletion (needed for event)
     const block = this.blocks.find((b) => b.id === id);
     const blockType = block?.type ?? 'unknown';
+    const isTimeRoot = this.isTimeRootBlock(blockType);
+
+    // Count connections and bindings being removed (for diff)
+    const connectionsToRemove = this.connections.filter(
+      (c) => c.from.blockId === id || c.to.blockId === id
+    );
+    const publishersRemoved = this.root.busStore.publishers.filter((p) => p.from.blockId === id).length;
+    const listenersRemoved = this.root.busStore.listeners.filter((l) => l.to.blockId === id).length;
 
     // Remove block
     this.blocks = this.blocks.filter((b) => b.id !== id);
 
     // Remove connections to/from this block (with cascade event emission)
-    const connectionsToRemove = this.connections.filter(
-      (c) => c.from.blockId === id || c.to.blockId === id
-    );
     for (const conn of connectionsToRemove) {
-      this.disconnect(conn.id);
+      this.disconnect(conn.id, { suppressGraphCommitted: true });
     }
 
     // Remove from lanes
@@ -405,6 +527,22 @@ export class PatchStore {
       blockId: id,
       blockType,
     });
+
+    // Emit GraphCommitted unless suppressed (used by replaceBlock)
+    if (!options?.suppressGraphCommitted) {
+      this.emitGraphCommitted(
+        'userEdit',
+        {
+          blocksAdded: 0,
+          blocksRemoved: 1,
+          busesAdded: 0,
+          busesRemoved: 0,
+          bindingsChanged: publishersRemoved + listenersRemoved + connectionsToRemove.length,
+          timeRootChanged: isTimeRoot,
+        },
+        [id]
+      );
+    }
   }
 
   /**
@@ -469,12 +607,12 @@ export class PatchStore {
     lane.blockIds = [...lane.blockIds];
     lane.blockIds.splice(oldIndex, 0, newBlockId);
 
-    // Remap preserved connections
+    // Remap preserved connections (suppress GraphCommitted - we emit one at the end)
     for (const preserved of mapping.preserved) {
       const fromId = preserved.fromBlockId === oldBlockId ? newBlockId : preserved.fromBlockId;
       const toId = preserved.toBlockId === oldBlockId ? newBlockId : preserved.toBlockId;
 
-      this.connect(fromId, preserved.fromSlot, toId, preserved.toSlot);
+      this.connect(fromId, preserved.fromSlot, toId, preserved.toSlot, { suppressGraphCommitted: true });
     }
 
     // Handle bus publishers
@@ -522,8 +660,24 @@ export class PatchStore {
     });
 
     // Remove old block (this also removes its connections and bus routing)
-    // This will emit BlockRemoved event, but BlockReplaced listeners have already run
-    this.removeBlock(oldBlockId);
+    // Suppress GraphCommitted - we emit one at the end that represents the complete operation
+    this.removeBlock(oldBlockId, { suppressGraphCommitted: true });
+
+    // Emit GraphCommitted for the complete replacement operation
+    const oldIsTimeRoot = this.isTimeRootBlock(oldBlock.type);
+    const newIsTimeRoot = this.isTimeRootBlock(newBlockType);
+    this.emitGraphCommitted(
+      'userEdit',
+      {
+        blocksAdded: 1,
+        blocksRemoved: 1,
+        busesAdded: 0,
+        busesRemoved: 0,
+        bindingsChanged: mapping.preserved.length + mapping.dropped.length,
+        timeRootChanged: oldIsTimeRoot || newIsTimeRoot,
+      },
+      [oldBlockId, newBlockId]
+    );
 
     return {
       success: true,
@@ -554,12 +708,15 @@ export class PatchStore {
 
   /**
    * Create a connection between two blocks (helper method).
+   * @param options - Optional settings
+   * @param options.suppressGraphCommitted - If true, don't emit GraphCommitted (used internally)
    */
   connect(
     fromBlockId: BlockId,
     fromSlotId: string,
     toBlockId: BlockId,
-    toSlotId: string
+    toSlotId: string,
+    options?: { suppressGraphCommitted?: boolean }
   ): void {
     // Prevent duplicate connections between the same ports
     const exists = this.connections.some(
@@ -588,12 +745,30 @@ export class PatchStore {
       from: connection.from,
       to: connection.to,
     });
+
+    // Emit GraphCommitted unless suppressed
+    if (!options?.suppressGraphCommitted) {
+      this.emitGraphCommitted(
+        'userEdit',
+        {
+          blocksAdded: 0,
+          blocksRemoved: 0,
+          busesAdded: 0,
+          busesRemoved: 0,
+          bindingsChanged: 1,
+          timeRootChanged: false,
+        },
+        [fromBlockId, toBlockId]
+      );
+    }
   }
 
   /**
    * Remove a connection (helper method).
+   * @param options - Optional settings
+   * @param options.suppressGraphCommitted - If true, don't emit GraphCommitted (used internally)
    */
-  disconnect(connectionId: string): void {
+  disconnect(connectionId: string, options?: { suppressGraphCommitted?: boolean }): void {
     // Capture connection data BEFORE removal (for event)
     const connection = this.connections.find((c) => c.id === connectionId);
     if (!connection) return;
@@ -607,6 +782,22 @@ export class PatchStore {
       from: connection.from,
       to: connection.to,
     });
+
+    // Emit GraphCommitted unless suppressed
+    if (!options?.suppressGraphCommitted) {
+      this.emitGraphCommitted(
+        'userEdit',
+        {
+          blocksAdded: 0,
+          blocksRemoved: 0,
+          busesAdded: 0,
+          busesRemoved: 0,
+          bindingsChanged: 1,
+          timeRootChanged: false,
+        },
+        [connection.from.blockId, connection.to.blockId]
+      );
+    }
   }
 
   /**

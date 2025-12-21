@@ -12,15 +12,98 @@ import type {
   CompilerPatch,
   Seed,
   PortRef,
+  CompileError,
 } from './types';
 import { buildDecorations, emptyDecorations, type DecorationSet } from './error-decorations';
 import { getBlockDefinition } from '../blocks';
 import { registerAllComposites, getCompositeCompilers } from '../composite-bridge';
 import { getFeatureFlags } from './featureFlags';
+import { createDiagnostic, type Diagnostic, type DiagnosticCode, type TargetRef } from '../diagnostics/types';
 
 // Unified compiler imports
 import { UnifiedCompiler, RuntimeAdapter } from './unified';
 import type { PatchDefinition as UnifiedPatchDef } from './unified';
+
+// =============================================================================
+// Diagnostic Conversion
+// =============================================================================
+
+/**
+ * Convert CompileError to Diagnostic for event emission.
+ */
+function compileErrorToDiagnostic(
+  error: CompileError,
+  patchRevision: number
+): Diagnostic {
+  // Map CompileErrorCode to DiagnosticCode
+  const codeMappings: Record<string, { code: DiagnosticCode; severity: 'error' | 'fatal' | 'warn' }> = {
+    MissingTimeRoot: { code: 'E_TIME_ROOT_MISSING', severity: 'error' },
+    MultipleTimeRoots: { code: 'E_TIME_ROOT_MULTIPLE', severity: 'error' },
+    PortTypeMismatch: { code: 'E_TYPE_MISMATCH', severity: 'error' },
+    WorldMismatch: { code: 'E_WORLD_MISMATCH', severity: 'error' },
+    DomainMismatch: { code: 'E_DOMAIN_MISMATCH', severity: 'error' },
+    CycleDetected: { code: 'E_CYCLE_DETECTED', severity: 'error' },
+    MissingInput: { code: 'E_MISSING_INPUT', severity: 'error' },
+    InvalidConnection: { code: 'E_INVALID_CONNECTION', severity: 'error' },
+  };
+
+  const mapping = codeMappings[error.code];
+  const diagnosticCode = mapping?.code ?? 'E_TYPE_MISMATCH'; // Fallback to type mismatch for unknown errors
+  const severity = mapping?.severity ?? 'error';
+
+  // Create primary target from error location
+  let primaryTarget: TargetRef;
+  let affectedTargets: TargetRef[] | undefined;
+
+  if (error.code === 'MissingTimeRoot') {
+    // No specific target for missing TimeRoot - use a synthetic graph span
+    primaryTarget = { kind: 'graphSpan', blockIds: [], spanKind: 'subgraph' };
+  } else if (error.code === 'MultipleTimeRoots' && error.where?.blockId) {
+    primaryTarget = { kind: 'timeRoot', blockId: error.where.blockId };
+  } else if (error.where?.connection) {
+    // Connection error - target both ends
+    const conn = error.where.connection;
+    primaryTarget = { kind: 'port', blockId: conn.from.blockId, portId: conn.from.port };
+    affectedTargets = [
+      { kind: 'port', blockId: conn.to.blockId, portId: conn.to.port },
+    ];
+  } else if (error.where?.blockId && error.where?.port) {
+    primaryTarget = { kind: 'port', blockId: error.where.blockId, portId: error.where.port };
+  } else if (error.where?.blockId) {
+    primaryTarget = { kind: 'block', blockId: error.where.blockId };
+  } else if (error.where?.busId) {
+    primaryTarget = { kind: 'bus', busId: error.where.busId };
+  } else {
+    // No location - use synthetic graph span
+    primaryTarget = { kind: 'graphSpan', blockIds: [], spanKind: 'subgraph' };
+  }
+
+  // Extract type mismatch details if available
+  let payload: Diagnostic['payload'] | undefined;
+  if (error.code === 'PortTypeMismatch' && error.message) {
+    // Parse type mismatch from message (e.g., "Type mismatch: blockA.out (Signal:number) → blockB.in (Field:vec2)")
+    const match = error.message.match(/\(([^)]+)\).*→.*\(([^)]+)\)/);
+    if (match) {
+      payload = {
+        kind: 'typeMismatch',
+        expected: match[2] || 'unknown',
+        actual: match[1] || 'unknown',
+      };
+    }
+  }
+
+  return createDiagnostic({
+    code: diagnosticCode,
+    severity,
+    domain: 'compile',
+    primaryTarget,
+    affectedTargets,
+    title: `Compilation Error: ${error.code}`,
+    message: error.message,
+    payload,
+    patchRevision,
+  });
+}
 
 // =============================================================================
 // PortRef Rewrite Map (per Design Doc Section 7)
@@ -601,6 +684,20 @@ export function createCompilerService(store: RootStore): CompilerService {
       const startTime = performance.now();
       const flags = getFeatureFlags();
 
+      // Generate compileId
+      const compileId = crypto.randomUUID();
+      const patchId = store.patchStore.patchId;
+      const patchRevision = store.patchStore.patchRevision;
+
+      // Emit CompileStarted event
+      store.events.emit({
+        type: 'CompileStarted',
+        compileId,
+        patchId,
+        patchRevision,
+        trigger: 'graphCommitted',
+      });
+
       store.logStore.debug('compiler', 'Starting compilation...');
       if (flags.useUnifiedCompiler) {
         store.logStore.info('compiler', 'Using UnifiedCompiler (feature flag enabled)');
@@ -634,6 +731,23 @@ export function createCompilerService(store: RootStore): CompilerService {
             })),
           };
           lastDecorations = buildDecorations(lastResult.errors);
+
+          // Convert errors to diagnostics and emit CompileFinished
+          const diagnostics = lastResult.errors.map((err) =>
+            compileErrorToDiagnostic(err, patchRevision)
+          );
+          const durationMs = performance.now() - startTime;
+
+          store.events.emit({
+            type: 'CompileFinished',
+            compileId,
+            patchId,
+            patchRevision,
+            status: 'failed',
+            durationMs,
+            diagnostics,
+          });
+
           return lastResult;
         }
 
@@ -669,15 +783,38 @@ export function createCompilerService(store: RootStore): CompilerService {
               return compilePatch(patch, registry, seed, ctx);
             })();
 
-        const elapsed = (performance.now() - startTime).toFixed(1);
+        const durationMs = performance.now() - startTime;
+
+        // Convert errors to diagnostics
+        const diagnostics = result.errors.map((err) =>
+          compileErrorToDiagnostic(err, patchRevision)
+        );
 
         if (result.ok) {
-          store.logStore.info('compiler', `Compiled successfully (${elapsed}ms)`);
-          // Emit CompileSucceeded event AFTER state changes
+          store.logStore.info('compiler', `Compiled successfully (${durationMs.toFixed(1)}ms)`);
+
+          // Emit CompileFinished event with success status
+          store.events.emit({
+            type: 'CompileFinished',
+            compileId,
+            patchId,
+            patchRevision,
+            status: 'ok',
+            durationMs,
+            diagnostics,
+            programMeta: {
+              timelineHint: result.timeModel?.kind ?? 'infinite',
+              timeRootKind: inferTimeRootKind(patch),
+              busUsageSummary: buildBusUsageSummary(patch),
+            },
+          });
+
+          // Emit legacy CompileSucceeded event for backward compatibility
           store.events.emit({
             type: 'CompileSucceeded',
-            durationMs: parseFloat(elapsed),
+            durationMs,
           });
+
           lastDecorations = emptyDecorations();
         } else {
           // EmptyPatch is not an error - it's expected when the patch is cleared
@@ -686,6 +823,17 @@ export function createCompilerService(store: RootStore): CompilerService {
           if (isEmptyPatch) {
             // Silently clear state - no error logging for empty patch
             lastDecorations = emptyDecorations();
+
+            // Still emit CompileFinished event (with empty diagnostics)
+            store.events.emit({
+              type: 'CompileFinished',
+              compileId,
+              patchId,
+              patchRevision,
+              status: 'failed',
+              durationMs,
+              diagnostics: [],
+            });
           } else {
             // Log each error
             for (const err of result.errors) {
@@ -695,11 +843,24 @@ export function createCompilerService(store: RootStore): CompilerService {
               store.logStore.error('compiler', `${err.code}: ${err.message}${location}`);
             }
             store.logStore.warn('compiler', `Compilation failed with ${result.errors.length} error(s)`);
-            // Emit CompileFailed event AFTER state changes
+
+            // Emit CompileFinished event with failure status
+            store.events.emit({
+              type: 'CompileFinished',
+              compileId,
+              patchId,
+              patchRevision,
+              status: 'failed',
+              durationMs,
+              diagnostics,
+            });
+
+            // Emit legacy CompileFailed event for backward compatibility
             store.events.emit({
               type: 'CompileFailed',
               errorCount: result.errors.length,
             });
+
             // Build decorations for UI display
             lastDecorations = buildDecorations(result.errors);
           }
@@ -718,6 +879,23 @@ export function createCompilerService(store: RootStore): CompilerService {
           errors: [{ code: 'UpstreamError', message }],
         };
         lastDecorations = buildDecorations(lastResult.errors);
+
+        // Convert error to diagnostic and emit CompileFinished
+        const diagnostics = lastResult.errors.map((err) =>
+          compileErrorToDiagnostic(err, patchRevision)
+        );
+        const durationMs = performance.now() - startTime;
+
+        store.events.emit({
+          type: 'CompileFinished',
+          compileId,
+          patchId,
+          patchRevision,
+          status: 'failed',
+          durationMs,
+          diagnostics,
+        });
+
         return lastResult;
       }
     },
@@ -754,6 +932,43 @@ export function createCompilerService(store: RootStore): CompilerService {
       return { width: 800, height: 600 };
     },
   };
+}
+
+/**
+ * Infer TimeRootKind from the compiled patch.
+ */
+function inferTimeRootKind(patch: CompilerPatch): 'FiniteTimeRoot' | 'CycleTimeRoot' | 'InfiniteTimeRoot' | 'none' {
+  for (const block of patch.blocks.values()) {
+    if (block.type === 'FiniteTimeRoot') return 'FiniteTimeRoot';
+    if (block.type === 'CycleTimeRoot') return 'CycleTimeRoot';
+    if (block.type === 'InfiniteTimeRoot') return 'InfiniteTimeRoot';
+  }
+  return 'none';
+}
+
+/**
+ * Build bus usage summary for program metadata.
+ */
+function buildBusUsageSummary(patch: CompilerPatch): Record<string, { publishers: number; listeners: number }> {
+  const summary: Record<string, { publishers: number; listeners: number }> = {};
+
+  // Count publishers per bus
+  for (const pub of patch.publishers ?? []) {
+    if (!summary[pub.busId]) {
+      summary[pub.busId] = { publishers: 0, listeners: 0 };
+    }
+    summary[pub.busId].publishers++;
+  }
+
+  // Count listeners per bus
+  for (const listener of patch.listeners ?? []) {
+    if (!summary[listener.busId]) {
+      summary[listener.busId] = { publishers: 0, listeners: 0 };
+    }
+    summary[listener.busId].listeners++;
+  }
+
+  return summary;
 }
 
 // =============================================================================

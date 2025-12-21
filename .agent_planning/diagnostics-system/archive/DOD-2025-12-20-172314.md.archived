@@ -1,0 +1,158 @@
+# Definition of Done: Diagnostics System Phase 1
+
+**Generated:** 2025-12-20-172314
+**Plan:** PLAN-2025-12-20-172314.md
+**Sprint Focus:** Foundation types, hub, store, events, compiler integration
+
+---
+
+## Acceptance Criteria
+
+### Core Diagnostic Types
+
+- [ ] `Diagnostic` interface has all fields from spec §1 (id, status, timestamps, severity, domain, code, primaryTarget, relatedTargets, title, summary, details, data, actions, scope)
+- [ ] `TargetRef` discriminated union supports all 7 kinds: block, port, bus, binding, composite, timeRoot, graphSpan
+- [ ] `DiagnosticCode` includes starter set (minimum 8 codes): E_TIME_ROOT_MISSING, E_TIME_ROOT_MULTIPLE, E_TYPE_MISMATCH, W_BUS_EMPTY, W_GRAPH_UNUSED_OUTPUT, E_RUNTIME_NAN, E_RUNTIME_INF, E_GRAPH_CYCLE_ILLEGAL
+- [ ] `FixAction` interface supports all required fields (id, label, kind, target, params, risk, requiresConfirmation, applyMode)
+- [ ] All types are exported from `src/editor/diagnostics/index.ts`
+
+### DiagnosticHub Implementation
+
+- [ ] `add(diagnostic: Diagnostic): string` method returns the stable diagnostic ID (generated or existing)
+- [ ] `add()` deduplicates by ID: if diagnostic with same ID exists, update `lastSeenAt` and increment `occurrences` instead of creating duplicate
+- [ ] `resolve(id: string): boolean` marks diagnostic as `status: 'resolved'` and returns true if found
+- [ ] `clear(scope?: Domain): void` removes diagnostics (all if no scope, or filtered by domain)
+- [ ] `get(id: string): Diagnostic | undefined` returns diagnostic by ID
+- [ ] `getAll(filters?: { domain?: Domain; severity?: Severity; status?: DiagnosticStatus }): Diagnostic[]` returns filtered diagnostics
+- [ ] Stable ID generation uses canonical target keys (e.g., `block:block-123`, `port:block-123:radius`)
+- [ ] Unit tests cover dedupe, resolve, clear, and filtering
+
+### DiagnosticStore (MobX Observable)
+
+- [ ] `DiagnosticStore` class created with MobX `makeObservable()` in constructor
+- [ ] `addDiagnostic(diagnostic: Omit<Diagnostic, 'id' | 'firstSeenAt' | 'lastSeenAt' | 'occurrences'>): string` action adds diagnostic to hub and emits `DiagnosticAdded` event
+- [ ] `resolveDiagnostic(id: string): void` action resolves diagnostic and emits `DiagnosticResolved` event
+- [ ] `clearDiagnostics(scope?: Domain): void` action clears diagnostics and emits `DiagnosticCleared` event
+- [ ] Computed `diagnostics` property returns all active diagnostics from hub
+- [ ] Computed `errorCount` returns count of diagnostics with severity 'error' or 'fatal'
+- [ ] Computed `warningCount` returns count of diagnostics with severity 'warn'
+- [ ] Integrated into `RootStore` constructor (instantiated and stored in `this.diagnosticStore`)
+
+### Diagnostic Event Types
+
+- [ ] `DiagnosticAddedEvent` interface added with fields: `type: 'DiagnosticAdded'`, `diagnosticId: string`, `code: DiagnosticCode`, `severity: Severity`, `primaryTarget: TargetRef`
+- [ ] `DiagnosticResolvedEvent` interface added with fields: `type: 'DiagnosticResolved'`, `diagnosticId: string`
+- [ ] `DiagnosticClearedEvent` interface added with fields: `type: 'DiagnosticCleared'`, `scope?: Domain`, `count: number`
+- [ ] All three events added to `EditorEvent` union type
+- [ ] Exported from `src/editor/events/index.ts`
+
+### Compiler Diagnostic Integration
+
+- [ ] `CompilerService.compile()` method accepts `diagnosticStore: DiagnosticStore` parameter (passed from RootStore)
+- [ ] Compiler emits `E_TIME_ROOT_MISSING` diagnostic if no TimeRoot blocks found (primaryTarget: `{ kind: 'graphSpan', nodes: [] }`)
+- [ ] Compiler emits `E_TIME_ROOT_MULTIPLE` diagnostic if multiple TimeRoot blocks found (primaryTarget: `{ kind: 'graphSpan', nodes: [timeRootTargets] }`)
+- [ ] Compiler emits `E_TYPE_MISMATCH` diagnostic for port type mismatches (primaryTarget: receiving port, relatedTargets: source port/bus, data includes expected/actual TypeDesc)
+- [ ] Compiler emits `W_BUS_EMPTY` diagnostic for buses with no publishers (primaryTarget: bus, data includes silentValue/combineMode)
+- [ ] Compiler emits `W_GRAPH_UNUSED_OUTPUT` diagnostic for unconnected output ports (primaryTarget: port)
+- [ ] All diagnostics cleared at start of compilation (call `diagnosticStore.clearDiagnostics('compile')`)
+- [ ] `CompileFailedEvent` emitted if any 'error' or 'fatal' diagnostics exist (instead of current `logStore.error()` logic)
+
+### DiagnosticHub Unit Tests
+
+- [ ] Test: Adding a diagnostic returns a stable ID
+- [ ] Test: Adding the same diagnostic twice (same code + target) updates `lastSeenAt` and increments `occurrences` (does not create duplicate)
+- [ ] Test: Resolving a diagnostic changes status to 'resolved'
+- [ ] Test: Clearing all diagnostics removes all entries
+- [ ] Test: Clearing by scope (e.g., 'compile') removes only matching diagnostics
+- [ ] Test: Filtering by severity returns only matching diagnostics
+- [ ] Test: Filtering by domain returns only matching diagnostics
+- [ ] All tests pass with `just test`
+
+### DiagnosticStore Unit Tests
+
+- [ ] Test: `addDiagnostic()` adds diagnostic to hub and emits `DiagnosticAdded` event
+- [ ] Test: `addDiagnostic()` for duplicate diagnostic updates existing entry (dedupe via hub)
+- [ ] Test: `resolveDiagnostic()` resolves diagnostic and emits `DiagnosticResolved` event
+- [ ] Test: `clearDiagnostics()` clears diagnostics and emits `DiagnosticCleared` event with correct count
+- [ ] Test: Computed `diagnostics` property returns all diagnostics from hub
+- [ ] Test: Computed `errorCount` returns count of 'error' and 'fatal' diagnostics
+- [ ] Test: Computed `warningCount` returns count of 'warn' diagnostics
+- [ ] All tests pass with `just test`
+
+### Compiler Integration Tests
+
+- [ ] Test: Compiling empty patch emits `E_TIME_ROOT_MISSING` diagnostic
+- [ ] Test: Compiling patch with 2 TimeRoots emits `E_TIME_ROOT_MULTIPLE` diagnostic
+- [ ] Test: Compiling patch with signal->field type mismatch emits `E_TYPE_MISMATCH` diagnostic with correct expected/actual TypeDesc in data
+- [ ] Test: Compiling patch with empty bus emits `W_BUS_EMPTY` diagnostic with correct busId/silentValue in data
+- [ ] Test: Compiling patch with unconnected output port emits `W_GRAPH_UNUSED_OUTPUT` diagnostic
+- [ ] Test: All diagnostics have correct `primaryTarget` TargetRef (block/port/bus)
+- [ ] Test: Diagnostics are cleared at start of each compilation
+- [ ] All tests pass with `just test`
+
+---
+
+## Sprint Scope
+
+**This sprint delivers:**
+1. Core diagnostic type definitions (Diagnostic, TargetRef, DiagnosticCode, Severity, Domain, FixAction)
+2. DiagnosticHub class (add, resolve, clear, stable ID generation, namespace management)
+3. DiagnosticStore (MobX observable, integrated into RootStore)
+4. Diagnostic events (DiagnosticAdded, DiagnosticResolved, DiagnosticCleared)
+5. Compiler integration (5 starter diagnostic codes: E_TIME_ROOT_MISSING, E_TIME_ROOT_MULTIPLE, E_TYPE_MISMATCH, W_BUS_EMPTY, W_GRAPH_UNUSED_OUTPUT)
+6. Unit tests (DiagnosticHub, DiagnosticStore, compiler integration)
+
+**Deferred to future sprints:**
+- Runtime diagnostics (NaN detection, performance monitors)
+- FixAction execution system
+- UI components (diagnostic console, badges)
+- Advanced polish (semantic addressing, grouping)
+- LogStore deprecation
+
+---
+
+## Done Means
+
+- All acceptance criteria checked
+- All tests pass (`just test`)
+- Type checking passes (`just typecheck`)
+- No breaking changes to existing functionality
+- Compiler emits diagnostics instead of logStore calls for 5 starter codes
+- DiagnosticStore accessible from RootStore and returns diagnostics
+
+---
+
+## Validation Commands
+
+```bash
+# Run all tests
+just test
+
+# Type checking
+just typecheck
+
+# Full check
+just check
+```
+
+---
+
+## Success Evidence
+
+**Compile a patch with no TimeRoot:**
+```typescript
+const diagnostics = rootStore.diagnosticStore.diagnostics;
+// Should include: { code: 'E_TIME_ROOT_MISSING', severity: 'fatal', ... }
+```
+
+**Compile a patch with type mismatch:**
+```typescript
+const diagnostics = rootStore.diagnosticStore.diagnostics;
+// Should include: { code: 'E_TYPE_MISMATCH', severity: 'error', data: { expected: ..., actual: ... } }
+```
+
+**Check diagnostic counts:**
+```typescript
+console.log(rootStore.diagnosticStore.errorCount); // > 0 if errors present
+console.log(rootStore.diagnosticStore.warningCount); // > 0 if warnings present
+```

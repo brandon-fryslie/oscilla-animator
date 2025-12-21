@@ -1,0 +1,95 @@
+Agent: iterative-implementer | 2025-12-20 18:53:45
+Mode: manual
+Completed: P1.3 - Complete Unit Tests for Event System | Files: 2 | Commits: 0
+Tests: 504 passing, 1 skipped
+Cache invalidated: None (no cache entries affected)
+Status: complete
+
+== WORK COMPLETED ==
+
+Task: P1.3 - Complete Unit Tests for Event System
+
+Added comprehensive test coverage for GraphCommitted and CompileLifecycle events:
+
+1. Enhanced GraphCommitted.test.ts (28 tests total):
+   - NEW: GraphCommitted payload structure tests (5 tests)
+     * Validates all required fields: patchRevision, reason, diffSummary, patchId, affectedBlockIds
+     * Tests diffSummary contains all fields: blocksAdded, blocksRemoved, busesAdded, busesRemoved, bindingsChanged, timeRootChanged
+   - NEW: Additional patchRevision tests (2 tests)
+     * Increment on connect
+     * Increment on disconnect
+   - NEW: replaceBlock affectedBlockIds test
+   - NEW: expandMacro affectedBlockIds test
+   - NEW: patchId consistency test
+   - NEW: diffSummary completeness tests (2 tests)
+     * Validates all fields zeroed for simple addBlock
+     * Tracks bindingsChanged on cascade removal
+
+2. Created CompileLifecycle.test.ts (21 tests):
+   - CompileStarted event payload structure (6 tests)
+     * Required fields: compileId, patchId, patchRevision, trigger, type
+     * All valid trigger values: graphCommitted, manual, startup, hotReload
+   - CompileFinished event payload structure (14 tests)
+     * Required fields: compileId, patchId, patchRevision, status, durationMs, diagnostics, type
+     * All valid status values: ok, failed
+     * Optional programMeta field structure
+     * All timelineHint values: finite, cyclic, infinite
+     * All timeRootKind values: FiniteTimeRoot, CycleTimeRoot, InfiniteTimeRoot, none
+     * Optional busUsageSummary structure
+   - Event correlation test (1 test)
+     * Validates compileId, patchId, patchRevision match between paired events
+
+== COVERAGE VERIFICATION ==
+
+Task requirements (from user prompt):
+✓ GraphCommitted payload includes patchRevision (line 21-26)
+✓ GraphCommitted payload includes reason (line 29-34)
+✓ GraphCommitted payload includes diffSummary with all fields (line 37-47)
+✓ affectedBlockIds is populated (line 58-63, 78-82, 161-170, 247-257, 278-291)
+✓ Emitted after addBlock (line 67-97)
+✓ Emitted after removeBlock (line 100-131)
+✓ Emitted after connect (line 135-145, 161-170)
+✓ Emitted after disconnect (line 147-159)
+✓ Emitted after replaceBlock (exactly once) (line 220-257)
+✓ Emitted after expandMacro with macroExpand reason (line 260-291)
+✓ patchRevision increments monotonically (line 175-186)
+✓ patchRevision matches patchStore.patchRevision (line 188-193)
+✓ patchRevision increments on connect/disconnect (line 195-217)
+✓ CompileStarted event payload structure (CompileLifecycle.test.ts, line 10-75)
+✓ CompileFinished event payload structure (CompileLifecycle.test.ts, line 77-269)
+
+All required tests from DOD-2025-12-20-174727.md P1.3 are implemented.
+
+== TEST RESULTS ==
+
+All tests passing:
+- 504 tests passed
+- 1 test skipped (composite.expansion.test.ts)
+- Total duration: 3.71s
+- New test files contributing 49 tests (28 + 21)
+
+== FILES MODIFIED ==
+
+1. src/editor/events/__tests__/GraphCommitted.test.ts (enhanced from 182 to 342 lines)
+   - Added 10 new test cases
+   - Enhanced existing test coverage
+   - Organized into logical describe blocks
+
+2. src/editor/events/__tests__/CompileLifecycle.test.ts (created, 271 lines)
+   - 21 comprehensive payload structure tests
+   - Validates type definitions match implementation
+
+== VALIDATION MODE ==
+
+Mode: Manual (TDD mode - tests define behavior)
+Validation: All tests pass (just test)
+
+== NEXT STEPS ==
+
+Ready for:
+- P0.8: Compiler Diagnostic Emission
+  * Emit CompileStarted at beginning of compilePatch()
+  * Emit CompileFinished with diagnostics snapshot
+  * These tests now validate the event payload structure
+
+No eval cache invalidation needed (test-infrastructure.md still accurate).

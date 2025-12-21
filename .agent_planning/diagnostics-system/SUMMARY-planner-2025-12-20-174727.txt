@@ -1,0 +1,4 @@
+Agent: status-planner | 2025-12-20-174727
+Topic: diagnostics-system
+Files: PLAN-2025-12-20-174727.md, DOD-2025-12-20-174727.md
+Items: 12 (P0: 8, P1: 3, P2: 1)
