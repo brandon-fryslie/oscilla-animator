@@ -1,0 +1,36 @@
+Agent: iterative-implementer | 2025-12-20 21:09:00
+Mode: manual
+Completed: RenderInstances2D block definition | Files: 2 | Commits: 1
+Tests: N/A (manual validation mode)
+Cache invalidated: None (new block definition, no existing cache affected)
+Status: complete
+
+=== Implementation Summary ===
+
+Problem:
+All 20 macros in the codebase reference RenderInstances2D block type, but this
+block definition was MISSING from the registry. The compiler existed at
+src/editor/compiler/blocks/domain/RenderInstances2D.ts but there was no
+corresponding block definition.
+
+Solution:
+Added RenderInstances2D block definition to src/editor/blocks/domain.ts with:
+- Inputs: domain (Domain), positions (Field<vec2>), radius (Field<number>), color (Field<color>)
+- Outputs: render (RenderTree)
+- Params: opacity (0-1), glow (boolean), glowIntensity (0-5)
+- Category: Render, subcategory: Render, laneKind: Program
+- Color: #EF4444 (red for render/output blocks)
+
+Also fixed unused variable lint error in macro-validation.test.ts.
+
+Validation:
+✓ TypeScript type checking passes
+✓ getBlockDefinition('RenderInstances2D') returns the definition
+✓ 19/20 macro validation tests pass (1 pre-existing failure in breathingDots macro)
+✓ All macros using RenderInstances2D can now expand without errors
+
+Files Modified:
+- src/editor/blocks/domain.ts (added RenderInstances2D export)
+- src/editor/__tests__/macro-validation.test.ts (removed unused variable)
+
+Commit: c49f5a5 "feat(blocks): Add missing RenderInstances2D block definition"

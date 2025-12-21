@@ -1,0 +1,56 @@
+Agent: iterative-implementer | 1766298171
+Mode: manual
+Completed: RuntimeHealthSnapshot emission in Player | Files: 2 | Commits: 2
+Tests: All passing (710 tests)
+Cache invalidated: None required (no architectural changes)
+Status: complete
+
+=== Summary ===
+Successfully implemented RuntimeHealthSnapshot event emission from the Player to enable runtime diagnostics in the DiagnosticHub.
+
+=== Changes ===
+1. Player (already committed in 48391cc):
+   - Added EventDispatcher option to PlayerOptions
+   - Added health tracking fields (frameTimes, nanCount, infCount, etc.)
+   - Track frame times in 60-frame rolling window
+   - Emit RuntimeHealthSnapshot at 250ms intervals (4 Hz)
+   - Calculate FPS estimate, avgFrameMs, worstFrameMs
+   - Added setActivePatchRevision/getActivePatchRevision methods
+   - Basic NaN/Infinity health checks in renderOnce()
+
+2. PreviewPanel (committed in 0ce701a):
+   - Pass store.events to createPlayer
+   - Set active patch revision when program loaded/swapped
+   - Enables Player to emit health snapshots to DiagnosticHub
+
+=== Validation ===
+- TypeScript compilation: PASS
+- ESLint: PASS (10 pre-existing warnings, unrelated)
+- Tests: 710 passed, 3 skipped
+- Manual verification: Player emits health snapshots when playing
+
+=== Implementation Details ===
+The Player now:
+1. Accepts optional EventDispatcher in PlayerOptions
+2. Tracks real frame times (before speed multiplier) in rolling window
+3. Emits RuntimeHealthSnapshot every 250ms during playback
+4. Includes performance metrics: fpsEstimate, avgFrameMs, worstFrameMs
+5. Includes health metrics: nanCount, infCount (with basic detection)
+6. Tracks activePatchRevision for diagnostics correlation
+7. Resets counters after each emission
+
+Event structure emitted:
+- type: 'RuntimeHealthSnapshot'
+- patchId: 'patch' (constant for now)
+- activePatchRevision: number
+- tMs: current playback time
+- frameBudget: { fpsEstimate, avgFrameMs, worstFrameMs? }
+- evalStats: { nanCount, infCount, fieldMaterializations: 0 }
+
+=== Next Steps ===
+The DiagnosticHub is already subscribed to RuntimeHealthSnapshot events and will:
+- Update runtime diagnostics based on health data
+- Expire stale runtime diagnostics after 5 seconds
+- Provide performance warnings if frame times exceed budget
+
+No additional work needed - the integration is complete.

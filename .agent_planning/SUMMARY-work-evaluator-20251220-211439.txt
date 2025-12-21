@@ -1,0 +1,8 @@
+Agent: work-evaluator | 2025-12-20 21:15:00
+Scope: work/macros-group1-runtime
+Verdict: INCOMPLETE
+Criteria: 2/5 expandable without errors | Missing buses block 3/5 | Browser testing required
+Previous issues: RenderInstances2D missing (FIXED)
+New issues: energy and palette buses not created by default
+Missing checks: E2E browser test suite for macro validation
+Cache updated: runtime-macros-expansion.md, findings-buses-init.md, INDEX.md
