@@ -72,6 +72,16 @@
   color: #000;
 }
 
+.log-badge-fatal {
+  background: #ff0000;
+  color: #fff;
+}
+
+.log-badge-diag-error {
+  background: #cc3333;
+  color: #fff;
+}
+
 .log-filters {
   display: flex;
   align-items: center;
@@ -164,7 +174,18 @@
   gap: 8px;
 }
 
-/* Log entries container */
+/* =============================================================================
+ * Log Body - Two column layout
+ * ============================================================================= */
+
+.log-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Log entries container - left side */
 .log-entries {
   flex: 1;
   overflow-y: auto;
@@ -172,6 +193,7 @@
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
   font-size: 11px;
   line-height: 1.5;
+  border-right: 1px solid #333;
 }
 
 .log-empty {
@@ -256,4 +278,235 @@
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+/* =============================================================================
+ * Diagnostics Panel - right side
+ * ============================================================================= */
+
+.diag-panel {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0d0d0d;
+  overflow: hidden;
+}
+
+.diag-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.diag-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diag-counts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diag-severity-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.diag-severity-badge.severity-fatal {
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff6666;
+}
+
+.diag-severity-badge.severity-error {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ff6666;
+}
+
+.diag-severity-badge.severity-warn {
+  background: rgba(255, 170, 0, 0.2);
+  color: #ffcc00;
+}
+
+.diag-severity-badge.severity-info {
+  background: rgba(100, 180, 255, 0.2);
+  color: #88bbff;
+}
+
+.diag-severity-badge.severity-hint {
+  background: rgba(150, 150, 150, 0.2);
+  color: #aaa;
+}
+
+.diag-muted-count {
+  font-size: 10px;
+  color: #666;
+}
+
+.diag-entries {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.diag-healthy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  color: #4a4;
+}
+
+.diag-healthy-icon {
+  font-size: 16px;
+}
+
+.diag-healthy-text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Diagnostic row - clickable */
+.diag-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #1a1a1a;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.diag-row:hover {
+  background: #1a1a1a;
+}
+
+.diag-row.muted {
+  opacity: 0.5;
+}
+
+/* Severity-specific row backgrounds */
+.diag-row.severity-fatal {
+  background: rgba(255, 0, 0, 0.08);
+}
+
+.diag-row.severity-error {
+  background: rgba(255, 68, 68, 0.06);
+}
+
+.diag-row.severity-warn {
+  background: rgba(255, 170, 0, 0.04);
+}
+
+.diag-row.severity-fatal:hover {
+  background: rgba(255, 0, 0, 0.12);
+}
+
+.diag-row.severity-error:hover {
+  background: rgba(255, 68, 68, 0.10);
+}
+
+.diag-row.severity-warn:hover {
+  background: rgba(255, 170, 0, 0.08);
+}
+
+.diag-icon {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.diag-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.diag-code {
+  font-size: 9px;
+  font-family: 'SF Mono', 'Monaco', monospace;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.diag-title {
+  font-size: 11px;
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diag-target {
+  font-size: 9px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diag-count {
+  font-size: 10px;
+  color: #888;
+  background: #222;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.diag-action-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: #333;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  transition: background 0.1s;
+}
+
+.diag-action-btn:hover {
+  background: #444;
+}
+
+.diag-mute-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  opacity: 0.5;
+  transition: opacity 0.1s, background 0.1s;
+}
+
+.diag-mute-btn:hover {
+  opacity: 1;
+  background: #333;
+}
+
+.diag-mute-btn.unmute {
+  opacity: 0.7;
 }

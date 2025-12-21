@@ -261,6 +261,15 @@ export class PatchStore {
       if (expansion) {
         return this.expandMacro(expansion);
       }
+      // Macro has no expansion - this is an error, don't add it as a block
+      console.error(`[PatchStore] Macro "${macroKey}" has no expansion registered. Ignoring.`);
+      return '';
+    }
+
+    // Guard: Never add raw macro: blocks - they must always expand
+    if (type.startsWith('macro:')) {
+      console.error(`[PatchStore] Cannot add macro block "${type}" directly. Macros must have an expansion.`);
+      return '';
     }
 
     // Regular block addition

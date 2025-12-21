@@ -510,7 +510,7 @@ export const Editor = observer(() => {
 
   // Load a default macro on startup and generate its control surface
   useEffect(() => {
-    store.patchStore.addBlock('macro:radialBurst', 'scene');
+    store.patchStore.addBlock('macro:simpleGrid', 'scene');
     // Generate a default surface for the macro
     // Use setTimeout to ensure blocks are fully populated after macro expansion
     setTimeout(() => {
@@ -518,7 +518,7 @@ export const Editor = observer(() => {
       store.patchStore.blocks.forEach((block) => {
         blockIds.set(block.type, block.id);
       });
-      const surface = generateSurfaceForMacro('radialBurst', blockIds);
+      const surface = generateSurfaceForMacro('simpleGrid', blockIds);
       if (surface) {
         controlSurfaceStore.setSurface(surface);
       }

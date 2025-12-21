@@ -8,8 +8,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
-import type { PortRef, Block, Slot, BlockForm, Connection } from './types';
-import { getBlockDefinition, getBlockTags, getBlockDefinitions, getBlockForm, type BlockDefinition, type BlockTags, type CompoundGraph } from './blocks';
+import type { PortRef, Block, Slot, Connection } from './types';
+import { getBlockDefinition, getBlockDefinitions, type BlockDefinition } from './blocks';
 import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint } from './portUtils';
 import './Inspector.css';
 
@@ -37,102 +37,6 @@ function getPortCompatibility(
   return true;
 }
 
-function formatFormLabel(form: BlockForm): string {
-  
-  return form.charAt(0).toUpperCase() + form.slice(1);
-}
-
-function formatTagKey(key: string): string {
-  if (key === 'legacyCategory') return 'Legacy';
-  if (key === 'laneKind') return 'Lane';
-  if (key === 'laneFlavor') return 'Flavor';
-  if (key === 'subcategory') return 'Subcategory';
-  if (key === 'form') return 'Form';
-  return key.replace(/([A-Z])/g, ' $1').replace(/^\w/, (c) => c.toUpperCase());
-}
-
-function TagPills({ tags, hideKeys = [] }: { tags: BlockTags; hideKeys?: string[] }) {
-  const entries = Object.entries(tags).filter(([key]) => !hideKeys.includes(key));
-  if (entries.length === 0) return null;
-
-  return (
-    <div className="tag-list">
-      {entries.map(([key, value]) => (
-        <span key={key} className="tag-pill">
-          <span className="tag-key">{formatTagKey(key)}</span>
-          {value !== true && (
-            <span className="tag-value">
-              {Array.isArray(value) ? value.join(', ') : String(value)}
-            </span>
-          )}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function CompositeGraphView({ graph }: { graph: CompoundGraph }) {
-  return (
-    <div className="composite-graph">
-      <div className="composite-graph-section">
-        <h4>Nodes</h4>
-        <ul className="composite-list">
-          {Object.entries(graph.nodes).map(([id, node]) => (
-            <li key={id}>
-              <span className="composite-node-id">{id}</span>
-              <span className="composite-node-type">{node.type}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      {graph.edges.length > 0 && (
-        <div className="composite-graph-section">
-          <h4>Edges</h4>
-          <ul className="composite-list">
-            {graph.edges.map((edge, idx) => (
-              <li key={`${edge.from}-${edge.to}-${idx}`}>
-                <code>{edge.from}</code>
-                <span className="composite-arrow">→</span>
-                <code>{edge.to}</code>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {(Object.keys(graph.inputMap).length > 0 || Object.keys(graph.outputMap).length > 0) && (
-        <div className="composite-graph-section">
-          <h4>Exposed Ports</h4>
-          <div className="composite-ports">
-            <div>
-              <h5>Inputs</h5>
-              <ul className="composite-list">
-                {Object.entries(graph.inputMap).map(([ext, internal]) => (
-                  <li key={ext}>
-                    <code>{ext}</code>
-                    <span className="composite-arrow">→</span>
-                    <code>{internal}</code>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h5>Outputs</h5>
-              <ul className="composite-list">
-                {Object.entries(graph.outputMap).map(([ext, internal]) => (
-                  <li key={ext}>
-                    <code>{internal}</code>
-                    <span className="composite-arrow">→</span>
-                    <code>{ext}</code>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /**
  * Port wiring panel - shows when a port is selected.
@@ -581,106 +485,69 @@ const PortWiringPanel = observer(({
 
 /**
  * Preview display for a block definition (not yet placed).
+ * Uses compact styling consistent with placed block inspector.
  */
 function DefinitionPreview({ definition }: { definition: BlockDefinition }) {
-  const tags = getBlockTags(definition);
-  const isComposite = definition.form === 'composite';
-  const [showCompositeGraph, setShowCompositeGraph] = useState(false);
-
   return (
-    <div className="inspector">
-      <div className="inspector-header inspector-header-preview" style={{ borderLeftColor: definition.color }}>
-        <h2>{definition.label}</h2>
-        <div className="block-meta">
-          <span className="block-preview-badge">Preview</span>
-          <span className="block-tier-badge">{formatFormLabel(getBlockForm(definition))}</span>
-          <span className="block-subcategory-badge">{definition.subcategory}</span>
-          {isComposite && <span className="block-composite-badge">Composite</span>}
-          <span
-            className="block-category"
-            style={{ backgroundColor: definition.color }}
-          >
-            {definition.category}
-          </span>
+    <div className="inspector insp-compact">
+      <div className="insp-header" style={{ borderLeftColor: definition.color }}>
+        <div className="insp-title-row">
+          <span className="insp-title">{definition.label}</span>
+          <span className="insp-category" style={{ background: definition.color }}>{definition.category}</span>
         </div>
+        <code className="insp-type">{definition.type}</code>
       </div>
 
-      <div className="inspector-body">
-        <div className="inspector-section">
-          <h3>Description</h3>
-          <p className="block-description">{definition.description}</p>
-        </div>
-
-        <div className="inspector-section">
-          <h3>Type</h3>
-          <code className="block-type-code">{definition.type}</code>
-        </div>
-
-        {isComposite && definition.primitiveGraph && (
-          <div className="inspector-section">
-            <div className="composite-header">
-              <h3>Composite Internals</h3>
-              <button
-                className="composite-toggle"
-                onClick={() => setShowCompositeGraph((v) => !v)}
-              >
-                {showCompositeGraph ? 'Hide' : 'Show'}
-              </button>
-            </div>
-            {showCompositeGraph && <CompositeGraphView graph={definition.primitiveGraph} />}
-          </div>
+      <div className="insp-body">
+        {/* Description */}
+        {definition.description && (
+          <p className="insp-description">{definition.description}</p>
         )}
 
-        <div className="inspector-section">
-          <h3>Tags</h3>
-          <TagPills tags={tags} hideKeys={['form', 'subcategory']} />
+        {/* Side-by-side Inputs/Outputs */}
+        <div className="ports-row">
+          <div className="ports-col">
+            <span className="ports-header">Inputs</span>
+            {definition.inputs.length === 0
+              ? <span className="ports-none">None</span>
+              : definition.inputs.map(slot => (
+                  <div key={slot.id} className="port-item">
+                    <span className="port-item-label">{slot.label}</span>
+                    <span className="port-disconnected-icon">○</span>
+                  </div>
+                ))
+            }
+          </div>
+          <div className="ports-col">
+            <span className="ports-header">Outputs</span>
+            {definition.outputs.length === 0
+              ? <span className="ports-none">None</span>
+              : definition.outputs.map(slot => (
+                  <div key={slot.id} className="port-item">
+                    <span className="port-item-label">{slot.label}</span>
+                    <span className="port-disconnected-icon">○</span>
+                  </div>
+                ))
+            }
+          </div>
         </div>
 
-        {definition.inputs.length > 0 && (
-          <div className="inspector-section">
-            <h3>Inputs</h3>
-            <ul className="slot-list">
-              {definition.inputs.map((slot) => (
-                <li key={slot.id}>
-                  <span className="slot-label">{slot.label}</span>
-                  <code className="slot-type">{slot.type}</code>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {definition.outputs.length > 0 && (
-          <div className="inspector-section">
-            <h3>Outputs</h3>
-            <ul className="slot-list">
-              {definition.outputs.map((slot) => (
-                <li key={slot.id}>
-                  <span className="slot-label">{slot.label}</span>
-                  <code className="slot-type">{slot.type}</code>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
+        {/* Parameters preview */}
         {definition.paramSchema.length > 0 && (
-          <div className="inspector-section">
-            <h3>Parameters</h3>
-            <ul className="param-schema-list">
-              {definition.paramSchema.map((param) => (
-                <li key={param.key}>
-                  <span className="param-schema-key">{param.label}</span>
-                  <span className="param-schema-type">{param.type}</span>
-                </li>
+          <div className="insp-section">
+            <span className="insp-section-title">Parameters</span>
+            <div className="param-preview-list">
+              {definition.paramSchema.map(param => (
+                <div key={param.key} className="param-preview-item">
+                  <span className="param-preview-key">{param.label}</span>
+                  <span className="param-preview-type">{param.type}</span>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
 
-        <div className="inspector-section">
-          <p className="inspector-hint">Drag this block to the patch bay to use it</p>
-        </div>
+        <p className="insp-hint">Drag to patch bay to use</p>
       </div>
     </div>
   );
