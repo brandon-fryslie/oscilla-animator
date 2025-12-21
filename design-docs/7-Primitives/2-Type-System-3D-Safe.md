@@ -14,6 +14,38 @@ The system must be capable of representing 3D even if the first implementation i
 
 ---
 
+## New Domains
+
+Add to `TypeDesc['domain']`:
+
+### Core 3D Math
+| Domain | Purpose |
+|--------|---------|
+| `vec3` | Positions, velocities, normals |
+| `quat` | Rotations (avoid Euler chaos) |
+| `mat4` | Transforms (camera + object) |
+
+### Scene Concepts (Special World)
+| Domain | Purpose |
+|--------|---------|
+| `camera` | Camera params object |
+| `light` | Light params object |
+| `mesh` | Mesh geometry handle/spec |
+| `material` | Material/shader params |
+
+### Masking
+**Decision**: Do NOT add `mask` domain. Use `semantics:'mask'` on `boolean`.
+
+```typescript
+// Correct: mask as semantics
+{ world: 'field', domain: 'boolean', semantics: 'mask' }
+
+// Wrong: separate mask domain (duplicates compatibility rules)
+{ world: 'field', domain: 'mask' }  // DON'T DO THIS
+```
+
+---
+
 ## ValueKind Additions
 
 Add these to `compiler/types.ts` even if currently unused:
@@ -22,37 +54,25 @@ Add these to `compiler/types.ts` even if currently unused:
 export type ValueKind =
   // Existing...
 
-  // 3D-safe additions (Scalars)
+  // 3D math (all three worlds)
   | 'Scalar:vec3'
-  | 'Scalar:vec4'
-  | 'Scalar:mat3'
-  | 'Scalar:mat4'
-  | 'Scalar:quat'        // Quaternion rotation
-
-  // 3D-safe additions (Fields)
+  | 'Signal:vec3'
   | 'Field:vec3'
-  | 'Field:vec4'
-  | 'Field:mat3'
+  | 'Scalar:mat4'
+  | 'Signal:mat4'
   | 'Field:mat4'
+  | 'Scalar:quat'
+  | 'Signal:quat'
   | 'Field:quat'
 
-  // 3D-safe additions (Signals)
-  | 'Signal:vec3'
-  | 'Signal:vec4'
-  | 'Signal:mat3'
-  | 'Signal:mat4'
-  | 'Signal:quat'
-
-  // Render-related additions
-  | 'Camera'             // Camera parameters
-  | 'Light'              // Light definition
-  | 'Mesh'               // 3D mesh data
-  | 'Material'           // Material/shader params
-
-  // Masking (for domain filtering)
-  | 'Field:mask'         // Boolean/unit mask per element
-  | 'Signal:mask';       // Time-varying mask
+  // Scene concepts (special world - not JSON scalars)
+  | 'Camera'      // Camera params (special handle)
+  | 'Light'       // Light params (special handle)
+  | 'Mesh'        // Mesh geometry (special handle)
+  | 'Material';   // Material/shader (special handle)
 ```
+
+**Note**: Camera/Light/Mesh/Material are "special" values, not plain JSON scalars. They live in a `special` world, not `scalar`.
 
 ---
 
