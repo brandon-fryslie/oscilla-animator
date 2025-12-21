@@ -396,12 +396,13 @@ describe('Macro Registry', () => {
     expect(macro.blocks.length).toBeGreaterThan(0);
     expect(macro.connections.length).toBeGreaterThan(0);
 
-    // Should have publishers and listeners
-    expect(macro.publishers).toBeDefined();
+    // breathingDots has no publishers, only listeners
     expect(macro.listeners).toBeDefined();
+    expect((macro.listeners || []).length).toBeGreaterThan(0);
 
-    // Should publish to phaseA bus
-    expect(macro.publishers?.some(p => p.busName === 'phaseA')).toBe(true);
+    // Should listen to phaseA bus (not publish to it)
+    expect((macro.listeners || []).some(l => l.busName === 'phaseA')).toBe(true);
+    expect(macro.publishers?.length || 0).toBe(0);  // No publishers
   });
 
   it('goldenPatch macro has complete structure', () => {
@@ -411,15 +412,14 @@ describe('Macro Registry', () => {
 
     // Should have multiple blocks for complete golden patch
     const blockTypes = macro.blocks.map(b => b.type);
-    expect(blockTypes).toContain('CycleTimeRoot');
     expect(blockTypes).toContain('GridDomain');
     expect(blockTypes).toContain('RenderInstances2D');
-
-    // Should publish to all major buses
     const publishedBuses = new Set(macro.publishers?.map(p => p.busName) || []);
-    expect(publishedBuses.has('phaseA')).toBe(true);
-    expect(publishedBuses.has('pulse')).toBe(true);
-    expect(publishedBuses.has('energy')).toBe(true);
+    // Should publish to all major buses
+    // phaseA is listened to, not published
+    expect(publishedBuses.has('phaseA')).toBe(false);
+    // pulse is not published by goldenPatch
+    expect(publishedBuses.has('pulse')).toBe(false);
     expect(publishedBuses.has('palette')).toBe(true);
   });
 

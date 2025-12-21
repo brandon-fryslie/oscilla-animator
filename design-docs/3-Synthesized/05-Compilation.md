@@ -33,10 +33,11 @@ CompiledProgram { program, timeModel, uiBindings }
 interface CompiledProgram {
   program: Program<RenderTree>
   timeModel: TimeModel
-  uiBindings: UiSignalBindings
 }
 ```
 
+
+**UI Integration**: UI reads `CompileResult.compiledPortMap` and `CompileResult.timeModel` for introspection. No separate binding layer needed.
 ## TimeModel Inference
 
 The compiler analyzes the patch graph and infers the time model.

@@ -91,7 +91,7 @@ Always available. Swap at the next rendered frame.
 
 ### Pulse Boundary
 Preferred for cyclic patches. Swap when the pulse bus fires.
-- Available only if `UiSignalBindings.buses.pulse` exists
+- Available only if pulse bus exists in BusStore
 - Used for changes that would cause phase discontinuity
 
 ### User Boundary (Freeze-Required)

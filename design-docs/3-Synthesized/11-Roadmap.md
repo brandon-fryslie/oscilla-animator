@@ -45,7 +45,7 @@ Make looping/finite/infinite a property of the patch, not the player.
 
 ### Must-Haves
 - Implement CycleTimeRoot fully
-- Compiler outputs timeModel + UiSignalBindings
+- Compiler outputs TimeModel
 - Player runs unbounded `t` and never wraps/clamps
 - Time Console UI driven by timeModel only
 
@@ -74,7 +74,6 @@ Make bus routing real and deterministic.
 ### Deliverables
 - Unified bus-aware compile pipeline
 - Bus artifact compilation with stable ordering
-- UiSignalBindings uses bus IDs, not ports
 
 ### Golden Patch Checkpoint
 Signal-only parts work: breath energy, pulse events, palette color. Bus Board scopes show movement.

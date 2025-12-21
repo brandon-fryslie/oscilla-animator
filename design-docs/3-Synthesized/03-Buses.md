@@ -107,36 +107,58 @@ PhaseClock typically publishes:
 
 These are authored by the patch or templates.
 
-## UI Binding
+## UI Integration
 
-The UI binds to patches via a single export structure:
+The UI layer interacts with compiled patches via:
 
-```typescript
-interface UiSignalBindings {
-  timeModel: TimeModel
-  buses: {
-    phaseA?: BusId
-    phaseB?: BusId
-    pulse?: BusId
-    energy?: BusId
-    progress?: BusId
-  }
-}
+1. **BusStore**: Direct access to bus registry, publishers, listeners
+   - UI controls can publish to buses like any other publisher
+   - Lens stacks transform published values
+
+2. **CompileResult.compiledPortMap**: Map<PortRef, Artifact>
+   - UI scopes/meters read compiled artifact values
+   - Allows introspection of any block output port
+
+3. **CompileResult.timeModel**: TimeModel
+   - Drives Time Console UI (Finite/Cycle/Infinite modes)
+   - Player transport configuration
+
+No special "UI bindings" are needed - the bus system is the universal integration layer.
+
+
+## UI Control Publishers
+
+UI controls (sliders, knobs, toggles) publish to buses via BusStore.createPublisher. They are treated as privileged publishers with high priority to override defaults.
+
+**Publisher Properties**
+- `sortKey = -1000` (high priority to override block-generated values)
+- `blockId = 'ui-control-{id}'` (unique identifier)
+- No compilation required - runtime only
+
+**Example Flow**
+```
+UI Slider (user drags)
+  ↓
+BusStore.createPublisher({
+  blockId: 'ui-control-1',
+  busId: 'energy',
+  sortKey: -1000
+})
+  ↓
+Bus compilation: UI publisher has highest priority
+  ↓
+Listeners receive UI value via lens stack
+  ↓
+Runtime: slider changes propagate like any other publisher
 ```
 
-**Hard rule:** UI never looks at arbitrary block ports. UI only uses this binding descriptor.
+**Key Design Points**
+- UI controls are not special - they are just publishers with negative sortKey
+- Lens stacks transform UI values before reaching listeners
+- No separate "binding" system needed - unified bus architecture
+- UI controls can override block outputs but not other UI controls (first UI control wins)
 
-## Bus Presence Semantics
-
-A bus only counts as present for UI if:
-1. It exists in the bus registry
-2. It has the correct TypeDesc
-3. The compiler declares it in UiSignalBindings
-
-If a patch declares a `phaseA` bus with wrong type:
-- Compile error: "reserved bus has invalid type"
-
-## Publisher Ordering
+**Cross-reference**: See `design-docs/3-Synthesized/07-UI-Spec.md` for detailed UI control widget specifications.
 
 Deterministic ordering via sortKey:
 - Every publisher has a stable sortKey

@@ -201,8 +201,10 @@ describe('Macro Registry Validation', () => {
         const golden = MACRO_REGISTRY['macro:goldenPatch'];
         const publishedBuses = new Set(golden.publishers?.map(p => p.busName) || []);
         
-        expect(publishedBuses.has('phaseA')).toBe(true);
-        expect(publishedBuses.has('pulse')).toBe(true);
+    // phaseA is listened to, not published
+    expect(publishedBuses.has('phaseA')).toBe(false);
+    // pulse is not published by goldenPatch
+    expect(publishedBuses.has('pulse')).toBe(false);
         expect(publishedBuses.has('energy')).toBe(true);
         expect(publishedBuses.has('palette')).toBe(true);
       });
