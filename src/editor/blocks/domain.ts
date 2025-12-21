@@ -854,3 +854,59 @@ export const FieldZipSignal = createBlock({
   laneKind: 'Fields',
   priority: 14,
 });
+
+/**
+ * RenderInstances2D - Render domain elements as 2D circles.
+ *
+ * This is the render sink that materializes Domain + Fields into visual output.
+ * All per-element data flows through this block to produce the final render tree.
+ *
+ * The radius input accepts BOTH Field<number> (per-element radii) and Signal<number>
+ * (broadcast same animated value to all elements).
+ */
+export const RenderInstances2D = createBlock({
+  type: 'RenderInstances2D',
+  label: 'Render Instances 2D',
+  form: 'primitive',
+  subcategory: 'Render',
+  category: 'Render',
+  description: 'Render domain elements as 2D circles',
+  inputs: [
+    input('domain', 'Domain', 'Domain'),
+    input('positions', 'Positions', 'Field<vec2>'),
+    input('radius', 'Radius', 'Field<number>'),
+    input('color', 'Color', 'Field<color>'),
+  ],
+  outputs: [
+    output('render', 'Render', 'RenderTree'),
+  ],
+  paramSchema: [
+    {
+      key: 'opacity',
+      label: 'Opacity',
+      type: 'number',
+      min: 0,
+      max: 1,
+      step: 0.1,
+      defaultValue: 1.0,
+    },
+    {
+      key: 'glow',
+      label: 'Glow',
+      type: 'boolean',
+      defaultValue: false,
+    },
+    {
+      key: 'glowIntensity',
+      label: 'Glow Intensity',
+      type: 'number',
+      min: 0,
+      max: 5,
+      step: 0.5,
+      defaultValue: 2.0,
+    },
+  ],
+  color: '#EF4444',
+  laneKind: 'Program',
+  priority: 100,
+});
