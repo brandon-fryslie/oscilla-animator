@@ -21,18 +21,18 @@ import type {
   CompileResult,
   CompilerPatch,
   DrawNode,
-  Field,
   PortRef,
   Program,
   RenderTree,
   RuntimeCtx,
   Seed,
   TimeModel,
-  Vec2,
 } from './types';
 import type { Bus, Publisher, Listener } from '../types';
 import { applyLens } from '../lenses';
 import { validateTimeRootConstraint } from './compile';
+// CRITICAL: Use busSemantics for ordering - single source of truth for UI and compiler
+import { getSortedPublishers, combineSignalArtifacts, combineFieldArtifacts } from '../semantic/busSemantics';
 
 // =============================================================================
 // Type Guards
@@ -72,257 +72,17 @@ export function isBusAwarePatch(patch: CompilerPatch): boolean {
 // =============================================================================
 // Publisher Sorting
 // =============================================================================
-
-/**
- * Sort publishers by (sortKey, id) for deterministic ordering.
- * Per SORTKEY-CONTRACT.md, this ensures identical results regardless of:
- * - Canvas layout changes
- * - Array insertion order
- * - Compilation order
- */
-function sortPublishers(publishers: Publisher[]): Publisher[] {
-  return [...publishers].sort((a, b) => {
-    if (a.sortKey !== b.sortKey) {
-      return a.sortKey - b.sortKey;
-    }
-    // Stable tie-breaker using locale compare
-    return a.id.localeCompare(b.id);
-  });
-}
+// REMOVED: Local sortPublishers() function - use canonical getSortedPublishers() from busSemantics
 
 // =============================================================================
 // Signal Combination
 // =============================================================================
-
-/**
- * Combine Signal artifacts using the bus's combine mode.
- * Phase 2 supports: 'last' and 'sum'
- */
-function combineSignalArtifacts(
-  artifacts: Artifact[],
-  mode: string,
-  defaultValue: unknown
-): Artifact {
-  // No publishers: return default value
-  if (artifacts.length === 0) {
-    // Infer kind from default value type
-    if (typeof defaultValue === 'number') {
-      return { kind: 'Signal:number', value: () => defaultValue };
-    }
-    if (typeof defaultValue === 'object' && defaultValue !== null && 'x' in defaultValue) {
-      return { kind: 'Signal:vec2', value: () => defaultValue as Vec2 };
-    }
-    // Fallback: return as scalar
-    return { kind: 'Scalar:number', value: 0 };
-  }
-
-  // Single publisher: return as-is
-  if (artifacts.length === 1) {
-    return artifacts[0]!;
-  }
-
-  // Multiple publishers: combine based on mode
-  if (mode === 'last') {
-    // Highest sortKey wins (last in sorted array)
-    return artifacts[artifacts.length - 1]!;
-  }
-
-  if (mode === 'sum') {
-    // Sum all values - works for number and vec2
-    const first = artifacts[0]!;
-
-    if (first.kind === 'Signal:number') {
-      const signals = artifacts.map(a => (a as typeof first).value);
-      return {
-        kind: 'Signal:number',
-        value: (t: number, ctx: RuntimeCtx) => {
-          let sum = 0;
-          for (const sig of signals) {
-            sum += sig(t, ctx);
-          }
-          return sum;
-        },
-      };
-    }
-
-    if (first.kind === 'Signal:vec2') {
-      const signals = artifacts.map(a => (a as typeof first).value);
-      return {
-        kind: 'Signal:vec2',
-        value: (t: number, ctx: RuntimeCtx) => {
-          let sumX = 0;
-          let sumY = 0;
-          for (const sig of signals) {
-            const v = sig(t, ctx);
-            sumX += v.x;
-            sumY += v.y;
-          }
-          return { x: sumX, y: sumY };
-        },
-      };
-    }
-
-    // For scalars, convert to signals and sum
-    if (first.kind === 'Scalar:number') {
-      const sum = artifacts.reduce((acc, a) => acc + ((a as typeof first).value ?? 0), 0);
-      return { kind: 'Scalar:number', value: sum };
-    }
-
-    if (first.kind === 'Scalar:vec2') {
-      const sum = artifacts.reduce(
-        (acc, a) => {
-          const v = (a as typeof first).value;
-          return { x: acc.x + v.x, y: acc.y + v.y };
-        },
-        { x: 0, y: 0 }
-      );
-      return { kind: 'Scalar:vec2', value: sum };
-    }
-
-    // Unsupported type for sum
-    return {
-      kind: 'Error',
-      message: `Sum mode not supported for type ${first.kind}`,
-    };
-  }
-
-  // Unsupported combine mode
-  return {
-    kind: 'Error',
-    message: `Unsupported combine mode: ${mode}. Signal buses support: last, sum`,
-  };
-}
+// REMOVED: Local combineSignalArtifacts() function - use canonical version from busSemantics
 
 // =============================================================================
 // Field Combination
 // =============================================================================
-
-/**
- * Combine Field artifacts using the bus's combine mode.
- * Fields support: 'last', 'sum', 'average', 'max', 'min'
- *
- * Field combination is lazy: we return a new Field that evaluates
- * all source fields and combines them per-element at evaluation time.
- */
-function combineFieldArtifacts(
-  artifacts: Artifact[],
-  mode: string,
-  defaultValue: unknown
-): Artifact {
-  // No publishers: return constant field with default value
-  if (artifacts.length === 0) {
-    if (typeof defaultValue === 'number') {
-      const constField: Field<number> = (_seed, n, _ctx) => {
-        const result: number[] = [];
-        for (let i = 0; i < n; i++) {
-          result.push(defaultValue);
-        }
-        return result;
-      };
-      return { kind: 'Field:number', value: constField };
-    }
-    // Fallback for non-number defaults
-    return {
-      kind: 'Error',
-      message: `Default value type not supported for Field bus: ${typeof defaultValue}`,
-    };
-  }
-
-  // Single publisher: return as-is
-  if (artifacts.length === 1) {
-    return artifacts[0]!;
-  }
-
-  // Multiple publishers: combine based on mode
-  const first = artifacts[0]!;
-
-  // Ensure all artifacts are Field:number
-  if (first.kind !== 'Field:number') {
-    return {
-      kind: 'Error',
-      message: `Field combination only supports Field:number, got ${first.kind}`,
-    };
-  }
-
-  const fields = artifacts.map(a => (a as { kind: 'Field:number'; value: Field<number> }).value);
-
-  if (mode === 'last') {
-    // Highest sortKey wins (last in sorted array)
-    return artifacts[artifacts.length - 1]!;
-  }
-
-  if (mode === 'sum') {
-    const combined: Field<number> = (seed, n, ctx) => {
-      const allValues = fields.map(f => f(seed, n, ctx));
-      const result: number[] = [];
-      for (let i = 0; i < n; i++) {
-        let sum = 0;
-        for (const vals of allValues) {
-          sum += vals[i] ?? 0;
-        }
-        result.push(sum);
-      }
-      return result;
-    };
-    return { kind: 'Field:number', value: combined };
-  }
-
-  if (mode === 'average') {
-    const combined: Field<number> = (seed, n, ctx) => {
-      const allValues = fields.map(f => f(seed, n, ctx));
-      const result: number[] = [];
-      for (let i = 0; i < n; i++) {
-        let sum = 0;
-        for (const vals of allValues) {
-          sum += vals[i] ?? 0;
-        }
-        result.push(sum / fields.length);
-      }
-      return result;
-    };
-    return { kind: 'Field:number', value: combined };
-  }
-
-  if (mode === 'max') {
-    const combined: Field<number> = (seed, n, ctx) => {
-      const allValues = fields.map(f => f(seed, n, ctx));
-      const result: number[] = [];
-      for (let i = 0; i < n; i++) {
-        let maxVal = -Infinity;
-        for (const vals of allValues) {
-          const v = vals[i] ?? -Infinity;
-          if (v > maxVal) maxVal = v;
-        }
-        result.push(maxVal);
-      }
-      return result;
-    };
-    return { kind: 'Field:number', value: combined };
-  }
-
-  if (mode === 'min') {
-    const combined: Field<number> = (seed, n, ctx) => {
-      const allValues = fields.map(f => f(seed, n, ctx));
-      const result: number[] = [];
-      for (let i = 0; i < n; i++) {
-        let minVal = Infinity;
-        for (const vals of allValues) {
-          const v = vals[i] ?? Infinity;
-          if (v < minVal) minVal = v;
-        }
-        result.push(minVal);
-      }
-      return result;
-    };
-    return { kind: 'Field:number', value: combined };
-  }
-
-  // Unsupported combine mode
-  return {
-    kind: 'Error',
-    message: `Unsupported combine mode: ${mode}. Field buses support: last, sum, average, max, min`,
-  };
-}
+// REMOVED: Local combineFieldArtifacts() function - use canonical version from busSemantics
 
 // =============================================================================
 // Topological Sort with Bus Dependencies
@@ -750,14 +510,16 @@ export function compileBusAwarePatch(
 /**
  * Infer TimeModel from the compiled patch.
  *
- * Inference rules (priority order):
- * 1. TimeRoot blocks (FiniteTimeRoot, CycleTimeRoot, InfiniteTimeRoot) - explicit time topology
- * 2. PhaseMachine (legacy) → FiniteTimeModel with computed duration
- * 3. PhaseClock with loop mode (legacy) → CyclicTimeModel
- * 4. Default → InfiniteTimeModel with 10s window
+ * IMPORTANT: Every patch MUST have exactly one TimeRoot block.
+ * The requireTimeRoot flag enforces this at validation time.
+ * This function extracts the TimeModel from the TimeRoot block.
+ *
+ * TimeRoot types:
+ * - FiniteTimeRoot → finite time model (one-shot animations)
+ * - CycleTimeRoot → cyclic time model (looping animations)
+ * - InfiniteTimeRoot → infinite time model (generative/evolving)
  */
 function inferTimeModel(patch: CompilerPatch): TimeModel {
-  // Priority 1: Check for TimeRoot blocks (explicit time topology)
   for (const block of patch.blocks.values()) {
     if (block.type === 'FiniteTimeRoot') {
       const durationMs = Number(block.params.durationMs ?? 5000);
@@ -791,50 +553,12 @@ function inferTimeModel(patch: CompilerPatch): TimeModel {
     }
   }
 
-  // Priority 2: PhaseMachine (legacy - implies finite duration)
-  for (const block of patch.blocks.values()) {
-    if (block.type === 'PhaseMachine') {
-      const entranceDuration = Number(block.params.entranceDuration ?? 2.5) * 1000;
-      const holdDuration = Number(block.params.holdDuration ?? 2.0) * 1000;
-      const exitDuration = Number(block.params.exitDuration ?? 0.5) * 1000;
-      const totalDuration = entranceDuration + holdDuration + exitDuration;
-
-      return {
-        kind: 'finite',
-        durationMs: totalDuration,
-        cuePoints: [
-          { tMs: 0, label: 'Entrance Start', kind: 'phase' },
-          { tMs: entranceDuration, label: 'Hold Start', kind: 'phase' },
-          { tMs: entranceDuration + holdDuration, label: 'Exit Start', kind: 'phase' },
-          { tMs: totalDuration, label: 'End', kind: 'phase' },
-        ],
-      };
-    }
-  }
-
-  // Priority 3: PhaseClock with loop mode (legacy - implies cyclic time)
-  for (const block of patch.blocks.values()) {
-    if (block.type === 'PhaseClock') {
-      const mode = String(block.params.mode ?? 'loop');
-      const durationSec = Number(block.params.duration ?? 3.0);
-      const periodMs = durationSec * 1000;
-
-      if (mode === 'loop' || mode === 'pingpong') {
-        return {
-          kind: 'cyclic',
-          periodMs,
-          phaseDomain: '0..1',
-          mode: mode as 'loop' | 'pingpong',
-        };
-      }
-    }
-  }
-
-  // Priority 4: Default fallback - infinite time model
-  return {
-    kind: 'infinite',
-    windowMs: 10000, // 10 second default preview window
-  };
+  // No TimeRoot found - this should be caught by validation (requireTimeRoot flag).
+  // If we reach here, it means validation was bypassed or there's a bug.
+  throw new Error(
+    'E_TIME_ROOT_MISSING: No TimeRoot block found. ' +
+      'Every patch must have exactly one TimeRoot (FiniteTimeRoot, CycleTimeRoot, or InfiniteTimeRoot).'
+  );
 }
 
 // =============================================================================
@@ -860,11 +584,8 @@ function getBusValue(
     };
   }
 
-  // Get enabled publishers for this bus
-  const busPublishers = publishers.filter(p => p.busId === busId && p.enabled);
-
-  // Sort by (sortKey, id) for deterministic ordering
-  const sortedPublishers = sortPublishers(busPublishers);
+  // Get enabled publishers for this bus, sorted deterministically
+  const sortedPublishers = getSortedPublishers(busId, publishers, false);
 
   // Collect artifacts from publishers
   const artifacts: Artifact[] = [];
