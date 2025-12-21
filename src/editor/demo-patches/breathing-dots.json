@@ -5,6 +5,30 @@
   },
   "blocks": [
     {
+      "id": "block-0",
+      "type": "CycleTimeRoot",
+      "label": "Time Root",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "phase",
+          "label": "Phase",
+          "type": "Signal<phase>",
+          "direction": "output"
+        },
+        {
+          "id": "wrap",
+          "label": "Wrap",
+          "type": "Event",
+          "direction": "output"
+        }
+      ],
+      "params": {
+        "periodMs": 3000
+      },
+      "category": "Time"
+    },
+    {
       "id": "block-1",
       "type": "composite:GridPoints",
       "label": "Grid Points",
@@ -131,7 +155,7 @@
       "description": "Scene sources and targets",
       "flavor": "General",
       "flowStyle": "patchbay",
-      "blockIds": [],
+      "blockIds": ["block-0"],
       "collapsed": false,
       "pinned": false,
       "name": "lane-scene"

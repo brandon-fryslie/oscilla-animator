@@ -14,6 +14,7 @@ import type {
   LensDefinition,
 } from '../types';
 import type { RootStore } from './RootStore';
+import { getSortedPublishers } from '../semantic/busSemantics';
 
 export class BusStore {
   buses: Bus[] = [];
@@ -494,12 +495,13 @@ export class BusStore {
   // =============================================================================
 
   /**
-   * Get all publishers for a bus.
+   * Get all publishers for a bus, sorted deterministically.
+   *
+   * CRITICAL: Uses busSemantics module for consistent ordering.
+   * Do NOT duplicate sorting logic here.
    */
   getPublishersByBus(busId: string): Publisher[] {
-    return this.publishers
-      .filter(p => p.busId === busId)
-      .sort((a, b) => a.sortKey - b.sortKey);
+    return getSortedPublishers(busId, this.publishers, false);
   }
 
   /**

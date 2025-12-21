@@ -12,6 +12,8 @@ import { input, output } from './utils';
  *
  * This is the fundamental primitive that creates elements with stable IDs.
  * Element IDs are stable across frames and recompiles for the same (n, seed) pair.
+ *
+ * Both n and seed are Scalar world - compile-time constants that trigger rebuild.
  */
 export const DomainN = createBlock({
   type: 'DomainN',
@@ -20,11 +22,27 @@ export const DomainN = createBlock({
   category: 'Scene',
   description: 'Create a domain with N elements, each with a stable ID',
   inputs: [
-    input('n', 'Element Count', 'Scalar:number'),
+    input('n', 'Element Count', 'Scalar:number', {
+      tier: 'primary',
+      defaultSource: {
+        value: 100,
+        world: 'scalar',
+        uiHint: { kind: 'slider', min: 1, max: 10000, step: 1 },
+      },
+    }),
+    input('seed', 'Seed', 'Scalar:number', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 0,
+        world: 'scalar',
+        uiHint: { kind: 'number', min: 0, max: 999999, step: 1 },
+      },
+    }),
   ],
   outputs: [
     output('domain', 'Domain', 'Domain'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'n',
@@ -55,6 +73,10 @@ export const DomainN = createBlock({
  *
  * Combines domain creation with grid positioning into a single block.
  * Element IDs are stable (row-R-col-C) and positions are deterministic.
+ *
+ * Inputs:
+ * - rows/cols: Scalar world (grid structure, triggers rebuild)
+ * - spacing/originX/Y: Signal world (can be animated for breathing/pan)
  */
 export const GridDomain = createBlock({
   type: 'GridDomain',
@@ -62,11 +84,53 @@ export const GridDomain = createBlock({
   subcategory: 'Sources',
   category: 'Scene',
   description: 'Create a grid domain with stable element IDs and base positions',
-  inputs: [],
+  inputs: [
+    input('rows', 'Rows', 'Scalar:number', {
+      tier: 'primary',
+      defaultSource: {
+        value: 10,
+        world: 'scalar',
+        uiHint: { kind: 'slider', min: 1, max: 100, step: 1 },
+      },
+    }),
+    input('cols', 'Columns', 'Scalar:number', {
+      tier: 'primary',
+      defaultSource: {
+        value: 10,
+        world: 'scalar',
+        uiHint: { kind: 'slider', min: 1, max: 100, step: 1 },
+      },
+    }),
+    input('spacing', 'Spacing', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 20,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 1, max: 200, step: 1 },
+      },
+    }),
+    input('originX', 'Origin X', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 100,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -1000, max: 2000, step: 10 },
+      },
+    }),
+    input('originY', 'Origin Y', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 100,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -1000, max: 2000, step: 10 },
+      },
+    }),
+  ],
   outputs: [
     output('domain', 'Domain', 'Domain'),
     output('pos0', 'Base Positions', 'Field<vec2>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'rows',
@@ -125,6 +189,10 @@ export const GridDomain = createBlock({
  * Takes an SVG path asset and samples N points along the path(s), creating
  * a domain with stable element IDs and positions from the path geometry.
  * Similar to GridDomain but positions come from SVG sampling.
+ *
+ * Inputs:
+ * - asset/sampleCount/seed: Scalar world (compile-time)
+ * - distribution: Config world (algorithm selection)
  */
 export const SVGSampleDomain = createBlock({
   type: 'SVGSampleDomain',
@@ -132,11 +200,51 @@ export const SVGSampleDomain = createBlock({
   subcategory: 'Sources',
   category: 'Scene',
   description: 'Sample points from SVG path with stable element IDs',
-  inputs: [],
+  inputs: [
+    input('asset', 'SVG Path Asset', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: '',
+        world: 'scalar',
+        uiHint: { kind: 'text' },
+      },
+    }),
+    input('sampleCount', 'Sample Count', 'Scalar:number', {
+      tier: 'primary',
+      defaultSource: {
+        value: 100,
+        world: 'scalar',
+        uiHint: { kind: 'slider', min: 1, max: 5000, step: 1 },
+      },
+    }),
+    input('seed', 'Seed', 'Scalar:number', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 0,
+        world: 'scalar',
+        uiHint: { kind: 'number', min: 0, max: 999999, step: 1 },
+      },
+    }),
+    input('distribution', 'Distribution', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 'even',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'even', label: 'Even (arc length)' },
+            { value: 'parametric', label: 'Parametric (t-value)' },
+          ],
+        },
+      },
+    }),
+  ],
   outputs: [
     output('domain', 'Domain', 'Domain'),
     output('pos0', 'Sampled Positions', 'Field<vec2>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'asset',
@@ -192,10 +300,19 @@ export const StableIdHash = createBlock({
   description: 'Hash stable element IDs to deterministic [0,1) values with salt',
   inputs: [
     input('domain', 'Domain', 'Domain'),
+    input('salt', 'Salt', 'Scalar:number', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'scalar',
+        uiHint: { kind: 'number', min: 0, max: 999999, step: 1 },
+      },
+    }),
   ],
   outputs: [
     output('u01', 'Hash [0,1)', 'Field<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'salt',
@@ -225,10 +342,45 @@ export const PositionMapGrid = createBlock({
   description: 'Arrange domain elements in a grid pattern',
   inputs: [
     input('domain', 'Domain', 'Domain'),
+    input('rows', 'Rows', 'Scalar:number', {
+      tier: 'primary',
+      defaultSource: { value: 10, world: 'scalar', uiHint: { kind: 'slider', min: 1, max: 100, step: 1 } },
+    }),
+    input('cols', 'Columns', 'Scalar:number', {
+      tier: 'primary',
+      defaultSource: { value: 10, world: 'scalar', uiHint: { kind: 'slider', min: 1, max: 100, step: 1 } },
+    }),
+    input('spacing', 'Spacing', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 20, world: 'signal', uiHint: { kind: 'slider', min: 1, max: 200, step: 1 } },
+    }),
+    input('originX', 'Origin X', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 100, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
+    }),
+    input('originY', 'Origin Y', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 100, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
+    }),
+    input('order', 'Order', 'Signal<string>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 'rowMajor',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'rowMajor', label: 'Row Major' },
+            { value: 'serpentine', label: 'Serpentine' },
+          ],
+        },
+      },
+    }),
   ],
   outputs: [
     output('pos', 'Positions', 'Field<vec2>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'rows',
@@ -304,10 +456,55 @@ export const PositionMapCircle = createBlock({
   description: 'Arrange domain elements in a circle',
   inputs: [
     input('domain', 'Domain', 'Domain'),
+    input('centerX', 'Center X', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 400, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
+    }),
+    input('centerY', 'Center Y', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 300, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
+    }),
+    input('radius', 'Radius', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 150, world: 'signal', uiHint: { kind: 'slider', min: 10, max: 500, step: 10 } },
+    }),
+    input('startAngle', 'Start Angle (deg)', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 360, step: 15 } },
+    }),
+    input('winding', 'Winding', 'Signal<string>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: '1',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: '1', label: 'Clockwise' },
+            { value: '-1', label: 'Counter-Clockwise' },
+          ],
+        },
+      },
+    }),
+    input('distribution', 'Distribution', 'Signal<string>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 'even',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'even', label: 'Even' },
+            { value: 'goldenAngle', label: 'Golden Angle' },
+          ],
+        },
+      },
+    }),
   ],
   outputs: [
     output('pos', 'Positions', 'Field<vec2>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'centerX',
@@ -384,10 +581,40 @@ export const PositionMapLine = createBlock({
   description: 'Arrange domain elements along a line',
   inputs: [
     input('domain', 'Domain', 'Domain'),
+    input('ax', 'Start X', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
+    }),
+    input('ay', 'Start Y', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 200, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
+    }),
+    input('bx', 'End X', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 700, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
+    }),
+    input('by', 'End Y', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 200, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
+    }),
+    input('distribution', 'Distribution', 'Signal<string>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 'even',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'even', label: 'Even' },
+          ],
+        },
+      },
+    }),
   ],
   outputs: [
     output('pos', 'Positions', 'Field<vec2>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'ax',
@@ -451,10 +678,15 @@ export const FieldConstNumber = createBlock({
   description: 'Uniform numeric value for all elements',
   inputs: [
     input('domain', 'Domain', 'Domain'),
+    input('value', 'Value', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: -10000, max: 10000, step: 0.1 } },
+    }),
   ],
   outputs: [
     output('out', 'Value', 'Field<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'value',
@@ -482,10 +714,15 @@ export const FieldConstColor = createBlock({
   description: 'Uniform color for all elements',
   inputs: [
     input('domain', 'Domain', 'Domain'),
+    input('color', 'Color', 'Signal<color>', {
+      tier: 'primary',
+      defaultSource: { value: '#3B82F6', world: 'signal', uiHint: { kind: 'color' } },
+    }),
   ],
   outputs: [
     output('out', 'Color', 'Field<color>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'color',
@@ -512,10 +749,15 @@ export const FieldHash01ById = createBlock({
   description: 'Deterministic random value per element (0 to 1)',
   inputs: [
     input('domain', 'Domain', 'Domain'),
+    input('seed', 'Seed', 'Scalar:number', {
+      tier: 'secondary',
+      defaultSource: { value: 0, world: 'scalar', uiHint: { kind: 'number', min: 0, max: 999999, step: 1 } },
+    }),
   ],
   outputs: [
     output('u', 'Random', 'Field<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'seed',
@@ -543,10 +785,44 @@ export const FieldMapNumber = createBlock({
   description: 'Apply a function to each element of a numeric field',
   inputs: [
     input('x', 'Input', 'Field<number>'),
+    input('fn', 'Function', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 'sin',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'neg', label: 'Negate' },
+            { value: 'abs', label: 'Absolute' },
+            { value: 'sin', label: 'Sine' },
+            { value: 'cos', label: 'Cosine' },
+            { value: 'tanh', label: 'Tanh' },
+            { value: 'smoothstep', label: 'Smoothstep' },
+            { value: 'scale', label: 'Scale' },
+            { value: 'offset', label: 'Offset' },
+            { value: 'clamp', label: 'Clamp' },
+          ],
+        },
+      },
+    }),
+    input('k', 'Parameter', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 } },
+    }),
+    input('a', 'Range Min', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 } },
+    }),
+    input('b', 'Range Max', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 } },
+    }),
   ],
   outputs: [
     output('y', 'Output', 'Field<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'fn',
@@ -609,10 +885,55 @@ export const FieldMapVec2 = createBlock({
   description: 'Apply spatial transformations to position fields',
   inputs: [
     input('vec', 'Input', 'Field<vec2>'),
+    input('fn', 'Function', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 'rotate',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'rotate', label: 'Rotate' },
+            { value: 'scale', label: 'Scale' },
+            { value: 'translate', label: 'Translate' },
+            { value: 'reflect', label: 'Reflect' },
+          ],
+        },
+      },
+    }),
+    input('angle', 'Angle (deg)', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -360, max: 360, step: 15 } },
+    }),
+    input('scaleX', 'Scale X', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: 0.1, max: 10, step: 0.1 } },
+    }),
+    input('scaleY', 'Scale Y', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: 0.1, max: 10, step: 0.1 } },
+    }),
+    input('offsetX', 'Offset X', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -500, max: 500, step: 10 } },
+    }),
+    input('offsetY', 'Offset Y', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -500, max: 500, step: 10 } },
+    }),
+    input('centerX', 'Center X', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 400, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
+    }),
+    input('centerY', 'Center Y', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 300, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
+    }),
   ],
   outputs: [
     output('out', 'Output', 'Field<vec2>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'fn',
@@ -707,10 +1028,28 @@ export const FieldZipNumber = createBlock({
   inputs: [
     input('a', 'A', 'Field<number>'),
     input('b', 'B', 'Field<number>'),
+    input('op', 'Operation', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 'add',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'add', label: 'Add' },
+            { value: 'sub', label: 'Subtract' },
+            { value: 'mul', label: 'Multiply' },
+            { value: 'min', label: 'Min' },
+            { value: 'max', label: 'Max' },
+          ],
+        },
+      },
+    }),
   ],
   outputs: [
     output('out', 'Result', 'Field<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'op',
@@ -746,10 +1085,19 @@ export const JitterFieldVec2 = createBlock({
   inputs: [
     input('idRand', 'Random', 'Field<number>'),
     input('phase', 'Phase', 'Signal<phase>'),
+    input('amount', 'Amount', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 5, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 100, step: 1 } },
+    }),
+    input('frequency', 'Frequency', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: 0.1, max: 10, step: 0.1 } },
+    }),
   ],
   outputs: [
     output('drift', 'Drift', 'Field<vec2>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'amount',
@@ -815,10 +1163,28 @@ export const FieldZipSignal = createBlock({
   inputs: [
     input('field', 'Field', 'Field<number>'),
     input('signal', 'Signal', 'Signal<number>'),
+    input('fn', 'Operation', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 'add',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'add', label: 'Add' },
+            { value: 'sub', label: 'Subtract' },
+            { value: 'mul', label: 'Multiply' },
+            { value: 'min', label: 'Min' },
+            { value: 'max', label: 'Max' },
+          ],
+        },
+      },
+    }),
   ],
   outputs: [
     output('out', 'Result', 'Field<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'fn',
@@ -859,10 +1225,27 @@ export const RenderInstances2D = createBlock({
     input('positions', 'Positions', 'Field<vec2>'),
     input('radius', 'Radius', 'Field<number>'),
     input('color', 'Color', 'Field<color>'),
+    input('opacity', 'Opacity', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 1.0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 } },
+    }),
+    input('glow', 'Glow', 'Signal<string>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 'false',
+        world: 'config',
+        uiHint: { kind: 'boolean' },
+      },
+    }),
+    input('glowIntensity', 'Glow Intensity', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 2.0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 5, step: 0.5 } },
+    }),
   ],
   outputs: [
     output('render', 'Render', 'RenderTree'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'opacity',

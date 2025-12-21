@@ -290,6 +290,7 @@ export type SlotType =
   | 'Signal<time>'      // Monotonic system time (TimeRoot output)
   | 'Signal<phase>'     // Phase value 0..1 (TimeRoot output)
   | 'Signal<color>'     // Time-varying color
+  | 'Signal<string>'    // Time-varying string (config enums, etc.)
   | 'Signal<PhaseSample>' // Phase machine output
   | 'Event<string>'     // Discrete text events (typewriter)
   | 'Event<any>'        // Generic events
@@ -301,6 +302,84 @@ export type SlotType =
   | 'FilterDef'         // SVG filter definition
   | 'StrokeStyle'       // Stroke styling configuration
   | 'ElementCount';     // Number of elements (from scene)
+
+// =============================================================================
+// Slot World System (Default Source Support)
+// =============================================================================
+
+/**
+ * World classification for slots.
+ * Determines evaluation timing and hot-swap behavior.
+ *
+ * This extends TypeWorld with additional categories for the
+ * "Remove Parameters" refactor where all params become inputs.
+ *
+ * @see design-docs/10-Refactor-for-UI-prep/14-RemoveParams.md
+ */
+export type SlotWorld =
+  | 'signal'    // Time-indexed, continuous, per-frame evaluation
+  | 'field'     // Per-element, lazy, bulk evaluation
+  | 'scalar'    // Compile-time constant (for domain size, seed, etc.)
+  | 'config';   // Compile-time selection (enum/bool), stepwise changes only
+
+/**
+ * UI presentation tier for inputs.
+ * Controls visibility and layout in Inspector.
+ *
+ * - 'primary': Always visible on block face (main creative parameters)
+ * - 'secondary': Tucked under "More" / "Advanced" (refinement parameters)
+ */
+export type SlotTier =
+  | 'primary'    // Always visible on block face
+  | 'secondary'; // Tucked under "More" / "Advanced"
+
+/**
+ * UI control hint for rendering inline input controls.
+ * Determines widget type when slot is in Default Source mode.
+ *
+ * These hints are used by the Inspector to generate appropriate
+ * inline controls for editing default values.
+ */
+export type UIControlHint =
+  | { readonly kind: 'slider'; readonly min: number; readonly max: number; readonly step: number }
+  | { readonly kind: 'number'; readonly min?: number; readonly max?: number; readonly step?: number }
+  | { readonly kind: 'select'; readonly options: readonly { readonly value: string; readonly label: string }[] }
+  | { readonly kind: 'color' }
+  | { readonly kind: 'boolean' }
+  | { readonly kind: 'text' };
+
+/**
+ * Default Source definition for an input slot.
+ * Represents the implicit constant value when nothing is connected.
+ *
+ * This is the core of the "Remove Parameters" refactor:
+ * - Former params become inputs with defaultSource metadata
+ * - UI generates controls from uiHint instead of ParamSchema
+ * - Compiler uses value when no wire/bus is connected
+ *
+ * @see design-docs/10-Refactor-for-UI-prep/14-RemoveParams.md
+ */
+export interface DefaultSource {
+  /** The constant value (typed per SlotType) */
+  readonly value: unknown;
+
+  /** UI control metadata for inline editing */
+  readonly uiHint: UIControlHint;
+
+  /**
+   * World classification - determines:
+   * - Evaluation timing (compile vs runtime)
+   * - Hot-swap behavior (topology change vs parameter change)
+   *
+   * | World   | Trigger         | Hot-Swap Strategy                    |
+   * |---------|-----------------|--------------------------------------|
+   * | signal  | Parameter edit  | Smooth transition, no recompile      |
+   * | field   | Parameter edit  | Smooth transition, no recompile      |
+   * | scalar  | Parameter edit  | Recompile (domain size changed)      |
+   * | config  | Parameter edit  | Topology change (crossfade/freeze)   |
+   */
+  readonly world: SlotWorld;
+}
 
 // =============================================================================
 // Block Definitions
@@ -398,6 +477,11 @@ export type BlockCategory = (typeof ALL_CATEGORIES)[number];
 
 /**
  * A Slot is a typed connection point on a block.
+ *
+ * Extended for the "Remove Parameters" refactor to support Default Sources.
+ * Input slots can optionally carry default value and UI metadata.
+ *
+ * @see design-docs/10-Refactor-for-UI-prep/14-RemoveParams.md
  */
 export interface Slot {
   /** Unique identifier for this slot (unique within block) */
@@ -411,6 +495,40 @@ export interface Slot {
 
   /** Input or output? */
   readonly direction: 'input' | 'output';
+
+  // === NEW FIELDS (Phase 1: optional, Phase 3+: required for inputs) ===
+
+  /**
+   * Default Source for input slots.
+   * Provides the constant value when nothing is connected.
+   *
+   * Input resolution priority: Wire > Bus Listener > Default Source
+   *
+   * MUST be undefined for output slots.
+   * SHOULD be defined for input slots (required in future phases).
+   *
+   * @example
+   * ```ts
+   * defaultSource: {
+   *   value: 1.0,
+   *   world: 'signal',
+   *   uiHint: { kind: 'slider', min: 0, max: 10, step: 0.1 }
+   * }
+   * ```
+   */
+  readonly defaultSource?: DefaultSource;
+
+  /**
+   * UI presentation tier (primary vs secondary).
+   * Controls visibility in Inspector UI.
+   *
+   * - 'primary': Always visible on block face
+   * - 'secondary': Tucked under "More" / "Advanced"
+   *
+   * Only meaningful for input slots.
+   * Defaults to 'primary' if not specified.
+   */
+  readonly tier?: SlotTier;
 }
 
 /**
@@ -822,6 +940,7 @@ export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc> = {
   'Signal<time>': { world: 'signal', domain: 'time', category: 'core', busEligible: true, unit: 'ms', semantics: 'system-time' },
   'Signal<phase>': { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'unit(0..1)' },
   'Signal<color>': { world: 'signal', domain: 'color', category: 'core', busEligible: true },
+  'Signal<string>': { world: 'signal', domain: 'string', category: 'core', busEligible: false, semantics: 'config-enum' },
   'Signal<PhaseSample>': { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'sample' },
   'Event<string>': { world: 'signal', domain: 'trigger', category: 'core', busEligible: true, semantics: 'string' },
   'Event<any>': { world: 'signal', domain: 'trigger', category: 'core', busEligible: true },

@@ -7,9 +7,12 @@
  *
  * TimeRoot blocks are the foundation of the time model system.
  * They produce the TimeModel that the Player uses to configure playback.
+ *
+ * All TimeRoot params are Config world - changing them triggers TimeModel
+ * rebuild and hot-swap (crossfade/freeze-fade).
  */
 import { createBlock } from './factory';
-import { output } from './utils';
+import { input, output } from './utils';
 
 /**
  * FiniteTimeRoot - Finite performance with known duration.
@@ -25,11 +28,21 @@ export const FiniteTimeRoot = createBlock({
   subcategory: 'TimeRoot',
   category: 'TimeRoot',
   description: 'Finite performance with known duration',
-  inputs: [],
+  inputs: [
+    input('durationMs', 'Duration (ms)', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 5000,
+        world: 'config', // Topology change triggers hot-swap
+        uiHint: { kind: 'slider', min: 100, max: 30000, step: 100 },
+      },
+    }),
+  ],
   outputs: [
     output('systemTime', 'System Time', 'Signal<time>'),
     output('progress', 'Progress', 'Signal<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'durationMs',
@@ -60,11 +73,35 @@ export const CycleTimeRoot = createBlock({
   subcategory: 'TimeRoot',
   category: 'TimeRoot',
   description: 'Looping primary cycle',
-  inputs: [],
+  inputs: [
+    input('periodMs', 'Period (ms)', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 3000,
+        world: 'config', // Period changes should snap to pulse boundary
+        uiHint: { kind: 'slider', min: 100, max: 10000, step: 100 },
+      },
+    }),
+    input('mode', 'Mode', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 'loop',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'loop', label: 'Loop' },
+            { value: 'pingpong', label: 'Ping-Pong' },
+          ],
+        },
+      },
+    }),
+  ],
   outputs: [
     output('systemTime', 'System Time', 'Signal<time>'),
     output('phase', 'Phase', 'Signal<phase>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'periodMs',
@@ -105,10 +142,20 @@ export const InfiniteTimeRoot = createBlock({
   subcategory: 'TimeRoot',
   category: 'TimeRoot',
   description: 'Ambient, unbounded time (no primary cycle)',
-  inputs: [],
+  inputs: [
+    input('windowMs', 'Preview Window (ms)', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 10000,
+        world: 'config', // UI-only, but still config for consistency
+        uiHint: { kind: 'slider', min: 1000, max: 60000, step: 1000 },
+      },
+    }),
+  ],
   outputs: [
     output('systemTime', 'System Time', 'Signal<time>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'windowMs',

@@ -420,18 +420,21 @@ describe('PatchStore - BlockReplaced Events', () => {
       root.events.on('BlockReplaced', listener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('AddSignal', laneId);
+      // CycleTimeRoot outputs Signal<phase> on 'phase'
+      const block1 = root.patchStore.addBlock('CycleTimeRoot', laneId);
+      // Oscillator accepts Signal<phase> on 'phase' input
+      const block2 = root.patchStore.addBlock('Oscillator', laneId);
 
-      // Connect to a slot that won't exist on the new block type
-      root.patchStore.connect(block1, 'value', block2, 'a');
+      // Connect CycleTimeRoot.phase -> Oscillator.phase (valid Signal<phase> connection)
+      root.patchStore.connect(block1, 'phase', block2, 'phase');
 
-      // Replace with a block type that has different slots
-      root.patchStore.replaceBlock(block2, 'Oscillator');
+      // Replace Oscillator with AddSignal which only accepts Signal<number> inputs
+      // Signal<phase> (domain: 'phase') is NOT compatible with Signal<number> (domain: 'number')
+      root.patchStore.replaceBlock(block2, 'AddSignal');
 
       const event = listener.mock.calls[0][0] as BlockReplacedEvent;
 
-      // Should have dropped connections
+      // Should have dropped connections (Signal<phase> can't connect to Signal<number>)
       expect(event.droppedConnections.length).toBeGreaterThan(0);
 
       // Each dropped connection should have a connectionId and reason

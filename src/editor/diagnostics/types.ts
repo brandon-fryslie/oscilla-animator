@@ -142,6 +142,8 @@ export type DiagnosticCode =
   | 'E_CYCLE_DETECTED'
   | 'E_MISSING_INPUT'
   | 'E_INVALID_CONNECTION'
+  // Internal errors
+  | 'E_VALIDATION_FAILED'
   // Bus-related warnings
   | 'W_BUS_EMPTY'
   | 'W_BUS_NO_PUBLISHERS'

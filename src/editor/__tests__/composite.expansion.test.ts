@@ -150,6 +150,10 @@ describe('RewriteMap correctness (Test Matrix Section A)', () => {
     const lanes = store.patchStore.lanes;
     const fieldsLane = lanes.find((l) => l.kind === 'Fields') ?? lanes[0];
 
+    // Add CycleTimeRoot - required for all patches
+    const sceneLane = lanes.find((l) => l.kind === 'Scene') ?? lanes[0];
+    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
+
     const grid1 = store.patchStore.addBlock('composite:GridPoints', fieldsLane.id, {
       count: 16,
       rows: 4,
@@ -344,6 +348,10 @@ describe('Error handling (Test Matrix Section H)', () => {
     const fieldsLane = lanes.find((l) => l.kind === 'Fields') ?? lanes[0];
     const phaseLane = lanes.find((l) => l.kind === 'Phase') ?? lanes[1];
     const outputLane = lanes.find((l) => l.kind === 'Output') ?? lanes[lanes.length - 1];
+
+    // Add CycleTimeRoot - required for all patches
+    const sceneLane = lanes.find((l) => l.kind === 'Scene') ?? lanes[0];
+    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
 
     // Add GridPoints composite (has domain, positions outputs but no "foobar" port)
     const gridId = store.patchStore.addBlock('composite:GridPoints', fieldsLane.id, {

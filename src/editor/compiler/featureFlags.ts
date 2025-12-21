@@ -49,7 +49,7 @@ const DEFAULT_FLAGS: CompilerFeatureFlags = {
   strictStateValidation: false,
   busCompilation: false,
   timeCtxPropagation: false,
-  requireTimeRoot: false, // REVERTED: Keep false until test failures fixed (Sprint 2, Step 2)
+  requireTimeRoot: true, // ENABLED: Patches must have TimeRoot block (Sprint 2)
 };
 
 /**

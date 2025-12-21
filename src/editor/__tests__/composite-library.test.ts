@@ -492,6 +492,10 @@ describe('Composite Compilation', () => {
     const fieldsLane = lanes.find(l => l.kind === 'Fields') ?? lanes[0];
     const outputLane = lanes.find(l => l.kind === 'Output') ?? lanes[lanes.length - 1];
 
+    // Add CycleTimeRoot - required for all patches
+    const sceneLane = lanes.find(l => l.kind === 'Scene') ?? lanes[0];
+    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
+
     // Add GridPoints composite
     const gridId = store.patchStore.addBlock('composite:GridPoints', fieldsLane.id, {
       count: 16,
@@ -533,6 +537,10 @@ describe('Composite Compilation', () => {
     const fieldsLane = lanes.find(l => l.kind === 'Fields') ?? lanes[0];
     const outputLane = lanes.find(l => l.kind === 'Output') ?? lanes[lanes.length - 1];
 
+    // Add CycleTimeRoot - required for all patches
+    const sceneLane = lanes.find(l => l.kind === 'Scene') ?? lanes[0];
+    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
+
     // Add CirclePoints composite
     const circleId = store.patchStore.addBlock('composite:CirclePoints', fieldsLane.id, {
       count: 12,
@@ -567,6 +575,10 @@ describe('Composite Compilation', () => {
     const fieldsLane = lanes.find(l => l.kind === 'Fields') ?? lanes[0];
     const phaseLane = lanes.find(l => l.kind === 'Phase') ?? lanes[1];
     const outputLane = lanes.find(l => l.kind === 'Output') ?? lanes[lanes.length - 1];
+
+    // Add CycleTimeRoot - required for all patches
+    const sceneLane = lanes.find(l => l.kind === 'Scene') ?? lanes[0];
+    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
 
     // Add domain
     const domainId = store.patchStore.addBlock('DomainN', fieldsLane.id, { n: 25, seed: 42 });

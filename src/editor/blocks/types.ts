@@ -1,7 +1,20 @@
 import type { BlockCategory, BlockForm, BlockSubcategory, Slot, BlockParams, LaneKind, LaneFlavor } from '../types';
 
 // Re-export types that are used by other modules
-export type { Slot, SlotType, LaneKind, LaneFlavor, BlockCategory, BlockSubcategory, BlockForm } from '../types';
+export type {
+  Slot,
+  SlotType,
+  LaneKind,
+  LaneFlavor,
+  BlockCategory,
+  BlockSubcategory,
+  BlockForm,
+  // New types for "Remove Parameters" refactor (Phase 1)
+  SlotWorld,
+  SlotTier,
+  UIControlHint,
+  DefaultSource,
+} from '../types';
 
 export type BlockTagValue =
   | string

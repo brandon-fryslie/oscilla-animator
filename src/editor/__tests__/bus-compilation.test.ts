@@ -32,6 +32,19 @@ function createTestContext(): CompileCtx {
  */
 function createTestRegistry(): BlockRegistry {
   return {
+    // CycleTimeRoot - required for all patches
+    CycleTimeRoot: {
+      type: 'CycleTimeRoot',
+      inputs: [],
+      outputs: [{ name: 'phase', type: { kind: 'Signal:number' }, required: true }],
+      compile: ({ params }) => {
+        const periodMs = (params.periodMs as number) ?? 3000;
+        return {
+          phase: { kind: 'Signal:number', value: (t: number) => (t / periodMs) % 1 },
+        };
+      },
+    },
+
     // Simple number source
     NumberSource: {
       type: 'NumberSource',
@@ -82,6 +95,7 @@ function createTestRegistry(): BlockRegistry {
 describe('Bus Compilation - Happy Path', () => {
   it('compiles single Signal<number> bus with one publisher and one listener', () => {
     const blocks = new Map([
+      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
       ['source1', { id: 'source1', type: 'NumberSource', params: { value: 42 } }],
       ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
     ]);
@@ -132,6 +146,7 @@ describe('Bus Compilation - Happy Path', () => {
 
   it('returns default value when bus has no publishers', () => {
     const blocks = new Map([
+      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
       ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
     ]);
 
@@ -174,6 +189,7 @@ describe('Bus Compilation - Happy Path', () => {
 
   it('combines multiple publishers with "last" mode - highest sortKey wins', () => {
     const blocks = new Map([
+      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
       ['source1', { id: 'source1', type: 'NumberSource', params: { value: 10 } }],
       ['source2', { id: 'source2', type: 'NumberSource', params: { value: 20 } }],
       ['source3', { id: 'source3', type: 'NumberSource', params: { value: 30 } }],
@@ -220,6 +236,7 @@ describe('Bus Compilation - Happy Path', () => {
 
   it('combines multiple publishers with "sum" mode', () => {
     const blocks = new Map([
+      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
       ['source1', { id: 'source1', type: 'NumberSource', params: { value: 10 } }],
       ['source2', { id: 'source2', type: 'NumberSource', params: { value: 20 } }],
       ['source3', { id: 'source3', type: 'NumberSource', params: { value: 30 } }],
@@ -272,6 +289,7 @@ describe('Bus Compilation - Happy Path', () => {
 describe('Bus Compilation - sortKey Determinism', () => {
   it('stable results with same sortKeys using id tie-breaker', () => {
     const blocks = new Map([
+      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
       ['source1', { id: 'source1', type: 'NumberSource', params: { value: 100 } }],
       ['source2', { id: 'source2', type: 'NumberSource', params: { value: 200 } }],
       ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
@@ -317,6 +335,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
 
   it('result changes when sortKeys swap', () => {
     const blocks = new Map([
+      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
       ['source1', { id: 'source1', type: 'NumberSource', params: { value: 100 } }],
       ['source2', { id: 'source2', type: 'NumberSource', params: { value: 200 } }],
       ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
@@ -394,7 +413,9 @@ describe('Bus Compilation - Error Handling', () => {
   // The old "rejects Field bus" test was removed as Field buses now work.
 
   it('rejects unsupported combine mode for Signal bus', () => {
-    const blocks = new Map();
+    const blocks = new Map([
+      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
+    ]);
 
     const bus: Bus = {
       id: 'bus1',
@@ -431,6 +452,7 @@ describe('Bus Compilation - Error Handling', () => {
 describe('Bus Compilation - Backward Compatibility', () => {
   it('wire-only patches compile unchanged', () => {
     const blocks = new Map([
+      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
       ['source1', { id: 'source1', type: 'NumberSource', params: { value: 42 } }],
       ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
     ]);

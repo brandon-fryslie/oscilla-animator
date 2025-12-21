@@ -12,6 +12,10 @@ import { input, output } from './utils';
  *
  * Core signal generator that converts phase [0,1] into oscillating waveforms.
  * Can subscribe from phaseA bus or receive explicit phase input.
+ *
+ * Inputs with defaultSource (Remove Parameters refactor):
+ * - shape: Config world - changing triggers hot-swap (crossfade)
+ * - amplitude/bias: Signal world - can be animated via bus/wire
  */
 export const Oscillator = createBlock({
   type: 'Oscillator',
@@ -21,10 +25,44 @@ export const Oscillator = createBlock({
   description: 'Generate waveforms (sine, cosine, triangle, saw) from phase',
   inputs: [
     input('phase', 'Phase', 'Signal<phase>'),
+    // Former params - now inputs with default sources
+    input('shape', 'Waveform', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 'sine',
+        world: 'config', // Enum selection triggers hot-swap, not per-frame eval
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'sine', label: 'Sine' },
+            { value: 'cosine', label: 'Cosine' },
+            { value: 'triangle', label: 'Triangle' },
+            { value: 'saw', label: 'Sawtooth' },
+          ],
+        },
+      },
+    }),
+    input('amplitude', 'Amplitude', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 1,
+        world: 'signal', // Continuous modulation allowed
+        uiHint: { kind: 'slider', min: 0, max: 10, step: 0.1 },
+      },
+    }),
+    input('bias', 'Bias', 'Signal<number>', {
+      tier: 'secondary', // Less commonly tweaked
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      },
+    }),
   ],
   outputs: [
     output('out', 'Output', 'Signal<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated to use defaultSource (Phase 4)
   paramSchema: [
     {
       key: 'shape',
@@ -67,6 +105,10 @@ export const Oscillator = createBlock({
  *
  * Transforms signal values using various shaping functions.
  * Useful for softening oscillators, creating breathing curves, etc.
+ *
+ * Inputs with defaultSource:
+ * - kind: Config world (triggers hot-swap)
+ * - amount: Signal world (can be modulated)
  */
 export const Shaper = createBlock({
   type: 'Shaper',
@@ -76,10 +118,36 @@ export const Shaper = createBlock({
   description: 'Shape signals with tanh, sigmoid, smoothstep, etc.',
   inputs: [
     input('in', 'Input', 'Signal<number>'),
+    input('kind', 'Shape', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 'smoothstep',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'tanh', label: 'Tanh' },
+            { value: 'softclip', label: 'Soft Clip' },
+            { value: 'sigmoid', label: 'Sigmoid' },
+            { value: 'smoothstep', label: 'Smoothstep' },
+            { value: 'pow', label: 'Power' },
+          ],
+        },
+      },
+    }),
+    input('amount', 'Amount', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 1,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0.1, max: 10, step: 0.1 },
+      },
+    }),
   ],
   outputs: [
     output('out', 'Output', 'Signal<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'kind',
@@ -114,6 +182,8 @@ export const Shaper = createBlock({
  *
  * Converts phase [0,1] into animated color via hue rotation.
  * Useful for palette animation and color cycling effects.
+ *
+ * All inputs are Signal world - colors can be animated.
  */
 export const ColorLFO = createBlock({
   type: 'ColorLFO',
@@ -123,10 +193,43 @@ export const ColorLFO = createBlock({
   description: 'Generate color from phase (hue rotation)',
   inputs: [
     input('phase', 'Phase', 'Signal<phase>'),
+    input('base', 'Base Color', 'Signal<color>', {
+      tier: 'primary',
+      defaultSource: {
+        value: '#3B82F6',
+        world: 'signal',
+        uiHint: { kind: 'color' },
+      },
+    }),
+    input('hueSpan', 'Hue Span', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 180,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 360, step: 1 },
+      },
+    }),
+    input('sat', 'Saturation', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 0.8,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
+      },
+    }),
+    input('light', 'Lightness', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 0.5,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
+      },
+    }),
   ],
   outputs: [
     output('color', 'Color', 'Signal<color>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'base',
@@ -261,6 +364,8 @@ export const MaxSignal = createBlock({
 
 /**
  * ClampSignal - Clamp signal to range
+ *
+ * Both min/max are Signal world - ranges can be animated.
  */
 export const ClampSignal = createBlock({
   type: 'ClampSignal',
@@ -270,10 +375,27 @@ export const ClampSignal = createBlock({
   description: 'Clamp signal values to a range',
   inputs: [
     input('in', 'Input', 'Signal<number>'),
+    input('min', 'Min', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 },
+      },
+    }),
+    input('max', 'Max', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 1,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 },
+      },
+    }),
   ],
   outputs: [
     output('out', 'Output', 'Signal<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'min',
@@ -306,6 +428,11 @@ export const ClampSignal = createBlock({
  *
  * This block owns its own time and produces a phase signal that cycles 0->1.
  * Kept for backwards compatibility with existing patches.
+ *
+ * Inputs with defaultSource:
+ * - duration: Signal world (can be modulated)
+ * - mode: Config world (triggers hot-swap)
+ * - offset: Signal world (can be modulated)
  */
 export const PhaseClockLegacy = createBlock({
   type: 'PhaseClockLegacy',
@@ -313,10 +440,43 @@ export const PhaseClockLegacy = createBlock({
   subcategory: 'Time',
   category: 'Time',
   description: '[Deprecated] Legacy phase clock that owns its own time. Use CycleTimeRoot instead.',
-  inputs: [],
+  inputs: [
+    input('duration', 'Duration (s)', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 3,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0.1, max: 60, step: 0.1 },
+      },
+    }),
+    input('mode', 'Mode', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 'loop',
+        world: 'config',
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'loop', label: 'Loop (0→1→0→1...)' },
+            { value: 'pingpong', label: 'Ping-Pong (0→1→0→1...)' },
+            { value: 'once', label: 'Once (0→1, then hold)' },
+          ],
+        },
+      },
+    }),
+    input('offset', 'Offset (s)', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      },
+    }),
+  ],
   outputs: [
     output('phase', 'Phase', 'Signal<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {
       key: 'duration',

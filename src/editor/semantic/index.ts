@@ -8,6 +8,7 @@
  * - SemanticGraph for derived graph indices
  * - Validator for all validation rules
  * - Adapter path resolution for conversions
+ * - Bus semantics (ordering, combining)
  *
  * BOTH the UI (wiring) and compiler MUST use this module for type checks and validation.
  * This eliminates divergence between what the UI allows and what compiles.
@@ -46,6 +47,15 @@ export {
   portKeyFromPublisher,
   portKeyFromListener,
 } from './types';
+
+// Bus Semantics Module
+export {
+  getSortedPublishers,
+  combineSignalArtifacts,
+  combineFieldArtifacts,
+  validateCombineMode,
+  getSupportedCombineModes,
+} from './busSemantics';
 
 // =============================================================================
 // Type Compatibility

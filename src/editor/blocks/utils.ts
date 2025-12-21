@@ -1,8 +1,43 @@
-import type { Slot, SlotType, ParamSchema } from './types';
+import type { Slot, SlotType, SlotTier, DefaultSource, ParamSchema } from './types';
 import { pathLibrary } from '../pathLibrary';
 
-export function input(id: string, label: string, type: SlotType): Slot {
-  return { id, label, type, direction: 'input' };
+/**
+ * Options for creating an input slot with default source metadata.
+ * Used by the "Remove Parameters" refactor where params become inputs.
+ */
+export interface InputSlotOptions {
+  /**
+   * Default source for when nothing is connected.
+   * Provides the constant value and UI control metadata.
+   */
+  defaultSource?: DefaultSource;
+
+  /**
+   * UI presentation tier.
+   * - 'primary': Always visible on block face
+   * - 'secondary': Tucked under "More"
+   * Defaults to 'primary' if not specified.
+   */
+  tier?: SlotTier;
+}
+
+/**
+ * Create an input slot definition.
+ *
+ * @param id - Unique identifier within the block
+ * @param label - Human-readable label
+ * @param type - Slot type (e.g., 'Signal<number>')
+ * @param options - Optional default source and tier metadata
+ */
+export function input(id: string, label: string, type: SlotType, options?: InputSlotOptions): Slot {
+  return {
+    id,
+    label,
+    type,
+    direction: 'input',
+    ...(options?.defaultSource && { defaultSource: options.defaultSource }),
+    ...(options?.tier && { tier: options.tier }),
+  };
 }
 
 export function output(id: string, label: string, type: SlotType): Slot {
