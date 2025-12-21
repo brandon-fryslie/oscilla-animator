@@ -115,6 +115,19 @@ export const ContextMenu = observer(() => {
           <span className="context-menu-slot">{slot?.label ?? portRef.slotId}</span>
         </div>
 
+        <div className="context-menu-section">
+          <button
+            className="context-menu-action"
+            onClick={() => {
+              store.uiStore.selectBlock(portRef.blockId);
+              store.uiStore.closeContextMenu();
+            }}
+          >
+            <span className="context-menu-icon">🔍</span>
+            <span>View in Inspector</span>
+          </button>
+        </div>
+
         {connections.length === 0 ? (
           <div className="context-menu-empty">No connections</div>
         ) : (

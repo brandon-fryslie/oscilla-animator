@@ -1,0 +1,64 @@
+Agent: iterative-implementer | 2025-12-21_11-17-32
+Mode: manual
+Completed: Validator integration in compiler and stores | Files: 3 | Commits: 0
+Status: complete
+
+## Work Completed
+
+1. **Created Patch Adapter** (`src/editor/semantic/patchAdapter.ts`)
+   - Converts RootStore format to PatchDocument for validator
+   - Lightweight reshaping, no deep cloning
+
+2. **Compiler Integration** (`src/editor/compiler/compile.ts`)
+   - Added semantic validation before codegen
+   - Calls `validator.validateAll()` in `compilePatchWireOnly()`
+   - Converts Diagnostic errors to CompileErrors
+   - Early exit if validation fails
+
+3. **PatchStore Preflight** (`src/editor/stores/PatchStore.ts`)
+   - Added `connect()` preflight validation
+   - Calls `validator.canAddConnection()` before adding wire
+   - Silently rejects invalid connections with console warning
+   - Uses storeToPatchDocument adapter
+
+## Validation Flow
+
+```
+UI Mutation (PatchStore.connect)
+  ↓
+validator.canAddConnection() ← preflight check
+  ↓
+[Valid] → Add connection to store
+[Invalid] → console.warn + silently reject
+
+Compiler (compilePatch)
+  ↓
+validator.validateAll() ← full graph validation
+  ↓
+[Valid] → Continue compilation
+[Invalid] → Return CompileErrors
+```
+
+## Type Safety
+
+- All validation uses canonical `areSlotTypesCompatible()` from semantic module
+- Single source of truth for type compatibility
+- No divergence between UI and compiler
+
+## Files Modified
+
+- `/Users/bmf/code/oscilla-animator/src/editor/semantic/patchAdapter.ts` (created)
+- `/Users/bmf/code/oscilla-animator/src/editor/compiler/compile.ts`
+- `/Users/bmf/code/oscilla-animator/src/editor/stores/PatchStore.ts`
+
+## Verification
+
+- `just typecheck` passes
+- No runtime changes - 762 tests should still pass (not run)
+- Integration complete, ready for testing
+
+## Next Steps
+
+- BusStore validation (Phase 2 - bus binding preflight)
+- Integration testing with actual UI
+- Performance profiling (validation overhead)

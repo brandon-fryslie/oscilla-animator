@@ -140,6 +140,16 @@ export const BlockContextMenu = observer(() => {
             <div className="context-menu-section">
               <button
                 className="context-menu-action"
+                onClick={() => {
+                  store.uiStore.selectBlock(blockId);
+                  store.uiStore.closeBlockContextMenu();
+                }}
+              >
+                <span className="context-menu-icon">🔍</span>
+                <span>View in Inspector</span>
+              </button>
+              <button
+                className="context-menu-action"
                 onClick={() => setShowReplacements(!showReplacements)}
               >
                 <span className="context-menu-icon">⇄</span>

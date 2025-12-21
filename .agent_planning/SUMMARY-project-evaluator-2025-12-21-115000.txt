@@ -1,0 +1,28 @@
+Agent: project-evaluator | 2025-12-21-115000
+Scope: issue/layout-projection (Issue #3 from UI Refactor Prep)
+Completion: 0% (NOT_STARTED - architectural debt)
+Gaps: ViewState separation, algorithmic layout, multi-view support
+Reused: 0 findings | Fresh: Full evaluation from spec + code
+Cache updated: layout-architecture.md
+Ambiguities: 3 found (lane switching preservation, ViewState granularity, UI component migration)
+Workflow: CONTINUE (clear what needs to be done, no blockers)
+
+Key Findings:
+- Lanes are embedded in patch semantics (violates spec principles)
+- advancedLaneMode stored in patch settings (UI state in document)
+- Layout switching mutates patch (triggers revision, appears in diffs)
+- Modulation table already demonstrates correct ViewState pattern
+- Migration requires 3 phases (introduce, make read-only, remove from patch)
+- Should tackle after Port Identity (#1) and Time Authority (#2)
+
+Evidence:
+- PatchStore.ts:303-308 - Block creation assigns to lane
+- PatchStore.ts:1013-1042 - Layout switching mutates patch
+- RootStore.ts:170,188 - Lanes serialized in patch
+- types.ts:662 - PatchDocument includes lanes
+- modulation-table/types.ts:210-270 - Correct ViewState pattern
+
+Next Action:
+- Read modulation table implementation (reference)
+- Create ViewStateStore (Phase 1)
+- Stop persisting advancedLaneMode in patch settings

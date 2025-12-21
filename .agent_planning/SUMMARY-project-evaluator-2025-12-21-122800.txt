@@ -1,0 +1,37 @@
+Agent: project-evaluator | 2025-12-21-122800
+Scope: Issue #5 - Bus Semantics Module
+Topic: ui-refactor-prep/bus-semantics
+
+Status: PARTIALLY COMPLETE - Critical divergence found
+Risk: HIGH - Non-deterministic behavior possible
+Blocker: Yes - Multi-UI cannot proceed safely
+
+Key Findings:
+1. Publisher ordering logic DUPLICATED in BusStore and compileBusAware
+2. BusStore sorts by sortKey ONLY (no tie-breaker)
+3. Compiler sorts by sortKey THEN id (has tie-breaker)
+4. CRITICAL DIVERGENCE: Same sortKey = different ordering in UI vs runtime
+5. Enabled/disabled filtering inconsistent between UI and compiler
+6. Combine logic duplicated in compileBusAware and FieldExpr
+
+Evidence:
+- BusStore.getPublishersByBus() - src/editor/stores/BusStore.ts:499
+- sortPublishers() - src/editor/compiler/compileBusAware.ts:83
+- No tie-breaker in UI = non-deterministic display vs runtime
+- Semantic layer exists but not used as single source
+
+Required Fix:
+- Create src/editor/semantic/busSemantics.ts (NEW)
+- Extract sortPublishers with tie-breaker (canonical)
+- Extract combine logic (Signal + Field)
+- Update BusStore and compiler to use single module
+- Add cross-layer consistency tests
+
+Priority: CRITICAL (Top 3 from Overview.md)
+Blocks: Multi-UI, server-authoritative patches, reliable diagnostics
+Effort: MEDIUM (~200 lines, 4-5 call sites, tests)
+
+Recommendation: PAUSE multi-UI work until bus semantics unified
+Alternative: Continue port identity and layout work, defer bus visualization
+
+Output: .agent_planning/ui-refactor-prep/EVAL-bus-semantics-2025-12-21.md

@@ -6,7 +6,9 @@ This directory contains reusable evaluation knowledge to avoid re-discovering pr
 
 | File | Scope | Confidence | Last Updated |
 |------|-------|------------|--------------|
-| `test-infrastructure.md` | Project-wide test setup | FRESH | 2025-12-20 |
+| `test-infrastructure.md` | Project-wide test setup | RECENT | 2025-12-20 |
+| `layout-architecture.md` | Lane system & layout state | FRESH | 2025-12-21 |
+| `time-architecture.md` | Time authority & TimeRoot system | FRESH | 2025-12-21 12:30 |
 
 ## Usage Guidelines
 

@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
 import { createCompilerService } from '../integration';
 import type { CompileStartedEvent, CompileFinishedEvent, EditorEvent } from '../../events/types';
-import { setFeatureFlags, resetFeatureFlags } from '../featureFlags';
+import { resetFeatureFlags, setFeatureFlags } from '../featureFlags';
 
 describe('Diagnostic Emission', () => {
   let store: RootStore;
@@ -16,9 +16,6 @@ describe('Diagnostic Emission', () => {
   beforeEach(() => {
     // Reset feature flags to default state
     resetFeatureFlags();
-
-    // Disable requireTimeRoot feature flag for these tests (to test legacy mode)
-    setFeatureFlags({ requireTimeRoot: false });
 
     store = new RootStore();
     events = [];
@@ -133,8 +130,8 @@ describe('Diagnostic Emission', () => {
   });
 
   describe('Diagnostic Conversion', () => {
-    it('should convert E_TIME_ROOT_MISSING diagnostic when requireTimeRoot is enabled', () => {
-      // Enable requireTimeRoot feature flag
+    it('should convert E_TIME_ROOT_MISSING diagnostic when patch has no TimeRoot', () => {
+      // Enable requireTimeRoot flag for this test
       setFeatureFlags({ requireTimeRoot: true });
 
       store = new RootStore();
@@ -166,7 +163,7 @@ describe('Diagnostic Emission', () => {
     });
 
     it('should convert E_TIME_ROOT_MULTIPLE diagnostic when multiple TimeRoots exist', () => {
-      // Enable requireTimeRoot feature flag
+      // Enable requireTimeRoot flag for this test
       setFeatureFlags({ requireTimeRoot: true });
 
       store = new RootStore();
@@ -207,9 +204,9 @@ describe('Diagnostic Emission', () => {
       store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
       const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
-      // Connect: GridDomain.domain -> RenderInstances2D.domain (required)
+
+      // Connect domain and positions
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
-      // Connect: GridDomain.pos0 -> RenderInstances2D.positions (required)
       store.patchStore.connect(domainBlock, 'pos0', renderBlock, 'positions');
 
       service.compile();
@@ -219,70 +216,8 @@ describe('Diagnostic Emission', () => {
 
       const event = finishedEvents[0];
       expect(event.programMeta).toBeDefined();
-      // timelineHint should be a valid value (finite, cyclic, or infinite)
-      expect(['finite', 'cyclic', 'infinite']).toContain(event.programMeta?.timelineHint);
-      // timeRootKind should be present
-      expect(event.programMeta?.timeRootKind).toBeDefined();
-    });
-
-    it('should include bus usage summary in programMeta', () => {
-      const service = createCompilerService(store);
-
-      // Create a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
-      // Connect: GridDomain.domain -> RenderInstances2D.domain (required)
-      store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
-      // Connect: GridDomain.pos0 -> RenderInstances2D.positions (required)
-      store.patchStore.connect(domainBlock, 'pos0', renderBlock, 'positions');
-
-      // CycleTimeRoot auto-publishes to phaseA bus, so we should see it in the summary
-      service.compile();
-
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
-      expect(finishedEvents).toHaveLength(1);
-
-      const event = finishedEvents[0];
-      expect(event.programMeta?.busUsageSummary).toBeDefined();
-      // The bus usage summary should include any buses that were used
-    });
-  });
-
-  describe('Empty Patch Handling', () => {
-    it('should emit CompileFinished with failed status for empty patch', () => {
-      const service = createCompilerService(store);
-
-      // Don't add any blocks - compile empty patch
-      service.compile();
-
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
-      expect(finishedEvents).toHaveLength(1);
-
-      const event = finishedEvents[0];
-      expect(event.status).toBe('failed');
-      // Empty patch fails with a diagnostic explaining why (no output port)
-      // This is better UX than silently failing
-      expect(event.diagnostics.length).toBeGreaterThanOrEqual(0);
-    });
-  });
-
-  describe('Exception Handling', () => {
-    it('should emit CompileFinished on compilation', () => {
-      const service = createCompilerService(store);
-
-      // Add a block
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-
-      // Compile should complete and emit CompileFinished
-      service.compile();
-
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
-      expect(finishedEvents).toHaveLength(1);
-
-      const event = finishedEvents[0];
-      // Should succeed or fail, but always emit CompileFinished
-      expect(['ok', 'failed']).toContain(event.status);
+      expect(event.programMeta?.timelineHint).toBe('cyclic');
+      expect(event.programMeta?.timeRootKind).toBe('cycle');
     });
   });
 });

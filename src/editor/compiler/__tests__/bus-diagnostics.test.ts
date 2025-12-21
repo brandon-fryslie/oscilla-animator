@@ -7,15 +7,15 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
 import { createCompilerService } from '../integration';
 import type { CompileFinishedEvent, EditorEvent } from '../../events/types';
-import { setFeatureFlags, resetFeatureFlags } from '../featureFlags';
+import { resetFeatureFlags } from '../featureFlags';
 
 describe('Bus Diagnostics', () => {
   let store: RootStore;
   let events: EditorEvent[];
 
   beforeEach(() => {
+    // Reset feature flags to default state (requireTimeRoot is now enabled by default)
     resetFeatureFlags();
-    setFeatureFlags({ requireTimeRoot: false });
 
     store = new RootStore();
     events = [];

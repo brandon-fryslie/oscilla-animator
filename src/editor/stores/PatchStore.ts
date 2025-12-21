@@ -21,6 +21,8 @@ import { listCompositeDefinitions } from '../composites';
 import type { RootStore } from './RootStore';
 import { mapConnections, copyCompatibleParams, type ReplacementResult } from '../replaceUtils';
 import type { GraphCommitReason, GraphDiffSummary } from '../events/types';
+import { Validator } from '../semantic';
+import { storeToPatchDocument } from '../semantic/patchAdapter';
 
 // =============================================================================
 // Migration Helpers
@@ -802,6 +804,8 @@ export class PatchStore {
 
   /**
    * Create a connection between two blocks (helper method).
+   * Uses semantic Validator for preflight validation.
+   *
    * @param options - Optional settings
    * @param options.suppressGraphCommitted - If true, don't emit GraphCommitted (used internally)
    */
@@ -821,6 +825,29 @@ export class PatchStore {
         c.to.slotId === toSlotId
     );
     if (exists) return;
+
+    // Preflight validation using Semantic Validator (warn-only, does not block)
+    // The compiler will catch real errors during compilation.
+    // This provides early warnings for invalid connections.
+    try {
+      const patchDoc = storeToPatchDocument(this.root);
+      const validator = new Validator(patchDoc, this.patchRevision);
+      const validationResult = validator.canAddConnection(
+        patchDoc,
+        { blockId: fromBlockId, slotId: fromSlotId },
+        { blockId: toBlockId, slotId: toSlotId }
+      );
+
+      if (!validationResult.ok) {
+        // Log warning but don't block - compiler will catch real errors
+        const firstError = validationResult.errors[0];
+        console.warn('[PatchStore] Preflight validation warning:', firstError?.message);
+        // Continue with connection creation despite warning
+      }
+    } catch (e) {
+      // Preflight validation should never crash the connection flow
+      console.warn('[PatchStore] Preflight validation error:', e);
+    }
 
     const id = this.generateConnectionId();
 

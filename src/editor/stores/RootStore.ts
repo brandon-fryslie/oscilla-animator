@@ -53,7 +53,7 @@ export class RootStore {
     // Create action executor (after stores and diagnostic hub)
     this.actionExecutor = new ActionExecutor(
       this.patchStore,
-      
+
       this.uiStore,
       this.diagnosticHub
     );
@@ -258,6 +258,16 @@ export class RootStore {
 
     // Create default buses for new empty patch
     this.busStore.createDefaultBuses();
+
+    // Auto-insert default CycleTimeRoot (Time Authority requirement)
+    // With requireTimeRoot flag enabled, every patch MUST have a TimeRoot.
+    // We insert CycleTimeRoot with 8s period (matches Golden Patch spec).
+    const timeLane = this.patchStore.lanes.find(l => l.kind === 'Phase');
+    if (timeLane) {
+      this.patchStore.addBlock('CycleTimeRoot', timeLane.id, {
+        periodMs: 8000,
+      });
+    }
 
     // Emit PatchCleared event AFTER state changes committed
     this.events.emit({ type: 'PatchCleared' });

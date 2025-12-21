@@ -14,6 +14,9 @@ import {
   DndContext,
   DragOverlay,
   useDroppable,
+  useSensor,
+  useSensors,
+  PointerSensor,
   type DragStartEvent,
   type DragEndEvent,
   pointerWithin,
@@ -455,6 +458,15 @@ export const Editor = observer(() => {
   // Help panel topic state
   const [helpPanelTopicId, setHelpPanelTopicId] = useState<HelpCenterTopicId>('overview');
 
+  // Configure dnd-kit sensors with distance activation constraint
+  // This allows clicks to work (no movement = click, movement = drag)
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: 5, // Require 5px of movement before starting drag
+    },
+  });
+  const sensors = useSensors(pointerSensor);
+
   // Set up auto-compile on patch changes
   useEffect(() => {
     const dispose = setupAutoCompile(store, compilerService, {
@@ -666,6 +678,7 @@ export const Editor = observer(() => {
 
   return (
     <DndContext
+      sensors={sensors}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       collisionDetection={pointerWithin}

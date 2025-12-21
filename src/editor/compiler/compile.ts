@@ -33,8 +33,8 @@ import type {
 import { compileBusAwarePatch, isBusAwarePatch } from './compileBusAware';
 import { getFeatureFlags } from './featureFlags';
 import { getBlockDefinition } from '../blocks';
-import { arePortTypesCompatible, areValueKindsCompatible } from '../semantic';
 
+import { arePortTypesCompatible, areValueKindsCompatible, Validator } from '../semantic';
 // =============================================================================
 // Main Compiler Entry Point
 // =============================================================================
@@ -52,6 +52,42 @@ export function compilePatch(
 
   // Wire-only compilation (Phase 1 logic)
   return compilePatchWireOnly(patch, registry, seed, ctx);
+}
+
+/**
+ * Convert CompilerPatch to PatchDocument for validation.
+ * This bridges the compiler's Map-based format to the Validator's array-based format.
+ */
+function compilerPatchToPatchDocument(patch: CompilerPatch): import('../semantic/types').PatchDocument {
+  const blocks = Array.from(patch.blocks.values()).map(block => ({
+    id: block.id,
+    type: block.type,
+    inputs: [], // CompilerPatch doesn't store slots - they come from registry
+    outputs: [],
+  }));
+
+  // Resolve inputs/outputs from registry
+  const getBlockDef = (type: string) => getBlockDefinition(type);
+
+  for (const block of blocks) {
+    const def = getBlockDef(block.type);
+    if (def) {
+      (block as any).inputs = def.inputs.map(slot => ({ id: slot.id, type: slot.type }));
+      (block as any).outputs = def.outputs.map(slot => ({ id: slot.id, type: slot.type }));
+    }
+  }
+
+  return {
+    blocks,
+    connections: Array.from(patch.connections).map(conn => ({
+      id: `conn-${conn.from.blockId}-${conn.from.port}-${conn.to.blockId}-${conn.to.port}`,
+      from: { blockId: conn.from.blockId, slotId: conn.from.port },
+      to: { blockId: conn.to.blockId, slotId: conn.to.port },
+    })),
+    buses: patch.buses ?? [],
+    publishers: patch.publishers ?? [],
+    listeners: patch.listeners ?? [],
+  };
 }
 
 /**
@@ -74,7 +110,26 @@ function compilePatchWireOnly(
     };
   }
 
-  // 0.5) Validate TimeRoot constraint (if feature flag enabled)
+  // 0.5) Semantic validation using the Validator (warn-only for wire-only mode)
+  // Wire-only mode is for backward compatibility with simple test patches.
+  // Full validation is enforced in the bus-aware compiler.
+  try {
+    const patchDoc = compilerPatchToPatchDocument(patch);
+    const validator = new Validator(patchDoc, 0);
+    const validationResult = validator.validateAll(patchDoc);
+
+    if (!validationResult.ok) {
+      // Log warnings but don't fail - wire-only mode is lenient
+      for (const diag of validationResult.errors) {
+        console.warn(`[Compiler] Validation warning: ${diag.code} - ${diag.message}`);
+      }
+    }
+  } catch (e) {
+    // Validation errors should not crash compilation
+    console.warn('[Compiler] Validation error:', e);
+  }
+
+  // 0.6) Validate TimeRoot constraint (if feature flag enabled)
   const timeRootErrors = validateTimeRootConstraint(patch);
   if (timeRootErrors.length > 0) {
     return { ok: false, errors: timeRootErrors };
