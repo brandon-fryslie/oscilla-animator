@@ -7,7 +7,7 @@
  * Key differences from wire-only compilation:
  * 1. Buses are first-class graph nodes
  * 2. Multi-pass compilation (blocks → buses → blocks using buses)
- * 3. Publisher ordering by sortKey for deterministic results
+ *  3. Publisher ordering by sortKey for deterministic results
  * 4. Default values when buses have no publishers
  * 5. Field buses support per-element combination (sum, average, max, min, last)
  */
@@ -521,6 +521,47 @@ export function compileBusAwarePatch(
       });
     }
   }
+  if (errors.length) return { ok: false, errors };
+
+  // =============================================================================
+  // 3.5. Validate port existence (fail fast before compilation)
+  // =============================================================================
+  // Validate wire connection source ports
+  for (const conn of patch.connections) {
+    const fromBlock = patch.blocks.get(conn.from.blockId);
+    if (!fromBlock) continue; // Block existence already validated in step 2
+
+    const compiler = registry[fromBlock.type];
+    if (!compiler) continue; // Compiler existence already validated in step 2
+
+    const portExists = compiler.outputs.some(p => p.name === conn.from.port);
+    if (!portExists) {
+      errors.push({
+        code: 'PortMissing',
+        message: `Block ${conn.from.blockId} (${fromBlock.type}) does not have output port '${conn.from.port}' (referenced by wire connection)`,
+        where: { blockId: conn.from.blockId, port: conn.from.port },
+      });
+    }
+  }
+
+  // Validate publisher source ports
+  for (const pub of publishers) {
+    const fromBlock = patch.blocks.get(pub.from.blockId);
+    if (!fromBlock) continue; // Block existence already validated
+
+    const compiler = registry[fromBlock.type];
+    if (!compiler) continue; // Compiler existence already validated
+
+    const portExists = compiler.outputs.some(p => p.name === pub.from.slotId);
+    if (!portExists) {
+      errors.push({
+        code: 'PortMissing',
+        message: `Block ${pub.from.blockId} (${fromBlock.type}) does not have output port '${pub.from.slotId}' (referenced by publisher to bus '${pub.busId}')`,
+        where: { blockId: pub.from.blockId, port: pub.from.slotId },
+      });
+    }
+  }
+
   if (errors.length) return { ok: false, errors };
 
   // =============================================================================
