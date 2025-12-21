@@ -11,7 +11,7 @@
  * Reference: .agent_planning/diagnostics-system/PLAN-D-FixAction-Execution.md
  */
 
-import type { DiagnosticAction, TargetRef } from './types';
+import type { DiagnosticAction, TargetRef, PortTargetRef } from './types';
 import type { PatchStore } from '../stores/PatchStore';
 import type { UIStateStore } from '../stores/UIStateStore';
 import type { DiagnosticHub } from './DiagnosticHub';
@@ -56,9 +56,7 @@ export class ActionExecutor {
           return this.removeBlock(action.blockId);
 
         case 'addAdapter':
-          // Deferred to Phase 3 - complex connection rewiring required
-          console.warn('[ActionExecutor] addAdapter action deferred to Phase 3');
-          return false;
+          return this.addAdapter(action.fromPort, action.adapterType);
 
         case 'createTimeRoot':
           return this.createTimeRoot(action.timeRootKind);
@@ -187,6 +185,97 @@ export class ActionExecutor {
     }
 
     this.patchStore.removeBlock(blockId);
+    return true;
+  }
+
+  /**
+   * Insert an adapter/lens between two connected ports.
+   * Finds the connection from the specified port, inserts an adapter block,
+   * and rewires the connections to go through the adapter.
+   */
+  addAdapter(fromPort: PortTargetRef, adapterType: string): boolean {
+    // 1. Find the connection from this port
+    const connection = this.patchStore.connections.find(
+      (c) => c.from.blockId === fromPort.blockId && c.from.slotId === fromPort.portId
+    );
+
+    if (!connection) {
+      console.warn('[ActionExecutor] No connection found from port:', fromPort);
+      return false;
+    }
+
+    // 2. Find the lane containing the source block
+    const lane = this.patchStore.lanes.find((l) =>
+      l.blockIds.includes(fromPort.blockId)
+    );
+
+    if (!lane) {
+      console.warn('[ActionExecutor] Lane not found for block:', fromPort.blockId);
+      return false;
+    }
+
+    // 3. Add the adapter block
+    const adapterId = this.patchStore.addBlock(adapterType, lane.id);
+
+    // 4. Rewire: remove old connection
+    this.patchStore.disconnect(connection.id);
+
+    // 5. Rewire: add new connections through adapter
+    // Adapter blocks typically have 'in' input and 'out' output ports
+    // For blocks like ClampSignal, Shaper, etc.
+    const adapterBlock = this.patchStore.blocks.find((b) => b.id === adapterId);
+    if (!adapterBlock) {
+      console.warn('[ActionExecutor] Adapter block not found after creation:', adapterId);
+      return false;
+    }
+
+    // Find the input port on the adapter (typically 'in' or 'input')
+    const adapterInput = adapterBlock.inputs.find((inp) =>
+      inp.id === 'in' || inp.id === 'input'
+    );
+
+    // Find the output port on the adapter (typically 'out' or 'output')
+    const adapterOutput = adapterBlock.outputs.find((out) =>
+      out.id === 'out' || out.id === 'output'
+    );
+
+    if (!adapterInput || !adapterOutput) {
+      console.warn('[ActionExecutor] Adapter block missing expected ports:', {
+        adapterType,
+        inputs: adapterBlock.inputs.map((i) => i.id),
+        outputs: adapterBlock.outputs.map((o) => o.id),
+      });
+      // Restore the original connection
+      this.patchStore.connect(
+        connection.from.blockId,
+        connection.from.slotId,
+        connection.to.blockId,
+        connection.to.slotId
+      );
+      // Remove the failed adapter block
+      this.patchStore.removeBlock(adapterId);
+      return false;
+    }
+
+    // Connect: source -> adapter input
+    this.patchStore.connect(
+      connection.from.blockId,
+      connection.from.slotId,
+      adapterId,
+      adapterInput.id
+    );
+
+    // Connect: adapter output -> original destination
+    this.patchStore.connect(
+      adapterId,
+      adapterOutput.id,
+      connection.to.blockId,
+      connection.to.slotId
+    );
+
+    // Select the adapter for user to configure parameters
+    this.uiStore.selectBlock(adapterId);
+
     return true;
   }
 

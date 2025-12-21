@@ -8,19 +8,20 @@ import { ActionExecutor } from '../ActionExecutor';
 import type { PatchStore } from '../../stores/PatchStore';
 import type { UIStateStore } from '../../stores/UIStateStore';
 import type { DiagnosticHub } from '../DiagnosticHub';
-import type { BlockId, LaneId } from '../../types';
+import type { BlockId, LaneId, Connection, Block } from '../../types';
 
 // Mock stores
 const createMockPatchStore = (): Partial<PatchStore> => ({
   blocks: [],
+  connections: [],
   lanes: [
     { id: 'phase' as LaneId, kind: 'Phase', blockIds: [], label: 'Phase', description: '', flavor: 'General', flowStyle: 'patchbay', collapsed: false, pinned: false, name: 'phase' },
     { id: 'fields' as LaneId, kind: 'Fields', blockIds: [], label: 'Fields', description: '', flavor: 'General', flowStyle: 'patchbay', collapsed: false, pinned: false, name: 'fields' },
   ],
-  addBlock: vi.fn((type: string, laneId: LaneId) => {
+  addBlock: vi.fn((_type: string, _laneId: LaneId) => {
     const newBlockId = `block-${Date.now()}` as BlockId;
-    (createMockPatchStore().blocks as any).push({ id: newBlockId, type });
-    const lane = createMockPatchStore().lanes?.find(l => l.id === laneId);
+    (createMockPatchStore().blocks as any).push({ id: newBlockId, type: _type });
+    const lane = createMockPatchStore().lanes?.find(l => l.id === _laneId);
     if (lane) {
       lane.blockIds.push(newBlockId);
     }
@@ -28,6 +29,8 @@ const createMockPatchStore = (): Partial<PatchStore> => ({
   }),
   removeBlock: vi.fn(),
   reorderBlockInLane: vi.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
 });
 
 
@@ -256,19 +259,172 @@ describe('ActionExecutor', () => {
   });
 
   describe('addAdapter', () => {
-    it('should return false and warn (deferred to Phase 3)', () => {
+    beforeEach(() => {
+      // Set up test blocks and connections for adapter tests
+      const sourceBlock: Block = {
+        id: 'source-block' as BlockId,
+        type: 'Oscillator',
+        label: 'Source',
+        inputs: [],
+        outputs: [{ id: 'out', label: 'Output', type: 'Signal<number>', direction: 'output' }],
+        params: {},
+        category: 'Time',
+        description: 'Source block',
+      };
+
+      const targetBlock: Block = {
+        id: 'target-block' as BlockId,
+        type: 'ClampSignal',
+        label: 'Target',
+        inputs: [{ id: 'in', label: 'Input', type: 'Signal<number>', direction: 'input' }],
+        outputs: [],
+        params: {},
+        category: 'Math',
+        description: 'Target block',
+      };
+
+      const adapterBlock: Block = {
+        id: 'adapter-block' as BlockId,
+        type: 'ClampSignal',
+        label: 'Clamp',
+        inputs: [{ id: 'in', label: 'Input', type: 'Signal<number>', direction: 'input' }],
+        outputs: [{ id: 'out', label: 'Output', type: 'Signal<number>', direction: 'output' }],
+        params: {},
+        category: 'Math',
+        description: 'Adapter block',
+      };
+
+      const connection: Connection = {
+        id: 'conn-1',
+        from: { blockId: 'source-block' as BlockId, slotId: 'out' },
+        to: { blockId: 'target-block' as BlockId, slotId: 'in' },
+      };
+
+      mockPatchStore.blocks = [sourceBlock, targetBlock];
+      mockPatchStore.connections = [connection];
+      mockPatchStore.lanes![0].blockIds = ['source-block' as BlockId, 'target-block' as BlockId];
+
+      // Mock addBlock to return adapter and add it to blocks
+      (mockPatchStore.addBlock as any) = vi.fn((_adapterType: string, laneId: LaneId) => {
+        const adapterId = 'adapter-block' as BlockId;
+        mockPatchStore.blocks!.push(adapterBlock);
+        mockPatchStore.lanes!.find(l => l.id === laneId)?.blockIds.push(adapterId);
+        return adapterId;
+      });
+    });
+
+    it('should insert adapter between connected ports', () => {
+      const result = actionExecutor.execute({
+        kind: 'addAdapter',
+        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        adapterType: 'ClampSignal',
+      });
+
+      expect(result).toBe(true);
+
+      // Verify adapter block was added
+      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('ClampSignal', 'phase');
+
+      // Verify old connection was removed
+      expect(mockPatchStore.disconnect).toHaveBeenCalledWith('conn-1');
+
+      // Verify new connections were added (source -> adapter -> target)
+      expect(mockPatchStore.connect).toHaveBeenCalledTimes(2);
+      expect(mockPatchStore.connect).toHaveBeenCalledWith('source-block', 'out', 'adapter-block', 'in');
+      expect(mockPatchStore.connect).toHaveBeenCalledWith('adapter-block', 'out', 'target-block', 'in');
+
+      // Verify adapter was selected
+      expect(mockUIStateStore.selectBlock).toHaveBeenCalledWith('adapter-block');
+    });
+
+    it('should return false if no connection from port', () => {
+      // Remove the connection
+      mockPatchStore.connections = [];
+
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = actionExecutor.execute({
         kind: 'addAdapter',
-        fromPort: { kind: 'port', blockId: 'block-1', portId: 'output' },
-        adapterType: 'scale',
+        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        adapterType: 'ClampSignal',
       });
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('addAdapter action deferred to Phase 3')
+        '[ActionExecutor] No connection found from port:',
+        expect.objectContaining({ blockId: 'source-block', portId: 'out' })
       );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should return false if lane not found', () => {
+      // Remove all lanes
+      mockPatchStore.lanes = [];
+
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const result = actionExecutor.execute({
+        kind: 'addAdapter',
+        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        adapterType: 'ClampSignal',
+      });
+
+      expect(result).toBe(false);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[ActionExecutor] Lane not found for block:',
+        'source-block'
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should handle adapter block with missing ports gracefully', () => {
+      // Create an adapter block with non-standard port names
+      const badAdapterBlock: Block = {
+        id: 'adapter-block' as BlockId,
+        type: 'BadAdapter',
+        label: 'Bad Adapter',
+        inputs: [{ id: 'nonstandard-input', label: 'Input', type: 'Signal<number>', direction: 'input' }],
+        outputs: [{ id: 'nonstandard-output', label: 'Output', type: 'Signal<number>', direction: 'output' }],
+        params: {},
+        category: 'Math',
+        description: 'Bad adapter',
+      };
+
+      // Override addBlock to add bad adapter
+      (mockPatchStore.addBlock as any) = vi.fn((_badAdapterType: string, laneId: LaneId) => {
+        const adapterId = 'adapter-block' as BlockId;
+        mockPatchStore.blocks!.push(badAdapterBlock);
+        mockPatchStore.lanes!.find(l => l.id === laneId)?.blockIds.push(adapterId);
+        return adapterId;
+      });
+
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const result = actionExecutor.execute({
+        kind: 'addAdapter',
+        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        adapterType: 'BadAdapter',
+      });
+
+      expect(result).toBe(false);
+
+      // Verify warning was logged
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[ActionExecutor] Adapter block missing expected ports:',
+        expect.objectContaining({
+          adapterType: 'BadAdapter',
+          inputs: ['nonstandard-input'],
+          outputs: ['nonstandard-output'],
+        })
+      );
+
+      // Verify original connection was restored
+      expect(mockPatchStore.connect).toHaveBeenCalledWith('source-block', 'out', 'target-block', 'in');
+
+      // Verify failed adapter block was removed
+      expect(mockPatchStore.removeBlock).toHaveBeenCalledWith('adapter-block');
 
       consoleWarnSpy.mockRestore();
     });

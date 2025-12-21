@@ -1,0 +1,26 @@
+Agent: iterative-implementer | 20251220_234500
+Mode: manual
+Completed: Action buttons for DiagnosticsConsole | Files: 2 | Commits: 1
+Tests: 727 passing, 2 failing (pre-existing in ActionExecutor.test.ts - unrelated to changes)
+Cache invalidated: None (no eval cache entries for DiagnosticsConsole)
+Status: complete
+
+Implementation Summary:
+- Added action buttons to DiagnosticRow component
+- Each diagnostic with actions now shows clickable buttons with icons
+- Added getActionIcon() and getActionLabel() helper functions
+- Action buttons execute via ActionExecutor
+- Buttons prevent row click propagation (stopPropagation)
+- Added CSS styling with hover states and opacity transitions
+- Action buttons appear between occurrence count and mute button
+
+Files Modified:
+- src/editor/components/DiagnosticsConsole.tsx
+- src/editor/components/DiagnosticsConsole.css
+
+Manual Validation:
+- Typecheck: PASSED
+- Lint: PASSED
+- Tests: 727/729 PASSING (2 pre-existing failures in ActionExecutor tests)
+
+Commit: 35792a5
