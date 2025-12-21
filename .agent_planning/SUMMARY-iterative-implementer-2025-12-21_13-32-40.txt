@@ -1,0 +1,52 @@
+Agent: iterative-implementer | 2025-12-21_14-45-00
+Mode: manual
+Completed: Bus Semantics Module export | Files: 1 | Commits: 0
+Tests: N/A (manual verification via typecheck)
+Cache invalidated: 0 entries (no stale cache)
+Status: complete
+
+TASK: Export Bus Semantics Module from semantic/index.ts
+
+CONTEXT:
+The busSemantics.ts file already existed with complete implementation of:
+- getSortedPublishers() - canonical publisher ordering
+- combineSignalArtifacts() - signal bus combination logic
+- combineFieldArtifacts() - field bus combination logic
+- validateCombineMode() - combine mode validation
+- getSupportedCombineModes() - supported modes query
+
+BusStore.ts was already using getSortedPublishers() from the module.
+compileBusAware.ts was already refactored to use the canonical functions.
+
+MISSING PIECE: The semantic/index.ts was NOT exporting the busSemantics functions.
+
+IMPLEMENTATION:
+1. Added export statement to src/editor/semantic/index.ts:
+   - Export all 5 functions from busSemantics module
+   - Updated module documentation to mention bus semantics
+
+2. Verified refactoring in compileBusAware.ts:
+   - Already uses getSortedPublishers() for sorting (line 590)
+   - Already uses combineSignalArtifacts() and combineFieldArtifacts() (lines 621, 623)
+   - Local duplicate functions already removed (comments at lines 77, 82, 87)
+   - NOTE: Still has local SIGNAL_COMBINE_MODES and FIELD_COMBINE_MODES constants
+     Could be replaced with getSupportedCombineModes() in future cleanup
+
+VALIDATION:
+- Ran `just typecheck` - PASSED with no errors
+- All imports resolve correctly
+- Single source of truth established for bus semantics
+
+ARCHITECTURE:
+semantic/
+  index.ts          - Main semantic kernel (NOW exports busSemantics)
+  busSemantics.ts   - Canonical bus logic (sorting, combining, validation)
+  graph.ts          - SemanticGraph implementation
+  validator.ts      - Validator implementation
+  types.ts          - Shared semantic types
+
+BENEFITS:
+1. Both UI (BusStore) and compiler (compileBusAware) use same sorting logic
+2. Prevents divergence between what UI shows and what compiles
+3. Single source of truth for bus combine semantics
+4. Easy to maintain - one place to update bus logic

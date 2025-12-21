@@ -1,0 +1,5 @@
+Agent: status-planner | 2025-12-21-133029
+Outcome: Created comprehensive Phase 5 cleanup plan for removing deprecated BlockParams/ParamSchema types
+Items: 10 major steps (P0: 1 audit, P1: 9 implementation) | Top: Pre-Flight Verification (MANDATORY) | PLAN-2025-12-21-133029.md
+Archived: 0 files
+Details: 815-line plan with dependency graph, removal order, risk assessment, and DoD checklist

@@ -1,0 +1,46 @@
+Agent: iterative-implementer | 2025-12-21_13-25-00
+Mode: manual
+Completed: Unified bus semantics - removed duplicate sorting/combine logic from compiler | Files: 1 | Commits: 1
+Cache invalidated: 0 entries (no cache invalidation needed - compiler implementation detail)
+Status: complete
+
+## Summary
+
+Successfully unified bus sorting and combination logic by removing duplicates from `compileBusAware.ts` and using the canonical `busSemantics` module instead.
+
+## Changes Made
+
+1. **Removed duplicate functions** from `compileBusAware.ts`:
+   - `sortPublishers()` - replaced with `getSortedPublishers()` from busSemantics
+   - `combineSignalArtifacts()` - using canonical version from busSemantics
+   - `combineFieldArtifacts()` - using canonical version from busSemantics
+
+2. **Added import** with CRITICAL comment:
+   ```typescript
+   // CRITICAL: Use busSemantics for ordering - single source of truth for UI and compiler
+   import { getSortedPublishers, combineSignalArtifacts, combineFieldArtifacts } from '../semantic/busSemantics';
+   ```
+
+3. **Updated getBusValue()** to use `getSortedPublishers(busId, publishers, false)`
+
+4. **Cleaned up unused imports** (Field, Vec2) that were only used by removed functions
+
+## Impact
+
+- **Line reduction**: Removed ~280 lines of duplicate code
+- **Single source of truth**: busSemantics is now the ONLY place bus ordering/combining logic lives
+- **Bug fix**: Eliminates non-deterministic ordering when BusStore and compiler had different implementations
+- **Maintainability**: Future changes to bus semantics only need to happen in one place
+
+## Verification
+
+- TypeScript compilation: PASS
+- No functional changes - only refactoring to use shared implementation
+
+## Files Modified
+
+- `/Users/bmf/code/oscilla-animator/src/editor/compiler/compileBusAware.ts`
+
+## Commit
+
+- ea91562: refactor(compiler): Use canonical busSemantics for sorting and combining

@@ -1,0 +1,26 @@
+Agent: status-planner | 2025-12-21 13:30:00
+Outcome: Created comprehensive plan for Remove Parameters Phase 1
+Items: 1 phase plan | Top: Slot Interface Extension | PLAN-2025-12-21-132956.md
+Archived: 0 files
+
+## Plan Summary
+
+**Goal**: Extend Slot interface to eliminate separate params/paramSchema concepts
+
+**Key Additions to Slot Interface**:
+- `defaultSource?: DefaultSource` - value, world, uiHint
+- `tier?: SlotTier` - primary/secondary for UI
+- Supporting types: SlotWorld, UIControlHint
+
+**Phase 1 Scope**: Type definitions only (2 hours)
+- All fields optional for backward compatibility
+- No implementation or migration
+- Foundation for 4 subsequent phases
+
+**Critical Decisions**:
+1. World classification: signal/field/scalar/config
+2. Config params trigger topology hot-swap
+3. Signal params allow continuous modulation
+4. Migration requires manual review (50+ blocks)
+
+**Next Steps**: Review plan, implement type definitions, wait for Phase 2 plan
