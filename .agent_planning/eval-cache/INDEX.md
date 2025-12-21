@@ -1,38 +1,43 @@
 # Evaluation Cache Index
 
-This directory contains reusable evaluation knowledge to avoid re-discovering project patterns.
+Reusable knowledge extracted from project evaluations. Use this to avoid re-discovering the same information.
 
-## Available Cache Files
+**Last Updated**: 2025-12-21 14:35:00
 
-| File | Scope | Confidence | Last Updated |
-|------|-------|------------|--------------|
-| `layout-architecture.md` | Lane system & layout state | FRESH | 2025-12-21 |
-| `time-architecture.md` | Time authority & TimeRoot system | FRESH | 2025-12-21 12:30 |
+---
+
+## Cached Topics
+
+| Topic | File | Cached | Source | Confidence |
+|-------|------|--------|--------|------------|
+| Replace Block Feature | replace-block-feature.md | 2025-12-21 14:35 | replace-block eval | HIGH |
+| WP1 Implementation Status | wp1-implementation-status.md | 2025-12-21 13:35 | project-evaluator (WP1 eval) | HIGH |
+| Time Architecture | time-architecture.md | 2025-12-21 12:31 | wp1-timeroot-compilers eval | HIGH |
+| Layout Architecture | layout-architecture.md | 2025-12-21 12:31 | wp1-timeroot-compilers eval | HIGH |
+| Bus Compiler Architecture | bus-compiler-architecture.md | 2025-12-21 13:35 | wp2-bus-aware-compiler eval | HIGH |
+| Compiler Architecture | compiler-architecture.md | 2025-12-21 13:35 | phase4-default-sources eval | HIGH |
+| Bus Semantics Module | bus-semantics.md | 2025-12-21 13:35 | project-evaluator | HIGH |
+| Bus Initialization | findings-buses-init.md | 2025-12-20 21:14 | bus-semantics-module eval | MEDIUM |
+| Runtime Macros | runtime-macros-expansion.md | 2025-12-20 21:14 | bus-semantics-module eval | MEDIUM |
+
+---
 
 ## Usage Guidelines
 
-**When evaluating:**
-1. Check this INDEX first
-2. Reuse FRESH/RECENT findings
-3. Re-verify RISKY/STALE items
-4. Update cache with new discoveries
+**Confidence Levels**:
+- **HIGH**: Just evaluated/implemented, highest trust
+- **MEDIUM**: < 7 days old, no changes to files
+- **LOW**: 7-30 days old, or dependencies changed
+- **STALE**: > 30 days old, or files in scope changed
 
-**What to cache:**
-- Test infrastructure and commands
-- Project structure and architecture
-- Common patterns and utilities
-- Runtime behavior per scope/domain
-- Break-it test patterns that work
+**When to Invalidate**:
+1. Files mentioned in cache entry are modified
+2. Related tests fail
+3. Architecture decisions change
+4. > 30 days since caching
 
-**What NOT to cache:**
-- Specific bug details (keep in WORK-EVALUATION files)
-- Point-in-time verdicts (COMPLETE/INCOMPLETE)
-- Test pass/fail counts (re-run to verify)
-- Feature-specific findings (unless broadly reusable)
-
-## Confidence Levels
-
-- **FRESH**: Just discovered (same day)
-- **RECENT**: Still valid (<1 week, no changes to related files)
-- **RISKY**: Related code changed, needs spot-check
-- **STALE**: Files in scope changed, full re-verification needed
+**How to Use**:
+1. Check INDEX.md for relevant topics
+2. Read cached entry for quick context
+3. Verify confidence level (STALE entries need re-validation)
+4. Reference original source if deep dive needed

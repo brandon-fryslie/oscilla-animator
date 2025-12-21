@@ -1,0 +1,32 @@
+Agent: project-evaluator | 2025-12-21-133500
+Scope: module/wp1-timeroot-compilers
+Completion: 85% | Gaps: 4 major features missing | Test Quality: HIGH
+Reused: time-architecture.md (FRESH) | Fresh: 23 files reviewed
+Cache updated: wp1-implementation-status.md in eval-cache/
+Ambiguities: 2 found (TimeModel update timing, scrubbing phase offset)
+Workflow: PAUSE - "Need clarification on dependency order and spec conflicts"
+
+Critical Finding: WP1 core implementation WORKS (TimeRoot compilers, TimeModel, player integration), but missing spec-defined features (wrap events, bus auto-publication, optional inputs) and both dependency prerequisites (WP0, bus-semantics-module) are PROPOSED with NO work started.
+
+Blocking Issues:
+1. Bus auto-publication cannot be safely implemented without WP0 (reserved bus enforcement)
+2. Spec conflict: TimeModel update timing (immediate vs. scheduled at pulse boundary)
+3. Dependency order violated: WP1 implemented before WP0 completion
+
+Missing Features (HIGH priority):
+- CycleTimeRoot missing outputs: wrap (Event), cycleT, cycleIndex
+- Bus auto-publication (phase->phaseA, wrap->pulse) not implemented
+- Optional inputs (phaseOffset, drift) not implemented
+
+Tech Debt:
+- Legacy inference paths still present (PhaseMachine, PhaseClock fallbacks)
+- Deprecated player properties (loopMode, playDirection)
+
+Recommendations:
+1. Clarify dependency order: Should WP0 be completed first?
+2. Resolve TimeModel update timing spec conflict
+3. Implement missing outputs + auto-publication (with or without WP0)
+4. Visual test TimeConsole UI mode switching
+5. Remove legacy code once safe
+
+-> STATUS-20251221-133500.md written to topic directory

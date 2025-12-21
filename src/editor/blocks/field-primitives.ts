@@ -45,6 +45,10 @@ export const FieldAddVec2 = createBlock({
  *
  * Takes a Field<number> in [0,1] and maps it to colors using a gradient.
  * The mapping can be direct or use different color spaces.
+ *
+ * Inputs with defaultSource:
+ * - colorA/colorB: Signal world (can be animated for breathing palettes)
+ * - mode: Config world (triggers hot-swap for different interpolation)
  */
 export const FieldColorize = createBlock({
   type: 'FieldColorize',
@@ -54,10 +58,41 @@ export const FieldColorize = createBlock({
   description: 'Map numeric field to colors',
   inputs: [
     input('values', 'Values', 'Field<number>'),
+    input('colorA', 'Color A', 'Signal<color>', {
+      tier: 'primary',
+      defaultSource: {
+        value: '#3B82F6',
+        world: 'signal', // Colors can be animated
+        uiHint: { kind: 'color' },
+      },
+    }),
+    input('colorB', 'Color B', 'Signal<color>', {
+      tier: 'primary',
+      defaultSource: {
+        value: '#EF4444',
+        world: 'signal',
+        uiHint: { kind: 'color' },
+      },
+    }),
+    input('mode', 'Mode', 'Signal<string>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 'lerp',
+        world: 'config', // Interpolation mode triggers hot-swap
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'lerp', label: 'Linear' },
+            { value: 'hue', label: 'Hue Rotate' },
+          ],
+        },
+      },
+    }),
   ],
   outputs: [
     output('colors', 'Colors', 'Field<color>'),
   ],
+  // TODO: Remove paramSchema after compiler updated to use defaultSource (Phase 4)
   paramSchema: [
     {
       key: 'colorA',
@@ -92,6 +127,10 @@ export const FieldColorize = createBlock({
  *
  * Takes a Field<number> and converts it to opacity values,
  * with optional clamping and curve application.
+ *
+ * Inputs with defaultSource:
+ * - min/max: Signal world (can be animated for breathing/pulsing opacity)
+ * - curve: Config world (triggers hot-swap for different curve shapes)
  */
 export const FieldOpacity = createBlock({
   type: 'FieldOpacity',
@@ -101,10 +140,43 @@ export const FieldOpacity = createBlock({
   description: 'Convert numeric field to opacity',
   inputs: [
     input('values', 'Values', 'Field<number>'),
+    input('min', 'Min Opacity', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal', // Opacity range can be animated
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 },
+      },
+    }),
+    input('max', 'Max Opacity', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 1,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 },
+      },
+    }),
+    input('curve', 'Curve', 'Signal<string>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 'linear',
+        world: 'config', // Curve function triggers hot-swap
+        uiHint: {
+          kind: 'select',
+          options: [
+            { value: 'linear', label: 'Linear' },
+            { value: 'smoothstep', label: 'Smooth' },
+            { value: 'square', label: 'Square' },
+            { value: 'sqrt', label: 'Square Root' },
+          ],
+        },
+      },
+    }),
   ],
   outputs: [
     output('opacity', 'Opacity', 'Field<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated to use defaultSource (Phase 4)
   paramSchema: [
     {
       key: 'min',

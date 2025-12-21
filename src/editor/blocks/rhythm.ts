@@ -11,6 +11,9 @@ import { input, output } from './utils';
  *
  * Generates discrete tick events at regular subdivisions of a phase signal.
  * Useful for creating rhythmic accents synced to a master phase.
+ *
+ * Inputs with defaultSource:
+ * - divisions: Scalar world (compile-time constant, triggers rebuild)
  */
 export const PulseDivider = createBlock({
   type: 'PulseDivider',
@@ -20,10 +23,19 @@ export const PulseDivider = createBlock({
   description: 'Generate tick events at phase subdivisions (e.g., quarter notes)',
   inputs: [
     input('phase', 'Phase', 'Signal<phase>'),
+    input('divisions', 'Divisions', 'Scalar:number', {
+      tier: 'primary',
+      defaultSource: {
+        value: 4,
+        world: 'scalar', // Compile-time count value
+        uiHint: { kind: 'slider', min: 1, max: 64, step: 1 },
+      },
+    }),
   ],
   outputs: [
     output('tick', 'Tick', 'Signal<Unit>'),
   ],
+  // TODO: Remove paramSchema after compiler updated to use defaultSource (Phase 4)
   paramSchema: [
     {
       key: 'divisions',
@@ -45,6 +57,9 @@ export const PulseDivider = createBlock({
  *
  * Generates an envelope that rises on trigger and decays over time.
  * Stateful block that tracks trigger time for envelope generation.
+ *
+ * Inputs with defaultSource:
+ * - attack/decay/peak: Signal world (can be animated for dynamic envelopes)
  */
 export const EnvelopeAD = createBlock({
   type: 'EnvelopeAD',
@@ -54,10 +69,35 @@ export const EnvelopeAD = createBlock({
   description: 'Attack/Decay envelope triggered by events',
   inputs: [
     input('trigger', 'Trigger', 'Signal<Unit>'),
+    input('attack', 'Attack (s)', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0.05,
+        world: 'signal', // Envelope timing can be modulated
+        uiHint: { kind: 'slider', min: 0.001, max: 2.0, step: 0.01 },
+      },
+    }),
+    input('decay', 'Decay (s)', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0.5,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0.001, max: 5.0, step: 0.01 },
+      },
+    }),
+    input('peak', 'Peak Value', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 1.0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 10, step: 0.1 },
+      },
+    }),
   ],
   outputs: [
     output('env', 'Envelope', 'Signal<number>'),
   ],
+  // TODO: Remove paramSchema after compiler updated to use defaultSource (Phase 4)
   paramSchema: [
     {
       key: 'attack',

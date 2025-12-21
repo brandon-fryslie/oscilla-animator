@@ -134,20 +134,30 @@ export type DiagnosticCode =
   | 'E_TIME_ROOT_MISSING'
   | 'E_TIME_ROOT_MULTIPLE'
   | 'E_TIME_ROOT_INVALID_TOPOLOGY'
+  | 'E_TIME_ROOT_UPSTREAM_DEPENDENCY'
+  | 'E_TIME_ROOT_BUS_LISTENER'
   // Type-related errors
   | 'E_TYPE_MISMATCH'
   | 'E_WORLD_MISMATCH'
   | 'E_DOMAIN_MISMATCH'
+  | 'E_TYPE_DESC_MISMATCH'
   // Graph topology errors
   | 'E_CYCLE_DETECTED'
   | 'E_MISSING_INPUT'
   | 'E_INVALID_CONNECTION'
+  // Reserved bus errors
+  | 'E_RESERVED_BUS_TYPE_MISMATCH'
+  | 'E_RESERVED_BUS_COMBINE_MODE_MISMATCH'
+  | 'E_BUS_COMBINE_MODE_INCOMPATIBLE'
+  // Composite errors
+  | 'E_COMPOSITE_CONTAINS_TIMEROOT'
   // Internal errors
   | 'E_VALIDATION_FAILED'
   // Bus-related warnings
   | 'W_BUS_EMPTY'
   | 'W_BUS_NO_PUBLISHERS'
   | 'W_BUS_COMBINE_CONFLICT'
+  | 'W_BUS_MULTIPLE_PUBLISHERS_CONTROL'
   // Graph structure warnings
   | 'W_GRAPH_UNUSED_OUTPUT'
   | 'W_GRAPH_DISCONNECTED_BLOCK'
