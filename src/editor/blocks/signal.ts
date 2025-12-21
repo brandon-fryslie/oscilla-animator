@@ -306,3 +306,58 @@ export const ClampSignal = createBlock({
   laneKind: 'Phase',
   priority: 24,
 });
+
+/**
+ * PhaseClockLegacy - Legacy time-based phase progression.
+ *
+ * @deprecated Use CycleTimeRoot or PhaseClock with TimeRoot input instead.
+ *
+ * This block owns its own time and produces a phase signal that cycles 0->1.
+ * Kept for backwards compatibility with existing patches.
+ */
+export const PhaseClockLegacy = createBlock({
+  type: 'PhaseClockLegacy',
+  label: 'Phase Clock (Legacy)',
+  form: 'primitive',
+  subcategory: 'Time',
+  category: 'Time',
+  description: '[Deprecated] Legacy phase clock that owns its own time. Use CycleTimeRoot instead.',
+  inputs: [],
+  outputs: [
+    output('phase', 'Phase', 'Signal<number>'),
+  ],
+  paramSchema: [
+    {
+      key: 'duration',
+      label: 'Duration (s)',
+      type: 'number',
+      min: 0.1,
+      max: 60,
+      step: 0.1,
+      defaultValue: 3,
+    },
+    {
+      key: 'mode',
+      label: 'Mode',
+      type: 'select',
+      options: [
+        { value: 'loop', label: 'Loop (0→1→0→1...)' },
+        { value: 'pingpong', label: 'Ping-Pong (0→1→0→1...)' },
+        { value: 'once', label: 'Once (0→1, then hold)' },
+      ],
+      defaultValue: 'loop',
+    },
+    {
+      key: 'offset',
+      label: 'Offset (s)',
+      type: 'number',
+      min: -10,
+      max: 10,
+      step: 0.1,
+      defaultValue: 0,
+    },
+  ],
+  color: '#F59E0B',
+  laneKind: 'Phase',
+  priority: 5,
+});
