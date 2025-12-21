@@ -8,13 +8,14 @@
  * - Severity counts header
  * - Click to "go to target" (navigates to the entity)
  * - Mute/unmute individual diagnostics
+ * - Action buttons for diagnostic fixes
  * - Empty state when patch is healthy
  */
 
 import { memo, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '../stores';
-import type { Diagnostic, Severity, TargetRef } from '../diagnostics/types';
+import type { Diagnostic, Severity, TargetRef, DiagnosticAction } from '../diagnostics/types';
 import './DiagnosticsConsole.css';
 
 // =============================================================================
@@ -84,6 +85,54 @@ function formatTarget(target: TargetRef): string {
   }
 }
 
+/**
+ * Get icon for a diagnostic action
+ */
+function getActionIcon(action: DiagnosticAction): string {
+  switch (action.kind) {
+    case 'createTimeRoot':
+      return '\u23F1\uFE0F'; // ⏱️ Timer
+    case 'insertBlock':
+      return '\u2795'; // ➕ Plus
+    case 'removeBlock':
+      return '\uD83D\uDDD1\uFE0F'; // 🗑️ Trash
+    case 'addAdapter':
+      return '\uD83D\uDD0C'; // 🔌 Plug
+    case 'openDocs':
+      return '\uD83D\uDCD6'; // 📖 Book
+    case 'goToTarget':
+      return '\uD83C\uDFAF'; // 🎯 Target
+    case 'muteDiagnostic':
+      return '\uD83D\uDD15'; // 🔕 Bell with slash
+    default:
+      return '\uD83D\uDD27'; // 🔧 Wrench
+  }
+}
+
+/**
+ * Get label for a diagnostic action
+ */
+function getActionLabel(action: DiagnosticAction): string {
+  switch (action.kind) {
+    case 'createTimeRoot':
+      return `Create ${action.timeRootKind} TimeRoot`;
+    case 'insertBlock':
+      return `Insert ${action.blockType}`;
+    case 'removeBlock':
+      return 'Remove block';
+    case 'addAdapter':
+      return `Add ${action.adapterType} adapter`;
+    case 'openDocs':
+      return 'Open documentation';
+    case 'goToTarget':
+      return 'Go to target';
+    case 'muteDiagnostic':
+      return 'Mute diagnostic';
+    default:
+      return 'Execute action';
+  }
+}
+
 // =============================================================================
 // Subcomponents
 // =============================================================================
@@ -94,6 +143,7 @@ interface DiagnosticRowProps {
   onGoToTarget: (target: TargetRef) => void;
   onMute: (id: string) => void;
   onUnmute: (id: string) => void;
+  onExecuteAction: (action: DiagnosticAction) => void;
 }
 
 const DiagnosticRow = memo(function DiagnosticRow({
@@ -102,6 +152,7 @@ const DiagnosticRow = memo(function DiagnosticRow({
   onGoToTarget,
   onMute,
   onUnmute,
+  onExecuteAction,
 }: DiagnosticRowProps) {
   const handleClick = useCallback(() => {
     onGoToTarget(diagnostic.primaryTarget);
@@ -140,6 +191,19 @@ const DiagnosticRow = memo(function DiagnosticRow({
       {diagnostic.metadata.occurrenceCount > 1 && (
         <span className="diagnostic-count">x{diagnostic.metadata.occurrenceCount}</span>
       )}
+      {diagnostic.actions?.map((action, index) => (
+        <button
+          key={index}
+          className="diagnostic-action-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onExecuteAction(action);
+          }}
+          title={getActionLabel(action)}
+        >
+          {getActionIcon(action)}
+        </button>
+      ))}
       <button
         className={`diagnostic-mute-btn ${isMuted ? 'unmute' : 'mute'}`}
         onClick={handleMuteToggle}
@@ -183,6 +247,17 @@ export const DiagnosticsConsole = observer(function DiagnosticsConsole({
       if (!success) {
         console.warn('[DiagnosticsConsole] Failed to navigate to target:', target);
       }
+    },
+    [actionExecutor]
+  );
+
+  const handleExecuteAction = useCallback(
+    (action: DiagnosticAction) => {
+      const success = actionExecutor.execute(action);
+      if (!success) {
+        console.warn('[DiagnosticsConsole] Failed to execute action:', action);
+      }
+      // Could add toast feedback here in future
     },
     [actionExecutor]
   );
@@ -295,6 +370,7 @@ export const DiagnosticsConsole = observer(function DiagnosticsConsole({
                 onGoToTarget={handleGoToTarget}
                 onMute={handleMute}
                 onUnmute={handleUnmute}
+                onExecuteAction={handleExecuteAction}
               />
             ))}
           </div>
