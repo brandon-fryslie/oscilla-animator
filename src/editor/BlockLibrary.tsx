@@ -5,7 +5,7 @@ import { useStore } from './stores';
 import { ALL_SUBCATEGORIES } from './types';
 import type { BlockSubcategory, BlockForm } from './types';
 import type { BlockDefinition } from './blocks/types';
-import { getBlockDefinitions, getBlocksForPalette, getBlockTags } from './blocks';
+import { getBlockDefinitions, getBlocksForPalette, getBlockTags, getBlockForm } from './blocks';
 import './BlockLibrary.css';
 
 // import { listCompositeDefinitions } from './composites'; // TODO: Refactor composites
@@ -48,10 +48,11 @@ function groupBlocksByForm(blocks: readonly BlockDefinition[]): FormGroup[] {
   const formMap = new Map<BlockForm, Map<BlockSubcategory, BlockDefinition[]>>();
 
   for (const block of blocks) {
-    let subcategoryMap = formMap.get(block.form);
+    const form = getBlockForm(block);
+    let subcategoryMap = formMap.get(form);
     if (!subcategoryMap) {
       subcategoryMap = new Map<BlockSubcategory, BlockDefinition[]>();
-      formMap.set(block.form, subcategoryMap);
+      formMap.set(form, subcategoryMap);
     }
 
     const subcategory = block.subcategory ?? 'Other';

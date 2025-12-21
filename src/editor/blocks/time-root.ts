@@ -22,7 +22,6 @@ import { output } from './utils';
 export const FiniteTimeRoot = createBlock({
   type: 'FiniteTimeRoot',
   label: 'Finite Time',
-  form: 'primitive',
   subcategory: 'TimeRoot',
   category: 'TimeRoot',
   description: 'Finite performance with known duration',
@@ -58,7 +57,6 @@ export const FiniteTimeRoot = createBlock({
 export const CycleTimeRoot = createBlock({
   type: 'CycleTimeRoot',
   label: 'Cycle Time',
-  form: 'primitive',
   subcategory: 'TimeRoot',
   category: 'TimeRoot',
   description: 'Looping primary cycle',
@@ -104,7 +102,6 @@ export const CycleTimeRoot = createBlock({
 export const InfiniteTimeRoot = createBlock({
   type: 'InfiniteTimeRoot',
   label: 'Infinite Time',
-  form: 'primitive',
   subcategory: 'TimeRoot',
   category: 'TimeRoot',
   description: 'Ambient, unbounded time (no primary cycle)',

@@ -18,7 +18,7 @@ function createMacro(config: {
   return {
     type: config.type,
     label: config.label,
-    form: 'macro',
+    // Note: form is derived from type prefix 'macro:' via getBlockForm()
     subcategory: config.subcategory || 'Quick Start',
     category: 'Macros',
     description: config.description,

@@ -16,7 +16,6 @@ import { input, output } from './utils';
 export const Oscillator = createBlock({
   type: 'Oscillator',
   label: 'Oscillator',
-  form: 'primitive',
   subcategory: 'Time',
   category: 'Time',
   description: 'Generate waveforms (sine, cosine, triangle, saw) from phase',
@@ -72,7 +71,6 @@ export const Oscillator = createBlock({
 export const Shaper = createBlock({
   type: 'Shaper',
   label: 'Shaper',
-  form: 'primitive',
   subcategory: 'Time',
   category: 'Time',
   description: 'Shape signals with tanh, sigmoid, smoothstep, etc.',
@@ -120,7 +118,6 @@ export const Shaper = createBlock({
 export const ColorLFO = createBlock({
   type: 'ColorLFO',
   label: 'Color LFO',
-  form: 'primitive',
   subcategory: 'Time',
   category: 'Time',
   description: 'Generate color from phase (hue rotation)',
@@ -178,7 +175,6 @@ export const ColorLFO = createBlock({
 export const AddSignal = createBlock({
   type: 'AddSignal',
   label: 'Add',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Math',
   description: 'Add two signals element-wise',
@@ -203,7 +199,6 @@ export const AddSignal = createBlock({
 export const MulSignal = createBlock({
   type: 'MulSignal',
   label: 'Multiply',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Math',
   description: 'Multiply two signals element-wise',
@@ -226,7 +221,6 @@ export const MulSignal = createBlock({
 export const MinSignal = createBlock({
   type: 'MinSignal',
   label: 'Min',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Math',
   description: 'Component-wise minimum of two signals',
@@ -249,7 +243,6 @@ export const MinSignal = createBlock({
 export const MaxSignal = createBlock({
   type: 'MaxSignal',
   label: 'Max',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Math',
   description: 'Component-wise maximum of two signals',
@@ -272,7 +265,6 @@ export const MaxSignal = createBlock({
 export const ClampSignal = createBlock({
   type: 'ClampSignal',
   label: 'Clamp',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Math',
   description: 'Clamp signal values to a range',
@@ -318,7 +310,6 @@ export const ClampSignal = createBlock({
 export const PhaseClockLegacy = createBlock({
   type: 'PhaseClockLegacy',
   label: 'Phase Clock (Legacy)',
-  form: 'primitive',
   subcategory: 'Time',
   category: 'Time',
   description: '[Deprecated] Legacy phase clock that owns its own time. Use CycleTimeRoot instead.',

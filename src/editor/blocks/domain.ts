@@ -16,7 +16,6 @@ import { input, output } from './utils';
 export const DomainN = createBlock({
   type: 'DomainN',
   label: 'Domain N',
-  form: 'primitive',
   subcategory: 'Sources',
   category: 'Scene',
   description: 'Create a domain with N elements, each with a stable ID',
@@ -60,7 +59,6 @@ export const DomainN = createBlock({
 export const GridDomain = createBlock({
   type: 'GridDomain',
   label: 'Grid Domain',
-  form: 'primitive',
   subcategory: 'Sources',
   category: 'Scene',
   description: 'Create a grid domain with stable element IDs and base positions',
@@ -131,7 +129,6 @@ export const GridDomain = createBlock({
 export const SVGSampleDomain = createBlock({
   type: 'SVGSampleDomain',
   label: 'SVG Sample Domain',
-  form: 'primitive',
   subcategory: 'Sources',
   category: 'Scene',
   description: 'Sample points from SVG path with stable element IDs',
@@ -190,7 +187,6 @@ export const SVGSampleDomain = createBlock({
 export const StableIdHash = createBlock({
   type: 'StableIdHash',
   label: 'Stable ID Hash',
-  form: 'primitive',
   subcategory: 'Fields',
   category: 'Fields',
   description: 'Hash stable element IDs to deterministic [0,1) values with salt',
@@ -224,7 +220,6 @@ export const StableIdHash = createBlock({
 export const PositionMapGrid = createBlock({
   type: 'PositionMapGrid',
   label: 'Grid Layout',
-  form: 'primitive',
   subcategory: 'Spatial',
   category: 'Fields',
   description: 'Arrange domain elements in a grid pattern',
@@ -304,7 +299,6 @@ export const PositionMapGrid = createBlock({
 export const PositionMapCircle = createBlock({
   type: 'PositionMapCircle',
   label: 'Circle Layout',
-  form: 'primitive',
   subcategory: 'Spatial',
   category: 'Fields',
   description: 'Arrange domain elements in a circle',
@@ -385,7 +379,6 @@ export const PositionMapCircle = createBlock({
 export const PositionMapLine = createBlock({
   type: 'PositionMapLine',
   label: 'Line Layout',
-  form: 'primitive',
   subcategory: 'Spatial',
   category: 'Fields',
   description: 'Arrange domain elements along a line',
@@ -453,7 +446,6 @@ export const PositionMapLine = createBlock({
 export const FieldConstNumber = createBlock({
   type: 'FieldConstNumber',
   label: 'Constant Number',
-  form: 'primitive',
   subcategory: 'Fields',
   category: 'Fields',
   description: 'Uniform numeric value for all elements',
@@ -485,7 +477,6 @@ export const FieldConstNumber = createBlock({
 export const FieldConstColor = createBlock({
   type: 'FieldConstColor',
   label: 'Constant Color',
-  form: 'primitive',
   subcategory: 'Style',
   category: 'Fields',
   description: 'Uniform color for all elements',
@@ -516,7 +507,6 @@ export const FieldConstColor = createBlock({
 export const FieldHash01ById = createBlock({
   type: 'FieldHash01ById',
   label: 'Random Per Element',
-  form: 'primitive',
   subcategory: 'Fields',
   category: 'Fields',
   description: 'Deterministic random value per element (0 to 1)',
@@ -548,7 +538,6 @@ export const FieldHash01ById = createBlock({
 export const FieldMapNumber = createBlock({
   type: 'FieldMapNumber',
   label: 'Map Number',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Fields',
   description: 'Apply a function to each element of a numeric field',
@@ -615,7 +604,6 @@ export const FieldMapNumber = createBlock({
 export const FieldMapVec2 = createBlock({
   type: 'FieldMapVec2',
   label: 'Transform Positions',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Fields',
   description: 'Apply spatial transformations to position fields',
@@ -713,7 +701,6 @@ export const FieldMapVec2 = createBlock({
 export const FieldZipNumber = createBlock({
   type: 'FieldZipNumber',
   label: 'Combine Numbers',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Fields',
   description: 'Combine two numeric fields element-wise',
@@ -753,7 +740,6 @@ export const FieldZipNumber = createBlock({
 export const JitterFieldVec2 = createBlock({
   type: 'JitterFieldVec2',
   label: 'Jitter Field',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Fields',
   description: 'Animated per-element position drift',
@@ -798,7 +784,6 @@ export const JitterFieldVec2 = createBlock({
 export const FieldFromSignalBroadcast = createBlock({
   type: 'FieldFromSignalBroadcast',
   label: 'Signal to Field',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Fields',
   description: 'Broadcast signal value to all field elements',
@@ -824,7 +809,6 @@ export const FieldFromSignalBroadcast = createBlock({
 export const FieldZipSignal = createBlock({
   type: 'FieldZipSignal',
   label: 'Field + Signal',
-  form: 'primitive',
   subcategory: 'Math',
   category: 'Fields',
   description: 'Combine field with signal value',
@@ -867,7 +851,6 @@ export const FieldZipSignal = createBlock({
 export const RenderInstances2D = createBlock({
   type: 'RenderInstances2D',
   label: 'Render Instances 2D',
-  form: 'primitive',
   subcategory: 'Render',
   category: 'Render',
   description: 'Render domain elements as 2D circles',

@@ -7,6 +7,7 @@
 
 import type { Block, Connection, BlockId, Slot } from './types';
 import type { BlockDefinition } from './blocks/types';
+import { getBlockForm } from './blocks/types';
 import { areTypesCompatible } from './portUtils';
 import { getBlockDefinition } from './blocks/registry';
 
@@ -77,7 +78,7 @@ export function findCompatibleReplacements(
     if (def.laneKind !== blockLaneKind) return false;
 
     // Don't suggest macros as replacements (they expand into multiple blocks)
-    if (def.form === 'macro') return false;
+    if (getBlockForm(def) === 'macro') return false;
 
     // Check if the new definition has compatible slots for all connected inputs
     for (const inputSlot of inputSlots) {

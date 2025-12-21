@@ -1,4 +1,5 @@
 import type { BlockDefinition, BlockTags, LaneKind, BlockCategory } from './types';
+import { getBlockForm } from './types';
 
 // Import domain blocks (new system only)
 import * as DomainBlocks from './domain';
@@ -43,8 +44,8 @@ function normalizeDefinition(definition: BlockDefinition): BlockDefinition {
 export function getBlockTags(definition: BlockDefinition): BlockTags {
   const tags: BlockTags = { ...(definition.tags ?? {}) };
 
-  // Normalize canonical tags
-  tags.form = definition.form;
+  // Normalize canonical tags - form is derived, not stored
+  tags.form = getBlockForm(definition);
   tags.subcategory = definition.subcategory ?? 'Other';
   tags.laneKind = definition.laneKind;
 

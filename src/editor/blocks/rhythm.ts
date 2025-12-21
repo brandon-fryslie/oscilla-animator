@@ -15,7 +15,6 @@ import { input, output } from './utils';
 export const PulseDivider = createBlock({
   type: 'PulseDivider',
   label: 'Pulse Divider',
-  form: 'primitive',
   subcategory: 'Time',
   category: 'Events',
   description: 'Generate tick events at phase subdivisions (e.g., quarter notes)',
@@ -50,7 +49,6 @@ export const PulseDivider = createBlock({
 export const EnvelopeAD = createBlock({
   type: 'EnvelopeAD',
   label: 'Envelope (AD)',
-  form: 'primitive',
   subcategory: 'Time',
   category: 'Events',
   description: 'Attack/Decay envelope triggered by events',

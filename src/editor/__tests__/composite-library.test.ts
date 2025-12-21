@@ -15,6 +15,7 @@ import { registerAllComposites, getCompositeBlockDefinitions } from '../composit
 import { MACRO_REGISTRY, getMacroKey, getMacroExpansion } from '../macros';
 import { RootStore } from '../stores/RootStore';
 import { createCompilerService } from '../compiler';
+import { getBlockForm } from '../blocks/types';
 
 describe('Composite Registration', () => {
   beforeEach(() => {
@@ -62,7 +63,8 @@ describe('Composite Registration', () => {
 
     for (const def of blockDefs) {
       expect(def.type).toMatch(/^composite:/);
-      expect(def.form).toBe('composite');
+      // form is derived from compositeDefinition, not stored
+      expect(getBlockForm(def)).toBe('composite');
     }
   });
 });

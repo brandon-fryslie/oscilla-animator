@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BLOCK_DEFINITIONS, getBlockTags } from '../blocks';
+import { BLOCK_DEFINITIONS, getBlockTags, getBlockForm } from '../blocks';
 
 describe('block registry tags', () => {
   it('populates tags for every block definition', () => {
@@ -9,7 +9,8 @@ describe('block registry tags', () => {
       const tags = getBlockTags(definition);
 
       expect(tags).toBeDefined();
-      expect(tags.form).toBe(definition.form);
+      // form is derived, not stored
+      expect(tags.form).toBe(getBlockForm(definition));
       // subcategory defaults to 'Other' when not defined
       expect(tags.subcategory).toBe(definition.subcategory ?? 'Other');
       expect(tags.laneKind).toBe(definition.laneKind);

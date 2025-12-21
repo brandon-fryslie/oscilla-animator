@@ -5,7 +5,7 @@
  * (in composites.ts) and the existing block registry and compiler systems.
  */
 
-import type { BlockDefinition, BlockCategory, BlockTags, BlockForm } from './blocks/types';
+import type { BlockDefinition, BlockCategory, BlockTags } from './blocks/types';
 import type { CompoundGraph } from './blocks/types';
 import type { CompositeDefinition, CompositeGraph } from './composites';
 import { listCompositeDefinitions } from './composites';
@@ -77,7 +77,7 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
     subcategory: def.subcategory,
     laneKind: def.laneKind,
     laneFlavor: def.laneFlavor,
-    form: 'composite' as BlockForm,
+    // Note: form is derived from compositeDefinition via getBlockForm()
     inputs,
     outputs,
     defaultParams: {}, // Empty default params
@@ -85,7 +85,6 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
     priority: 100, // Lower priority than primitive blocks
     tags: {
       ...def.tags,
-      form: 'composite',
       subcategory: def.subcategory,
       laneKind: def.laneKind,
       origin: 'composite',

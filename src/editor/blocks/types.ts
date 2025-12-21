@@ -25,13 +25,12 @@ export interface BlockDefinition {
   readonly label: string;
 
   /**
-   * Block form: primitive, composite, legacy-composite, or macro
-   * - primitive: Irreducible atomic operations
-   * - composite: Built from primitives, single unit in UI
-   * - legacy-composite: Existing blocks pending migration
-   * - macro: Expands into visible blocks when added
+   * @deprecated Form is now derived from structure. Use getBlockForm() instead.
+   * - Macros: type starts with 'macro:'
+   * - Composites: have compositeDefinition
+   * - Primitives: everything else
    */
-  readonly form: BlockForm;
+  readonly form?: BlockForm;
 
   /**
    * Subcategory within form for organization.
@@ -145,4 +144,31 @@ export interface ParamSchema {
   readonly step?: number;
   readonly options?: readonly { value: string; label: string }[];
   readonly defaultValue: unknown;
+}
+
+// =============================================================================
+// Block Form Derivation
+// =============================================================================
+
+/**
+ * Derive the form of a block from its structure.
+ *
+ * Form is NOT stored as metadata - it's derived from how the block is defined:
+ * - Macros: type starts with 'macro:' (expand into visible blocks)
+ * - Composites: have compositeDefinition (internal graph, single unit in UI)
+ * - Primitives: everything else (atomic operations)
+ */
+export function getBlockForm(def: BlockDefinition): BlockForm {
+  // Macros have a 'macro:' prefix by convention
+  if (def.type.startsWith('macro:')) {
+    return 'macro';
+  }
+
+  // Composites have a compositeDefinition (and typically 'composite:' prefix)
+  if (def.compositeDefinition != null) {
+    return 'composite';
+  }
+
+  // Everything else is a primitive
+  return 'primitive';
 }

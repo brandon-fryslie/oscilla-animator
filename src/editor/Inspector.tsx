@@ -9,7 +9,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
 import type { PortRef, Block, Slot, BlockForm, Connection } from './types';
-import { getBlockDefinition, getBlockTags, getBlockDefinitions, type BlockDefinition, type BlockTags, type CompoundGraph } from './blocks';
+import { getBlockDefinition, getBlockTags, getBlockDefinitions, getBlockForm, type BlockDefinition, type BlockTags, type CompoundGraph } from './blocks';
 import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint } from './portUtils';
 import './Inspector.css';
 
@@ -593,7 +593,7 @@ function DefinitionPreview({ definition }: { definition: BlockDefinition }) {
         <h2>{definition.label}</h2>
         <div className="block-meta">
           <span className="block-preview-badge">Preview</span>
-          <span className="block-tier-badge">{formatFormLabel(definition.form)}</span>
+          <span className="block-tier-badge">{formatFormLabel(getBlockForm(definition))}</span>
           <span className="block-subcategory-badge">{definition.subcategory}</span>
           {isComposite && <span className="block-composite-badge">Composite</span>}
           <span
