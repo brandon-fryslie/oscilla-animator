@@ -84,8 +84,6 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const [cuePoints, setCuePoints] = useState<readonly CuePoint[]>([]);
   const [timeModel, setTimeModel] = useState<TimeModel>(DEFAULT_TIME_MODEL);
 
-  // Infinite mode view offset state
-  const [viewOffset, setViewOffset] = useState(0);
 
   // Pan and zoom state
   const [panOffset, setPanOffset] = useState<PanOffset>({ x: 0, y: 0 });
@@ -93,6 +91,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ mouseX: number; mouseY: number; panX: number; panY: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const didPanRef = useRef(false); // Track if mouse moved during drag (to distinguish click from pan)
 
   // Speed and seed from store (with fallbacks)
   const speed = store.uiStore.settings.speed;
@@ -250,27 +249,13 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     store.uiStore.setFiniteLoopMode(enabled);
   }, [store]);
 
-  // Infinite mode handlers
-  const handleViewOffsetChange = useCallback((offset: number) => {
-    setViewOffset(offset);
-  }, []);
-
-  const handleWindowChange = useCallback((windowMs: number) => {
-    // Update the time model with new window size
-    setTimeModel((prev) => {
-      if (prev.kind === 'infinite') {
-        return { ...prev, windowMs };
-      }
-      return prev;
-    });
-  }, []);
-
   // Pan handlers for mouse drag
   const handlePanStart = useCallback((e: React.MouseEvent) => {
     // Only start pan on primary mouse button
     if (e.button !== 0) return;
 
     setIsPanning(true);
+    didPanRef.current = false; // Reset pan tracking
     panStartRef.current = {
       mouseX: e.clientX,
       mouseY: e.clientY,
@@ -285,6 +270,13 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
 
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Mark that we actually panned (moved significantly)
+    const deltaPixels = Math.abs(e.clientX - panStartRef.current.mouseX) +
+                        Math.abs(e.clientY - panStartRef.current.mouseY);
+    if (deltaPixels > 3) {
+      didPanRef.current = true;
+    }
 
     // Calculate scale between screen pixels and SVG coordinates (accounting for zoom)
     const scaleX = (width / zoom) / canvas.clientWidth;
@@ -304,6 +296,20 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     setIsPanning(false);
     panStartRef.current = null;
   }, []);
+
+  // Click handler for play/pause toggle (only if not panning)
+  const handleCanvasClick = useCallback(() => {
+    if (didPanRef.current) {
+      didPanRef.current = false;
+      return; // Was a pan, not a click
+    }
+    // Toggle play/pause
+    if (playState === 'playing') {
+      handlePause();
+    } else {
+      handlePlay();
+    }
+  }, [playState, handlePlay, handlePause]);
 
   const handleResetView = useCallback(() => {
     setPanOffset({ x: 0, y: 0 });
@@ -368,6 +374,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         onMouseMove={handlePanMove}
         onMouseUp={handlePanEnd}
         onMouseLeave={handlePanEnd}
+        onClick={handleCanvasClick}
         onDoubleClick={handleResetView}
         onWheel={handleWheel}
       >
@@ -378,28 +385,25 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
           viewBox={`${panOffset.x} ${panOffset.y} ${width / zoom} ${height / zoom}`}
           className="preview-svg"
         />
-      </div>
 
-      {/* TimeConsole replaces old scrubber/buttons */}
-      <TimeConsole
-        timeModel={timeModel}
-        currentTime={currentTime}
-        playState={playState}
-        speed={speed}
-        seed={seed}
-        cuePoints={cuePoints}
-        viewOffset={viewOffset}
-        finiteLoopMode={finiteLoopMode}
-        onScrub={handleScrub}
-        onPlay={handlePlay}
-        onPause={handlePause}
-        onReset={handleReset}
-        onSpeedChange={handleSpeedChange}
-        onSeedChange={handleSeedChange}
-        onViewOffsetChange={handleViewOffsetChange}
-        onWindowChange={handleWindowChange}
-        onFiniteLoopModeChange={handleFiniteLoopModeChange}
-      />
+        {/* TimeConsole anchored inside preview canvas */}
+        <TimeConsole
+          timeModel={timeModel}
+          currentTime={currentTime}
+          playState={playState}
+          speed={speed}
+          seed={seed}
+          cuePoints={cuePoints}
+          finiteLoopMode={finiteLoopMode}
+          onScrub={handleScrub}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onReset={handleReset}
+          onSpeedChange={handleSpeedChange}
+          onSeedChange={handleSeedChange}
+          onFiniteLoopModeChange={handleFiniteLoopModeChange}
+        />
+      </div>
     </div>
   );
 });

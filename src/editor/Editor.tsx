@@ -9,7 +9,7 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -30,6 +30,7 @@ import { ContextMenu } from './ContextMenu';
 import { PathManagerModal } from './PathManagerModal';
 import { createCompilerService, setupAutoCompile } from './compiler';
 import { ControlSurfaceStore, ControlSurfacePanel, generateSurfaceForMacro } from './controlSurface';
+import { useEditorLayout } from './useEditorLayout';
 import type { BlockDefinition } from './blocks';
 import type { LaneId } from './types';
 import './Editor.css';
@@ -38,9 +39,6 @@ import { HelpCenterModal, HelpPanel, type HelpCenterTopicId } from './HelpCenter
 
 type HelpTopic = 'intro' | 'library' | 'inspector' | 'preview' | 'patch' | 'controlSurface';
 const TOUR_COMPLETE_KEY = 'loom-editor-tour-complete';
-
-// P1/P2: Sidebar mode types
-type SidebarMode = 'hidden' | '1x' | '2x';
 
 interface HelpModalProps {
   topic: HelpTopic;
@@ -408,97 +406,48 @@ export const Editor = observer(() => {
   // Create compiler service
   const compilerService = useMemo(() => createCompilerService(store), [store]);
 
-  // Layout state
-  const [libraryCollapsed, setLibraryCollapsed] = useState(false);
-  const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
-  const [leftSplit, setLeftSplit] = useState(0.5); // library vs inspector
-  const [centerSplit, setCenterSplit] = useState(0.4); // preview vs bay
-  const [patchBayCollapsed, setPatchBayCollapsed] = useState(false);
-  const [busBoardCollapsed, setBusBoardCollapsed] = useState(false);
-  const [baySplit, setBaySplit] = useState(0.5); // patchbay vs busboard
+  // Layout state - persisted in localStorage via useEditorLayout hook
+  const {
+    libraryCollapsed,
+    setLibraryCollapsed,
+    inspectorCollapsed,
+    setInspectorCollapsed,
+    leftSplit,
+    centerSplit,
+    patchBayCollapsed,
+    setPatchBayCollapsed,
+    busBoardCollapsed,
+    setBusBoardCollapsed,
+    baySplit,
+    bayCollective,
+    toggleBayCollective,
+    leftSidebarMode,
+    setLeftSidebarMode,
+    rightSidebarMode,
+    setRightSidebarMode,
+    controlsCollapsed,
+    setControlsCollapsed,
+    helpPanelCollapsed,
+    setHelpPanelCollapsed,
+    dragging,
+    setDragging,
+    leftColumnRef,
+    centerColumnRef,
+    bayRef,
+    getLeftSidebarWidth,
+    getRightSidebarWidth,
+    applyDesignerView,
+    applyPerformanceView,
+  } = useEditorLayout();
 
-  // P1: Bay collective collapse state
-  const [bayCollective, setBayCollective] = useState(false);
-  const [savedBaySplit, setSavedBaySplit] = useState(0.5);
-
-  // P1/P2: Sidebar mode state
-  const [leftSidebarMode, setLeftSidebarMode] = useState<SidebarMode>('1x');
-  const [rightSidebarMode, setRightSidebarMode] = useState<SidebarMode>('1x');
-
-  const [dragging, setDragging] = useState<null | 'left-split' | 'center-split' | 'bay-split'>(null);
-  const leftColumnRef = useRef<HTMLDivElement | null>(null);
-  const centerColumnRef = useRef<HTMLDivElement | null>(null);
-  const bayRef = useRef<HTMLDivElement | null>(null);
   const [helpTopic, setHelpTopic] = useState<HelpTopic | null>(null);
   const [hasCompletedTour, setHasCompletedTour] = useState(false);
   const [showHelpNudge, setShowHelpNudge] = useState(false);
   const [helpCenterOpen, setHelpCenterOpen] = useState(false);
   const [isPathsModalOpen, setIsPathsModalOpen] = useState(false);
 
-  // Help panel state (embedded in right sidebar)
-  const [helpPanelCollapsed, setHelpPanelCollapsed] = useState(true); // collapsed by default
+  // Help panel topic state
   const [helpPanelTopicId, setHelpPanelTopicId] = useState<HelpCenterTopicId>('overview');
-
-  // Controls panel collapsible state - collapsed by default
-  const [controlsCollapsed, setControlsCollapsed] = useState(true);
-
-  // P1: Bay collective collapse logic
-  const toggleBayCollective = () => {
-    if (bayCollective) {
-      // Expand both panels to saved split
-      setPatchBayCollapsed(false);
-      setBusBoardCollapsed(false);
-      setBaySplit(savedBaySplit);
-      setBayCollective(false);
-    } else {
-      // Save current split and collapse both
-      setSavedBaySplit(baySplit);
-      setPatchBayCollapsed(true);
-      setBusBoardCollapsed(true);
-      setBayCollective(true);
-    }
-  };
-
-  // P1: Clear bay collective state when manually expanding individual panels
-  useEffect(() => {
-    if (bayCollective && (!patchBayCollapsed || !busBoardCollapsed)) {
-      setBayCollective(false);
-    }
-  }, [patchBayCollapsed, busBoardCollapsed, bayCollective]);
-
-  // P1/P2: Sidebar mode helpers
-  const getLeftSidebarWidth = (): string => {
-    if (leftSidebarMode === 'hidden') return '24px'; // collapsed tab width
-    if (leftSidebarMode === '2x') return '640px';
-    return '320px'; // 1x
-  };
-
-  const getRightSidebarWidth = (): string => {
-    if (rightSidebarMode === 'hidden') return '24px'; // collapsed tab width
-    if (rightSidebarMode === '2x') return '840px';
-    return '420px'; // 1x
-  };
-
-  // P2: View preset functions
-  const applyDesignerView = () => {
-    setLeftSidebarMode('1x');
-    setLibraryCollapsed(false);
-    setInspectorCollapsed(false);
-    setPatchBayCollapsed(false);
-    setBusBoardCollapsed(false);
-    setBayCollective(false);
-    setCenterSplit(0.4);
-    setRightSidebarMode('1x');
-  };
-
-  const applyPerformanceView = () => {
-    setLeftSidebarMode('hidden');
-    setPatchBayCollapsed(true);
-    setBusBoardCollapsed(true);
-    setBayCollective(true);
-    setCenterSplit(0.7);
-    setRightSidebarMode('2x');
-  };
 
   // Set up auto-compile on patch changes
   useEffect(() => {
@@ -558,39 +507,6 @@ export const Editor = observer(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  // Drag handles for resizers
-  useEffect(() => {
-    if (!dragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (dragging === 'left-split' && leftColumnRef.current) {
-        const rect = leftColumnRef.current.getBoundingClientRect();
-        const ratio = (e.clientY - rect.top) / rect.height;
-        setLeftSplit(Math.max(0.2, Math.min(0.8, ratio)));
-      }
-      if (dragging === 'center-split' && centerColumnRef.current) {
-        const rect = centerColumnRef.current.getBoundingClientRect();
-        const ratio = (e.clientY - rect.top) / rect.height;
-        setCenterSplit(Math.max(0.2, Math.min(0.8, ratio)));
-      }
-      if (dragging === 'bay-split' && bayRef.current) {
-        const rect = bayRef.current.getBoundingClientRect();
-        const ratio = (e.clientX - rect.left) / rect.width;
-        setBaySplit(Math.max(0.2, Math.min(0.8, ratio)));
-      }
-    };
-
-    const handleMouseUp = () => setDragging(null);
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [dragging]);
 
   // Load a default macro on startup and generate its control surface
   useEffect(() => {

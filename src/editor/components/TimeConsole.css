@@ -816,3 +816,82 @@
   background: #4a9eff;
   border-color: #4a9eff;
 }
+
+/* =============================================================================
+   Simplified Infinite Controls - PhaseIndicator based
+   ============================================================================= */
+
+.infinite-controls-simple {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 2px;
+}
+
+.infinite-controls-simple:hover {
+  transform: scale(1.05);
+}
+
+.infinite-controls-simple.compact {
+  padding: 0;
+}
+
+/* Pause overlay with icon */
+.infinite-pause-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: rgba(74, 158, 255, 0.9);
+  text-shadow: 0 0 4px rgba(74, 158, 255, 0.5);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Smaller pause icon for compact mode */
+.infinite-controls-simple.compact .infinite-pause-overlay {
+  font-size: 10px;
+}
+
+/* Infinite chip - special circular chip for infinite mode */
+.time-console-chip.infinite-chip {
+  padding: 4px;
+  border-radius: 50%;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.time-console-chip.infinite-chip:hover {
+  border-color: #9c27b0;
+}
+
+/* =============================================================================
+   Finite Mode - Loop Toggle Button
+   ============================================================================= */
+
+.finite-loop-toggle {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: transparent;
+  border: 1px solid #444;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.finite-loop-toggle:hover {
+  border-color: #666;
+  color: #888;
+}
+
+.finite-loop-toggle.active {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: rgba(76, 175, 80, 0.5);
+  color: #4caf50;
+}

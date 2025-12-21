@@ -1,0 +1,107 @@
+/**
+ * PhaseIndicator Styles
+ *
+ * Circular phase visualization with:
+ * - Indefinite spinner for infinite mode
+ * - Time-accurate progress for finite/cyclic modes
+ * - Pulsing blue glow for paused state
+ */
+
+.phase-indicator {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Size variants */
+.phase-indicator-small {
+  width: 24px;
+  height: 24px;
+}
+
+.phase-indicator-medium {
+  width: 36px;
+  height: 36px;
+}
+
+.phase-indicator-large {
+  width: 48px;
+  height: 48px;
+}
+
+/* SVG container */
+.phase-indicator-svg {
+  display: block;
+}
+
+/* Background track */
+.phase-indicator-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+/* Infinite spinner - indefinite rotation */
+.phase-indicator-spinner {
+  fill: none;
+  stroke: #9c27b0;
+  stroke-linecap: round;
+  animation: phase-spin 1.5s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes phase-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Progress arc for finite/cyclic */
+.phase-indicator-progress {
+  fill: none;
+  stroke: #4a9eff;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+/* Inner ring for cyclic sub-phases */
+.phase-indicator-inner {
+  fill: none;
+  stroke: rgba(74, 158, 255, 0.3);
+}
+
+/* Paused state glow overlay */
+.phase-indicator-paused-glow {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 12px 4px rgba(74, 158, 255, 0.4);
+  animation: paused-pulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes paused-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    box-shadow: 0 0 8px 2px rgba(74, 158, 255, 0.3);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 16px 6px rgba(74, 158, 255, 0.5);
+  }
+}
+
+/* Pause the spinner when paused */
+.phase-indicator.paused .phase-indicator-spinner {
+  animation-play-state: paused;
+}
+
+/* Subtle indication that clicking resumes */
+.phase-indicator.paused {
+  cursor: pointer;
+}

@@ -15,9 +15,10 @@
  * Always-present controls: Run/Freeze, Speed, Seed
  */
 
-import { memo, useState, useRef, useCallback } from 'react';
+import { memo, useState, useCallback } from 'react';
 import type { TimeModel, CuePoint } from '../compiler/types';
 import type { PlayState } from '../runtime';
+import { PhaseIndicator } from './PhaseIndicator';
 import './TimeConsole.css';
 
 // =============================================================================
@@ -71,12 +72,12 @@ interface FiniteControlsProps {
 }
 
 interface InfiniteControlsProps {
-  windowMs: number;
+  timeModel: TimeModel;
   currentTime: number;
-  viewOffset: number;
+  playState: PlayState;
   collapseLevel: CollapseLevel;
-  onViewOffsetChange: (offset: number) => void;
-  onWindowChange: (windowMs: number) => void;
+  onPlay: () => void;
+  onPause: () => void;
 }
 
 // =============================================================================
@@ -99,11 +100,6 @@ function formatElapsedTime(ms: number): string {
   return `${seconds}.${millis.toString().padStart(2, '0')}s`;
 }
 
-function formatViewOffset(ms: number): string {
-  if (Math.abs(ms) < 10) return '0s';
-  const sign = ms < 0 ? '-' : '+';
-  return `${sign}${(Math.abs(ms) / 1000).toFixed(1)}s`;
-}
 
 // =============================================================================
 // FiniteControls Component
@@ -199,214 +195,43 @@ const CyclicControls = memo(function CyclicControls() {
 });
 
 // =============================================================================
-// InfiniteControls Component
+// InfiniteControls Component - Simplified with PhaseIndicator
 // =============================================================================
 
 const InfiniteControls = memo(function InfiniteControls({
-  windowMs,
+  timeModel,
   currentTime,
-  viewOffset,
+  playState,
   collapseLevel,
-  onViewOffsetChange,
-  onWindowChange,
+  onPlay,
+  onPause,
 }: InfiniteControlsProps) {
-  const scopeRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{ x: number; offset: number } | null>(null);
-  const [isEditingWindow, setIsEditingWindow] = useState(false);
-  const [windowInputValue, setWindowInputValue] = useState(String(windowMs / 1000));
+  const isPaused = playState !== 'playing';
 
-  // The visible window shows time from (currentTime - windowMs + viewOffset) to (currentTime + viewOffset)
-  // viewOffset of 0 means "now" is at the right edge
-  // negative viewOffset looks into the past (shifts window left)
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    setIsDragging(true);
-    dragStartRef.current = {
-      x: e.clientX,
-      offset: viewOffset,
-    };
-    e.preventDefault();
-  }, [viewOffset]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !dragStartRef.current || !scopeRef.current) return;
-
-    const scopeWidth = scopeRef.current.clientWidth;
-    const deltaX = e.clientX - dragStartRef.current.x;
-    // Convert pixel delta to time delta (positive drag = look into past = negative offset)
-    const deltaMs = (deltaX / scopeWidth) * windowMs;
-    const newOffset = dragStartRef.current.offset - deltaMs;
-
-    // Clamp: can't look into future (offset > 0) too much, can look into past
-    const clampedOffset = Math.min(0, Math.max(-currentTime, newOffset));
-    onViewOffsetChange(clampedOffset);
-  }, [isDragging, windowMs, currentTime, onViewOffsetChange]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    dragStartRef.current = null;
-  }, []);
-
-  const handleDoubleClick = useCallback(() => {
-    onViewOffsetChange(0); // Reset to "now"
-  }, [onViewOffsetChange]);
-
-  const handleWindowEdit = useCallback(() => {
-    setWindowInputValue(String(windowMs / 1000));
-    setIsEditingWindow(true);
-  }, [windowMs]);
-
-  const handleWindowInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setWindowInputValue(e.target.value);
-  }, []);
-
-  const handleWindowInputBlur = useCallback(() => {
-    const newWindowSec = parseFloat(windowInputValue);
-    if (!isNaN(newWindowSec) && newWindowSec > 0) {
-      onWindowChange(newWindowSec * 1000);
+  const handleClick = useCallback(() => {
+    if (isPaused) {
+      onPlay();
+    } else {
+      onPause();
     }
-    setIsEditingWindow(false);
-  }, [windowInputValue, onWindowChange]);
+  }, [isPaused, onPlay, onPause]);
 
-  const handleWindowInputKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleWindowInputBlur();
-    } else if (e.key === 'Escape') {
-      setIsEditingWindow(false);
-    }
-  }, [handleWindowInputBlur]);
+  // Size based on collapse level
+  const indicatorSize = collapseLevel === 'hidden' ? 'small' : 'medium';
 
-  // Calculate scope visualization
-  const windowStart = currentTime - windowMs + viewOffset;
-  const nowPosition = viewOffset === 0 ? 100 : ((currentTime - windowStart) / windowMs) * 100;
-  const isViewingPast = viewOffset < -10;
-
-  // Minimal mode: compact single-row display
-  if (collapseLevel === 'minimal') {
-    return (
-      <div
-        ref={scopeRef}
-        className={`infinite-controls-minimal ${isDragging ? 'dragging' : ''}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onDoubleClick={handleDoubleClick}
-      >
-        {/* Mini progress bar showing position in window */}
-        <div className="infinite-mini-track">
-          <div
-            className="infinite-mini-now"
-            style={{ left: `${Math.min(100, Math.max(0, nowPosition))}%` }}
-          />
-        </div>
-        <span className="infinite-mini-time">{formatElapsedTime(currentTime)}</span>
-        {isViewingPast && (
-          <span className="infinite-mini-offset">{formatViewOffset(viewOffset)}</span>
-        )}
-        {isEditingWindow ? (
-          <input
-            type="number"
-            className="infinite-mini-window-input"
-            value={windowInputValue}
-            onChange={handleWindowInputChange}
-            onBlur={handleWindowInputBlur}
-            onKeyDown={handleWindowInputKeyDown}
-            autoFocus
-            min={0.1}
-            step={0.1}
-          />
-        ) : (
-          <button className="infinite-mini-window" onClick={handleWindowEdit}>
-            {(windowMs / 1000).toFixed(1)}s
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  // Expanded mode: full controls
   return (
-    <div className="infinite-controls">
-      {/* Readouts */}
-      <div className="infinite-readouts">
-        <span className="infinite-now-display">
-          Now: {formatElapsedTime(currentTime)}
-        </span>
-        {isViewingPast && (
-          <span className="infinite-offset-display">
-            View Offset: {formatViewOffset(viewOffset)}
-          </span>
-        )}
-        <span className="infinite-window-display">
-          {isEditingWindow ? (
-            <input
-              type="number"
-              className="infinite-window-input"
-              value={windowInputValue}
-              onChange={handleWindowInputChange}
-              onBlur={handleWindowInputBlur}
-              onKeyDown={handleWindowInputKeyDown}
-              autoFocus
-              min={0.1}
-              step={0.1}
-            />
-          ) : (
-            <button className="infinite-window-btn" onClick={handleWindowEdit}>
-              Window: {(windowMs / 1000).toFixed(1)}s
-            </button>
-          )}
-        </span>
-      </div>
-
-      {/* Sliding Window Scope */}
-      <div
-        ref={scopeRef}
-        className={`infinite-scope ${isDragging ? 'dragging' : ''}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onDoubleClick={handleDoubleClick}
-      >
-        {/* Time scale markers */}
-        <div className="infinite-scope-track">
-          {/* Gradient showing time flow */}
-          <div className="infinite-scope-gradient" />
-
-          {/* Time tick marks */}
-          {[0, 0.25, 0.5, 0.75, 1].map((fraction) => {
-            const timeAtTick = windowStart + fraction * windowMs;
-            return (
-              <div
-                key={fraction}
-                className="infinite-scope-tick"
-                style={{ left: `${fraction * 100}%` }}
-              >
-                <span className="infinite-scope-tick-label">
-                  {formatElapsedTime(Math.max(0, timeAtTick))}
-                </span>
-              </div>
-            );
-          })}
-
-          {/* "Now" marker */}
-          <div
-            className="infinite-now-marker"
-            style={{ left: `${Math.min(100, Math.max(0, nowPosition))}%` }}
-          >
-            <div className="infinite-now-line" />
-            <span className="infinite-now-label">NOW</span>
-          </div>
-        </div>
-
-        {/* Drag hint */}
-        <div className="infinite-scope-hint">
-          {isDragging ? 'Release to stop' : 'Drag to view history • Double-click to return to now'}
-        </div>
-      </div>
+    <div
+      className={`infinite-controls-simple ${isPaused ? 'paused' : ''} ${collapseLevel === 'hidden' ? 'compact' : ''}`}
+      onClick={handleClick}
+      title={isPaused ? 'Click to resume' : 'Click to freeze'}
+    >
+      <PhaseIndicator
+        timeModel={timeModel}
+        currentTime={currentTime}
+        playState={playState}
+        size={indicatorSize}
+      />
+      {isPaused && <div className="infinite-pause-overlay">⏸</div>}
     </div>
   );
 });
@@ -422,11 +247,10 @@ export const TimeConsole = memo(function TimeConsole({
   speed,
   seed,
   cuePoints,
-  viewOffset = 0,
   finiteLoopMode = false,
   collapseLevel: controlledCollapseLevel,
   onCollapseLevelChange,
-  defaultCollapseLevel = 'expanded',
+  defaultCollapseLevel = 'hidden',
   onScrub,
   onPlay,
   onPause,
@@ -434,8 +258,6 @@ export const TimeConsole = memo(function TimeConsole({
   onSpeedChange,
   onSeedChange,
   onFiniteLoopModeChange,
-  onViewOffsetChange,
-  onWindowChange,
 }: TimeConsoleProps) {
   // Support both controlled and uncontrolled collapse state
   const [internalCollapseLevel, setInternalCollapseLevel] = useState<CollapseLevel>(defaultCollapseLevel);
@@ -499,6 +321,23 @@ export const TimeConsole = memo(function TimeConsole({
 
   // Hidden mode: show only a small chip to restore
   if (collapseLevel === 'hidden') {
+    // Special compact chip for infinite mode - just PhaseIndicator with pause overlay
+    if (timeModel.kind === 'infinite') {
+      return (
+        <div className="time-console-chip infinite-chip" onClick={handleExpand}>
+          <InfiniteControls
+            timeModel={timeModel}
+            currentTime={currentTime}
+            playState={playState}
+            collapseLevel="hidden"
+            onPlay={onPlay}
+            onPause={onPause}
+          />
+        </div>
+      );
+    }
+
+    // Standard chip for finite/cyclic modes
     return (
       <div className="time-console-chip" onClick={handleExpand}>
         <span className={`chip-badge chip-${timeModel.kind}`}>
@@ -528,12 +367,12 @@ export const TimeConsole = memo(function TimeConsole({
         {/* Mode-specific compact controls */}
         {timeModel.kind === 'infinite' && (
           <InfiniteControls
-            windowMs={timeModel.windowMs}
+            timeModel={timeModel}
             currentTime={currentTime}
-            viewOffset={viewOffset}
+            playState={playState}
             collapseLevel="minimal"
-            onViewOffsetChange={onViewOffsetChange ?? (() => {})}
-            onWindowChange={onWindowChange ?? (() => {})}
+            onPlay={onPlay}
+            onPause={onPause}
           />
         )}
         {timeModel.kind === 'finite' && (
@@ -616,12 +455,12 @@ export const TimeConsole = memo(function TimeConsole({
         {timeModel.kind === 'cyclic' && <CyclicControls />}
         {timeModel.kind === 'infinite' && (
           <InfiniteControls
-            windowMs={timeModel.windowMs}
+            timeModel={timeModel}
             currentTime={currentTime}
-            viewOffset={viewOffset}
+            playState={playState}
             collapseLevel="expanded"
-            onViewOffsetChange={onViewOffsetChange ?? (() => {})}
-            onWindowChange={onWindowChange ?? (() => {})}
+            onPlay={onPlay}
+            onPause={onPause}
           />
         )}
       </div>

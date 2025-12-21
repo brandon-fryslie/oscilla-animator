@@ -1,29 +1,160 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 // P1/P2: Sidebar mode types
 export type SidebarMode = 'hidden' | '1x' | '2x';
 
-export function useEditorLayout() {
-  const [libraryCollapsed, setLibraryCollapsed] = useState(false);
-  const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
-  const [leftSplit, setLeftSplit] = useState(0.5); // library vs inspector
-  const [centerSplit, setCenterSplit] = useState(0.4); // preview vs bay
-  const [patchBayCollapsed, setPatchBayCollapsed] = useState(false);
-  const [busBoardCollapsed, setBusBoardCollapsed] = useState(false);
-  const [baySplit, setBaySplit] = useState(0.5); // patchbay vs busboard
+const LAYOUT_STORAGE_KEY = 'loom-editor-layout';
 
-  // P1: Bay collective collapse state
+interface LayoutState {
+  libraryCollapsed: boolean;
+  inspectorCollapsed: boolean;
+  leftSplit: number;
+  centerSplit: number;
+  patchBayCollapsed: boolean;
+  busBoardCollapsed: boolean;
+  baySplit: number;
+  leftSidebarMode: SidebarMode;
+  rightSidebarMode: SidebarMode;
+  controlsCollapsed: boolean;
+  helpPanelCollapsed: boolean;
+}
+
+const DEFAULT_LAYOUT: LayoutState = {
+  libraryCollapsed: false,
+  inspectorCollapsed: false,
+  leftSplit: 0.5,
+  centerSplit: 0.4,
+  patchBayCollapsed: false,
+  busBoardCollapsed: false,
+  baySplit: 0.5,
+  leftSidebarMode: '1x',
+  rightSidebarMode: 'hidden', // Right sidebar collapsed by default
+  controlsCollapsed: true,
+  helpPanelCollapsed: true,
+};
+
+function loadLayoutState(): LayoutState {
+  try {
+    const stored = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<LayoutState>;
+      // Merge with defaults to handle missing keys from older versions
+      return { ...DEFAULT_LAYOUT, ...parsed };
+    }
+  } catch (err) {
+    console.warn('Failed to load layout state from localStorage:', err);
+  }
+  return DEFAULT_LAYOUT;
+}
+
+function saveLayoutState(state: LayoutState): void {
+  try {
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.warn('Failed to save layout state to localStorage:', err);
+  }
+}
+
+export function useEditorLayout() {
+  // Load initial state from localStorage
+  const [layoutState] = useState<LayoutState>(loadLayoutState);
+
+  // Individual state values
+  const [libraryCollapsed, setLibraryCollapsedRaw] = useState(layoutState.libraryCollapsed);
+  const [inspectorCollapsed, setInspectorCollapsedRaw] = useState(layoutState.inspectorCollapsed);
+  const [leftSplit, setLeftSplitRaw] = useState(layoutState.leftSplit);
+  const [centerSplit, setCenterSplitRaw] = useState(layoutState.centerSplit);
+  const [patchBayCollapsed, setPatchBayCollapsedRaw] = useState(layoutState.patchBayCollapsed);
+  const [busBoardCollapsed, setBusBoardCollapsedRaw] = useState(layoutState.busBoardCollapsed);
+  const [baySplit, setBaySplitRaw] = useState(layoutState.baySplit);
+  const [leftSidebarMode, setLeftSidebarModeRaw] = useState<SidebarMode>(layoutState.leftSidebarMode);
+  const [rightSidebarMode, setRightSidebarModeRaw] = useState<SidebarMode>(layoutState.rightSidebarMode);
+  const [controlsCollapsed, setControlsCollapsedRaw] = useState(layoutState.controlsCollapsed);
+  const [helpPanelCollapsed, setHelpPanelCollapsedRaw] = useState(layoutState.helpPanelCollapsed);
+
+  // P1: Bay collective collapse state (not persisted - ephemeral)
   const [bayCollective, setBayCollective] = useState(false);
   const [savedBaySplit, setSavedBaySplit] = useState(0.5);
-
-  // P1/P2: Sidebar mode state
-  const [leftSidebarMode, setLeftSidebarMode] = useState<SidebarMode>('1x');
-  const [rightSidebarMode, setRightSidebarMode] = useState<SidebarMode>('1x');
 
   const [dragging, setDragging] = useState<null | 'left-split' | 'center-split' | 'bay-split'>(null);
   const leftColumnRef = useRef<HTMLDivElement | null>(null);
   const centerColumnRef = useRef<HTMLDivElement | null>(null);
   const bayRef = useRef<HTMLDivElement | null>(null);
+
+  // Wrapped setters that also persist
+  const setLibraryCollapsed = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setLibraryCollapsedRaw(value);
+  }, []);
+
+  const setInspectorCollapsed = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setInspectorCollapsedRaw(value);
+  }, []);
+
+  const setLeftSplit = useCallback((value: number | ((prev: number) => number)) => {
+    setLeftSplitRaw(value);
+  }, []);
+
+  const setCenterSplit = useCallback((value: number | ((prev: number) => number)) => {
+    setCenterSplitRaw(value);
+  }, []);
+
+  const setPatchBayCollapsed = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setPatchBayCollapsedRaw(value);
+  }, []);
+
+  const setBusBoardCollapsed = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setBusBoardCollapsedRaw(value);
+  }, []);
+
+  const setBaySplit = useCallback((value: number | ((prev: number) => number)) => {
+    setBaySplitRaw(value);
+  }, []);
+
+  const setLeftSidebarMode = useCallback((value: SidebarMode | ((prev: SidebarMode) => SidebarMode)) => {
+    setLeftSidebarModeRaw(value);
+  }, []);
+
+  const setRightSidebarMode = useCallback((value: SidebarMode | ((prev: SidebarMode) => SidebarMode)) => {
+    setRightSidebarModeRaw(value);
+  }, []);
+
+  const setControlsCollapsed = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setControlsCollapsedRaw(value);
+  }, []);
+
+  const setHelpPanelCollapsed = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setHelpPanelCollapsedRaw(value);
+  }, []);
+
+  // Persist state whenever relevant values change
+  useEffect(() => {
+    const newState: LayoutState = {
+      libraryCollapsed,
+      inspectorCollapsed,
+      leftSplit,
+      centerSplit,
+      patchBayCollapsed,
+      busBoardCollapsed,
+      baySplit,
+      leftSidebarMode,
+      rightSidebarMode,
+      controlsCollapsed,
+      helpPanelCollapsed,
+    };
+    saveLayoutState(newState);
+  }, [
+    libraryCollapsed,
+    inspectorCollapsed,
+    leftSplit,
+    centerSplit,
+    patchBayCollapsed,
+    busBoardCollapsed,
+    baySplit,
+    leftSidebarMode,
+    rightSidebarMode,
+    controlsCollapsed,
+    helpPanelCollapsed,
+  ]);
 
   // P1: Bay collective collapse logic
   const toggleBayCollective = () => {
@@ -114,7 +245,7 @@ export function useEditorLayout() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragging]);
+  }, [dragging, setLeftSplit, setCenterSplit, setBaySplit]);
 
   return {
     libraryCollapsed,
@@ -137,6 +268,10 @@ export function useEditorLayout() {
     setLeftSidebarMode,
     rightSidebarMode,
     setRightSidebarMode,
+    controlsCollapsed,
+    setControlsCollapsed,
+    helpPanelCollapsed,
+    setHelpPanelCollapsed,
     dragging,
     setDragging,
     leftColumnRef,
