@@ -168,3 +168,41 @@ They are called:
 Default Sources
 
 If you adopt that term consistently, a lot of other design decisions will suddenly feel simpler and more inevitable.
+
+
+Me: 'Default Source' it is.  Is this a good idea?  It feels necessary to avoid the patch breaking whenever I add anything with an input 
+
+Yes — it’s a good idea, and it’s one of the few “fallback” mechanisms that actually reduces complexity instead of hiding it, as long as you make it explicit in the semantics and predictable in the UI.
+
+Why it’s good (for this project specifically)
+	•	Your graph becomes total: every input always has a value, so compilation/evaluation never has to deal with “null wiring.” That’s a huge simplification for buses, lenses, lazy fields, and hot-swaps.
+	•	No-jank editing becomes feasible: disconnecting a wire doesn’t create a discontinuity of “missing data”; it swaps to a neutral value. That’s exactly what you want for live patching.
+	•	Discoverability improves: users can add a block and immediately see it “do something” because defaults produce a meaningful baseline.
+	•	You can enforce invariants like “exactly one effective source per input” (wire OR bus-listener OR Default Source), which makes the system easier to reason about and debug.
+
+The main risk
+
+It can become “magic” if users can’t tell where a value is coming from.
+
+You avoid that by making the Default Source visible as a source in the inspector and on the port affordance:
+	•	Port badge: Default (or an icon) when it’s fed by a Default Source
+	•	Inspector shows: Source: Default Source (number = 0) with editable value
+	•	Clicking the port can show “Replace default…” options (connect bus, insert block, etc.)
+
+If you do that, it won’t feel like a hack; it will feel like the system has a coherent rule: inputs are never undefined.
+
+Two design constraints to keep it “honest”
+	1.	Never silently choose a non-neutral default unless the type explicitly defines a neutral element / identity.
+Example: number→0 is safe, color→transparent/black is OK, vec2→(0,0) is OK. But “duration” defaults need care.
+	2.	Defaults must be stable and deterministic (no randomness, no time dependence unless the type is inherently time-based and you’re explicit about it).
+
+One key clarification
+
+Your current statement says “should generally implement the identity function, should one be defined.”
+That’s correct in spirit, but operationally it should be:
+	•	Default Source outputs the neutral value for its domain (the identity element of the bus combiner if applicable, otherwise a type-defined neutral)
+	•	If the input represents a transform (e.g. “scale”), the neutral is the identity transform (scale=1), not always 0.
+
+So the neutral is sometimes per-port semantic, not just per-type. You can handle that with “default hints” on the port definition (recommended).
+
+Bottom line: it’s not just necessary to avoid breakage — it’s a foundational rule that makes the whole “playable, no-jank, always-live” philosophy actually implementable.
