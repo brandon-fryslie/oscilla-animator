@@ -22,8 +22,8 @@ describe('PatchStore - Wire Events', () => {
 
       // Create two blocks
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
-      const block2 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       // Connect blocks
       root.patchStore.connect(block1, 'value', block2, 'value');
@@ -44,8 +44,8 @@ describe('PatchStore - Wire Events', () => {
       root.events.on('WireAdded', listener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
-      const block2 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       // Connect blocks first time
       root.patchStore.connect(block1, 'value', block2, 'value');
@@ -83,8 +83,8 @@ describe('PatchStore - Wire Events', () => {
       root.events.on('WireAdded', listener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
-      const block2 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       root.patchStore.connect(block1, 'value', block2, 'value');
 
@@ -108,8 +108,8 @@ describe('PatchStore - Wire Events', () => {
       root.events.on('WireRemoved', removeListener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
-      const block2 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       // Connect blocks
       root.patchStore.connect(block1, 'value', block2, 'value');
@@ -145,8 +145,8 @@ describe('PatchStore - Wire Events', () => {
       root.events.on('WireRemoved', removeListener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
-      const block2 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       root.patchStore.connect(block1, 'value', block2, 'value');
       const wireId = root.patchStore.connections[0]?.id ?? '';
@@ -163,8 +163,8 @@ describe('PatchStore - Wire Events', () => {
       root.events.on('WireRemoved', listener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
-      const block2 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       root.patchStore.connect(block1, 'value', block2, 'value');
       const wireId = root.patchStore.connections[0]?.id ?? '';
@@ -192,9 +192,9 @@ describe('PatchStore - Wire Events', () => {
       root.events.on('WireRemoved', listener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
-      const block2 = root.patchStore.addBlock('Constant', laneId);
-      const block3 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block3 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       // Create 3 connections involving block2
       root.patchStore.connect(block1, 'value', block2, 'value');
@@ -237,10 +237,10 @@ describe('PatchStore - Wire Events', () => {
       root.events.on('WireRemoved', listener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
-      const block2 = root.patchStore.addBlock('Constant', laneId);
-      const block3 = root.patchStore.addBlock('Constant', laneId);
-      const block4 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block3 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block4 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       // Create connections
       root.patchStore.connect(block1, 'value', block2, 'value');
@@ -260,7 +260,7 @@ describe('PatchStore - Wire Events', () => {
       root.events.on('WireRemoved', listener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       // Remove block with no connections
       root.patchStore.removeBlock(block1);
@@ -274,8 +274,8 @@ describe('PatchStore - Wire Events', () => {
     it('emits events in correct order: WireAdded after creation', () => {
       let connectionExistsAtEventTime = false;
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
-      const block2 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       root.events.on('WireAdded', (event) => {
         // Connection should already exist in store when event fires
@@ -290,8 +290,8 @@ describe('PatchStore - Wire Events', () => {
 
     it('emits events in correct order: WireRemoved after deletion', () => {
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
-      const block2 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       root.patchStore.connect(block1, 'value', block2, 'value');
       const wireId = root.patchStore.connections[0]?.id ?? '';
@@ -359,7 +359,7 @@ describe('PatchStore - BlockReplaced Events', () => {
       root.events.on('BlockReplaced', listener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const oldBlockId = root.patchStore.addBlock('Constant', laneId);
+      const oldBlockId = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       // Try to replace with invalid block type
       root.patchStore.replaceBlock(oldBlockId, 'NonExistentBlockType' as any);
@@ -373,9 +373,9 @@ describe('PatchStore - BlockReplaced Events', () => {
       root.events.on('BlockReplaced', listener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
       const block2 = root.patchStore.addBlock('AddSignal', laneId);
-      const block3 = root.patchStore.addBlock('Constant', laneId);
+      const block3 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       // Connect blocks: block1 -> block2 -> block3
       root.patchStore.connect(block1, 'value', block2, 'a');
@@ -420,7 +420,7 @@ describe('PatchStore - BlockReplaced Events', () => {
       root.events.on('BlockReplaced', listener);
 
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('Constant', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
       const block2 = root.patchStore.addBlock('AddSignal', laneId);
 
       // Connect to a slot that won't exist on the new block type

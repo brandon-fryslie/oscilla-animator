@@ -8,6 +8,8 @@
 
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useRef, useState, memo } from 'react';
+import Tippy from '@tippyjs/react';
+import 'tippy.js/dist/tippy.css';
 import { useStore } from './stores';
 import type { LogLevel, LogComponent } from './logTypes';
 import {
@@ -277,6 +279,89 @@ const SeverityBadge = memo(function SeverityBadge({ severity, count }: SeverityB
   );
 });
 
+// =============================================================================
+// Diagnostic Badge with Tooltip (for collapsed state)
+// =============================================================================
+
+interface DiagnosticBadgeProps {
+  diagnostics: Diagnostic[];
+  errorCount: number;
+  warningCount: number;
+  onExecuteAction: (action: DiagnosticAction) => void;
+  onExpand: () => void;
+}
+
+const DiagnosticBadgeWithTooltip = memo(function DiagnosticBadgeWithTooltip({
+  diagnostics,
+  errorCount,
+  warningCount,
+  onExecuteAction,
+  onExpand,
+}: DiagnosticBadgeProps) {
+  const totalCount = errorCount + warningCount;
+  if (totalCount === 0) return null;
+
+  // Get badge color and icon based on severity
+  const hasErrors = errorCount > 0;
+  const badgeClass = hasErrors ? 'diag-badge-error' : 'diag-badge-warning';
+  const badgeIcon = hasErrors ? '\u274C' : '\u26A0';
+
+  const tooltipContent = (
+    <div className="diag-badge-tooltip">
+      <div className="diag-badge-tooltip-header">
+        {errorCount > 0 && <span className="severity-error">{'\u274C'} {errorCount} error{errorCount !== 1 ? 's' : ''}</span>}
+        {warningCount > 0 && <span className="severity-warn">{'\u26A0'} {warningCount} warning{warningCount !== 1 ? 's' : ''}</span>}
+      </div>
+      <div className="diag-badge-tooltip-list">
+        {diagnostics.slice(0, 5).map((diag) => (
+          <div key={diag.id} className={`diag-badge-item ${getSeverityClass(diag.severity)}`}>
+            <span className="diag-badge-item-icon">{getSeverityIcon(diag.severity)}</span>
+            <span className="diag-badge-item-text">{diag.title}</span>
+            {diag.actions && diag.actions.length > 0 && (
+              <div className="diag-badge-item-actions">
+                {diag.actions.map((action, idx) => (
+                  <button
+                    key={idx}
+                    className="diag-badge-action-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onExecuteAction(action);
+                    }}
+                    title={getActionLabel(action)}
+                  >
+                    {getActionIcon(action)} {getActionLabel(action)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+        {diagnostics.length > 5 && (
+          <div className="diag-badge-more">+{diagnostics.length - 5} more...</div>
+        )}
+      </div>
+      <button className="diag-badge-expand-btn" onClick={onExpand}>
+        Expand logs panel
+      </button>
+    </div>
+  );
+
+  return (
+    <Tippy
+      content={tooltipContent}
+      placement="top"
+      interactive={true}
+      appendTo={() => document.body}
+      trigger="click"
+      hideOnClick={true}
+    >
+      <button className={`diag-collapsed-badge ${badgeClass}`} onClick={(e) => e.stopPropagation()}>
+        {badgeIcon} {totalCount}
+      </button>
+    </Tippy>
+  );
+});
+
 /**
  * LogWindow - collapsible log viewer with filters and diagnostics panel.
  */
@@ -286,7 +371,7 @@ export const LogWindow = observer(() => {
   const diagnosticStore = store.diagnosticStore;
   const actionExecutor = store.actionExecutor;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState<LogSize>('compact');
+  const [size, setSize] = useState<LogSize>('collapsed');
 
   // Auto-scroll to bottom when new entries arrive
   useEffect(() => {
@@ -428,18 +513,32 @@ export const LogWindow = observer(() => {
 
         {/* Right side: badges + status */}
         <div className="log-right-group">
-          {logStore.errorCount > 0 && (
-            <span className="log-badge log-badge-error">{logStore.errorCount}</span>
+          {/* When collapsed, show interactive diagnostic badge */}
+          {size === 'collapsed' && (
+            <DiagnosticBadgeWithTooltip
+              diagnostics={sortedDiagnostics}
+              errorCount={diagErrorCount + diagFatalCount}
+              warningCount={diagWarningCount}
+              onExecuteAction={handleExecuteAction}
+              onExpand={() => setSize('compact')}
+            />
           )}
-          {logStore.warningCount > 0 && (
-            <span className="log-badge log-badge-warning">{logStore.warningCount}</span>
-          )}
-          {/* Diagnostic badges */}
-          {diagFatalCount > 0 && (
-            <span className="log-badge log-badge-fatal" title="Fatal diagnostics">{diagFatalCount} fatal</span>
-          )}
-          {diagErrorCount > 0 && (
-            <span className="log-badge log-badge-diag-error" title="Diagnostic errors">{diagErrorCount} diag</span>
+          {/* When expanded, show simple badges */}
+          {size !== 'collapsed' && (
+            <>
+              {logStore.errorCount > 0 && (
+                <span className="log-badge log-badge-error">{logStore.errorCount}</span>
+              )}
+              {logStore.warningCount > 0 && (
+                <span className="log-badge log-badge-warning">{logStore.warningCount}</span>
+              )}
+              {diagFatalCount > 0 && (
+                <span className="log-badge log-badge-fatal" title="Fatal diagnostics">{diagFatalCount} fatal</span>
+              )}
+              {diagErrorCount > 0 && (
+                <span className="log-badge log-badge-diag-error" title="Diagnostic errors">{diagErrorCount} diag</span>
+              )}
+            </>
           )}
           <StatusBadge />
         </div>

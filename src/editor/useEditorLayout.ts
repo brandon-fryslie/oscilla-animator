@@ -3,6 +3,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 // P1/P2: Sidebar mode types
 export type SidebarMode = 'hidden' | '1x' | '2x';
 
+// Patch visualization modes
+export type PatchViewMode = 'lanes' | 'table';
+
+export const PATCH_VIEW_MODES: { id: PatchViewMode; label: string; description: string }[] = [
+  { id: 'lanes', label: 'Lanes', description: 'Traditional lane-based patch bay' },
+  { id: 'table', label: 'Table', description: 'Modulation table (buses × ports)' },
+];
+
 const LAYOUT_STORAGE_KEY = 'loom-editor-layout';
 
 interface LayoutState {
@@ -17,6 +25,7 @@ interface LayoutState {
   rightSidebarMode: SidebarMode;
   controlsCollapsed: boolean;
   helpPanelCollapsed: boolean;
+  patchViewMode: PatchViewMode;
 }
 
 const DEFAULT_LAYOUT: LayoutState = {
@@ -31,6 +40,7 @@ const DEFAULT_LAYOUT: LayoutState = {
   rightSidebarMode: 'hidden', // Right sidebar collapsed by default
   controlsCollapsed: true,
   helpPanelCollapsed: true,
+  patchViewMode: 'lanes', // Default to traditional lane view
 };
 
 function loadLayoutState(): LayoutState {
@@ -71,6 +81,7 @@ export function useEditorLayout() {
   const [rightSidebarMode, setRightSidebarModeRaw] = useState<SidebarMode>(layoutState.rightSidebarMode);
   const [controlsCollapsed, setControlsCollapsedRaw] = useState(layoutState.controlsCollapsed);
   const [helpPanelCollapsed, setHelpPanelCollapsedRaw] = useState(layoutState.helpPanelCollapsed);
+  const [patchViewMode, setPatchViewModeRaw] = useState<PatchViewMode>(layoutState.patchViewMode);
 
   // P1: Bay collective collapse state (not persisted - ephemeral)
   const [bayCollective, setBayCollective] = useState(false);
@@ -126,6 +137,10 @@ export function useEditorLayout() {
     setHelpPanelCollapsedRaw(value);
   }, []);
 
+  const setPatchViewMode = useCallback((value: PatchViewMode | ((prev: PatchViewMode) => PatchViewMode)) => {
+    setPatchViewModeRaw(value);
+  }, []);
+
   // Persist state whenever relevant values change
   useEffect(() => {
     const newState: LayoutState = {
@@ -140,6 +155,7 @@ export function useEditorLayout() {
       rightSidebarMode,
       controlsCollapsed,
       helpPanelCollapsed,
+      patchViewMode,
     };
     saveLayoutState(newState);
   }, [
@@ -154,6 +170,7 @@ export function useEditorLayout() {
     rightSidebarMode,
     controlsCollapsed,
     helpPanelCollapsed,
+    patchViewMode,
   ]);
 
   // P1: Bay collective collapse logic
@@ -272,6 +289,8 @@ export function useEditorLayout() {
     setControlsCollapsed,
     helpPanelCollapsed,
     setHelpPanelCollapsed,
+    patchViewMode,
+    setPatchViewMode,
     dragging,
     setDragging,
     leftColumnRef,

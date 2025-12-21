@@ -3,7 +3,14 @@
  */
 
 // Core compile function
-export { compilePatch, topoSortBlocks, isPortTypeAssignable } from './compile';
+export { compilePatch, topoSortBlocks } from './compile';
+
+// Re-export type compatibility from semantic module (single source of truth)
+export {
+  arePortTypesCompatible,
+  areValueKindsCompatible,
+  arePortTypesCompatible as isPortTypeAssignable, // Backwards compatibility alias
+} from '../semantic';
 
 // Types
 export type {

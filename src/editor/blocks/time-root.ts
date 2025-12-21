@@ -63,7 +63,7 @@ export const CycleTimeRoot = createBlock({
   inputs: [],
   outputs: [
     output('systemTime', 'System Time', 'Signal<time>'),
-    output('phaseA', 'Phase A', 'Signal<phase>'),
+    output('phase', 'Phase', 'Signal<phase>'),
   ],
   paramSchema: [
     {

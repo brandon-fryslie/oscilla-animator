@@ -1,0 +1,4 @@
+Agent: status-planner | 2025-12-21-112636
+Topic: port-identity
+Files: PLAN-2025-12-21-112636.md, DOD-2025-12-21-112636.md
+Items: 3 (P0: 2, P1: 1)

@@ -51,7 +51,7 @@ export const FiniteTimeRootBlock: BlockCompiler = {
  *
  * Outputs:
  * - systemTime: Monotonic time in milliseconds
- * - phaseA: 0..1 wrapped at period (sawtooth or triangle wave)
+ * - phase: 0..1 wrapped at period (sawtooth or triangle wave)
  */
 export const CycleTimeRootBlock: BlockCompiler = {
   type: 'CycleTimeRoot',
@@ -60,7 +60,7 @@ export const CycleTimeRootBlock: BlockCompiler = {
 
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
-    { name: 'phaseA', type: { kind: 'Signal:phase' } },
+    { name: 'phase', type: { kind: 'Signal:phase' } },
   ],
 
   compile({ params }) {
@@ -71,25 +71,25 @@ export const CycleTimeRootBlock: BlockCompiler = {
     const systemTime: SignalNumber = (tMs) => tMs;
 
     // Phase wraps at period
-    const phaseA: SignalNumber = (tMs) => {
+    const phase: SignalNumber = (tMs) => {
       if (tMs < 0) return 0;
 
       const cycles = tMs / periodMs;
-      const phase = cycles - Math.floor(cycles); // 0..1
+      const phaseValue = cycles - Math.floor(cycles); // 0..1
 
       if (mode === 'pingpong') {
         // Triangle wave: 0→1→0→1...
         const cycleNum = Math.floor(cycles);
-        return (cycleNum % 2 === 0) ? phase : (1 - phase);
+        return (cycleNum % 2 === 0) ? phaseValue : (1 - phaseValue);
       }
 
       // Default loop: sawtooth wave
-      return phase;
+      return phaseValue;
     };
 
     return {
       systemTime: { kind: 'Signal:Time', value: systemTime },
-      phaseA: { kind: 'Signal:phase', value: phaseA },
+      phase: { kind: 'Signal:phase', value: phase },
     };
   },
 };

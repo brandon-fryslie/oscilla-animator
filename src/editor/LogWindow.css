@@ -510,3 +510,148 @@
 .diag-mute-btn.unmute {
   opacity: 0.7;
 }
+
+/* =============================================================================
+   Diagnostic Badge with Tooltip (collapsed state)
+   ============================================================================= */
+
+.diag-collapsed-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: filter 0.1s;
+}
+
+.diag-collapsed-badge:hover {
+  filter: brightness(1.2);
+}
+
+.diag-collapsed-badge.diag-badge-error {
+  background: #dc2626;
+  color: #fff;
+}
+
+.diag-collapsed-badge.diag-badge-warning {
+  background: #d97706;
+  color: #fff;
+}
+
+/* Tooltip content */
+.diag-badge-tooltip {
+  min-width: 280px;
+  max-width: 400px;
+  font-size: 12px;
+}
+
+.diag-badge-tooltip-header {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin: -5px -9px 8px -9px;
+  border-radius: 4px 4px 0 0;
+}
+
+.diag-badge-tooltip-header .severity-error {
+  color: #f87171;
+}
+
+.diag-badge-tooltip-header .severity-warn {
+  color: #fbbf24;
+}
+
+.diag-badge-tooltip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.diag-badge-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  border-left: 3px solid #666;
+}
+
+.diag-badge-item.severity-error {
+  border-left-color: #dc2626;
+}
+
+.diag-badge-item.severity-warn {
+  border-left-color: #d97706;
+}
+
+.diag-badge-item.severity-fatal {
+  border-left-color: #7f1d1d;
+}
+
+.diag-badge-item-icon {
+  display: none; /* Hidden, we use border color instead */
+}
+
+.diag-badge-item-text {
+  color: #e5e5e5;
+  font-weight: 500;
+}
+
+.diag-badge-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.diag-badge-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.diag-badge-action-btn:hover {
+  background: #2563eb;
+}
+
+.diag-badge-more {
+  color: #888;
+  font-size: 11px;
+  padding: 4px;
+  text-align: center;
+}
+
+.diag-badge-expand-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: #333;
+  color: #ccc;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.diag-badge-expand-btn:hover {
+  background: #444;
+  color: #fff;
+}

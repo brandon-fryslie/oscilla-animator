@@ -92,7 +92,7 @@ describe('RootStore - Event Listeners', () => {
     it('clears selectedBlockId when selected block is removed', () => {
       // Create and select a block
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const blockId = root.patchStore.addBlock('Constant', laneId);
+      const blockId = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       root.uiStore.uiState.selectedBlockId = blockId;
       expect(root.uiStore.uiState.selectedBlockId).toBe(blockId);
@@ -107,8 +107,8 @@ describe('RootStore - Event Listeners', () => {
     it('preserves selectedBlockId when non-selected block is removed', () => {
       // Create two blocks
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const blockId1 = root.patchStore.addBlock('Constant', laneId);
-      const blockId2 = root.patchStore.addBlock('Constant', laneId);
+      const blockId1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const blockId2 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       // Select block1
       root.uiStore.uiState.selectedBlockId = blockId1;
@@ -122,7 +122,7 @@ describe('RootStore - Event Listeners', () => {
 
     it('does nothing when no block is selected', () => {
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const blockId = root.patchStore.addBlock('Constant', laneId);
+      const blockId = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       root.uiStore.uiState.selectedBlockId = null;
 
@@ -135,9 +135,9 @@ describe('RootStore - Event Listeners', () => {
 
     it('handles multiple block removals correctly', () => {
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const blockId1 = root.patchStore.addBlock('Constant', laneId);
-      const blockId2 = root.patchStore.addBlock('Constant', laneId);
-      const blockId3 = root.patchStore.addBlock('Constant', laneId);
+      const blockId1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const blockId2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const blockId3 = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       // Select block1
       root.uiStore.uiState.selectedBlockId = blockId1;
@@ -160,7 +160,7 @@ describe('RootStore - Event Listeners', () => {
 
     it('selection clearing is synchronous with block removal', () => {
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const blockId = root.patchStore.addBlock('Constant', laneId);
+      const blockId = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       root.uiStore.uiState.selectedBlockId = blockId;
 
@@ -197,7 +197,7 @@ describe('RootStore - Event Listeners', () => {
     it('preserves selectedBlockId when non-selected block is replaced', () => {
       // Create two blocks
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const blockId1 = root.patchStore.addBlock('Constant', laneId);
+      const blockId1 = root.patchStore.addBlock('FieldConstNumber', laneId);
       const blockId2 = root.patchStore.addBlock('AddSignal', laneId);
 
       // Select block1
@@ -303,7 +303,7 @@ describe('RootStore - Event Listeners', () => {
 
     it('block removal event handler does not throw errors', () => {
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const blockId = root.patchStore.addBlock('Constant', laneId);
+      const blockId = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       root.uiStore.uiState.selectedBlockId = blockId;
 
@@ -313,7 +313,7 @@ describe('RootStore - Event Listeners', () => {
 
     it('block removal event handler is non-blocking', () => {
       const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const blockId = root.patchStore.addBlock('Constant', laneId);
+      const blockId = root.patchStore.addBlock('FieldConstNumber', laneId);
 
       root.uiStore.uiState.selectedBlockId = blockId;
 

@@ -122,10 +122,10 @@ describe('TimeRoot Block Compilers', () => {
       expect(CycleTimeRootBlock.inputs).toEqual([]);
     });
 
-    it('should have systemTime and phaseA outputs', () => {
+    it('should have systemTime and phase outputs', () => {
       expect(CycleTimeRootBlock.outputs).toEqual([
         { name: 'systemTime', type: { kind: 'Signal:Time' } },
-        { name: 'phaseA', type: { kind: 'Signal:phase' } },
+        { name: 'phase', type: { kind: 'Signal:phase' } },
       ]);
     });
 
@@ -143,7 +143,7 @@ describe('TimeRoot Block Compilers', () => {
         expect(systemTime(1000, mockRuntimeCtx)).toBe(1000);
       });
 
-      it('should return phaseA as sawtooth wave (loop mode)', () => {
+      it('should return phase as sawtooth wave (loop mode)', () => {
         const result = CycleTimeRootBlock.compile({
           id: 'test',
           params: { periodMs: 3000, mode: 'loop' },
@@ -151,12 +151,12 @@ describe('TimeRoot Block Compilers', () => {
           ctx: mockCompileCtx,
         });
 
-        const phaseA = getSignalValue<number>(result.phaseA, 'Signal:phase');
-        expect(phaseA(0, mockRuntimeCtx)).toBeCloseTo(0, 5);
-        expect(phaseA(1500, mockRuntimeCtx)).toBeCloseTo(0.5, 5);
-        expect(phaseA(2999, mockRuntimeCtx)).toBeCloseTo(0.9997, 3);
-        expect(phaseA(3000, mockRuntimeCtx)).toBeCloseTo(0, 5); // Wraps
-        expect(phaseA(4500, mockRuntimeCtx)).toBeCloseTo(0.5, 5); // Second cycle
+        const phase = getSignalValue<number>(result.phase, 'Signal:phase');
+        expect(phase(0, mockRuntimeCtx)).toBeCloseTo(0, 5);
+        expect(phase(1500, mockRuntimeCtx)).toBeCloseTo(0.5, 5);
+        expect(phase(2999, mockRuntimeCtx)).toBeCloseTo(0.9997, 3);
+        expect(phase(3000, mockRuntimeCtx)).toBeCloseTo(0, 5); // Wraps
+        expect(phase(4500, mockRuntimeCtx)).toBeCloseTo(0.5, 5); // Second cycle
       });
 
       it('should handle negative time', () => {
@@ -167,13 +167,13 @@ describe('TimeRoot Block Compilers', () => {
           ctx: mockCompileCtx,
         });
 
-        const phaseA = getSignalValue<number>(result.phaseA, 'Signal:phase');
-        expect(phaseA(-100, mockRuntimeCtx)).toBe(0);
+        const phase = getSignalValue<number>(result.phase, 'Signal:phase');
+        expect(phase(-100, mockRuntimeCtx)).toBe(0);
       });
     });
 
     describe('compile - pingpong mode', () => {
-      it('should return phaseA as triangle wave (pingpong mode)', () => {
+      it('should return phase as triangle wave (pingpong mode)', () => {
         const result = CycleTimeRootBlock.compile({
           id: 'test',
           params: { periodMs: 1000, mode: 'pingpong' },
@@ -181,20 +181,20 @@ describe('TimeRoot Block Compilers', () => {
           ctx: mockCompileCtx,
         });
 
-        const phaseA = getSignalValue<number>(result.phaseA, 'Signal:phase');
+        const phase = getSignalValue<number>(result.phase, 'Signal:phase');
 
         // First cycle: 0→1
-        expect(phaseA(0, mockRuntimeCtx)).toBeCloseTo(0, 5);
-        expect(phaseA(500, mockRuntimeCtx)).toBeCloseTo(0.5, 5);
-        expect(phaseA(999, mockRuntimeCtx)).toBeCloseTo(0.999, 3);
+        expect(phase(0, mockRuntimeCtx)).toBeCloseTo(0, 5);
+        expect(phase(500, mockRuntimeCtx)).toBeCloseTo(0.5, 5);
+        expect(phase(999, mockRuntimeCtx)).toBeCloseTo(0.999, 3);
 
         // Second cycle: 1→0 (ping-pong back)
-        expect(phaseA(1000, mockRuntimeCtx)).toBeCloseTo(1, 5); // At wrap, phase is 0, so 1-0=1
-        expect(phaseA(1500, mockRuntimeCtx)).toBeCloseTo(0.5, 5);
-        expect(phaseA(1999, mockRuntimeCtx)).toBeCloseTo(0.001, 3);
+        expect(phase(1000, mockRuntimeCtx)).toBeCloseTo(1, 5); // At wrap, phase is 0, so 1-0=1
+        expect(phase(1500, mockRuntimeCtx)).toBeCloseTo(0.5, 5);
+        expect(phase(1999, mockRuntimeCtx)).toBeCloseTo(0.001, 3);
 
         // Third cycle: 0→1 again
-        expect(phaseA(2000, mockRuntimeCtx)).toBeCloseTo(0, 5);
+        expect(phase(2000, mockRuntimeCtx)).toBeCloseTo(0, 5);
       });
     });
 
@@ -206,9 +206,9 @@ describe('TimeRoot Block Compilers', () => {
         ctx: mockCompileCtx,
       });
 
-      const phaseA = getSignalValue<number>(result.phaseA, 'Signal:phase');
+      const phase = getSignalValue<number>(result.phase, 'Signal:phase');
       // Default periodMs is 3000, default mode is 'loop'
-      expect(phaseA(1500, mockRuntimeCtx)).toBeCloseTo(0.5, 5);
+      expect(phase(1500, mockRuntimeCtx)).toBeCloseTo(0.5, 5);
     });
   });
 

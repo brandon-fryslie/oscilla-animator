@@ -475,3 +475,4 @@ RootStore
 - Components: PascalCase `.tsx`
 - Utilities: camelCase `.ts`
 - Tests: `*.test.ts` in `__tests__/` directories
+Use Chrome DevTools MCP to verify rather than running the tests.  the tests are NOT a good indication that the code is working

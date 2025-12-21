@@ -22,6 +22,7 @@ import { useStore } from './stores';
 import { BlockLibrary } from './BlockLibrary';
 import { PatchBay } from './PatchBay';
 import { BusBoard } from './BusBoard';
+import { ModulationTable, ModulationTableStore } from './modulation-table';
 import { Inspector } from './Inspector';
 import { LogWindow } from './LogWindow';
 import { PreviewPanel } from './PreviewPanel';
@@ -30,7 +31,7 @@ import { ContextMenu } from './ContextMenu';
 import { PathManagerModal } from './PathManagerModal';
 import { createCompilerService, setupAutoCompile } from './compiler';
 import { ControlSurfaceStore, ControlSurfacePanel, generateSurfaceForMacro } from './controlSurface';
-import { useEditorLayout } from './useEditorLayout';
+import { useEditorLayout, PATCH_VIEW_MODES } from './useEditorLayout';
 import type { BlockDefinition } from './blocks';
 import type { LaneId } from './types';
 import './Editor.css';
@@ -403,6 +404,9 @@ export const Editor = observer(() => {
   // Create control surface store
   const controlSurfaceStore = useMemo(() => new ControlSurfaceStore(store), [store]);
 
+  // Create modulation table store
+  const modulationTableStore = useMemo(() => new ModulationTableStore(store), [store]);
+
   // Create compiler service
   const compilerService = useMemo(() => createCompilerService(store), [store]);
 
@@ -429,6 +433,8 @@ export const Editor = observer(() => {
     setControlsCollapsed,
     helpPanelCollapsed,
     setHelpPanelCollapsed,
+    patchViewMode,
+    setPatchViewMode,
     dragging,
     setDragging,
     leftColumnRef,
@@ -603,6 +609,35 @@ export const Editor = observer(() => {
       const blockType = activeData.blockType as string;
       const laneId = (overData.laneId ?? overData.laneName) as LaneId;
       store.patchStore.addBlock(blockType, laneId);
+    }
+
+    // Dropping library block onto an insertion point
+    if (activeData?.type === 'library-block' && overData?.type === 'insertion-point') {
+      const blockType = activeData.blockType as string;
+      const laneId = overData.laneId as LaneId;
+      const index = overData.index as number;
+      store.patchStore.addBlockAtIndex(blockType, laneId, index);
+    }
+
+    // Dropping placed block onto an insertion point (reorder)
+    if (activeData?.type === 'patch-block' && overData?.type === 'insertion-point') {
+      const blockId = activeData.blockId as string;
+      const sourceLaneId = activeData.sourceLaneId as string;
+      const targetLaneId = overData.laneId as LaneId;
+      const targetIndex = overData.index as number;
+
+      if (sourceLaneId === targetLaneId) {
+        // Reorder within same lane
+        const sourceIndex = activeData.sourceIndex as number;
+        // Adjust target index if moving forward (since we remove first)
+        const adjustedIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+        if (sourceIndex !== adjustedIndex) {
+          store.patchStore.reorderBlockInLane(sourceLaneId as LaneId, blockId, adjustedIndex);
+        }
+      } else {
+        // Move to different lane at specific position
+        store.patchStore.moveBlockToLaneAtIndex(blockId, targetLaneId, targetIndex);
+      }
     }
 
     // Dropping placed block onto trash
@@ -796,6 +831,19 @@ export const Editor = observer(() => {
                 <div className="panel-header patch-header">
                   <span className="panel-title">Patch</span>
                   <div className="panel-header-actions">
+                    {/* View Mode Switcher */}
+                    <div className="view-mode-switcher">
+                      {PATCH_VIEW_MODES.map((mode) => (
+                        <button
+                          key={mode.id}
+                          className={`view-mode-btn ${patchViewMode === mode.id ? 'active' : ''}`}
+                          onClick={() => setPatchViewMode(mode.id)}
+                          title={mode.description}
+                        >
+                          {mode.label}
+                        </button>
+                      ))}
+                    </div>
                     <button
                       className="panel-collapse-icon"
                       onClick={() => openHelpPanel('patch')}
@@ -814,7 +862,11 @@ export const Editor = observer(() => {
                 </div>
                 {!patchBayCollapsed && (
                   <div className="patch-body">
-                    <PatchBay />
+                    {patchViewMode === 'lanes' ? (
+                      <PatchBay />
+                    ) : (
+                      <ModulationTable store={modulationTableStore} />
+                    )}
                   </div>
                 )}
               </div>

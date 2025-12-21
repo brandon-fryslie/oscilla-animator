@@ -231,7 +231,11 @@ export type ValueKind =
   | 'Spec:RevealMask'
   | 'Spec:Transform3DCompositor'
   | 'Spec:DeformCompositor'
-  | 'Spec:ProgramStack';
+  | 'Spec:ProgramStack'
+
+  // Additional artifact kinds (can be produced by compilers)
+  | 'ElementCount'  // Number of elements from scene
+  | 'FieldExpr';    // Lazy field expression (Phase 2)
 
 /**
  * PortType can be extended with refinements (units, constraints, etc.)

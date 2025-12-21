@@ -1,5 +1,5 @@
 /**
- * PatchBay Styles
+ * PatchBay Styles - Compact, horizontal-scrolling lanes
  */
 
 .patch-bay {
@@ -13,33 +13,34 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px;
+  gap: 4px;
+  padding: 8px;
   overflow-y: auto;
 }
 
+/* =============================================================================
+   Lane Styling - Compact horizontal rows
+   ============================================================================= */
+
 .lane {
   display: flex;
-  gap: 12px;
-  padding: 12px;
+  align-items: stretch;
   background: #222;
-  border-radius: 8px;
-  min-height: 80px;
-  transition: background 0.15s, box-shadow 0.15s, min-height 0.2s;
+  border-radius: 6px;
+  min-height: 48px;
+  transition: background 0.15s, box-shadow 0.15s;
 }
 
-/* Collapsed lane - compact view */
+/* Collapsed lane */
 .lane.collapsed {
-  min-height: auto;
-  padding: 8px 12px;
+  min-height: 32px;
 }
 
-.lane.collapsed .lane-header {
-  width: auto;
-  flex: 1;
+.lane.collapsed .lane-content {
+  display: none;
 }
 
-/* Flow style visual indicators */
+/* Flow style indicators */
 .lane.chain {
   border-left: 3px solid var(--lane-color, #666);
 }
@@ -53,7 +54,6 @@
   box-shadow: inset 0 0 0 2px var(--lane-color, #666);
 }
 
-/* Suggested lane (matches dragging block's laneKind) */
 .lane.suggested {
   background: #252525;
   box-shadow: inset 0 0 0 2px var(--lane-color, #666);
@@ -69,141 +69,194 @@
   }
 }
 
+.lane.active {
+  background: #282828;
+  box-shadow: inset 0 0 0 1px var(--lane-color, #666);
+}
+
+/* =============================================================================
+   Lane Header - Compact with hover expansion
+   ============================================================================= */
+
 .lane-header {
   flex-shrink: 0;
-  width: 180px;
+  width: 40px;
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
   cursor: pointer;
-  border-radius: 6px;
-  padding: 4px;
-  margin: -4px;
-  transition: background 0.1s;
+  border-radius: 6px 0 0 6px;
 }
 
-.lane-header:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.lane-color-bar {
-  width: 4px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.lane-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.lane-title-row {
+/* Color fill with letter abbreviation */
+.lane-color-fill {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  justify-content: center;
+  border-radius: 4px 0 0 4px;
+  position: relative;
 }
 
+.lane-abbrev {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Hover info - hidden, use title attribute instead */
+.lane-hover-info {
+  display: none;
+}
+
+/* Chevron and count */
 .lane-chevron {
-  font-size: 10px;
-  color: #666;
-  width: 12px;
-  flex-shrink: 0;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 1px;
+  border-radius: 2px;
+  cursor: pointer;
 }
 
-.lane-label {
-  margin: 0;
-  font-size: 14px;
+.lane-chevron:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.lane-count {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 8px;
   font-weight: 600;
-  color: #fff;
-}
-
-.lane-kind-badge {
-  padding: 1px 6px;
-  border-radius: 8px;
-  font-size: 9px;
-  font-weight: 500;
-  color: #fff;
-  opacity: 0.8;
-}
-
-.lane-pinned-badge {
-  font-size: 10px;
-}
-
-.lane-flow-badge {
-  padding: 1px 5px;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0 3px;
   border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  background: #333;
-  color: #888;
 }
 
-.lane-flow-badge.chain {
-  color: #22c55e;
-}
-
-.lane-flow-badge.patchbay {
-  color: #a855f7;
-}
-
-.lane-block-count {
-  font-size: 11px;
-  font-weight: 600;
-  color: #666;
-  background: #333;
-  padding: 2px 8px;
-  border-radius: 10px;
-  align-self: flex-start;
-}
-
-.lane-description {
-  margin: 4px 0 0 18px;
-  font-size: 10px;
-  color: #777;
-  line-height: 1.3;
-}
+/* =============================================================================
+   Lane Content - Single row, horizontal scroll, NEVER wraps
+   ============================================================================= */
 
 .lane-content {
   flex: 1;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-start;
-  align-content: flex-start;
-  padding: 8px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 2px;
+  align-items: center;
+  padding: 6px;
   background: #1a1a1a;
-  border-radius: 6px;
-  min-height: 56px;
+  border-radius: 0 6px 6px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Custom scrollbar for lane content */
+.lane-content::-webkit-scrollbar {
+  height: 4px;
+}
+
+.lane-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lane-content::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 2px;
+}
+
+.lane-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .lane-empty {
   color: #555;
-  font-size: 12px;
-  font-style: italic;
+  font-size: 16px;
+  font-weight: 600;
   display: flex;
   align-items: center;
+  justify-content: center;
   height: 100%;
+  min-width: 40px;
   padding: 0 8px;
 }
 
 .lane.drop-target .lane-empty {
   color: var(--lane-color);
-  font-style: normal;
-  font-weight: 500;
 }
 
-/* Block rendering */
+/* Insertion point - wide hit area that doesn't affect layout */
+.insertion-point {
+  position: relative;
+  width: 80px;
+  margin-left: -39px;
+  margin-right: -39px;
+  height: 100%;
+  min-height: 32px;
+  flex-shrink: 0;
+  z-index: 1;
+  /* Debug: uncomment to see hit area */
+  /* background: rgba(255,0,0,0.1); */
+}
+
+/* Visual indicator line - only shows when active */
+.insertion-point::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  margin-left: -1.5px;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.1s ease, box-shadow 0.1s ease;
+  pointer-events: none;
+}
+
+.insertion-point.active::after {
+  background: var(--lane-color, #4a9eff);
+  box-shadow: 0 0 12px 3px color-mix(in srgb, var(--lane-color, #4a9eff) 60%, transparent);
+}
+
+/* Last insertion point fills remaining space */
+.insertion-point:last-child {
+  flex: 1;
+  min-width: 80px;
+  margin-right: 0;
+}
+
+.insertion-point:last-child::after {
+  left: 8px;
+  margin-left: 0;
+}
+
+/* =============================================================================
+   Block Styling - Compact, draggable anywhere
+   ============================================================================= */
+
 .block {
   display: flex;
-  gap: 8px;
-  padding: 8px 10px;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
   background: #2a2a2a;
   border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  cursor: pointer;
+  border-radius: 4px;
+  cursor: grab;
   transition: all 0.15s;
-  min-width: 100px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
 }
 
 .block:hover {
@@ -218,6 +271,8 @@
 }
 
 .block.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
@@ -226,178 +281,95 @@
   background: rgba(74, 158, 255, 0.08);
 }
 
-/* Block drag handle */
-.block-drag-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  min-width: 16px;
-  margin: -8px 0 -8px -10px;
-  padding: 8px 4px;
-  border-radius: 6px 0 0 6px;
-  cursor: grab;
-}
-
-.block-drag-handle:active {
-  cursor: grabbing;
-}
-
-.block-grip {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: -2px;
-}
-
-.block-drag-handle:hover .block-grip {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.block-color-bar {
+/* Block color indicator - thin left bar */
+.block-color-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: 3px;
-  border-radius: 2px;
-  flex-shrink: 0;
+  border-radius: 4px 0 0 4px;
 }
 
 .block-content {
   flex: 1;
   min-width: 0;
-}
-
-.block-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.block-type {
-  font-size: 9px;
-  color: #888;
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Active lane (selected for palette filtering) */
-.lane.active {
-  background: #282828;
-  box-shadow: inset 0 0 0 1px var(--lane-color, #666);
-}
-
-.lane.active .lane-header {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.lane.active .lane-label::after {
-  content: ' •';
-  color: var(--lane-color, #666);
-}
-
-/* Type hints in lane header */
-.lane-type-hint {
-  font-size: 9px;
-  font-weight: 400;
-  color: #666;
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Chevron click area */
-.lane-chevron {
-  cursor: pointer;
-  padding: 2px;
-  border-radius: 2px;
-}
-
-.lane-chevron:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* =============================================================================
-   Port Rendering
-   ============================================================================= */
-
-/* Block with ports needs adjusted layout */
-.block.has-inputs {
   padding-left: 4px;
 }
 
-.block.has-outputs {
-  padding-right: 4px;
+.block-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
 }
 
-/* Port container - vertical stack on each side */
+.block-type {
+  font-size: 8px;
+  color: #666;
+  font-family: 'Monaco', 'Menlo', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+/* =============================================================================
+   Port Styling - Compact symbol with popover
+   ============================================================================= */
+
 .block-ports {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   justify-content: center;
-  margin: -8px 0;
 }
 
 .block-ports.inputs {
-  margin-left: -4px;
+  margin-left: -8px;
   padding-right: 4px;
 }
 
 .block-ports.outputs {
-  margin-right: -4px;
+  margin-right: -8px;
   padding-left: 4px;
 }
 
-/* Individual port */
+/* Compact port - just a symbol */
 .port {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  background: #333;
-  border: 2px solid #555;
-  border-radius: 10px;
-  font-size: 9px;
-  color: #aaa;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
-  white-space: nowrap;
+  /* Background/border set via inline styles based on connection state */
 }
 
 .port.input {
-  border-radius: 0 10px 10px 0;
-  padding-left: 4px;
+  border-radius: 0 4px 4px 0;
 }
 
 .port.output {
-  border-radius: 10px 0 0 10px;
-  padding-right: 4px;
+  border-radius: 4px 0 0 4px;
 }
 
 .port:hover {
-  background: #444;
-  border-color: #777;
-  color: #fff;
-}
-
-.port.connected {
-  background: #2a3a2a;
+  filter: brightness(1.2);
+  transform: scale(1.1);
 }
 
 .port.hovered {
-  border-color: #4ade80;
-  background: #2a4a2a;
+  filter: brightness(1.3);
 }
 
 .port.selected {
-  border-color: #60a5fa;
-  background: #2a3a4a;
-  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5);
 }
 
 .port.compatible {
@@ -413,52 +385,116 @@
   }
 }
 
-.port-label {
-  max-width: 60px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.port-badges {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.port-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1px 4px;
-  border-radius: 6px;
-  background: #444;
-  color: #ddd;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.port-badge.world {
-  font-size: 9px;
-  min-width: 18px;
-}
-
-.port-badge.world.signal { background: #1d4ed8; }
-.port-badge.world.field { background: #9333ea; }
-.port-badge.world.scalar { background: #b45309; }
-.port-badge.world.event { background: #047857; }
-.port-badge.world.scene { background: #2563eb; }
-.port-badge.world.program { background: #b91c1c; }
-.port-badge.world.render { background: #0ea5e9; }
-.port-badge.world.filter { background: #7c3aed; }
-.port-badge.world.stroke { background: #334155; }
-.port-badge.world.unknown { background: #44403c; }
-
-.port-badge.domain {
-  background: #2f2f2f;
-  color: #b4b4b4;
+/* Port glyph styling */
+.port-glyph {
+  font-size: 12px;
   font-weight: 600;
-  text-transform: none;
+  line-height: 1;
+}
+
+/* Disconnected port glyph - grey dash */
+.port-glyph.disconnected {
+  color: #9ca3af;
+}
+
+/* Connected port glyph - white (background provides color) */
+.port.connected .port-glyph {
+  color: #fff;
+}
+
+/* Glyph colors by world (for tooltips) */
+.port-glyph.signal { color: #60a5fa; }
+.port-glyph.field { color: #c084fc; }
+.port-glyph.scalar { color: #fbbf24; }
+.port-glyph.event { color: #4ade80; }
+.port-glyph.scene { color: #38bdf8; }
+.port-glyph.program { color: #f87171; }
+.port-glyph.render { color: #22d3ee; }
+.port-glyph.filter { color: #a78bfa; }
+.port-glyph.stroke { color: #94a3b8; }
+
+/* =============================================================================
+   Port Tooltip (Tippy) - Rich tooltip on hover
+   ============================================================================= */
+
+.port-tooltip {
+  min-width: 160px;
+  font-size: 12px;
+}
+
+.port-tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin: -5px -9px 0 -9px;
+  border-radius: 4px 4px 0 0;
+}
+
+.port-tooltip-glyph {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.port-tooltip-glyph.signal { color: #60a5fa; }
+.port-tooltip-glyph.field { color: #c084fc; }
+.port-tooltip-glyph.scalar { color: #fbbf24; }
+.port-tooltip-glyph.event { color: #4ade80; }
+.port-tooltip-glyph.scene { color: #38bdf8; }
+.port-tooltip-glyph.program { color: #f87171; }
+.port-tooltip-glyph.render { color: #22d3ee; }
+.port-tooltip-glyph.filter { color: #a78bfa; }
+.port-tooltip-glyph.stroke { color: #94a3b8; }
+
+.port-tooltip-label {
+  font-weight: 600;
+  color: #fff;
+}
+
+.port-tooltip-details {
+  padding: 6px 0 0 0;
+}
+
+.port-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 3px 0;
+}
+
+.port-tooltip-key {
+  color: #888;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.port-tooltip-value {
+  color: #ddd;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 11px;
+}
+
+.port-tooltip-value.world-signal { color: #60a5fa; }
+.port-tooltip-value.world-field { color: #c084fc; }
+.port-tooltip-value.world-scalar { color: #fbbf24; }
+.port-tooltip-value.world-event { color: #4ade80; }
+.port-tooltip-value.world-scene { color: #38bdf8; }
+.port-tooltip-value.world-program { color: #f87171; }
+.port-tooltip-value.world-render { color: #22d3ee; }
+
+.port-tooltip-status {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.port-tooltip-status.connected {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
 }

@@ -1,0 +1,44 @@
+Agent: iterative-implementer | 2025-12-21_10-47-51
+Mode: manual
+Completed: Time Authority Unification | Files: 1 | Commits: 1
+Tests: 738 passing, 0 failing
+Cache invalidated: None (no eval cache entries for Player time handling)
+Status: complete
+
+## Summary
+
+Successfully unified time authority in Player runtime. TimeRoot is now the sole authority for time topology, with Player providing monotonic time.
+
+## Changes
+
+Modified `src/editor/runtime/player.ts`:
+- **Cyclic mode**: Removed time wrapping (`tMs = tMs % maxTime`)
+- **Infinite mode**: Kept unbounded time advancement
+- **Finite mode**: Preserved existing pause/loop behavior
+- Time advances monotonically for cyclic/infinite modes
+- Only clamps to non-negative (>= 0)
+- Added ProgramSwapped event emission in setActivePatchRevision
+
+## Verification
+
+- All 738 tests passing (3 skipped)
+- No regressions in animation behavior
+- TimeRoot compilers already correctly derive phase from monotonic time via modulo arithmetic
+- Backward compatible: existing patches continue to work
+
+## Commit
+
+1857bb8 - feat(player): Make time monotonic for cyclic/infinite modes
+
+## Architecture Impact
+
+This change corrects the architectural layering:
+- **Before**: Two sources of truth (Player wrapped time, TimeRoot derived phase)
+- **After**: Single source of truth (Player provides monotonic time, TimeRoot derives all topology)
+
+TimeRoot blocks like CycleTimeRoot already use modulo arithmetic, so they correctly handle monotonic time:
+```typescript
+const phase = (tMs / periodMs) - Math.floor(tMs / periodMs); // 0..1
+```
+
+This works whether tMs is 3000 or 303000 for a 3000ms period.

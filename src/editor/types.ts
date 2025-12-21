@@ -51,7 +51,10 @@ export type InternalDomain =
   | 'scene'        // Scene data
   | 'sceneTargets' // Scene target points
   | 'sceneStrokes' // Scene stroke paths
-  | 'event';       // Generic events
+  | 'event'        // Generic events
+  | 'string'       // String values (labels, etc.)
+  | 'bounds'       // Bounding box / bounds
+  | 'spec';        // Spec types (config that compiles to programs)
 
 /**
  * All domains (core + internal).

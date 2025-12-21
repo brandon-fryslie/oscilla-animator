@@ -85,6 +85,10 @@ export class DiagnosticHub {
       events.on('ProgramSwapped', (event) => this.handleProgramSwapped(event)),
       events.on('RuntimeHealthSnapshot', (event) => this.handleRuntimeHealthSnapshot(event))
     );
+
+    // Run initial authoring validation immediately
+    // This ensures diagnostics are available even before any events are emitted
+    this.authoringSnapshot = this.runAuthoringValidators(0);
   }
 
   /**
@@ -367,6 +371,9 @@ export class DiagnosticHub {
    * Get diagnostics for a specific patch revision.
    * Excludes muted diagnostics by default.
    *
+   * Note: Authoring diagnostics are ALWAYS included regardless of revision,
+   * because they represent the current graph state, not a historical snapshot.
+   *
    * @param patchRevision - The revision to query
    * @param includeMuted - Whether to include muted diagnostics (default: false)
    * @returns Array of diagnostics for that revision
@@ -374,11 +381,8 @@ export class DiagnosticHub {
   getByRevision(patchRevision: number, includeMuted = false): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
-    // Add authoring diagnostics if they match the revision
-    const authoringDiags = this.authoringSnapshot.filter(
-      (d) => d.metadata.patchRevision === patchRevision
-    );
-    diagnostics.push(...authoringDiags);
+    // Authoring diagnostics are always current - include all regardless of revision
+    diagnostics.push(...this.authoringSnapshot);
 
     // Add compile diagnostics for this revision
     const compileDiags = this.compileSnapshots.get(patchRevision);

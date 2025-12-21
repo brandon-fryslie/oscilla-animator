@@ -11,8 +11,11 @@
  * - Patchbay lanes: fan-out sources
  */
 
+import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
+import Tippy from '@tippyjs/react';
+import 'tippy.js/dist/tippy.css';
 import { useStore } from './stores';
 import type { Lane, LaneKind, Block, Slot, PortRef } from './types';
 import { getBlockDefinition } from './blocks';
@@ -24,7 +27,6 @@ import {
   isPortConnected,
   areTypesCompatible,
   describeSlotType,
-  formatTypeDescriptor,
 } from './portUtils';
 import './PatchBay.css';
 
@@ -42,7 +44,39 @@ const LANE_KIND_COLORS: Record<LaneKind, string> = {
 };
 
 /**
- * Port component - renders an input or output connection point.
+ * Lane abbreviations for compact header display.
+ */
+const LANE_KIND_ABBREV: Record<LaneKind, string> = {
+  Scene: 'S',
+  Phase: 'P',
+  Fields: 'F',
+  Scalars: 'C',
+  Spec: 'X',
+  Program: 'R',
+  Output: 'O',
+};
+
+/**
+ * Port glyph mapping - single character symbols for port types
+ */
+const PORT_GLYPHS: Record<string, string> = {
+  // By world
+  signal: '~',
+  field: '⊛',
+  scalar: '◆',
+  event: '⚡',
+  scene: '◐',
+  program: '▶',
+  render: '◉',
+  filter: '⨍',
+  stroke: '╱',
+  unknown: '○',
+};
+
+/**
+ * Port component - renders a compact input or output connection point.
+ * Shows grey dash when unconnected, colored glyph when connected.
+ * Tooltip appears above/below to avoid covering other blocks.
  */
 function Port({
   slot,
@@ -71,20 +105,10 @@ function Port({
 }) {
   const portRef: PortRef = { blockId, slotId: slot.id, direction };
   const typeDescriptor = describeSlotType(slot.type);
-  const worldGlyph: Record<string, string | null> = {
-    signal: 'S',
-    field: 'F',
-    scalar: 'C',
-    event: 'E',
-    scene: 'SC',
-    program: 'P',
-    render: 'R',
-    filter: 'FX',
-    stroke: 'ST',
-    unknown: null,
-  };
-  const worldBadge = worldGlyph[typeDescriptor.world] ?? null;
-  const domainBadge = typeDescriptor.domain;
+  const typeGlyph = PORT_GLYPHS[typeDescriptor.world] ?? '○';
+
+  // Show dash when unconnected, type glyph when connected
+  const displayGlyph = isConnected ? typeGlyph : '–';
 
   const handleMouseEnter = () => onHover(portRef);
   const handleMouseLeave = () => onHover(null);
@@ -98,41 +122,96 @@ function Port({
     onContextMenu(e, portRef);
   };
 
-  // Determine port styling
-  let portStyle: React.CSSProperties = {};
-  if (connectionColor) {
-    portStyle.backgroundColor = connectionColor;
-    portStyle.borderColor = connectionColor;
-  }
-  if (isCompatible && !isConnected) {
-    portStyle.boxShadow = '0 0 8px 2px rgba(74, 222, 128, 0.6)';
-  }
+  // Determine port styling - grey when unconnected, connectionColor when connected
+  const portStyle: React.CSSProperties = {
+    ...(isConnected && connectionColor ? {
+      backgroundColor: connectionColor,
+      borderColor: connectionColor,
+      color: '#fff',
+    } : {
+      backgroundColor: '#4a5568',
+      borderColor: '#4a5568',
+      color: '#9ca3af',
+    }),
+    ...(isCompatible && !isConnected && {
+      boxShadow: '0 0 8px 2px rgba(74, 222, 128, 0.6)',
+    }),
+  };
 
   const className = [
     'port',
     direction,
-    isConnected ? 'connected' : '',
+    isConnected ? 'connected' : 'disconnected',
     isHovered ? 'hovered' : '',
     isSelected ? 'selected' : '',
     isCompatible ? 'compatible' : '',
   ].filter(Boolean).join(' ');
 
-  return (
-    <div
-      className={className}
-      style={portStyle}
-      title={`${slot.label} (${slot.type}) · ${formatTypeDescriptor(typeDescriptor)}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onClick={handleClick}
-      onContextMenu={handleContextMenu}
-    >
-      <span className="port-badges">
-        {worldBadge && <span className={`port-badge world ${typeDescriptor.world}`}>{worldBadge}</span>}
-        {domainBadge && <span className="port-badge domain">{domainBadge}</span>}
-      </span>
-      <span className="port-label">{slot.label}</span>
+  const tooltipContent = (
+    <div className="port-tooltip">
+      <div className="port-tooltip-header">
+        <span className={`port-tooltip-glyph ${typeDescriptor.world}`}>{typeGlyph}</span>
+        <span className="port-tooltip-label">{slot.label}</span>
+      </div>
+      <div className="port-tooltip-details">
+        <div className="port-tooltip-row">
+          <span className="port-tooltip-key">Type</span>
+          <span className="port-tooltip-value">{slot.type}</span>
+        </div>
+        <div className="port-tooltip-row">
+          <span className="port-tooltip-key">World</span>
+          <span className={`port-tooltip-value world-${typeDescriptor.world}`}>{typeDescriptor.world}</span>
+        </div>
+        <div className="port-tooltip-row">
+          <span className="port-tooltip-key">Domain</span>
+          <span className="port-tooltip-value">{typeDescriptor.domain}</span>
+        </div>
+        {isConnected && (
+          <div className="port-tooltip-status connected">● Connected</div>
+        )}
+      </div>
     </div>
+  );
+
+  return (
+    <Tippy
+      content={tooltipContent}
+      placement="top-start"
+      delay={[300, 0]}
+      duration={150}
+      interactive={false}
+      appendTo={() => document.body}
+      offset={[0, 45]}
+      popperOptions={{
+        modifiers: [
+          {
+            name: 'flip',
+            options: {
+              fallbackPlacements: ['bottom-start'],
+              padding: 50,
+            },
+          },
+          {
+            name: 'preventOverflow',
+            options: {
+              padding: 12,
+              boundary: 'viewport',
+            },
+          },
+        ],
+      }}
+    >
+      <div
+        className={className}
+        style={portStyle}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+      >
+        <span className={`port-glyph ${isConnected ? typeDescriptor.world : 'disconnected'}`}>{displayGlyph}</span>
+      </div>
+    </Tippy>
   );
 }
 
@@ -234,7 +313,13 @@ const DraggablePatchBlock = observer(({
         e.stopPropagation();
         onSelect();
       }}
+      onContextMenu={handleBlockContextMenu}
+      {...listeners}
+      {...attributes}
     >
+      {/* Block color indicator */}
+      <div className="block-color-indicator" style={{ backgroundColor: blockColor }} />
+
       {/* Input ports (left side) */}
       {hasInputs && (
         <div className="block-ports inputs">
@@ -279,17 +364,7 @@ const DraggablePatchBlock = observer(({
         </div>
       )}
 
-      {/* Drag handle */}
-      <div
-        className="block-drag-handle"
-        style={{ backgroundColor: blockColor }}
-        {...listeners}
-        {...attributes}
-      >
-        <span className="block-grip">⋮⋮</span>
-      </div>
-
-      <div className="block-content" onContextMenu={handleBlockContextMenu}>
+      <div className="block-content">
         <div className="block-label">{block.label}</div>
         <div className="block-type">{block.type}</div>
       </div>
@@ -358,8 +433,35 @@ function getLaneTypeHint(kind: LaneKind): string {
 }
 
 /**
+ * Insertion point drop zone - appears between blocks for precise positioning.
+ */
+function InsertionPoint({
+  laneId,
+  index,
+}: {
+  laneId: string;
+  index: number;
+}) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `insert-${laneId}-${index}`,
+    data: {
+      type: 'insertion-point',
+      laneId,
+      index,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`insertion-point ${isOver ? 'active' : ''}`}
+    />
+  );
+}
+
+/**
  * Droppable lane component.
- * Supports collapse/expand and displays flow style indicator.
+ * Compact header with letter abbreviation, horizontal scrolling content.
  * Click sets active lane for palette filtering.
  */
 const DroppableLane = observer(({
@@ -384,9 +486,8 @@ const DroppableLane = observer(({
   });
 
   const laneColor = LANE_KIND_COLORS[lane.kind];
+  const laneAbbrev = LANE_KIND_ABBREV[lane.kind];
   const isCollapsed = lane.collapsed;
-  const isPinned = lane.pinned;
-  const showTypeHints = store.uiStore.settings.showTypeHints;
   const typeHint = getLaneTypeHint(lane.kind);
 
   const handleHeaderClick = (e: React.MouseEvent) => {
@@ -415,59 +516,58 @@ const DroppableLane = observer(({
         '--lane-color': laneColor,
       } as React.CSSProperties}
     >
-      <div className="lane-header" onClick={handleHeaderClick}>
-        <div className="lane-color-bar" style={{ backgroundColor: laneColor }} />
-        <div className="lane-info">
-          <div className="lane-title-row">
-            <span className="lane-chevron" onClick={handleChevronClick}>
-              {isCollapsed ? '▸' : '▾'}
-            </span>
-            <h3 className="lane-label">{lane.label}</h3>
-            <span className="lane-kind-badge" style={{ backgroundColor: laneColor }}>
-              {lane.kind}
-            </span>
-            {showTypeHints && typeHint && (
-              <span className="lane-type-hint" title={`Expected types: ${typeHint}`}>
-                ({typeHint})
-              </span>
-            )}
-            {isPinned && <span className="lane-pinned-badge">📌</span>}
-            <span className={`lane-flow-badge ${lane.flowStyle}`}>
-              {lane.flowStyle === 'chain' ? '→' : '⤵'}
-            </span>
-          </div>
-          {!isCollapsed && <p className="lane-description">{lane.description}</p>}
+      {/* Compact lane header - shows letter abbreviation */}
+      <div
+        className="lane-header"
+        onClick={handleHeaderClick}
+        title={`${lane.kind}: ${lane.description}\n${typeHint}`}
+      >
+        <div className="lane-color-fill" style={{ backgroundColor: laneColor }}>
+          <span className="lane-abbrev">{laneAbbrev}</span>
         </div>
-        <div className="lane-block-count">{lane.blockIds.length}</div>
+        <span className="lane-chevron" onClick={handleChevronClick}>
+          {isCollapsed ? '▸' : '▾'}
+        </span>
+        {lane.blockIds.length > 0 && (
+          <span className="lane-count">{lane.blockIds.length}</span>
+        )}
       </div>
 
       {!isCollapsed && (
         <div className="lane-content">
-          {lane.blockIds.length === 0 && (
+          {lane.blockIds.length === 0 ? (
             <div className="lane-empty">
-              {isOver ? 'Drop here' : 'Drag blocks here'}
+              {isOver ? 'Drop' : '+'}
             </div>
+          ) : (
+            <>
+              {/* Insertion point before first block */}
+              <InsertionPoint laneId={lane.id} index={0} />
+
+              {lane.blockIds.map((blockId, index) => {
+                const block = store.patchStore.blocks.find((b) => b.id === blockId);
+                if (!block) return null;
+
+                const isSelected = store.uiStore.uiState.selectedBlockId === blockId;
+
+                return (
+                  <React.Fragment key={blockId}>
+                    <DraggablePatchBlock
+                      block={block}
+                      laneId={lane.id}
+                      index={index}
+                      laneColor={laneColor}
+                      isSelected={isSelected}
+                      onSelect={() => store.uiStore.selectBlock(blockId)}
+                      portColorMap={portColorMap}
+                    />
+                    {/* Insertion point after each block */}
+                    <InsertionPoint laneId={lane.id} index={index + 1} />
+                  </React.Fragment>
+                );
+              })}
+            </>
           )}
-
-          {lane.blockIds.map((blockId, index) => {
-            const block = store.patchStore.blocks.find((b) => b.id === blockId);
-            if (!block) return null;
-
-            const isSelected = store.uiStore.uiState.selectedBlockId === blockId;
-
-            return (
-              <DraggablePatchBlock
-                key={blockId}
-                block={block}
-                laneId={lane.id}
-                index={index}
-                laneColor={laneColor}
-                isSelected={isSelected}
-                onSelect={() => store.uiStore.selectBlock(blockId)}
-                portColorMap={portColorMap}
-              />
-            );
-          })}
         </div>
       )}
     </div>

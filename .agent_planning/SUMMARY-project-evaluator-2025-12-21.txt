@@ -1,0 +1,12 @@
+Agent: project-evaluator | 2025-12-21
+Scope: port-identity/macro-upstream-error
+Completion: 0% (build broken) | Gaps: 3 critical | Test Quality: N/A (can't run)
+Reused: 0 findings | Fresh: 3 findings
+Cache updated: [3 files] in eval-cache/
+  - port-identity-issue.md (BindingEndpoint migration incomplete)
+  - compiler-validation-gaps.md (validation missing in compileBusAware.ts)
+  - INDEX.md (cache index)
+Ambiguities: 3 found | Workflow: PAUSE (need user input on approach)
+  -> Clarify: Fix 2A (rename phaseA→phase) vs 2B (rename macro refs)?
+  -> Clarify: Priority - quick fix or do it right first time?
+  -> Clarify: Are there production patches that would break?

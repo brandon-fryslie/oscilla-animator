@@ -12,6 +12,9 @@ describe('DiagnosticStore', () => {
 
   beforeEach(() => {
     rootStore = new RootStore();
+    // Add a TimeRoot block so authoring validators pass
+    // (otherwise we get a "Missing TimeRoot" diagnostic)
+    rootStore.patchStore.addBlock('CycleTimeRoot', rootStore.patchStore.lanes[0].id);
   });
 
   describe('Initialization', () => {
@@ -20,14 +23,24 @@ describe('DiagnosticStore', () => {
       expect(rootStore.diagnosticHub).toBeDefined();
     });
 
-    it('should have zero counts initially', () => {
+    it('should have zero counts after adding TimeRoot', () => {
+      // With a TimeRoot block added in beforeEach, there should be no authoring diagnostics
       expect(rootStore.diagnosticStore.errorCount).toBe(0);
       expect(rootStore.diagnosticStore.warningCount).toBe(0);
       expect(rootStore.diagnosticStore.totalCount).toBe(0);
     });
 
-    it('should have empty activeDiagnostics initially', () => {
+    it('should have empty activeDiagnostics after adding TimeRoot', () => {
       expect(rootStore.diagnosticStore.activeDiagnostics).toEqual([]);
+    });
+
+    it('should have Missing TimeRoot diagnostic without TimeRoot', () => {
+      // Create a fresh RootStore WITHOUT adding TimeRoot
+      const freshStore = new RootStore();
+      // Initial authoring validation should find missing TimeRoot
+      expect(freshStore.diagnosticStore.activeDiagnostics).toHaveLength(1);
+      expect(freshStore.diagnosticStore.activeDiagnostics[0].code).toBe('E_TIME_ROOT_MISSING');
+      expect(freshStore.diagnosticStore.errorCount).toBe(1);
     });
   });
 

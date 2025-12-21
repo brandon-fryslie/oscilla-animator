@@ -24,17 +24,16 @@ import type {
   CompilerPatch,
   DrawNode,
   PortRef,
-  PortType,
   Program,
   RenderTree,
   RuntimeCtx,
   Seed,
   TimeModel,
-  ValueKind,
 } from './types';
 import { compileBusAwarePatch, isBusAwarePatch } from './compileBusAware';
 import { getFeatureFlags } from './featureFlags';
 import { getBlockDefinition } from '../blocks';
+import { arePortTypesCompatible, areValueKindsCompatible } from '../semantic';
 
 // =============================================================================
 // Main Compiler Entry Point
@@ -152,7 +151,7 @@ function compilePatchWireOnly(
       continue;
     }
 
-    if (!isPortTypeAssignable(fromPort.type, toPort.type)) {
+    if (!arePortTypesCompatible(fromPort.type, toPort.type)) {
       errors.push({
         code: 'PortTypeMismatch',
         message: `Type mismatch: ${c.from.blockId}.${c.from.port} (${fromPort.type.kind}) → ${c.to.blockId}.${c.to.port} (${toPort.type.kind})`,
@@ -257,7 +256,7 @@ function compilePatchWireOnly(
         });
         continue;
       }
-      if (!isKindAssignable(produced.kind, outDef.type.kind)) {
+      if (!areValueKindsCompatible(produced.kind, outDef.type.kind)) {
         errors.push({
           code: 'PortTypeMismatch',
           message: `Compiler produced wrong kind for ${blockId}.${outDef.name}: got ${produced.kind}, expected ${outDef.type.kind}`,
@@ -476,49 +475,9 @@ function inferTimeModel(
 // =============================================================================
 // Port Compatibility
 // =============================================================================
-
-export function isPortTypeAssignable(from: PortType, to: PortType): boolean {
-  // Exact match
-  if (from.kind === to.kind) return true;
-
-  // Compatible type sets - types within a set can be connected
-  const compatibleSets: string[][] = [
-    ['Field:Point', 'Field:vec2'],
-    ['ElementCount', 'Scalar:number'],
-    ['Render', 'RenderTree', 'RenderTreeProgram'], // All render types are compatible
-    ['Signal:number', 'Signal:Unit'],
-  ];
-
-  for (const set of compatibleSets) {
-    if (set.includes(from.kind) && set.includes(to.kind)) return true;
-  }
-
-  // One-way compatibility: TargetScene can feed into Field:vec2 or Field:Point
-  // (the receiving block handles extraction)
-  if (from.kind === 'TargetScene' && (to.kind === 'Field:vec2' || to.kind === 'Field:Point')) {
-    return true;
-  }
-
-  return false;
-}
-
-function isKindAssignable(fromKind: Artifact['kind'], toKind: ValueKind): boolean {
-  if (fromKind === toKind) return true;
-
-  // Same compatible sets as port types
-  const compatibleSets: string[][] = [
-    ['Field:Point', 'Field:vec2'],
-    ['ElementCount', 'Scalar:number'],
-    ['Render', 'RenderTree', 'RenderTreeProgram'], // All render types are compatible
-    ['Signal:number', 'Signal:Unit'],
-  ];
-
-  for (const set of compatibleSets) {
-    if (set.includes(fromKind) && set.includes(toKind)) return true;
-  }
-
-  return false;
-}
+// NOTE: Type compatibility functions have been moved to src/editor/semantic/
+// to provide a single source of truth for both UI and compiler.
+// Import from '../semantic' for arePortTypesCompatible, areValueKindsCompatible.
 
 // =============================================================================
 // Connection Indexing

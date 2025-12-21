@@ -12,8 +12,12 @@ import type { PatchStore } from '../../stores/PatchStore';
 
 /**
  * Create a minimal mock PatchStore for testing.
+ * By default includes a CycleTimeRoot to avoid "Missing TimeRoot" authoring diagnostic.
+ * Pass empty array explicitly to test missing TimeRoot scenarios.
  */
-function createMockPatchStore(blocks: any[] = []): PatchStore {
+function createMockPatchStore(
+  blocks: any[] = [{ id: 'time-root', type: 'CycleTimeRoot' }]
+): PatchStore {
   return {
     blocks,
   } as PatchStore;
@@ -50,6 +54,10 @@ describe('DiagnosticHub', () => {
 
   describe('Event Handling', () => {
     it('should handle GraphCommitted events and run authoring validators', () => {
+      // Create hub with no TimeRoot to test missing TimeRoot detection
+      patchStore = createMockPatchStore([]);
+      hub = new DiagnosticHub(events, patchStore);
+
       // Emit GraphCommitted with a patch that has no TimeRoot
       events.emit({
         type: 'GraphCommitted',
@@ -194,6 +202,10 @@ describe('DiagnosticHub', () => {
 
   describe('Query Methods', () => {
     beforeEach(() => {
+      // Use empty blocks to generate Missing TimeRoot authoring diagnostic
+      patchStore = createMockPatchStore([]);
+      hub = new DiagnosticHub(events, patchStore);
+
       // Set up some test data
       const diag1 = createCompileDiagnostic(1, 'E_TYPE_MISMATCH');
       const diag2 = createCompileDiagnostic(2, 'E_CYCLE_DETECTED');
@@ -272,17 +284,22 @@ describe('DiagnosticHub', () => {
       expect(rev2Diags.length).toBe(2);
     });
 
-    it('should return diagnostics by revision', () => {
+    it('should return diagnostics by revision (includes authoring)', () => {
+      // getByRevision now always includes authoring diagnostics (revision-agnostic)
       const rev1 = hub.getByRevision(1);
-      expect(rev1.length).toBe(1);
-      expect(rev1[0].metadata.patchRevision).toBe(1);
+      // 1 compile diagnostic + 1 authoring diagnostic
+      expect(rev1.length).toBe(2);
+      expect(rev1.filter((d) => d.domain === 'compile')).toHaveLength(1);
+      expect(rev1.filter((d) => d.domain === 'authoring')).toHaveLength(1);
 
       const rev2 = hub.getByRevision(2);
-      expect(rev2.length).toBe(2);
-      expect(rev2.every((d) => d.metadata.patchRevision === 2)).toBe(true);
+      // 2 compile diagnostics + 1 authoring diagnostic
+      expect(rev2.length).toBe(3);
+      expect(rev2.filter((d) => d.domain === 'compile')).toHaveLength(2);
+      expect(rev2.filter((d) => d.domain === 'authoring')).toHaveLength(1);
     });
 
-    it('should return diagnostics for active revision only', () => {
+    it('should return diagnostics for active revision (includes authoring)', () => {
       // Set active revision to 2
       events.emit({
         type: 'ProgramSwapped',
@@ -294,13 +311,20 @@ describe('DiagnosticHub', () => {
       });
 
       const active = hub.getActive();
-      expect(active.length).toBe(2);
-      expect(active.every((d) => d.metadata.patchRevision === 2)).toBe(true);
+      // 2 compile diagnostics + 1 authoring diagnostic
+      expect(active.length).toBe(3);
+      // Compile diagnostics have patchRevision 2
+      expect(active.filter((d) => d.domain === 'compile')).toHaveLength(2);
+      expect(active.filter((d) => d.domain === 'compile').every((d) => d.metadata.patchRevision === 2)).toBe(true);
+      // Authoring diagnostics are always included regardless of revision
+      expect(active.filter((d) => d.domain === 'authoring')).toHaveLength(1);
     });
 
-    it('should return empty array for non-existent revision', () => {
+    it('should return only authoring diagnostics for non-existent compile revision', () => {
+      // No compile diagnostics exist for revision 999, but authoring diagnostics are always included
       const nonExistent = hub.getByRevision(999);
-      expect(nonExistent).toEqual([]);
+      expect(nonExistent).toHaveLength(1);
+      expect(nonExistent[0].domain).toBe('authoring');
     });
 
     it('should return undefined for compile snapshot of non-compiled revision', () => {

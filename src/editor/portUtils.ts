@@ -2,9 +2,14 @@
  * Port Utilities
  *
  * Type compatibility checking and connection color assignment.
+ *
+ * NOTE: Type compatibility is delegated to the semantic module to ensure
+ * the UI and compiler use the same rules. The local TypeDescriptor parsing
+ * is retained for UI display purposes (badges, hints).
  */
 
 import type { SlotType, Connection, Block, Slot, PortRef } from './types';
+import { areSlotTypesCompatible, getCompatibilityHint } from './semantic';
 
 // =============================================================================
 // Slot Type Descriptors
@@ -52,12 +57,10 @@ export function formatSlotType(type: SlotType): string {
 
 /**
  * Human-readable compatibility hint for a slot type.
+ * Delegates to the semantic module for consistent hints.
  */
 export function slotCompatibilityHint(type: SlotType): string {
-  const desc = describeSlotType(type);
-  if (desc.world === 'unknown') return `Requires matching type (${type}).`;
-  if (!desc.domain) return `Requires ${formatTypeDescriptor(desc)} ports.`;
-  return `Requires ${formatTypeDescriptor(desc)} (same world and domain).`;
+  return getCompatibilityHint(type);
 }
 
 function normalizeDomain(domain: string): string {
@@ -156,29 +159,14 @@ export function describeSlotType(type: SlotType): TypeDescriptor {
 
 /**
  * Check if two slot types are compatible for connection.
- * An output can connect to an input if the types match.
+ * Delegates to the semantic module to ensure UI and compiler use the same rules.
  *
- * Rules:
- * - Exact match always works
- * - Generic types (Field<T>, Signal<T>) match their specific versions
+ * @param outputType The source SlotType (from output port)
+ * @param inputType The target SlotType (to input port)
+ * @returns true if the types are compatible
  */
 export function areTypesCompatible(outputType: SlotType, inputType: SlotType): boolean {
-  // Exact match
-  if (outputType === inputType) return true;
-
-  const outDesc = describeSlotType(outputType);
-  const inDesc = describeSlotType(inputType);
-
-  // If both have a known world, enforce world + domain match
-  if (outDesc.world !== 'unknown' && inDesc.world !== 'unknown') {
-    if (outDesc.world !== inDesc.world) return false;
-    if (outDesc.domain && inDesc.domain) {
-      return outDesc.domain === inDesc.domain;
-    }
-    return outDesc.world === inDesc.world;
-  }
-
-  return false;
+  return areSlotTypesCompatible(outputType, inputType);
 }
 
 /**
