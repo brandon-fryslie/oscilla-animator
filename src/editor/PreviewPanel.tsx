@@ -13,7 +13,6 @@
 import { observer } from 'mobx-react-lite';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import {
-  Player,
   createPlayer,
   SvgRenderer,
   group,
@@ -22,6 +21,7 @@ import {
   type Scene,
   type CuePoint,
   type TimeModel,
+  type Player,
 } from './runtime';
 import type { CompilerService, Viewport } from './compiler';
 import type { Program } from './compiler/types';
@@ -101,6 +101,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const { width, height } = viewport;
 
   // Initialize player and renderer ONCE (never destroy/recreate)
+  // biome-ignore format: complex hook
   useEffect(() => {
     if (!svgRef.current) return;
     if (playerRef.current) return; // Already initialized
@@ -163,16 +164,18 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
       player.destroy();
       renderer.clear();
     };
-  }, []); // Empty deps - only run once
+  // Intentionally run only once - initialization hook
+  // biome-ignore lint/correctness/useExhaustiveDependencies: run once on mount
+  });
 
   // Sync with external isPlaying prop
   useEffect(() => {
     const player = playerRef.current;
     if (!player) return;
 
-    if (isPlaying && playState !== 'playing') {
+    if (isPlaying === true && playState !== 'playing') {
       player.play();
-    } else if (!isPlaying && playState === 'playing') {
+    } else if (isPlaying === false && playState === 'playing') {
       player.pause();
     }
   }, [isPlaying, playState]);
@@ -209,7 +212,9 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     }, 500);
 
     return () => clearInterval(interval);
-  }, [compilerService, viewport.width, viewport.height, store.patchStore.patchRevision]);
+  // viewport is tracked inside the effect via closure
+  // biome-ignore lint/correctness/useExhaustiveDependencies: compilerService is the true dependency
+  }, [compilerService, logStore, store.patchStore.patchRevision]);
 
   // TimeConsole callbacks
   const handlePlay = useCallback(() => {

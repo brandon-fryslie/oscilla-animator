@@ -113,7 +113,10 @@ function isSuggestAllowed(policy: AdapterPolicy): boolean {
 }
 
 function chooseBestPath(paths: Array<Array<{ id: string; policy: AdapterPolicy; cost: number; from: TypeDesc; to: TypeDesc }>>) {
-  return chooseBestPaths(paths)[0]!;
+  const bestPaths = chooseBestPaths(paths);
+  // We know bestPaths is non-empty when this function is called
+  // because callers only invoke this after checking paths.length > 0
+  return bestPaths[0];
 }
 
 function chooseBestPaths(paths: Array<Array<{ id: string; policy: AdapterPolicy; cost: number; from: TypeDesc; to: TypeDesc }>>) {

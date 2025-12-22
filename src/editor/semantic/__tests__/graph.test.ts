@@ -27,6 +27,9 @@ describe('SemanticGraph', () => {
           },
         ],
         connections: [],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const graph = SemanticGraph.fromPatch(patch);
@@ -60,6 +63,9 @@ describe('SemanticGraph', () => {
             to: { blockId: 'block2', slotId: 'progress', direction: 'input' },
           },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const graph = SemanticGraph.fromPatch(patch);
@@ -235,6 +241,9 @@ describe('SemanticGraph', () => {
           { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
           { id: 'conn2', from: { blockId: 'b', slotId: 'out', direction: 'output' }, to: { blockId: 'c', slotId: 'in', direction: 'input' } },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const graph = SemanticGraph.fromPatch(patch);
@@ -252,6 +261,9 @@ describe('SemanticGraph', () => {
           { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
           { id: 'conn2', from: { blockId: 'b', slotId: 'out', direction: 'output' }, to: { blockId: 'a', slotId: 'in', direction: 'input' } },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const graph = SemanticGraph.fromPatch(patch);
@@ -272,6 +284,9 @@ describe('SemanticGraph', () => {
           { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
           { id: 'conn2', from: { blockId: 'b', slotId: 'out', direction: 'output' }, to: { blockId: 'c', slotId: 'in', direction: 'input' } },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const graph = SemanticGraph.fromPatch(patch);
@@ -301,6 +316,9 @@ describe('SemanticGraph', () => {
           { id: 'conn2', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'c', slotId: 'in', direction: 'input' } },
           { id: 'conn3', from: { blockId: 'b', slotId: 'out', direction: 'output' }, to: { blockId: 'd', slotId: 'in', direction: 'input' } },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const graph = SemanticGraph.fromPatch(patch);

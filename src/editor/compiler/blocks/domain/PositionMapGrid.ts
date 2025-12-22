@@ -31,7 +31,7 @@ export const PositionMapGridBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const cols = Number(params.cols ?? 10);
     const spacing = Number(params.spacing ?? 20);
     const originX = Number(params.originX ?? 100);

@@ -44,7 +44,7 @@ export const JitterFieldVec2Block: BlockCompiler = {
       };
     }
 
-    const idRandFn = idRandArtifact.value as Field<number>;
+    const idRandFn = idRandArtifact.value;
     const phaseFn = phaseArtifact.value;
     const amount = Number(params.amount ?? 10);
     const frequency = Number(params.frequency ?? 1);
@@ -62,7 +62,7 @@ export const JitterFieldVec2Block: BlockCompiler = {
 
       const out = new Array<Vec2>(randoms.length);
       for (let i = 0; i < randoms.length; i++) {
-        const r = randoms[i]!;
+        const r = randoms[i];
 
         // Each element gets a unique direction from 0 to 2π
         const angle = r * Math.PI * 2;

@@ -76,7 +76,7 @@ export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelPro
 
   const handleNameChange = (e: React.FocusEvent<HTMLInputElement>) => {
     const newName = e.target.value.trim();
-    if (newName && newName !== bus.name) {
+    if (newName !== undefined && newName !== null && newName.length > 0 && newName !== bus.name) {
       store.busStore.updateBus(bus.id, { name: newName });
     }
   };
@@ -110,7 +110,7 @@ export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelPro
     e.preventDefault();
     e.stopPropagation();
 
-    if (!draggedPublisherId) return;
+    if (draggedPublisherId === undefined || draggedPublisherId === null) return;
 
     const draggedIndex = publishers.findIndex(p => p.id === draggedPublisherId);
     if (draggedIndex === -1 || draggedIndex === targetIndex) {

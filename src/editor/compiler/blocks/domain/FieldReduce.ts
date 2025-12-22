@@ -55,7 +55,7 @@ export const FieldReduceBlock: BlockCompiler = {
       };
     }
 
-    const fieldFn = fieldArtifact.value as Field<number>;
+    const fieldFn = fieldArtifact.value;
 
     // We need a domain to evaluate the field. The field function captures its domain
     // from the upstream block that created it. We'll evaluate with a reasonable count.

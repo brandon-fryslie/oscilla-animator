@@ -165,8 +165,11 @@ describe('Domain Pipeline', () => {
         expect(positions.length).toBe(4);
 
         // At 0 degrees, point should be at (center + radius, center)
-        expect(positions[0]!.x).toBeCloseTo(150, 1);
-        expect(positions[0]!.y).toBeCloseTo(100, 1);
+        const firstPos = positions[0];
+        if (firstPos) {
+          expect(firstPos.x).toBeCloseTo(150, 1);
+          expect(firstPos.y).toBeCloseTo(100, 1);
+        }
       }
     });
   });

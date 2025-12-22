@@ -28,6 +28,7 @@ import {
   areTypesCompatible,
   describeSlotType,
 } from './portUtils';
+import { isDefined } from './types/helpers';
 import './PatchBay.css';
 
 /**
@@ -124,7 +125,7 @@ function Port({
 
   // Determine port styling - grey when unconnected, connectionColor when connected
   const portStyle: React.CSSProperties = {
-    ...(isConnected && connectionColor ? {
+    ...(isConnected && isDefined(connectionColor) ? {
       backgroundColor: connectionColor,
       borderColor: connectionColor,
       color: '#fff',

@@ -12,19 +12,20 @@ import {
   InfiniteTimeRootBlock,
   extractTimeRootAutoPublications
 } from '../TimeRoot';
-import type { CompileCtx } from '../../../types';
+import type { CompileCtx, RuntimeCtx } from '../../../types';
 
 // =============================================================================
 // Test Helpers
 // =============================================================================
 
-function createTestContext(): CompileCtx {
+function createTestContext(): CompileCtx & RuntimeCtx {
   return {
     env: {},
     geom: {
       get: <K extends object, V>(_key: K, compute: () => V): V => compute(),
       invalidate: () => {},
     },
+    viewport: { w: 1920, h: 1080, dpr: 1 },
   };
 }
 

@@ -141,7 +141,7 @@ export class Validator {
           domain: 'compile',
           primaryTarget: {
             kind: 'timeRoot',
-            blockId: timeRootBlocks[0]!.id,
+            blockId: timeRootBlocks[0].id,
           },
           affectedTargets: timeRootBlocks.slice(1).map((b) => ({
             kind: 'block' as const,

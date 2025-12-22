@@ -41,7 +41,7 @@ export const FieldFromSignalBroadcastBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const signalFn = signalArtifact.value;
 
     // Create field that broadcasts signal value to all elements

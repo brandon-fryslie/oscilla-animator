@@ -48,7 +48,7 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const blockSeed = Number(params.seed ?? 0);
 
     // Create field that produces deterministic random per element
@@ -58,7 +58,7 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
       const combinedSeed = seed + blockSeed;
 
       for (let i = 0; i < count; i++) {
-        const elementId = domain.elements[i]!;
+        const elementId = domain.elements[i];
         out[i] = hash01(elementId, combinedSeed);
       }
 

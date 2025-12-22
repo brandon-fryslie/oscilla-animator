@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { isDefined, isNonEmptyString } from './types/helpers';
 import './Modal.css';
 
 type ModalWidth = 'small' | 'medium' | 'large';
@@ -31,18 +32,18 @@ function useFocusTrap(enabled: boolean, containerRef: React.RefObject<HTMLDivEle
 
       if (focusables.length === 0) return;
 
-      const first = focusables[0]!;
-      const last = focusables[focusables.length - 1]!;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
       const active = document.activeElement as HTMLElement | null;
 
       if (event.shiftKey) {
         if (active === first || !container.contains(active)) {
           event.preventDefault();
-          last.focus();
+          last?.focus();
         }
       } else if (active === last) {
         event.preventDefault();
-        first.focus();
+        first?.focus();
       }
     };
 
@@ -59,7 +60,7 @@ export function Modal({
   footer,
   width = 'medium',
   zIndex = 1200,
-}: ModalProps) {
+}: ModalProps): React.JSX.Element | null {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -99,7 +100,7 @@ export function Modal({
           aria-modal="true"
           aria-label={title ?? 'Modal dialog'}
         >
-          {title && (
+          {isNonEmptyString(title) && (
             <div className="modal-header">
               <h2 className="modal-title">{title}</h2>
               <button className="modal-close" onClick={onClose} aria-label="Close modal">
@@ -108,11 +109,11 @@ export function Modal({
             </div>
           )}
           <div className="modal-body">{children}</div>
-          {footer && <div className="modal-footer">{footer}</div>}
+          {isDefined(footer) && <div className="modal-footer">{footer}</div>}
         </div>
       </div>
     );
-  }, [children, footer, isOpen, onClose, title, width]);
+  }, [children, footer, isOpen, onClose, title, width, zIndex]);
 
   if (!isOpen) return null;
   return createPortal(content, document.body);

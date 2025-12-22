@@ -6,8 +6,8 @@
  * Reference: design-docs/10-Refactor-for-UI-prep/11-DiffSummary.md
  */
 
-import { Op } from './ops';
-import { DiffSummary, EntityDiff, EntityRef } from './types';
+import type { Op } from './ops';
+import type { DiffSummary, EntityDiff } from './types';
 
 export function generateDiff(ops: readonly Op[]): DiffSummary {
   const diff: EntityDiff = {

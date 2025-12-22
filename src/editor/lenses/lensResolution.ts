@@ -62,7 +62,7 @@ function artifactFromDefaultSource(source: DefaultSourceState): Artifact {
       return { kind: 'Signal:vec2', value: () => value as any };
     }
     if (type.domain === 'color') {
-      return { kind: 'Signal:color', value: () => value };
+      return { kind: 'Signal:color', value: () => value as string };
     }
     if (type.domain === 'boolean') {
       return { kind: 'Signal:number', value: () => (value ? 1 : 0) };

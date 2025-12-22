@@ -8,11 +8,12 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useStore } from './stores';
 import type { TypeDesc, BusCombineMode, CoreDomain } from './types';
 import type { RootStore } from './stores/RootStore';
 import { isBusEligible } from './types';
+import { isNonEmptyString } from './types/helpers';
 import './BusCreationDialog.css';
 
 interface BusCreationDialogProps {
@@ -121,10 +122,12 @@ function sanitizeName(name: string): string {
  * Returns empty string if sanitization fails or inputs are invalid.
  */
 function generateContextAwareName(blockLabel?: string, portName?: string): string {
-  if (!blockLabel) return '';
+  if (blockLabel === undefined || blockLabel === null || blockLabel === '') {
+    return '';
+  }
 
   // Try block_port pattern first
-  if (portName) {
+  if (portName !== undefined && portName !== null && portName !== '') {
     const combined = `${blockLabel}_${portName}`;
     const sanitized = sanitizeName(combined);
     if (sanitized) return sanitized;
@@ -161,8 +164,8 @@ function generateUniqueBusName(baseName: string, existingNames: string[]): strin
 
   if (letterMatch) {
     // Base name ends with a letter, increment it
-    const prefix = letterMatch[1]!;
-    const currentLetter = letterMatch[2]!;
+    const prefix = letterMatch[1];
+    const currentLetter = letterMatch[2];
     const currentCode = currentLetter.charCodeAt(0);
 
     // Try next letters
@@ -222,7 +225,7 @@ function generateInitialName(
   const existingNames = store.busStore.buses.map(b => b.name);
 
   // Try context-aware naming first
-  if (blockLabel) {
+  if (isNonEmptyString(blockLabel)) {
     const contextName = generateContextAwareName(blockLabel, portName);
     if (contextName) {
       return generateUniqueBusName(contextName, existingNames);
@@ -230,7 +233,7 @@ function generateInitialName(
   }
 
   // Use suggested name if provided
-  if (suggestedName) {
+  if (isNonEmptyString(suggestedName)) {
     const sanitized = sanitizeName(suggestedName);
     if (sanitized) {
       return generateUniqueBusName(sanitized, existingNames);
@@ -262,12 +265,13 @@ export const BusCreationDialog = observer((props: BusCreationDialogProps) => {
   } = props;
 
   // Determine initial type from suggestion or default to number
-  const getInitialDomain = (): CoreDomain => {
+  // Use useCallback to make this stable for the useEffect dependency array
+  const getInitialDomain = useCallback((): CoreDomain => {
     if (suggestedType && isBusEligible(suggestedType)) {
       return suggestedType.domain as CoreDomain;
     }
     return 'number';
-  };
+  }, [suggestedType]);
 
   const [selectedDomain, setSelectedDomain] = useState<CoreDomain>(getInitialDomain());
   const [busName, setBusName] = useState<string>('');
@@ -297,7 +301,7 @@ export const BusCreationDialog = observer((props: BusCreationDialogProps) => {
       setValidationError('');
       setUserHasEdited(false);
     }
-  }, [isOpen, suggestedType, suggestedName, sourceBlockLabel, sourcePortName]);
+  }, [isOpen, getInitialDomain, store, suggestedName, sourceBlockLabel, sourcePortName]);
 
   // Update combine mode when domain changes
   useEffect(() => {
@@ -353,12 +357,22 @@ export const BusCreationDialog = observer((props: BusCreationDialogProps) => {
     const busId = store.busStore.createBus(typeDesc, trimmedName, combineMode);
 
     // Auto-publish if requested
-    if (autoPublishFromBlock && autoPublishFromPort) {
+    if (
+      autoPublishFromBlock !== undefined &&
+      autoPublishFromBlock !== null &&
+      autoPublishFromPort !== undefined &&
+      autoPublishFromPort !== null
+    ) {
       store.busStore.addPublisher(busId, autoPublishFromBlock, autoPublishFromPort);
     }
 
     // Auto-subscribe if requested
-    if (autoSubscribeToBlock && autoSubscribeToPort) {
+    if (
+      autoSubscribeToBlock !== undefined &&
+      autoSubscribeToBlock !== null &&
+      autoSubscribeToPort !== undefined &&
+      autoSubscribeToPort !== null
+    ) {
       store.busStore.addListener(busId, autoSubscribeToBlock, autoSubscribeToPort);
     }
 

@@ -63,8 +63,8 @@ export const FieldZipNumberBlock: BlockCompiler = {
 
     const op = String(params.op ?? 'add');
 
-    const fieldAFn = fieldA.value as Field<number>;
-    const fieldBFn = fieldB.value as Field<number>;
+    const fieldAFn = fieldA.value;
+    const fieldBFn = fieldB.value;
     const zipOp = getZipOperation(op);
 
     // Create zipped field
@@ -75,7 +75,7 @@ export const FieldZipNumberBlock: BlockCompiler = {
 
       const out = new Array<number>(count);
       for (let i = 0; i < count; i++) {
-        out[i] = zipOp(valuesA[i]!, valuesB[i]!);
+        out[i] = zipOp(valuesA[i], valuesB[i]);
       }
 
       return out;

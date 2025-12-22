@@ -97,8 +97,8 @@ function ConceptsPage() {
       </p>
       <h3>Fields</h3>
       <p>
-        A <strong>Field</strong> is a value that varies per element. Instead of saying “all particles start at x = 200”, you
-        say “each particle has its own start position inside this region, or at some radial distance, with jitter”.
+        A <strong>Field</strong> is a value that varies per element. Instead of saying "all particles start at x = 200", you
+        say "each particle has its own start position inside this region, or at some radial distance, with jitter".
       </p>
       <p>
         In the kernel, a Field is a function:
@@ -129,8 +129,8 @@ function ConceptsPage() {
         <li>raw time <code>tLocal</code> since the phase started.</li>
       </ul>
       <p>
-        This lets you write animation logic that thinks in terms of “where in the entrance are we?” rather than “what is the
-        absolute time in milliseconds?”.
+        This lets you write animation logic that thinks in terms of "where in the entrance are we?" rather than "what is the
+        absolute time in milliseconds?".
       </p>
       <h3>Programs and Render Trees</h3>
       <p>
@@ -214,7 +214,7 @@ function RoadmapPage() {
       <ul>
         <li>
           <strong>Richer ambient loops:</strong> better primitives and presets for multi-scale looping, so animations can run for a
-          long time while still “rhyming”.
+          long time while still "rhyming".
         </li>
         <li>
           <strong>More compositors:</strong> global post-effects that can be layered onto any program without changing the core logic.
@@ -644,7 +644,7 @@ export interface HelpPanelProps {
   onPopOut: () => void; // Open in larger modal
 }
 
-export const HelpPanel = ({ topicId, collapsed, onToggleCollapse, onNavigate, onRetakeTour, onPopOut }: HelpPanelProps) => {
+export const HelpPanel = ({ topicId, collapsed, onToggleCollapse, onNavigate, onRetakeTour, onPopOut }: HelpPanelProps): JSX.Element => {
   const topics = useMemo(() => buildTopics(onRetakeTour), [onRetakeTour]);
 
   // Build flat map of all topics
@@ -728,7 +728,7 @@ export const HelpPanel = ({ topicId, collapsed, onToggleCollapse, onNavigate, on
   );
 };
 
-export function HelpCenterModal({ isOpen, initialTopicId = 'overview', onClose, onRetakeTour }: HelpCenterProps) {
+export function HelpCenterModal({ isOpen, initialTopicId = 'overview', onClose, onRetakeTour }: HelpCenterProps): React.ReactElement | null {
   const topics = useMemo(() => buildTopics(onRetakeTour), [onRetakeTour]);
   const [activeId, setActiveId] = useState<HelpCenterTopicId>(initialTopicId);
 

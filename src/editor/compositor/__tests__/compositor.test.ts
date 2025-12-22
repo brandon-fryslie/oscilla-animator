@@ -59,8 +59,8 @@ describe('Selection API', () => {
     const refs = find(tree, { selector: all }, {}, drawNodeAdapter.getChildren);
 
     expect(refs.length).toBe(7); // root + 2 strokes + particles group + 3 particles
-    expect(refs[0]!.id).toBe('root');
-    expect(refs[0]!.path).toEqual([]);
+    expect(refs[0].id).toBe('root');
+    expect(refs[0].path).toEqual([]);
   });
 
   it('finds nodes by tag', () => {
@@ -76,8 +76,8 @@ describe('Selection API', () => {
     const refs = find(tree, { selector: byId('p-2') }, {}, drawNodeAdapter.getChildren);
 
     expect(refs.length).toBe(1);
-    expect(refs[0]!.id).toBe('p-2');
-    expect(refs[0]!.path).toEqual([2, 1]); // root -> particles(2) -> p-2(1)
+    expect(refs[0].id).toBe('p-2');
+    expect(refs[0].path).toEqual([2, 1]); // root -> particles(2) -> p-2(1)
   });
 
   it('combines selectors with and/or/not', () => {
@@ -91,7 +91,7 @@ describe('Selection API', () => {
       drawNodeAdapter.getChildren
     );
     expect(animated.length).toBe(1);
-    expect(animated[0]!.id).toBe('stroke-1');
+    expect(animated[0].id).toBe('stroke-1');
 
     // particle OR stroke
     const particleOrStroke = find(
@@ -162,7 +162,7 @@ describe('TreeRewrite', () => {
     expect(wrapperRefs.length).toBe(1);
 
     // Wrapper should contain particles
-    const wrapper = drawNodeRewrite.getAt(result, wrapperRefs[0]!.path) as any;
+    const wrapper = drawNodeRewrite.getAt(result, wrapperRefs[0].path) as any;
     expect(wrapper.children.length).toBe(3);
     expect(wrapper.children.map((c: any) => c.id)).toEqual(['p-1', 'p-2', 'p-3']);
   });
@@ -304,7 +304,7 @@ describe('Resources', () => {
     reg = addResource(reg, glowFilter('glow-2', 10));
 
     expect(reg.filters.size).toBe(2);
-    expect(reg.filters.get('glow-1')!.effects[0]!.type).toBe('gaussianBlur');
+    expect(reg.filters.get('glow-1')!.effects[0].type).toBe('gaussianBlur');
   });
 
   it('deduplicates by id', () => {

@@ -34,7 +34,7 @@ export const PositionMapCircleBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const centerX = Number(params.centerX ?? 400);
     const centerY = Number(params.centerY ?? 300);
     const radius = Number(params.radius ?? 150);

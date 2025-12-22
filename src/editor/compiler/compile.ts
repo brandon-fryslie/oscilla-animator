@@ -78,7 +78,7 @@ export function validateTimeRootConstraint(patch: CompilerPatch): CompileError[]
     errors.push({
       code: 'MultipleTimeRoots',
       message: `Patch contains ${timeRootBlocks.length} TimeRoot blocks - only one is allowed`,
-      where: { blockId: timeRootBlocks[0]!.id },
+      where: { blockId: timeRootBlocks[0].id },
     });
   }
 

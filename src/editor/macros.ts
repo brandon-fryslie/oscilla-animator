@@ -66,7 +66,7 @@ export interface MacroListener {
   toSlot: string;
   /** Optional lens to transform the bus value */
   lens?: {
-    type: LensType;
+    type: string;
     params: Record<string, unknown>;
   };
 }
@@ -735,7 +735,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
         params: { rows: 15, cols: 15, spacing: 30, originX: 120, originY: 50 } },
       { ref: 'idHash', type: 'StableIdHash', laneKind: 'Fields', label: 'Per-Element ID',
         params: { salt: 42 } },
-      
+
       // Color Animation
       { ref: 'colorOsc', type: 'Oscillator', laneKind: 'Phase', label: 'Color Wave',
         params: { shape: 'sine', frequency: 0.1 } },
@@ -743,7 +743,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { ref: 'colorPhase', type: 'FieldZipNumber', laneKind: 'Fields', label: 'Add Color Offset', params: { op: 'add' } },
       { ref: 'colorize', type: 'FieldColorize', laneKind: 'Fields', label: 'Gradient',
         params: { colorA: '#ff00ff', colorB: '#00ffff' } },
-      
+
       // Position Animation (Swirl)
       { ref: 'swirlJitter', type: 'JitterFieldVec2', laneKind: 'Fields', label: 'Swirl Motion',
         params: { amount: 25, frequency: 0.25 } },
@@ -795,7 +795,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { busName: 'phaseA', toRef: 'opacityOsc', toSlot: 'phase' },
 
       // Connect render radius to energy bus
-      { busName: 'energy', toRef: 'render', toSlot: 'radius', 
+      { busName: 'energy', toRef: 'render', toSlot: 'radius',
         lens: { type: 'scale', params: { scale: 10, offset: 2 } } },
     ],
   },

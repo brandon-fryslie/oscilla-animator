@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { compilePatch } from '../compiler/compile';
-import type { CompilerPatch, BlockRegistry, CompileCtx, Seed } from '../compiler/types';
+import type { CompilerPatch, BlockRegistry, CompileCtx, Seed, RuntimeCtx } from '../compiler/types';
 import type { Bus, Publisher, Listener } from '../types';
 
 // =============================================================================
@@ -73,11 +73,11 @@ function createTestRegistry(): BlockRegistry {
           program: {
             kind: 'RenderTreeProgram',
             value: {
-              signal: (t: number, ctx: any) => ({
+              signal: (_t: number, ctx: RuntimeCtx) => ({
                 kind: 'group',
                 id: 'root',
                 children: [],
-                meta: { value: input.value(t, ctx) },
+                meta: { value: input.value(_t, ctx) },
               }),
               event: () => [],
             },

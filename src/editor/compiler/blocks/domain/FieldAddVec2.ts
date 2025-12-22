@@ -41,8 +41,8 @@ export const FieldAddVec2Block: BlockCompiler = {
       };
     }
 
-    const fieldAFn = fieldA.value as Field<Vec2>;
-    const fieldBFn = fieldB.value as Field<Vec2>;
+    const fieldAFn = fieldA.value;
+    const fieldBFn = fieldB.value;
 
     // Create summed field
     const field: Field<Vec2> = (seed, n, ctx) => {
@@ -52,8 +52,8 @@ export const FieldAddVec2Block: BlockCompiler = {
 
       const out = new Array<Vec2>(count);
       for (let i = 0; i < count; i++) {
-        const a = valuesA[i]!;
-        const b = valuesB[i]!;
+        const a = valuesA[i];
+        const b = valuesB[i];
         out[i] = { x: a.x + b.x, y: a.y + b.y };
       }
 

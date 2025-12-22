@@ -75,7 +75,7 @@ export const FieldMapNumberBlock: BlockCompiler = {
     const a = Number(params.a ?? 0);
     const b = Number(params.b ?? 1);
 
-    const inputFieldFn = inputField.value as Field<number>;
+    const inputFieldFn = inputField.value;
     const mapFn = getMapFunction(fn, k, a, b);
 
     // Create mapped field

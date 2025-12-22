@@ -62,8 +62,8 @@ export const RenderInstances2DBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
-    const positionField = positionsArtifact.value as Field<Vec2>;
+    const domain = domainArtifact.value;
+    const positionField = positionsArtifact.value;
 
     // Radius input: accept EITHER Field<number> OR Signal<number>
     // - Field<number>: per-element radii (static or varied)
@@ -75,7 +75,7 @@ export const RenderInstances2DBlock: BlockCompiler = {
 
     if (radiusArtifact?.kind === 'Field:number') {
       radiusMode = 'field';
-      radiusField = radiusArtifact.value as Field<number>;
+      radiusField = radiusArtifact.value;
     } else if (radiusArtifact?.kind === 'Signal:number') {
       radiusMode = 'signal';
       radiusSignal = radiusArtifact.value as (t: number, ctx: RuntimeCtx) => number;
@@ -85,7 +85,7 @@ export const RenderInstances2DBlock: BlockCompiler = {
     // Optional color field - default to white if not provided
     const colorArtifact = inputs.color;
     const colorField: Field<unknown> = colorArtifact?.kind === 'Field:color'
-      ? colorArtifact.value as Field<unknown>
+      ? colorArtifact.value
       : (_seed, n) => new Array(n).fill('#ffffff');
 
     // Params

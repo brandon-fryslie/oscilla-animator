@@ -22,7 +22,7 @@ describe('ModulationTableStore', () => {
       expect(tableStore.rowGroups.length).toBe(0);
 
       // Add macro
-      rootStore.patchStore.addBlock('macro:simpleGrid', 'scene');
+      rootStore.patchStore.addBlock('macro:simpleGrid');
 
       // Now should have rows (count increased after Remove Parameters refactor)
       // RenderInstances2D now exposes: positions, radius, color, opacity, glow, glowIntensity
@@ -39,7 +39,7 @@ describe('ModulationTableStore', () => {
   describe('macro expansion and row derivation', () => {
     it('should create blocks when macro:simpleGrid is added', () => {
       // Add the macro
-      rootStore.patchStore.addBlock('macro:simpleGrid', 'scene');
+      rootStore.patchStore.addBlock('macro:simpleGrid');
 
       // Check blocks were created
       const blocks = rootStore.patchStore.blocks;
@@ -59,7 +59,7 @@ describe('ModulationTableStore', () => {
 
     it('should derive rows from RenderInstances2D inputs', () => {
       // Add the macro
-      rootStore.patchStore.addBlock('macro:simpleGrid', 'scene');
+      rootStore.patchStore.addBlock('macro:simpleGrid');
 
       // Check rows
       const rows = tableStore.rows;
@@ -80,7 +80,7 @@ describe('ModulationTableStore', () => {
     });
 
     it('should create row groups for blocks', () => {
-      rootStore.patchStore.addBlock('macro:simpleGrid', 'scene');
+      rootStore.patchStore.addBlock('macro:simpleGrid');
 
       const groups = tableStore.rowGroups;
       console.log('Row groups:');
@@ -93,7 +93,7 @@ describe('ModulationTableStore', () => {
     });
 
     it('should derive columns from buses', () => {
-      rootStore.patchStore.addBlock('macro:simpleGrid', 'scene');
+      rootStore.patchStore.addBlock('macro:simpleGrid');
 
       const columns = tableStore.columns;
       console.log('Columns (buses):');

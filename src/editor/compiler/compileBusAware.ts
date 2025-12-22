@@ -15,6 +15,7 @@
 import type {
   Artifact,
   BlockId,
+  BlockInstance,
   BlockRegistry,
   CompileCtx,
   CompileError,
@@ -509,8 +510,8 @@ export function compileBusAwarePatch(
           inputs[p.name] = lensed;
         } else {
           // Check for Default Source (fallback)
-          const defaultArtifact = resolveDefaultSource(block.type, p.name, p.type.kind);
-          
+          const defaultArtifact = resolveDefaultSource(block, p.name, p.type.kind);
+
           if (defaultArtifact) {
             inputs[p.name] = defaultArtifact;
           } else if (p.required) {
@@ -802,7 +803,7 @@ function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx
         return { kind: 'Signal:vec2', value: () => artifact.value };
       }
       if (artifact.kind === 'Scalar:color') {
-        return { kind: 'Signal:color', value: () => artifact.value };
+        return { kind: 'Signal:color', value: () => artifact.value as string };
       }
       if (artifact.kind === 'Scalar:boolean') {
         return { kind: 'Signal:number', value: () => (artifact.value ? 1 : 0) };
@@ -931,7 +932,7 @@ function applyLensStack(
       return { kind: 'Error', message: `Lens type mismatch: ${lens.lensId}` };
     }
 
-    const params: Record<string, unknown> = {};
+    const params: Record<string, Artifact> = {} as Record<string, Artifact>;
     for (const [paramKey, binding] of Object.entries(lens.params)) {
       params[paramKey] = resolveLensParam(binding, {
         resolveBus: (busId) =>
@@ -955,7 +956,7 @@ function applyLensStack(
     }
 
     if (def.apply) {
-      current = def.apply(current, params) as Artifact;
+      current = def.apply(current, params);
     }
   }
 
@@ -1035,7 +1036,7 @@ function inferOutputPort(
     }
   }
 
-  if (produced.length === 1) return produced[0]!;
+  if (produced.length === 1) return produced[0];
   return null;
 }
 
@@ -1044,16 +1045,17 @@ function inferOutputPort(
 // =============================================================================
 
 function resolveDefaultSource(
-  blockType: string,
+  block: BlockInstance,
   portName: string,
   kind: string // ValueKind
 ): Artifact | null {
-  const def = getBlockDefinition(blockType);
+  const def = getBlockDefinition(block.type);
   if (!def) return null;
 
   const slot = def.inputs?.find(s => s.id === portName);
   if (slot?.defaultSource) {
-    return createDefaultArtifact(slot.defaultSource.value, kind);
+    const override = block.params?.[portName];
+    return createDefaultArtifact(override ?? slot.defaultSource.value, kind);
   }
   return null;
 }

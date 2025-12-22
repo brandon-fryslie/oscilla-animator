@@ -11,7 +11,7 @@ import type { PatchDocument, ValidationResult } from '../semantic/types';
 import type { SemanticGraph } from '../semantic';
 import type { Op } from './ops';
 import type { Diagnostic } from '../diagnostics/types';
-import type { BlockId, Connection, Bus, Publisher, Listener, PortRef } from '../types';
+import type { PortRef } from '../types';
 
 // =============================================================================
 // Diff Summary
@@ -111,7 +111,7 @@ export interface TxBuilder {
   // Wire Ops
   addWire(from: PortRef, to: PortRef, id?: string): string;
   removeWire(connectionId: string): void;
-  
+
   // Bus Ops
   addBus(spec: { name: string; type: any; combineMode: any; defaultValue: unknown; sortKey?: number; id?: string }): string;
   removeBus(busId: string): void;
@@ -128,7 +128,7 @@ export interface TxBuilder {
 
   // Time Ops
   setTimeRoot(blockId: string): void;
-  
+
   // Settings Ops
   updatePatchSettings(patch: Record<string, unknown>): void;
 
@@ -152,7 +152,7 @@ export interface PatchKernel {
   ): TxResult<R>;
 
   applyTx(tx: CommittedTx): void; // Simplified return type for now
-  
+
   undo(): void;
   redo(): void;
 }

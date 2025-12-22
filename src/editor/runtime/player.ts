@@ -65,8 +65,8 @@ export class Player {
   private seed: Seed = 1;
   private scene: Scene | null = null;
 
-  private compileCtx: CompileCtx;
-  private runtimeCtx: RuntimeCtx;
+  private readonly compileCtx: CompileCtx;
+  private readonly runtimeCtx: RuntimeCtx;
 
   private playState: PlayState = 'paused';
   private tMs = 0;
@@ -79,13 +79,13 @@ export class Player {
   // TimeModel from compiler (Phase 3: TimeRoot)
   private timeModel: TimeModel | null = null;
 
-  private onFrame: (tree: RenderTree, tMs: number) => void;
-  private onStateChange?: (state: PlayState) => void;
-  private onTimeChange?: (tMs: number) => void;
-  private onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
+  private readonly onFrame: (tree: RenderTree, tMs: number) => void;
+  private readonly onStateChange?: (state: PlayState) => void;
+  private readonly onTimeChange?: (tMs: number) => void;
+  private readonly onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
 
   // Event dispatcher for runtime health snapshots
-  private events?: EventDispatcher;
+  private readonly events?: EventDispatcher;
 
   // Runtime health tracking
   private activePatchRevision = 0;
@@ -176,15 +176,15 @@ export class Player {
    * Check if the current program has a finite duration.
    */
   hasFiniteDuration(): boolean {
-    return this.currentTimeline?.kind === 'finite';
+    return this.timeModel?.kind === 'finite';
   }
 
   /**
    * Get the program's recommended duration (if finite).
    */
   getProgramDuration(): number | null {
-    if (this.currentTimeline?.kind === 'finite') {
-      return this.currentTimeline.durationMs;
+    if (this.timeModel?.kind === 'finite') {
+      return this.timeModel.durationMs;
     }
     return null;
   }
@@ -321,7 +321,7 @@ export class Player {
   // Frame Loop
   // ===========================================================================
 
-  private tick = (): void => {
+  private readonly tick = (): void => {
     if (this.playState !== 'playing') return;
 
     const now = performance.now();

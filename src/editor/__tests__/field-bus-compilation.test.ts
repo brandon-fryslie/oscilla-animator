@@ -133,7 +133,12 @@ function createFieldTestRegistry(): BlockRegistry {
           const bValues = bField(seed, n, ctx);
           const result: number[] = [];
           for (let i = 0; i < n; i++) {
-            result.push(aValues[i]! + bValues[i]!);
+            const aVal = aValues[i];
+            const bVal = bValues[i];
+            // Both arrays should have valid indices since we loop from 0 to n
+            if (aVal !== undefined && bVal !== undefined) {
+              result.push(aVal + bVal);
+            }
           }
           return result;
         };

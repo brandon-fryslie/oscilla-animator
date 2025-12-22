@@ -254,7 +254,7 @@ const CONNECTION_COLORS = [
  * Colors cycle through the palette.
  */
 export function getConnectionColor(connectionIndex: number): string {
-  return CONNECTION_COLORS[connectionIndex % CONNECTION_COLORS.length]!;
+  return CONNECTION_COLORS[connectionIndex % CONNECTION_COLORS.length];
 }
 
 /**

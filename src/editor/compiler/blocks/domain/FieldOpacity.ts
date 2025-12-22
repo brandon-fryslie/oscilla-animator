@@ -48,7 +48,7 @@ export const FieldOpacityBlock: BlockCompiler = {
       };
     }
 
-    const valuesFn = valuesArtifact.value as Field<number>;
+    const valuesFn = valuesArtifact.value;
     const min = Number(params.min ?? 0);
     const max = Number(params.max ?? 1);
     const curve = String(params.curve ?? 'linear');

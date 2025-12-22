@@ -36,7 +36,7 @@ interface RenderCtx {
 // =============================================================================
 
 export class SvgRenderer {
-  private svg: SVGSVGElement;
+  private readonly svg: SVGSVGElement;
   private nodeMap = new Map<string, SVGElement>();
   private usedIds = new Set<string>();
 
@@ -146,7 +146,7 @@ export class SvgRenderer {
 
     // Reorder children to match tree order
     for (let i = 0; i < children.length; i++) {
-      const expectedId = children[i]!.id;
+      const expectedId = children[i].id;
       const el = this.nodeMap.get(expectedId);
       if (el && el.parentNode === parent) {
         const currentIndex = Array.from(parent.children).indexOf(el);

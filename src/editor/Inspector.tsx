@@ -98,7 +98,7 @@ const PortWiringPanel = observer(({
     }> = [];
     const nearMisses: Array<{ block: Block; slot: Slot }> = [];
     const sourceDesc = describeSlotType(slot.type);
-    if (!sourceDesc.domain) return { suggestions, nearMisses };
+    if (sourceDesc.domain === null) return { suggestions, nearMisses };
     const lookingForDirection = portRef.direction === 'output' ? 'input' : 'output';
 
     for (const b of store.patchStore.blocks) {
@@ -113,7 +113,7 @@ const PortWiringPanel = observer(({
         if (compatible) continue;
 
         const desc = describeSlotType(s.type);
-        if (!desc.domain) continue;
+        if (desc.domain === null) continue;
         // Same domain but different world -> likely needs adapter
         const domainMatches = desc.domain === sourceDesc.domain;
         const worldMismatch = desc.world !== sourceDesc.world;
@@ -163,7 +163,7 @@ const PortWiringPanel = observer(({
       }
     }
     return { suggestions, nearMisses };
-  }, [block.id, portRef.direction, slot.type, store.patchStore.blocks.length, adapterDefinitions]);
+  }, [block.id, portRef.direction, slot.type, store.patchStore.blocks, adapterDefinitions]);
 
   // Get existing connections for this port
   const existingConnections = getConnectionsForPort(
@@ -298,8 +298,8 @@ const PortWiringPanel = observer(({
     const worldBadge = worldGlyph[desc.world] ?? null;
     return (
       <span className="port-badges">
-        {worldBadge && <span className={`port-badge world ${desc.world}`}>{worldBadge}</span>}
-        {desc.domain && <span className="port-badge domain">{desc.domain}</span>}
+        {worldBadge !== null && <span className={`port-badge world ${desc.world}`}>{worldBadge}</span>}
+        {desc.domain !== null && <span className="port-badge domain">{desc.domain}</span>}
       </span>
     );
   };
@@ -584,7 +584,6 @@ const PortItem = observer(({
   onNavigate: (blockId: string) => void;
 }) => {
   const store = useStore();
-  const portRef: PortRef = { blockId, slotId: slot.id, direction };
 
   // Find connection for this port
   const connection = connections.find(c =>
@@ -596,16 +595,17 @@ const PortItem = observer(({
   const connectedBlockId = connection
     ? (direction === 'input' ? connection.from.blockId : connection.to.blockId)
     : null;
-  const connectedBlock = connectedBlockId
+  const connectedBlock = connectedBlockId !== null && connectedBlockId !== undefined
     ? blocks.find(b => b.id === connectedBlockId)
     : null;
 
   const handleClick = useCallback(() => {
+    const portRef: PortRef = { blockId, slotId: slot.id, direction };
     store.uiStore.setSelectedPort(portRef);
-  }, [store, portRef]);
+  }, [store, blockId, direction, slot.id]);
 
   const handleDoubleClickConnected = useCallback(() => {
-    if (connectedBlockId) onNavigate(connectedBlockId);
+    if (connectedBlockId !== null && connectedBlockId !== undefined) onNavigate(connectedBlockId);
   }, [onNavigate, connectedBlockId]);
 
   const isSelected = store.uiStore.uiState.selectedPort?.blockId === blockId &&
@@ -645,6 +645,15 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
   const currentValue = block.params[slot.id] ?? defaultSource.value;
   const updateValue = (value: unknown) => {
     store.patchStore.updateBlockParams(block.id, { [slot.id]: value });
+  };
+
+  // Helper to convert value to string safely
+  const valueToString = (val: unknown): string => {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+    // For objects, return a placeholder rather than '[object Object]'
+    return '(value)';
   };
 
   const renderControl = () => {
@@ -702,7 +711,7 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
           <input
             type="text"
             className="param-input"
-            value={String(currentValue ?? '')}
+            value={valueToString(currentValue)}
             onChange={(e) => updateValue(e.target.value)}
           />
         );
@@ -759,7 +768,7 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
       }
     }
     return results.sort((a, b) => a.label.localeCompare(b.label));
-  }, [block.type, block.inputs, block.outputs]);
+  }, [block]);
 
   const handleReplace = useCallback((newDef: BlockDefinition) => {
     const incoming = store.patchStore.connections.filter(c => c.to.blockId === block.id);
@@ -886,7 +895,7 @@ const BlockInspectorWiringPanel = observer(({
       store.patchStore.connect(target.portRef.blockId, target.portRef.slotId, sourcePortRef.blockId, sourcePortRef.slotId);
     }
     store.uiStore.setSelectedPort(null); // Clear selection after connecting
-  }, [store, sourcePortRef, sourcePortBlock.id, sourcePortSlot.id]);
+  }, [store, sourcePortRef]);
 
   const handleCancel = useCallback(() => {
     store.uiStore.setSelectedPort(null); // Clear selection
@@ -909,8 +918,8 @@ const BlockInspectorWiringPanel = observer(({
     const worldBadge = worldGlyph[desc.world] ?? null;
     return (
       <span className="port-badges">
-        {worldBadge && <span className={`port-badge world ${desc.world}`}>{worldBadge}</span>}
-        {desc.domain && <span className="port-badge domain">{desc.domain}</span>}
+        {worldBadge !== null && <span className={`port-badge world ${desc.world}`}>{worldBadge}</span>}
+        {desc.domain !== null && <span className="port-badge domain">{desc.domain}</span>}
       </span>
     );
   };
@@ -1018,7 +1027,7 @@ export const Inspector = observer(() => {
                   </div>
                   <code className="insp-type">{block.type}</code>
                 </div>
-          
+
                 <div className="insp-body">
                   {/* Wiring Panel for selected port on current block */}
                   {store.uiStore.uiState.selectedPort &&
@@ -1068,7 +1077,7 @@ export const Inspector = observer(() => {
                           }
                         </div>
                       </div>
-          
+
                       {/* Inputs (Default Sources) */}
                       {block.inputs.some((slot) => slot.defaultSource) && (
                         <div className="insp-section">
@@ -1134,13 +1143,13 @@ export const Inspector = observer(() => {
                           </div>
                         </div>
                       )}
-          
+
                       {/* Bus connections */}
                       <BusConnectionsSection block={block} />
-          
+
                       {/* Compatible replacement blocks */}
                       <CompatibleBlocksSection block={block} />
-          
+
                       {/* Delete */}
                       <button
                         className="insp-delete"

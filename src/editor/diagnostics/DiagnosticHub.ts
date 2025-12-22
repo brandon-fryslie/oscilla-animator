@@ -71,7 +71,7 @@ export class DiagnosticHub {
   private unsubscribers: (() => void)[] = [];
 
   /** Reference to PatchStore for authoring validation */
-  private patchStore: PatchStore;
+  private readonly patchStore: PatchStore;
 
   /** Runtime diagnostics expiry time in milliseconds (5 seconds) */
   private static readonly RUNTIME_EXPIRY_MS = 5000;

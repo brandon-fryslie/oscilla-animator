@@ -17,9 +17,6 @@ import type {
   Listener,
   Patch,
   PortRef,
-  AdapterStep,
-  LensDefinition,
-  BusCombineMode,
 } from '../types';
 
 import type { CompositeDefinition } from '../composites';

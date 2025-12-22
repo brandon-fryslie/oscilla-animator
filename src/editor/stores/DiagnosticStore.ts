@@ -159,7 +159,7 @@ export class DiagnosticStore {
     return this.activeDiagnostics.filter(d => {
       const target = d.primaryTarget;
       if (target.kind === 'block') return target.blockId === blockId;
-      if (target.kind === 'port') return target.blockId === blockId;
+      if (target.kind === 'port') return target.portRef.blockId === blockId;
       if (target.kind === 'timeRoot') return target.blockId === blockId;
       if (target.kind === 'graphSpan') return target.blockIds.includes(blockId);
       return false;

@@ -1,5 +1,5 @@
 import type { RootStore } from '../stores/RootStore';
-import type { Block, Connection, Bus, Publisher, Listener } from '../types';
+import type { Block, Connection, Publisher, Listener } from '../types';
 import { compilePatch } from './compile';
 import { createCompileCtx } from './context';
 import { createBlockRegistry, registerDynamicBlock } from './blocks';
@@ -484,7 +484,14 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
   }
 
   return {
-    expandedPatch: { blocks: newBlocks, connections: newConnections },
+    expandedPatch: {
+      blocks: newBlocks,
+      connections: newConnections,
+      buses: patch.buses,
+      publishers: [], // Will be merged with newPublishers by caller
+      listeners: [], // Will be merged with newListeners by caller
+      defaultSources: patch.defaultSources,
+    },
     rewriteMap: rewriteBuilder.build(),
     newPublishers,
     newListeners,
@@ -623,15 +630,15 @@ export function createCompilerService(store: RootStore): CompilerService {
                 patchRevision,
                 trigger: 'graphCommitted',
               });
-      
+
               store.logStore.debug('compiler', 'Starting compilation...');
-      
+
               try {
                 let patch = editorToPatch(store);
-      
+
                 // Step 1: Expand composites and build rewrite map
                 const { expandedPatch, rewriteMap, newPublishers, newListeners } = expandComposites(patch);
-      
+
         // Step 2: Apply rewrite map to bus publishers/listeners and merge new bus bindings
         const { patch: rewrittenPatch, errors: rewriteErrors } = rewriteBusBindings(
           {

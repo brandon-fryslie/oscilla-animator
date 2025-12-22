@@ -22,6 +22,9 @@ describe('Validator', () => {
           },
         ],
         connections: [],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -49,6 +52,9 @@ describe('Validator', () => {
           },
         ],
         connections: [],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -76,6 +82,9 @@ describe('Validator', () => {
           },
         ],
         connections: [],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -130,6 +139,9 @@ describe('Validator', () => {
             to: { blockId: 'target', slotId: 'value', direction: 'input' },
           },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -167,6 +179,9 @@ describe('Validator', () => {
             to: { blockId: 'target', slotId: 'phase', direction: 'input' },
           },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -203,6 +218,9 @@ describe('Validator', () => {
             to: { blockId: 'target', slotId: 'value', direction: 'input' },
           },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -253,6 +271,9 @@ describe('Validator', () => {
             to: { blockId: 'a', slotId: 'value', direction: 'input' },
           },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -282,6 +303,9 @@ describe('Validator', () => {
             to: { blockId: 'missing', slotId: 'value', direction: 'input' },
           },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -337,6 +361,8 @@ describe('Validator', () => {
             sortKey: 1,
           },
         ],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -375,6 +401,8 @@ describe('Validator', () => {
             sortKey: 0,
           },
         ],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -416,6 +444,8 @@ describe('Validator', () => {
             sortKey: 0,
           },
         ],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -456,6 +486,8 @@ describe('Validator', () => {
             sortKey: 0,
           },
         ],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -480,6 +512,9 @@ describe('Validator', () => {
           },
         ],
         connections: [],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -514,6 +549,9 @@ describe('Validator', () => {
             to: { blockId: 'time', slotId: 'period', direction: 'input' },
           },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -548,6 +586,9 @@ describe('Validator', () => {
             to: { blockId: 'time', slotId: 'period', direction: 'input' },
           },
         ],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -588,6 +629,7 @@ describe('Validator', () => {
             sortKey: 0,
           },
         ],
+        publishers: [],
         listeners: [
           {
             id: 'listener1',
@@ -651,6 +693,8 @@ describe('Validator', () => {
             sortKey: 1,
           },
         ],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -688,6 +732,8 @@ describe('Validator', () => {
             sortKey: 0,
           },
         ],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -730,6 +776,8 @@ describe('Validator', () => {
             sortKey: 0,
           },
         ],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -804,6 +852,7 @@ describe('Validator', () => {
             sortKey: 1,
           },
         ],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -873,6 +922,7 @@ describe('Validator', () => {
             sortKey: 1,
           },
         ],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -903,13 +953,16 @@ describe('Validator', () => {
           },
         ],
         connections: [],
+        buses: [],
+        publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
       const result = validator.canAddConnection(
         patch,
-        { blockId: 'source', slotId: 'value' },
-        { blockId: 'target', slotId: 'value' }
+        { blockId: 'source', slotId: 'value', direction: 'output' },
+        { blockId: 'target', slotId: 'value', direction: 'input' }
       );
 
       expect(result.ok).toBe(true);
@@ -945,6 +998,7 @@ describe('Validator', () => {
           },
         ],
         publishers: [],
+        listeners: [],
       };
 
       const validator = new Validator(patch, 1);

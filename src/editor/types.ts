@@ -6,6 +6,10 @@
  * type system that compiles to V4 primitives.
  */
 
+// Re-export type helpers for convenience
+export * from './types/helpers';
+export * from './types/dnd';
+
 // =============================================================================
 // Bus Type System (Core/Internal Split)
 // =============================================================================
@@ -582,12 +586,14 @@ export interface CompositeConnection {
   readonly from: {
     readonly blockId: BlockId;
     readonly slotId: string;
+    readonly direction: 'output';
   };
 
   /** Destination endpoint */
   readonly to: {
     readonly blockId: BlockId;
     readonly slotId: string;
+    readonly direction: 'input';
   };
 }
 

@@ -27,9 +27,9 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       // Connect the blocks
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -55,7 +55,7 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
@@ -71,9 +71,9 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       // Connect the blocks
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -106,7 +106,7 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
@@ -122,12 +122,12 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a TimeRoot
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
       // Add two GridDomains, only connect one fully
-      const domainBlock1 = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const domainBlock2 = store.patchStore.addBlock('GridDomain', 'fields', { rows: 3, cols: 3 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      const domainBlock1 = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const domainBlock2 = store.patchStore.addBlock('GridDomain', { rows: 3, cols: 3 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       // Connect GridDomain1 fully to Render
       store.patchStore.connect(domainBlock1, 'domain', renderBlock, 'domain');
@@ -137,7 +137,7 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
@@ -150,7 +150,7 @@ describe('Bus Diagnostics', () => {
       // Should have warnings for GridDomain2's unused outputs (domain, pos0)
       expect(unusedOutputWarnings.length).toBeGreaterThanOrEqual(1);
       expect(unusedOutputWarnings.some((w) =>
-        w.primaryTarget.kind === 'port' && (w.primaryTarget as any).blockId === domainBlock2
+        w.primaryTarget.kind === 'port' && w.primaryTarget.portRef.blockId === domainBlock2
       )).toBe(true);
     });
 
@@ -158,16 +158,16 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add just a CycleTimeRoot - its outputs (phase, wrap) are auto-published
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
       store.patchStore.connect(domainBlock, 'pos0', renderBlock, 'positions');
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
@@ -184,9 +184,9 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       // Connect domain but publish pos0 to a bus instead of connecting
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -202,7 +202,7 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;

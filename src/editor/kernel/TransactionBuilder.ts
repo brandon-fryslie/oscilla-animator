@@ -6,25 +6,19 @@
  * Reference: design-docs/10-Refactor-for-UI-prep/9-TransactionBuilderContract.md
  */
 
-import {
+import type {
   TxBuilder,
   TxView,
   TxResult,
   TxMeta,
   CommittedTx,
-  PreviewTx,
-  TxError,
   PatchKernel
 } from './types';
-import type {
-  PatchDocument,
-  ValidationResult
-} from '../semantic/types';
-import type { SemanticGraph } from '../semantic';
+import type { PatchDocument } from '../semantic/types';
 import type { Patch, Block, Connection, Bus, Publisher, Listener } from '../types';
 import { Validator } from '../semantic/validator';
 import { applyOp } from './applyOp';
-import { Op } from './ops';
+import type { Op } from './ops';
 import { generateDiff } from './diff';
 
 // Helper to deep clone patch
@@ -33,18 +27,16 @@ function clonePatch(patch: Patch): Patch {
 }
 
 export class TransactionBuilder implements TxBuilder {
-  private baseDoc: Patch;
-  private stagedDoc: Patch; // Mutable working copy
+  private readonly stagedDoc: Patch; // Mutable working copy
   private stagedOps: Op[] = [];
   private inverseOps: Op[] = []; // Accumulated in REVERSE order of application
   private committed = false;
   private aborted = false;
-  private kernel: PatchKernel;
-  private meta: TxMeta;
+  private readonly kernel: PatchKernel;
+  private readonly meta: TxMeta;
 
   constructor(kernel: PatchKernel, baseDoc: Patch, meta: TxMeta) {
     this.kernel = kernel;
-    this.baseDoc = baseDoc;
     this.stagedDoc = clonePatch(baseDoc);
     this.meta = meta;
   }
@@ -58,7 +50,7 @@ export class TransactionBuilder implements TxBuilder {
       doc: this.stagedDoc as PatchDocument,
       // TODO: SemanticGraph incremental update not yet implemented.
       // For now, we return the base graph. Validation will rebuild graph from stagedDoc at commit time.
-      graph: this.kernel.graph, 
+      graph: this.kernel.graph,
     };
   }
 
@@ -74,7 +66,7 @@ export class TransactionBuilder implements TxBuilder {
       // For now we allow it but warn or assume non-invertible.
       // In production, all ops MUST have inverses.
     }
-    
+
     // Apply to staged doc immediately to keep view consistent
     applyOp(this.stagedDoc, op);
   }
@@ -97,7 +89,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'BlockAdd', block };
     const inv: Op = { op: 'BlockRemove', blockId: id };
-    
+
     this.op(op, inv);
     return id;
   }
@@ -140,11 +132,11 @@ export class TransactionBuilder implements TxBuilder {
   retypeBlock(blockId: string, nextType: string, remap?: { kind: 'byKey' | 'schema'; schemaId?: string }): void {
     const block = this.stagedDoc.blocks.find(b => b.id === blockId);
     if (!block) return;
-    
+
     const prevType = block.type;
     const op: Op = { op: 'BlockRetype', blockId, nextType, remap };
     const inv: Op = { op: 'BlockRetype', blockId, nextType: prevType }; // TODO: inverse remap?
-    
+
     this.op(op, inv);
   }
 
@@ -155,7 +147,7 @@ export class TransactionBuilder implements TxBuilder {
     const prevLabel = block.label;
     const op: Op = { op: 'BlockSetLabel', blockId, label };
     const inv: Op = { op: 'BlockSetLabel', blockId, label: prevLabel };
-    
+
     this.op(op, inv);
   }
 
@@ -171,7 +163,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'BlockPatchParams', blockId, patch };
     const inv: Op = { op: 'BlockPatchParams', blockId, patch: undoPatch };
-    
+
     this.op(op, inv);
   }
 
@@ -189,7 +181,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'WireAdd', connection };
     const inv: Op = { op: 'WireRemove', connectionId };
-    
+
     this.op(op, inv);
     return connectionId;
   }
@@ -200,7 +192,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'WireRemove', connectionId };
     const inv: Op = { op: 'WireAdd', connection: { ...conn } };
-    
+
     this.op(op, inv);
   }
 
@@ -209,12 +201,12 @@ export class TransactionBuilder implements TxBuilder {
     if (!conn) return;
 
     const prev: typeof next = {};
-    if (next.from) prev.from = conn.from;
-    if (next.to) prev.to = conn.to;
+    if (next.from) prev.from = conn.from as any;
+    if (next.to) prev.to = conn.to as any;
 
     const op: Op = { op: 'WireRetarget', connectionId, next };
     const inv: Op = { op: 'WireRetarget', connectionId, next: prev };
-    
+
     this.op(op, inv);
   }
 
@@ -236,7 +228,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'BusAdd', bus };
     const inv: Op = { op: 'BusRemove', busId: id };
-    
+
     this.op(op, inv);
     return id;
   }
@@ -257,7 +249,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'BusRemove', busId };
     const inv: Op = { op: 'BusAdd', bus: { ...bus } };
-    
+
     this.op(op, inv);
   }
 
@@ -272,7 +264,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'BusUpdate', busId, patch };
     const inv: Op = { op: 'BusUpdate', busId, patch: undoPatch };
-    
+
     this.op(op, inv);
   }
 
@@ -293,7 +285,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'PublisherAdd', publisher };
     const inv: Op = { op: 'PublisherRemove', publisherId: id };
-    
+
     this.op(op, inv);
     return id;
   }
@@ -304,7 +296,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'PublisherRemove', publisherId };
     const inv: Op = { op: 'PublisherAdd', publisher: { ...pub } };
-    
+
     this.op(op, inv);
   }
 
@@ -319,7 +311,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'PublisherUpdate', publisherId, patch };
     const inv: Op = { op: 'PublisherUpdate', publisherId, patch: undoPatch };
-    
+
     this.op(op, inv);
   }
 
@@ -336,7 +328,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'ListenerAdd', listener };
     const inv: Op = { op: 'ListenerRemove', listenerId: id };
-    
+
     this.op(op, inv);
     return id;
   }
@@ -347,7 +339,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'ListenerRemove', listenerId };
     const inv: Op = { op: 'ListenerAdd', listener: { ...list } };
-    
+
     this.op(op, inv);
   }
 
@@ -362,7 +354,7 @@ export class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'ListenerUpdate', listenerId, patch };
     const inv: Op = { op: 'ListenerUpdate', listenerId, patch: undoPatch };
-    
+
     this.op(op, inv);
   }
 
@@ -375,7 +367,6 @@ export class TransactionBuilder implements TxBuilder {
     // Assuming we can find it in stagedDoc (or baseDoc).
     // For now, simpler to not invert or require lookup.
     // Let's iterate.
-    let prevTimeRoot: string | undefined;
     // Find TimeRoot blocks in stagedDoc? No specific flag.
     // Rely on caller?
     // Actually applyOp('TimeRootSet') currently does nothing (TODO in applyOp.ts).
@@ -392,10 +383,10 @@ export class TransactionBuilder implements TxBuilder {
     for (const key of Object.keys(patch)) {
       undoPatch[key] = (this.stagedDoc.settings as any)[key];
     }
-    
+
     const op: Op = { op: 'PatchSettingsUpdate', patch };
     const inv: Op = { op: 'PatchSettingsUpdate', patch: undoPatch };
-    
+
     this.op(op, inv);
   }
 
@@ -407,7 +398,7 @@ export class TransactionBuilder implements TxBuilder {
     this.committed = true;
   }
 
-  abort(reason?: string): void {
+  abort(_reason?: string): void {
     this.aborted = true;
   }
 

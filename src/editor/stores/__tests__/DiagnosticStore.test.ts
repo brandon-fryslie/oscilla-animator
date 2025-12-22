@@ -14,7 +14,7 @@ describe('DiagnosticStore', () => {
     rootStore = new RootStore();
     // Add a TimeRoot block so authoring validators pass
     // (otherwise we get a "Missing TimeRoot" diagnostic)
-    rootStore.patchStore.addBlock('CycleTimeRoot', rootStore.patchStore.lanes[0].id);
+    rootStore.patchStore.addBlock('CycleTimeRoot');
   });
 
   describe('Initialization', () => {

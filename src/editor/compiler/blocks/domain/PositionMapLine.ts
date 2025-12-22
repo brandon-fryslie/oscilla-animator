@@ -31,7 +31,7 @@ export const PositionMapLineBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const ax = Number(params.ax ?? 100);
     const ay = Number(params.ay ?? 200);
     const bx = Number(params.bx ?? 700);

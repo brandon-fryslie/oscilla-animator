@@ -29,7 +29,7 @@ export const FieldConstNumberBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const value = Number(params.value ?? 1);
 
     // Create constant field that returns the same value for all elements

@@ -29,7 +29,7 @@ export const FieldConstColorBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const color = String(params.color ?? '#3B82F6');
 
     // Create constant field that returns the same color for all elements

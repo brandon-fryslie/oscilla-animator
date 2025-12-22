@@ -2,11 +2,10 @@
  * @file Patch Store
  * @description Manages the core patch data: blocks, connections, and lanes.
  */
-import { makeObservable, observable, action, computed } from 'mobx';
+import { makeObservable, observable, action } from 'mobx';
 import type {
   Block,
   Connection,
-  Lane,
   BlockId,
   LaneId,
   LaneKind,
@@ -151,7 +150,7 @@ export class PatchStore {
   // =============================================================================
 
   generateBlockId(): BlockId {
-    return this.root.generateId('block') as BlockId;
+    return this.root.generateId('block');
   }
 
   generateConnectionId(): string {
@@ -672,7 +671,7 @@ export class PatchStore {
             newBlockId,
             newSlot.id,
             oldLis.adapterChain,
-            oldLis.lens
+            oldLis.lensStack
           );
         }
       }

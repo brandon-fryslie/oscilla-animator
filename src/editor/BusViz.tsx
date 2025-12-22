@@ -22,7 +22,7 @@ export interface BusVizProps {
  * Main bus visualization component.
  * Renders domain-appropriate static placeholder.
  */
-export function BusViz({ domain, defaultValue, size = 20 }: BusVizProps) {
+export function BusViz({ domain, defaultValue, size = 20 }: BusVizProps): JSX.Element {
   switch (domain) {
     case 'number':
       return <NumberViz value={defaultValue as number} size={size} />;
@@ -48,7 +48,7 @@ export function BusViz({ domain, defaultValue, size = 20 }: BusVizProps) {
 /**
  * Number: Horizontal bar (empty/placeholder at 0).
  */
-function NumberViz({ value, size }: { value: number; size: number }) {
+function NumberViz({ value, size }: { value: number; size: number }): JSX.Element {
   // Static placeholder - always shows empty bar
   return (
     <svg
@@ -69,7 +69,7 @@ function NumberViz({ value, size }: { value: number; size: number }) {
 /**
  * Vec2: XY crosshair icon (static at center).
  */
-function Vec2Viz({ value, size }: { value: { x: number; y: number }; size: number }) {
+function Vec2Viz({ value, size }: { value: { x: number; y: number }; size: number }): JSX.Element {
   return (
     <svg
       width={size}
@@ -90,7 +90,7 @@ function Vec2Viz({ value, size }: { value: { x: number; y: number }; size: numbe
 /**
  * Color: Color swatch (shows default color).
  */
-function ColorViz({ value, size }: { value: { r: number; g: number; b: number; a: number }; size: number }) {
+function ColorViz({ value, size }: { value: { r: number; g: number; b: number; a: number }; size: number }): JSX.Element {
   // Convert to CSS rgba
   const { r, g, b, a } = value;
   const rgba = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a})`;
@@ -125,7 +125,7 @@ function ColorViz({ value, size }: { value: { r: number; g: number; b: number; a
 /**
  * Phase: Circular ring (static at 0°).
  */
-function PhaseViz({ value, size }: { value: number; size: number }) {
+function PhaseViz({ value, size }: { value: number; size: number }): JSX.Element {
   // Phase is [0, 1] - convert to angle
   const angle = value * 360;
 
@@ -156,7 +156,7 @@ function PhaseViz({ value, size }: { value: number; size: number }) {
 /**
  * Time: Clock icon (static).
  */
-function TimeViz({ size }: { size: number }) {
+function TimeViz({ size }: { size: number }): JSX.Element {
   return (
     <svg
       width={size}
@@ -183,7 +183,7 @@ function TimeViz({ size }: { size: number }) {
 /**
  * Rate: Speed gauge icon (static).
  */
-function RateViz({ size }: { size: number }) {
+function RateViz({ size }: { size: number }): JSX.Element {
   return (
     <svg
       width={size}
@@ -222,7 +222,7 @@ function RateViz({ size }: { size: number }) {
 /**
  * Trigger: Pulse LED (static, not blinking).
  */
-function TriggerViz({ size }: { size: number }) {
+function TriggerViz({ size }: { size: number }): JSX.Element {
   return (
     <svg
       width={size}
@@ -243,7 +243,7 @@ function TriggerViz({ size }: { size: number }) {
 /**
  * Boolean: On/off indicator (static at default).
  */
-function BooleanViz({ value, size }: { value: boolean; size: number }) {
+function BooleanViz({ value, size }: { value: boolean; size: number }): JSX.Element {
   return (
     <svg
       width={size}
@@ -277,7 +277,7 @@ function BooleanViz({ value, size }: { value: boolean; size: number }) {
 /**
  * Default fallback visualization.
  */
-function DefaultViz({ domain, size }: { domain: string; size: number }) {
+function DefaultViz({ domain, size }: { domain: string; size: number }): JSX.Element {
   return (
     <svg
       width={size}

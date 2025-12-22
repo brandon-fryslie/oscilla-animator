@@ -7,7 +7,7 @@ interface HelpModalProps {
   onClose: () => void;
 }
 
-export function HelpModal({ topic, onClose }: HelpModalProps) {
+export function HelpModal({ topic, onClose }: HelpModalProps): JSX.Element {
   const steps: { title: string; body: React.ReactNode }[] =
     topic === 'intro'
       ? [
@@ -231,7 +231,7 @@ export function HelpModal({ topic, onClose }: HelpModalProps) {
     });
 
     setPointerStyles(nextStyles);
-  }, [topic, stepIndex, pointers.length]);
+  }, [topic, stepIndex, pointers]);
 
   return (
     <div className="editor-help-overlay" onClick={onClose}>

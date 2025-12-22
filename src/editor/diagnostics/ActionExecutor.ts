@@ -101,7 +101,7 @@ export class ActionExecutor {
 
       case 'port':
         // Select the block containing the port
-        this.uiStore.selectBlock(target.blockId);
+        this.uiStore.selectBlock(target.portRef.blockId);
         // TODO: Expand port panel and highlight port (future enhancement)
         return true;
 

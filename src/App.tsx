@@ -1,6 +1,6 @@
 import { Editor } from './editor/Editor';
 
-function App() {
+function App(): JSX.Element {
   return <Editor />;
 }
 

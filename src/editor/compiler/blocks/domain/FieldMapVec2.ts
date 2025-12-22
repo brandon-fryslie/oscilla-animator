@@ -52,7 +52,7 @@ export const FieldMapVec2Block: BlockCompiler = {
       const out = new Array<Vec2>(n);
 
       for (let i = 0; i < n; i++) {
-        const v = inputVecs[i]!;
+        const v = inputVecs[i];
         let x = v.x;
         let y = v.y;
 

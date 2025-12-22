@@ -6,7 +6,7 @@
  * Reference: design-docs/10-Refactor-for-UI-prep/9-TransactionBuilderContract.md
  */
 
-import {
+import type {
   PatchKernel,
   TxMeta,
   TxResult,
@@ -15,7 +15,7 @@ import {
   TxId
 } from './types';
 import type { PatchDocument, ValidationResult } from '../semantic/types';
-import { SemanticGraph } from '../semantic';
+import type { SemanticGraph } from '../semantic';
 import type { Patch } from '../types';
 import { SemanticGraph as GraphImpl } from '../semantic/graph';
 import { Validator } from '../semantic/validator';
@@ -24,7 +24,7 @@ import { applyOp } from './applyOp';
 
 export class Kernel implements PatchKernel {
   // State
-  private _doc: Patch;
+  private readonly _doc: Patch;
   private _graph: GraphImpl;
   private _report: ValidationResult;
 
@@ -89,7 +89,7 @@ export class Kernel implements PatchKernel {
 
     // 4. Update history
     this.history.nodes.set(tx.id, tx);
-    
+
     // Update parent's children
     if (tx.parentId) {
       const children = this.history.children.get(tx.parentId) ?? [];
@@ -137,7 +137,7 @@ export class Kernel implements PatchKernel {
       // Default to last child (most recent branch)
       const nextId = children[children.length - 1];
       const tx = this.history.nodes.get(nextId);
-      
+
       if (tx) {
         // Re-apply ops
         for (const op of tx.ops) {

@@ -163,7 +163,7 @@ class PathLibrary {
     const index = this.state.entries.findIndex(e => e.id === id);
     if (index === -1) return null;
 
-    const entry = this.state.entries[index]!;
+    const entry = this.state.entries[index];
 
     // Cannot update built-in paths (except name for display)
     if (entry.source === 'builtin' && Object.keys(updates).some(k => k !== 'name')) {

@@ -46,7 +46,7 @@ export const StableIdHashBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const salt = Number(params.salt ?? 0);
 
     // Create field that produces stable hash per element
@@ -55,7 +55,7 @@ export const StableIdHashBlock: BlockCompiler = {
       const out = new Array<number>(count);
 
       for (let i = 0; i < count; i++) {
-        const elementId = domain.elements[i]!;
+        const elementId = domain.elements[i];
         // Combine element ID with salt for hashing
         const hashInput = `${elementId}-${salt}`;
         out[i] = stableHash(hashInput);

@@ -179,7 +179,7 @@ export function stringToPortKey(str: string): PortKey | null {
   if (parts.length !== 3) return null;
   const [blockId, slotId, direction] = parts;
   if (direction !== 'input' && direction !== 'output') return null;
-  return { blockId: blockId!, slotId: slotId!, direction };
+  return { blockId: blockId, slotId: slotId, direction };
 }
 
 /**

@@ -73,22 +73,22 @@ export const BusPicker = observer((props: BusPickerProps) => {
   const block = store.patchStore.blocks.find((b) => b.id === portRef.blockId);
   const slot = block?.inputs.find((s) => s.id === portRef.slotId);
 
-  if (!slot) {
+  if (slot === undefined || slot === null) {
     return null; // Port not found
   }
 
   const portTypeDesc = SLOT_TYPE_TO_TYPE_DESC[slot.type];
-  if (!portTypeDesc) {
+  if (portTypeDesc === undefined || portTypeDesc === null) {
     console.warn(`No TypeDesc found for slot type: ${slot.type}`);
     return null;
   }
 
   const compatibleBuses = getCompatibleBuses(store, portTypeDesc);
-  const selectedBus = selectedBusId ? store.busStore.getBusById(selectedBusId) : null;
+  const selectedBus = selectedBusId !== null && selectedBusId !== undefined ? store.busStore.getBusById(selectedBusId) : null;
 
   // Handle click outside to close
   useEffect(() => {
-    if (!isOpen) return;
+    if (isOpen === false) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
@@ -121,13 +121,13 @@ export const BusPicker = observer((props: BusPickerProps) => {
   };
 
   const handleSkipLens = () => {
-    if (!selectedBusId) return;
+    if (selectedBusId === undefined || selectedBusId === null) return;
     store.busStore.addListener(selectedBusId, portRef.blockId, portRef.slotId, undefined, undefined);
     onClose();
   };
 
   const handleApplyLens = () => {
-    if (!selectedBusId) return;
+    if (selectedBusId === undefined || selectedBusId === null) return;
     store.busStore.addListener(selectedBusId, portRef.blockId, portRef.slotId, undefined, selectedLens);
     onClose();
   };
@@ -147,7 +147,7 @@ export const BusPicker = observer((props: BusPickerProps) => {
     setStage('lens');
   };
 
-  if (!isOpen) return null;
+  if (isOpen === false) return null;
 
   // Calculate position to keep dropdown on screen
   const dropdownStyle: React.CSSProperties = {
@@ -219,7 +219,7 @@ export const BusPicker = observer((props: BusPickerProps) => {
         )}
 
         {/* Stage 2: Lens Selection */}
-        {stage === 'lens' && selectedBus && (
+        {stage === 'lens' && selectedBus !== null && selectedBus !== undefined && (
           <>
             <div className="bus-picker-header">
               <button className="bus-picker-back-btn" onClick={handleBackToBus} title="Back to bus selection">

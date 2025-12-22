@@ -139,7 +139,7 @@ function wireToExplicitInput(ctx: AutoWireContext): AutoWireResult {
     return { connections: [], reason: 'ambiguous: multiple outputs match toPort' };
   }
 
-  const output = matchingOutputs[0]!;
+  const output = matchingOutputs[0];
   const candidate = {
     fromBlockId: newBlockId,
     fromSlotId: output.id,
@@ -177,7 +177,7 @@ function wireFromExplicitOutput(ctx: AutoWireContext): AutoWireResult {
     return { connections: [], reason: 'ambiguous: multiple inputs match fromPort' };
   }
 
-  const input = matchingInputs[0]!;
+  const input = matchingInputs[0];
   const candidate = {
     fromBlockId: fromPort.blockId,
     fromSlotId: fromPort.slotId,
@@ -221,7 +221,7 @@ function wireFromPrevInLane(ctx: AutoWireContext): AutoWireResult {
 
     // Only wire if exactly one match (no ambiguity)
     if (matchingInputs.length === 1) {
-      const input = matchingInputs[0]!;
+      const input = matchingInputs[0];
       const candidate = {
         fromBlockId: prevBlockInLane.blockId,
         fromSlotId: prevOutput.id,
@@ -301,7 +301,7 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
 
     // Only wire if exactly ONE candidate (no ambiguity)
     if (candidates.length === 1) {
-      const source = candidates[0]!;
+      const source = candidates[0];
       result.push({
         fromBlockId: source.blockId,
         fromSlotId: source.slotId,

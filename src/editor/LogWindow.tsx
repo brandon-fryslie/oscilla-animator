@@ -20,6 +20,7 @@ import {
 } from './logTypes';
 import { StatusBadge } from './StatusBadge';
 import type { Diagnostic, Severity, TargetRef, DiagnosticAction } from './diagnostics/types';
+import { isNonEmptyString } from './types/helpers';
 import './LogWindow.css';
 
 type LogSize = 'collapsed' | 'compact' | 'full';
@@ -112,7 +113,7 @@ function formatTarget(target: TargetRef): string {
     case 'block':
       return `Block: ${target.blockId}`;
     case 'port':
-      return `Port: ${target.blockId}.${target.portId}`;
+      return `Port: ${target.portRef.blockId}.${target.portRef.slotId}`;
     case 'bus':
       return `Bus: ${target.busId}`;
     case 'binding':
@@ -570,7 +571,7 @@ export const LogWindow = observer(() => {
                     [{LOG_COMPONENT_CONFIG[entry.component].label}]
                   </span>
                   <span className="log-message">{entry.message}</span>
-                  {entry.details && (
+                  {isNonEmptyString(entry.details) && (
                     <details className="log-details">
                       <summary>Details</summary>
                       <pre>{entry.details}</pre>

@@ -61,7 +61,7 @@ export const FieldZipSignalBlock: BlockCompiler = {
       };
     }
 
-    const fieldFn = fieldArtifact.value as Field<number>;
+    const fieldFn = fieldArtifact.value;
     const signalFn = signalArtifact.value;
     const fn = String(params.fn ?? 'add');
     const zipOp = getZipOperation(fn);
@@ -78,7 +78,7 @@ export const FieldZipSignalBlock: BlockCompiler = {
       // Apply operation to each element
       const out = new Array<number>(fieldValues.length);
       for (let i = 0; i < fieldValues.length; i++) {
-        out[i] = zipOp(fieldValues[i]!, signalValue);
+        out[i] = zipOp(fieldValues[i], signalValue);
       }
 
       return out;

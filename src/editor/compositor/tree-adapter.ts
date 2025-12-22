@@ -67,7 +67,7 @@ export const drawNodeAdapter: TreeAdapter<DrawNode> = {
         if (children.length !== 1) {
           throw new Error('EffectNode must have exactly one child');
         }
-        return { ...node, child: children[0]! };
+        return { ...node, child: children[0] };
       case 'shape':
         throw new Error('ShapeNode has no children');
     }

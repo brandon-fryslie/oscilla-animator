@@ -254,17 +254,24 @@ export class BusStore {
 
   /**
    * Update publisher properties.
+   * Replaces the entire publisher object to avoid mutating readonly fields.
    */
   updatePublisher(publisherId: string, updates: Partial<Pick<Publisher, 'enabled' | 'sortKey' | 'adapterChain' | 'lensStack'>>): void {
-    const publisher = this.publishers.find(p => p.id === publisherId);
-    if (!publisher) {
+    const index = this.publishers.findIndex(p => p.id === publisherId);
+    if (index === -1) {
       throw new Error(`Publisher ${publisherId} not found`);
     }
 
-    if (updates.enabled !== undefined) publisher.enabled = updates.enabled;
-    if (updates.sortKey !== undefined) publisher.sortKey = updates.sortKey;
-    if (updates.adapterChain !== undefined) publisher.adapterChain = updates.adapterChain;
-    if (updates.lensStack !== undefined) publisher.lensStack = updates.lensStack;
+    const existing = this.publishers[index];
+    const updated: Publisher = {
+      ...existing,
+      ...(updates.adapterChain !== undefined && { adapterChain: updates.adapterChain }),
+      ...(updates.lensStack !== undefined && { lensStack: updates.lensStack }),
+      ...(updates.enabled !== undefined && { enabled: updates.enabled }),
+      ...(updates.sortKey !== undefined && { sortKey: updates.sortKey }),
+    };
+
+    this.publishers[index] = updated;
   }
 
   /**
@@ -346,33 +353,39 @@ export class BusStore {
 
   /**
    * Update listener properties.
+   * Replaces the entire listener object to avoid mutating readonly fields.
    */
   updateListener(listenerId: string, updates: Partial<Pick<Listener, 'enabled' | 'lensStack'>>): void {
-    const listener = this.listeners.find(l => l.id === listenerId);
-    if (!listener) {
+    const index = this.listeners.findIndex(l => l.id === listenerId);
+    if (index === -1) {
       throw new Error(`Listener ${listenerId} not found`);
     }
 
-    if (updates.enabled !== undefined) listener.enabled = updates.enabled;
-    if ('lensStack' in updates) {
-      listener.lensStack = updates.lensStack ?? undefined;
-    }
+    const existing = this.listeners[index];
+    const updated: Listener = {
+      ...existing,
+      ...(updates.lensStack !== undefined && { lensStack: updates.lensStack }),
+      ...(updates.enabled !== undefined && { enabled: updates.enabled }),
+    };
+
+    this.listeners[index] = updated;
   }
 
   /**
    * Add a lens to the listener's stack.
+   * Replaces the entire listener object to avoid mutating readonly fields.
    * @param listenerId - Listener ID
    * @param lens - Lens to add
    * @param index - Optional index (default: append to end)
    */
   addLensToStack(listenerId: string, lens: LensDefinition | LensInstance, index?: number): void {
-    const listener = this.listeners.find(l => l.id === listenerId);
-    if (!listener) {
+    const listenerIndex = this.listeners.findIndex(l => l.id === listenerId);
+    if (listenerIndex === -1) {
       throw new Error(`Listener ${listenerId} not found`);
     }
 
-    // Ensure listener has lensStack
-    const currentStack = listener.lensStack ?? [];
+    const existing = this.listeners[listenerIndex];
+    const currentStack = existing.lensStack ?? [];
 
     // Insert at index or append
     const newStack = [...currentStack];
@@ -383,21 +396,27 @@ export class BusStore {
       ? lens
       : createLensInstanceFromDefinition(lens, listenerId, insertIndex, this.root.defaultSourceStore);
     newStack.splice(insertIndex, 0, instance);
-    listener.lensStack = newStack;
+
+    this.listeners[listenerIndex] = {
+      ...existing,
+      lensStack: newStack,
+    };
   }
 
   /**
    * Remove a lens from the listener's stack.
+   * Replaces the entire listener object to avoid mutating readonly fields.
    * @param listenerId - Listener ID
    * @param index - Index of lens to remove
    */
   removeLensFromStack(listenerId: string, index: number): void {
-    const listener = this.listeners.find(l => l.id === listenerId);
-    if (!listener) {
+    const listenerIndex = this.listeners.findIndex(l => l.id === listenerId);
+    if (listenerIndex === -1) {
       throw new Error(`Listener ${listenerId} not found`);
     }
 
-    const currentStack = listener.lensStack ?? [];
+    const existing = this.listeners[listenerIndex];
+    const currentStack = existing.lensStack ?? [];
     if (index < 0 || index >= currentStack.length) {
       throw new Error(`Invalid lens index: ${index}`);
     }
@@ -405,20 +424,28 @@ export class BusStore {
     const newStack = [...currentStack];
     newStack.splice(index, 1);
 
-    listener.lensStack = newStack.length > 0 ? newStack : undefined;
+    this.listeners[listenerIndex] = {
+      ...existing,
+      lensStack: newStack.length > 0 ? newStack : undefined,
+    };
   }
 
   /**
    * Clear all lenses from the listener's stack.
+   * Replaces the entire listener object to avoid mutating readonly fields.
    * @param listenerId - Listener ID
    */
   clearLensStack(listenerId: string): void {
-    const listener = this.listeners.find(l => l.id === listenerId);
-    if (!listener) {
+    const listenerIndex = this.listeners.findIndex(l => l.id === listenerId);
+    if (listenerIndex === -1) {
       throw new Error(`Listener ${listenerId} not found`);
     }
 
-    listener.lensStack = undefined;
+    const existing = this.listeners[listenerIndex];
+    this.listeners[listenerIndex] = {
+      ...existing,
+      lensStack: undefined,
+    };
   }
 
   /**

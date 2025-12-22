@@ -5,6 +5,7 @@
 import { makeObservable, observable, action } from 'mobx';
 import type { BlockId, LaneId, LaneKind, PortRef } from '../types';
 import type { RootStore } from './RootStore';
+import type { BlockDefinition } from '../blocks';
 
 export class UIStateStore {
   uiState = {
@@ -45,7 +46,7 @@ export class UIStateStore {
   };
 
   // Compiled program for preview (cached)
-  previewedDefinition: any = null;
+  previewedDefinition: BlockDefinition | null = null;
 
   root: RootStore;
 

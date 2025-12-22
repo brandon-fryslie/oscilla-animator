@@ -30,11 +30,11 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a simple block to trigger compilation
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
       service.compile();
 
-      const startedEvents = events.filter((e) => e.type === 'CompileStarted') as CompileStartedEvent[];
+      const startedEvents = events.filter((e) => e.type === 'CompileStarted');
       expect(startedEvents).toHaveLength(1);
 
       const event = startedEvents[0];
@@ -48,13 +48,13 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a simple block
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
       // Compile twice
       service.compile();
       service.compile();
 
-      const startedEvents = events.filter((e) => e.type === 'CompileStarted') as CompileStartedEvent[];
+      const startedEvents = events.filter((e) => e.type === 'CompileStarted');
       expect(startedEvents).toHaveLength(2);
 
       const compileId1 = startedEvents[0].compileId;
@@ -69,9 +69,9 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a valid complete patch (TimeRoot + Domain + Render)
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       // Connect: GridDomain.domain -> RenderInstances2D.domain (required)
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -80,7 +80,7 @@ describe('Diagnostic Emission', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
@@ -97,12 +97,12 @@ describe('Diagnostic Emission', () => {
     it('should include compileId matching CompileStarted', () => {
       const service = createCompilerService(store);
 
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
       service.compile();
 
-      const startedEvents = events.filter((e) => e.type === 'CompileStarted') as CompileStartedEvent[];
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const startedEvents = events.filter((e) => e.type === 'CompileStarted');
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
 
       expect(startedEvents).toHaveLength(1);
       expect(finishedEvents).toHaveLength(1);
@@ -112,11 +112,11 @@ describe('Diagnostic Emission', () => {
     it('should measure compilation duration', () => {
       const service = createCompilerService(store);
 
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
@@ -137,11 +137,11 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a non-TimeRoot block (should trigger missing TimeRoot error)
-      store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
+      store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
@@ -166,12 +166,12 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add two TimeRoot blocks (should trigger multiple TimeRoot error)
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      store.patchStore.addBlock('FiniteTimeRoot', 'phase', { durationMs: 5000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('FiniteTimeRoot', { durationMs: 5000 });
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
@@ -191,9 +191,9 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Create a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       // Connect domain and positions
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -201,7 +201,7 @@ describe('Diagnostic Emission', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
