@@ -313,6 +313,8 @@ import type { Domain } from './unified/Domain';
 // Re-export Domain for consumers
 export type { Domain };
 
+import type { DefaultSourceState } from '../types';
+
 /**
  * Extended CompilerPatch with optional bus support.
  * Maintains backward compatibility with existing wire-only patches.
@@ -326,6 +328,9 @@ export interface CompilerPatch {
   buses?: Bus[];
   publishers?: Publisher[];
   listeners?: Listener[];
+  
+  // Default sources for lens parameters (Phase 3)
+  defaultSources?: Record<string, DefaultSourceState>;
 }
 
 // =============================================================================

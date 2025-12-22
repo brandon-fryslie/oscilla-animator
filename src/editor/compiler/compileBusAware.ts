@@ -228,25 +228,6 @@ function validateReservedBuses(
         where: { busId: bus.id },
       });
     }
-
-    // Additional check: Ensure TimeRoot blocks are the only publishers to reserved buses
-    if (isReservedBusName(bus.name)) {
-      const timeRootPublishers = publishers.filter(
-        pub => pub.busId === bus.id && pub.enabled
-      );
-
-      // Check if any non-TimeRoot block is publishing to a reserved bus
-      for (const pub of timeRootPublishers) {
-        const block = blocks.get(pub.from.blockId);
-        if (block && !['FiniteTimeRoot', 'CycleTimeRoot', 'InfiniteTimeRoot'].includes(block.type)) {
-          errors.push({
-            code: 'MultipleWriters', // Use existing error code for violations
-            message: `Only TimeRoot blocks may publish to reserved bus "${bus.name}"`,
-            where: { blockId: pub.from.blockId },
-          });
-        }
-      }
-    }
   }
 
   return errors;

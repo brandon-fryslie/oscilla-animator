@@ -1,0 +1,207 @@
+import { TypeDesc, UIControlHint, CoreDomain } from '../types';
+import { Artifact, RuntimeCtx } from '../compiler/types';
+
+export interface LensParamSpec {
+  type: TypeDesc; // Typically 'scalar:number' etc.
+  default: unknown;
+  uiHint: UIControlHint;
+}
+
+export type LensScope = 'publisher' | 'listener';
+
+export interface LensDef {
+  id: string;
+  label: string;
+  domain: CoreDomain; // Lenses are domain-specific
+  allowedScopes: LensScope[];
+  params: Record<string, LensParamSpec>;
+  costHint?: 'cheap' | 'medium' | 'heavy';
+  stabilityHint?: 'scrubSafe' | 'transportOnly' | 'either';
+  
+  // Execution logic
+  apply?: (value: unknown, params: Record<string, unknown>) => unknown;
+}
+
+const lenses = new Map<string, LensDef>();
+
+export function registerLens(def: LensDef) {
+  lenses.set(def.id, def);
+}
+
+export function getLens(id: string): LensDef | undefined {
+  return lenses.get(id);
+}
+
+export function getAllLenses(): LensDef[] {
+  return Array.from(lenses.values());
+}
+
+// Helpers for params
+const SCALAR_NUM: TypeDesc = { world: 'scalar', domain: 'number', category: 'core', busEligible: true };
+const BOOL: TypeDesc = { world: 'scalar', domain: 'boolean', category: 'core', busEligible: true };
+
+/**
+ * Initialize the registry with canonical lenses.
+ * Ref: @design-docs/10-Refactor-for-UI-prep/17-CanonicalLenses.md
+ */
+export function initLensRegistry() {
+  
+  // =========================================================================
+  // 0) Domain: number
+  // =========================================================================
+
+  // Gain (Pub + List)
+  registerLens({
+    id: 'Gain',
+    label: 'Gain & Bias',
+    domain: 'number',
+    allowedScopes: ['publisher', 'listener'],
+    costHint: 'cheap',
+    stabilityHint: 'scrubSafe',
+    params: {
+      gain: {
+        type: SCALAR_NUM,
+        default: 1,
+        uiHint: { kind: 'number', step: 0.1 }
+      },
+      bias: {
+        type: SCALAR_NUM,
+        default: 0,
+        uiHint: { kind: 'number', step: 0.1 }
+      }
+    },
+    apply: (artifact: unknown, params: Record<string, unknown>) => {
+      const input = artifact as Artifact;
+      if (input.kind !== 'Signal:number') return input; // Safety check
+      
+      const sig = input.value;
+      const gainArt = params.gain as Artifact;
+      const biasArt = params.bias as Artifact;
+
+      // Extract values or signals
+      // Note: This assumes Scalar or Signal inputs for params.
+      // Phase 4 needs robust helper "resolveValue(art, t, ctx)"
+      
+      return {
+        kind: 'Signal:number',
+        value: (t: number, ctx: RuntimeCtx) => {
+          let g = 1;
+          if (gainArt.kind === 'Scalar:number') g = gainArt.value;
+          else if (gainArt.kind === 'Signal:number') g = gainArt.value(t, ctx);
+          
+          let b = 0;
+          if (biasArt.kind === 'Scalar:number') b = biasArt.value;
+          else if (biasArt.kind === 'Signal:number') b = biasArt.value(t, ctx);
+          
+          return sig(t, ctx) * g + b;
+        }
+      };
+    }
+  });
+
+  // Clamp (Pub + List)
+  registerLens({
+    id: 'Clamp',
+    label: 'Clamp',
+    domain: 'number',
+    allowedScopes: ['publisher', 'listener'],
+    costHint: 'cheap',
+    stabilityHint: 'scrubSafe',
+    params: {
+      min: { type: SCALAR_NUM, default: 0, uiHint: { kind: 'number' } },
+      max: { type: SCALAR_NUM, default: 1, uiHint: { kind: 'number' } }
+    }
+  });
+
+  // Ease (List only)
+  registerLens({
+    id: 'Ease',
+    label: 'Ease',
+    domain: 'number',
+    allowedScopes: ['listener'],
+    costHint: 'medium',
+    stabilityHint: 'scrubSafe',
+    params: {
+      amount: { type: SCALAR_NUM, default: 1, uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 } },
+      // Curve enum would be here
+    }
+  });
+
+  // Slew (Pub + List, stateful)
+  registerLens({
+    id: 'Slew',
+    label: 'Slew',
+    domain: 'number',
+    allowedScopes: ['publisher', 'listener'],
+    costHint: 'medium',
+    stabilityHint: 'transportOnly',
+    params: {
+      riseMs: { type: SCALAR_NUM, default: 100, uiHint: { kind: 'number', min: 0 } },
+      fallMs: { type: SCALAR_NUM, default: 100, uiHint: { kind: 'number', min: 0 } }
+    }
+  });
+
+  // =========================================================================
+  // 1) Domain: phase
+  // =========================================================================
+
+  // PhaseOffset (Pub + List)
+  registerLens({
+    id: 'PhaseOffset',
+    label: 'Phase Offset',
+    domain: 'phase',
+    allowedScopes: ['publisher', 'listener'],
+    costHint: 'cheap',
+    stabilityHint: 'scrubSafe',
+    params: {
+      offset: { type: SCALAR_NUM, default: 0, uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 } }
+    }
+  });
+
+  // PingPong (Pub + List)
+  registerLens({
+    id: 'PingPong',
+    label: 'Ping Pong',
+    domain: 'phase',
+    allowedScopes: ['publisher', 'listener'],
+    costHint: 'cheap',
+    stabilityHint: 'scrubSafe',
+    params: {
+      enabled: { type: BOOL, default: true, uiHint: { kind: 'boolean' } }
+    }
+  });
+
+  // =========================================================================
+  // 2) Domain: vec2
+  // =========================================================================
+  
+  // Rotate2D
+  registerLens({
+    id: 'Rotate2D',
+    label: 'Rotate',
+    domain: 'vec2',
+    allowedScopes: ['publisher', 'listener'],
+    costHint: 'cheap',
+    stabilityHint: 'scrubSafe',
+    params: {
+      turns: { type: SCALAR_NUM, default: 0, uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 } }
+    }
+  });
+
+  // =========================================================================
+  // 3) Domain: color
+  // =========================================================================
+
+  // HueShift
+  registerLens({
+    id: 'HueShift',
+    label: 'Hue Shift',
+    domain: 'color',
+    allowedScopes: ['publisher', 'listener'],
+    costHint: 'cheap',
+    stabilityHint: 'scrubSafe',
+    params: {
+      turns: { type: SCALAR_NUM, default: 0, uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 } }
+    }
+  });
+}

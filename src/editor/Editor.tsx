@@ -273,7 +273,7 @@ function HelpModal({ topic, onClose }: HelpModalProps) {
     });
 
     setPointerStyles(nextStyles);
-  }, [topic, stepIndex, pointers.length]);
+  }, [topic, stepIndex, pointers]);
 
   return (
     <div className="editor-help-overlay" onClick={onClose}>

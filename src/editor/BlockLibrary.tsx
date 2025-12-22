@@ -167,7 +167,7 @@ export const BlockLibrary = observer(() => {
   const activeLane = store.activeLane;
   const filterByLane = store.uiStore.settings.filterByLane;
 
-  const blockDefs = useMemo(() => getBlockDefinitions(), [store.compositeStore.composites.length]);
+  const blockDefs = useMemo(() => getBlockDefinitions(), []);
 
   const formGroups = useMemo(
     () => groupBlocksByForm(blockDefs),
@@ -191,7 +191,7 @@ export const BlockLibrary = observer(() => {
       activeLane?.kind,
       activeLane?.flavor
     );
-  }, [filterByLane, activeLane?.kind, activeLane?.flavor, blockDefs]);
+  }, [filterByLane, activeLane?.kind, activeLane?.flavor]);
 
   // Filter by search term
   const searchFilteredBlocks = useMemo(() => {

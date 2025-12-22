@@ -1,0 +1,66 @@
+import { AdapterCost, AdapterPolicy, TypeDesc } from '../types';
+
+export interface AdapterDef {
+  id: string;
+  label: string;
+  policy: AdapterPolicy;
+  cost: AdapterCost;
+  from: TypeDesc;
+  to: TypeDesc;
+  // Execution logic will be added in Phase 4
+}
+
+/**
+ * Registry for adapter definitions.
+ */
+class AdapterRegistry {
+  private adapters: Map<string, AdapterDef> = new Map();
+
+  /**
+   * Register a new adapter.
+   */
+  register(adapter: AdapterDef): void {
+    this.adapters.set(adapter.id, adapter);
+  }
+
+  /**
+   * Get an adapter by ID.
+   */
+  get(id: string): AdapterDef | undefined {
+    return this.adapters.get(id);
+  }
+
+  /**
+   * Find adapters that convert from one type to another.
+   */
+  findAdapters(from: TypeDesc, to: TypeDesc): AdapterDef[] {
+    const result: AdapterDef[] = [];
+    for (const adapter of this.adapters.values()) {
+      if (this.matchesType(adapter.from, from) && this.matchesType(adapter.to, to)) {
+        result.push(adapter);
+      }
+    }
+    return result.sort((a, b) => a.cost - b.cost);
+  }
+
+  /**
+   * Check if a type description matches a target type.
+   */
+  private matchesType(source: TypeDesc, target: TypeDesc): boolean {
+    return (
+      source.world === target.world &&
+      source.domain === target.domain &&
+      source.category === target.category
+    );
+  }
+
+  /**
+   * List all registered adapters.
+   */
+  list(): AdapterDef[] {
+    return Array.from(this.adapters.values());
+  }
+}
+
+// Global adapter registry instance
+export const adapterRegistry = new AdapterRegistry();

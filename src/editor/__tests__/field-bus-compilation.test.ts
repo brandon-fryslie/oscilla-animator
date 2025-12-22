@@ -43,7 +43,6 @@ function createFieldTestRegistry(): BlockRegistry {
     },
 
     // Field source - produces Field<number>
-    // Field source - produces Field<number>
     FieldNumberSource: {
       type: 'FieldNumberSource',
       inputs: [],

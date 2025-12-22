@@ -39,7 +39,7 @@ export const RESERVED_BUS_CONTRACTS: Record<string, ReservedBusContract> = {
       busEligible: true,
     },
     combineMode: 'last',
-    description: 'Primary phase signal from CycleTimeRoot',
+    description: 'Primary phase signal',
   },
 
   phaseB: {
@@ -87,7 +87,7 @@ export const RESERVED_BUS_CONTRACTS: Record<string, ReservedBusContract> = {
       busEligible: true,
     },
     combineMode: 'last',
-    description: 'Progress signal from FiniteTimeRoot (0-1)',
+    description: 'Progress signal (0-1)',
   },
 
   palette: {
@@ -141,18 +141,6 @@ export const COMBINE_MODE_COMPATIBILITY: Record<string, BusCombineMode[]> = {
   'renderTree': ['last'],
   'event': ['last'],
 };
-
-/**
- * Control-plane buses that should have single publishers.
- * These buses represent authoritative control signals.
- */
-export const CONTROL_PLANE_BUSES = new Set(['phaseA', 'phaseB', 'progress', 'palette']);
-
-/**
- * Data-plane buses that expect multiple publishers.
- * These buses are designed for aggregation.
- */
-export const DATA_PLANE_BUSES = new Set(['energy', 'pulse']);
 
 /**
  * Check if a bus name is reserved.
@@ -274,18 +262,4 @@ export function validateCombineModeCompatibility(
   }
 
   return null;
-}
-
-/**
- * Check if a bus is a control-plane bus (should have single publisher).
- */
-export function isControlPlaneBus(busName: string): boolean {
-  return CONTROL_PLANE_BUSES.has(busName);
-}
-
-/**
- * Check if a bus is a data-plane bus (expects multiple publishers).
- */
-export function isDataPlaneBus(busName: string): boolean {
-  return DATA_PLANE_BUSES.has(busName);
 }

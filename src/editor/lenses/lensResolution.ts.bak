@@ -1,0 +1,11 @@
+import { Artifact, CompileCtx } from '../compiler/types';
+import { DefaultSourceState } from '../types';
+
+export interface ParamResolutionContext {
+  resolveBus: (busId: string) => Artifact;
+  resolveWire: (blockId: string, slotId: string) => Artifact;
+  defaultSources: Map<string, DefaultSourceState>;
+  compileCtx: CompileCtx;
+  // Recursion guard
+  visited: Set<string>;
+}

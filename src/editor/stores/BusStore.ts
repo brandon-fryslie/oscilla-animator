@@ -80,12 +80,14 @@ export class BusStore {
       domain: 'phase' | 'number' | 'trigger' | 'color';
       combineMode: BusCombineMode;
       defaultValue: unknown;
+      semantics?: string;
     }> = [
-      { name: 'phaseA', world: 'signal', domain: 'phase', combineMode: 'last', defaultValue: 0 },
-      { name: 'phaseB', world: 'signal', domain: 'phase', combineMode: 'last', defaultValue: 0 },
-      { name: 'energy', world: 'signal', domain: 'number', combineMode: 'sum', defaultValue: 0 },
-      { name: 'pulse', world: 'signal', domain: 'trigger', combineMode: 'last', defaultValue: false },
-      { name: 'palette', world: 'signal', domain: 'color', combineMode: 'last', defaultValue: '#000000' },
+      { name: 'phaseA', world: 'signal', domain: 'phase', combineMode: 'last', defaultValue: 0, semantics: 'primary' },
+      { name: 'phaseB', world: 'signal', domain: 'phase', combineMode: 'last', defaultValue: 0, semantics: 'secondary' },
+      { name: 'energy', world: 'signal', domain: 'number', combineMode: 'sum', defaultValue: 0, semantics: 'energy' },
+      { name: 'pulse', world: 'signal', domain: 'trigger', combineMode: 'last', defaultValue: false, semantics: 'pulse' },
+      { name: 'palette', world: 'signal', domain: 'color', combineMode: 'last', defaultValue: '#000000' }, // No semantics required
+      { name: 'progress', world: 'signal', domain: 'number', combineMode: 'last', defaultValue: 0, semantics: 'progress' },
     ];
 
     defaults.forEach((def) => {
@@ -94,6 +96,7 @@ export class BusStore {
         domain: def.domain,
         category: 'core',
         busEligible: true,
+        semantics: def.semantics,
       };
 
       const bus: Bus = {
