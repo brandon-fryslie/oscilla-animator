@@ -64,10 +64,8 @@ export interface AutoWireContext {
 export interface AutoWireResult {
   /** Connections to create (may be multiple for blocks with multiple compatible ports) */
   connections: Array<{
-    fromBlockId: BlockId;
-    fromSlotId: string;
-    toBlockId: BlockId;
-    toSlotId: string;
+    from: PortRef;
+    to: PortRef;
   }>;
 
   /** Why we didn't auto-wire (for debugging) */
@@ -141,10 +139,8 @@ function wireToExplicitInput(ctx: AutoWireContext): AutoWireResult {
 
   const output = matchingOutputs[0]!;
   const candidate = {
-    fromBlockId: newBlockId,
-    fromSlotId: output.id,
-    toBlockId: toPort.blockId,
-    toSlotId: toPort.slotId,
+    from: { blockId: newBlockId, slotId: output.id, direction: 'output' },
+    to: { blockId: toPort.blockId, slotId: toPort.slotId, direction: 'input' },
   };
 
   // Check for cycles
@@ -179,10 +175,8 @@ function wireFromExplicitOutput(ctx: AutoWireContext): AutoWireResult {
 
   const input = matchingInputs[0]!;
   const candidate = {
-    fromBlockId: fromPort.blockId,
-    fromSlotId: fromPort.slotId,
-    toBlockId: newBlockId,
-    toSlotId: input.id,
+    from: { blockId: fromPort.blockId, slotId: fromPort.slotId, direction: 'output' },
+    to: { blockId: newBlockId, slotId: input.id, direction: 'input' },
   };
 
   // Check for cycles
@@ -223,10 +217,8 @@ function wireFromPrevInLane(ctx: AutoWireContext): AutoWireResult {
     if (matchingInputs.length === 1) {
       const input = matchingInputs[0]!;
       const candidate = {
-        fromBlockId: prevBlockInLane.blockId,
-        fromSlotId: prevOutput.id,
-        toBlockId: newBlockId,
-        toSlotId: input.id,
+        from: { blockId: prevBlockInLane.blockId, slotId: prevOutput.id, direction: 'output' },
+        to: { blockId: newBlockId, slotId: input.id, direction: 'input' },
       };
 
       // Check for cycles
@@ -286,10 +278,8 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
 
         // Check wouldn't create cycle
         const candidate = {
-          fromBlockId: block.id,
-          fromSlotId: output.id,
-          toBlockId: newBlockId,
-          toSlotId: newInput.id,
+          from: { blockId: block.id, slotId: output.id, direction: 'output' },
+          to: { blockId: newBlockId, slotId: newInput.id, direction: 'input' },
         };
         if (wouldCreateCycle(blocks, [...connections, ...result.map(toConnection)], candidate)) {
           continue;
@@ -303,10 +293,8 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
     if (candidates.length === 1) {
       const source = candidates[0]!;
       result.push({
-        fromBlockId: source.blockId,
-        fromSlotId: source.slotId,
-        toBlockId: newBlockId,
-        toSlotId: newInput.id,
+        from: { blockId: source.blockId, slotId: source.slotId, direction: 'output' },
+        to: { blockId: newBlockId, slotId: newInput.id, direction: 'input' },
       });
     }
   }
@@ -338,11 +326,11 @@ function hasIncomingConnection(
 /**
  * Convert our simple connection format to a Connection-like shape for cycle check.
  */
-function toConnection(c: AutoWireResult['connections'][0]): Connection {
+function toConnection(c: { from: PortRef; to: PortRef }): Connection {
   return {
     id: 'temp',
-    from: { blockId: c.fromBlockId, slotId: c.fromSlotId },
-    to: { blockId: c.toBlockId, slotId: c.toSlotId },
+    from: c.from,
+    to: c.to,
   };
 }
 
@@ -354,10 +342,10 @@ function toConnection(c: AutoWireResult['connections'][0]): Connection {
 function wouldCreateCycle(
   blocks: readonly Block[],
   existingConnections: readonly Connection[],
-  candidate: { fromBlockId: BlockId; toBlockId: BlockId }
+  candidate: { from: PortRef; to: PortRef }
 ): boolean {
-  const src = candidate.fromBlockId;
-  const dst = candidate.toBlockId;
+  const src = candidate.from.blockId;
+  const dst = candidate.to.blockId;
 
   // Self-loop
   if (src === dst) return true;

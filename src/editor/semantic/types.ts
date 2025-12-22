@@ -19,6 +19,7 @@ import type { Diagnostic } from '../diagnostics/types';
 
 // Export utilities from here as well for convenience
 export { portRefToKey, portKeyToRef };
+export type { PortKey };
 
 // =============================================================================
 // Validation Result

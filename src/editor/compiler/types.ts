@@ -279,8 +279,8 @@ export interface TargetScene {
 // Patch Graph Data Model
 // =============================================================================
 
-import type { PortRef, Bus, Publisher, Listener } from '../types';
-export type { PortRef, Bus, Publisher, Listener };
+import type { PortRef, Bus, Publisher, Listener, BlockId } from '../types';
+export type { PortRef, Bus, Publisher, Listener, BlockId };
 
 export interface CompilerConnection {
   from: PortRef; // output port

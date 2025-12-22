@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { Composite } from '../../types';
+import { portRefToKey } from '../../types';
 import { validateCompositeDefinition } from '../CompositeStore';
 
 describe('Composite Validation', () => {
@@ -38,8 +39,8 @@ describe('Composite Validation', () => {
         connections: [
           {
             id: 'conn1',
-            from: { blockId: 'block1', slotId: 'value' },
-            to: { blockId: 'block2', slotId: 'value' },
+            from: portRefToKey({ blockId: 'block1', slotId: 'value', direction: 'output' }),
+            to: portRefToKey({ blockId: 'block2', slotId: 'value', direction: 'input' }),
           },
         ],
       };

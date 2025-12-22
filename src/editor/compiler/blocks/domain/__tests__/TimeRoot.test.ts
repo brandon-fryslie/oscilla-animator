@@ -12,7 +12,7 @@ import {
   InfiniteTimeRootBlock,
   extractTimeRootAutoPublications
 } from '../TimeRoot';
-import type { CompileCtx } from '../../../types';
+import type { CompileCtx, RuntimeCtx } from '../../../types';
 
 // =============================================================================
 // Test Helpers
@@ -25,7 +25,9 @@ function createTestContext(): CompileCtx {
       get: <K extends object, V>(_key: K, compute: () => V): V => compute(),
       invalidate: () => {},
     },
-  };
+    // Mock viewport for RuntimeCtx compatibility
+    viewport: { w: 800, h: 600, dpr: 1 },
+  } as CompileCtx & RuntimeCtx; // Cast to satisfy both
 }
 
 // =============================================================================

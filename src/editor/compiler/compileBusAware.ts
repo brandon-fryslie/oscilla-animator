@@ -14,11 +14,9 @@
 
 import type {
   Artifact,
-  BlockId,
   BlockRegistry,
   CompileCtx,
   CompileError,
-  CompileResult,
   CompilerPatch,
   DrawNode,
   Program,
@@ -27,8 +25,8 @@ import type {
   Seed,
   TimeModel,
 } from './types';
-import type { PortRef, Bus, Publisher, Listener } from '../types';
-import { portRefToKey, portKeyToRef } from '../types';
+import type { PortRef, Bus, Publisher, Listener, BlockId, PortKey } from '../types';
+import { portRefToKey } from '../types';
 import { validateTimeRootConstraint } from './compile';
 import { extractTimeRootAutoPublications } from './blocks/domain/TimeRoot';
 // CRITICAL: Use busSemantics for ordering - single source of truth for UI and compiler
@@ -324,7 +322,7 @@ export function compileBusAwarePatch(
           id: `auto-${blockId}-${autoPub.busName}`,
           enabled: true,
           busId: targetBus.id,
-          from: { blockId, slotId: autoPub.artifactKey, dir: 'output' },
+          from: { blockId, slotId: autoPub.artifactKey, direction: 'output' },
           sortKey: autoPub.sortKey,
         });
       }
@@ -404,11 +402,11 @@ export function compileBusAwarePatch(
     const compiler = registry[fromBlock.type];
     if (!compiler) continue; // Compiler existence already validated in step 2
 
-    const portExists = compiler.outputs.some(p => p.name === conn.from.port);
+    const portExists = compiler.outputs.some(p => p.name === conn.from.slotId);
     if (!portExists) {
       errors.push({
         code: 'PortMissing',
-        message: `Block ${conn.from.blockId} (${fromBlock.type}) does not have output port '${conn.from.port}' (referenced by wire connection)`,
+        message: `Block ${conn.from.blockId} (${fromBlock.type}) does not have output port '${conn.from.slotId}' (referenced by wire connection)`,
         where: { blockId: conn.from.blockId, portRef: conn.from },
       });
     }
@@ -471,16 +469,16 @@ export function compileBusAwarePatch(
 
     for (const p of compiler.inputs) {
       // First check for wire connection
-      const wireConn = incoming.get(keyOf(blockId, p.name))?.[0];
+      const wireConn = incoming.get(keyOf(blockId, p.id, 'input'))?.[0];
 
       if (wireConn) {
         // Wire takes precedence over bus
-        const srcKey = keyOf(wireConn.from.blockId, wireConn.from.port);
+        const srcKey = keyOf(wireConn.from.blockId, wireConn.from.slotId, 'output');
         const src = compiledPortMap.get(srcKey);
-        inputs[p.name] = src ?? {
+        inputs[p.id] = src ?? {
           kind: 'Error',
           message: `Missing upstream artifact for ${srcKey}`,
-          where: { blockId: wireConn.from.blockId, port: wireConn.from.slotId },
+          where: { blockId: wireConn.from.blockId, portRef: wireConn.from },
         };
       } else {
         // Check for bus listener
@@ -501,17 +499,17 @@ export function compileBusAwarePatch(
             inputs[p.name] = defaultArtifact;
           } else if (p.required) {
             // No connection at all for required input
-            inputs[p.name] = {
+            inputs[p.id] = {
               kind: 'Error',
-              message: `Missing required input ${blockId}.${p.name}`,
-              where: { blockId, portRef: { blockId, slotId: p.name, direction: 'input' } },
+              message: `Missing required input ${blockId}.${p.id}`,
+              where: { blockId, portRef: { blockId, slotId: p.id, direction: 'input' } },
             };
           } else {
             // Optional input with no connection
-            inputs[p.name] = {
+            inputs[p.id] = {
               kind: 'Error',
-              message: `Unwired optional input ${blockId}.${p.name}`,
-              where: { blockId, portRef: { blockId, slotId: p.name, direction: 'input' } },
+              message: `Unwired optional input ${blockId}.${p.id}`,
+              where: { blockId, portRef: { blockId, slotId: p.id, direction: 'input' } },
             };
           }
         }
@@ -521,12 +519,12 @@ export function compileBusAwarePatch(
     // Check for required input errors
     for (const [name, art] of Object.entries(inputs)) {
       if (art.kind === 'Error') {
-        const def = compiler.inputs.find((x) => x.name === name);
+        const def = compiler.inputs.find((x) => x.id === name);
         if (def?.required) {
                       errors.push({
                         code: 'UpstreamError',
                         message: art.message,
-                        where: { blockId, portRef: { blockId, slotId: p.name, direction: 'input' } },
+                        where: { blockId, portRef: { blockId, slotId: name, direction: 'input' } },
                       });        }
       }
     }
@@ -541,8 +539,8 @@ export function compileBusAwarePatch(
       if (!produced) {
         errors.push({
           code: 'PortMissing',
-          message: `Compiler did not produce required output port ${blockId}.${outDef.name}`,
-          where: { blockId, port: outDef.name },
+          message: `Compiler did not produce required output port ${blockId}.${outDef.id}`,
+          where: { blockId, portRef: { blockId, slotId: outDef.id, direction: 'output' } },
         });
         continue;
       }
@@ -550,11 +548,11 @@ export function compileBusAwarePatch(
         errors.push({
           code: 'UpstreamError',
           message: produced.message,
-          where: produced.where ?? { blockId, port: outDef.name },
+          where: produced.where ?? { blockId, portRef: { blockId, slotId: outDef.id, direction: 'output' } },
         });
         continue;
       }
-      compiledPortMap.set(keyOf(blockId, outDef.name, 'output'), produced);
+      compiledPortMap.set(keyOf(blockId, outDef.id, 'output'), produced);
     }
 
     if (errors.length) return { ok: false, errors };
@@ -576,7 +574,7 @@ export function compileBusAwarePatch(
   if (!outArt) {
     errors.push({
       code: 'OutputMissing',
-      message: `Output artifact not found for ${outputRef.blockId}.${outputRef.port}`,
+      message: `Output artifact not found for ${outputRef.blockId}.${outputRef.slotId}`,
     });
     return { ok: false, errors };
   }
@@ -709,8 +707,7 @@ function getBusValue(
       errors.push({
         code: 'BusEvaluationError',
         message: `Publisher ${pub.id} has error artifact: ${artifact.message}`,
-        where: { busId, blockId: pub.from.blockId, port: pub.from.slotId },
-      });
+                        where: { busId, blockId: pub.from.blockId, portRef: pub.from },      });
       continue;
     }
 

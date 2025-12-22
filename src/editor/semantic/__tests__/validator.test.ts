@@ -121,13 +121,13 @@ describe('Validator', () => {
         connections: [
           {
             id: 'conn1',
-            from: { blockId: 'source1', slotId: 'value' },
-            to: { blockId: 'target', slotId: 'value' },
+            from: { blockId: 'source1', slotId: 'value', direction: 'output' },
+            to: { blockId: 'target', slotId: 'value', direction: 'input' },
           },
           {
             id: 'conn2',
-            from: { blockId: 'source2', slotId: 'value' },
-            to: { blockId: 'target', slotId: 'value' },
+            from: { blockId: 'source2', slotId: 'value', direction: 'output' },
+            to: { blockId: 'target', slotId: 'value', direction: 'input' },
           },
         ],
       };
@@ -163,8 +163,8 @@ describe('Validator', () => {
         connections: [
           {
             id: 'conn1',
-            from: { blockId: 'source', slotId: 'value' },
-            to: { blockId: 'target', slotId: 'phase' },
+            from: { blockId: 'source', slotId: 'value', direction: 'output' },
+            to: { blockId: 'target', slotId: 'phase', direction: 'input' },
           },
         ],
       };
@@ -200,8 +200,8 @@ describe('Validator', () => {
         connections: [
           {
             id: 'conn1',
-            from: { blockId: 'source', slotId: 'value' },
-            to: { blockId: 'target', slotId: 'value' },
+            from: { blockId: 'source', slotId: 'value', direction: 'output' },
+            to: { blockId: 'target', slotId: 'value', direction: 'input' },
           },
         ],
       };
@@ -240,13 +240,13 @@ describe('Validator', () => {
         connections: [
           {
             id: 'conn1',
-            from: { blockId: 'a', slotId: 'scaled' },
-            to: { blockId: 'b', slotId: 'value' },
+            from: { blockId: 'a', slotId: 'scaled', direction: 'output' },
+            to: { blockId: 'b', slotId: 'value', direction: 'input' },
           },
           {
             id: 'conn2',
-            from: { blockId: 'b', slotId: 'scaled' },
-            to: { blockId: 'a', slotId: 'value' },
+            from: { blockId: 'b', slotId: 'scaled', direction: 'output' },
+            to: { blockId: 'a', slotId: 'value', direction: 'input' },
           },
         ],
       };
@@ -274,8 +274,8 @@ describe('Validator', () => {
         connections: [
           {
             id: 'conn1',
-            from: { blockId: 'source', slotId: 'value' },
-            to: { blockId: 'missing', slotId: 'value' },
+            from: { blockId: 'source', slotId: 'value', direction: 'output' },
+            to: { blockId: 'missing', slotId: 'value', direction: 'input' },
           },
         ],
       };
@@ -506,8 +506,8 @@ describe('Validator', () => {
         connections: [
           {
             id: 'conn1',
-            from: { blockId: 'default', slotId: 'value' },
-            to: { blockId: 'time', slotId: 'period' },
+            from: { blockId: 'default', slotId: 'value', direction: 'output' },
+            to: { blockId: 'time', slotId: 'period', direction: 'input' },
           },
         ],
       };
@@ -540,8 +540,8 @@ describe('Validator', () => {
         connections: [
           {
             id: 'conn1',
-            from: { blockId: 'source', slotId: 'value' },
-            to: { blockId: 'time', slotId: 'period' },
+            from: { blockId: 'source', slotId: 'value', direction: 'output' },
+            to: { blockId: 'time', slotId: 'period', direction: 'input' },
           },
         ],
       };
@@ -588,7 +588,7 @@ describe('Validator', () => {
           {
             id: 'listener1',
             busId: 'energy',
-            to: { blockId: 'time', slotId: 'period', dir: 'input' },
+            to: { blockId: 'time', slotId: 'period', direction: 'input' },
             enabled: true,
           },
         ],

@@ -1,4 +1,4 @@
-import type { BlockSubcategory, LaneKind, LaneFlavor, SlotType } from './types';
+import type { BlockSubcategory, LaneKind, LaneFlavor, SlotType, PortKey } from './types';
 import type { BlockTags } from './blocks';
 
 export interface ExposedPort {

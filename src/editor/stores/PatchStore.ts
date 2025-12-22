@@ -769,8 +769,8 @@ export class PatchStore {
       const validator = new Validator(patchDoc, this.patchRevision);
       const validationResult = validator.canAddConnection(
         patchDoc,
-        { blockId: fromBlockId, slotId: fromSlotId },
-        { blockId: toBlockId, slotId: toSlotId }
+        { blockId: fromBlockId, slotId: fromSlotId, direction: 'output' },
+        { blockId: toBlockId, slotId: toSlotId, direction: 'input' }
       );
 
       if (!validationResult.ok) {

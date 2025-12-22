@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { SemanticGraph } from '../graph';
 import type { PatchDocument } from '../types';
+import { portRefToKey } from '../../types';
 
 describe('SemanticGraph', () => {
   describe('graph construction', () => {
@@ -56,8 +57,8 @@ describe('SemanticGraph', () => {
         connections: [
           {
             id: 'conn1',
-            from: { blockId: 'block1', slotId: 'progress' },
-            to: { blockId: 'block2', slotId: 'progress' },
+            from: { blockId: 'block1', slotId: 'progress', direction: 'output' },
+            to: { blockId: 'block2', slotId: 'progress', direction: 'input' },
           },
         ],
       };
@@ -65,20 +66,24 @@ describe('SemanticGraph', () => {
       const graph = SemanticGraph.fromPatch(patch);
 
       // Check incoming wires
-      const incomingWires = graph.getIncomingWires({
-        blockId: 'block2',
-        slotId: 'progress',
-        dir: 'input',
-      });
+      const incomingWires = graph.getIncomingWires(
+        portRefToKey({
+          blockId: 'block2',
+          slotId: 'progress',
+          direction: 'input',
+        })
+      );
       expect(incomingWires).toHaveLength(1);
       expect(incomingWires[0]?.connectionId).toBe('conn1');
 
       // Check outgoing wires
-      const outgoingWires = graph.getOutgoingWires({
-        blockId: 'block1',
-        slotId: 'progress',
-        dir: 'output',
-      });
+      const outgoingWires = graph.getOutgoingWires(
+        portRefToKey({
+          blockId: 'block1',
+          slotId: 'progress',
+          direction: 'output',
+        })
+      );
       expect(outgoingWires).toHaveLength(1);
       expect(outgoingWires[0]?.connectionId).toBe('conn1');
     });
@@ -122,7 +127,7 @@ describe('SemanticGraph', () => {
             from: {
               blockId: 'block1',
               slotId: 'phase',
-              dir: 'output',
+              direction: 'output',
             },
             enabled: true,
             sortKey: 0,
@@ -135,7 +140,7 @@ describe('SemanticGraph', () => {
             to: {
               blockId: 'block2',
               slotId: 'phase',
-              dir: 'input',
+              direction: 'input',
             },
             enabled: true,
           },
@@ -145,20 +150,24 @@ describe('SemanticGraph', () => {
       const graph = SemanticGraph.fromPatch(patch);
 
       // Check publisher edges
-      const outgoingPublishers = graph.getOutgoingPublishers({
-        blockId: 'block1',
-        slotId: 'phase',
-        dir: 'output',
-      });
+      const outgoingPublishers = graph.getOutgoingPublishers(
+        portRefToKey({
+          blockId: 'block1',
+          slotId: 'phase',
+          direction: 'output',
+        })
+      );
       expect(outgoingPublishers).toHaveLength(1);
       expect(outgoingPublishers[0]?.publisherId).toBe('pub1');
 
       // Check listener edges
-      const incomingListeners = graph.getIncomingListeners({
-        blockId: 'block2',
-        slotId: 'phase',
-        dir: 'input',
-      });
+      const incomingListeners = graph.getIncomingListeners(
+        portRefToKey({
+          blockId: 'block2',
+          slotId: 'phase',
+          direction: 'input',
+        })
+      );
       expect(incomingListeners).toHaveLength(1);
       expect(incomingListeners[0]?.listenerId).toBe('listener1');
 
@@ -206,7 +215,7 @@ describe('SemanticGraph', () => {
             from: {
               blockId: 'block1',
               slotId: 'phase',
-              dir: 'output',
+              direction: 'output',
             },
             enabled: false, // Disabled
             sortKey: 0,
@@ -232,8 +241,8 @@ describe('SemanticGraph', () => {
           { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [{ id: 'out', type: 'Signal<number>' }] },
         ],
         connections: [
-          { id: 'conn1', from: { blockId: 'a', slotId: 'out' }, to: { blockId: 'b', slotId: 'in' } },
-          { id: 'conn2', from: { blockId: 'b', slotId: 'out' }, to: { blockId: 'c', slotId: 'in' } },
+          { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
+          { id: 'conn2', from: { blockId: 'b', slotId: 'out', direction: 'output' }, to: { blockId: 'c', slotId: 'in', direction: 'input' } },
         ],
       };
 
@@ -249,8 +258,8 @@ describe('SemanticGraph', () => {
           { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [{ id: 'out', type: 'Signal<number>' }] },
         ],
         connections: [
-          { id: 'conn1', from: { blockId: 'a', slotId: 'out' }, to: { blockId: 'b', slotId: 'in' } },
-          { id: 'conn2', from: { blockId: 'b', slotId: 'out' }, to: { blockId: 'a', slotId: 'in' } },
+          { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
+          { id: 'conn2', from: { blockId: 'b', slotId: 'out', direction: 'output' }, to: { blockId: 'a', slotId: 'in', direction: 'input' } },
         ],
       };
 
@@ -269,8 +278,8 @@ describe('SemanticGraph', () => {
           { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [{ id: 'out', type: 'Signal<number>' }] },
         ],
         connections: [
-          { id: 'conn1', from: { blockId: 'a', slotId: 'out' }, to: { blockId: 'b', slotId: 'in' } },
-          { id: 'conn2', from: { blockId: 'b', slotId: 'out' }, to: { blockId: 'c', slotId: 'in' } },
+          { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
+          { id: 'conn2', from: { blockId: 'b', slotId: 'out', direction: 'output' }, to: { blockId: 'c', slotId: 'in', direction: 'input' } },
         ],
       };
 
@@ -297,9 +306,9 @@ describe('SemanticGraph', () => {
           { id: 'd', type: 'D', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [] },
         ],
         connections: [
-          { id: 'conn1', from: { blockId: 'a', slotId: 'out' }, to: { blockId: 'b', slotId: 'in' } },
-          { id: 'conn2', from: { blockId: 'a', slotId: 'out' }, to: { blockId: 'c', slotId: 'in' } },
-          { id: 'conn3', from: { blockId: 'b', slotId: 'out' }, to: { blockId: 'd', slotId: 'in' } },
+          { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
+          { id: 'conn2', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'c', slotId: 'in', direction: 'input' } },
+          { id: 'conn3', from: { blockId: 'b', slotId: 'out', direction: 'output' }, to: { blockId: 'd', slotId: 'in', direction: 'input' } },
         ],
       };
 
@@ -342,21 +351,21 @@ describe('SemanticGraph', () => {
           {
             id: 'pub1',
             busId: 'energy',
-            from: { blockId: 'block1', slotId: 'val', dir: 'output' },
+            from: { blockId: 'block1', slotId: 'val', direction: 'output' },
             enabled: true,
             sortKey: 20,
           },
           {
             id: 'pub2',
             busId: 'energy',
-            from: { blockId: 'block2', slotId: 'val', dir: 'output' },
+            from: { blockId: 'block2', slotId: 'val', direction: 'output' },
             enabled: true,
             sortKey: 10,
           },
           {
             id: 'pub3',
             busId: 'energy',
-            from: { blockId: 'block3', slotId: 'val', dir: 'output' },
+            from: { blockId: 'block3', slotId: 'val', direction: 'output' },
             enabled: true,
             sortKey: 30,
           },

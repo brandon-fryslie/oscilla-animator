@@ -8,7 +8,7 @@
  * is retained for UI display purposes (badges, hints).
  */
 
-import type { SlotType, Connection, Block, Slot, PortRef } from './types';
+import type { SlotType, Connection, Block, Slot, PortRef, PortKey } from './types';
 import { areSlotTypesCompatible, getCompatibilityHint } from './semantic';
 import { portRefToKey } from './types'; // Import portRefToKey
 

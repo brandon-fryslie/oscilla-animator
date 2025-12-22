@@ -5,7 +5,8 @@
  * graph nodes in Phase 2 compilation.
  */
 
-import type { Artifact, BlockId, PortType } from './types';
+import type { BlockId } from '../../types';
+import type { Artifact, PortType } from './types';
 import type { Bus, Publisher, Listener } from '../types';
 
 // =============================================================================

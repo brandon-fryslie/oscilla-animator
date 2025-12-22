@@ -37,6 +37,7 @@ export type {
   // Patch graph
   BlockId,
   PortRef,
+  PortRef,
   CompilerConnection,
   BlockInstance,
   CompilerPatch,

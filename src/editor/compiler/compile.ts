@@ -14,7 +14,6 @@
 
 import type {
   Artifact,
-  BlockId,
   BlockInstance,
   BlockRegistry,
   CompileCtx,
@@ -23,13 +22,21 @@ import type {
   CompilerConnection,
   CompilerPatch,
   DrawNode,
-  PortRef,
   Program,
   RenderTree,
   RuntimeCtx,
   Seed,
   TimeModel,
 } from './types';
+import type {
+  Connection,
+  Bus,
+  Publisher,
+  Listener,
+  BlockId,
+  PortRef,
+  PortKey,
+} from '../types';
 import { compileBusAwarePatch, isBusAwarePatch } from './compileBusAware';
 import { getFeatureFlags } from './featureFlags';
 import { getBlockDefinition } from '../blocks';
@@ -80,9 +87,9 @@ function compilerPatchToPatchDocument(patch: CompilerPatch): import('../semantic
   return {
     blocks,
     connections: Array.from(patch.connections).map(conn => ({
-      id: `conn-${conn.from.blockId}-${conn.from.port}-${conn.to.blockId}-${conn.to.port}`,
-      from: { blockId: conn.from.blockId, slotId: conn.from.port },
-      to: { blockId: conn.to.blockId, slotId: conn.to.port },
+      id: `conn-${conn.from.blockId}-${conn.from.slotId}-${conn.from.direction}-${conn.to.blockId}-${conn.to.slotId}-${conn.to.direction}`,
+      from: conn.from,
+      to: conn.to,
     })),
     buses: patch.buses ?? [],
     publishers: patch.publishers ?? [],
@@ -186,13 +193,13 @@ function compilePatchWireOnly(
     const fromComp = registry[fromBlock.type]!;
     const toComp = registry[toBlock.type]!;
 
-    const fromPort = fromComp.outputs.find((p) => p.name === c.from.port);
-    const toPort = toComp.inputs.find((p) => p.name === c.to.port);
+    const fromPort = fromComp.outputs.find((p) => p.name === c.from.slotId);
+    const toPort = toComp.inputs.find((p) => p.name === c.to.slotId);
 
     if (!fromPort) {
       errors.push({
         code: 'PortMissing',
-        message: `Missing output port ${c.from.blockId}.${c.from.port}`,
+        message: `Missing output port ${c.from.blockId}.${c.from.slotId}`,
         where: { connection: c },
       });
       continue;
@@ -200,7 +207,7 @@ function compilePatchWireOnly(
     if (!toPort) {
       errors.push({
         code: 'PortMissing',
-        message: `Missing input port ${c.to.blockId}.${c.to.port}`,
+        message: `Missing input port ${c.to.blockId}.${c.to.slotId}`,
         where: { connection: c },
       });
       continue;
@@ -209,7 +216,7 @@ function compilePatchWireOnly(
     if (!arePortTypesCompatible(fromPort.type, toPort.type)) {
       errors.push({
         code: 'PortTypeMismatch',
-        message: `Type mismatch: ${c.from.blockId}.${c.from.port} (${fromPort.type.kind}) → ${c.to.blockId}.${c.to.port} (${toPort.type.kind})`,
+        message: `Type mismatch: ${c.from.blockId}.${c.from.slotId} (${fromPort.type.kind}) → ${c.to.blockId}.${c.to.slotId} (${toPort.type.kind})`,
         where: { connection: c },
       });
     }
@@ -249,27 +256,26 @@ function compilePatchWireOnly(
     for (const p of compiler.inputs) {
       const conn = incoming.get(keyOf(blockId, p.name))?.[0];
       if (conn) {
-        const srcKey = keyOf(conn.from.blockId, conn.from.port);
+        const srcKey = keyOf(conn.from.blockId, conn.from.slotId, 'output');
         const src = compiledPortMap.get(srcKey);
         inputs[p.name] = src ?? {
           kind: 'Error',
           message: `Missing upstream artifact for ${srcKey}`,
-          where: { blockId: conn.from.blockId, port: conn.from.port },
+          where: { blockId: conn.from.blockId, portRef: conn.from },
         };
       } else {
         // No connection: either optional or provide default scalar constant from params.
         if (p.required) {
           inputs[p.name] = {
             kind: 'Error',
-            message: `Missing required input ${blockId}.${p.name}`,
-            where: { blockId, port: p.name },
+            where: { blockId, portRef: { blockId, slotId: p.name, direction: 'input' } },
           };
         } else {
           // Optional inputs get a placeholder Error - block compiler handles defaults
           inputs[p.name] = {
             kind: 'Error',
             message: `Unwired optional input ${blockId}.${p.name}`,
-            where: { blockId, port: p.name },
+            where: { blockId, portRef: { blockId, slotId: p.name, direction: 'input' } },
           };
         }
       }
@@ -283,7 +289,7 @@ function compilePatchWireOnly(
           errors.push({
             code: 'UpstreamError',
             message: art.message,
-            where: { blockId, port: name },
+            where: { blockId, portRef: { blockId, slotId: name, direction: 'input' } },
           });
         }
       }
@@ -299,7 +305,7 @@ function compilePatchWireOnly(
         errors.push({
           code: 'PortMissing',
           message: `Compiler did not produce required output port ${blockId}.${outDef.name}`,
-          where: { blockId, port: outDef.name },
+          where: { blockId, portRef: { blockId, slotId: outDef.name, direction: 'output' } },
         });
         continue;
       }
@@ -307,7 +313,7 @@ function compilePatchWireOnly(
         errors.push({
           code: 'UpstreamError',
           message: produced.message,
-          where: produced.where ?? { blockId, port: outDef.name },
+          where: produced.where ?? { blockId, portRef: { blockId, slotId: outDef.name, direction: 'output' } },
         });
         continue;
       }
@@ -315,7 +321,7 @@ function compilePatchWireOnly(
         errors.push({
           code: 'PortTypeMismatch',
           message: `Compiler produced wrong kind for ${blockId}.${outDef.name}: got ${produced.kind}, expected ${outDef.type.kind}`,
-          where: { blockId, port: outDef.name },
+          where: { blockId, portRef: { blockId, slotId: outDef.name, direction: 'output' } },
         });
         continue;
       }
@@ -335,11 +341,11 @@ function compilePatchWireOnly(
     return { ok: false, errors };
   }
 
-  const outArt = compiledPortMap.get(keyOf(outputRef.blockId, outputRef.port));
+  const outArt = compiledPortMap.get(keyOf(outputRef.blockId, outputRef.slotId, 'output'));
   if (!outArt) {
     errors.push({
       code: 'OutputMissing',
-      message: `Output artifact not found for ${outputRef.blockId}.${outputRef.port}`,
+      message: `Output artifact not found for ${outputRef.blockId}.${outputRef.slotId}`,
     });
     return { ok: false, errors };
   }
@@ -365,7 +371,7 @@ function compilePatchWireOnly(
   errors.push({
     code: 'OutputWrongType',
     message: `Patch output must be RenderTreeProgram or RenderTree, got ${outArt.kind}`,
-    where: { blockId: outputRef.blockId, port: outputRef.port },
+    where: { blockId: outputRef.blockId, portRef: outputRef },
   });
   return { ok: false, errors };
 }
@@ -502,7 +508,7 @@ function indexIncoming(
 ): Map<string, CompilerConnection[]> {
   const m = new Map<string, CompilerConnection[]>();
   for (const c of conns) {
-    const k = keyOf(c.to.blockId, c.to.port);
+    const k = keyOf(c.to.blockId, c.to.slotId, 'input');
     const arr = m.get(k) ?? [];
     arr.push(c);
     m.set(k, arr);
@@ -510,8 +516,8 @@ function indexIncoming(
   return m;
 }
 
-function keyOf(blockId: string, port: string): string {
-  return `${blockId}:${port}`;
+function keyOf(blockId: string, slotId: string, direction: 'input' | 'output'): PortKey {
+  return portRefToKey({ blockId, slotId, direction });
 }
 
 // =============================================================================
@@ -594,7 +600,7 @@ function inferOutputPort(
 
   // Map of all ports that feed something
   const fed = new Set<string>();
-  for (const c of patch.connections) fed.add(keyOf(c.from.blockId, c.from.port));
+  for (const c of patch.connections) fed.add(keyOf(c.from.blockId, c.from.slotId, 'output'));
 
   for (const [blockId, block] of patch.blocks.entries()) {
     const comp = registry[block.type];
