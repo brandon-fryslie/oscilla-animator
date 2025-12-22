@@ -10,7 +10,7 @@ export { LogStore } from './logStore';
 export { LogWindow } from './LogWindow';
 export { StatusBadge } from './StatusBadge';
 export {
-  BLOCK_DEFINITIONS,
+  getBlockDefinitions,
   getBlockDefinition,
   type BlockDefinition,
   type ParamSchema,

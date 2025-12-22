@@ -201,23 +201,24 @@ export class ActionExecutor {
    * and rewires the connections to go through the adapter.
    */
   addAdapter(fromPort: PortTargetRef, adapterType: string): boolean {
+    const portRef = fromPort.portRef;
     // 1. Find the connection from this port
     const connection = this.patchStore.connections.find(
-      (c) => c.from.blockId === fromPort.blockId && c.from.slotId === fromPort.portId
+      (c) => c.from.blockId === portRef.blockId && c.from.slotId === portRef.slotId
     );
 
     if (!connection) {
-      console.warn('[ActionExecutor] No connection found from port:', fromPort);
+      console.warn('[ActionExecutor] No connection found from port:', portRef);
       return false;
     }
 
     // 2. Find the lane containing the source block
     const lane = this.viewStore.lanes.find((l) =>
-      l.blockIds.includes(fromPort.blockId)
+      l.blockIds.includes(portRef.blockId)
     );
 
     if (!lane) {
-      console.warn('[ActionExecutor] Lane not found for block:', fromPort.blockId);
+      console.warn('[ActionExecutor] Lane not found for block:', portRef.blockId);
       return false;
     }
 

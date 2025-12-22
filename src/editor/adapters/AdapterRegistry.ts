@@ -1,4 +1,5 @@
 import type { AdapterCost, AdapterPolicy, TypeDesc } from '../types';
+import { CORE_DOMAIN_DEFAULTS } from '../types';
 
 export interface AdapterDef {
   id: string;
@@ -64,3 +65,152 @@ class AdapterRegistry {
 
 // Global adapter registry instance
 export const adapterRegistry = new AdapterRegistry();
+
+const COST_CHEAP = 1;
+const COST_MEDIUM = 10;
+const COST_HEAVY = 100;
+
+const CORE_DOMAINS = Object.keys(CORE_DOMAIN_DEFAULTS) as Array<keyof typeof CORE_DOMAIN_DEFAULTS>;
+
+function isCoreDomain(domain: string): boolean {
+  return CORE_DOMAINS.includes(domain as keyof typeof CORE_DOMAIN_DEFAULTS);
+}
+
+function makeTypeDesc(world: TypeDesc['world'], domain: TypeDesc['domain']): TypeDesc {
+  const category = isCoreDomain(domain) ? 'core' : 'internal';
+  return {
+    world,
+    domain,
+    category,
+    busEligible: category === 'core' && world !== 'scalar' && world !== 'config',
+  };
+}
+
+export function initAdapterRegistry(): void {
+  if (adapterRegistry.list().length > 0) return;
+
+  // World adapters
+  for (const domain of CORE_DOMAINS) {
+    const scalar = makeTypeDesc('scalar', domain);
+    const signal = makeTypeDesc('signal', domain);
+    const field = makeTypeDesc('field', domain);
+
+    adapterRegistry.register({
+      id: `ConstToSignal:${domain}`,
+      label: `Const → Signal (${domain})`,
+      policy: 'AUTO',
+      cost: COST_CHEAP,
+      from: scalar,
+      to: signal,
+    });
+
+    adapterRegistry.register({
+      id: `BroadcastScalarToField:${domain}`,
+      label: `Const → Field (${domain})`,
+      policy: 'AUTO',
+      cost: COST_MEDIUM,
+      from: scalar,
+      to: field,
+    });
+
+    adapterRegistry.register({
+      id: `BroadcastSignalToField:${domain}`,
+      label: `Signal → Field (${domain})`,
+      policy: 'AUTO',
+      cost: COST_MEDIUM,
+      from: signal,
+      to: field,
+    });
+
+    adapterRegistry.register({
+      id: `ReduceFieldToSignal:${domain}`,
+      label: `Field → Signal (${domain})`,
+      policy: 'EXPLICIT',
+      cost: COST_HEAVY,
+      from: field,
+      to: signal,
+    });
+  }
+
+  // Domain adapters: phase/number and duration/number
+  const signalNumber = makeTypeDesc('signal', 'number');
+  const signalPhase = makeTypeDesc('signal', 'phase');
+  const scalarNumber = makeTypeDesc('scalar', 'number');
+  const scalarPhase = makeTypeDesc('scalar', 'phase');
+  const signalDuration = makeTypeDesc('signal', 'duration');
+  const scalarDuration = makeTypeDesc('scalar', 'duration');
+
+  adapterRegistry.register({
+    id: 'NormalizeToPhase:signal',
+    label: 'Number → Phase (signal)',
+    policy: 'SUGGEST',
+    cost: COST_CHEAP,
+    from: signalNumber,
+    to: signalPhase,
+  });
+
+  adapterRegistry.register({
+    id: 'PhaseToNumber:signal',
+    label: 'Phase → Number (signal)',
+    policy: 'AUTO',
+    cost: COST_CHEAP,
+    from: signalPhase,
+    to: signalNumber,
+  });
+
+  adapterRegistry.register({
+    id: 'NormalizeToPhase:scalar',
+    label: 'Number → Phase (scalar)',
+    policy: 'SUGGEST',
+    cost: COST_CHEAP,
+    from: scalarNumber,
+    to: scalarPhase,
+  });
+
+  adapterRegistry.register({
+    id: 'PhaseToNumber:scalar',
+    label: 'Phase → Number (scalar)',
+    policy: 'AUTO',
+    cost: COST_CHEAP,
+    from: scalarPhase,
+    to: scalarNumber,
+  });
+
+  adapterRegistry.register({
+    id: 'NumberToDurationMs:signal',
+    label: 'Number → Duration (signal)',
+    policy: 'SUGGEST',
+    cost: COST_CHEAP,
+    from: signalNumber,
+    to: signalDuration,
+  });
+
+  adapterRegistry.register({
+    id: 'DurationToNumberMs:signal',
+    label: 'Duration → Number (signal)',
+    policy: 'AUTO',
+    cost: COST_CHEAP,
+    from: signalDuration,
+    to: signalNumber,
+  });
+
+  adapterRegistry.register({
+    id: 'NumberToDurationMs:scalar',
+    label: 'Number → Duration (scalar)',
+    policy: 'SUGGEST',
+    cost: COST_CHEAP,
+    from: scalarNumber,
+    to: scalarDuration,
+  });
+
+  adapterRegistry.register({
+    id: 'DurationToNumberMs:scalar',
+    label: 'Duration → Number (scalar)',
+    policy: 'AUTO',
+    cost: COST_CHEAP,
+    from: scalarDuration,
+    to: scalarNumber,
+  });
+}
+
+initAdapterRegistry();

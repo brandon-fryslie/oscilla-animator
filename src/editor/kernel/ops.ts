@@ -16,7 +16,6 @@ import type {
   Publisher,
   Listener,
   Patch,
-  BindingEndpoint,
   PortRef,
   AdapterStep,
   LensDefinition,
@@ -64,7 +63,7 @@ export type BlockPatchParams = {
 
 export type WireAdd = {
   op: 'WireAdd';
-  connection: Connection; // includes id, from {blockId, slotId}, to {blockId, slotId}
+  connection: Connection; // includes id, from/to PortRef
 };
 
 export type WireRemove = {
@@ -75,7 +74,7 @@ export type WireRemove = {
 export type WireRetarget = {
   op: 'WireRetarget';
   connectionId: string;
-  next: { from?: { blockId: BlockId; slotId: string }; to?: { blockId: BlockId; slotId: string } };
+  next: { from?: PortRef; to?: PortRef };
 };
 
 // =============================================================================
@@ -115,7 +114,7 @@ export type PublisherRemove = {
 export type PublisherUpdate = {
   op: 'PublisherUpdate';
   publisherId: string;
-  patch: Partial<Pick<Publisher, 'enabled' | 'sortKey' | 'adapterChain'>>;
+  patch: Partial<Pick<Publisher, 'enabled' | 'sortKey' | 'adapterChain' | 'lensStack'>>;
 };
 
 export type ListenerAdd = {

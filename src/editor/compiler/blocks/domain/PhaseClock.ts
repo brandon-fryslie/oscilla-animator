@@ -2,7 +2,7 @@
  * PhaseClock Block Compiler
  *
  * Derived clock that transforms upstream time into phase [0,1].
- * Unlike the legacy PhaseClock, this block requires a time input from a TimeRoot.
+ * Requires a time input from a TimeRoot.
  *
  * Outputs:
  * - phase: Signal<phase> in [0,1] based on mode (loop/once/pingpong)

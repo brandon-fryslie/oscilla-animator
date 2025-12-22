@@ -10,8 +10,9 @@
 
 import { makeObservable, observable, computed, action } from 'mobx';
 import type { RootStore } from '../stores/RootStore';
-import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
-import type { TypeDesc, Slot, Listener, LensDefinition } from '../types';
+import { SLOT_TYPE_TO_TYPE_DESC, isDirectlyCompatible } from '../types';
+import type { TypeDesc, Slot, Listener, LensDefinition, LensInstance, AdapterStep } from '../types';
+import { findAdapterPath } from '../adapters/autoAdapter';
 import { getBlockDefinition } from '../blocks/registry';
 import type { BlockDefinition } from '../blocks/types';
 import {
@@ -30,6 +31,7 @@ import {
   createDefaultViewState,
   parseRowKey,
 } from './types';
+import { createLensInstanceFromDefinition, lensInstanceToDefinition } from '../lenses/lensInstances';
 
 /**
  * Store for modulation table state.
@@ -363,7 +365,9 @@ export class ModulationTableStore {
           busId: column.busId,
           listenerId: listener?.id,
           enabled: listener?.enabled,
-          lensChain: listener?.lensStack ?? (listener?.lens ? [listener.lens] : undefined),
+          lensChain: listener?.lensStack
+            ? listener.lensStack.map((lens) => lensInstanceToDefinition(lens, this.root.defaultSourceStore))
+            : undefined,
           status,
           suggestedChain: status === 'convertible' ? this.getSuggestedChain(row, column) : undefined,
           costClass: status === 'convertible' ? this.getCostClass(row, column) : undefined,
@@ -465,6 +469,18 @@ export class ModulationTableStore {
     }
 
     const { blockId, portId } = parsed;
+    const row = this.rows.find((candidate) => candidate.key === rowKey);
+    const column = this.columns.find((candidate) => candidate.busId === busId);
+    let adapterChain: AdapterStep[] | undefined;
+
+    if (row && column && !isDirectlyCompatible(column.type, row.type)) {
+      const result = findAdapterPath(column.type, row.type, 'listener');
+      if (!result.ok) {
+        console.warn(`Cannot bind ${rowKey} to ${busId}: ${result.reason ?? 'no adapter path'}`);
+        return;
+      }
+      adapterChain = result.chain;
+    }
 
     // Check if there's already a listener for this port
     const portKey = createPortRefKey(blockId, portId);
@@ -476,7 +492,7 @@ export class ModulationTableStore {
     }
 
     // Create new listener
-    this.root.busStore.addListener(busId, blockId, portId, undefined, lensChain);
+    this.root.busStore.addListener(busId, blockId, portId, adapterChain, lensChain);
   }
 
   /**
@@ -504,9 +520,14 @@ export class ModulationTableStore {
     const portKey = createPortRefKey(parsed.blockId, parsed.portId);
     const listenerId = this.patchIndex.listenersByInputPort.get(portKey);
 
-    if (listenerId) {
-      this.root.busStore.updateListener(listenerId, { lensStack: lensChain });
-    }
+    if (!listenerId) return;
+
+    const lensStack: LensInstance[] | undefined = lensChain
+      ? lensChain.map((lens, index) =>
+          createLensInstanceFromDefinition(lens, listenerId, index, this.root.defaultSourceStore)
+        )
+      : undefined;
+    this.root.busStore.updateListener(listenerId, { lensStack });
   }
 
   // =============================================================================
@@ -562,55 +583,22 @@ export class ModulationTableStore {
    * Check if source type is directly compatible with target type.
    */
   private isTypeCompatible(source: TypeDesc, target: TypeDesc): boolean {
-    // Direct match
-    if (source.world === target.world && source.domain === target.domain) {
-      return true;
-    }
-
-    // Signal can feed field (broadcast)
-    if (source.world === 'signal' && target.world === 'field' && source.domain === target.domain) {
-      return true;
-    }
-
-    return false;
+    return isDirectlyCompatible(source, target);
   }
 
   /**
    * Check if source type can be converted to target type.
    */
   private isTypeConvertible(source: TypeDesc, target: TypeDesc): boolean {
-    // Number-to-number conversions across worlds
-    if (source.domain === 'number' && target.domain === 'number') {
-      return true;
-    }
-
-    // Phase to number
-    if (source.domain === 'phase' && target.domain === 'number') {
-      return true;
-    }
-
-    // Number to phase (with clamping)
-    if (source.domain === 'number' && target.domain === 'phase') {
-      return true;
-    }
-
-    return false;
+    const result = findAdapterPath(source, target, 'listener');
+    return result.ok || (result.suggestions && result.suggestions.length > 0);
   }
 
   /**
    * Get suggested lens chain for type conversion.
    */
   private getSuggestedChain(row: TableRow, column: TableColumn): LensDefinition[] | undefined {
-    // Signal to field: broadcast lens
-    if (column.type.world === 'signal' && row.type.world === 'field') {
-      return [{ type: 'broadcast', params: {} }];
-    }
-
-    // Phase to number: scale lens
-    if (column.type.domain === 'phase' && row.type.domain === 'number') {
-      return [{ type: 'scale', params: { scale: 1, offset: 0 } }];
-    }
-
+    // Type conversions should be represented via adapters, not lenses.
     return undefined;
   }
 

@@ -20,7 +20,6 @@ import {
   FieldHash01ByIdBlock,
   FieldMapNumberBlock,
   FieldZipNumberBlock,
-  PhaseClockLegacyBlock,
   RenderInstances2DBlock,
 } from '../compiler/blocks/domain';
 import type { Artifact, CompileCtx, RuntimeCtx } from '../compiler/types';
@@ -329,60 +328,6 @@ describe('Domain Pipeline', () => {
       if (zipResult.out.kind === 'Field:number') {
         const values = zipResult.out.value(0, 2, testCtx);
         expect(values).toEqual([20, 20]); // 4 * 5 = 20
-      }
-    });
-  });
-
-  describe('PhaseClockLegacy', () => {
-    it('produces looping phase signal', () => {
-      const result = PhaseClockLegacyBlock.compile({
-        id: 'clock',
-        params: { duration: 1, mode: 'loop', offset: 0 },
-        inputs: {},
-        ctx: testCtx,
-      });
-
-      if (result.phase.kind === 'Signal:number') {
-        const signal = result.phase.value;
-
-        expect(signal(0, testRuntimeCtx)).toBeCloseTo(0, 2);
-        expect(signal(500, testRuntimeCtx)).toBeCloseTo(0.5, 2);
-        expect(signal(1000, testRuntimeCtx)).toBeCloseTo(0, 2); // Loops
-      }
-    });
-
-    it('produces once phase signal', () => {
-      const result = PhaseClockLegacyBlock.compile({
-        id: 'clock-once',
-        params: { duration: 1, mode: 'once', offset: 0 },
-        inputs: {},
-        ctx: testCtx,
-      });
-
-      if (result.phase.kind === 'Signal:number') {
-        const signal = result.phase.value;
-
-        expect(signal(0, testRuntimeCtx)).toBeCloseTo(0, 2);
-        expect(signal(500, testRuntimeCtx)).toBeCloseTo(0.5, 2);
-        expect(signal(1500, testRuntimeCtx)).toBeCloseTo(1, 2); // Clamps at 1
-      }
-    });
-
-    it('produces pingpong phase signal', () => {
-      const result = PhaseClockLegacyBlock.compile({
-        id: 'clock-pp',
-        params: { duration: 1, mode: 'pingpong', offset: 0 },
-        inputs: {},
-        ctx: testCtx,
-      });
-
-      if (result.phase.kind === 'Signal:number') {
-        const signal = result.phase.value;
-
-        expect(signal(0, testRuntimeCtx)).toBeCloseTo(0, 2);
-        expect(signal(500, testRuntimeCtx)).toBeCloseTo(0.5, 2);
-        expect(signal(1000, testRuntimeCtx)).toBeCloseTo(1, 2);
-        expect(signal(1500, testRuntimeCtx)).toBeCloseTo(0.5, 2); // Going back
       }
     });
   });

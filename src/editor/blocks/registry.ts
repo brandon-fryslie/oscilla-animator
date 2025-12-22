@@ -33,7 +33,7 @@ const ALL_INDIVIDUAL_BLOCKS: BlockDefinition[] = [
 
 
 /**
- * Normalize tags with canonical defaults for form/subcategory/legacy category.
+ * Normalize tags with canonical defaults for form/subcategory.
  */
 function normalizeDefinition(definition: BlockDefinition): BlockDefinition {
   const normalizedDef: BlockDefinition = { ...definition };

@@ -58,8 +58,8 @@ export {
   type Scene,
 } from './player';
 
-// Re-export timeline and time model types from compiler for convenience
-export type { TimelineHint, CuePoint, TimeModel, FiniteTimeModel, CyclicTimeModel, InfiniteTimeModel } from '../compiler/types';
+// Re-export time model types from compiler for convenience
+export type { CuePoint, TimeModel, FiniteTimeModel, CyclicTimeModel, InfiniteTimeModel } from '../compiler/types';
 
 // SVG Renderer
 export {
@@ -69,4 +69,3 @@ export {
   transform2dToSvg,
   transform3dToCss,
 } from './svgRenderer';
-

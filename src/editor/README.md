@@ -135,10 +135,10 @@ Lenses transform bus values before they reach their destination:
 1. **ease**: Apply easing curve (easeInOutSine, easeOutBounce, etc.)
 2. **slew**: Rate-limited smoothing for gradual changes
 3. **quantize**: Snap to discrete steps (for rhythmic effects)
-4. **scale**: Linear scale + offset transformation
-5. **warp**: Phase warping (speed up/slow down parts of cycle)
-6. **broadcast**: Lift scalar signal to constant field
-7. **perElementOffset**: Add per-element phase offset
+4. **scale**: Linear gain + offset transformation
+5. **clamp**: Clamp values to a min/max range
+6. **deadzone**: Zero small values near 0
+7. **mapRange**: Remap input range to output range
 
 ### Lens Presets
 

@@ -138,8 +138,8 @@ function ConceptsPage() {
         a <strong>RenderTree</strong>.
       </p>
       <p>
-        The RenderTree is a nested structure of groups, shapes, and effects that maps neatly onto SVG. Programs may also expose
-        <strong>timeline hints</strong> so the player can present finite shots and ambient loops in a friendly way.
+        The RenderTree is a nested structure of groups, shapes, and effects that maps neatly onto SVG. Time topology comes from
+        the TimeRoot, which produces a TimeModel for the UI and runtime.
       </p>
     </div>
   );
@@ -297,10 +297,6 @@ function BlocksCompositesPage() {
       <p>
         <strong>Composite</strong> blocks wrap a small internal graph of primitives into a single, reusable unit with its own parameters
         and ports. They help keep complex patches readable.
-      </p>
-      <p>
-        In the current editor, some &quot;legacy-composite&quot; blocks still exist while the system moves toward explicit composite
-        definitions. These act like composites in the UI but are backed by older code.
       </p>
       <p>
         Over time, more behaviors will be expressed as composites, making it easier to:
@@ -510,9 +506,6 @@ function PreviewPage() {
           <strong>Scrubber</strong> – scrub through time, including into future phases.
         </li>
         <li>
-          <strong>Loop mode</strong> – choose between looping, ping-pong, or single-shot behavior.
-        </li>
-        <li>
           <strong>Speed</strong> – multiply the effective time speed (slow down or speed up).
         </li>
         <li>
@@ -520,8 +513,7 @@ function PreviewPage() {
         </li>
       </ul>
       <p>
-        For programs that expose timeline hints, the Preview shows whether the animation is a finite shot or an infinite/ambient
-        loop, and can display structural cue points.
+        The Preview reflects the active TimeModel (finite, cyclic, or infinite) and can display structural cue points.
       </p>
     </div>
   );
@@ -800,4 +792,3 @@ export function HelpCenterModal({ isOpen, initialTopicId = 'overview', onClose, 
     </div>
   );
 }
-

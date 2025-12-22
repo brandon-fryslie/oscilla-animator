@@ -14,11 +14,17 @@ import { getLayoutById, DEFAULT_LAYOUT, mapLaneToLayout, PRESET_LAYOUTS } from '
 import type { LaneLayout } from '../laneLayouts';
 import type { RootStore } from './RootStore';
 import { getBlockDefinition } from '../blocks';
+import { SemanticGraph } from '../semantic';
+import { storeToPatchDocument } from '../semantic/patchAdapter';
 
 export interface ViewLayout {
   id: string;
   lanes: Lane[];
   currentLayoutId: string;
+}
+
+export interface ProjectionLayout {
+  nodes: Map<BlockId, { x: number; y: number }>;
 }
 
 export class ViewStateStore {
@@ -30,6 +36,9 @@ export class ViewStateStore {
   /** Lane definitions with block assignments */
   lanes: Lane[] = [];
 
+  /** Active view id (lane vs projection) */
+  activeViewId: string = 'lane';
+
   constructor(root: RootStore) {
     this.root = root;
     this.lanes = this.createLanesFromLayout(DEFAULT_LAYOUT);
@@ -39,6 +48,7 @@ export class ViewStateStore {
       currentLayoutId: observable,
       currentLayout: computed,
       availableLayouts: computed,
+      projectionLayout: computed,
       toggleLaneCollapsed: action,
       toggleLanePinned: action,
       renameLane: action,
@@ -108,6 +118,11 @@ export class ViewStateStore {
   /** Get all available layouts */
   get availableLayouts(): readonly LaneLayout[] {
     return PRESET_LAYOUTS;
+  }
+
+  /** Get projection layout derived from SemanticGraph */
+  get projectionLayout(): ProjectionLayout {
+    return computeProjectionLayout(this.root);
   }
 
   // =============================================================================
@@ -264,4 +279,54 @@ export class ViewStateStore {
       lane.blockIds = lane.blockIds.filter(id => id !== blockId);
     }
   }
+}
+
+function computeProjectionLayout(root: RootStore): ProjectionLayout {
+  const doc = storeToPatchDocument(root);
+  const graph = SemanticGraph.fromPatch(doc);
+  const blocks = graph.getBlocks().map((b) => b.blockId);
+
+  const indegree = new Map<string, number>();
+  const layers = new Map<string, number>();
+  for (const blockId of blocks) {
+    indegree.set(blockId, 0);
+  }
+
+  for (const blockId of blocks) {
+    for (const downstream of graph.getDownstreamBlocks(blockId)) {
+      indegree.set(downstream, (indegree.get(downstream) ?? 0) + 1);
+    }
+  }
+
+  const queue: string[] = blocks.filter((id) => (indegree.get(id) ?? 0) === 0).sort();
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const baseLayer = layers.get(current) ?? 0;
+    for (const next of graph.getDownstreamBlocks(current)) {
+      layers.set(next, Math.max(layers.get(next) ?? 0, baseLayer + 1));
+      indegree.set(next, (indegree.get(next) ?? 0) - 1);
+      if ((indegree.get(next) ?? 0) === 0) {
+        queue.push(next);
+        queue.sort();
+      }
+    }
+  }
+
+  const buckets = new Map<number, string[]>();
+  for (const blockId of blocks) {
+    const layer = layers.get(blockId) ?? 0;
+    const list = buckets.get(layer) ?? [];
+    list.push(blockId);
+    buckets.set(layer, list);
+  }
+
+  const nodes = new Map<BlockId, { x: number; y: number }>();
+  for (const [layer, ids] of buckets.entries()) {
+    const sorted = [...ids].sort();
+    sorted.forEach((id, index) => {
+      nodes.set(id, { x: layer * 280, y: index * 140 });
+    });
+  }
+
+  return { nodes };
 }

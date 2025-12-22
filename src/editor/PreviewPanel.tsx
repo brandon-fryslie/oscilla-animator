@@ -96,7 +96,6 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   // Speed and seed from store (with fallbacks)
   const speed = store.uiStore.settings.speed;
   const seed = store.uiStore.settings.seed;
-  const finiteLoopMode = store.uiStore.settings.finiteLoopMode;
 
   // Derive dimensions from viewport
   const { width, height } = viewport;
@@ -125,7 +124,6 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         onStateChange: handleStateChange,
         onTimeChange: setCurrentTime,
         onCuePointsChange: setCuePoints,
-        autoApplyTimeline: true,
         events: store.events, // Pass EventDispatcher for runtime health snapshots
       }
     );
@@ -178,14 +176,6 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
       player.pause();
     }
   }, [isPlaying, playState]);
-
-  // Sync finiteLoopMode with player
-  useEffect(() => {
-    const player = playerRef.current;
-    if (!player) return;
-
-    player.setFiniteLoopMode(finiteLoopMode);
-  }, [finiteLoopMode]);
 
   // Watch for compiler service program and viewport changes
   useEffect(() => {
@@ -246,10 +236,6 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const handleSeedChange = useCallback((newSeed: number) => {
     store.uiStore.setSeed(newSeed);
     // Seed change triggers recompilation via autoCompile
-  }, [store]);
-
-  const handleFiniteLoopModeChange = useCallback((enabled: boolean) => {
-    store.uiStore.setFiniteLoopMode(enabled);
   }, [store]);
 
   // Pan handlers for mouse drag
@@ -397,14 +383,12 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
           speed={speed}
           seed={seed}
           cuePoints={cuePoints}
-          finiteLoopMode={finiteLoopMode}
           onScrub={handleScrub}
           onPlay={handlePlay}
           onPause={handlePause}
           onReset={handleReset}
           onSpeedChange={handleSpeedChange}
           onSeedChange={handleSeedChange}
-          onFiniteLoopModeChange={handleFiniteLoopModeChange}
         />
       </div>
     </div>

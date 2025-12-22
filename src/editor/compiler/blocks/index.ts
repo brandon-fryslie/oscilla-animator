@@ -1,8 +1,7 @@
 /**
  * Block Compiler Registry
  *
- * Contains domain primitives and signal blocks (new system).
- * Legacy blocks have been archived to .agent_planning/LEGACY-BLOCKS-ARCHIVE.md
+ * Contains domain primitives and signal blocks.
  */
 
 import type { BlockRegistry } from '../types';
@@ -23,7 +22,6 @@ import {
   FieldMapVec2Block,
   FieldZipNumberBlock,
   PhaseClockBlock,
-  PhaseClockLegacyBlock,
   TriggerOnWrapBlock,
   RenderInstances2DBlock,
   // TimeRoot blocks (Phase 3: TimeRoot)
@@ -83,7 +81,6 @@ export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   FieldMapVec2: FieldMapVec2Block,
   FieldZipNumber: FieldZipNumberBlock,
   PhaseClock: PhaseClockBlock,
-  PhaseClockLegacy: PhaseClockLegacyBlock,
   TriggerOnWrap: TriggerOnWrapBlock,
   RenderInstances2D: RenderInstances2DBlock,
 

@@ -416,8 +416,8 @@ export class PatchStore {
       }
       const connection: Connection = {
         id: this.generateConnectionId(),
-        from: { blockId: fromId, slotId: conn.fromSlot },
-        to: { blockId: toId, slotId: conn.toSlot },
+        from: { blockId: fromId, slotId: conn.fromSlot, direction: 'output' },
+        to: { blockId: toId, slotId: conn.toSlot, direction: 'input' },
       };
       this.connections.push(connection);
     }
@@ -769,8 +769,8 @@ export class PatchStore {
       const validator = new Validator(patchDoc, this.patchRevision);
       const validationResult = validator.canAddConnection(
         patchDoc,
-        { blockId: fromBlockId, slotId: fromSlotId },
-        { blockId: toBlockId, slotId: toSlotId }
+        { blockId: fromBlockId, slotId: fromSlotId, direction: 'output' },
+        { blockId: toBlockId, slotId: toSlotId, direction: 'input' }
       );
 
       if (!validationResult.ok) {
@@ -788,8 +788,8 @@ export class PatchStore {
 
     const connection: Connection = {
       id,
-      from: { blockId: fromBlockId, slotId: fromSlotId },
-      to: { blockId: toBlockId, slotId: toSlotId },
+      from: { blockId: fromBlockId, slotId: fromSlotId, direction: 'output' },
+      to: { blockId: toBlockId, slotId: toSlotId, direction: 'input' },
     };
 
     this.connections.push(connection);

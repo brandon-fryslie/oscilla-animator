@@ -314,8 +314,8 @@ describe('Deterministic identity (Test Matrix Section D)', () => {
 
     // Add an unrelated block
     const lanes = store.patchStore.lanes;
-    const phaseLane = lanes.find((l) => l.kind === 'Phase') ?? lanes[0];
-    store.patchStore.addBlock('PhaseClockLegacy', phaseLane.id, { duration: 5 });
+    const fieldsLane = lanes.find((l) => l.kind === 'Fields') ?? lanes[0];
+    store.patchStore.addBlock('GridDomain', fieldsLane.id, {});
 
     // Compile again
     const result2 = compiler.compile();
@@ -346,7 +346,6 @@ describe('Error handling (Test Matrix Section H)', () => {
     // Add a composite and a bus binding to a non-existent port
     const lanes = store.patchStore.lanes;
     const fieldsLane = lanes.find((l) => l.kind === 'Fields') ?? lanes[0];
-    const phaseLane = lanes.find((l) => l.kind === 'Phase') ?? lanes[1];
     const outputLane = lanes.find((l) => l.kind === 'Output') ?? lanes[lanes.length - 1];
 
     // Add CycleTimeRoot - required for all patches
@@ -359,9 +358,6 @@ describe('Error handling (Test Matrix Section H)', () => {
       rows: 4,
       cols: 4,
     });
-
-    // Add a phase clock (legacy, doesn't require tIn input)
-    const clockId = store.patchStore.addBlock('PhaseClockLegacy', phaseLane.id, { duration: 2 });
 
     // Add a renderer
     const rendererId = store.patchStore.addBlock('RenderInstances2D', outputLane.id, {});

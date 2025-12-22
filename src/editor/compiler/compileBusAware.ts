@@ -28,7 +28,7 @@ import type {
   Seed,
   TimeModel,
 } from './types';
-import type { Bus, Publisher, Listener } from '../types';
+import type { Bus, Publisher, Listener, LensInstance, AdapterStep, DefaultSourceState } from '../types';
 import { validateTimeRootConstraint } from './compile';
 import { extractTimeRootAutoPublications } from './blocks/domain/TimeRoot';
 // CRITICAL: Use busSemantics for ordering - single source of truth for UI and compiler
@@ -38,6 +38,8 @@ import {
   isReservedBusName,
 } from '../semantic/busContracts';
 import { getBlockDefinition } from '../blocks/registry';
+import { getLens } from '../lenses/LensRegistry';
+import { resolveLensParam } from '../lenses/lensResolution';
 
 // =============================================================================
 // Type Guards
@@ -62,18 +64,9 @@ const SIGNAL_COMBINE_MODES = ['last', 'sum'] as const;
 const FIELD_COMBINE_MODES = ['last', 'sum', 'average', 'max', 'min'] as const;
 
 
-/**
- * Type guard to check if patch has buses.
- */
-export function isBusAwarePatch(patch: CompilerPatch): boolean {
-  return (patch.buses && patch.buses.length > 0) || false;
-}
-
 // =============================================================================
 // Default Values
 // =============================================================================
-
-
 // =============================================================================
 // Publisher Sorting
 // =============================================================================
@@ -248,9 +241,12 @@ export function compileBusAwarePatch(
   ctx: CompileCtx
 ): CompileResult {
   const errors: CompileError[] = [];
-  const buses = patch.buses ?? [];
-  let publishers = patch.publishers ?? [];
-  const listeners = patch.listeners ?? [];
+  const buses = patch.buses;
+  let publishers = patch.publishers;
+  const listeners = patch.listeners;
+  const defaultSources = new Map<string, DefaultSourceState>(
+    Object.entries(patch.defaultSources)
+  );
 
   // =============================================================================
   // 0. Empty patch check
@@ -324,7 +320,7 @@ export function compileBusAwarePatch(
           id: `auto-${blockId}-${autoPub.busName}`,
           enabled: true,
           busId: targetBus.id,
-          from: { blockId, slotId: autoPub.artifactKey, dir: 'output' },
+          from: { blockId, slotId: autoPub.artifactKey, direction: 'output' },
           sortKey: autoPub.sortKey,
         });
       }
@@ -490,9 +486,27 @@ export function compileBusAwarePatch(
 
         if (busListener) {
           // Input comes from a bus - get the bus value
-          const busArtifact = getBusValue(busListener.busId, buses, publishers, compiledPortMap, errors);
-          // Lens stack application would go here (Phase 2)
-          inputs[p.name] = busArtifact;
+          const busArtifact = getBusValue(
+            busListener.busId,
+            buses,
+            publishers,
+            compiledPortMap,
+            errors,
+            (artifact, publisher) =>
+              applyPublisherStack(artifact, publisher, ctx, defaultSources, buses, publishers, compiledPortMap, errors)
+          );
+          const adapted = applyAdapterChain(busArtifact, busListener.adapterChain, ctx, errors);
+          const lensed = applyLensStack(
+            adapted,
+            busListener.lensStack,
+            ctx,
+            defaultSources,
+            buses,
+            publishers,
+            compiledPortMap,
+            errors
+          );
+          inputs[p.name] = lensed;
         } else {
           // Check for Default Source (fallback)
           const defaultArtifact = resolveDefaultSource(block.type, p.name, p.type.kind);
@@ -616,7 +630,7 @@ export function compileBusAwarePatch(
  * Infer TimeModel from the compiled patch.
  *
  * IMPORTANT: Every patch MUST have exactly one TimeRoot block.
- * The requireTimeRoot flag enforces this at validation time.
+ * TimeRoot validation is enforced at compile time.
  * This function extracts the TimeModel from the TimeRoot block.
  *
  * TimeRoot types:
@@ -658,7 +672,7 @@ function inferTimeModel(patch: CompilerPatch): TimeModel {
     }
   }
 
-  // No TimeRoot found - this should be caught by validation (requireTimeRoot flag).
+  // No TimeRoot found - this should be caught by validation.
   // If we reach here, it means validation was bypassed or there's a bug.
   throw new Error(
     'E_TIME_ROOT_MISSING: No TimeRoot block found. ' +
@@ -678,7 +692,8 @@ function getBusValue(
   buses: Bus[],
   publishers: Publisher[],
   compiledPortMap: Map<string, Artifact>,
-  errors: CompileError[]
+  errors: CompileError[],
+  applyPublisherStack?: (artifact: Artifact, publisher: Publisher) => Artifact
 ): Artifact {
   const bus = buses.find(b => b.id === busId);
   if (!bus) {
@@ -716,7 +731,8 @@ function getBusValue(
       continue;
     }
 
-    artifacts.push(artifact);
+    const shaped = applyPublisherStack ? applyPublisherStack(artifact, pub) : artifact;
+    artifacts.push(shaped);
   }
 
   // Combine artifacts using bus's combine mode - dispatch based on bus world
@@ -724,6 +740,252 @@ function getBusValue(
     return combineFieldArtifacts(artifacts, bus.combineMode, bus.defaultValue);
   } else {
     return combineSignalArtifacts(artifacts, bus.combineMode, bus.defaultValue);
+  }
+}
+
+function applyPublisherStack(
+  artifact: Artifact,
+  publisher: Publisher,
+  ctx: CompileCtx,
+  defaultSources: Map<string, DefaultSourceState>,
+  buses: Bus[],
+  publishers: Publisher[],
+  compiledPortMap: Map<string, Artifact>,
+  errors: CompileError[]
+): Artifact {
+  const adapted = applyAdapterChain(artifact, publisher.adapterChain, ctx, errors);
+  return applyLensStack(
+    adapted,
+    publisher.lensStack,
+    ctx,
+    defaultSources,
+    buses,
+    publishers,
+    compiledPortMap,
+    errors
+  );
+}
+
+function applyAdapterChain(
+  artifact: Artifact,
+  chain: AdapterStep[] | undefined,
+  ctx: CompileCtx,
+  errors: CompileError[]
+): Artifact {
+  if (!chain || chain.length === 0) return artifact;
+  let current = artifact;
+
+  for (const step of chain) {
+    const next = applyAdapterStep(current, step, ctx);
+    if (next.kind === 'Error') {
+      errors.push({
+        code: 'AdapterError',
+        message: next.message,
+      });
+      return next;
+    }
+    current = next;
+  }
+
+  return current;
+}
+
+function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx): Artifact {
+  const [adapterName] = step.adapterId.split(':');
+
+  switch (adapterName) {
+    case 'ConstToSignal': {
+      if (artifact.kind === 'Scalar:number') {
+        return { kind: 'Signal:number', value: () => artifact.value };
+      }
+      if (artifact.kind === 'Scalar:vec2') {
+        return { kind: 'Signal:vec2', value: () => artifact.value };
+      }
+      if (artifact.kind === 'Scalar:color') {
+        return { kind: 'Signal:color', value: () => artifact.value };
+      }
+      if (artifact.kind === 'Scalar:boolean') {
+        return { kind: 'Signal:number', value: () => (artifact.value ? 1 : 0) };
+      }
+      return { kind: 'Error', message: `ConstToSignal unsupported for ${artifact.kind}` };
+    }
+    case 'BroadcastScalarToField': {
+      if (artifact.kind === 'Scalar:number') {
+        return {
+          kind: 'Field:number',
+          value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
+        };
+      }
+      if (artifact.kind === 'Scalar:vec2') {
+        return {
+          kind: 'Field:vec2',
+          value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
+        };
+      }
+      if (artifact.kind === 'Scalar:color') {
+        return {
+          kind: 'Field:color',
+          value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
+        };
+      }
+      if (artifact.kind === 'Scalar:boolean') {
+        return {
+          kind: 'Field:boolean',
+          value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
+        };
+      }
+      return { kind: 'Error', message: `BroadcastScalarToField unsupported for ${artifact.kind}` };
+    }
+    case 'BroadcastSignalToField': {
+      const t = (ctx.env as { t?: number }).t ?? 0;
+      if (artifact.kind === 'Signal:number') {
+        return {
+          kind: 'Field:number',
+          value: (_seed, n, compileCtx) => {
+            const time = (compileCtx.env as { t?: number }).t ?? t;
+            const v = artifact.value(time, { viewport: { w: 0, h: 0, dpr: 1 } });
+            return Array.from({ length: n }, () => v);
+          },
+        };
+      }
+      if (artifact.kind === 'Signal:vec2') {
+        return {
+          kind: 'Field:vec2',
+          value: (_seed, n, compileCtx) => {
+            const time = (compileCtx.env as { t?: number }).t ?? t;
+            const v = artifact.value(time, { viewport: { w: 0, h: 0, dpr: 1 } });
+            return Array.from({ length: n }, () => v);
+          },
+        };
+      }
+      if (artifact.kind === 'Signal:color') {
+        return {
+          kind: 'Field:color',
+          value: (_seed, n, compileCtx) => {
+            const time = (compileCtx.env as { t?: number }).t ?? t;
+            const v = artifact.value(time, { viewport: { w: 0, h: 0, dpr: 1 } });
+            return Array.from({ length: n }, () => v);
+          },
+        };
+      }
+      return { kind: 'Error', message: `BroadcastSignalToField unsupported for ${artifact.kind}` };
+    }
+    case 'PhaseToNumber': {
+      if (artifact.kind === 'Signal:phase') {
+        return { kind: 'Signal:number', value: artifact.value };
+      }
+      if (artifact.kind === 'Scalar:number') {
+        return artifact;
+      }
+      return { kind: 'Error', message: `PhaseToNumber unsupported for ${artifact.kind}` };
+    }
+    case 'NormalizeToPhase': {
+      if (artifact.kind === 'Signal:number') {
+        return {
+          kind: 'Signal:phase',
+          value: (t, runtimeCtx) => {
+            const v = artifact.value(t, runtimeCtx);
+            return ((v % 1) + 1) % 1;
+          },
+        };
+      }
+      if (artifact.kind === 'Scalar:number') {
+        const v = artifact.value;
+        return { kind: 'Scalar:number', value: ((v % 1) + 1) % 1 };
+      }
+      return { kind: 'Error', message: `NormalizeToPhase unsupported for ${artifact.kind}` };
+    }
+    case 'ReduceFieldToSignal': {
+      return { kind: 'Error', message: 'ReduceFieldToSignal requires runtime reduction context' };
+    }
+    default:
+      return { kind: 'Error', message: `Unsupported adapter: ${step.adapterId}` };
+  }
+}
+
+function applyLensStack(
+  artifact: Artifact,
+  lensStack: LensInstance[] | undefined,
+  ctx: CompileCtx,
+  defaultSources: Map<string, DefaultSourceState>,
+  buses: Bus[],
+  publishers: Publisher[],
+  compiledPortMap: Map<string, Artifact>,
+  errors: CompileError[],
+  depth: number = 0
+): Artifact {
+  if (!lensStack || lensStack.length === 0) return artifact;
+  let current = artifact;
+
+  for (const lens of lensStack) {
+    if (!lens.enabled) continue;
+    const def = getLens(lens.lensId);
+    if (!def) continue;
+
+    const type = getArtifactType(current);
+    if (!type || type.domain !== def.domain || type.world === 'field' && def.domain === 'phase') {
+      errors.push({
+        code: 'AdapterError',
+        message: `Lens ${lens.lensId} is not type-preserving for ${current.kind}`,
+      });
+      return { kind: 'Error', message: `Lens type mismatch: ${lens.lensId}` };
+    }
+
+    const params: Record<string, unknown> = {};
+    for (const [paramKey, binding] of Object.entries(lens.params)) {
+      params[paramKey] = resolveLensParam(binding, {
+        resolveBus: (busId) =>
+          getBusValue(busId, buses, publishers, compiledPortMap, errors, (art, pub) =>
+            applyPublisherStack(art, pub, ctx, defaultSources, buses, publishers, compiledPortMap, errors)
+          ),
+        resolveWire: (blockId, slotId) =>
+          compiledPortMap.get(keyOf(blockId, slotId)) ?? {
+            kind: 'Error',
+            message: `Missing upstream artifact for ${blockId}.${slotId}`,
+            where: { blockId, port: slotId },
+          },
+        defaultSources,
+        compileCtx: ctx,
+        applyAdapterChain: (art, chain) => applyAdapterChain(art, chain, ctx, errors),
+        applyLensStack: (art, stack) =>
+          applyLensStack(art, stack, ctx, defaultSources, buses, publishers, compiledPortMap, errors, depth + 1),
+        visited: new Set(),
+        depth: depth + 1,
+      });
+    }
+
+    if (def.apply) {
+      current = def.apply(current, params) as Artifact;
+    }
+  }
+
+  return current;
+}
+
+function getArtifactType(artifact: Artifact): { world: 'signal' | 'field' | 'scalar'; domain: string } | null {
+  switch (artifact.kind) {
+    case 'Signal:number':
+      return { world: 'signal', domain: 'number' };
+    case 'Signal:vec2':
+      return { world: 'signal', domain: 'vec2' };
+    case 'Signal:phase':
+      return { world: 'signal', domain: 'phase' };
+    case 'Signal:color':
+      return { world: 'signal', domain: 'color' };
+    case 'Field:number':
+      return { world: 'field', domain: 'number' };
+    case 'Field:vec2':
+      return { world: 'field', domain: 'vec2' };
+    case 'Field:color':
+      return { world: 'field', domain: 'color' };
+    case 'Scalar:number':
+      return { world: 'scalar', domain: 'number' };
+    case 'Scalar:vec2':
+      return { world: 'scalar', domain: 'vec2' };
+    case 'Scalar:boolean':
+      return { world: 'scalar', domain: 'boolean' };
+    default:
+      return null;
   }
 }
 

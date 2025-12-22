@@ -23,11 +23,14 @@ interface LensSelectorProps {
 type Mode = 'preset' | 'custom';
 
 const LENS_TYPES: { value: string; label: string; description: string }[] = [
-  { value: 'ease', label: 'Ease', description: 'Apply easing curve' },
-  { value: 'slew', label: 'Slew', description: 'Smooth rate limiting' },
+  { value: 'scale', label: 'Gain', description: 'Linear gain + offset' },
+  { value: 'polarity', label: 'Polarity', description: 'Invert or pass through' },
+  { value: 'clamp', label: 'Clamp', description: 'Clamp to a min/max range' },
+  { value: 'deadzone', label: 'Deadzone', description: 'Zero small values' },
   { value: 'quantize', label: 'Quantize', description: 'Snap to steps' },
-  { value: 'scale', label: 'Scale', description: 'Linear scale + offset' },
-  { value: 'warp', label: 'Warp', description: 'Phase warping' },
+  { value: 'ease', label: 'Ease', description: 'Apply easing curve' },
+  { value: 'mapRange', label: 'Map Range', description: 'Remap input range' },
+  { value: 'slew', label: 'Slew', description: 'Smooth rate limiting' },
 ];
 
 /**
@@ -59,17 +62,14 @@ export function LensSelector({ value, onChange, compact = false }: LensSelectorP
   const handleTypeChange = (type: string) => {
     // Create default params for each type
     const defaultParams: Record<string, Record<string, unknown>> = {
-      ease: { easing: 'easeInOutSine' },
-      slew: { rate: 2.0 },
-      quantize: { steps: 4 },
       scale: { scale: 1, offset: 0 },
-      warp: { power: 1 },
-      broadcast: {},
-      perElementOffset: { range: 1.0 },
+      polarity: { invert: false },
       clamp: { min: 0, max: 1 },
-      offset: { amount: 0 },
-      deadzone: { threshold: 0.05 },
-      mapRange: { inMin: 0, inMax: 1, outMin: 0, outMax: 1 },
+      deadzone: { width: 0.05 },
+      quantize: { steps: 4 },
+      ease: { easing: 'easeInOutSine' },
+      mapRange: { inMin: 0, inMax: 1, outMin: 0, outMax: 1, clamp: true },
+      slew: { riseMs: 120, fallMs: 120 },
     };
 
     onChange({ type, params: defaultParams[type] || {} });
@@ -229,18 +229,30 @@ function LensParamsEditor({
 
     case 'slew':
       return (
-        <div className="lens-param-row">
-          <label className="lens-param-label">Rate</label>
-          <input
-            type="number"
-            className="lens-param-input"
-            value={(lens.params.rate as number) ?? 2.0}
-            step={0.1}
-            min={0.01}
-            onChange={(e) => onChange('rate', parseFloat(e.target.value) || 2.0)}
-          />
-          <span className="lens-param-unit">/sec</span>
-        </div>
+        <>
+          <div className="lens-param-row">
+            <label className="lens-param-label">Rise (ms)</label>
+            <input
+              type="number"
+              className="lens-param-input"
+              value={(lens.params.riseMs as number) ?? 120}
+              step={1}
+              min={0}
+              onChange={(e) => onChange('riseMs', parseFloat(e.target.value) || 120)}
+            />
+          </div>
+          <div className="lens-param-row">
+            <label className="lens-param-label">Fall (ms)</label>
+            <input
+              type="number"
+              className="lens-param-input"
+              value={(lens.params.fallMs as number) ?? 120}
+              step={1}
+              min={0}
+              onChange={(e) => onChange('fallMs', parseFloat(e.target.value) || 120)}
+            />
+          </div>
+        </>
       );
 
     case 'quantize':
@@ -285,41 +297,111 @@ function LensParamsEditor({
         </>
       );
 
-    case 'warp':
+    case 'polarity':
       return (
         <div className="lens-param-row">
-          <label className="lens-param-label">Power</label>
+          <label className="lens-param-label">Invert</label>
           <input
-            type="number"
-            className="lens-param-input"
-            value={(lens.params.power as number) ?? 1}
-            step={0.1}
-            min={0.1}
-            onChange={(e) => onChange('power', parseFloat(e.target.value) || 1)}
+            type="checkbox"
+            checked={(lens.params.invert as boolean) ?? false}
+            onChange={(e) => onChange('invert', e.target.checked)}
           />
         </div>
       );
 
-    case 'perElementOffset':
+    case 'clamp':
+      return (
+        <>
+          <div className="lens-param-row">
+            <label className="lens-param-label">Min</label>
+            <input
+              type="number"
+              className="lens-param-input"
+              value={(lens.params.min as number) ?? 0}
+              step={0.1}
+              onChange={(e) => onChange('min', parseFloat(e.target.value) || 0)}
+            />
+          </div>
+          <div className="lens-param-row">
+            <label className="lens-param-label">Max</label>
+            <input
+              type="number"
+              className="lens-param-input"
+              value={(lens.params.max as number) ?? 1}
+              step={0.1}
+              onChange={(e) => onChange('max', parseFloat(e.target.value) || 1)}
+            />
+          </div>
+        </>
+      );
+
+    case 'deadzone':
       return (
         <div className="lens-param-row">
-          <label className="lens-param-label">Range</label>
+          <label className="lens-param-label">Width</label>
           <input
             type="number"
             className="lens-param-input"
-            value={(lens.params.range as number) ?? 1.0}
-            step={0.1}
+            value={(lens.params.width as number) ?? 0.05}
+            step={0.01}
             min={0}
-            onChange={(e) => onChange('range', parseFloat(e.target.value) || 1.0)}
+            onChange={(e) => onChange('width', parseFloat(e.target.value) || 0.05)}
           />
         </div>
       );
 
-    case 'broadcast':
+    case 'mapRange':
       return (
-        <div className="lens-param-row">
-          <span className="lens-param-hint">No parameters needed</span>
-        </div>
+        <>
+          <div className="lens-param-row">
+            <label className="lens-param-label">In Min</label>
+            <input
+              type="number"
+              className="lens-param-input"
+              value={(lens.params.inMin as number) ?? 0}
+              step={0.1}
+              onChange={(e) => onChange('inMin', parseFloat(e.target.value) || 0)}
+            />
+          </div>
+          <div className="lens-param-row">
+            <label className="lens-param-label">In Max</label>
+            <input
+              type="number"
+              className="lens-param-input"
+              value={(lens.params.inMax as number) ?? 1}
+              step={0.1}
+              onChange={(e) => onChange('inMax', parseFloat(e.target.value) || 1)}
+            />
+          </div>
+          <div className="lens-param-row">
+            <label className="lens-param-label">Out Min</label>
+            <input
+              type="number"
+              className="lens-param-input"
+              value={(lens.params.outMin as number) ?? 0}
+              step={0.1}
+              onChange={(e) => onChange('outMin', parseFloat(e.target.value) || 0)}
+            />
+          </div>
+          <div className="lens-param-row">
+            <label className="lens-param-label">Out Max</label>
+            <input
+              type="number"
+              className="lens-param-input"
+              value={(lens.params.outMax as number) ?? 1}
+              step={0.1}
+              onChange={(e) => onChange('outMax', parseFloat(e.target.value) || 1)}
+            />
+          </div>
+          <div className="lens-param-row">
+            <label className="lens-param-label">Clamp</label>
+            <input
+              type="checkbox"
+              checked={(lens.params.clamp as boolean) ?? true}
+              onChange={(e) => onChange('clamp', e.target.checked)}
+            />
+          </div>
+        </>
       );
 
     default:

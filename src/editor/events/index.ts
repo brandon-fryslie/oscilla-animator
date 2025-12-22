@@ -11,8 +11,6 @@ export type {
   MacroExpandedEvent,
   PatchLoadedEvent,
   PatchClearedEvent,
-  CompileSucceededEvent,
-  CompileFailedEvent,
   BlockAddedEvent,
   BlockRemovedEvent,
 } from './types';

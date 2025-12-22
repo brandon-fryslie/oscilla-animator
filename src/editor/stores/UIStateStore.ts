@@ -35,7 +35,6 @@ export class UIStateStore {
     seed: 0,
     speed: 1.0,
     currentLayoutId: 'default' as string,
-    finiteLoopMode: true, // false = 'once' (stop at end), true = 'loop' (rewind and continue)
     advancedLaneMode: false, // Controls lane visibility (Simple vs Detailed)
     autoConnect: false, // Auto-create connections on block drop
     showTypeHints: false, // Show type labels on ports
@@ -68,7 +67,6 @@ export class UIStateStore {
       togglePlayPause: action,
       setSeed: action,
       setSpeed: action,
-      setFiniteLoopMode: action,
       setAdvancedLaneMode: action,
       setAutoConnect: action,
       setShowTypeHints: action,
@@ -142,10 +140,6 @@ export class UIStateStore {
 
   setSpeed(speed: number): void {
     this.settings.speed = speed;
-  }
-
-  setFiniteLoopMode(enabled: boolean): void {
-    this.settings.finiteLoopMode = enabled;
   }
 
   // =============================================================================

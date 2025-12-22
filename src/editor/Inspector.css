@@ -67,7 +67,6 @@
 
 .block-tier-badge,
 .block-subcategory-badge,
-.block-legacy-badge,
 .block-composite-badge {
   padding: 2px 8px;
   border-radius: 10px;
@@ -87,12 +86,6 @@
   background: #0f172a;
   color: #fbbf24;
   border: 1px solid rgba(251, 191, 36, 0.4);
-}
-
-.block-legacy-badge {
-  background: #312e81;
-  color: #c7d2fe;
-  border: 1px solid rgba(124, 58, 237, 0.4);
 }
 
 .block-composite-badge {
@@ -922,6 +915,16 @@ code.wiring-info-value {
 .param-input:focus {
   outline: none;
   border-color: #4a9eff;
+}
+
+.param-xy {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.param-xy .param-input {
+  flex: 1;
 }
 
 /* Bus connections */

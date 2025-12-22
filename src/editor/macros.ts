@@ -569,7 +569,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
         busName: 'phaseA',
         toRef: 'render',
         toSlot: 'opacity',
-        lens: { type: 'offset', params: { amount: 0.3 } },
+        lens: { type: 'scale', params: { scale: 1, offset: 0.3 } },
       },
     ],
   },

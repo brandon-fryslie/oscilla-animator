@@ -207,27 +207,6 @@ body.editor-mode {
   color: #4a9eff;
 }
 
-/* Legacy classes - kept for compatibility */
-.panel-help-btn {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border-radius: 0;
-  border: none;
-  background: transparent;
-  color: #555;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.panel-help-btn:hover {
-  background: #1a1a2e;
-  color: #aaa;
-}
-
 .panel-toggle-btn {
   background: transparent;
   color: #555;

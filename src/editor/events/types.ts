@@ -9,7 +9,7 @@
  * - Events are scoped per RootStore instance
  */
 
-import type { TypeDesc } from '../types';
+import type { TypeDesc, PortRef } from '../types';
 import type { Diagnostic } from '../diagnostics/types';
 
 /**
@@ -51,32 +51,6 @@ export interface PatchLoadedEvent {
  */
 export interface PatchClearedEvent {
   type: 'PatchCleared';
-}
-
-/**
- * CompileSucceeded event.
- *
- * Emitted when patch compilation succeeds.
- * Emitted by: CompilerService.compile()
- * When: After program successfully compiled
- */
-export interface CompileSucceededEvent {
-  type: 'CompileSucceeded';
-  /** Compilation duration in milliseconds */
-  durationMs: number;
-}
-
-/**
- * CompileFailed event.
- *
- * Emitted when patch compilation fails (not for empty patches).
- * Emitted by: CompilerService.compile()
- * When: After compilation errors detected
- */
-export interface CompileFailedEvent {
-  type: 'CompileFailed';
-  /** Number of compilation errors */
-  errorCount: number;
 }
 
 /**
@@ -152,9 +126,9 @@ export interface WireAddedEvent {
   /** ID of the wire connection */
   wireId: string;
   /** Source block and port */
-  from: { blockId: string; slotId: string };
+  from: PortRef;
   /** Target block and port */
-  to: { blockId: string; slotId: string };
+  to: PortRef;
 }
 
 /**
@@ -169,9 +143,9 @@ export interface WireRemovedEvent {
   /** ID of the wire connection */
   wireId: string;
   /** Source block and port */
-  from: { blockId: string; slotId: string };
+  from: PortRef;
   /** Target block and port */
-  to: { blockId: string; slotId: string };
+  to: PortRef;
 }
 
 /**
@@ -358,8 +332,8 @@ export type CompileStatus = 'ok' | 'failed';
  * Metadata about the compiled program (only present on success).
  */
 export interface CompiledProgramMeta {
-  /** Timeline hint: finite, cyclic, or infinite */
-  timelineHint: 'finite' | 'cyclic' | 'infinite';
+  /** TimeModel kind */
+  timeModelKind: 'finite' | 'cyclic' | 'infinite';
   /** Kind of TimeRoot used */
   timeRootKind: 'FiniteTimeRoot' | 'CycleTimeRoot' | 'InfiniteTimeRoot' | 'none';
   /** Optional bus usage summary */
@@ -505,9 +479,8 @@ export interface RuntimeHealthSnapshotEvent {
  * - ProgramSwapped: Runtime activated new program
  * - RuntimeHealthSnapshot: Throttled runtime health stats
  *
- * LEGACY EVENTS (kept for backward compatibility, may be removed):
- * - CompileSucceeded/CompileFailed: Replaced by CompileFinished
- * - BlockAdded/BlockRemoved/WireAdded/etc: Replaced by GraphCommitted for diagnostics
+ * GRANULAR EVENTS:
+ * - BlockAdded/BlockRemoved/WireAdded/etc: Used for UI coordination and targeted updates
  */
 export type EditorEvent =
   // Lifecycle events
@@ -520,10 +493,7 @@ export type EditorEvent =
   | CompileFinishedEvent
   | ProgramSwappedEvent
   | RuntimeHealthSnapshotEvent
-  // Legacy compile events (kept for backward compatibility)
-  | CompileSucceededEvent
-  | CompileFailedEvent
-  // Legacy granular events (kept for backward compatibility)
+  // Granular events (used for UI coordination)
   | BlockAddedEvent
   | BlockRemovedEvent
   | BlockReplacedEvent

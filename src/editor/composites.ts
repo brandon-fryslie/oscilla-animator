@@ -52,11 +52,13 @@ export function listCompositeDefinitions(): readonly CompositeDefinition[] {
 }
 
 export function registerComposite(definition: CompositeDefinition): CompositeDefinition {
+  validateCompositePortMaps(definition);
   compositeRegistry.push(definition);
   return definition;
 }
 
 export function replaceComposite(definition: CompositeDefinition): CompositeDefinition {
+  validateCompositePortMaps(definition);
   const idx = compositeRegistry.findIndex((c) => c.id === definition.id);
   if (idx >= 0) {
     compositeRegistry[idx] = definition;
@@ -74,5 +76,25 @@ export function removeComposite(id: string): void {
   const idx = compositeRegistry.findIndex((c) => c.id === id);
   if (idx >= 0) {
     compositeRegistry.splice(idx, 1);
+  }
+}
+
+function validateCompositePortMaps(definition: CompositeDefinition): void {
+  const missingInputs = definition.exposedInputs
+    .map((port) => port.id)
+    .filter((portId) => !(portId in definition.graph.inputMap));
+  const missingOutputs = definition.exposedOutputs
+    .map((port) => port.id)
+    .filter((portId) => !(portId in definition.graph.outputMap));
+
+  if (missingInputs.length > 0 || missingOutputs.length > 0) {
+    const parts: string[] = [];
+    if (missingInputs.length > 0) {
+      parts.push(`inputs: ${missingInputs.join(', ')}`);
+    }
+    if (missingOutputs.length > 0) {
+      parts.push(`outputs: ${missingOutputs.join(', ')}`);
+    }
+    throw new Error(`Composite "${definition.id}" is missing port maps (${parts.join('; ')}).`);
   }
 }

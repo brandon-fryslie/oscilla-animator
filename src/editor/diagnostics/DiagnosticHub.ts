@@ -306,8 +306,17 @@ export class DiagnosticHub {
   private runAuthoringValidators(patchRevision: number): Diagnostic[] {
     // Check if root is available (may not be in tests with minimal mocks)
     if (!this.patchStore.root) {
-      // Fallback to basic TimeRoot check for backwards compatibility with tests
-      return this.runLegacyTimeRootCheck(patchRevision);
+      return [
+        createDiagnostic({
+          code: 'E_VALIDATION_FAILED',
+          severity: 'error',
+          domain: 'authoring',
+          primaryTarget: { kind: 'graphSpan', blockIds: [], spanKind: 'subgraph' },
+          title: 'Validation Error',
+          message: 'Patch root is unavailable for validation.',
+          patchRevision,
+        }),
+      ];
     }
 
     try {
@@ -333,43 +342,6 @@ export class DiagnosticHub {
         }),
       ];
     }
-  }
-
-  /**
-   * Legacy TimeRoot check for backwards compatibility with minimal test mocks.
-   * Only called when this.patchStore.root is not available.
-   */
-  private runLegacyTimeRootCheck(patchRevision: number): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
-
-    const timeRootBlocks = this.patchStore.blocks.filter(
-      (block) =>
-        block.type === 'FiniteTimeRoot' ||
-        block.type === 'CycleTimeRoot' ||
-        block.type === 'InfiniteTimeRoot'
-    );
-
-    if (timeRootBlocks.length === 0) {
-      diagnostics.push(
-        createDiagnostic({
-          code: 'E_TIME_ROOT_MISSING',
-          severity: 'error',
-          domain: 'authoring',
-          primaryTarget: { kind: 'graphSpan', blockIds: [], spanKind: 'subgraph' },
-          title: 'Missing TimeRoot',
-          message: 'The patch requires exactly one TimeRoot block (Finite, Cycle, or Infinite).',
-          patchRevision,
-          actions: [
-            {
-              kind: 'createTimeRoot',
-              timeRootKind: 'Cycle',
-            },
-          ],
-        })
-      );
-    }
-
-    return diagnostics;
   }
 
   // ===========================================================================

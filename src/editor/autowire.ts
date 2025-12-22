@@ -341,8 +341,8 @@ function hasIncomingConnection(
 function toConnection(c: AutoWireResult['connections'][0]): Connection {
   return {
     id: 'temp',
-    from: { blockId: c.fromBlockId, slotId: c.fromSlotId },
-    to: { blockId: c.toBlockId, slotId: c.toSlotId },
+    from: { blockId: c.fromBlockId, slotId: c.fromSlotId, direction: 'output' },
+    to: { blockId: c.toBlockId, slotId: c.toSlotId, direction: 'input' },
   };
 }
 

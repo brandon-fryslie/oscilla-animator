@@ -494,7 +494,7 @@ describe('Composite Compilation', () => {
 
     // Add CycleTimeRoot - required for all patches
     const sceneLane = lanes.find(l => l.kind === 'Scene') ?? lanes[0];
-    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
+    const timeRootId = store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
 
     // Add GridPoints composite
     const gridId = store.patchStore.addBlock('composite:GridPoints', fieldsLane.id, {
@@ -573,7 +573,6 @@ describe('Composite Compilation', () => {
     const store = new RootStore();
     const lanes = store.patchStore.lanes;
     const fieldsLane = lanes.find(l => l.kind === 'Fields') ?? lanes[0];
-    const phaseLane = lanes.find(l => l.kind === 'Phase') ?? lanes[1];
     const outputLane = lanes.find(l => l.kind === 'Output') ?? lanes[lanes.length - 1];
 
     // Add CycleTimeRoot - required for all patches
@@ -589,9 +588,6 @@ describe('Composite Compilation', () => {
       cols: 5,
       spacing: 60,
     });
-
-    // Add phase clock
-    const clockId = store.patchStore.addBlock('PhaseClockLegacy', phaseLane.id, { duration: 2 });
 
     // Add DotsRenderer composite
     const renderId = store.patchStore.addBlock('composite:DotsRenderer', outputLane.id, {});
@@ -618,7 +614,7 @@ describe('Composite Compilation', () => {
     }
 
     // Publish clock phase to bus
-    store.busStore.addPublisher(busId, clockId, 'phase');
+    store.busStore.addPublisher(busId, timeRootId, 'phase');
 
     // Listen on renderer radius with scale lens
     store.busStore.addListener(busId, renderId, 'radius', undefined, {

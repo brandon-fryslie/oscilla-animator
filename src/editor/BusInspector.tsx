@@ -11,6 +11,7 @@ import { useStore } from './stores';
 import type { Bus, Publisher, Listener, CoreDomain, BusCombineMode, LensDefinition } from './types';
 import { formatTypeDesc, getCombineModesForDomain } from './semantic';
 import { LensSelector, LensBadge } from './components/LensSelector';
+import { createLensInstanceFromDefinition, lensInstanceToDefinition } from './lenses/lensInstances';
 import './BusInspector.css';
 
 interface BusInspectorProps {
@@ -175,6 +176,10 @@ function ListenerItem({
   const block = store.patchStore.blocks.find(b => b.id === listener.to.blockId);
   const blockName = block?.label ?? 'Unknown Block';
   const portName = listener.to.slotId;
+  const primaryLens = listener.lensStack?.[0];
+  const lensDefinition = primaryLens
+    ? lensInstanceToDefinition(primaryLens, store.defaultSourceStore)
+    : undefined;
 
   const handleJumpToBlock = () => {
     store.uiStore.selectBlock(listener.to.blockId);
@@ -189,7 +194,17 @@ function ListenerItem({
   };
 
   const handleLensChange = (lens: LensDefinition | undefined) => {
-    store.busStore.updateListener(listener.id, { lens });
+    if (!lens) {
+      store.busStore.updateListener(listener.id, { lensStack: undefined });
+      return;
+    }
+    const instance = createLensInstanceFromDefinition(
+      lens,
+      listener.id,
+      0,
+      store.defaultSourceStore
+    );
+    store.busStore.updateListener(listener.id, { lensStack: [instance] });
   };
 
   return (
@@ -198,15 +213,15 @@ function ListenerItem({
         <div className="routing-item-info">
           <span className="routing-block-name">{blockName}</span>
           <span className="routing-port-name">{portName}</span>
-          <LensBadge lens={listener.lens} />
+          <LensBadge lens={lensDefinition} />
         </div>
         <div className="routing-item-actions">
           <button
-            className={`routing-lens-btn ${listener.lens ? 'has-lens' : ''}`}
+            className={`routing-lens-btn ${lensDefinition ? 'has-lens' : ''}`}
             onClick={handleEditLens}
-            title={listener.lens ? 'Edit lens' : 'Add lens'}
+            title={lensDefinition ? 'Edit lens' : 'Add lens'}
           >
-            {listener.lens ? '🔧' : '+🔧'}
+            {lensDefinition ? '🔧' : '+🔧'}
           </button>
           <button
             className="routing-toggle-btn"
@@ -227,7 +242,7 @@ function ListenerItem({
       {isEditingLens && (
         <div className="routing-item-lens-editor">
           <LensSelector
-            value={listener.lens}
+            value={lensDefinition}
             onChange={handleLensChange}
           />
         </div>

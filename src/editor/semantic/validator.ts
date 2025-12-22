@@ -170,7 +170,7 @@ export class Validator {
         const portKey: PortKey = {
           blockId: block.id,
           slotId: input.id,
-          dir: 'input',
+          direction: 'input',
         };
 
         const incomingWires = this.graph.getIncomingWires(portKey);
@@ -192,8 +192,11 @@ export class Validator {
               domain: 'compile',
               primaryTarget: {
                 kind: 'port',
-                blockId: block.id,
-                portId: input.id,
+                portRef: {
+                  blockId: block.id,
+                  slotId: input.id,
+                  direction: 'input',
+                },
               },
               title: 'Multiple writers',
               message: `Input port ${block.id}.${input.id} has ${totalWriters} incoming connections (wires + listeners). Only one writer is allowed.`,
@@ -250,14 +253,20 @@ export class Validator {
             domain: 'compile',
             primaryTarget: {
               kind: 'port',
-              blockId: toBlock.id,
-              portId: toSlot.id,
+              portRef: {
+                blockId: toBlock.id,
+                slotId: toSlot.id,
+                direction: 'input',
+              },
             },
             affectedTargets: [
               {
                 kind: 'port',
-                blockId: fromBlock.id,
-                portId: fromSlot.id,
+                portRef: {
+                  blockId: fromBlock.id,
+                  slotId: fromSlot.id,
+                  direction: 'output',
+                },
               },
             ],
             title: 'Type mismatch',
@@ -350,8 +359,11 @@ export class Validator {
             domain: 'compile',
             primaryTarget: {
               kind: 'port',
-              blockId: conn.from.blockId,
-              portId: conn.from.slotId,
+              portRef: {
+                blockId: conn.from.blockId,
+                slotId: conn.from.slotId,
+                direction: 'output',
+              },
             },
             title: 'Invalid connection source',
             message: `Connection references missing output slot: ${conn.from.blockId}.${conn.from.slotId}`,
@@ -389,8 +401,11 @@ export class Validator {
             domain: 'compile',
             primaryTarget: {
               kind: 'port',
-              blockId: conn.to.blockId,
-              portId: conn.to.slotId,
+              portRef: {
+                blockId: conn.to.blockId,
+                slotId: conn.to.slotId,
+                direction: 'input',
+              },
             },
             title: 'Invalid connection target',
             message: `Connection references missing input slot: ${conn.to.blockId}.${conn.to.slotId}`,
@@ -640,8 +655,8 @@ export class Validator {
    */
   canAddConnection(
     patch: PatchDocument,
-    from: { blockId: string; slotId: string },
-    to: { blockId: string; slotId: string }
+    from: { blockId: string; slotId: string; direction: 'output' },
+    to: { blockId: string; slotId: string; direction: 'input' }
   ): ValidationResult {
     const errors: Diagnostic[] = [];
 
@@ -690,8 +705,11 @@ export class Validator {
           domain: 'authoring',
           primaryTarget: {
             kind: 'port',
-            blockId: from.blockId,
-            portId: from.slotId,
+            portRef: {
+              blockId: from.blockId,
+              slotId: from.slotId,
+              direction: 'output',
+            },
           },
           title: 'Invalid source port',
           message: `Output slot not found: ${from.blockId}.${from.slotId}`,
@@ -709,8 +727,11 @@ export class Validator {
           domain: 'authoring',
           primaryTarget: {
             kind: 'port',
-            blockId: to.blockId,
-            portId: to.slotId,
+            portRef: {
+              blockId: to.blockId,
+              slotId: to.slotId,
+              direction: 'input',
+            },
           },
           title: 'Invalid target port',
           message: `Input slot not found: ${to.blockId}.${to.slotId}`,
@@ -734,8 +755,11 @@ export class Validator {
           domain: 'authoring',
           primaryTarget: {
             kind: 'port',
-            blockId: toBlock.id,
-            portId: toSlot.id,
+            portRef: {
+              blockId: toBlock.id,
+              slotId: toSlot.id,
+              direction: 'input',
+            },
           },
           title: 'Type mismatch',
           message: `Cannot connect ${fromBlock.id}.${fromSlot.id} (${fromSlot.type}) to ${toBlock.id}.${toSlot.id} (${toSlot.type})`,
@@ -762,8 +786,11 @@ export class Validator {
           domain: 'authoring',
           primaryTarget: {
             kind: 'port',
-            blockId: to.blockId,
-            portId: toSlot.id,
+            portRef: {
+              blockId: to.blockId,
+              slotId: toSlot.id,
+              direction: 'input',
+            },
           },
           title: 'Multiple writers',
           message: `Input port ${toBlock.id}.${toSlot.id} already has a connection`,

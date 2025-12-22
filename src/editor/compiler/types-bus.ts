@@ -14,7 +14,6 @@ import type { Bus, Publisher, Listener } from '../types';
 
 /**
  * Extended CompilerPatch with bus support.
- * Maintains backward compatibility with existing wire-only patches.
  */
 export interface BusAwareCompilerPatch {
   blocks: Map<BlockId, any>; // BlockInstance

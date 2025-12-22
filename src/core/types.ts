@@ -107,11 +107,6 @@ export const DEFAULT_CONTEXT: Context = {
   },
 };
 
-/**
- * Legacy DEFAULT_INPUT for backward compatibility.
- * @deprecated Use DEFAULT_CONTEXT instead.
- */
-export const DEFAULT_INPUT: Input = DEFAULT_CONTEXT.input;
 
 // =============================================================================
 // Compile-Time Context (static info available during plan compilation)
@@ -256,10 +251,6 @@ export type Phase = {
   readonly ease?: Ease;
 };
 
-/**
- * PhaseSpec is an alias for Phase (backward compatibility).
- */
-export type PhaseSpec = Phase;
 
 /**
  * PhaseMachine is a sequence of phases.
@@ -280,10 +271,6 @@ export type PhaseSample = {
   readonly globalTime: Time;    // Total time into animation
 };
 
-/**
- * PhaseInfo is an alias for PhaseSample (backward compatibility).
- */
-export type PhaseInfo = PhaseSample;
 
 // =============================================================================
 // Program - The Complete Animation
@@ -318,44 +305,6 @@ export type Compiler<SceneType, Out, Ev = never> = (
   seed: Seed
 ) => Program<Out, Ev>;
 
-// =============================================================================
-// Timeline Hints (Player-Time Feature)
-// =============================================================================
-
-/**
- * A CuePoint marks a significant moment in the animation.
- * Used for phase boundaries, beats, and other structural markers.
- */
-export type CuePoint = {
-  readonly tMs: number;
-  readonly label: string;
-  readonly kind?: 'phase' | 'beat' | 'marker';
-};
-
-/**
- * TimelineHint describes the temporal structure of a program.
- * Programs can optionally expose this to inform the player.
- */
-export type TimelineHint =
-  | {
-      readonly kind: 'finite';
-      readonly durationMs: number;
-      readonly recommendedLoop?: 'loop' | 'pingpong' | 'none';
-      readonly cuePoints?: readonly CuePoint[];
-    }
-  | {
-      readonly kind: 'infinite';
-      readonly recommendedLoop?: 'loop' | 'none';
-      readonly windowMs?: number; // Suggested preview window
-    };
-
-/**
- * Extended Program type with optional timeline metadata.
- * This is the "Program with hints" version for player-aware animations.
- */
-export type ProgramWithTimeline<Out, Ev = never> = Program<Out, Ev> & {
-  readonly timeline?: () => TimelineHint;
-};
 
 // =============================================================================
 // Composition Laws

@@ -24,6 +24,4 @@ export * from './macros';
 // Re-export all registry functions
 export * from './registry';
 
-// Legacy constant export for backward compatibility
-import { getBlockDefinitions } from './registry';
-export const BLOCK_DEFINITIONS = getBlockDefinitions(true);
+// Re-export registry helpers

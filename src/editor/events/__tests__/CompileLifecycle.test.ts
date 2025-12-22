@@ -238,20 +238,20 @@ describe('CompileFinished Event Payload', () => {
       durationMs: 42,
       diagnostics: [],
       programMeta: {
-        timelineHint: 'cyclic',
+        timeModelKind: 'cyclic',
         timeRootKind: 'CycleTimeRoot',
       },
     };
 
     expect(event).toHaveProperty('programMeta');
-    expect(event.programMeta?.timelineHint).toBe('cyclic');
+    expect(event.programMeta?.timeModelKind).toBe('cyclic');
     expect(event.programMeta?.timeRootKind).toBe('CycleTimeRoot');
   });
 
-  it('should support programMeta with all timelineHint values', () => {
-    const timelineHints: Array<'finite' | 'cyclic' | 'infinite'> = ['finite', 'cyclic', 'infinite'];
+  it('should support programMeta with all timeModelKind values', () => {
+    const timeModelKinds: Array<'finite' | 'cyclic' | 'infinite'> = ['finite', 'cyclic', 'infinite'];
 
-    timelineHints.forEach((hint) => {
+    timeModelKinds.forEach((kind) => {
       const event: CompileFinishedEvent = {
         type: 'CompileFinished',
         compileId: crypto.randomUUID(),
@@ -261,12 +261,12 @@ describe('CompileFinished Event Payload', () => {
         durationMs: 42,
         diagnostics: [],
         programMeta: {
-          timelineHint: hint,
+          timeModelKind: kind,
           timeRootKind: 'CycleTimeRoot',
         },
       };
 
-      expect(event.programMeta?.timelineHint).toBe(hint);
+      expect(event.programMeta?.timeModelKind).toBe(kind);
     });
   });
 
@@ -288,7 +288,7 @@ describe('CompileFinished Event Payload', () => {
         durationMs: 42,
         diagnostics: [],
         programMeta: {
-          timelineHint: 'cyclic',
+          timeModelKind: 'cyclic',
           timeRootKind: kind,
         },
       };
@@ -307,7 +307,7 @@ describe('CompileFinished Event Payload', () => {
       durationMs: 42,
       diagnostics: [],
       programMeta: {
-        timelineHint: 'cyclic',
+        timeModelKind: 'cyclic',
         timeRootKind: 'CycleTimeRoot',
         busUsageSummary: {
           phaseA: { publishers: 1, listeners: 3 },

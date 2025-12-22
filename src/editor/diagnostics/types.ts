@@ -11,6 +11,8 @@
  * Reference: design-docs/4-Event-System/3.5-Events-and-Payloads-Schema.md
  */
 
+import type { PortRef } from '../types';
+
 // ============================================================================
 // Target Reference Types (discriminated union)
 // ============================================================================
@@ -28,8 +30,7 @@ export interface BlockTargetRef {
  */
 export interface PortTargetRef {
   kind: 'port';
-  blockId: string;
-  portId: string;
+  portRef: PortRef;
 }
 
 /**
@@ -338,7 +339,7 @@ export function serializeTargetRef(target: TargetRef): string {
     case 'block':
       return `block:${target.blockId}`;
     case 'port':
-      return `port:${target.blockId}.${target.portId}`;
+      return `port:${target.portRef.blockId}.${target.portRef.slotId}.${target.portRef.direction}`;
     case 'bus':
       return `bus:${target.busId}`;
     case 'binding':

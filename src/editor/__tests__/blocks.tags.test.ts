@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { BLOCK_DEFINITIONS, getBlockTags, getBlockForm } from '../blocks';
+import { getBlockDefinitions, getBlockTags, getBlockForm } from '../blocks';
 
 describe('block registry tags', () => {
   it('populates tags for every block definition', () => {
-    expect(BLOCK_DEFINITIONS.length).toBeGreaterThan(0);
+    const definitions = getBlockDefinitions(true);
+    expect(definitions.length).toBeGreaterThan(0);
 
-    for (const definition of BLOCK_DEFINITIONS) {
+    for (const definition of definitions) {
       const tags = getBlockTags(definition);
 
       expect(tags).toBeDefined();
@@ -18,7 +19,7 @@ describe('block registry tags', () => {
   });
 
   it('retains lane flavor tags when present', () => {
-    const withFlavor = BLOCK_DEFINITIONS.find((def) => def.laneFlavor);
+    const withFlavor = getBlockDefinitions(true).find((def) => def.laneFlavor);
 
     // If a block with laneFlavor exists, verify the tag is retained
     if (withFlavor) {
@@ -32,7 +33,7 @@ describe('block registry tags', () => {
 
   it('supports scalar and array tag values', () => {
     const sample = {
-      ...BLOCK_DEFINITIONS[0],
+      ...getBlockDefinitions(true)[0],
       tags: { custom: ['a', 'b', true, 3], flag: true, weight: 2 },
     };
 

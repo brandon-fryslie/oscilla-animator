@@ -7,16 +7,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
 import { createCompilerService } from '../integration';
 import type { CompileStartedEvent, CompileFinishedEvent, EditorEvent } from '../../events/types';
-import { resetFeatureFlags, setFeatureFlags } from '../featureFlags';
 
 describe('Diagnostic Emission', () => {
   let store: RootStore;
   let events: EditorEvent[];
 
   beforeEach(() => {
-    // Reset feature flags to default state
-    resetFeatureFlags();
-
     store = new RootStore();
     events = [];
 
@@ -92,8 +88,8 @@ describe('Diagnostic Emission', () => {
       expect(event.durationMs).toBeGreaterThanOrEqual(0);
       expect(event.diagnostics).toEqual([]);
       expect(event.programMeta).toBeDefined();
-      // timelineHint should be a valid value (finite, cyclic, or infinite)
-      expect(['finite', 'cyclic', 'infinite']).toContain(event.programMeta?.timelineHint);
+      // timeModelKind should be a valid value (finite, cyclic, or infinite)
+      expect(['finite', 'cyclic', 'infinite']).toContain(event.programMeta?.timeModelKind);
       // timeRootKind should be present
       expect(event.programMeta?.timeRootKind).toBeDefined();
     });
@@ -131,9 +127,6 @@ describe('Diagnostic Emission', () => {
 
   describe('Diagnostic Conversion', () => {
     it('should convert E_TIME_ROOT_MISSING diagnostic when patch has no TimeRoot', () => {
-      // Enable requireTimeRoot flag for this test
-      setFeatureFlags({ requireTimeRoot: true });
-
       store = new RootStore();
       events = [];
 
@@ -163,9 +156,6 @@ describe('Diagnostic Emission', () => {
     });
 
     it('should convert E_TIME_ROOT_MULTIPLE diagnostic when multiple TimeRoots exist', () => {
-      // Enable requireTimeRoot flag for this test
-      setFeatureFlags({ requireTimeRoot: true });
-
       store = new RootStore();
       events = [];
 
@@ -197,9 +187,7 @@ describe('Diagnostic Emission', () => {
   });
 
   describe('ProgramMeta', () => {
-    it('should include timelineHint and timeRootKind in programMeta on success', () => {
-      // With requireTimeRoot: false (default), compiler should still infer from TimeRoot if present
-      // This test verifies TimeRoot inference works correctly
+    it('should include timeModelKind and timeRootKind in programMeta on success', () => {
       const service = createCompilerService(store);
 
       // Create a complete, valid patch
@@ -219,7 +207,7 @@ describe('Diagnostic Emission', () => {
       const event = finishedEvents[0];
       expect(event.programMeta).toBeDefined();
       // With TimeRoot present, should correctly infer cyclic time
-      expect(event.programMeta?.timelineHint).toBe('cyclic');
+      expect(event.programMeta?.timeModelKind).toBe('cyclic');
       // timeRootKind should match the block type
       expect(event.programMeta?.timeRootKind).toBe('CycleTimeRoot');
     });

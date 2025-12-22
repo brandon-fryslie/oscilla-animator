@@ -161,19 +161,26 @@ export interface LensDefinition {
   params: Record<string, unknown>;
 }
 
+export type LensParamBinding =
+  | { kind: 'default'; defaultSourceId: string }
+  | { kind: 'wire'; from: PortRef; adapterChain?: AdapterStep[]; lensStack?: LensInstance[] }
+  | { kind: 'bus'; busId: string; adapterChain?: AdapterStep[]; lensStack?: LensInstance[] };
+
+export interface LensInstance {
+  lensId: string;
+  params: Record<string, LensParamBinding>;
+  enabled: boolean;
+  sortKey?: number;
+}
+
 /**
- * Endpoint reference for routing (bus publishers/listeners).
- * Uses canonical slotId + direction for stable identity.
+ * Identifies a specific port on a specific block.
+ * Canonical port identity format across UI, compiler, and diagnostics.
  */
-export interface BindingEndpoint {
-  /** Block ID */
+export interface PortRef {
   readonly blockId: BlockId;
-
-  /** Canonical slot ID (stable across renames) */
   readonly slotId: string;
-
-  /** Port direction */
-  readonly dir: 'input' | 'output';
+  readonly direction: 'input' | 'output';
 }
 
 /**
@@ -187,10 +194,13 @@ export interface Publisher {
   readonly busId: string;
 
   /** Source output endpoint */
-  readonly from: BindingEndpoint;
+  readonly from: PortRef;
 
   /** Optional adapter chain */
   readonly adapterChain?: AdapterStep[];
+
+  /** Optional lens stack applied before bus combine */
+  readonly lensStack?: LensInstance[];
 
   /** Whether this publisher is active */
   enabled: boolean;
@@ -213,7 +223,7 @@ export interface Listener {
   readonly busId: string;
 
   /** Target input endpoint */
-  readonly to: BindingEndpoint;
+  readonly to: PortRef;
 
   /** Optional adapter chain */
   readonly adapterChain?: AdapterStep[];
@@ -221,11 +231,19 @@ export interface Listener {
   /** Whether this listener is active */
   enabled: boolean;
 
-  /** Optional lens to transform the bus value before applying (legacy - use lensStack) */
-  readonly lens?: LensDefinition;
-
   /** Optional lens stack - multiple lenses applied in sequence (replaces single lens) */
-  readonly lensStack?: LensDefinition[];
+  readonly lensStack?: LensInstance[];
+}
+
+/**
+ * Default Source state for implicit lens params.
+ */
+export interface DefaultSourceState {
+  id: string;
+  type: TypeDesc;
+  value: unknown;
+  uiHint?: UIControlHint;
+  rangeHint?: { min?: number; max?: number; step?: number; log?: boolean };
 }
 
 // =============================================================================
@@ -268,7 +286,7 @@ export type SlotType =
   | 'Event<any>'        // Generic events
   | 'Program'           // Compiled animation program
   | 'Render'            // Final render output (user-facing unified type)
-  | 'RenderTree'        // Final render output (internal/legacy)
+  | 'RenderTree'        // Final render output (internal)
   | 'RenderNode'        // Single render node
   | 'RenderNode[]'      // Array of render nodes
   | 'FilterDef'         // SVG filter definition
@@ -318,7 +336,8 @@ export type UIControlHint =
   | { readonly kind: 'select'; readonly options: readonly { readonly value: string; readonly label: string }[] }
   | { readonly kind: 'color' }
   | { readonly kind: 'boolean' }
-  | { readonly kind: 'text' };
+  | { readonly kind: 'text' }
+  | { readonly kind: 'xy' };
 
 /**
  * Default Source definition for an input slot.
@@ -377,7 +396,6 @@ export type BlockType = string; // e.g., 'RadialOrigin', 'PhaseMachine', 'Partic
  *
  * - 'primitive': Irreducible atomic operations (implemented in TypeScript)
  * - 'composite': Built from primitives, behaves as single block in UI
- * - 'legacy-composite': Existing blocks to be migrated to composite definitions
  * - 'macro': Expands into visible blocks when added to patch
  */
 export type BlockForm = 'primitive' | 'composite' | 'macro';
@@ -415,14 +433,13 @@ export const ALL_SUBCATEGORIES = [
   'FX',             // Filters and effects
   'Adapters',       // Type conversions
   'Output',         // Final sinks
-  'Other',          // Fallback for legacy blocks without subcategory
+  'Other',          // Fallback for blocks without subcategory
 ] as const;
 
 export type BlockSubcategory = (typeof ALL_SUBCATEGORIES)[number];
 
 /**
  * Block category for library organization.
- * @deprecated Use BlockSubcategory instead
  */
 export type BlockCategory = BlockSubcategory;
 
@@ -530,16 +547,10 @@ export interface Connection {
   readonly id: string;
 
   /** Source block + slot */
-  readonly from: {
-    readonly blockId: BlockId;
-    readonly slotId: string;
-  };
+  readonly from: PortRef;
 
   /** Destination block + slot */
-  readonly to: {
-    readonly blockId: BlockId;
-    readonly slotId: string;
-  };
+  readonly to: PortRef;
 }
 
 /**
@@ -703,13 +714,8 @@ export interface LaneLayout {
  * This is what gets saved/loaded.
  */
 export interface Patch {
-  /** Format version for migration */
+  /** Format version for serialization */
   readonly version: number;
-
-  /** Feature flags for compatibility detection */
-  readonly features?: {
-    buses?: boolean;
-  };
 
   /** All blocks in the patch */
   blocks: Block[];
@@ -720,21 +726,23 @@ export interface Patch {
   /** Lane assignments (which blocks are in which lanes) */
   lanes: Lane[];
 
-  /** Bus definitions (v2+) */
-  buses?: Bus[];
+  /** Bus definitions */
+  buses: Bus[];
 
-  /** Bus routing - publishers from blocks to buses (v2+) */
-  publishers?: Publisher[];
+  /** Bus routing - publishers from blocks to buses */
+  publishers: Publisher[];
 
-  /** Bus routing - listeners from buses to blocks (v2+) */
-  listeners?: Listener[];
+  /** Bus routing - listeners from buses to blocks */
+  listeners: Listener[];
+
+  /** Default sources for lens params and other implicit bindings */
+  defaultSources: DefaultSourceState[];
 
   /** Global settings (seed, speed, etc.) */
   settings: {
     seed: number;
     speed: number;
     currentLayoutId?: string;
-    finiteLoopMode?: boolean;
     advancedLaneMode?: boolean;
     autoConnect?: boolean;
     showTypeHints?: boolean;
@@ -756,15 +764,6 @@ export interface Patch {
  * Editor UI state (selection, drag, etc.).
  * Not part of Patch (UI-only state).
  */
-/**
- * Identifies a specific port on a specific block.
- */
-export interface PortRef {
-  readonly blockId: BlockId;
-  readonly slotId: string;
-  readonly direction: 'input' | 'output';
-}
-
 /**
  * Context menu state for right-click actions.
  */

@@ -179,7 +179,7 @@ export class TransactionBuilder implements TxBuilder {
   // Wire Ops
   // ---------------------------------------------------------------------------
 
-  addWire(from: { blockId: string; slotId: string }, to: { blockId: string; slotId: string }, id?: string): string {
+  addWire(from: { blockId: string; slotId: string; direction: 'output' }, to: { blockId: string; slotId: string; direction: 'input' }, id?: string): string {
     const connectionId = id ?? crypto.randomUUID();
     const connection: Connection = {
       id: connectionId,
@@ -204,7 +204,7 @@ export class TransactionBuilder implements TxBuilder {
     this.op(op, inv);
   }
 
-  retargetWire(connectionId: string, next: { from?: { blockId: string; slotId: string }; to?: { blockId: string; slotId: string } }): void {
+  retargetWire(connectionId: string, next: { from?: { blockId: string; slotId: string; direction: 'output' }; to?: { blockId: string; slotId: string; direction: 'input' } }): void {
     const conn = this.stagedDoc.connections.find(c => c.id === connectionId);
     if (!conn) return;
 
@@ -280,7 +280,7 @@ export class TransactionBuilder implements TxBuilder {
   // Binding Ops
   // ---------------------------------------------------------------------------
 
-  addPublisher(spec: { busId: string; from: { blockId: string; slotId: string; dir: 'output' }; enabled?: boolean; sortKey?: number; adapterChain?: any[]; id?: string }): string {
+  addPublisher(spec: { busId: string; from: { blockId: string; slotId: string; direction: 'output' }; enabled?: boolean; sortKey?: number; adapterChain?: any[]; id?: string }): string {
     const id = spec.id ?? crypto.randomUUID();
     const publisher: Publisher = {
       id,
@@ -323,7 +323,7 @@ export class TransactionBuilder implements TxBuilder {
     this.op(op, inv);
   }
 
-  addListener(spec: { busId: string; to: { blockId: string; slotId: string; dir: 'input' }; enabled?: boolean; adapterChain?: any[]; lensStack?: any[]; id?: string }): string {
+  addListener(spec: { busId: string; to: { blockId: string; slotId: string; direction: 'input' }; enabled?: boolean; adapterChain?: any[]; lensStack?: any[]; id?: string }): string {
     const id = spec.id ?? crypto.randomUUID();
     const listener: Listener = {
       id,

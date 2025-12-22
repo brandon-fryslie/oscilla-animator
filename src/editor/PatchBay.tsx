@@ -487,7 +487,7 @@ const DroppableLane = observer(({
     data: {
       type: 'lane',
       laneId: lane.id,
-      laneName: lane.id, // Legacy compatibility
+      laneName: lane.id,
     },
   });
 

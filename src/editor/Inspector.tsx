@@ -9,7 +9,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
 import type { PortRef, Block, Slot, Connection } from './types';
-import { getBlockDefinition, getBlockDefinitions, type BlockDefinition } from './blocks';
+import { getBlockDefinition, getBlockDefinitions, getBlockForm, type BlockDefinition } from './blocks';
 import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint } from './portUtils';
 import './Inspector.css';
 
@@ -637,6 +637,111 @@ const PortItem = observer(({
   );
 });
 
+const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Slot }) => {
+  const store = useStore();
+  const defaultSource = slot.defaultSource;
+  if (!defaultSource) return null;
+
+  const currentValue = block.params[slot.id] ?? defaultSource.value;
+  const updateValue = (value: unknown) => {
+    store.patchStore.updateBlockParams(block.id, { [slot.id]: value });
+  };
+
+  const renderControl = () => {
+    switch (defaultSource.uiHint.kind) {
+      case 'slider':
+      case 'number': {
+        const min = 'min' in defaultSource.uiHint ? defaultSource.uiHint.min : undefined;
+        const max = 'max' in defaultSource.uiHint ? defaultSource.uiHint.max : undefined;
+        const step = defaultSource.uiHint.step;
+        return (
+          <input
+            type="number"
+            className="param-input"
+            value={typeof currentValue === 'number' ? currentValue : Number(currentValue) || 0}
+            min={min}
+            max={max}
+            step={step}
+            onChange={(e) => updateValue(parseFloat(e.target.value) || 0)}
+          />
+        );
+      }
+      case 'select':
+        return (
+          <select
+            className="param-input"
+            value={String(currentValue)}
+            onChange={(e) => updateValue(e.target.value)}
+          >
+            {defaultSource.uiHint.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        );
+      case 'color':
+        return (
+          <input
+            type="color"
+            className="param-input"
+            value={String(currentValue)}
+            onChange={(e) => updateValue(e.target.value)}
+          />
+        );
+      case 'boolean':
+        return (
+          <input
+            type="checkbox"
+            checked={Boolean(currentValue)}
+            onChange={(e) => updateValue(e.target.checked)}
+          />
+        );
+      case 'text':
+        return (
+          <input
+            type="text"
+            className="param-input"
+            value={String(currentValue ?? '')}
+            onChange={(e) => updateValue(e.target.value)}
+          />
+        );
+      case 'xy': {
+        const vec = typeof currentValue === 'object' && currentValue !== null
+          ? (currentValue as { x: number; y: number })
+          : { x: 0, y: 0 };
+        return (
+          <div className="param-xy">
+            <input
+              type="number"
+              className="param-input"
+              value={vec.x}
+              step={0.1}
+              onChange={(e) => updateValue({ ...vec, x: parseFloat(e.target.value) || 0 })}
+            />
+            <input
+              type="number"
+              className="param-input"
+              value={vec.y}
+              step={0.1}
+              onChange={(e) => updateValue({ ...vec, y: parseFloat(e.target.value) || 0 })}
+            />
+          </div>
+        );
+      }
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="param-row">
+      <label className="param-key">{slot.label}</label>
+      {renderControl()}
+    </div>
+  );
+});
+
 /**
  * Compatible blocks section - shows blocks that can replace the current one
  */
@@ -648,7 +753,7 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
     const results: BlockDefinition[] = [];
     for (const def of getBlockDefinitions()) {
       if (def.type === block.type) continue;
-      if (def.form === 'macro') continue;
+      if (getBlockForm(def) === 'macro') continue;
       if (getPortCompatibility(block, def)) {
         results.push(def);
       }
@@ -964,10 +1069,24 @@ export const Inspector = observer(() => {
                         </div>
                       </div>
           
-                      {/* Parameters */}
+                      {/* Inputs (Default Sources) */}
+                      {block.inputs.some((slot) => slot.defaultSource) && (
+                        <div className="insp-section">
+                          <span className="insp-section-title">Inputs</span>
+                          <div className="param-grid">
+                            {block.inputs
+                              .filter((slot) => slot.defaultSource)
+                              .map((slot) => (
+                                <DefaultSourceControl key={slot.id} block={block} slot={slot} />
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Legacy Parameters */}
                       {Object.keys(block.params).length > 0 && (
                         <div className="insp-section">
-                          <span className="insp-section-title">Parameters</span>
+                          <span className="insp-section-title">Legacy Parameters</span>
                           <div className="param-grid">
                             {Object.entries(block.params).map(([key, value]) => {
                               const schema = definition?.paramSchema.find(s => s.key === key);

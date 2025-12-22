@@ -17,12 +17,7 @@ import type {
 import { buildDecorations, emptyDecorations, type DecorationSet } from './error-decorations';
 import { getBlockDefinition } from '../blocks';
 import { registerAllComposites, getCompositeCompilers } from '../composite-bridge';
-import { getFeatureFlags } from './featureFlags';
 import { createDiagnostic, type Diagnostic, type DiagnosticCode, type TargetRef } from '../diagnostics/types';
-
-// Unified compiler imports
-import { UnifiedCompiler, RuntimeAdapter } from './unified';
-import type { PatchDefinition as UnifiedPatchDef } from './unified';
 
 // =============================================================================
 // Diagnostic Conversion
@@ -72,12 +67,15 @@ function compileErrorToDiagnostic(
   } else if (error.where?.connection) {
     // Connection error - target both ends
     const conn = error.where.connection;
-    primaryTarget = { kind: 'port', blockId: conn.from.blockId, portId: conn.from.port };
+    primaryTarget = {
+      kind: 'port',
+      portRef: { blockId: conn.from.blockId, slotId: conn.from.port, direction: 'output' },
+    };
     affectedTargets = [
-      { kind: 'port', blockId: conn.to.blockId, portId: conn.to.port },
+      { kind: 'port', portRef: { blockId: conn.to.blockId, slotId: conn.to.port, direction: 'input' } },
     ];
   } else if (error.where?.blockId && error.where?.port) {
-    primaryTarget = { kind: 'port', blockId: error.where.blockId, portId: error.where.port };
+    primaryTarget = { kind: 'port', portRef: { blockId: error.where.blockId, slotId: error.where.port, direction: 'input' } };
   } else if (error.where?.blockId) {
     primaryTarget = { kind: 'block', blockId: error.where.blockId };
   } else if (error.where?.busId) {
@@ -257,6 +255,7 @@ export function editorToPatch(store: RootStore): CompilerPatch {
     buses: store.busStore.buses,
     publishers: store.busStore.publishers,
     listeners: store.busStore.listeners,
+    defaultSources: Object.fromEntries(store.defaultSourceStore.sources.entries()),
     // output is auto-inferred
   };
 }
@@ -377,7 +376,7 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
                 to: {
                   blockId: internalBlockId,
                   slotId: port,
-                  dir: 'input',
+                  direction: 'input',
                 },
                 enabled: true,
               };
@@ -402,7 +401,7 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
                 from: {
                   blockId: internalBlockId,
                   slotId: port,
-                  dir: 'output',
+                  direction: 'output',
                 },
                 enabled: true,
                 sortKey: 0, // Default sort key, can be customized if needed
@@ -505,7 +504,7 @@ function rewriteBusBindings(
   const errors: Array<{ code: string; message: string; where?: { blockId?: string; port?: string } }> = [];
 
   // Rewrite publishers
-  const rewrittenPublishers = patch.publishers?.map((pub) => {
+  const rewrittenPublishers = patch.publishers.map((pub) => {
     const ref: PortRef = { blockId: pub.from.blockId, port: pub.from.slotId };
     const rewritten = rewriteMap.rewrite(ref);
 
@@ -522,12 +521,12 @@ function rewriteBusBindings(
     // Return publisher with rewritten port reference
     return {
       ...pub,
-      from: { blockId: rewritten.blockId, slotId: rewritten.port, dir: 'output' as const },
+      from: { blockId: rewritten.blockId, slotId: rewritten.port, direction: 'output' as const },
     };
   });
 
   // Rewrite listeners
-  const rewrittenListeners = patch.listeners?.map((listener) => {
+  const rewrittenListeners = patch.listeners.map((listener) => {
     const ref: PortRef = { blockId: listener.to.blockId, port: listener.to.slotId };
     const rewritten = rewriteMap.rewrite(ref);
 
@@ -544,7 +543,7 @@ function rewriteBusBindings(
     // Return listener with rewritten port reference
     return {
       ...listener,
-      to: { blockId: rewritten.blockId, slotId: rewritten.port, dir: 'input' as const },
+      to: { blockId: rewritten.blockId, slotId: rewritten.port, direction: 'input' as const },
     };
   });
 
@@ -555,95 +554,6 @@ function rewriteBusBindings(
       listeners: rewrittenListeners,
     },
     errors,
-  };
-}
-
-// =============================================================================
-// Unified Compiler Integration
-// =============================================================================
-
-/**
- * Convert CompilerPatch to UnifiedCompiler PatchDefinition.
- */
-function toUnifiedPatchDef(patch: CompilerPatch): UnifiedPatchDef {
-  // Convert connections
-  const connections = patch.connections.map((c) => ({
-    from: { blockId: c.from.blockId, port: c.from.port },
-    to: { blockId: c.to.blockId, port: c.to.port },
-  }));
-
-  // Convert buses if present
-  const buses = patch.buses
-    ? patch.buses.map((bus: Bus) => ({
-        id: bus.id,
-        name: bus.name,
-        type: bus.type,
-        combineMode: bus.combineMode,
-        defaultValue: bus.defaultValue,
-        sortKey: bus.sortKey ?? 0,
-      }))
-    : [];
-
-  // Convert publishers if present
-  const publishers = patch.publishers
-    ? patch.publishers.map((pub: Publisher) => ({
-        id: pub.id,
-        blockId: pub.from.blockId,
-        busId: pub.busId,
-        port: pub.from.slotId,
-        sortKey: pub.sortKey,
-        disabled: !pub.enabled,
-      }))
-    : [];
-
-  // Convert listeners if present
-  const listeners = patch.listeners
-    ? patch.listeners.map((listener: Listener) => ({
-        id: listener.id,
-        blockId: listener.to.blockId,
-        busId: listener.busId,
-        port: listener.to.slotId,
-        disabled: !listener.enabled,
-      }))
-    : [];
-
-  return {
-    blocks: new Map(patch.blocks),
-    connections,
-    buses,
-    publishers,
-    listeners,
-  };
-}
-
-/**
- * Compile using UnifiedCompiler and adapt result to CompileResult.
- */
-function compileWithUnified(patch: CompilerPatch): CompileResult {
-  const unifiedPatch = toUnifiedPatchDef(patch);
-  const compiler = new UnifiedCompiler();
-  const result = compiler.compile(unifiedPatch);
-
-  // If compilation failed, convert errors
-  if (result.errors.length > 0) {
-    return {
-      ok: false,
-      errors: result.errors.map((err) => ({
-        code: err.type === 'cycle' ? 'CycleDetected' : 'UpstreamError',
-        message: err.message,
-        where: err.nodes ? { blockId: err.nodes[0] } : undefined,
-      })),
-    };
-  }
-
-  // Create runtime adapter and program
-  const adapter = new RuntimeAdapter(result);
-  const program = adapter.createProgram();
-
-  return {
-    ok: true,
-    program,
-    errors: [],
   };
 }
 
@@ -699,7 +609,6 @@ export function createCompilerService(store: RootStore): CompilerService {
   return {
     compile(): CompileResult {
       const startTime = performance.now();
-      const flags = getFeatureFlags();
 
       // Generate compileId
       const compileId = crypto.randomUUID();
@@ -716,9 +625,6 @@ export function createCompilerService(store: RootStore): CompilerService {
               });
       
               store.logStore.debug('compiler', 'Starting compilation...');
-              if (flags.useUnifiedCompiler) {
-                store.logStore.info('compiler', 'Using UnifiedCompiler (feature flag enabled)');
-              }
       
               try {
                 let patch = editorToPatch(store);
@@ -731,8 +637,8 @@ export function createCompilerService(store: RootStore): CompilerService {
           {
             ...expandedPatch,
             buses: patch.buses,
-            publishers: [...(patch.publishers ?? []), ...newPublishers],
-            listeners: [...(patch.listeners ?? []), ...newListeners],
+            publishers: [...patch.publishers, ...newPublishers],
+            listeners: [...patch.listeners, ...newListeners],
           },
           rewriteMap
         );
@@ -790,13 +696,8 @@ export function createCompilerService(store: RootStore): CompilerService {
           );
         }
 
-        // Choose compiler based on feature flag
-        const result = flags.useUnifiedCompiler
-          ? compileWithUnified(patch)
-          : (() => {
-              const seed: Seed = store.uiStore.settings.seed;
-              return compilePatch(patch, registry, seed, ctx);
-            })();
+        const seed: Seed = store.uiStore.settings.seed;
+        const result = compilePatch(patch, registry, seed, ctx);
 
         const durationMs = performance.now() - startTime;
 
@@ -818,16 +719,10 @@ export function createCompilerService(store: RootStore): CompilerService {
             durationMs,
             diagnostics,
             programMeta: {
-              timelineHint: result.timeModel?.kind ?? 'infinite',
+              timeModelKind: result.timeModel?.kind ?? 'infinite',
               timeRootKind: inferTimeRootKind(patch),
               busUsageSummary: buildBusUsageSummary(patch),
             },
-          });
-
-          // Emit legacy CompileSucceeded event for backward compatibility
-          store.events.emit({
-            type: 'CompileSucceeded',
-            durationMs,
           });
 
           lastDecorations = emptyDecorations();
@@ -866,12 +761,6 @@ export function createCompilerService(store: RootStore): CompilerService {
               status: 'failed',
               durationMs,
               diagnostics,
-            });
-
-            // Emit legacy CompileFailed event for backward compatibility
-            store.events.emit({
-              type: 'CompileFailed',
-              errorCount: result.errors.length,
             });
 
             // Build decorations for UI display
@@ -966,7 +855,7 @@ function buildBusUsageSummary(patch: CompilerPatch): Record<string, { publishers
   const summary: Record<string, { publishers: number; listeners: number }> = {};
 
   // Count publishers per bus
-  for (const pub of patch.publishers ?? []) {
+  for (const pub of patch.publishers) {
     if (!summary[pub.busId]) {
       summary[pub.busId] = { publishers: 0, listeners: 0 };
     }
@@ -974,7 +863,7 @@ function buildBusUsageSummary(patch: CompilerPatch): Record<string, { publishers
   }
 
   // Count listeners per bus
-  for (const listener of patch.listeners ?? []) {
+  for (const listener of patch.listeners) {
     if (!summary[listener.busId]) {
       summary[listener.busId] = { publishers: 0, listeners: 0 };
     }

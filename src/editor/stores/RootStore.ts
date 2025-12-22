@@ -8,6 +8,7 @@ import { BusStore } from './BusStore';
 import { UIStateStore } from './UIStateStore';
 import { ViewStateStore } from './ViewStateStore';
 import { CompositeStore } from './CompositeStore';
+import { DefaultSourceStore } from './DefaultSourceStore';
 import { DiagnosticStore } from './DiagnosticStore';
 import { LogStore } from '../logStore';
 import { EventDispatcher } from '../events';
@@ -25,6 +26,7 @@ export class RootStore {
   uiStore: UIStateStore;
   viewStore: ViewStateStore;
   compositeStore: CompositeStore;
+  defaultSourceStore: DefaultSourceStore;
   logStore: LogStore;
 
   // Diagnostics
@@ -47,6 +49,7 @@ export class RootStore {
     this.uiStore = new UIStateStore(this);
     this.viewStore = new ViewStateStore(this);
     this.compositeStore = new CompositeStore(this);
+    this.defaultSourceStore = new DefaultSourceStore();
 
     // Create diagnostic infrastructure (after patchStore)
     this.diagnosticHub = new DiagnosticHub(this.events, this.patchStore);
@@ -168,19 +171,15 @@ export class RootStore {
   // =============================================================================
 
   toJSON(): Patch {
-    const hasBuses = this.busStore.buses.length > 0 || this.busStore.publishers.length > 0 || this.busStore.listeners.length > 0;
-
     return {
-      version: hasBuses ? 2 : 1,
-      features: hasBuses ? { buses: true } : undefined,
+      version: 2,
       blocks: this.patchStore.blocks.map((b) => ({ ...b })),
       connections: this.patchStore.connections.map((c) => ({ ...c })),
       lanes: this.viewStore.lanes.map((l) => ({ ...l })),
-      ...(hasBuses && {
-        buses: this.busStore.buses.map((b) => ({ ...b })),
-        publishers: this.busStore.publishers.map((p) => ({ ...p })),
-        listeners: this.busStore.listeners.map((l) => ({ ...l })),
-      }),
+      buses: this.busStore.buses.map((b) => ({ ...b })),
+      publishers: this.busStore.publishers.map((p) => ({ ...p })),
+      listeners: this.busStore.listeners.map((l) => ({ ...l })),
+      defaultSources: Array.from(this.defaultSourceStore.sources.values()).map((s) => ({ ...s })),
       settings: { 
         ...this.uiStore.settings,
         currentLayoutId: this.viewStore.currentLayoutId,
@@ -189,13 +188,8 @@ export class RootStore {
   }
 
   loadPatch(patch: Patch): void {
-    const migratedBlocks = patch.blocks.map(block => ({
-      ...block,
-      params: this.migrateBlockParams(block.type, block.params),
-    }));
-
-    this.patchStore.blocks = migratedBlocks;
-    this.patchStore.connections = patch.connections;
+    this.patchStore.blocks = patch.blocks.map((block) => ({ ...block }));
+    this.patchStore.connections = patch.connections.map((connection) => ({ ...connection }));
     
     // View state
     if (patch.lanes) {
@@ -206,28 +200,23 @@ export class RootStore {
     }
 
     this.uiStore.settings = {
-      seed: patch.settings?.seed || 0,
-      speed: patch.settings?.speed || 1,
-      currentLayoutId: patch.settings?.currentLayoutId || 'default',
-      finiteLoopMode: patch.settings?.finiteLoopMode ?? true,
-      advancedLaneMode: patch.settings?.advancedLaneMode || false,
-      autoConnect: patch.settings?.autoConnect || false,
-      showTypeHints: patch.settings?.showTypeHints || false,
-      highlightCompatible: patch.settings?.highlightCompatible || false,
-      warnBeforeDisconnect: patch.settings?.warnBeforeDisconnect || true,
-      filterByLane: patch.settings?.filterByLane || false,
-      filterByConnection: patch.settings?.filterByConnection || false,
+      seed: patch.settings.seed,
+      speed: patch.settings.speed,
+      currentLayoutId: patch.settings.currentLayoutId || 'default',
+      advancedLaneMode: patch.settings.advancedLaneMode ?? false,
+      autoConnect: patch.settings.autoConnect ?? false,
+      showTypeHints: patch.settings.showTypeHints ?? false,
+      highlightCompatible: patch.settings.highlightCompatible ?? false,
+      warnBeforeDisconnect: patch.settings.warnBeforeDisconnect ?? true,
+      filterByLane: patch.settings.filterByLane ?? false,
+      filterByConnection: patch.settings.filterByConnection ?? false,
     };
 
-    if (patch.version >= 2 || (patch.features?.buses)) {
-      this.busStore.buses = patch.buses || [];
-      this.busStore.publishers = patch.publishers || [];
-      this.busStore.listeners = patch.listeners || [];
-    } else {
-      this.busStore.buses = [];
-      this.busStore.publishers = [];
-      this.busStore.listeners = [];
-    }
+    this.busStore.buses = patch.buses.map((bus) => ({ ...bus }));
+    this.busStore.publishers = patch.publishers.map((publisher) => ({ ...publisher }));
+    this.busStore.listeners = patch.listeners.map((listener) => ({ ...listener }));
+
+    this.defaultSourceStore.load(patch.defaultSources);
 
     // Create default buses if none exist in loaded patch
     this.busStore.createDefaultBuses();
@@ -251,16 +240,6 @@ export class RootStore {
       blockCount: this.patchStore.blocks.length,
       connectionCount: this.patchStore.connections.length,
     });
-  }
-
-  private migrateBlockParams(type: string, params: Record<string, unknown>): Record<string, unknown> {
-    if (type === 'SVGPathSource' && params.target) {
-        const target = String(params.target);
-        if (target === 'logo') return { ...params, target: 'builtin:logo' };
-        if (target === 'text') return { ...params, target: 'builtin:text' };
-        if (target === 'heart') return { ...params, target: 'builtin:heart' };
-    }
-    return params;
   }
 
   clearPatch(): void {

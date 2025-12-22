@@ -85,7 +85,7 @@ describe('ActionExecutor', () => {
     it('should select a port target (selects parent block)', () => {
       const result = actionExecutor.execute({
         kind: 'goToTarget',
-        target: { kind: 'port', blockId: 'block-1', portId: 'input-1' },
+        target: { kind: 'port', portRef: { blockId: 'block-1', slotId: 'input-1', direction: 'input' } },
       });
 
       expect(result).toBe(true);
@@ -296,8 +296,8 @@ describe('ActionExecutor', () => {
 
       const connection: Connection = {
         id: 'conn-1',
-        from: { blockId: 'source-block' as BlockId, slotId: 'out' },
-        to: { blockId: 'target-block' as BlockId, slotId: 'in' },
+        from: { blockId: 'source-block' as BlockId, slotId: 'out', direction: 'output' },
+        to: { blockId: 'target-block' as BlockId, slotId: 'in', direction: 'input' },
       };
 
       mockPatchStore.blocks = [sourceBlock, targetBlock];
@@ -316,7 +316,7 @@ describe('ActionExecutor', () => {
     it('should insert adapter between connected ports', () => {
       const result = actionExecutor.execute({
         kind: 'addAdapter',
-        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        fromPort: { kind: 'port', portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } },
         adapterType: 'ClampSignal',
       });
 
@@ -345,14 +345,14 @@ describe('ActionExecutor', () => {
 
       const result = actionExecutor.execute({
         kind: 'addAdapter',
-        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        fromPort: { kind: 'port', portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } },
         adapterType: 'ClampSignal',
       });
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         '[ActionExecutor] No connection found from port:',
-        expect.objectContaining({ blockId: 'source-block', portId: 'out' })
+        expect.objectContaining({ portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } })
       );
 
       consoleWarnSpy.mockRestore();
@@ -366,7 +366,7 @@ describe('ActionExecutor', () => {
 
       const result = actionExecutor.execute({
         kind: 'addAdapter',
-        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        fromPort: { kind: 'port', portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } },
         adapterType: 'ClampSignal',
       });
 
@@ -404,7 +404,7 @@ describe('ActionExecutor', () => {
 
       const result = actionExecutor.execute({
         kind: 'addAdapter',
-        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        fromPort: { kind: 'port', portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } },
         adapterType: 'BadAdapter',
       });
 
@@ -443,7 +443,7 @@ describe('ActionExecutor', () => {
       void result; // Use result to avoid unused variable warning
 
       // Actually test with a simpler approach - just invoke with valid action and check logs
-      actionExecutor.execute({ kind: 'addAdapter', fromPort: { kind: 'port', blockId: 'b', portId: 'p' }, adapterType: 'test' });
+      actionExecutor.execute({ kind: 'addAdapter', fromPort: { kind: 'port', portRef: { blockId: 'b', slotId: 'p', direction: 'output' } }, adapterType: 'test' });
 
       expect(consoleWarnSpy).toHaveBeenCalled();
 

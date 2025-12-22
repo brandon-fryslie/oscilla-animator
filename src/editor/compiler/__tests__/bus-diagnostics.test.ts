@@ -7,16 +7,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
 import { createCompilerService } from '../integration';
 import type { CompileFinishedEvent, EditorEvent } from '../../events/types';
-import { resetFeatureFlags } from '../featureFlags';
 
 describe('Bus Diagnostics', () => {
   let store: RootStore;
   let events: EditorEvent[];
 
   beforeEach(() => {
-    // Reset feature flags to default state (requireTimeRoot is now enabled by default)
-    resetFeatureFlags();
-
     store = new RootStore();
     events = [];
 
@@ -52,7 +48,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-1',
         busId: 'custom-bus',
-        from: { blockId: domainBlock, slotId: 'domain', dir: 'output' },
+        from: { blockId: domainBlock, slotId: 'domain', direction: 'output' },
         enabled: true,
         sortKey: 0,
       });
@@ -96,7 +92,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-1',
         busId: 'custom-bus',
-        from: { blockId: domainBlock, slotId: 'domain', dir: 'output' },
+        from: { blockId: domainBlock, slotId: 'domain', direction: 'output' },
         enabled: true,
         sortKey: 0,
       });
@@ -104,7 +100,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.listeners.push({
         id: 'lis-1',
         busId: 'custom-bus',
-        to: { blockId: renderBlock, slotId: 'radius', dir: 'input' },
+        to: { blockId: renderBlock, slotId: 'radius', direction: 'input' },
         enabled: true,
       });
 
@@ -179,7 +175,7 @@ describe('Bus Diagnostics', () => {
 
       // Should not have any warnings about TimeRoot outputs (phase, wrap)
       const timeRootWarnings = unusedOutputWarnings.filter(
-        (w) => w.primaryTarget.kind === 'port' && ['phase', 'wrap'].includes((w.primaryTarget as any).portId)
+        (w) => w.primaryTarget.kind === 'port' && ['phase', 'wrap'].includes((w.primaryTarget as any).portRef?.slotId)
       );
       expect(timeRootWarnings).toHaveLength(0);
     });
@@ -199,7 +195,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-pos0',
         busId: 'phaseA', // Use existing bus
-        from: { blockId: domainBlock, slotId: 'pos0', dir: 'output' },
+        from: { blockId: domainBlock, slotId: 'pos0', direction: 'output' },
         enabled: true,
         sortKey: 0,
       });
@@ -214,7 +210,7 @@ describe('Bus Diagnostics', () => {
 
       // Should not have warning for pos0 since it's published
       const pos0Warnings = unusedOutputWarnings.filter(
-        (w) => w.primaryTarget.kind === 'port' && (w.primaryTarget as any).portId === 'pos0'
+        (w) => w.primaryTarget.kind === 'port' && (w.primaryTarget as any).portRef?.slotId === 'pos0'
       );
       expect(pos0Warnings).toHaveLength(0);
     });
