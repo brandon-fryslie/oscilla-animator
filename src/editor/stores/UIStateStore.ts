@@ -34,6 +34,7 @@ export class UIStateStore {
   settings = {
     seed: 0,
     speed: 1.0,
+    currentLayoutId: 'default' as string,
     finiteLoopMode: true, // false = 'once' (stop at end), true = 'loop' (rewind and continue)
     advancedLaneMode: false, // Controls lane visibility (Simple vs Detailed)
     autoConnect: false, // Auto-create connections on block drop
@@ -156,9 +157,9 @@ export class UIStateStore {
 
     // Switch layout based on mode
     if (enabled) {
-      this.root.patchStore.switchLayout('detailed');
+      this.root.viewStore.switchLayout('detailed');
     } else {
-      this.root.patchStore.switchLayout('simple');
+      this.root.viewStore.switchLayout('simple');
     }
   }
 

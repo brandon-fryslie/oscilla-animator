@@ -14,7 +14,7 @@
  * World categories for type system.
  * Only signal and field - scalar is semantics, special is category.
  */
-export type TypeWorld = 'signal' | 'field';
+export type TypeWorld = 'signal' | 'field' | 'scalar' | 'config';
 
 /**
  * Core domains - what users see in the bus system.
@@ -96,33 +96,14 @@ export interface TypeDesc {
 export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer';
 
 /**
- * Legacy alias for TypeDesc.
- * @deprecated Use TypeDesc instead
- */
-export type TypeDescriptor = TypeDesc;
-
-/**
  * Format a TypeDesc for display.
  */
-export function formatTypeDesc(typeDesc: TypeDesc): string {
-  return `${typeDesc.world}:${typeDesc.domain}`;
-}
+// MOVED TO SEMANTIC KERNEL
 
 /**
  * Get available combine modes for a given domain.
  */
-export function getCombineModesForDomain(domain: Domain): BusCombineMode[] {
-  // Numeric domains support all combine modes
-  if (domain === 'number' || domain === 'duration' || domain === 'time' || domain === 'rate') {
-    return ['sum', 'average', 'max', 'min', 'last'];
-  }
-  // Point/vec2 domains support vector operations
-  if (domain === 'point' || domain === 'vec2') {
-    return ['sum', 'average', 'last'];
-  }
-  // Other domains only support 'last' and 'layer'
-  return ['last', 'layer'];
-}
+// MOVED TO SEMANTIC KERNEL
 
 /**
  * Bus interface - central typed signal distributors.
@@ -159,6 +140,25 @@ export interface AdapterStep {
 
   /** Parameters for the adapter */
   readonly params: Record<string, unknown>;
+}
+
+/**
+ * Adapter policy levels.
+ */
+export type AdapterPolicy = 'AUTO' | 'SUGGEST' | 'EXPLICIT' | 'FORBIDDEN';
+
+/**
+ * Adapter cost (lower is better).
+ */
+export type AdapterCost = number;
+
+/**
+ * Lens definition for transforming bus values.
+ */
+export interface LensDefinition {
+  type: string;
+  label?: string;
+  params: Record<string, unknown>;
 }
 
 /**
@@ -200,34 +200,6 @@ export interface Publisher {
 
   /** Sort key for deterministic ordering within bus */
   sortKey: number;
-}
-
-/**
- * Lens types for transforming bus values at the listener side.
- * Lenses enable "binding phase/energy produces pleasing motion immediately".
- */
-export type LensType =
-  | 'ease'              // Apply easing curve (0-1 input)
-  | 'slew'              // Rate-limited smoothing
-  | 'quantize'          // Snap to discrete steps
-  | 'scale'             // Linear scale + offset
-  | 'warp'              // Phase warping (speed up/slow down parts of cycle)
-  | 'broadcast'         // Lift scalar signal to constant field
-  | 'perElementOffset'  // Add per-element phase offset to signal
-  | 'clamp'             // Bound values to [min, max] range
-  | 'offset'            // Add constant to value
-  | 'deadzone'          // Zero values below threshold
-  | 'mapRange';         // Linear mapping from one range to another
-
-/**
- * Lens definition - transformation applied between bus value and target parameter.
- */
-export interface LensDefinition {
-  /** Type of lens to apply */
-  readonly type: LensType;
-
-  /** Lens-specific parameters */
-  readonly params: Record<string, unknown>;
 }
 
 /**
@@ -448,32 +420,11 @@ export const ALL_SUBCATEGORIES = [
 
 export type BlockSubcategory = (typeof ALL_SUBCATEGORIES)[number];
 
-
-/**
- * Legacy categories - kept for backwards compatibility during migration.
- * @deprecated Use BlockForm + BlockSubcategory instead
- */
-export const ALL_CATEGORIES = [
-  'Macros',     // Recipe starters - expand into multiple blocks
-  'Scene',
-  'Derivers',
-  'Fields',
-  'Math',       // Scalar math blocks
-  'Time',
-  'TimeRoot',   // Time topology blocks (Phase 3: TimeRoot)
-  'Events',
-  'Dynamics',
-  'Compose',
-  'Render',
-  'FX',
-  'Adapters',
-] as const;
-
 /**
  * Block category for library organization.
  * @deprecated Use BlockSubcategory instead
  */
-export type BlockCategory = (typeof ALL_CATEGORIES)[number];
+export type BlockCategory = BlockSubcategory;
 
 /**
  * A Slot is a typed connection point on a block.
@@ -672,12 +623,6 @@ export type LaneFlowStyle =
 export type LaneId = string;
 
 /**
- * Legacy lane name type for compatibility.
- * @deprecated Use LaneId instead
- */
-export type LaneName = LaneId;
-
-/**
  * A Lane is a horizontal track in the patch bay.
  * Blocks are assigned to lanes for organization.
  *
@@ -714,10 +659,6 @@ export interface Lane {
 
   /** UI state: is lane pinned (always visible)? */
   pinned: boolean;
-
-  // Legacy compatibility
-  /** @deprecated Use id instead */
-  readonly name: LaneId;
 }
 
 /**
@@ -792,6 +733,7 @@ export interface Patch {
   settings: {
     seed: number;
     speed: number;
+    currentLayoutId?: string;
     finiteLoopMode?: boolean;
     advancedLaneMode?: boolean;
     autoConnect?: boolean;
@@ -805,32 +747,6 @@ export interface Patch {
   /** Composite definitions for this patch */
   composites?: import('./composites').CompositeDefinition[];
 }
-
-// =============================================================================
-// Block Registry (Behavior Mapping)
-// =============================================================================
-
-/**
- * Block behavior definition (how to compile block to V4).
- * Phase 1: Stub type. Phase 4: Implement compilation.
- */
-export interface BlockBehavior {
-  /** Block type this behavior handles */
-  readonly type: BlockType;
-
-  /** Default parameters for new instances */
-  readonly defaultParams: BlockParams;
-
-  /** Compile this block to a V4 function/value */
-  // TODO Phase 4: Define compilation signature
-  compile?: (block: Block, inputs: unknown[]) => unknown;
-}
-
-/**
- * Registry of block behaviors.
- * Maps block type → behavior.
- */
-export type BlockRegistry = Map<BlockType, BlockBehavior>;
 
 // =============================================================================
 // Editor UI State (Non-Serializable)

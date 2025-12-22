@@ -84,7 +84,7 @@ const PortWiringPanel = observer(({
   }, [portRef.direction, slot.type]);
 
   const adapterDefinitions = useMemo(
-    () => getBlockDefinitions().filter((d) => d.category === 'Adapters'),
+    () => getBlockDefinitions().filter((d) => d.subcategory === 'Adapters'),
     []
   );
 
@@ -175,10 +175,17 @@ const PortWiringPanel = observer(({
 
   const handleConnect = (target: { block: Block; slot: Slot; portRef: PortRef }) => {
     if (portRef.direction === 'output') {
-      // This port is output, target is input
+      // This port is an OUTPUT, target is an INPUT.
+      // An output can connect to multiple inputs, so we just add.
       store.patchStore.connect(portRef.blockId, portRef.slotId, target.portRef.blockId, target.portRef.slotId);
     } else {
-      // This port is input, target is output
+      // This port is an INPUT, target is an OUTPUT.
+      // An input can only have one writer. Remove existing connections first.
+      const existing = getConnectionsForPort(portRef.blockId, portRef.slotId, 'input', store.patchStore.connections);
+      for (const conn of existing) {
+        store.patchStore.disconnect(conn.id);
+      }
+      // Now, add the new connection.
       store.patchStore.connect(target.portRef.blockId, target.portRef.slotId, portRef.blockId, portRef.slotId);
     }
     // Clear selection after connecting
@@ -190,7 +197,7 @@ const PortWiringPanel = observer(({
    */
   const handleAddAndConnect = (def: BlockDefinition, targetSlot: Slot) => {
     // Find the suggested lane
-    const targetLane = store.patchStore.lanes.find((lane) => lane.kind === def.laneKind);
+    const targetLane = store.viewStore.lanes.find((lane) => lane.kind === def.laneKind);
     if (!targetLane) return;
 
     // Add the block
@@ -214,7 +221,7 @@ const PortWiringPanel = observer(({
   };
 
   const findLaneIdForBlock = (blockId: string): string | null => {
-    const lane = store.patchStore.lanes.find((l) => l.blockIds.includes(blockId));
+    const lane = store.viewStore.lanes.find((l) => l.blockIds.includes(blockId));
     return lane?.id ?? null;
   };
 
@@ -232,9 +239,9 @@ const PortWiringPanel = observer(({
     adapterOutput: Slot;
   }) => {
     // Determine lane to place adapter
-    const laneByKind = store.patchStore.lanes.find((l) => l.kind === suggestion.adapter.laneKind);
+    const laneByKind = store.viewStore.lanes.find((l) => l.kind === suggestion.adapter.laneKind);
     const laneOfTarget = findLaneIdForBlock(suggestion.block.id);
-    const laneFallback = store.patchStore.lanes[0]?.id ?? null;
+    const laneFallback = store.viewStore.lanes[0]?.id ?? null;
     const laneId = laneByKind?.id ?? laneOfTarget ?? laneFallback;
     if (!laneId) return;
 
@@ -337,7 +344,12 @@ const PortWiringPanel = observer(({
                 const otherSlot = otherSlots?.find((s) => s.id === otherSlotId);
 
                 return (
-                  <li key={conn.id} className="wiring-connection-item">
+                  <li
+                    key={conn.id}
+                    className="wiring-connection-item"
+                    onDoubleClick={() => store.uiStore.selectBlock(otherBlockId)}
+                    title="Double-click to inspect this block"
+                  >
                     <span className="wiring-target-block">{otherBlock?.label ?? 'Unknown'}</span>
                     <span className="wiring-target-slot">
                       {otherSlot?.label ?? otherSlotId}
@@ -493,7 +505,7 @@ function DefinitionPreview({ definition }: { definition: BlockDefinition }) {
       <div className="insp-header" style={{ borderLeftColor: definition.color }}>
         <div className="insp-title-row">
           <span className="insp-title">{definition.label}</span>
-          <span className="insp-category" style={{ background: definition.color }}>{definition.category}</span>
+          <span className="insp-category" style={{ background: definition.color }}>{definition.subcategory ?? 'Other'}</span>
         </div>
         <code className="insp-type">{definition.type}</code>
       </div>
@@ -562,7 +574,7 @@ const PortItem = observer(({
   direction,
   connections,
   blocks,
-  onNavigate
+  onNavigate // Not used for click to select, but for double-click to navigate
 }: {
   slot: Slot;
   blockId: string;
@@ -571,6 +583,9 @@ const PortItem = observer(({
   blocks: readonly Block[];
   onNavigate: (blockId: string) => void;
 }) => {
+  const store = useStore();
+  const portRef: PortRef = { blockId, slotId: slot.id, direction };
+
   // Find connection for this port
   const connection = connections.find(c =>
     direction === 'input'
@@ -585,22 +600,38 @@ const PortItem = observer(({
     ? blocks.find(b => b.id === connectedBlockId)
     : null;
 
+  const handleClick = useCallback(() => {
+    store.uiStore.setSelectedPort(portRef);
+  }, [store, portRef]);
+
+  const handleDoubleClickConnected = useCallback(() => {
+    if (connectedBlockId) onNavigate(connectedBlockId);
+  }, [onNavigate, connectedBlockId]);
+
+  const isSelected = store.uiStore.uiState.selectedPort?.blockId === blockId &&
+                     store.uiStore.uiState.selectedPort?.slotId === slot.id &&
+                     store.uiStore.uiState.selectedPort?.direction === direction;
+
   return (
-    <div className="port-item">
+    <div className={`port-item ${isSelected ? 'selected' : ''}`}>
       <span className="port-item-label">{slot.label}</span>
       {connection ? (
         <span
           className="port-connected-icon"
-          title={`Connected to: ${connectedBlock?.label ?? 'Unknown'}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (connectedBlockId) onNavigate(connectedBlockId);
-          }}
+          title={`Connected to: ${connectedBlock?.label ?? 'Unknown'} (click to wire, double-click to inspect)`}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClickConnected}
         >
           ●
         </span>
       ) : (
-        <span className="port-disconnected-icon" title="Not connected">○</span>
+        <span
+          className="port-disconnected-icon"
+          title="Not connected (click to wire)"
+          onClick={handleClick}
+        >
+          ○
+        </span>
       )}
     </div>
   );
@@ -628,7 +659,7 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
   const handleReplace = useCallback((newDef: BlockDefinition) => {
     const incoming = store.patchStore.connections.filter(c => c.to.blockId === block.id);
     const outgoing = store.patchStore.connections.filter(c => c.from.blockId === block.id);
-    const lane = store.patchStore.lanes.find(l => l.blockIds.includes(block.id));
+    const lane = store.viewStore.lanes.find(l => l.blockIds.includes(block.id));
     if (!lane) return;
 
     const savedIn = incoming.map(c => ({ from: c.from.blockId, fromSlot: c.from.slotId, toSlot: c.to.slotId }));
@@ -716,6 +747,119 @@ const BusConnectionsSection = observer(({ block }: { block: Block }) => {
   );
 });
 
+// New BlockInspectorWiringPanel
+const BlockInspectorWiringPanel = observer(({
+  sourcePortRef,
+  sourcePortBlock,
+  sourcePortSlot,
+}: {
+  sourcePortRef: PortRef;
+  sourcePortBlock: Block;
+  sourcePortSlot: Slot;
+}) => {
+  const store = useStore();
+
+  const compatibleTargets = findCompatiblePorts(
+    sourcePortRef,
+    sourcePortSlot,
+    store.patchStore.blocks,
+    store.patchStore.connections
+  );
+
+  const handleConnect = useCallback((target: { block: Block; slot: Slot; portRef: PortRef }) => {
+    // Logic from PortWiringPanel's handleConnect
+    if (sourcePortRef.direction === 'output') {
+      // Current port is output, target is input
+      store.patchStore.connect(sourcePortRef.blockId, sourcePortRef.slotId, target.portRef.blockId, target.portRef.slotId);
+    } else {
+      // Current port is input, target is output
+      // Remove existing connections to this input port first
+      const existing = getConnectionsForPort(sourcePortRef.blockId, sourcePortRef.slotId, 'input', store.patchStore.connections);
+      for (const conn of existing) {
+        store.patchStore.disconnect(conn.id);
+      }
+      store.patchStore.connect(target.portRef.blockId, target.portRef.slotId, sourcePortRef.blockId, sourcePortRef.slotId);
+    }
+    store.uiStore.setSelectedPort(null); // Clear selection after connecting
+  }, [store, sourcePortRef, sourcePortBlock.id, sourcePortSlot.id]);
+
+  const handleCancel = useCallback(() => {
+    store.uiStore.setSelectedPort(null); // Clear selection
+  }, [store]);
+
+  const renderTypeBadges = (type: Slot['type']) => {
+    const desc = describeSlotType(type);
+    const worldGlyph: Record<string, string | null> = {
+      signal: 'S',
+      field: 'F',
+      scalar: 'C',
+      event: 'E',
+      scene: 'SC',
+      program: 'P',
+      render: 'R',
+      filter: 'FX',
+      stroke: 'ST',
+      unknown: null,
+    };
+    const worldBadge = worldGlyph[desc.world] ?? null;
+    return (
+      <span className="port-badges">
+        {worldBadge && <span className={`port-badge world ${desc.world}`}>{worldBadge}</span>}
+        {desc.domain && <span className="port-badge domain">{desc.domain}</span>}
+      </span>
+    );
+  };
+
+  const blockColor = getBlockDefinition(sourcePortBlock.type)?.color ?? '#666';
+
+
+  return (
+    <div className="inspector insp-compact wiring-suggestions-panel">
+      <div className="insp-header" style={{ borderLeftColor: blockColor }}>
+        <div className="insp-title-row">
+          <span className="insp-title">{sourcePortSlot.label}</span>
+          <span className="insp-category" style={{ background: blockColor }}>
+            {sourcePortRef.direction === 'input' ? 'Input' : 'Output'} Port
+          </span>
+        </div>
+        <code className="insp-type">{sourcePortSlot.type}</code>
+      </div>
+
+      <div className="insp-body">
+        <div className="insp-section">
+          <span className="insp-section-title">
+            {sourcePortRef.direction === 'output' ? 'Compatible Inputs' : 'Compatible Outputs'}
+          </span>
+          {compatibleTargets.length === 0 ? (
+            <p className="insp-hint">No compatible ports found.</p>
+          ) : (
+            <ul className="wiring-target-list">
+              {compatibleTargets.map((target) => (
+                <li
+                  key={`${target.block.id}:${target.slot.id}`}
+                  className="wiring-target-item"
+                  onClick={() => handleConnect(target)}
+                  title={`Connect to ${target.block.label}.${target.slot.label}`}
+                >
+                  <span className="wiring-target-block">{target.block.label}</span>
+                  <span className="wiring-target-slot">
+                    {target.slot.label}
+                    {renderTypeBadges(target.slot.type)}
+                  </span>
+                  <code className="wiring-target-type">{target.slot.type}</code>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <button className="insp-cancel-btn" onClick={handleCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+});
+
 /**
  * Inspector displays and edits parameters of selected block.
  * Compact, Ableton-style layout.
@@ -764,117 +908,129 @@ export const Inspector = observer(() => {
       {/* Compact header */}
       <div className="insp-header" style={{ borderLeftColor: blockColor }}>
         <div className="insp-title-row">
-          <span className="insp-title">{block.label}</span>
-          <span className="insp-category" style={{ background: blockColor }}>{block.category}</span>
-        </div>
-        <code className="insp-type">{block.type}</code>
-      </div>
-
-      <div className="insp-body">
-        {/* Side-by-side Inputs/Outputs */}
-        <div className="ports-row">
-          <div className="ports-col">
-            <span className="ports-header">Inputs</span>
-            {block.inputs.length === 0
-              ? <span className="ports-none">None</span>
-              : block.inputs.map(slot => (
-                  <PortItem
-                    key={slot.id}
-                    slot={slot}
-                    blockId={block.id}
-                    direction="input"
-                    connections={store.patchStore.connections}
-                    blocks={store.patchStore.blocks}
-                    onNavigate={navigateToBlock}
-                  />
-                ))
-            }
-          </div>
-          <div className="ports-col">
-            <span className="ports-header">Outputs</span>
-            {block.outputs.length === 0
-              ? <span className="ports-none">None</span>
-              : block.outputs.map(slot => (
-                  <PortItem
-                    key={slot.id}
-                    slot={slot}
-                    blockId={block.id}
-                    direction="output"
-                    connections={store.patchStore.connections}
-                    blocks={store.patchStore.blocks}
-                    onNavigate={navigateToBlock}
-                  />
-                ))
-            }
-          </div>
-        </div>
-
-        {/* Parameters */}
-        {Object.keys(block.params).length > 0 && (
-          <div className="insp-section">
-            <span className="insp-section-title">Parameters</span>
-            <div className="param-grid">
-              {Object.entries(block.params).map(([key, value]) => {
-                const schema = definition?.paramSchema.find(s => s.key === key);
-                const label = schema?.label ?? key;
-                return (
-                  <div key={key} className="param-row">
-                    <label className="param-key">{label}</label>
-                    {schema?.type === 'select' && schema.options ? (
-                      <select
-                        className="param-input"
-                        value={String(value)}
-                        onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.value })}
-                      >
-                        {schema.options.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    ) : typeof value === 'boolean' ? (
-                      <input
-                        type="checkbox"
-                        checked={value}
-                        onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.checked })}
-                      />
-                    ) : typeof value === 'number' ? (
-                      <input
-                        type="number"
-                        className="param-input"
-                        value={value}
-                        step={schema?.step ?? (value < 1 ? 0.1 : 1)}
-                        min={schema?.min}
-                        max={schema?.max}
-                        onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: parseFloat(e.target.value) || 0 })}
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        className="param-input"
-                        value={String(value)}
-                        onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.value })}
-                      />
-                    )}
+                    <span className="insp-title">{block.label}</span>
+                    <span className="insp-category" style={{ background: blockColor }}>{block.category}</span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Bus connections */}
-        <BusConnectionsSection block={block} />
-
-        {/* Compatible replacement blocks */}
-        <CompatibleBlocksSection block={block} />
-
-        {/* Delete */}
-        <button
-          className="insp-delete"
-          onClick={() => store.patchStore.removeBlock(block.id)}
-        >
-          Delete
-        </button>
-      </div>
-    </div>
-  );
-});
+                  <code className="insp-type">{block.type}</code>
+                </div>
+          
+                <div className="insp-body">
+                  {/* Wiring Panel for selected port on current block */}
+                  {store.uiStore.uiState.selectedPort &&
+                   store.uiStore.uiState.selectedPort.blockId === block.id ? (
+                    <BlockInspectorWiringPanel
+                      sourcePortRef={store.uiStore.uiState.selectedPort}
+                      sourcePortBlock={block}
+                      sourcePortSlot={block.inputs.find(s => s.id === store.uiStore.uiState.selectedPort?.slotId) || block.outputs.find(s => s.id === store.uiStore.uiState.selectedPort?.slotId)!}
+                    />
+                  ) : (
+                    <>
+                      {/* Original content of Block Inspector */}
+                      {/* Side-by-side Inputs/Outputs */}
+                      <div className="ports-row">
+                        <div className="ports-col">
+                          <span className="ports-header">Inputs</span>
+                          {block.inputs.length === 0
+                            ? <span className="ports-none">None</span>
+                            : block.inputs.map(slot => (
+                                <PortItem
+                                  key={slot.id}
+                                  slot={slot}
+                                  blockId={block.id}
+                                  direction="input"
+                                  connections={store.patchStore.connections}
+                                  blocks={store.patchStore.blocks}
+                                  onNavigate={navigateToBlock}
+                                />
+                              ))
+                          }
+                        </div>
+                        <div className="ports-col">
+                          <span className="ports-header">Outputs</span>
+                          {block.outputs.length === 0
+                            ? <span className="ports-none">None</span>
+                            : block.outputs.map(slot => (
+                                <PortItem
+                                  key={slot.id}
+                                  slot={slot}
+                                  blockId={block.id}
+                                  direction="output"
+                                  connections={store.patchStore.connections}
+                                  blocks={store.patchStore.blocks}
+                                  onNavigate={navigateToBlock}
+                                />
+                              ))
+                          }
+                        </div>
+                      </div>
+          
+                      {/* Parameters */}
+                      {Object.keys(block.params).length > 0 && (
+                        <div className="insp-section">
+                          <span className="insp-section-title">Parameters</span>
+                          <div className="param-grid">
+                            {Object.entries(block.params).map(([key, value]) => {
+                              const schema = definition?.paramSchema.find(s => s.key === key);
+                              const label = schema?.label ?? key;
+                              return (
+                                <div key={key} className="param-row">
+                                  <label className="param-key">{label}</label>
+                                  {schema?.type === 'select' && schema.options ? (
+                                    <select
+                                      className="param-input"
+                                      value={String(value)}
+                                      onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.value })}
+                                    >
+                                      {schema.options.map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                      ))}
+                                    </select>
+                                  ) : typeof value === 'boolean' ? (
+                                    <input
+                                      type="checkbox"
+                                      checked={value}
+                                      onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.checked })}
+                                    />
+                                  ) : typeof value === 'number' ? (
+                                    <input
+                                      type="number"
+                                      className="param-input"
+                                      value={value}
+                                      step={schema?.step ?? (value < 1 ? 0.1 : 1)}
+                                      min={schema?.min}
+                                      max={schema?.max}
+                                      onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: parseFloat(e.target.value) || 0 })}
+                                    />
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      className="param-input"
+                                      value={String(value)}
+                                      onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.value })}
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+          
+                      {/* Bus connections */}
+                      <BusConnectionsSection block={block} />
+          
+                      {/* Compatible replacement blocks */}
+                      <CompatibleBlocksSection block={block} />
+          
+                      {/* Delete */}
+                      <button
+                        className="insp-delete"
+                        onClick={() => store.patchStore.removeBlock(block.id)}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );});

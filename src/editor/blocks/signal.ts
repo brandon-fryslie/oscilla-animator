@@ -20,8 +20,6 @@ import { input, output } from './utils';
 export const Oscillator = createBlock({
   type: 'Oscillator',
   label: 'Oscillator',
-  subcategory: 'Time',
-  category: 'Time',
   description: 'Generate waveforms (sine, cosine, triangle, saw) from phase',
   inputs: [
     input('phase', 'Phase', 'Signal<phase>'),
@@ -113,8 +111,6 @@ export const Oscillator = createBlock({
 export const Shaper = createBlock({
   type: 'Shaper',
   label: 'Shaper',
-  subcategory: 'Time',
-  category: 'Time',
   description: 'Shape signals with tanh, sigmoid, smoothstep, etc.',
   inputs: [
     input('in', 'Input', 'Signal<number>'),
@@ -188,8 +184,6 @@ export const Shaper = createBlock({
 export const ColorLFO = createBlock({
   type: 'ColorLFO',
   label: 'Color LFO',
-  subcategory: 'Time',
-  category: 'Time',
   description: 'Generate color from phase (hue rotation)',
   inputs: [
     input('phase', 'Phase', 'Signal<phase>'),
@@ -278,8 +272,6 @@ export const ColorLFO = createBlock({
 export const AddSignal = createBlock({
   type: 'AddSignal',
   label: 'Add',
-  subcategory: 'Math',
-  category: 'Math',
   description: 'Add two signals element-wise',
   inputs: [
     input('a', 'A', 'Signal<number>'),
@@ -302,8 +294,6 @@ export const AddSignal = createBlock({
 export const MulSignal = createBlock({
   type: 'MulSignal',
   label: 'Multiply',
-  subcategory: 'Math',
-  category: 'Math',
   description: 'Multiply two signals element-wise',
   inputs: [
     input('a', 'A', 'Signal<number>'),
@@ -324,8 +314,6 @@ export const MulSignal = createBlock({
 export const MinSignal = createBlock({
   type: 'MinSignal',
   label: 'Min',
-  subcategory: 'Math',
-  category: 'Math',
   description: 'Component-wise minimum of two signals',
   inputs: [
     input('a', 'A', 'Signal<number>'),
@@ -346,8 +334,6 @@ export const MinSignal = createBlock({
 export const MaxSignal = createBlock({
   type: 'MaxSignal',
   label: 'Max',
-  subcategory: 'Math',
-  category: 'Math',
   description: 'Component-wise maximum of two signals',
   inputs: [
     input('a', 'A', 'Signal<number>'),
@@ -370,8 +356,6 @@ export const MaxSignal = createBlock({
 export const ClampSignal = createBlock({
   type: 'ClampSignal',
   label: 'Clamp',
-  subcategory: 'Math',
-  category: 'Math',
   description: 'Clamp signal values to a range',
   inputs: [
     input('in', 'Input', 'Signal<number>'),
@@ -437,8 +421,6 @@ export const ClampSignal = createBlock({
 export const PhaseClockLegacy = createBlock({
   type: 'PhaseClockLegacy',
   label: 'Phase Clock (Legacy)',
-  subcategory: 'Time',
-  category: 'Time',
   description: '[Deprecated] Legacy phase clock that owns its own time. Use CycleTimeRoot instead.',
   inputs: [
     input('duration', 'Duration (s)', 'Signal<number>', {

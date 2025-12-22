@@ -10,11 +10,9 @@ import type {
   BlockId,
   LaneId,
   LaneKind,
-  BlockCategory,
+  BlockSubcategory,
   BlockType,
 } from '../types';
-import { getLayoutById, PRESET_LAYOUTS, DEFAULT_LAYOUT, mapLaneToLayout } from '../laneLayouts';
-import type { LaneLayout } from '../laneLayouts';
 import { getBlockDefinition } from '../blocks';
 import { getMacroKey, getMacroExpansion, type MacroExpansion } from '../macros';
 import { listCompositeDefinitions } from '../composites';
@@ -49,12 +47,6 @@ export class PatchStore {
   blocks: Block[] = [];
   connections: Connection[] = [];
 
-  /** Current lane layout ID */
-  currentLayoutId: string = DEFAULT_LAYOUT.id;
-
-  /** Lane definitions with block assignments */
-  lanes: Lane[] = this.createLanesFromLayout(DEFAULT_LAYOUT);
-
   /**
    * Unique identifier for this patch.
    * Generated once when the patch is created, persisted across saves.
@@ -76,14 +68,8 @@ export class PatchStore {
     makeObservable(this, {
       blocks: observable,
       connections: observable,
-      lanes: observable,
-      currentLayoutId: observable,
       patchId: observable,
       patchRevision: observable,
-
-      // Computed
-      currentLayout: computed,
-      availableLayouts: computed,
 
       // Actions
       addBlock: action,
@@ -96,16 +82,6 @@ export class PatchStore {
       disconnect: action,
       removeConnection: action,
       updateBlockParams: action,
-      toggleLaneCollapsed: action,
-      toggleLanePinned: action,
-      renameLane: action,
-      addLane: action,
-      removeLane: action,
-      moveBlockToLane: action,
-      moveBlockToLaneAtIndex: action,
-      reorderBlockInLane: action,
-      addBlockAtIndex: action,
-      switchLayout: action,
       resetPatchId: action,
       incrementRevision: action,
     });
@@ -168,20 +144,6 @@ export class PatchStore {
       blockType === 'CycleTimeRoot' ||
       blockType === 'InfiniteTimeRoot'
     );
-  }
-
-  // =============================================================================
-  // Computed Values
-  // =============================================================================
-
-  /** Get current lane layout */
-  get currentLayout(): LaneLayout {
-    return getLayoutById(this.currentLayoutId) ?? DEFAULT_LAYOUT;
-  }
-
-  /** Get all available layouts */
-  get availableLayouts(): readonly LaneLayout[] {
-    return PRESET_LAYOUTS;
   }
 
   // =============================================================================
@@ -259,7 +221,7 @@ export class PatchStore {
   /**
    * Add a block to the patch.
    */
-  addBlock(type: BlockType, laneId: LaneId, params?: Record<string, unknown>): BlockId {
+  addBlock(type: BlockType, params?: Record<string, unknown>): BlockId {
     // Check if this is a macro that should expand
     const macroKey = getMacroKey(type, params);
     if (macroKey) {
@@ -282,9 +244,6 @@ export class PatchStore {
     // Look up block definition from registry
     const definition = getBlockDefinition(type);
 
-    // Find lane to infer category
-    const laneObj = this.lanes.find((l) => l.id === laneId);
-
     // Merge params with defaults and migrate old values
     const rawParams = params ?? definition?.defaultParams ?? {};
     const migratedParams = migrateBlockParams(type, rawParams);
@@ -296,16 +255,11 @@ export class PatchStore {
       inputs: definition?.inputs ?? [],
       outputs: definition?.outputs ?? [],
       params: migratedParams,
-      category: definition?.category ?? this.inferCategory(laneObj?.kind ?? 'Program'),
+      category: definition?.subcategory ?? 'Other',
       description: definition?.description ?? `${type} block`,
     };
 
     this.blocks.push(block);
-
-    // Add to lane - use array spread to ensure MobX detects the change
-    if (laneObj) {
-      laneObj.blockIds = [...laneObj.blockIds, id];
-    }
 
     // Process auto-bus connections for this block
     this.processAutoBusConnections(id, type);
@@ -315,7 +269,7 @@ export class PatchStore {
       type: 'BlockAdded',
       blockId: id,
       blockType: type,
-      laneId,
+      laneId: '', // Legacy payload, unused by ViewStore now
     });
 
     // Emit GraphCommitted for diagnostics
@@ -356,7 +310,7 @@ export class PatchStore {
 
     const id = this.generateBlockId();
     const definition = getBlockDefinition(type);
-    const laneObj = this.lanes.find((l) => l.id === laneId);
+    const laneObj = this.root.viewStore.lanes.find((l) => l.id === laneId);
 
     const rawParams = params ?? definition?.defaultParams ?? {};
     const migratedParams = migrateBlockParams(type, rawParams);
@@ -368,7 +322,7 @@ export class PatchStore {
       inputs: definition?.inputs ?? [],
       outputs: definition?.outputs ?? [],
       params: migratedParams,
-      category: definition?.category ?? this.inferCategory(laneObj?.kind ?? 'Program'),
+      category: definition?.subcategory ?? this.inferSubcategory(laneObj?.kind ?? 'Program'),
       description: definition?.description ?? `${type} block`,
     };
 
@@ -420,7 +374,7 @@ export class PatchStore {
     // Create all blocks
     for (const macroBlock of expansion.blocks) {
       // Find the appropriate lane for this block's kind
-      const lane = this.lanes.find((l) => l.kind === macroBlock.laneKind);
+      const lane = this.root.viewStore.lanes.find((l) => l.kind === macroBlock.laneKind);
       if (!lane) {
         throw new Error(`Macro block "${macroBlock.ref}" (${macroBlock.type}) references unknown lane kind "${macroBlock.laneKind}"`);
       }
@@ -438,16 +392,19 @@ export class PatchStore {
         inputs: definition.inputs ?? [],
         outputs: definition.outputs ?? [],
         params: { ...definition.defaultParams, ...(macroBlock.params ?? {}) },
-        category: definition.category,
+        category: definition.subcategory ?? 'Other', // Set category based on definition or default
         description: definition.description,
       };
 
       this.blocks.push(block);
       lane.blockIds = [...lane.blockIds, id];
       refToId.set(macroBlock.ref, id);
+
+      // Process auto-bus connections for this newly added block
+      this.processAutoBusConnections(id, macroBlock.type);
     }
 
-    // Create all connections (suppress GraphCommitted - we emit one at the end)
+    // Create all connections
     for (const conn of expansion.connections) {
       const fromId = refToId.get(conn.fromRef);
       const toId = refToId.get(conn.toRef);
@@ -457,16 +414,12 @@ export class PatchStore {
       if (!toId) {
         throw new Error(`Macro connection references unknown target block ref "${conn.toRef}"`);
       }
-      this.connect(fromId, conn.fromSlot, toId, conn.toSlot, { suppressGraphCommitted: true });
-    }
-
-    // Process auto-bus connections for all blocks (handles both primitives and composites)
-    for (const macroBlock of expansion.blocks) {
-      const blockId = refToId.get(macroBlock.ref);
-      if (!blockId) {
-        throw new Error(`Macro auto-bus processing failed: ref "${macroBlock.ref}" not found`);
-      }
-      this.processAutoBusConnections(blockId, macroBlock.type);
+      const connection: Connection = {
+        id: this.generateConnectionId(),
+        from: { blockId: fromId, slotId: conn.fromSlot },
+        to: { blockId: toId, slotId: conn.toSlot },
+      };
+      this.connections.push(connection);
     }
 
     // Create bus publishers if defined
@@ -542,11 +495,11 @@ export class PatchStore {
   }
 
   /**
-   * Map lane kind to block category.
+   * Map lane kind to block subcategory.
    */
-  private inferCategory(kind: LaneKind): BlockCategory {
-    const mapping: Record<LaneKind, BlockCategory> = {
-      Scene: 'Scene',
+  private inferSubcategory(kind: LaneKind): BlockSubcategory {
+    const mapping: Record<LaneKind, BlockSubcategory> = {
+      Scene: 'Sources',
       Phase: 'Time',
       Fields: 'Fields',
       Scalars: 'Math',
@@ -555,24 +508,6 @@ export class PatchStore {
       Output: 'Render',
     };
     return mapping[kind];
-  }
-
-  /**
-   * Create lanes from a layout template.
-   */
-  private createLanesFromLayout(layout: LaneLayout): Lane[] {
-    return layout.lanes.map((template) => ({
-      id: template.id,
-      name: template.id, // Legacy compatibility
-      kind: template.kind,
-      label: template.label,
-      description: template.description,
-      flavor: template.flavor,
-      flowStyle: template.flowStyle,
-      blockIds: [],
-      collapsed: false,
-      pinned: false,
-    }));
   }
 
   updateBlock(id: BlockId, updates: Partial<Block>): void {
@@ -609,7 +544,7 @@ export class PatchStore {
     }
 
     // Remove from lanes
-    for (const lane of this.lanes) {
+    for (const lane of this.root.viewStore.lanes) {
       lane.blockIds = lane.blockIds.filter((bid) => bid !== id);
     }
 
@@ -666,7 +601,7 @@ export class PatchStore {
     }
 
     // Find the lane for this block
-    const lane = this.lanes.find((l) => l.blockIds.includes(oldBlockId));
+    const lane = this.root.viewStore.lanes.find((l) => l.blockIds.includes(oldBlockId));
     if (!lane) {
       return {
         success: false,
@@ -691,7 +626,7 @@ export class PatchStore {
       inputs: newDef.inputs,
       outputs: newDef.outputs,
       params: newParams,
-      category: newDef.category,
+      category: newDef.subcategory ?? 'Other',
       description: newDef.description,
     };
 
@@ -927,124 +862,5 @@ export class PatchStore {
    */
   removeConnection(id: string): void {
     this.disconnect(id);
-  }
-
-  // =============================================================================
-  // Actions - Lane Management
-  // =============================================================================
-
-  toggleLaneCollapsed(laneId: LaneId): void {
-    const lane = this.lanes.find((l) => l.id === laneId);
-    if (!lane) return;
-    lane.collapsed = !lane.collapsed;
-  }
-
-  toggleLanePinned(laneId: LaneId): void {
-    const lane = this.lanes.find((l) => l.id === laneId);
-    if (!lane) return;
-    lane.pinned = !lane.pinned;
-  }
-
-  renameLane(laneId: LaneId, newName: string): void {
-    const lane = this.lanes.find((l) => l.id === laneId);
-    if (!lane) return;
-    lane.label = newName;
-  }
-
-  addLane(lane: Lane): void {
-    this.lanes.push(lane);
-  }
-
-  removeLane(laneId: LaneId): void {
-    const lane = this.lanes.find((l) => l.id === laneId);
-    if (!lane || lane.pinned) return; // Don't remove pinned lanes
-
-    // Move blocks to first available lane
-    const firstLane = this.lanes.find((l) => l.id !== laneId);
-    if (firstLane) {
-      firstLane.blockIds.push(...lane.blockIds);
-    }
-
-    this.lanes = this.lanes.filter((l) => l.id !== laneId);
-  }
-
-  moveBlockToLane(blockId: BlockId, targetLaneId: LaneId): void {
-    // Remove from all lanes
-    for (const lane of this.lanes) {
-      lane.blockIds = lane.blockIds.filter((id) => id !== blockId);
-    }
-
-    // Add to target lane
-    const targetLane = this.lanes.find((l) => l.id === targetLaneId);
-    if (targetLane) {
-      targetLane.blockIds.push(blockId);
-    }
-  }
-
-  moveBlockToLaneAtIndex(blockId: BlockId, targetLaneId: LaneId, index: number): void {
-    // Remove from all lanes
-    for (const lane of this.lanes) {
-      lane.blockIds = lane.blockIds.filter((id) => id !== blockId);
-    }
-
-    // Add to target lane at specific index
-    const targetLane = this.lanes.find((l) => l.id === targetLaneId);
-    if (targetLane) {
-      const newBlockIds = [...targetLane.blockIds];
-      newBlockIds.splice(index, 0, blockId);
-      targetLane.blockIds = newBlockIds;
-    }
-  }
-
-  reorderBlockInLane(laneId: LaneId, blockId: BlockId, newIndex: number): void {
-    const lane = this.lanes.find((l) => l.id === laneId);
-    if (!lane) return;
-
-    const oldIndex = lane.blockIds.indexOf(blockId);
-    if (oldIndex === -1) return;
-
-    // Remove from old position
-    lane.blockIds.splice(oldIndex, 1);
-
-    // Insert at new position
-    lane.blockIds.splice(newIndex, 0, blockId);
-  }
-
-  // =============================================================================
-  // Actions - Layout Management
-  // =============================================================================
-
-  /**
-   * Switch to a different lane layout.
-   */
-  switchLayout(layoutId: string): void {
-    const newLayout = getLayoutById(layoutId);
-    if (!newLayout || layoutId === this.currentLayoutId) return;
-
-    const oldLayout = this.currentLayout;
-
-    // Collect all blocks with their current lane assignments
-    const blockAssignments: Array<{ blockId: BlockId; oldLaneId: string }> = [];
-    for (const lane of this.lanes) {
-      for (const blockId of lane.blockIds) {
-        blockAssignments.push({ blockId, oldLaneId: lane.id });
-      }
-    }
-
-    // Create new lanes from the new layout
-    this.lanes = this.createLanesFromLayout(newLayout);
-    this.currentLayoutId = layoutId;
-
-    // Migrate blocks to new lanes
-    for (const { blockId, oldLaneId } of blockAssignments) {
-      const newLaneId = mapLaneToLayout(oldLaneId, oldLayout, newLayout);
-      const newLane = this.lanes.find((l) => l.id === newLaneId);
-      if (newLane) {
-        newLane.blockIds.push(blockId);
-      } else {
-        // Fallback: put in first lane
-        this.lanes[0]?.blockIds.push(blockId);
-      }
-    }
   }
 }

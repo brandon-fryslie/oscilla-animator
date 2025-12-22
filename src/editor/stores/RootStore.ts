@@ -6,6 +6,7 @@ import { makeObservable, computed, action } from 'mobx';
 import { PatchStore } from './PatchStore';
 import { BusStore } from './BusStore';
 import { UIStateStore } from './UIStateStore';
+import { ViewStateStore } from './ViewStateStore';
 import { CompositeStore } from './CompositeStore';
 import { DiagnosticStore } from './DiagnosticStore';
 import { LogStore } from '../logStore';
@@ -13,7 +14,6 @@ import { EventDispatcher } from '../events';
 import { DiagnosticHub } from '../diagnostics/DiagnosticHub';
 import { ActionExecutor } from '../diagnostics/ActionExecutor';
 import type { Block, Bus, Lane, Patch, Slot } from '../types';
-import breathingDotsPatch from '../demo-patches/breathing-dots.json';
 
 export class RootStore {
   // Event dispatcher (created first so stores can set up listeners)
@@ -23,6 +23,7 @@ export class RootStore {
   patchStore: PatchStore;
   busStore: BusStore;
   uiStore: UIStateStore;
+  viewStore: ViewStateStore;
   compositeStore: CompositeStore;
   logStore: LogStore;
 
@@ -34,7 +35,7 @@ export class RootStore {
   private nextId = 1;
 
   constructor() {
-    // Create event dispatcher first so stores can subscribe in their constructors
+    // Create event dispatcher first so stores can set up listeners)
     this.events = new EventDispatcher();
 
     // Create log store before other stores (they may want to log during init)
@@ -44,19 +45,26 @@ export class RootStore {
     this.patchStore = new PatchStore(this);
     this.busStore = new BusStore(this);
     this.uiStore = new UIStateStore(this);
+    this.viewStore = new ViewStateStore(this);
     this.compositeStore = new CompositeStore(this);
 
     // Create diagnostic infrastructure (after patchStore)
     this.diagnosticHub = new DiagnosticHub(this.events, this.patchStore);
     this.diagnosticStore = new DiagnosticStore(this.diagnosticHub);
 
-    // Create action executor (after stores and diagnostic hub)
-    this.actionExecutor = new ActionExecutor(
-      this.patchStore,
+        // Create action executor (after stores and diagnostic hub)
 
-      this.uiStore,
-      this.diagnosticHub
-    );
+        this.actionExecutor = new ActionExecutor(
+
+          this.patchStore,
+
+          this.uiStore,
+
+          this.viewStore,
+
+          this.diagnosticHub
+
+        );
 
     makeObservable(this, {
       selectedBlock: computed,
@@ -138,7 +146,7 @@ export class RootStore {
   get activeLane(): Lane | null {
     const { activeLaneId } = this.uiStore.uiState;
     if (!activeLaneId) return null;
-    return this.patchStore.lanes.find((l) => l.id === activeLaneId) ?? null;
+    return this.viewStore.lanes.find((l) => l.id === activeLaneId) ?? null;
   }
 
   get selectedPortInfo(): { block: Block; slot: Slot; direction: 'input' | 'output' } | null {
@@ -167,13 +175,16 @@ export class RootStore {
       features: hasBuses ? { buses: true } : undefined,
       blocks: this.patchStore.blocks.map((b) => ({ ...b })),
       connections: this.patchStore.connections.map((c) => ({ ...c })),
-      lanes: this.patchStore.lanes.map((l) => ({ ...l })),
+      lanes: this.viewStore.lanes.map((l) => ({ ...l })),
       ...(hasBuses && {
         buses: this.busStore.buses.map((b) => ({ ...b })),
         publishers: this.busStore.publishers.map((p) => ({ ...p })),
         listeners: this.busStore.listeners.map((l) => ({ ...l })),
       }),
-      settings: { ...this.uiStore.settings },
+      settings: { 
+        ...this.uiStore.settings,
+        currentLayoutId: this.viewStore.currentLayoutId,
+      },
     };
   }
 
@@ -185,10 +196,19 @@ export class RootStore {
 
     this.patchStore.blocks = migratedBlocks;
     this.patchStore.connections = patch.connections;
-    this.patchStore.lanes = patch.lanes;
+    
+    // View state
+    if (patch.lanes) {
+      this.viewStore.lanes = patch.lanes;
+    }
+    if (patch.settings?.currentLayoutId) {
+      this.viewStore.currentLayoutId = patch.settings.currentLayoutId;
+    }
+
     this.uiStore.settings = {
       seed: patch.settings?.seed || 0,
       speed: patch.settings?.speed || 1,
+      currentLayoutId: patch.settings?.currentLayoutId || 'default',
       finiteLoopMode: patch.settings?.finiteLoopMode ?? true,
       advancedLaneMode: patch.settings?.advancedLaneMode || false,
       autoConnect: patch.settings?.autoConnect || false,
@@ -252,28 +272,19 @@ export class RootStore {
     this.uiStore.uiState.selectedBlockId = null;
     this.uiStore.previewedDefinition = null;
 
-    for (const lane of this.patchStore.lanes) {
+    for (const lane of this.viewStore.lanes) {
       lane.blockIds = [];
     }
 
     // Create default buses for new empty patch
     this.busStore.createDefaultBuses();
 
-    // Auto-insert default CycleTimeRoot (Time Authority requirement)
-    // With requireTimeRoot flag enabled, every patch MUST have a TimeRoot.
-    // We insert CycleTimeRoot with 8s period (matches Golden Patch spec).
-    const timeLane = this.patchStore.lanes.find(l => l.kind === 'Phase');
-    if (timeLane) {
-      this.patchStore.addBlock('CycleTimeRoot', timeLane.id, {
-        periodMs: 8000,
-      });
-    }
-
     // Emit PatchCleared event AFTER state changes committed
     this.events.emit({ type: 'PatchCleared' });
   }
 
   loadDemoAnimation(): void {
-    this.loadPatch(breathingDotsPatch as Patch);
+    // Demo animation temporarily disabled during refactor
+    console.warn('Demo animation disabled');
   }
 }

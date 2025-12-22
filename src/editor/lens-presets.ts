@@ -345,6 +345,6 @@ export function createLensFromPreset(presetId: string): LensDefinition | null {
   // Return a copy to prevent accidental mutation
   return {
     type: preset.lens.type,
-    params: { ...preset.lens.params },
+    params: { ...(preset.lens.params || {}) },
   };
 }

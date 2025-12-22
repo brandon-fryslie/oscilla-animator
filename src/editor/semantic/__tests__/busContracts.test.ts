@@ -11,8 +11,6 @@ import {
   validateReservedBus,
   validateCombineModeCompatibility,
   isReservedBusName,
-  isControlPlaneBus,
-  isDataPlaneBus,
 } from '../busContracts';
 
 describe('Bus Contracts', () => {
@@ -27,7 +25,7 @@ describe('Bus Contracts', () => {
           busEligible: true,
         },
         combineMode: 'last',
-        description: 'Primary phase signal from CycleTimeRoot',
+        description: 'Primary phase signal',
       });
 
       expect(RESERVED_BUS_CONTRACTS.energy).toEqual({
@@ -116,25 +114,6 @@ describe('Bus Contracts', () => {
 
       const errors = validateReservedBus('customBus', customType, 'sum');
       expect(errors).toHaveLength(0);
-    });
-  });
-
-  describe('Control vs Data Plane Buses', () => {
-    it('should identify control-plane buses', () => {
-      expect(isControlPlaneBus('phaseA')).toBe(true);
-      expect(isControlPlaneBus('phaseB')).toBe(true);
-      expect(isControlPlaneBus('progress')).toBe(true);
-      expect(isControlPlaneBus('palette')).toBe(true);
-      expect(isControlPlaneBus('energy')).toBe(false);
-      expect(isControlPlaneBus('pulse')).toBe(false);
-      expect(isControlPlaneBus('custom')).toBe(false);
-    });
-
-    it('should identify data-plane buses', () => {
-      expect(isDataPlaneBus('energy')).toBe(true);
-      expect(isDataPlaneBus('pulse')).toBe(true);
-      expect(isDataPlaneBus('phaseA')).toBe(false);
-      expect(isDataPlaneBus('custom')).toBe(false);
     });
   });
 

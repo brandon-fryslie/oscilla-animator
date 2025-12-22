@@ -8,7 +8,7 @@ import type {
   Publisher,
   Listener,
   AdapterStep,
-  TypeDescriptor,
+  TypeDesc,
   BusCombineMode,
   BlockId,
   LensDefinition,
@@ -91,7 +91,7 @@ export class BusStore {
     ];
 
     defaults.forEach((def) => {
-      const typeDesc: TypeDescriptor = {
+      const typeDesc: TypeDesc = {
         world: def.world,
         domain: def.domain,
         category: 'core',
@@ -125,7 +125,7 @@ export class BusStore {
    * Create a new bus.
    */
   createBus(
-    typeDesc: TypeDescriptor,
+    typeDesc: TypeDesc,
     name: string,
     combineMode: BusCombineMode,
     defaultValue?: any
@@ -535,7 +535,7 @@ export class BusStore {
   /**
    * Find all buses matching a type descriptor.
    */
-  findBusesByTypeDesc(typeDesc: TypeDescriptor): Bus[] {
+  findBusesByTypeDesc(typeDesc: TypeDesc): Bus[] {
     return this.buses.filter(b =>
       b.type.world === typeDesc.world && b.type.domain === typeDesc.domain
     );

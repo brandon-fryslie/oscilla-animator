@@ -319,6 +319,22 @@ export function validateCombineMode(world: 'signal' | 'field', mode: string): bo
 }
 
 /**
+ * Get available combine modes for a given domain.
+ */
+export function getCombineModesForDomain(domain: string): string[] {
+  // Numeric domains support all combine modes
+  if (['number', 'duration', 'time', 'rate'].includes(domain)) {
+    return ['sum', 'average', 'max', 'min', 'last'];
+  }
+  // Point/vec2 domains support vector operations
+  if (['point', 'vec2'].includes(domain)) {
+    return ['sum', 'average', 'last'];
+  }
+  // Other domains only support 'last' and 'layer'
+  return ['last', 'layer'];
+}
+
+/**
  * Get supported combine modes for a world.
  */
 export function getSupportedCombineModes(world: 'signal' | 'field'): string[] {

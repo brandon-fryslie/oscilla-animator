@@ -313,7 +313,7 @@ import type { Domain } from './unified/Domain';
 // Re-export Domain for consumers
 export type { Domain };
 
-import type { DefaultSourceState } from '../types';
+import type { DefaultSource } from '../types';
 
 /**
  * Extended CompilerPatch with optional bus support.
@@ -330,7 +330,7 @@ export interface CompilerPatch {
   listeners?: Listener[];
   
   // Default sources for lens parameters (Phase 3)
-  defaultSources?: Record<string, DefaultSourceState>;
+  defaultSources?: Record<string, DefaultSource>;
 }
 
 // =============================================================================

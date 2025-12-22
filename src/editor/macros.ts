@@ -11,7 +11,7 @@
  * ALL MACROS USE ONLY PRIMITIVE BLOCKS - no composites.
  */
 
-import type { LaneKind, LensType } from './types';
+import type { LaneKind } from './types';
 
 /**
  * A block placement in a macro expansion.
@@ -97,6 +97,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 1. Simple Grid - Just GridDomain + RenderInstances2D
   'macro:simpleGrid': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 3000 } }, // Default 3s cycle
       { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid Domain',
         params: { rows: 10, cols: 10, spacing: 30, originX: 250, originY: 150 } },
       { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
@@ -110,6 +112,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 2. Animated Circle Ring - Circle layout with oscillating radius
   'macro:animatedCircleRing': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', laneKind: 'Phase', label: 'Size Wave',
         params: { shape: 'sine', amplitude: 0.5, bias: 0.5 } },
       { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
@@ -136,6 +140,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 3. Line Wave - Line of dots with phase-offset oscillation
   'macro:lineWave': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', laneKind: 'Phase', label: 'Wave',
         params: { shape: 'sine', amplitude: 20, bias: 0 } },
       { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
@@ -174,6 +180,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 4. Rainbow Grid - Grid with per-element color variation
   'macro:rainbowGrid': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'colorLfo', type: 'ColorLFO', laneKind: 'Phase', label: 'Rainbow',
         params: { base: '#FF0000', hueSpan: 360, sat: 0.9, light: 0.6 } },
       { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid',
@@ -195,6 +203,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 5. Pulsing Grid - Grid with pulse-driven radius
   'macro:pulsingGrid': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'divider', type: 'PulseDivider', laneKind: 'Phase', label: '4 Pulses',
         params: { divisions: 4 } },
       { ref: 'envelope', type: 'EnvelopeAD', laneKind: 'Phase', label: 'Pulse Env',
@@ -221,6 +231,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 6. Drifting Circle - Circle layout with jitter motion
   'macro:driftingCircle': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 8000 } }, // Default 8s cycle
       { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
         params: { n: 30, seed: 789 } },
       { ref: 'circle', type: 'PositionMapCircle', laneKind: 'Fields', label: 'Circle',
@@ -249,6 +261,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 7. Multi-Ring - Multiple concentric circles
   'macro:multiRing': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
         params: { n: 48, seed: 321 } },
       { ref: 'circleInner', type: 'PositionMapCircle', laneKind: 'Fields', label: 'Inner Ring',
@@ -274,6 +288,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 8. Breathing Line - Line with breathing animation
   'macro:breathingLine': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', laneKind: 'Phase', label: 'Breath',
         params: { shape: 'cosine', amplitude: 0.5, bias: 0.5 } },
       { ref: 'shaper', type: 'Shaper', laneKind: 'Phase', label: 'Smooth',
@@ -303,6 +319,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 9. Color Pulse - Grid with animated color from ColorLFO
   'macro:colorPulse': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'colorLfo', type: 'ColorLFO', laneKind: 'Phase', label: 'Color Cycle',
         params: { base: '#00FFFF', hueSpan: 180, sat: 0.85, light: 0.55 } },
       { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid',
@@ -329,6 +347,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 10. Rhythmic Dots - Grid with PulseDivider envelope
   'macro:rhythmicDots': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'divider', type: 'PulseDivider', laneKind: 'Phase', label: '8 Beats',
         params: { divisions: 8 } },
       { ref: 'envelope', type: 'EnvelopeAD', laneKind: 'Phase', label: 'Accent',
@@ -363,6 +383,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Uses bus routing: phaseA bus -> RenderInstances2D radius (with mapRange lens)
   'macro:breathingDots': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 8000 } }, // Default 8s cycle
       // Domain source - creates N elements with sequential IDs
       { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Domain',
         params: { n: 25, seed: 42 } },
@@ -397,6 +419,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 1: Breathing Wave - Oscillator + Shaper for smooth breathing
   'macro:breathingWave': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       // Oscillator generates wave from phase
       { ref: 'osc', type: 'Oscillator', laneKind: 'Phase', label: 'Breathing Osc',
         params: { shape: 'cosine', amplitude: 0.5, bias: 0.5 } },
@@ -432,7 +456,9 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 2: Rhythmic Pulse - PulseDivider + EnvelopeAD for accents
   'macro:rhythmicPulse': {
     blocks: [
-      { ref: 'divider', type: 'PulseDivider', laneKind: 'Phase', label: '4 Beats',
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
+      { ref: 'divider', type: 'PulseDivider', laneKind: 'Phase', label: '8 Beats',
         params: { divisions: 4 } },
       { ref: 'envelope', type: 'EnvelopeAD', laneKind: 'Phase', label: 'Accent Env',
         params: { attack: 0.02, decay: 0.3, peak: 1.0 } },
@@ -461,6 +487,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 3: Color Drift - ColorLFO for slow hue cycling
   'macro:colorDrift': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'colorLfo', type: 'ColorLFO', laneKind: 'Phase', label: 'Color Cycle',
         params: { base: '#3B82F6', hueSpan: 180, sat: 0.8, light: 0.5 } },
       { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Elements',
@@ -480,12 +508,15 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
     ],
     listeners: [
       { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
+      { busName: 'palette', toRef: 'render', toSlot: 'color' },
     ],
   },
 
   // Slice 4: Stable Grid - GridDomain + StableIdHash for determinism
   'macro:stableGrid': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid Domain',
         params: { rows: 10, cols: 10, spacing: 30, originX: 200, originY: 100 } },
       { ref: 'hash', type: 'StableIdHash', laneKind: 'Fields', label: 'ID Hash',
@@ -506,6 +537,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 5: Phase Spread - FieldZipSignal for per-element phase offsets
   'macro:phaseSpread': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', laneKind: 'Phase', label: 'Wave',
         params: { shape: 'sine', amplitude: 1, bias: 0 } },
       { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid',
@@ -544,6 +577,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 6: Drifting Dots - JitterFieldVec2 + FieldAddVec2 for position animation
   'macro:driftingDots': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 8000 } }, // Default 8s cycle
       { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid',
         params: { rows: 10, cols: 10, spacing: 35, originX: 200, originY: 100 } },
       { ref: 'hash', type: 'StableIdHash', laneKind: 'Fields', label: 'Jitter Seed',
@@ -573,6 +608,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 7: Styled Elements - FieldColorize + FieldOpacity for visual variety
   'macro:styledElements': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid',
         params: { rows: 8, cols: 8, spacing: 45, originX: 200, originY: 100 } },
       { ref: 'hash', type: 'StableIdHash', laneKind: 'Fields', label: 'Random Values',
@@ -600,6 +637,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 8: Responsive Grid - ViewportInfo for centered layouts
   'macro:responsiveGrid': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'viewport', type: 'ViewportInfo', laneKind: 'Scene', label: 'Viewport' },
       { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Centered Grid',
         params: { rows: 6, cols: 6, spacing: 50, originX: 400, originY: 300 } },
@@ -618,6 +657,8 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 9: Golden Patch - Complete Breathing Constellation
   'macro:goldenPatch': {
     blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 8000 } }, // Default 8s cycle
       // Breathing energy (Slice 1)
       { ref: 'breathOsc', type: 'Oscillator', laneKind: 'Phase', label: 'Breath Osc',
         params: { shape: 'cosine', amplitude: 0.5, bias: 0.5 } },
@@ -681,6 +722,81 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { busName: 'phaseA', toRef: 'divider', toSlot: 'phase' },
       { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
       { busName: 'phaseA', toRef: 'jitter', toSlot: 'phase' },
+    ],
+  },
+
+  // 11. Full Showcase - Demonstrates multiple animated properties
+  'macro:fullShowcase': {
+    blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 8000 } }, // Default 8s cycle for golden patch
+      // Domain
+      { ref: 'grid', type: 'GridDomain', laneKind: 'Fields', label: 'Grid',
+        params: { rows: 15, cols: 15, spacing: 30, originX: 120, originY: 50 } },
+      { ref: 'idHash', type: 'StableIdHash', laneKind: 'Fields', label: 'Per-Element ID',
+        params: { salt: 42 } },
+      
+      // Color Animation
+      { ref: 'colorOsc', type: 'Oscillator', laneKind: 'Phase', label: 'Color Wave',
+        params: { shape: 'sine', frequency: 0.1 } },
+      { ref: 'broadcastPhase', type: 'FieldFromSignalBroadcast', laneKind: 'Fields', label: 'Broadcast Color Phase'},
+      { ref: 'colorPhase', type: 'FieldZipNumber', laneKind: 'Fields', label: 'Add Color Offset', params: { op: 'add' } },
+      { ref: 'colorize', type: 'FieldColorize', laneKind: 'Fields', label: 'Gradient',
+        params: { colorA: '#ff00ff', colorB: '#00ffff' } },
+      
+      // Position Animation (Swirl)
+      { ref: 'swirlJitter', type: 'JitterFieldVec2', laneKind: 'Fields', label: 'Swirl Motion',
+        params: { amount: 25, frequency: 0.25 } },
+      { ref: 'posAdd', type: 'FieldAddVec2', laneKind: 'Fields', label: 'Add Swirl' },
+
+      // Size Animation
+      { ref: 'sizeOsc', type: 'Oscillator', laneKind: 'Phase', label: 'Size Wave',
+        params: { shape: 'cosine', amplitude: 0.5, bias: 0.5, frequency: 0.3 } },
+
+      // Opacity Animation
+      { ref: 'opacityOsc', type: 'Oscillator', laneKind: 'Phase', label: 'Opacity Wave',
+        params: { shape: 'triangle', frequency: 0.5, amplitude: 0.4, bias: 0.5 } },
+
+      // Renderer
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Showcase Render' },
+    ],
+    connections: [
+      // Domain plumbing
+      { fromRef: 'grid', fromSlot: 'domain', toRef: 'idHash', toSlot: 'domain' },
+      { fromRef: 'grid', fromSlot: 'domain', toRef: 'broadcastPhase', toSlot: 'domain' },
+      // { fromRef: 'grid', fromSlot: 'domain', toRef: 'swirlJitter', toSlot: 'domain' }, // Removed invalid connection
+      { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+
+      // Color chain
+      { fromRef: 'colorOsc', fromSlot: 'out', toRef: 'broadcastPhase', toSlot: 'signal' },
+      { fromRef: 'broadcastPhase', fromSlot: 'field', toRef: 'colorPhase', toSlot: 'a' },
+      { fromRef: 'idHash', fromSlot: 'u01', toRef: 'colorPhase', toSlot: 'b' },
+      { fromRef: 'colorPhase', fromSlot: 'out', toRef: 'colorize', toSlot: 'values' },
+      { fromRef: 'colorize', fromSlot: 'colors', toRef: 'render', toSlot: 'color' },
+
+      // Position chain
+      { fromRef: 'grid', fromSlot: 'pos0', toRef: 'posAdd', toSlot: 'a' },
+      { fromRef: 'idHash', fromSlot: 'u01', toRef: 'swirlJitter', toSlot: 'idRand' }, // THIS IS THE ORIGINAL WRITER
+      { fromRef: 'swirlJitter', fromSlot: 'drift', toRef: 'posAdd', toSlot: 'b' },
+      { fromRef: 'posAdd', fromSlot: 'out', toRef: 'render', toSlot: 'positions' },
+
+      // Opacity (direct wire)
+      { fromRef: 'opacityOsc', fromSlot: 'out', toRef: 'render', toSlot: 'opacity' },
+    ],
+    publishers: [
+      // Use energy bus for size
+      { fromRef: 'sizeOsc', fromSlot: 'out', busName: 'energy' },
+    ],
+    listeners: [
+      // PhaseA drives all oscillators
+      { busName: 'phaseA', toRef: 'colorOsc', toSlot: 'phase' },
+      { busName: 'phaseA', toRef: 'swirlJitter', toSlot: 'phase' },
+      { busName: 'phaseA', toRef: 'sizeOsc', toSlot: 'phase' },
+      { busName: 'phaseA', toRef: 'opacityOsc', toSlot: 'phase' },
+
+      // Connect render radius to energy bus
+      { busName: 'energy', toRef: 'render', toSlot: 'radius', 
+        lens: { type: 'scale', params: { scale: 10, offset: 2 } } },
     ],
   },
 };

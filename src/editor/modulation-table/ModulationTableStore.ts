@@ -148,7 +148,7 @@ export class ModulationTableStore {
         if (!typeDesc.busEligible) continue;
 
         const rowKey = createRowKey(block.id, input.id);
-        const groupKey = createGroupKey(blockDef.category, block.id);
+        const groupKey = createGroupKey(blockDef.subcategory, block.id);
 
         rows.push({
           key: rowKey,
@@ -183,7 +183,7 @@ export class ModulationTableStore {
 
         group = {
           key: row.groupKey,
-          label: `${blockDef.category}: ${block.label}`,
+          label: `${blockDef.subcategory}: ${block.label}`,
           blockId: row.blockId,
           blockDef,
           rowKeys: [],
@@ -198,8 +198,8 @@ export class ModulationTableStore {
 
     // Sort groups: Render first, then others
     return [...groupMap.values()].sort((a, b) => {
-      const aRender = a.blockDef.category === 'Render' ? 0 : 1;
-      const bRender = b.blockDef.category === 'Render' ? 0 : 1;
+      const aRender = a.blockDef.subcategory === 'Render' ? 0 : 1;
+      const bRender = b.blockDef.subcategory === 'Render' ? 0 : 1;
       if (aRender !== bRender) return aRender - bRender;
       return a.label.localeCompare(b.label);
     });
@@ -520,7 +520,7 @@ export class ModulationTableStore {
   private shouldBlockShowRows(blockDef: BlockDefinition): boolean {
     // Show rows for render/domain/camera blocks
     const showCategories = ['Render', 'Scene', 'Derivers'];
-    if (showCategories.includes(blockDef.category)) {
+    if (showCategories.includes(blockDef.subcategory)) {
       return true;
     }
 

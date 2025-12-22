@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import type { LensDefinition, LensType } from '../types';
+import type { LensDefinition } from '../types';
 import { LENS_PRESETS, createLensFromPreset } from '../lens-presets';
 import { getEasingNames } from '../lenses';
 import './LensSelector.css';
@@ -22,7 +22,7 @@ interface LensSelectorProps {
 
 type Mode = 'preset' | 'custom';
 
-const LENS_TYPES: { value: LensType; label: string; description: string }[] = [
+const LENS_TYPES: { value: string; label: string; description: string }[] = [
   { value: 'ease', label: 'Ease', description: 'Apply easing curve' },
   { value: 'slew', label: 'Slew', description: 'Smooth rate limiting' },
   { value: 'quantize', label: 'Quantize', description: 'Snap to steps' },
@@ -56,9 +56,9 @@ export function LensSelector({ value, onChange, compact = false }: LensSelectorP
     }
   };
 
-  const handleTypeChange = (type: LensType) => {
+  const handleTypeChange = (type: string) => {
     // Create default params for each type
-    const defaultParams: Record<LensType, Record<string, unknown>> = {
+    const defaultParams: Record<string, Record<string, unknown>> = {
       ease: { easing: 'easeInOutSine' },
       slew: { rate: 2.0 },
       quantize: { steps: 4 },
@@ -72,7 +72,7 @@ export function LensSelector({ value, onChange, compact = false }: LensSelectorP
       mapRange: { inMin: 0, inMax: 1, outMin: 0, outMax: 1 },
     };
 
-    onChange({ type, params: defaultParams[type] });
+    onChange({ type, params: defaultParams[type] || {} });
   };
 
   const handleParamChange = (key: string, paramValue: unknown) => {
@@ -179,7 +179,7 @@ export function LensSelector({ value, onChange, compact = false }: LensSelectorP
             <select
               className="lens-type-select"
               value={value?.type ?? ''}
-              onChange={(e) => handleTypeChange(e.target.value as LensType)}
+              onChange={(e) => handleTypeChange(e.target.value)}
             >
               <option value="">Select type...</option>
               {LENS_TYPES.map((t) => (

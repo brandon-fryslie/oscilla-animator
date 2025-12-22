@@ -20,8 +20,6 @@ import { input, output } from './utils';
 export const FieldAddVec2 = createBlock({
   type: 'FieldAddVec2',
   label: 'Add Vectors',
-  subcategory: 'Math',
-  category: 'Fields',
   description: 'Add two vec2 fields element-wise',
   inputs: [
     input('a', 'A', 'Field<vec2>'),
@@ -53,8 +51,6 @@ export const FieldAddVec2 = createBlock({
 export const FieldColorize = createBlock({
   type: 'FieldColorize',
   label: 'Colorize Field',
-  subcategory: 'Style',
-  category: 'Fields',
   description: 'Map numeric field to colors',
   inputs: [
     input('values', 'Values', 'Field<number>'),
@@ -135,8 +131,6 @@ export const FieldColorize = createBlock({
 export const FieldOpacity = createBlock({
   type: 'FieldOpacity',
   label: 'Field Opacity',
-  subcategory: 'Style',
-  category: 'Fields',
   description: 'Convert numeric field to opacity',
   inputs: [
     input('values', 'Values', 'Field<number>'),
@@ -227,8 +221,6 @@ export const FieldOpacity = createBlock({
 export const ViewportInfo = createBlock({
   type: 'ViewportInfo',
   label: 'Viewport Info',
-  subcategory: 'Sources',
-  category: 'Scene',
   description: 'Viewport dimensions and center point',
   inputs: [],
   outputs: [

@@ -1,5 +1,6 @@
-import { TypeDesc, AdapterStep, isDirectlyCompatible } from '../types';
-import { getAllAdapters } from './AdapterRegistry';
+import { isDirectlyCompatible } from '../types';
+import type { TypeDesc, AdapterStep } from '../types';
+import { adapterRegistry } from './AdapterRegistry';
 
 export interface AutoAdapterResult {
   ok: boolean;
@@ -17,7 +18,7 @@ export function findAdapterPath(
     return { ok: true, chain: [] };
   }
 
-  const allAdapters = getAllAdapters();
+  const allAdapters = adapterRegistry.list();
 
   // Try direct adapters first
   const directAdapters = allAdapters.filter(adapter =>
@@ -33,8 +34,6 @@ export function findAdapterPath(
       ok: true,
       chain: [{
         adapterId: bestAdapter.id,
-        from: from,
-        to: to,
         params: {}
       }]
     };

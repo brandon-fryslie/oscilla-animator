@@ -1,4 +1,4 @@
-import { AdapterCost, AdapterPolicy, TypeDesc } from '../types';
+import type { AdapterCost, AdapterPolicy, TypeDesc } from '../types';
 
 export interface AdapterDef {
   id: string;

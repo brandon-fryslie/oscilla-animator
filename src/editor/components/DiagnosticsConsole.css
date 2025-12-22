@@ -276,6 +276,14 @@
   text-overflow: ellipsis;
 }
 
+.diagnostic-message {
+  font-size: 11px;
+  color: #ccc; /* Lighter than target */
+  white-space: normal; /* Allow wrapping */
+  font-family: 'Monaco', 'Consolas', monospace;
+  margin-top: 2px;
+}
+
 .diagnostic-target {
   font-size: 10px;
   color: #888;

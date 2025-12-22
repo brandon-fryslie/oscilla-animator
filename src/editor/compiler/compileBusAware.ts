@@ -29,7 +29,6 @@ import type {
   TimeModel,
 } from './types';
 import type { Bus, Publisher, Listener } from '../types';
-import { applyLens } from '../lenses';
 import { validateTimeRootConstraint } from './compile';
 import { extractTimeRootAutoPublications } from './blocks/domain/TimeRoot';
 // CRITICAL: Use busSemantics for ordering - single source of truth for UI and compiler
@@ -38,6 +37,7 @@ import {
   validateReservedBus,
   isReservedBusName,
 } from '../semantic/busContracts';
+import { getBlockDefinition } from '../blocks/registry';
 
 // =============================================================================
 // Type Guards
@@ -204,8 +204,8 @@ function topoSortBlocksWithBuses(
  */
 function validateReservedBuses(
   buses: Bus[],
-  publishers: Publisher[],
-  blocks: Map<string, any>
+  _publishers: Publisher[],
+  _blocks: Map<string, any>
 ): CompileError[] {
   const errors: CompileError[] = [];
 
@@ -490,35 +490,30 @@ export function compileBusAwarePatch(
 
         if (busListener) {
           // Input comes from a bus - get the bus value
-          let busArtifact = getBusValue(busListener.busId, buses, publishers, compiledPortMap, errors);
-
-
-          // Apply lens stack transformations if configured
-          // Support both legacy single lens and new lens stack
-          const lensStack = busListener.lensStack || (busListener.lens ? [busListener.lens] : undefined);
-          if (lensStack && lensStack.length > 0 && busArtifact.kind !== 'Error') {
-            for (const lens of lensStack) {
-              if (busArtifact.kind !== 'Error') {
-                busArtifact = applyLens(busArtifact, lens);
-              }
-            }
-          }
-
+          const busArtifact = getBusValue(busListener.busId, buses, publishers, compiledPortMap, errors);
+          // Lens stack application would go here (Phase 2)
           inputs[p.name] = busArtifact;
-        } else if (p.required) {
-          // No connection at all for required input
-          inputs[p.name] = {
-            kind: 'Error',
-            message: `Missing required input ${blockId}.${p.name}`,
-            where: { blockId, port: p.name },
-          };
         } else {
-          // Optional input with no connection
-          inputs[p.name] = {
-            kind: 'Error',
-            message: `Unwired optional input ${blockId}.${p.name}`,
-            where: { blockId, port: p.name },
-          };
+          // Check for Default Source (fallback)
+          const defaultArtifact = resolveDefaultSource(block.type, p.name, p.type.kind);
+          
+          if (defaultArtifact) {
+            inputs[p.name] = defaultArtifact;
+          } else if (p.required) {
+            // No connection at all for required input
+            inputs[p.name] = {
+              kind: 'Error',
+              message: `Missing required input ${blockId}.${p.name}`,
+              where: { blockId, port: p.name },
+            };
+          } else {
+            // Optional input with no connection
+            inputs[p.name] = {
+              kind: 'Error',
+              message: `Unwired optional input ${blockId}.${p.name}`,
+              where: { blockId, port: p.name },
+            };
+          }
         }
       }
     }
@@ -780,4 +775,58 @@ function inferOutputPort(
 
   if (produced.length === 1) return produced[0]!;
   return null;
+}
+
+// =============================================================================
+// Default Source Resolution
+// =============================================================================
+
+function resolveDefaultSource(
+  blockType: string,
+  portName: string,
+  kind: string // ValueKind
+): Artifact | null {
+  const def = getBlockDefinition(blockType);
+  if (!def) return null;
+
+  const slot = def.inputs?.find(s => s.id === portName);
+  if (slot?.defaultSource) {
+    return createDefaultArtifact(slot.defaultSource.value, kind);
+  }
+  return null;
+}
+
+function createDefaultArtifact(value: unknown, kind: string): Artifact {
+  switch (kind) {
+    case 'Signal:number':
+    case 'Signal:Unit':
+    case 'Signal:phase':
+      return { kind: kind as any, value: () => Number(value) };
+    case 'Signal:Time':
+      return { kind: kind as any, value: () => Number(value) };
+    case 'Scalar:number':
+      return { kind: kind as any, value: Number(value) };
+    case 'Scalar:boolean':
+      return { kind: kind as any, value: Boolean(value) };
+    case 'Scalar:string':
+      return { kind: kind as any, value: String(value) };
+    case 'Signal:boolean':
+      return { kind: kind as any, value: () => Boolean(value) };
+    case 'Signal:vec2':
+      return { kind: kind as any, value: () => (value as any) };
+    case 'Signal:color':
+      return { kind: kind as any, value: () => String(value) };
+    case 'Signal:string':
+      return { kind: kind as any, value: () => String(value) };
+    case 'Field:number':
+      // Broadcast scalar to field
+      const num = Number(value);
+      return { kind: kind as any, value: (_s: any, n: number) => new Array(n).fill(num) };
+    default:
+      // Try best effort for scalars
+      if (kind.startsWith('Scalar:')) {
+         return { kind: kind as any, value: value as any };
+      }
+      return { kind: 'Error', message: `Default source not supported for ${kind}` };
+  }
 }

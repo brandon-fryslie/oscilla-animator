@@ -49,15 +49,14 @@ export {
 } from './renderTree';
 
 // Player
-export type {
-  ProgramFactory,
-  Scene,
-  PlayState,
-  LoopMode,
-  PlayerOptions,
+export {
+  Player,
+  createPlayer,
+  type PlayState,
+  type PlayerOptions,
+  type ProgramFactory,
+  type Scene,
 } from './player';
-
-export { Player, createPlayer } from './player';
 
 // Re-export timeline and time model types from compiler for convenience
 export type { TimelineHint, CuePoint, TimeModel, FiniteTimeModel, CyclicTimeModel, InfiniteTimeModel } from '../compiler/types';

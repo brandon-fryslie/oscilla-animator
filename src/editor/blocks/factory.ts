@@ -23,7 +23,7 @@ export function createBlock(
   return {
     // Provide sensible defaults for required fields
     // Note: form is derived from structure via getBlockForm(), not stored
-    category: 'Misc',
+    subcategory: 'Other',
     description: '',
     inputs: [],
     outputs: [],

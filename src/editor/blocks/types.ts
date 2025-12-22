@@ -6,7 +6,6 @@ export type {
   SlotType,
   LaneKind,
   LaneFlavor,
-  BlockCategory,
   BlockSubcategory,
   BlockForm,
   // New types for "Remove Parameters" refactor (Phase 1)
@@ -51,12 +50,6 @@ export interface BlockDefinition {
    * Optional - defaults to category mapping for legacy blocks.
    */
   readonly subcategory?: BlockSubcategory;
-
-  /**
-   * Category for library organization.
-   * @deprecated Use form + subcategory instead
-   */
-  readonly category: BlockCategory;
 
   /** Description shown in inspector */
   readonly description: string;

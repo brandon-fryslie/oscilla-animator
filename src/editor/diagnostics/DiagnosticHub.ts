@@ -320,6 +320,7 @@ export class DiagnosticHub {
       return result.errors;
     } catch (error) {
       // If validation fails catastrophically, return a single error diagnostic
+      console.error('[DiagnosticHub] Validation failed catastrophically:', error);
       return [
         createDiagnostic({
           code: 'E_VALIDATION_FAILED',

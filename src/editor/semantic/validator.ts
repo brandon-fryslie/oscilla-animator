@@ -24,7 +24,6 @@ import type { SlotType } from '../types';
 import {
   RESERVED_BUS_CONTRACTS,
   validateReservedBus,
-  isControlPlaneBus,
   validateCombineModeCompatibility,
 } from './busContracts';
 
@@ -86,10 +85,6 @@ export class Validator {
     // Rule 8: Combine mode compatibility validation (NEW P1)
     const combineModeErrors = this.validateCombineModeCompatibility(patch);
     errors.push(...combineModeErrors);
-
-    // Rule 9: Multiple publisher validation for control buses (NEW P3)
-    const multiPublisherWarnings = this.validateMultiplePublishers(patch);
-    warnings.push(...multiPublisherWarnings);
 
     // Warning: Empty buses
     const emptyBusWarnings = this.warnEmptyBuses(patch);
@@ -594,56 +589,6 @@ export class Validator {
     }
 
     return errors;
-  }
-
-  /**
-   * Rule: Control-plane buses should have single publishers.
-   * NEW P3: Warns about multiple publishers on control buses.
-   */
-  private validateMultiplePublishers(patch: PatchDocument): Diagnostic[] {
-    const warnings: Diagnostic[] = [];
-
-    if (!patch.buses || !patch.publishers) {
-      return warnings;
-    }
-
-    for (const bus of patch.buses) {
-      // Only check control-plane buses
-      if (!isControlPlaneBus(bus.name)) {
-        continue;
-      }
-
-      const publisherCount = patch.publishers.filter(
-        (p) => p.busId === bus.id
-      ).length;
-
-      if (publisherCount > 1) {
-        warnings.push(
-          createDiagnostic({
-            code: 'W_BUS_MULTIPLE_PUBLISHERS_CONTROL',
-            severity: 'warn',
-            domain: 'compile',
-            primaryTarget: {
-              kind: 'bus',
-              busId: bus.id,
-            },
-            title: 'Multiple publishers on control bus',
-            message: `Control-plane bus "${bus.name}" has ${publisherCount} publishers. This may cause ambiguous behavior. Consider using a data-plane bus or explicit priority ordering.`,
-            patchRevision: this.patchRevision,
-            payload: {
-              kind: 'generic',
-              data: {
-                busName: bus.name,
-                publisherCount,
-                busType: 'control-plane',
-              },
-            },
-          })
-        );
-      }
-    }
-
-    return warnings;
   }
 
   /**

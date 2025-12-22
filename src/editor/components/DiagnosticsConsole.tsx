@@ -186,6 +186,7 @@ const DiagnosticRow = memo(function DiagnosticRow({
       <div className="diagnostic-content">
         <span className="diagnostic-code">{diagnostic.code}</span>
         <span className="diagnostic-title">{diagnostic.title}</span>
+        <span className="diagnostic-message">{diagnostic.message}</span>
         <span className="diagnostic-target">{formatTarget(diagnostic.primaryTarget)}</span>
       </div>
       {diagnostic.metadata.occurrenceCount > 1 && (

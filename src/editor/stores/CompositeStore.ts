@@ -3,7 +3,7 @@
  * @description Manages saved block groups (composites).
  */
 import { makeObservable, observable, action } from 'mobx';
-import type { Block, BlockId, Composite, Connection, LaneId } from '../types';
+import type { BlockId, Composite, LaneId } from '../types';
 import type { RootStore } from './RootStore';
 
 /**
@@ -113,7 +113,7 @@ export class CompositeStore {
       throw new Error(`Composite "${compositeId}" not found`);
     }
 
-    const lane = this.root.patchStore.lanes.find((l) => l.id === laneId);
+    const lane = this.root.viewStore.lanes.find((l) => l.id === laneId);
     if (!lane) {
       throw new Error(`Lane "${laneId}" not found for composite instantiation`);
     }
@@ -121,16 +121,12 @@ export class CompositeStore {
     // Create new blocks with updated IDs
     const idMap = new Map<BlockId, BlockId>();
     for (const block of composite.blocks) {
-      const newId = this.root.patchStore.generateBlockId();
+      // Use addBlock to ensure proper initialization and event emission
+      const newId = this.root.patchStore.addBlock(block.type, block.params);
       idMap.set(block.id, newId);
 
-      const newBlock: Block = {
-        ...block,
-        id: newId,
-      };
-
-      this.root.patchStore.blocks.push(newBlock);
-      lane.blockIds.push(newId);
+      // Move to the target lane
+      this.root.viewStore.moveBlockToLane(newId, laneId);
     }
 
     // Create new connections with updated IDs
@@ -144,13 +140,7 @@ export class CompositeStore {
         throw new Error(`Composite connection references unknown target block "${conn.from.blockId}"`);
       }
 
-      const newConn: Connection = {
-        id: this.root.patchStore.generateConnectionId(),
-        from: { blockId: fromId, slotId: conn.from.slotId },
-        to: { blockId: toId, slotId: conn.to.slotId },
-      };
-
-      this.root.patchStore.connections.push(newConn);
+      this.root.patchStore.connect(fromId, conn.from.slotId, toId, conn.to.slotId);
     }
   }
 }

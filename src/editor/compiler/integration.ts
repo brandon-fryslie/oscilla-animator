@@ -45,6 +45,11 @@ function compileErrorToDiagnostic(
     CycleDetected: { code: 'E_CYCLE_DETECTED', severity: 'error' },
     MissingInput: { code: 'E_MISSING_INPUT', severity: 'error' },
     InvalidConnection: { code: 'E_INVALID_CONNECTION', severity: 'error' },
+    // Bus & Adapter errors
+    BusEvaluationError: { code: 'E_VALIDATION_FAILED', severity: 'error' },
+    AdapterError: { code: 'E_TYPE_MISMATCH', severity: 'error' },
+    BusTypeError: { code: 'E_RESERVED_BUS_TYPE_MISMATCH', severity: 'error' },
+    UnsupportedCombineMode: { code: 'E_BUS_COMBINE_MODE_INCOMPATIBLE', severity: 'error' },
   };
 
   const mapping = codeMappings[error.code];
@@ -55,7 +60,11 @@ function compileErrorToDiagnostic(
   let primaryTarget: TargetRef;
   let affectedTargets: TargetRef[] | undefined;
 
-  if (error.code === 'MissingTimeRoot') {
+  if (error.code === 'CycleDetected') {
+    const cycleMatch = error.message.match(/Blocks in cycle: ([\w, ]+)/);
+    const blockIds = cycleMatch ? cycleMatch[1].split(', ').filter(Boolean) : [];
+    primaryTarget = { kind: 'graphSpan', blockIds, spanKind: 'cycle' };
+  } else if (error.code === 'MissingTimeRoot') {
     // No specific target for missing TimeRoot - use a synthetic graph span
     primaryTarget = { kind: 'graphSpan', blockIds: [], spanKind: 'subgraph' };
   } else if (error.code === 'MultipleTimeRoots' && error.where?.blockId) {
@@ -80,15 +89,21 @@ function compileErrorToDiagnostic(
 
   // Extract type mismatch details if available
   let payload: Diagnostic['payload'] | undefined;
+  let message = error.message;
+
   if (error.code === 'PortTypeMismatch' && error.message) {
-    // Parse type mismatch from message (e.g., "Type mismatch: blockA.out (Signal:number) → blockB.in (Field:vec2)")
-    const match = error.message.match(/\(([^)]+)\).*→.*\(([^)]+)\)/);
+    // New, more robust regex to capture block/port info
+    const match = error.message.match(
+      /([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s\(([^)]+)\)\s→\s([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s\(([^)]+)\)/
+    );
     if (match) {
       payload = {
         kind: 'typeMismatch',
-        expected: match[2] || 'unknown',
-        actual: match[1] || 'unknown',
+        expected: match[6] || 'unknown',
+        actual: match[3] || 'unknown',
       };
+      // Keep the detailed message
+      message = `Type mismatch from ${match[1]}.${match[2]} (${match[3]}) to ${match[4]}.${match[5]} (${match[6]})`;
     }
   }
 
@@ -99,7 +114,7 @@ function compileErrorToDiagnostic(
     primaryTarget,
     affectedTargets,
     title: `Compilation Error: ${error.code}`,
-    message: error.message,
+    message,
     payload,
     patchRevision,
   });
@@ -691,26 +706,26 @@ export function createCompilerService(store: RootStore): CompilerService {
       const patchId = store.patchStore.patchId;
       const patchRevision = store.patchStore.patchRevision;
 
-      // Emit CompileStarted event
-      store.events.emit({
-        type: 'CompileStarted',
-        compileId,
-        patchId,
-        patchRevision,
-        trigger: 'graphCommitted',
-      });
-
-      store.logStore.debug('compiler', 'Starting compilation...');
-      if (flags.useUnifiedCompiler) {
-        store.logStore.info('compiler', 'Using UnifiedCompiler (feature flag enabled)');
-      }
-
-      try {
-        let patch = editorToPatch(store);
-
-        // Step 1: Expand composites and build rewrite map
-        const { expandedPatch, rewriteMap, newPublishers, newListeners } = expandComposites(patch);
-
+              // Emit CompileStarted event
+              store.events.emit({
+                type: 'CompileStarted',
+                compileId,
+                patchId,
+                patchRevision,
+                trigger: 'graphCommitted',
+              });
+      
+              store.logStore.debug('compiler', 'Starting compilation...');
+              if (flags.useUnifiedCompiler) {
+                store.logStore.info('compiler', 'Using UnifiedCompiler (feature flag enabled)');
+              }
+      
+              try {
+                let patch = editorToPatch(store);
+      
+                // Step 1: Expand composites and build rewrite map
+                const { expandedPatch, rewriteMap, newPublishers, newListeners } = expandComposites(patch);
+      
         // Step 2: Apply rewrite map to bus publishers/listeners and merge new bus bindings
         const { patch: rewrittenPatch, errors: rewriteErrors } = rewriteBusBindings(
           {
@@ -754,12 +769,10 @@ export function createCompilerService(store: RootStore): CompilerService {
         }
 
         patch = rewrittenPatch;
-
         store.logStore.debug(
           'compiler',
           `Patch has ${patch.blocks.size} blocks and ${patch.connections.length} connections`
         );
-
         // Log rewrite map stats for debugging
         const mappingCount = rewriteMap.getAllMappings().size;
         if (mappingCount > 0) {
@@ -839,14 +852,12 @@ export function createCompilerService(store: RootStore): CompilerService {
           } else {
             // Log each error
             for (const err of result.errors) {
-              const location = err.where?.blockId
-                ? ` [${err.where.blockId}${err.where.port ? '.' + err.where.port : ''}]`
-                : '';
-              store.logStore.error('compiler', `${err.code}: ${err.message}${location}`);
-            }
-            store.logStore.warn('compiler', `Compilation failed with ${result.errors.length} error(s)`);
-
-            // Emit CompileFinished event with failure status
+                          const location = err.where?.blockId
+                            ? ` [${err.where.blockId}${err.where.port ? '.' + err.where.port : ''}]`
+                            : '';
+                                      store.logStore.error('compiler', `${err.code}: ${err.message}${location}`);
+                                    }
+                                    store.logStore.warn('compiler', `Compilation failed with ${result.errors.length} error(s)`);            // Emit CompileFinished event with failure status
             store.events.emit({
               type: 'CompileFinished',
               compileId,

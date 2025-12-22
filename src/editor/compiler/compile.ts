@@ -382,7 +382,7 @@ function findTimeRootBlocks(patch: CompilerPatch): BlockInstance[] {
 
   for (const block of patch.blocks.values()) {
     const blockDef = getBlockDefinition(block.type);
-    if (blockDef?.category === 'TimeRoot') {
+    if (blockDef?.subcategory === 'TimeRoot') {
       timeRootBlocks.push(block);
     }
   }

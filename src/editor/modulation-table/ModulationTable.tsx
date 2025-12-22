@@ -11,6 +11,7 @@ import { observer } from 'mobx-react-lite';
 import { useRef, useCallback, useState } from 'react';
 import type { ModulationTableStore } from './ModulationTableStore';
 import type { TableRow, TableColumn, TableCell, RowGroup, RowKey } from './types';
+import type { LensDefinition } from '../types';
 import './ModulationTable.css';
 
 interface ModulationTableProps {
@@ -20,14 +21,14 @@ interface ModulationTableProps {
 /**
  * Format a lens chain for display.
  */
-function formatLensChain(lensChain: readonly { type: string; params: Record<string, unknown> }[] | undefined): string {
+function formatLensChain(lensChain: readonly LensDefinition[] | undefined): string {
   if (!lensChain || lensChain.length === 0) {
     return '';
   }
 
   return lensChain
     .map((lens) => {
-      const params = Object.entries(lens.params)
+      const params = Object.entries(lens.params || {})
         .map(([k, v]) => `${k}:${v}`)
         .join(', ');
       return params ? `${lens.type}(${params})` : lens.type;

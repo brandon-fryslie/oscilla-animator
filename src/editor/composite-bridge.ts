@@ -5,7 +5,7 @@
  * (in composites.ts) and the existing block registry and compiler systems.
  */
 
-import type { BlockDefinition, BlockCategory, BlockTags } from './blocks/types';
+import type { BlockDefinition, BlockSubcategory, BlockTags } from './blocks/types';
 import type { CompoundGraph } from './blocks/types';
 import type { CompositeDefinition, CompositeGraph } from './composites';
 import { listCompositeDefinitions } from './composites';
@@ -43,34 +43,8 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
     direction: 'output' as const,
   }));
 
-  // Determine block category based on lane kind
-  let category: BlockCategory;
-  switch (def.laneKind) {
-    case 'Scene':
-      category = 'Scene';
-      break;
-    case 'Phase':
-      category = 'Time';
-      break;
-    case 'Fields':
-      category = 'Fields';
-      break;
-    case 'Spec':
-      category = 'Compose';
-      break;
-    case 'Program':
-      category = 'Render';
-      break;
-    case 'Output':
-      category = 'Compose'; // No Sinks category, use Compose
-      break;
-    default:
-      category = 'Compose'; // Default for composites
-  }
-
   return {
     type: `composite:${def.id}`,
-    category,
     label: def.label,
     description: def.description || `Composite: ${def.label}`,
     color: def.color ?? '#666666',

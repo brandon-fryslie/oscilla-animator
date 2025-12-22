@@ -12,8 +12,6 @@ export { StatusBadge } from './StatusBadge';
 export {
   BLOCK_DEFINITIONS,
   getBlockDefinition,
-  getBlocksByCategory,
-  getCategoriesWithBlocks,
   type BlockDefinition,
   type ParamSchema,
 } from './blocks';
@@ -26,7 +24,6 @@ export type {
   SlotType,
   Connection,
   Lane,
-  LaneName,
   Patch,
   EditorUIState,
   Template,

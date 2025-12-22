@@ -714,6 +714,28 @@ code.wiring-info-value {
   border-radius: 4px;
 }
 
+/* New Wiring Suggestions Panel */
+.wiring-suggestions-panel .insp-body {
+  padding-top: 0;
+}
+
+.insp-cancel-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 4px;
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 2px;
+  color: #ccc;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.insp-cancel-btn:hover {
+  background: #333;
+  border-color: #444;
+}
+
 /* =============================================================================
    Compact Inspector (Ableton-style)
    ============================================================================= */

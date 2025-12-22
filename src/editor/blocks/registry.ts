@@ -1,4 +1,4 @@
-import type { BlockDefinition, BlockTags, LaneKind, BlockCategory } from './types';
+import type { BlockDefinition, BlockTags, LaneKind } from './types';
 import { getBlockForm } from './types';
 
 // Import domain blocks (new system only)
@@ -125,13 +125,6 @@ export function getBlocksForPalette(
   }
 
   return { matched, other };
-}
-
-/**
- * Category-aware filtering
- */
-export function getBlocksByCategory(category: BlockCategory): readonly BlockDefinition[] {
-  return getBlockDefinitions(true).filter((def) => def.category === category);
 }
 
 /**

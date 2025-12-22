@@ -178,10 +178,8 @@ export const BlockLibrary = observer(() => {
    * Add a block to its suggested lane (first lane matching laneKind).
    */
   const addBlockToSuggestedLane = (definition: BlockDefinition) => {
-    const targetLane = store.patchStore.lanes.find((lane) => lane.kind === definition.laneKind);
-    if (targetLane) {
-      store.patchStore.addBlock(definition.type, targetLane.id, definition.defaultParams);
-    }
+    // Just add the block - ViewStore will handle placement based on affinity
+    store.patchStore.addBlock(definition.type, definition.defaultParams);
   };
 
   // Get filtered blocks based on lane context

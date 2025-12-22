@@ -1,5 +1,5 @@
-import { TypeDesc, UIControlHint, CoreDomain } from '../types';
-import { Artifact, RuntimeCtx } from '../compiler/types';
+import type { TypeDesc, UIControlHint, CoreDomain } from '../types';
+import type { Artifact, RuntimeCtx } from '../compiler/types';
 
 export interface LensParamSpec {
   type: TypeDesc; // Typically 'scalar:number' etc.
@@ -205,3 +205,6 @@ export function initLensRegistry() {
     }
   });
 }
+
+// Auto-initialize registry
+initLensRegistry();

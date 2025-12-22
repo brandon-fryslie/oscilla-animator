@@ -43,22 +43,12 @@ export interface Scene {
 
 export type PlayState = 'playing' | 'paused';
 
-/**
- * @deprecated LoopMode is deprecated. Looping behavior is now determined by TimeModel.
- * - Cyclic time models loop automatically
- * - Finite time models pause at end
- * - Infinite time models advance unbounded
- */
-export type LoopMode = 'none' | 'loop' | 'pingpong';
-
 export interface PlayerOptions {
   compileCtx: CompileCtx;
   runtimeCtx: RuntimeCtx;
   onFrame: (tree: RenderTree, tMs: number) => void;
   onStateChange?: (state: PlayState) => void;
   onTimeChange?: (tMs: number) => void;
-  /** @deprecated Use TimeModel instead. Looping is now structural. */
-  onLoopModeChange?: (mode: LoopMode) => void;
   onTimelineChange?: (hint: TimelineHint | null) => void;
   onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
   /** If true, automatically apply timeline hints from programs */
@@ -87,9 +77,7 @@ export class Player {
   private rafId: number | null = null;
 
   private speed = 1.0;
-  private loopMode: LoopMode = 'loop'; // Default to looping
   private maxTime = 10000; // 10 seconds default
-  private playDirection = 1; // 1 = forward, -1 = backward (for pingpong)
 
   // Timeline hints from the current program
   private currentTimeline: TimelineHint | null = null;
@@ -105,7 +93,6 @@ export class Player {
   private onFrame: (tree: RenderTree, tMs: number) => void;
   private onStateChange?: (state: PlayState) => void;
   private onTimeChange?: (tMs: number) => void;
-  private onLoopModeChange?: (mode: LoopMode) => void;
   private onTimelineChange?: (hint: TimelineHint | null) => void;
   private onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
 
@@ -127,7 +114,6 @@ export class Player {
     this.onFrame = opts.onFrame;
     this.onStateChange = opts.onStateChange;
     this.onTimeChange = opts.onTimeChange;
-    this.onLoopModeChange = opts.onLoopModeChange;
     this.onTimelineChange = opts.onTimelineChange;
     this.onCuePointsChange = opts.onCuePointsChange;
     this.autoApplyTimeline = opts.autoApplyTimeline ?? true;
@@ -170,25 +156,6 @@ export class Player {
    */
   setSpeed(speed: number): void {
     this.speed = Math.max(0.1, Math.min(4, speed));
-  }
-
-  /**
-   * Set loop mode.
-   * @deprecated Use TimeModel for looping behavior. This is only for backward compatibility.
-   * When TimeModel is set, loopMode is ignored.
-   */
-  setLoopMode(mode: LoopMode): void {
-    this.loopMode = mode;
-    this.playDirection = 1; // Reset direction when changing mode
-    this.onLoopModeChange?.(mode);
-  }
-
-  /**
-   * Get current loop mode.
-   * @deprecated Use getTimeModel() instead. When TimeModel is set, loopMode is ignored.
-   */
-  getLoopMode(): LoopMode {
-    return this.loopMode;
   }
 
   /**
@@ -364,19 +331,9 @@ export class Player {
     if (timeline.kind === 'finite') {
       // Set max time to program duration
       this.maxTime = timeline.durationMs;
-
-      // Apply recommended loop mode if specified
-      if (timeline.recommendedLoop) {
-        this.setLoopMode(timeline.recommendedLoop);
-      }
     } else if (timeline.kind === 'infinite') {
       // Use suggested preview window or default
       this.maxTime = timeline.windowMs ?? 10000;
-
-      // Apply recommended loop mode
-      if (timeline.recommendedLoop) {
-        this.setLoopMode(timeline.recommendedLoop);
-      }
     }
   }
 
@@ -417,10 +374,6 @@ export class Player {
         break;
       case 'cyclic':
         this.maxTime = model.periodMs;
-        // Apply loop mode from model if specified
-        if (model.mode) {
-          this.setLoopMode(model.mode);
-        }
         break;
       case 'infinite':
         this.maxTime = model.windowMs;
@@ -509,7 +462,7 @@ export class Player {
 
     const now = performance.now();
     const realDt = now - this.lastFrameMs; // Real frame time in ms
-    const dt = realDt * this.speed * this.playDirection;
+    const dt = realDt * this.speed;
     this.lastFrameMs = now;
     this.tMs += dt;
 
@@ -555,28 +508,9 @@ export class Player {
           break;
       }
     } else {
-      // Legacy behavior when no TimeModel is set (backward compatibility)
-      // Default to loop behavior to match pre-TimeModel expectations
-      if (this.loopMode === 'loop') {
-        if (this.tMs >= this.maxTime) {
-          this.tMs = 0;
-        } else if (this.tMs < 0) {
-          this.tMs = this.maxTime;
-        }
-      } else if (this.loopMode === 'pingpong') {
-        if (this.tMs >= this.maxTime) {
-          this.tMs = this.maxTime;
-          this.playDirection = -1;
-        } else if (this.tMs <= 0) {
-          this.tMs = 0;
-          this.playDirection = 1;
-        }
-      } else {
-        // No loop - clamp at max
-        if (this.tMs >= this.maxTime) {
-          this.tMs = this.maxTime;
-          this.pause();
-        }
+      // Basic fallback when no TimeModel is set - just clamp to non-negative
+      if (this.tMs < 0) {
+        this.tMs = 0;
       }
     }
 
@@ -711,7 +645,6 @@ export function createPlayer(
     height?: number;
     onStateChange?: (state: PlayState) => void;
     onTimeChange?: (tMs: number) => void;
-    onLoopModeChange?: (mode: LoopMode) => void;
     onTimelineChange?: (hint: TimelineHint | null) => void;
     onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
     autoApplyTimeline?: boolean;
@@ -740,7 +673,6 @@ export function createPlayer(
     onFrame,
     onStateChange: opts?.onStateChange,
     onTimeChange: opts?.onTimeChange,
-    onLoopModeChange: opts?.onLoopModeChange,
     onTimelineChange: opts?.onTimelineChange,
     onCuePointsChange: opts?.onCuePointsChange,
     autoApplyTimeline: opts?.autoApplyTimeline,

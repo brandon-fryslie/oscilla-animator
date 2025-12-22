@@ -14,6 +14,7 @@
 import type { DiagnosticAction, TargetRef, PortTargetRef } from './types';
 import type { PatchStore } from '../stores/PatchStore';
 import type { UIStateStore } from '../stores/UIStateStore';
+import type { ViewStateStore } from '../stores/ViewStateStore';
 import type { DiagnosticHub } from './DiagnosticHub';
 
 /**
@@ -22,15 +23,18 @@ import type { DiagnosticHub } from './DiagnosticHub';
 export class ActionExecutor {
   patchStore: PatchStore;
   uiStore: UIStateStore;
+  viewStore: ViewStateStore;
   diagnosticHub: DiagnosticHub;
 
   constructor(
     patchStore: PatchStore,
     uiStore: UIStateStore,
+    viewStore: ViewStateStore,
     diagnosticHub: DiagnosticHub
   ) {
     this.patchStore = patchStore;
     this.uiStore = uiStore;
+    this.viewStore = viewStore;
     this.diagnosticHub = diagnosticHub;
   }
 
@@ -141,11 +145,11 @@ export class ActionExecutor {
     nearBlockId?: string
   ): boolean {
     // Find the appropriate lane
-    let targetLane = this.patchStore.lanes[0]; // Default to first lane
+    let targetLane = this.viewStore.lanes[0]; // Default to first lane
 
     if (nearBlockId) {
       // Find the lane containing the reference block
-      const refLane = this.patchStore.lanes.find((lane) =>
+      const refLane = this.viewStore.lanes.find((lane) =>
         lane.blockIds.includes(nearBlockId)
       );
       if (refLane) {
@@ -159,13 +163,16 @@ export class ActionExecutor {
     }
 
     // Add the block
-    const newBlockId = this.patchStore.addBlock(blockType, targetLane.id);
+    const newBlockId = this.patchStore.addBlock(blockType);
 
     // Reorder if position is specified
     if (nearBlockId && position && targetLane.blockIds.includes(nearBlockId)) {
       const nearIndex = targetLane.blockIds.indexOf(nearBlockId);
       const newIndex = position === 'before' ? nearIndex : nearIndex + 1;
-      this.patchStore.reorderBlockInLane(targetLane.id, newBlockId, newIndex);
+      
+      // We need to ensure the block is in the target lane first (it might have been auto-placed elsewhere)
+      this.viewStore.moveBlockToLane(newBlockId, targetLane.id);
+      this.viewStore.reorderBlockInLane(targetLane.id, newBlockId, newIndex);
     }
 
     // Select the new block
@@ -205,7 +212,7 @@ export class ActionExecutor {
     }
 
     // 2. Find the lane containing the source block
-    const lane = this.patchStore.lanes.find((l) =>
+    const lane = this.viewStore.lanes.find((l) =>
       l.blockIds.includes(fromPort.blockId)
     );
 
@@ -215,7 +222,10 @@ export class ActionExecutor {
     }
 
     // 3. Add the adapter block
-    const adapterId = this.patchStore.addBlock(adapterType, lane.id);
+    const adapterId = this.patchStore.addBlock(adapterType);
+    
+    // Move to the correct lane
+    this.viewStore.moveBlockToLane(adapterId, lane.id);
 
     // 4. Rewire: remove old connection
     this.patchStore.disconnect(connection.id);
@@ -285,7 +295,7 @@ export class ActionExecutor {
    */
   createTimeRoot(timeRootKind: 'Finite' | 'Cycle' | 'Infinite'): boolean {
     // Find the Time lane (Phase lane is the time lane in the current layouts)
-    const timeLane = this.patchStore.lanes.find((lane) => lane.kind === 'Phase');
+    const timeLane = this.viewStore.lanes.find((lane) => lane.kind === 'Phase');
     if (!timeLane) {
       console.warn('[ActionExecutor] Time lane not found');
       return false;
@@ -307,7 +317,10 @@ export class ActionExecutor {
     const blockType = `${timeRootKind}TimeRoot`;
 
     // Add the new TimeRoot block
-    const newBlockId = this.patchStore.addBlock(blockType, timeLane.id);
+    const newBlockId = this.patchStore.addBlock(blockType);
+    
+    // Ensure it's in the time lane
+    this.uiStore.root.viewStore.moveBlockToLane(newBlockId, timeLane.id);
 
     // Auto-publish to buses (handled by PatchStore.addBlock via processAutoBusConnections)
     // CycleTimeRoot auto-publishes 'phase' -> 'phaseA' and 'wrap' -> 'pulse'

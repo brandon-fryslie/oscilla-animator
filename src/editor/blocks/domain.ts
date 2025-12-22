@@ -18,8 +18,6 @@ import { input, output } from './utils';
 export const DomainN = createBlock({
   type: 'DomainN',
   label: 'Domain N',
-  subcategory: 'Sources',
-  category: 'Scene',
   description: 'Create a domain with N elements, each with a stable ID',
   inputs: [
     input('n', 'Element Count', 'Scalar:number', {
@@ -81,8 +79,6 @@ export const DomainN = createBlock({
 export const GridDomain = createBlock({
   type: 'GridDomain',
   label: 'Grid Domain',
-  subcategory: 'Sources',
-  category: 'Scene',
   description: 'Create a grid domain with stable element IDs and base positions',
   inputs: [
     input('rows', 'Rows', 'Scalar:number', {
@@ -197,8 +193,6 @@ export const GridDomain = createBlock({
 export const SVGSampleDomain = createBlock({
   type: 'SVGSampleDomain',
   label: 'SVG Sample Domain',
-  subcategory: 'Sources',
-  category: 'Scene',
   description: 'Sample points from SVG path with stable element IDs',
   inputs: [
     input('asset', 'SVG Path Asset', 'Signal<string>', {
@@ -295,8 +289,6 @@ export const SVGSampleDomain = createBlock({
 export const StableIdHash = createBlock({
   type: 'StableIdHash',
   label: 'Stable ID Hash',
-  subcategory: 'Fields',
-  category: 'Fields',
   description: 'Hash stable element IDs to deterministic [0,1) values with salt',
   inputs: [
     input('domain', 'Domain', 'Domain'),
@@ -337,8 +329,6 @@ export const StableIdHash = createBlock({
 export const PositionMapGrid = createBlock({
   type: 'PositionMapGrid',
   label: 'Grid Layout',
-  subcategory: 'Spatial',
-  category: 'Fields',
   description: 'Arrange domain elements in a grid pattern',
   inputs: [
     input('domain', 'Domain', 'Domain'),
@@ -451,8 +441,6 @@ export const PositionMapGrid = createBlock({
 export const PositionMapCircle = createBlock({
   type: 'PositionMapCircle',
   label: 'Circle Layout',
-  subcategory: 'Spatial',
-  category: 'Fields',
   description: 'Arrange domain elements in a circle',
   inputs: [
     input('domain', 'Domain', 'Domain'),
@@ -576,8 +564,6 @@ export const PositionMapCircle = createBlock({
 export const PositionMapLine = createBlock({
   type: 'PositionMapLine',
   label: 'Line Layout',
-  subcategory: 'Spatial',
-  category: 'Fields',
   description: 'Arrange domain elements along a line',
   inputs: [
     input('domain', 'Domain', 'Domain'),
@@ -673,8 +659,6 @@ export const PositionMapLine = createBlock({
 export const FieldConstNumber = createBlock({
   type: 'FieldConstNumber',
   label: 'Constant Number',
-  subcategory: 'Fields',
-  category: 'Fields',
   description: 'Uniform numeric value for all elements',
   inputs: [
     input('domain', 'Domain', 'Domain'),
@@ -709,8 +693,6 @@ export const FieldConstNumber = createBlock({
 export const FieldConstColor = createBlock({
   type: 'FieldConstColor',
   label: 'Constant Color',
-  subcategory: 'Style',
-  category: 'Fields',
   description: 'Uniform color for all elements',
   inputs: [
     input('domain', 'Domain', 'Domain'),
@@ -744,8 +726,6 @@ export const FieldConstColor = createBlock({
 export const FieldHash01ById = createBlock({
   type: 'FieldHash01ById',
   label: 'Random Per Element',
-  subcategory: 'Fields',
-  category: 'Fields',
   description: 'Deterministic random value per element (0 to 1)',
   inputs: [
     input('domain', 'Domain', 'Domain'),
@@ -780,8 +760,6 @@ export const FieldHash01ById = createBlock({
 export const FieldMapNumber = createBlock({
   type: 'FieldMapNumber',
   label: 'Map Number',
-  subcategory: 'Math',
-  category: 'Fields',
   description: 'Apply a function to each element of a numeric field',
   inputs: [
     input('x', 'Input', 'Field<number>'),
@@ -880,8 +858,6 @@ export const FieldMapNumber = createBlock({
 export const FieldMapVec2 = createBlock({
   type: 'FieldMapVec2',
   label: 'Transform Positions',
-  subcategory: 'Math',
-  category: 'Fields',
   description: 'Apply spatial transformations to position fields',
   inputs: [
     input('vec', 'Input', 'Field<vec2>'),
@@ -1022,8 +998,6 @@ export const FieldMapVec2 = createBlock({
 export const FieldZipNumber = createBlock({
   type: 'FieldZipNumber',
   label: 'Combine Numbers',
-  subcategory: 'Math',
-  category: 'Fields',
   description: 'Combine two numeric fields element-wise',
   inputs: [
     input('a', 'A', 'Field<number>'),
@@ -1079,8 +1053,6 @@ export const FieldZipNumber = createBlock({
 export const JitterFieldVec2 = createBlock({
   type: 'JitterFieldVec2',
   label: 'Jitter Field',
-  subcategory: 'Math',
-  category: 'Fields',
   description: 'Animated per-element position drift',
   inputs: [
     input('idRand', 'Random', 'Field<number>'),
@@ -1132,8 +1104,6 @@ export const JitterFieldVec2 = createBlock({
 export const FieldFromSignalBroadcast = createBlock({
   type: 'FieldFromSignalBroadcast',
   label: 'Signal to Field',
-  subcategory: 'Math',
-  category: 'Fields',
   description: 'Broadcast signal value to all field elements',
   inputs: [
     input('domain', 'Domain', 'Domain'),
@@ -1157,8 +1127,6 @@ export const FieldFromSignalBroadcast = createBlock({
 export const FieldZipSignal = createBlock({
   type: 'FieldZipSignal',
   label: 'Field + Signal',
-  subcategory: 'Math',
-  category: 'Fields',
   description: 'Combine field with signal value',
   inputs: [
     input('field', 'Field', 'Field<number>'),
@@ -1206,6 +1174,28 @@ export const FieldZipSignal = createBlock({
 });
 
 /**
+ * BroadcastSignalColor - Broadcast Signal<color> to Field<color>.
+ *
+ * This is an adapter block for bridging a signal-world color to the field-world.
+ */
+export const BroadcastSignalColor = createBlock({
+  type: 'BroadcastSignalColor',
+  label: 'Signal to Field (Color)',
+  description: 'Broadcast a single color signal to all elements in a domain.',
+  inputs: [
+    input('domain', 'Domain', 'Domain'),
+    input('signal', 'Signal', 'Signal<color>'),
+  ],
+  outputs: [
+    output('field', 'Field', 'Field<color>'),
+  ],
+  paramSchema: [],
+  color: '#4ade80', // Green, for adapters/conversion
+  laneKind: 'Fields',
+  priority: 100, // Adapters should be easy to find
+});
+
+/**
  * RenderInstances2D - Render domain elements as 2D circles.
  *
  * This is the render sink that materializes Domain + Fields into visual output.
@@ -1217,8 +1207,6 @@ export const FieldZipSignal = createBlock({
 export const RenderInstances2D = createBlock({
   type: 'RenderInstances2D',
   label: 'Render Instances 2D',
-  subcategory: 'Render',
-  category: 'Render',
   description: 'Render domain elements as 2D circles',
   inputs: [
     input('domain', 'Domain', 'Domain'),

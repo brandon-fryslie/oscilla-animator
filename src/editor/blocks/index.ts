@@ -27,6 +27,3 @@ export * from './registry';
 // Legacy constant export for backward compatibility
 import { getBlockDefinitions } from './registry';
 export const BLOCK_DEFINITIONS = getBlockDefinitions(true);
-
-// Alias for backward compatibility
-export { getBlocksByCategory as getCategoriesWithBlocks } from './registry';

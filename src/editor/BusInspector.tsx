@@ -9,7 +9,7 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { useStore } from './stores';
 import type { Bus, Publisher, Listener, CoreDomain, BusCombineMode, LensDefinition } from './types';
-import { formatTypeDesc, getCombineModesForDomain } from './types';
+import { formatTypeDesc, getCombineModesForDomain } from './semantic';
 import { LensSelector, LensBadge } from './components/LensSelector';
 import './BusInspector.css';
 

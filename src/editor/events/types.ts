@@ -9,7 +9,7 @@
  * - Events are scoped per RootStore instance
  */
 
-import type { TypeDescriptor } from '../types';
+import type { TypeDesc } from '../types';
 import type { Diagnostic } from '../diagnostics/types';
 
 /**
@@ -230,7 +230,7 @@ export interface BusCreatedEvent {
   /** Name of the bus */
   name: string;
   /** Type descriptor of the bus */
-  busType: TypeDescriptor;
+  busType: TypeDesc;
 }
 
 /**

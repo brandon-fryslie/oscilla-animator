@@ -12,7 +12,7 @@ import {
   InfiniteTimeRootBlock,
   extractTimeRootAutoPublications
 } from '../TimeRoot';
-import type { CompileCtx } from '../../types';
+import type { CompileCtx } from '../../../types';
 
 // =============================================================================
 // Test Helpers

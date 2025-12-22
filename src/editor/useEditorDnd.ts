@@ -70,10 +70,10 @@ export function useEditorDnd() {
 
       if (sourceLaneId === targetLaneId) {
         if (activeData.sourceIndex !== targetIndex) {
-          store.patchStore.reorderBlockInLane(sourceLaneId as LaneId, blockId, targetIndex);
+          store.viewStore.reorderBlockInLane(sourceLaneId as LaneId, blockId, targetIndex);
         }
       } else {
-        store.patchStore.moveBlockToLane(blockId, targetLaneId);
+        store.viewStore.moveBlockToLane(blockId, targetLaneId);
       }
       return;
     }
@@ -82,7 +82,10 @@ export function useEditorDnd() {
     if (activeData?.type === 'library-block' && overData?.type === 'lane') {
       const blockType = activeData.blockType as string;
       const laneId = (overData.laneId ?? overData.laneName) as LaneId;
-      store.patchStore.addBlock(blockType, laneId);
+      const blockId = store.patchStore.addBlock(blockType);
+      
+      // Explicitly move to the target lane since user dropped it there
+      store.viewStore.moveBlockToLane(blockId, laneId);
     }
 
     // Dropping placed block onto trash
@@ -99,7 +102,7 @@ export function useEditorDnd() {
 
       if (sourceLaneId !== targetLaneId) {
         // Move to different lane
-        store.patchStore.moveBlockToLane(blockId, targetLaneId);
+        store.viewStore.moveBlockToLane(blockId, targetLaneId);
       }
       // Note: reordering within same lane would need drop position info
       // For now, moving to same lane just keeps it in place

@@ -34,12 +34,15 @@ export function extractTimeRootAutoPublications(
     case 'FiniteTimeRoot':
       return [
         { busName: 'progress', artifactKey: 'progress', sortKey: 0 },
+        { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'end', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
       ];
 
     case 'InfiniteTimeRoot':
       return [
+        { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
+        { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
       ];
 
@@ -65,6 +68,7 @@ export const FiniteTimeRootBlock: BlockCompiler = {
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
     { name: 'progress', type: { kind: 'Signal:number' } },
+    { name: 'phase', type: { kind: 'Signal:phase' } },
     { name: 'end', type: { kind: 'Event' } },
     { name: 'energy', type: { kind: 'Signal:number' } },
   ],
@@ -77,6 +81,13 @@ export const FiniteTimeRootBlock: BlockCompiler = {
 
     // Progress clamps at 1 after duration
     const progress: SignalNumber = (tMs) => {
+      if (tMs <= 0) return 0;
+      if (tMs >= durationMs) return 1;
+      return tMs / durationMs;
+    };
+
+    // Phase is same as progress for FiniteTimeRoot (0..1 clamped)
+    const phase: SignalNumber = (tMs) => {
       if (tMs <= 0) return 0;
       if (tMs >= durationMs) return 1;
       return tMs / durationMs;
@@ -97,6 +108,7 @@ export const FiniteTimeRootBlock: BlockCompiler = {
     return {
       systemTime: { kind: 'Signal:Time', value: systemTime },
       progress: { kind: 'Signal:number', value: progress },
+      phase: { kind: 'Signal:phase', value: phase },
       end: { kind: 'Event', value: end },
       energy: { kind: 'Signal:number', value: energy },
     };
@@ -208,18 +220,38 @@ export const InfiniteTimeRootBlock: BlockCompiler = {
 
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
+    { name: 'phase', type: { kind: 'Signal:phase' } },
+    { name: 'pulse', type: { kind: 'Event' } },
     { name: 'energy', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ params: _params }): CompiledOutputs {
+  compile({ params }): CompiledOutputs {
     // System time is identity - just passes through the raw time
     const systemTime: SignalNumber = (tMs) => tMs;
+    const periodMs = Number(params.periodMs ?? 10000);
+
+    // Ambient phase: simple 0..1 loop based on periodMs
+    const phase: SignalNumber = (tMs) => {
+      if (tMs < 0) return 0;
+      const cycles = tMs / periodMs;
+      return cycles - Math.floor(cycles);
+    };
+
+    // Ambient pulse: fires on cycle boundary
+    const pulse: Event = (tMs, lastTMs) => {
+      if (tMs < 0 || lastTMs < 0) return false;
+      const currCycle = Math.floor(tMs / periodMs);
+      const lastCycle = Math.floor(lastTMs / periodMs);
+      return currCycle > lastCycle;
+    };
 
     // Energy is constant 1.0 for ambient content
     const energy: SignalNumber = (_tMs) => 1.0;
 
     return {
       systemTime: { kind: 'Signal:Time', value: systemTime },
+      phase: { kind: 'Signal:phase', value: phase },
+      pulse: { kind: 'Event', value: pulse },
       energy: { kind: 'Signal:number', value: energy },
     };
   },

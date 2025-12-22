@@ -55,6 +55,7 @@ export {
   combineFieldArtifacts,
   validateCombineMode,
   getSupportedCombineModes,
+  getCombineModesForDomain,
 } from './busSemantics';
 
 // =============================================================================
@@ -203,6 +204,8 @@ export function areSlotTypesCompatible(
   return isAssignable(fromDesc, toDesc);
 }
 
+import { findAdapterPath } from '../adapters/autoAdapter';
+
 // =============================================================================
 // Adapter Path Resolution
 // =============================================================================
@@ -232,11 +235,16 @@ export function getConvertiblePaths(
     ];
   }
 
-  // TODO: Phase 2 - implement adapter registry lookup for:
-  // - number → color (via gradient/palette)
-  // - phase → color (via palette)
-  // - signal → field (via lift)
-  // - field → signal (via reduce - heavy)
+  // Use auto-adapter logic
+  const result = findAdapterPath(from, to);
+  if (result.ok && result.chain) {
+    return [{
+      from,
+      to,
+      adapters: result.chain,
+      isHeavy: false, // TODO: derive from adapter cost
+    }];
+  }
 
   return [];
 }

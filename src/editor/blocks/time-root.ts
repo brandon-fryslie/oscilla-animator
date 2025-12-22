@@ -25,8 +25,6 @@ import { input, output } from './utils';
 export const FiniteTimeRoot = createBlock({
   type: 'FiniteTimeRoot',
   label: 'Finite Time',
-  subcategory: 'TimeRoot',
-  category: 'TimeRoot',
   description: 'Finite performance with known duration',
   inputs: [
     input('durationMs', 'Duration (ms)', 'Signal<number>', {
@@ -41,6 +39,7 @@ export const FiniteTimeRoot = createBlock({
   outputs: [
     output('systemTime', 'System Time', 'Signal<time>'),
     output('progress', 'Progress', 'Signal<number>'),
+    output('phase', 'Phase', 'Signal<phase>'),
     output('end', 'End Event', 'Event<any>'),
     output('energy', 'Energy', 'Signal<number>'),
   ],
@@ -58,6 +57,7 @@ export const FiniteTimeRoot = createBlock({
   ],
   color: '#ef4444', // Red for finite
   laneKind: 'Phase',
+  subcategory: 'TimeRoot',
   priority: -10, // High priority to appear first
 });
 
@@ -72,8 +72,6 @@ export const FiniteTimeRoot = createBlock({
 export const CycleTimeRoot = createBlock({
   type: 'CycleTimeRoot',
   label: 'Cycle Time',
-  subcategory: 'TimeRoot',
-  category: 'TimeRoot',
   description: 'Looping primary cycle',
   inputs: [
     input('periodMs', 'Period (ms)', 'Signal<number>', {
@@ -131,6 +129,7 @@ export const CycleTimeRoot = createBlock({
   ],
   color: '#3b82f6', // Blue for cyclic
   laneKind: 'Phase',
+  subcategory: 'TimeRoot',
   priority: -9,
 });
 
@@ -145,8 +144,6 @@ export const CycleTimeRoot = createBlock({
 export const InfiniteTimeRoot = createBlock({
   type: 'InfiniteTimeRoot',
   label: 'Infinite Time',
-  subcategory: 'TimeRoot',
-  category: 'TimeRoot',
   description: 'Ambient, unbounded time (no primary cycle)',
   inputs: [
     input('windowMs', 'Preview Window (ms)', 'Signal<number>', {
@@ -157,9 +154,19 @@ export const InfiniteTimeRoot = createBlock({
         uiHint: { kind: 'slider', min: 1000, max: 60000, step: 1000 },
       },
     }),
+    input('periodMs', 'Ambient Period (ms)', 'Signal<number>', {
+      tier: 'secondary',
+      defaultSource: {
+        value: 10000,
+        world: 'config',
+        uiHint: { kind: 'slider', min: 1000, max: 60000, step: 1000 },
+      },
+    }),
   ],
   outputs: [
     output('systemTime', 'System Time', 'Signal<time>'),
+    output('phase', 'Ambient Phase', 'Signal<phase>'),
+    output('pulse', 'Ambient Pulse', 'Event<any>'),
     output('energy', 'Energy', 'Signal<number>'),
   ],
   // TODO: Remove paramSchema after compiler updated (Phase 4)
@@ -173,9 +180,19 @@ export const InfiniteTimeRoot = createBlock({
       step: 1000,
       defaultValue: 10000,
     },
+    {
+      key: 'periodMs',
+      label: 'Ambient Period (ms)',
+      type: 'number',
+      min: 1000,
+      max: 60000,
+      step: 1000,
+      defaultValue: 10000,
+    },
   ],
   color: '#8b5cf6', // Purple for infinite
   laneKind: 'Phase',
+  subcategory: 'TimeRoot',
   priority: -8,
 });
 

@@ -281,6 +281,27 @@
   background: rgba(74, 158, 255, 0.08);
 }
 
+@keyframes error-glow {
+  50% { outline-color: rgba(239, 68, 68, 1); outline-width: 3px; }
+}
+
+@keyframes warning-glow {
+  50% { outline-color: rgba(245, 158, 11, 1); outline-width: 3px; }
+}
+
+/* Error and Warning States */
+.block.has-error {
+  outline: 2px solid rgba(239, 68, 68, 0.8);
+  outline-offset: 2px;
+  animation: error-glow 1s ease-in-out infinite;
+}
+
+.block.has-warning {
+  outline: 2px solid rgba(245, 158, 11, 0.8);
+  outline-offset: 2px;
+  animation: warning-glow 1s ease-in-out infinite;
+}
+
 /* Block color indicator - thin left bar */
 .block-color-indicator {
   position: absolute;

@@ -266,6 +266,12 @@ const DraggablePatchBlock = observer(({
   const definition = getBlockDefinition(block.type);
   const blockColor = definition?.color ?? laneColor;
 
+  // Get diagnostics state
+  const diagnostics = store.diagnosticStore.getDiagnosticsForBlock(block.id);
+  console.log(`[DraggablePatchBlock] Render ${block.id}: Found ${diagnostics.length} diagnostics`);
+  const hasError = diagnostics.some(d => d.severity === 'error' || d.severity === 'fatal');
+  const hasWarning = !hasError && diagnostics.some(d => d.severity === 'warn');
+
   // Get hovered/selected port state
   const hoveredPort = store.uiStore.uiState.hoveredPort;
   const selectedPort = store.uiStore.uiState.selectedPort;
@@ -308,7 +314,7 @@ const DraggablePatchBlock = observer(({
         ...style,
         '--block-color': blockColor,
       } as React.CSSProperties}
-      className={`block ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isOverDropTarget ? 'drop-target' : ''} ${hasInputs ? 'has-inputs' : ''} ${hasOutputs ? 'has-outputs' : ''}`}
+      className={`block ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isOverDropTarget ? 'drop-target' : ''} ${hasInputs ? 'has-inputs' : ''} ${hasOutputs ? 'has-outputs' : ''} ${hasError ? 'has-error' : ''} ${hasWarning ? 'has-warning' : ''}`}
       onClick={(e) => {
         e.stopPropagation();
         onSelect();
@@ -496,13 +502,13 @@ const DroppableLane = observer(({
 
     // Double-click toggles collapse
     if (e.detail === 2) {
-      store.patchStore.toggleLaneCollapsed(lane.id);
+      store.viewStore.toggleLaneCollapsed(lane.id);
     }
   };
 
   const handleChevronClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    store.patchStore.toggleLaneCollapsed(lane.id);
+    store.viewStore.toggleLaneCollapsed(lane.id);
   };
 
   return (
@@ -599,7 +605,7 @@ export const PatchBay = observer(() => {
     <div className="patch-bay" onClick={handleBackgroundClick}>
       <LayoutSelector />
       <div className="patch-bay-lanes" onClick={handleBackgroundClick}>
-        {store.patchStore.lanes.map((lane) => (
+        {store.viewStore.lanes.map((lane) => (
           <DroppableLane
             key={lane.id}
             lane={lane}

@@ -11,8 +11,8 @@ import './LayoutSelector.css';
 
 export const LayoutSelector = observer(() => {
   const store = useStore();
-  const currentLayout = store.patchStore.currentLayout;
-  const layouts = store.patchStore.availableLayouts;
+  const currentLayout = store.viewStore.currentLayout;
+  const layouts = store.viewStore.availableLayouts;
 
   return (
     <div className="layout-selector">
@@ -20,7 +20,7 @@ export const LayoutSelector = observer(() => {
       <select
         className="layout-select"
         value={currentLayout.id}
-        onChange={(e) => store.patchStore.switchLayout(e.target.value)}
+        onChange={(e) => store.viewStore.switchLayout(e.target.value)}
       >
         {layouts.map((layout: LaneLayout) => (
           <option key={layout.id} value={layout.id}>

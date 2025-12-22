@@ -528,7 +528,7 @@ export const Editor = observer(() => {
 
   // Load a default macro on startup and generate its control surface
   useEffect(() => {
-    store.patchStore.addBlock('macro:simpleGrid', 'scene');
+    store.patchStore.addBlock('macro:simpleGrid');
     // Generate a default surface for the macro
     // Use setTimeout to ensure blocks are fully populated after macro expansion
     setTimeout(() => {
@@ -577,7 +577,7 @@ export const Editor = observer(() => {
   function getBlockColor(blockType: string): string {
     // Import would create circular dep, so inline the lookup
     const colors: Record<string, string> = {
-      Scene: '#4a9eff',
+      Sources: '#4a9eff',
       Fields: '#a855f7',
       Time: '#22c55e',
       Math: '#f59e0b',
@@ -608,10 +608,10 @@ export const Editor = observer(() => {
 
       if (sourceLaneId === targetLaneId) {
         if (activeData.sourceIndex !== targetIndex) {
-          store.patchStore.reorderBlockInLane(sourceLaneId as LaneId, blockId, targetIndex);
+          store.viewStore.reorderBlockInLane(sourceLaneId as LaneId, blockId, targetIndex);
         }
       } else {
-        store.patchStore.moveBlockToLane(blockId, targetLaneId);
+        store.viewStore.moveBlockToLane(blockId, targetLaneId);
       }
       return;
     }
@@ -620,7 +620,10 @@ export const Editor = observer(() => {
     if (activeData?.type === 'library-block' && overData?.type === 'lane') {
       const blockType = activeData.blockType as string;
       const laneId = (overData.laneId ?? overData.laneName) as LaneId;
-      store.patchStore.addBlock(blockType, laneId);
+      const blockId = store.patchStore.addBlock(blockType);
+      
+      // Explicitly move to target lane
+      store.viewStore.moveBlockToLane(blockId, laneId);
     }
 
     // Dropping library block onto an insertion point
@@ -628,7 +631,10 @@ export const Editor = observer(() => {
       const blockType = activeData.blockType as string;
       const laneId = overData.laneId as LaneId;
       const index = overData.index as number;
-      store.patchStore.addBlockAtIndex(blockType, laneId, index);
+      const blockId = store.patchStore.addBlock(blockType);
+      
+      // Explicitly move and reorder in target lane
+      store.viewStore.moveBlockToLaneAtIndex(blockId, laneId, index);
     }
 
     // Dropping placed block onto an insertion point (reorder)
@@ -644,11 +650,11 @@ export const Editor = observer(() => {
         // Adjust target index if moving forward (since we remove first)
         const adjustedIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
         if (sourceIndex !== adjustedIndex) {
-          store.patchStore.reorderBlockInLane(sourceLaneId as LaneId, blockId, adjustedIndex);
+          store.viewStore.reorderBlockInLane(sourceLaneId as LaneId, blockId, adjustedIndex);
         }
       } else {
         // Move to different lane at specific position
-        store.patchStore.moveBlockToLaneAtIndex(blockId, targetLaneId, targetIndex);
+        store.viewStore.moveBlockToLaneAtIndex(blockId, targetLaneId, targetIndex);
       }
     }
 
@@ -666,7 +672,7 @@ export const Editor = observer(() => {
 
       if (sourceLaneId !== targetLaneId) {
         // Move to different lane
-        store.patchStore.moveBlockToLane(blockId, targetLaneId);
+        store.viewStore.moveBlockToLane(blockId, targetLaneId);
       }
       // Note: reordering within same lane would need drop position info
       // For now, moving to same lane just keeps it in place

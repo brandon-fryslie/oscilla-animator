@@ -194,7 +194,7 @@ function PathsIcon() {
  */
 export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModalOpen, showHelpNudge, onDesignerView, onPerformanceView }: SettingsToolbarProps) => {
   const store = useStore();
-  const currentLayout = store.patchStore.currentLayout;
+  const currentLayout = store.viewStore.currentLayout;
 
   return (
     <div className="settings-toolbar">
@@ -212,7 +212,7 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
               label={layout.name}
               description={layout.description}
               checked={currentLayout.id === layout.id}
-              onClick={() => store.patchStore.switchLayout(layout.id)}
+              onClick={() => store.viewStore.switchLayout(layout.id)}
             />
           ))}
           <MenuDivider />

@@ -20,7 +20,6 @@ function createMacro(config: {
     label: config.label,
     // Note: form is derived from type prefix 'macro:' via getBlockForm()
     subcategory: config.subcategory || 'Quick Start',
-    category: 'Macros',
     description: config.description,
     inputs: [],
     outputs: [],
@@ -42,7 +41,6 @@ export const MacroSimpleGrid = createMacro({
   description: 'Macro: Basic grid of dots - the simplest possible patch.',
   priority: -100,
   color: '#3B82F6',
-  subcategory: 'Quick Start',
 });
 
 export const MacroAnimatedCircleRing = createMacro({
@@ -51,7 +49,6 @@ export const MacroAnimatedCircleRing = createMacro({
   description: 'Macro: Circle layout with oscillating radius animation.',
   priority: -99,
   color: '#EC4899',
-  subcategory: 'Quick Start',
 });
 
 export const MacroLineWave = createMacro({
@@ -60,7 +57,6 @@ export const MacroLineWave = createMacro({
   description: 'Macro: Line of dots with phase-offset wave animation.',
   priority: -98,
   color: '#8B5CF6',
-  subcategory: 'Quick Start',
 });
 
 export const MacroRainbowGrid = createMacro({
@@ -69,7 +65,6 @@ export const MacroRainbowGrid = createMacro({
   description: 'Macro: Grid with per-element color variation from ColorLFO.',
   priority: -97,
   color: '#F59E0B',
-  subcategory: 'Quick Start',
 });
 
 export const MacroPulsingGrid = createMacro({
@@ -78,7 +73,6 @@ export const MacroPulsingGrid = createMacro({
   description: 'Macro: Grid with pulse-driven rhythmic radius animation.',
   priority: -96,
   color: '#EF4444',
-  subcategory: 'Quick Start',
 });
 
 export const MacroDriftingCircle = createMacro({
@@ -87,7 +81,6 @@ export const MacroDriftingCircle = createMacro({
   description: 'Macro: Circle layout with smooth jitter motion.',
   priority: -95,
   color: '#22C55E',
-  subcategory: 'Quick Start',
 });
 
 export const MacroMultiRing = createMacro({
@@ -96,7 +89,6 @@ export const MacroMultiRing = createMacro({
   description: 'Macro: Multiple concentric circles with size variation.',
   priority: -94,
   color: '#06B6D4',
-  subcategory: 'Quick Start',
 });
 
 export const MacroBreathingLine = createMacro({
@@ -105,7 +97,6 @@ export const MacroBreathingLine = createMacro({
   description: 'Macro: Line with synchronized breathing animation.',
   priority: -93,
   color: '#14B8A6',
-  subcategory: 'Quick Start',
 });
 
 export const MacroColorPulse = createMacro({
@@ -114,7 +105,6 @@ export const MacroColorPulse = createMacro({
   description: 'Macro: Grid with animated color from ColorLFO.',
   priority: -92,
   color: '#A855F7',
-  subcategory: 'Quick Start',
 });
 
 export const MacroRhythmicDots = createMacro({
@@ -123,7 +113,14 @@ export const MacroRhythmicDots = createMacro({
   description: 'Macro: Grid with PulseDivider envelope for rhythmic accents.',
   priority: -91,
   color: '#F59E0B',
-  subcategory: 'Quick Start',
+});
+
+export const MacroFullShowcase = createMacro({
+  type: 'macro:fullShowcase',
+  label: '🎡 Full Showcase',
+  description: 'Macro: A complex scene demonstrating color, size, opacity, and position animations.',
+  priority: -101,
+  color: '#d946ef',
 });
 
 // =============================================================================
@@ -136,7 +133,6 @@ export const MacroBreathingWave = createMacro({
   description: 'Macro: Demonstrates Oscillator + Shaper for smooth breathing intensity curves. (Slice 1)',
   priority: -80,
   color: '#3B82F6',
-  subcategory: 'Slice Demos',
 });
 
 export const MacroRhythmicPulse = createMacro({
@@ -145,7 +141,6 @@ export const MacroRhythmicPulse = createMacro({
   description: 'Macro: Demonstrates PulseDivider + EnvelopeAD for rhythmic accent triggers. (Slice 2)',
   priority: -79,
   color: '#F59E0B',
-  subcategory: 'Slice Demos',
 });
 
 export const MacroColorDrift = createMacro({
@@ -154,7 +149,6 @@ export const MacroColorDrift = createMacro({
   description: 'Macro: Demonstrates ColorLFO for slow hue cycling color animation. (Slice 3)',
   priority: -78,
   color: '#EC4899',
-  subcategory: 'Slice Demos',
 });
 
 export const MacroStableGrid = createMacro({
@@ -163,7 +157,6 @@ export const MacroStableGrid = createMacro({
   description: 'Macro: Demonstrates GridDomain + StableIdHash for per-element deterministic randomness. (Slice 4)',
   priority: -77,
   color: '#8B5CF6',
-  subcategory: 'Slice Demos',
 });
 
 export const MacroPhaseSpread = createMacro({
@@ -172,7 +165,6 @@ export const MacroPhaseSpread = createMacro({
   description: 'Macro: Demonstrates FieldZipSignal for per-element phase offset animation. (Slice 5)',
   priority: -76,
   color: '#A855F7',
-  subcategory: 'Slice Demos',
 });
 
 export const MacroDriftingDots = createMacro({
@@ -181,7 +173,6 @@ export const MacroDriftingDots = createMacro({
   description: 'Macro: Demonstrates JitterFieldVec2 + FieldAddVec2 for animated position drift. (Slice 6)',
   priority: -75,
   color: '#22C55E',
-  subcategory: 'Slice Demos',
 });
 
 export const MacroStyledElements = createMacro({
@@ -190,7 +181,6 @@ export const MacroStyledElements = createMacro({
   description: 'Macro: Demonstrates FieldColorize + FieldOpacity for per-element visual variety. (Slice 7)',
   priority: -74,
   color: '#F59E0B',
-  subcategory: 'Slice Demos',
 });
 
 export const MacroResponsiveGrid = createMacro({
@@ -199,7 +189,6 @@ export const MacroResponsiveGrid = createMacro({
   description: 'Macro: Demonstrates ViewportInfo for viewport-centered responsive layouts. (Slice 8)',
   priority: -73,
   color: '#14B8A6',
-  subcategory: 'Slice Demos',
 });
 
 export const MacroGoldenPatch = createMacro({
@@ -208,7 +197,6 @@ export const MacroGoldenPatch = createMacro({
   description: 'Macro: Complete "Breathing Constellation" - validates all slices working together. (Slice 9)',
   priority: -72,
   color: '#EF4444',
-  subcategory: 'Slice Demos',
 });
 
 export const MacroBreathingDots = createMacro({
@@ -217,7 +205,6 @@ export const MacroBreathingDots = createMacro({
   description: 'Macro: Simple grid with breathing animation using bus-driven radius. Demonstrates domain + bus integration.',
   priority: -71,
   color: '#06B6D4',
-  subcategory: 'Slice Demos',
 });
 
 // Note: Composite-based macros have been removed as composites may not work reliably.
