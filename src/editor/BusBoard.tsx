@@ -115,7 +115,7 @@ function saveGroupCollapseState(state: Record<string, boolean>): void {
 /**
  * Bus Board - vertical mixer panel for all buses.
  */
-export const BusBoard = observer(() => {
+export const BusBoard = observer((): React.ReactElement => {
   const store = useStore();
   const [collapsed, setCollapsed] = useState(false);
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);

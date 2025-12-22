@@ -31,8 +31,8 @@ import { storeToPatchDocument } from '../semantic/patchAdapter';
  * New: 'builtin:logo', 'builtin:text', 'builtin:heart'
  */
 function migrateBlockParams(type: string, params: Record<string, unknown>): Record<string, unknown> {
-  if (type === 'SVGPathSource' && params.target) {
-    const target = String(params.target);
+  if (type === 'SVGPathSource' && params.target !== undefined) {
+    const target = params.target;
     // Migrate old format to new
     if (target === 'logo') return { ...params, target: 'builtin:logo' };
     if (target === 'text') return { ...params, target: 'builtin:text' };
@@ -168,24 +168,24 @@ export class PatchStore {
    */
   private processAutoBusConnections(blockId: BlockId, blockType: string): void {
     const definition = getBlockDefinition(blockType);
-    if (!definition) {
+    if (definition === undefined) {
       throw new Error(`Cannot process auto-bus connections: block type "${blockType}" not found in registry`);
     }
 
     // Check for primitive block auto-bus definitions
-    if (definition.autoBusSubscriptions) {
+    if (definition.autoBusSubscriptions !== undefined) {
       for (const [inputPort, busName] of Object.entries(definition.autoBusSubscriptions)) {
         const bus = this.root.busStore.buses.find(b => b.name === busName);
-        if (bus) {
+        if (bus !== undefined) {
           this.root.busStore.addListener(bus.id, blockId, inputPort);
         }
       }
     }
 
-    if (definition.autoBusPublications) {
+    if (definition.autoBusPublications !== undefined) {
       for (const [outputPort, busName] of Object.entries(definition.autoBusPublications)) {
         const bus = this.root.busStore.buses.find(b => b.name === busName);
-        if (bus) {
+        if (bus !== undefined) {
           this.root.busStore.addPublisher(bus.id, blockId, outputPort);
         }
       }
@@ -197,19 +197,19 @@ export class PatchStore {
       const composites = listCompositeDefinitions();
       const compositeDef = composites.find(c => c.id === compositeId);
 
-      if (compositeDef?.graph.busSubscriptions) {
+      if (compositeDef !== undefined && compositeDef.graph.busSubscriptions !== undefined) {
         for (const [inputPort, busName] of Object.entries(compositeDef.graph.busSubscriptions)) {
           const bus = this.root.busStore.buses.find(b => b.name === busName);
-          if (bus) {
+          if (bus !== undefined) {
             this.root.busStore.addListener(bus.id, blockId, inputPort);
           }
         }
       }
 
-      if (compositeDef?.graph.busPublications) {
+      if (compositeDef !== undefined && compositeDef.graph.busPublications !== undefined) {
         for (const [outputPort, busName] of Object.entries(compositeDef.graph.busPublications)) {
           const bus = this.root.busStore.buses.find(b => b.name === busName);
-          if (bus) {
+          if (bus !== undefined) {
             this.root.busStore.addPublisher(bus.id, blockId, outputPort);
           }
         }
@@ -223,9 +223,9 @@ export class PatchStore {
   addBlock(type: BlockType, params?: Record<string, unknown>): BlockId {
     // Check if this is a macro that should expand
     const macroKey = getMacroKey(type, params);
-    if (macroKey) {
+    if (macroKey !== null && macroKey !== undefined && macroKey !== '') {
       const expansion = getMacroExpansion(macroKey);
-      if (expansion) {
+      if (expansion !== null && expansion !== undefined) {
         return this.expandMacro(expansion);
       }
       // Macro has no expansion - crash immediately
@@ -295,9 +295,9 @@ export class PatchStore {
   addBlockAtIndex(type: BlockType, laneId: LaneId, index: number, params?: Record<string, unknown>): BlockId {
     // Check if this is a macro that should expand
     const macroKey = getMacroKey(type, params);
-    if (macroKey) {
+    if (macroKey !== null && macroKey !== undefined && macroKey !== '') {
       const expansion = getMacroExpansion(macroKey);
-      if (expansion) {
+      if (expansion !== null && expansion !== undefined) {
         return this.expandMacro(expansion);
       }
       throw new Error(`Macro "${macroKey}" has no expansion registered in MACRO_REGISTRY`);
@@ -328,7 +328,7 @@ export class PatchStore {
     this.blocks.push(block);
 
     // Add to lane at specific index
-    if (laneObj) {
+    if (laneObj !== null && laneObj !== undefined) {
       const newBlockIds = [...laneObj.blockIds];
       newBlockIds.splice(index, 0, id);
       laneObj.blockIds = newBlockIds;
@@ -374,13 +374,13 @@ export class PatchStore {
     for (const macroBlock of expansion.blocks) {
       // Find the appropriate lane for this block's kind
       const lane = this.root.viewStore.lanes.find((l) => l.kind === macroBlock.laneKind);
-      if (!lane) {
+      if (lane === null || lane === undefined) {
         throw new Error(`Macro block "${macroBlock.ref}" (${macroBlock.type}) references unknown lane kind "${macroBlock.laneKind}"`);
       }
 
       const id = this.generateBlockId();
       const definition = getBlockDefinition(macroBlock.type);
-      if (!definition) {
+      if (definition === null || definition === undefined) {
         throw new Error(`Macro block "${macroBlock.ref}" references unknown block type "${macroBlock.type}"`);
       }
 
@@ -407,10 +407,10 @@ export class PatchStore {
     for (const conn of expansion.connections) {
       const fromId = refToId.get(conn.fromRef);
       const toId = refToId.get(conn.toRef);
-      if (!fromId) {
+      if (fromId === undefined) {
         throw new Error(`Macro connection references unknown source block ref "${conn.fromRef}"`);
       }
-      if (!toId) {
+      if (toId === undefined) {
         throw new Error(`Macro connection references unknown target block ref "${conn.toRef}"`);
       }
       const connection: Connection = {
@@ -422,16 +422,16 @@ export class PatchStore {
     }
 
     // Create bus publishers if defined
-    if (expansion.publishers) {
+    if (expansion.publishers !== null && expansion.publishers !== undefined) {
       for (const pub of expansion.publishers) {
         const blockId = refToId.get(pub.fromRef);
-        if (!blockId) {
+        if (blockId === undefined) {
           throw new Error(`Macro publisher references unknown block ref "${pub.fromRef}"`);
         }
 
         // Find the bus by name
         const bus = this.root.busStore.buses.find((b) => b.name === pub.busName);
-        if (!bus) {
+        if (bus === null || bus === undefined) {
           throw new Error(`Macro publisher references unknown bus "${pub.busName}"`);
         }
 
@@ -441,21 +441,21 @@ export class PatchStore {
     }
 
     // Create bus listeners if defined
-    if (expansion.listeners) {
+    if (expansion.listeners !== null && expansion.listeners !== undefined) {
       for (const lis of expansion.listeners) {
         const blockId = refToId.get(lis.toRef);
-        if (!blockId) {
+        if (blockId === undefined) {
           throw new Error(`Macro listener references unknown block ref "${lis.toRef}"`);
         }
 
         // Find the bus by name
         const bus = this.root.busStore.buses.find((b) => b.name === lis.busName);
-        if (!bus) {
+        if (bus === null || bus === undefined) {
           throw new Error(`Macro listener references unknown bus "${lis.busName}"`);
         }
 
         // Add listener with optional lens
-        const lensDefinition = lis.lens
+        const lensDefinition = lis.lens !== undefined && lis.lens !== null
           ? { type: lis.lens.type, params: lis.lens.params }
           : undefined;
         this.root.busStore.addListener(bus.id, blockId, lis.toSlot, undefined, lensDefinition);
@@ -490,7 +490,11 @@ export class PatchStore {
 
     // Return the first block ID (for selection purposes)
     const firstRef = expansion.blocks[0]?.ref;
-    return firstRef ? refToId.get(firstRef) ?? '' : '';
+    if (firstRef !== undefined && firstRef !== null && firstRef !== '') {
+      const mappedId = refToId.get(firstRef);
+      return mappedId !== undefined && mappedId !== null ? mappedId : '';
+    }
+    return '';
   }
 
   /**
@@ -511,7 +515,7 @@ export class PatchStore {
 
   updateBlock(id: BlockId, updates: Partial<Block>): void {
     const block = this.blocks.find((b) => b.id === id);
-    if (!block) return;
+    if (block === undefined || block === null) return;
     Object.assign(block, updates);
   }
 
@@ -559,7 +563,7 @@ export class PatchStore {
     });
 
     // Emit GraphCommitted unless suppressed (used by replaceBlock)
-    if (!options?.suppressGraphCommitted) {
+    if (options?.suppressGraphCommitted !== true) {
       this.emitGraphCommitted(
         'userEdit',
         {
@@ -580,7 +584,7 @@ export class PatchStore {
    */
   replaceBlock(oldBlockId: BlockId, newBlockType: BlockType): ReplacementResult {
     const oldBlock = this.blocks.find((b) => b.id === oldBlockId);
-    if (!oldBlock) {
+    if (oldBlock === undefined || oldBlock === null) {
       return {
         success: false,
         preservedConnections: 0,
@@ -590,7 +594,7 @@ export class PatchStore {
     }
 
     const newDef = getBlockDefinition(newBlockType);
-    if (!newDef) {
+    if (newDef === undefined || newDef === null) {
       return {
         success: false,
         preservedConnections: 0,
@@ -601,7 +605,7 @@ export class PatchStore {
 
     // Find the lane for this block
     const lane = this.root.viewStore.lanes.find((l) => l.blockIds.includes(oldBlockId));
-    if (!lane) {
+    if (lane === undefined || lane === null) {
       return {
         success: false,
         preservedConnections: 0,
@@ -650,9 +654,9 @@ export class PatchStore {
     for (const oldPub of oldPublishers) {
       // Try to find a compatible output slot on new block
       const oldSlot = oldBlock.outputs.find((s) => s.id === oldPub.from.slotId);
-      if (oldSlot) {
+      if (oldSlot !== undefined && oldSlot !== null) {
         const newSlot = newBlock.outputs.find((s) => s.type === oldSlot.type);
-        if (newSlot) {
+        if (newSlot !== undefined && newSlot !== null) {
           this.root.busStore.addPublisher(oldPub.busId, newBlockId, newSlot.id, oldPub.adapterChain);
         }
       }
@@ -663,9 +667,9 @@ export class PatchStore {
     for (const oldLis of oldListeners) {
       // Try to find a compatible input slot on new block
       const oldSlot = oldBlock.inputs.find((s) => s.id === oldLis.to.slotId);
-      if (oldSlot) {
+      if (oldSlot !== undefined && oldSlot !== null) {
         const newSlot = newBlock.inputs.find((s) => s.type === oldSlot.type);
-        if (newSlot) {
+        if (newSlot !== undefined && newSlot !== null) {
           this.root.busStore.addListener(
             oldLis.busId,
             newBlockId,
@@ -722,7 +726,7 @@ export class PatchStore {
    */
   updateBlockParams(blockId: BlockId, params: Record<string, unknown>): void {
     const block = this.blocks.find((b) => b.id === blockId);
-    if (block) {
+    if (block !== null && block !== undefined) {
       // Use Object.assign to mutate in place for MobX reactivity
       Object.assign(block.params, params);
     }
@@ -802,7 +806,7 @@ export class PatchStore {
     });
 
     // Emit GraphCommitted unless suppressed
-    if (!options?.suppressGraphCommitted) {
+    if (options?.suppressGraphCommitted !== true) {
       this.emitGraphCommitted(
         'userEdit',
         {
@@ -826,7 +830,7 @@ export class PatchStore {
   disconnect(connectionId: string, options?: { suppressGraphCommitted?: boolean }): void {
     // Capture connection data BEFORE removal (for event)
     const connection = this.connections.find((c) => c.id === connectionId);
-    if (!connection) return;
+    if (connection === null || connection === undefined) return;
 
     this.connections = this.connections.filter((c) => c.id !== connectionId);
 
@@ -839,7 +843,7 @@ export class PatchStore {
     });
 
     // Emit GraphCommitted unless suppressed
-    if (!options?.suppressGraphCommitted) {
+    if (options?.suppressGraphCommitted !== true) {
       this.emitGraphCommitted(
         'userEdit',
         {

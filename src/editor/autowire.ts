@@ -119,7 +119,7 @@ export function computeAutoWire(ctx: AutoWireContext): AutoWireResult {
  */
 function wireToExplicitInput(ctx: AutoWireContext): AutoWireResult {
   const { toPort, newBlockId, newBlockDef, connections } = ctx;
-  if (!toPort) return { connections: [], reason: 'no toPort' };
+  if (toPort === undefined) return { connections: [], reason: 'no toPort' };
 
   // Cannot overwrite existing input connection
   if (hasIncomingConnection(connections, toPort.blockId, toPort.slotId)) {
@@ -140,6 +140,10 @@ function wireToExplicitInput(ctx: AutoWireContext): AutoWireResult {
   }
 
   const output = matchingOutputs[0];
+  if (output == null) {
+    return { connections: [], reason: 'no output found' };
+  }
+
   const candidate = {
     fromBlockId: newBlockId,
     fromSlotId: output.id,
@@ -160,7 +164,7 @@ function wireToExplicitInput(ctx: AutoWireContext): AutoWireResult {
  */
 function wireFromExplicitOutput(ctx: AutoWireContext): AutoWireResult {
   const { fromPort, newBlockId, newBlockDef, connections } = ctx;
-  if (!fromPort) return { connections: [], reason: 'no fromPort' };
+  if (fromPort === undefined) return { connections: [], reason: 'no fromPort' };
 
   // Find inputs on new block that match the source output type AND are free
   const matchingInputs = newBlockDef.inputs.filter((inp) => {
@@ -178,6 +182,10 @@ function wireFromExplicitOutput(ctx: AutoWireContext): AutoWireResult {
   }
 
   const input = matchingInputs[0];
+  if (input == null) {
+    return { connections: [], reason: 'no input found' };
+  }
+
   const candidate = {
     fromBlockId: fromPort.blockId,
     fromSlotId: fromPort.slotId,
@@ -202,7 +210,7 @@ function wireFromExplicitOutput(ctx: AutoWireContext): AutoWireResult {
  */
 function wireFromPrevInLane(ctx: AutoWireContext): AutoWireResult {
   const { prevBlockInLane, newBlockId, newBlockDef, connections, blocks } = ctx;
-  if (!prevBlockInLane) return { connections: [], reason: 'no prevBlockInLane' };
+  if (prevBlockInLane === undefined) return { connections: [], reason: 'no prevBlockInLane' };
 
   const prevDef = prevBlockInLane.definition;
   const result: AutoWireResult['connections'] = [];
@@ -222,6 +230,8 @@ function wireFromPrevInLane(ctx: AutoWireContext): AutoWireResult {
     // Only wire if exactly one match (no ambiguity)
     if (matchingInputs.length === 1) {
       const input = matchingInputs[0];
+      if (input == null) continue;
+
       const candidate = {
         fromBlockId: prevBlockInLane.blockId,
         fromSlotId: prevOutput.id,
@@ -253,7 +263,7 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
   const { blocks, connections, newBlockId, newBlockDef, getDefinition } = ctx;
   const result: AutoWireResult['connections'] = [];
 
-  if (!getDefinition) {
+  if (getDefinition === undefined) {
     return { connections: [], reason: 'no getDefinition provided for cross-lane wiring' };
   }
 
@@ -302,6 +312,8 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
     // Only wire if exactly ONE candidate (no ambiguity)
     if (candidates.length === 1) {
       const source = candidates[0];
+      if (source == null) continue;
+
       result.push({
         fromBlockId: source.blockId,
         fromSlotId: source.slotId,
@@ -386,7 +398,9 @@ function isReachable(adj: Map<string, Set<string>>, start: string, goal: string)
   const seen = new Set<string>();
 
   while (stack.length > 0) {
-    const current = stack.pop()!;
+    const current = stack.pop();
+    if (current == null) continue;
+
     if (current === goal) return true;
     if (seen.has(current)) continue;
     seen.add(current);

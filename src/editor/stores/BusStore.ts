@@ -130,7 +130,7 @@ export class BusStore {
     typeDesc: TypeDesc,
     name: string,
     combineMode: BusCombineMode,
-    defaultValue?: any
+    defaultValue?: unknown
   ): string {
     // Check for duplicate name (case-insensitive)
     const normalizedName = name.toLowerCase();
@@ -167,7 +167,7 @@ export class BusStore {
   deleteBus(busId: string): void {
     // Get bus data before removal (for event)
     const bus = this.buses.find(b => b.id === busId);
-    if (!bus) {
+    if (bus === undefined) {
       throw new Error(`Bus ${busId} not found`);
     }
 
@@ -194,7 +194,7 @@ export class BusStore {
    */
   updateBus(busId: string, updates: Partial<Pick<Bus, 'name' | 'combineMode' | 'defaultValue'>>): void {
     const bus = this.buses.find(b => b.id === busId);
-    if (!bus) {
+    if (bus === null || bus === undefined) {
       throw new Error(`Bus ${busId} not found`);
     }
 
@@ -214,11 +214,11 @@ export class BusStore {
     busId: string,
     blockId: BlockId,
     slotId: string,
-    adapterChain?: AdapterStep[],
-    lensStack?: LensInstance[]
+    adapterChain?: readonly AdapterStep[],
+    lensStack?: readonly LensInstance[]
   ): string {
     const bus = this.buses.find(b => b.id === busId);
-    if (!bus) {
+    if (bus === null || bus === undefined) {
       throw new Error(`Bus ${busId} not found`);
     }
 
@@ -280,7 +280,7 @@ export class BusStore {
   removePublisher(publisherId: string): void {
     // Get publisher data before removal (for event)
     const publisher = this.publishers.find(p => p.id === publisherId);
-    if (!publisher) {
+    if (publisher === null || publisher === undefined) {
       return; // Silently ignore if not found (already removed)
     }
 
@@ -304,22 +304,26 @@ export class BusStore {
     busId: string,
     blockId: BlockId,
     slotId: string,
-    adapterChain?: AdapterStep[],
-    lensOrStack?: LensDefinition | LensDefinition[] | LensInstance[]
+    adapterChain?: readonly AdapterStep[],
+    lensOrStack?: LensDefinition | readonly LensDefinition[] | readonly LensInstance[]
   ): string {
     const bus = this.buses.find(b => b.id === busId);
-    if (!bus) {
+    if (bus === null || bus === undefined) {
       throw new Error(`Bus ${busId} not found`);
     }
 
     const listenerId = this.root.generateId('list');
     let lensStack: LensInstance[] | undefined;
-    if (lensOrStack) {
+    if (lensOrStack !== null && lensOrStack !== undefined) {
       const lenses = Array.isArray(lensOrStack) ? lensOrStack : [lensOrStack];
-      lensStack = lenses.map((lens, index) => {
-        if ('lensId' in lens) return lens;
+      lensStack = lenses.map((lens, index): LensInstance => {
+        // Type guard: check if it's already a LensInstance
+        const maybeInstance = lens as LensDefinition & Partial<LensInstance>;
+        if (typeof maybeInstance.lensId === 'string') {
+          return maybeInstance as LensInstance;
+        }
         return createLensInstanceFromDefinition(
-          lens,
+          lens as LensDefinition,
           listenerId,
           index,
           this.root.defaultSourceStore
@@ -378,7 +382,7 @@ export class BusStore {
    * @param lens - Lens to add
    * @param index - Optional index (default: append to end)
    */
-  addLensToStack(listenerId: string, lens: LensDefinition | LensInstance, index?: number): void {
+  addLensToStack(listenerId: string, lens: Readonly<LensDefinition | LensInstance>, index?: number): void {
     const listenerIndex = this.listeners.findIndex(l => l.id === listenerId);
     if (listenerIndex === -1) {
       throw new Error(`Listener ${listenerId} not found`);
@@ -454,7 +458,7 @@ export class BusStore {
   removeListener(listenerId: string): void {
     // Get listener data before removal (for event)
     const listener = this.listeners.find(l => l.id === listenerId);
-    if (!listener) {
+    if (listener === null || listener === undefined) {
       return; // Silently ignore if not found (already removed)
     }
 
@@ -476,7 +480,7 @@ export class BusStore {
    */
   reorderPublisher(publisherId: string, newSortKey: number): void {
     const publisher = this.publishers.find(p => p.id === publisherId);
-    if (!publisher) {
+    if (publisher === null || publisher === undefined) {
       throw new Error(`Publisher ${publisherId} not found`);
     }
 

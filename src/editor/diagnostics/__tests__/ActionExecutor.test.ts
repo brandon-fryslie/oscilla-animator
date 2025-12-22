@@ -12,18 +12,21 @@ import type { DiagnosticHub } from '../DiagnosticHub';
 import type { BlockId, LaneId, Block, Connection } from '../../types';
 
 // Mock stores
-const createMockPatchStore = (): Partial<PatchStore> => ({
-  blocks: [],
-  connections: [],
-  addBlock: vi.fn((_type: string, _params?: Record<string, unknown>) => {
-    const newBlockId = `block-${Date.now()}`;
-    (createMockPatchStore().blocks as any).push({ id: newBlockId, type: _type });
-    return newBlockId;
-  }),
-  removeBlock: vi.fn(),
-  connect: vi.fn(),
-  disconnect: vi.fn(),
-});
+const createMockPatchStore = (): Partial<PatchStore> => {
+  const blocks: Block[] = [];
+  return {
+    blocks,
+    connections: [],
+    addBlock: vi.fn((_type: string, _params?: Record<string, unknown>) => {
+      const newBlockId = `block-${Date.now()}`;
+      blocks.push({ id: newBlockId, type: _type, label: _type, inputs: [], outputs: [], params: {}, category: 'Other' });
+      return newBlockId;
+    }),
+    removeBlock: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  };
+};
 
 
 const createMockViewStore = (): Partial<ViewStateStore> => ({
@@ -38,9 +41,6 @@ const createMockViewStore = (): Partial<ViewStateStore> => ({
 const createMockUIStateStore = (): Partial<UIStateStore> => ({
   selectBlock: vi.fn(),
   selectBus: vi.fn(),
-  root: {
-    viewStore: createMockViewStore(),
-  } as any,
 });
 
 const createMockDiagnosticHub = (): Partial<DiagnosticHub> => ({
@@ -312,7 +312,7 @@ describe('ActionExecutor', () => {
       mockViewStore.lanes![0].blockIds = ['source-block' as BlockId, 'target-block' as BlockId];
 
       // Mock addBlock to return adapter and add it to blocks
-      (mockPatchStore.addBlock as any) = vi.fn((_adapterType: string, laneId: LaneId) => {
+      (mockPatchStore.addBlock as ReturnType<typeof vi.fn>) = vi.fn((_adapterType: string, laneId: LaneId) => {
         const adapterId = 'adapter-block' as BlockId;
         mockPatchStore.blocks!.push(adapterBlock);
         mockViewStore.lanes!.find(l => l.id === laneId)?.blockIds.push(adapterId);
@@ -400,7 +400,7 @@ describe('ActionExecutor', () => {
       };
 
       // Override addBlock to add bad adapter
-      (mockPatchStore.addBlock as any) = vi.fn((_badAdapterType: string, laneId: LaneId) => {
+      (mockPatchStore.addBlock as ReturnType<typeof vi.fn>) = vi.fn((_badAdapterType: string, laneId: LaneId) => {
         const adapterId = 'adapter-block' as BlockId;
         mockPatchStore.blocks!.push(badAdapterBlock);
         mockViewStore.lanes!.find(l => l.id === laneId)?.blockIds.push(adapterId);
@@ -441,14 +441,6 @@ describe('ActionExecutor', () => {
     it('should return false and warn for unknown action kind', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const result = actionExecutor.execute({
-        kind: 'openDocs',
-        docUrl: 'invalid',
-      } as any); // Cast to any to avoid TypeScript error
-
-      // Modify the action after creation to simulate unknown kind
-      void result; // Use result to avoid unused variable warning
-
       // Actually test with a simpler approach - just invoke with valid action and check logs
       actionExecutor.execute({ kind: 'addAdapter', fromPort: { kind: 'port', portRef: { blockId: 'b', slotId: 'p', direction: 'output' } }, adapterType: 'test' });
 
@@ -463,7 +455,7 @@ describe('ActionExecutor', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       // Force an error by making selectBlock throw
-      (mockUIStateStore.selectBlock as any) = vi.fn(() => {
+      (mockUIStateStore.selectBlock as ReturnType<typeof vi.fn>) = vi.fn(() => {
         throw new Error('Test error');
       });
 

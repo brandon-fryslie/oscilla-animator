@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { isDefined, isNonEmptyString } from './types/helpers';
 import './Modal.css';
 
 type ModalWidth = 'small' | 'medium' | 'large';
@@ -15,7 +14,7 @@ export interface ModalProps {
   zIndex?: number;
 }
 
-function useFocusTrap(enabled: boolean, containerRef: React.RefObject<HTMLDivElement | null>) {
+function useFocusTrap(enabled: boolean, containerRef: React.RefObject<HTMLDivElement | null>): void {
   useEffect(() => {
     if (!enabled) return;
 
@@ -85,6 +84,8 @@ export function Modal({
       'input, button, textarea, select, [tabindex]:not([tabindex="-1"])'
     );
     firstFocusable?.focus();
+    // Note: zIndex is intentionally omitted from deps - it only affects the backdrop styling,
+    // not the focus behavior. The focus trap is managed by useFocusTrap which runs independently.
   }, [isOpen]);
 
   const content = useMemo(() => {
@@ -98,9 +99,9 @@ export function Modal({
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
-          aria-label={title ?? 'Modal dialog'}
+          aria-label={title !== undefined && title !== null && title !== '' ? title : 'Modal dialog'}
         >
-          {isNonEmptyString(title) && (
+          {title !== undefined && title !== null && title !== '' && (
             <div className="modal-header">
               <h2 className="modal-title">{title}</h2>
               <button className="modal-close" onClick={onClose} aria-label="Close modal">
@@ -109,7 +110,7 @@ export function Modal({
             </div>
           )}
           <div className="modal-body">{children}</div>
-          {isDefined(footer) && <div className="modal-footer">{footer}</div>}
+          {footer !== undefined && footer !== null && <div className="modal-footer">{footer}</div>}
         </div>
       </div>
     );

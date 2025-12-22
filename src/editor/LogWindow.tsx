@@ -366,7 +366,7 @@ const DiagnosticBadgeWithTooltip = memo(function DiagnosticBadgeWithTooltip({
 /**
  * LogWindow - collapsible log viewer with filters and diagnostics panel.
  */
-export const LogWindow = observer(() => {
+export const LogWindow = observer((): React.ReactElement => {
   const store = useStore();
   const logStore = store.logStore;
   const diagnosticStore = store.diagnosticStore;

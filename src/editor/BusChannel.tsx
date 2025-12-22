@@ -61,7 +61,7 @@ function isCoreDomain(domain: string): domain is CoreDomain {
 /**
  * Individual bus channel strip.
  */
-export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelProps) => {
+export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelProps): React.ReactElement => {
   const store = useStore();
   const publishers = store.busStore.getPublishersByBus(bus.id);
   const listeners = store.busStore.getListenersByBus(bus.id);
@@ -74,9 +74,9 @@ export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelPro
   const [draggedPublisherId, setDraggedPublisherId] = useState<string | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
 
-  const handleNameChange = (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleNameChange = (e: React.FocusEvent<HTMLInputElement>): void => {
     const newName = e.target.value.trim();
-    if (newName !== undefined && newName !== null && newName.length > 0 && newName !== bus.name) {
+    if (newName.length > 0 && newName !== bus.name) {
       store.busStore.updateBus(bus.id, { name: newName });
     }
   };
@@ -106,7 +106,7 @@ export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelPro
     setDropTargetIndex(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+  const handleDrop = (e: React.DragEvent, targetIndex: number): void => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -201,7 +201,7 @@ export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelPro
           <div className="bus-channel-publisher-list">
             {publishers.map((pub, index) => {
               const block = store.patchStore.blocks.find((b) => b.id === pub.from.blockId);
-              const blockLabel = block?.label ?? pub.from.blockId;
+              const blockLabel = block !== undefined && block !== null ? block.label : pub.from.blockId;
               const isDragging = pub.id === draggedPublisherId;
               const isDropTarget = index === dropTargetIndex;
 

@@ -136,32 +136,32 @@ export class RootStore {
 
   get selectedBlock(): Block | null {
     const { selectedBlockId } = this.uiStore.uiState;
-    if (!selectedBlockId) return null;
+    if (selectedBlockId === null || selectedBlockId === undefined) return null;
     return this.patchStore.blocks.find((b) => b.id === selectedBlockId) ?? null;
   }
 
   get selectedBus(): Bus | null {
     const { selectedBusId } = this.uiStore.uiState;
-    if (!selectedBusId) return null;
+    if (selectedBusId === null || selectedBusId === undefined) return null;
     return this.busStore.buses.find((b) => b.id === selectedBusId) ?? null;
   }
 
   get activeLane(): Lane | null {
     const { activeLaneId } = this.uiStore.uiState;
-    if (!activeLaneId) return null;
+    if (activeLaneId === null || activeLaneId === undefined) return null;
     return this.viewStore.lanes.find((l) => l.id === activeLaneId) ?? null;
   }
 
   get selectedPortInfo(): { block: Block; slot: Slot; direction: 'input' | 'output' } | null {
     const portRef = this.uiStore.uiState.selectedPort;
-    if (!portRef) return null;
+    if (portRef === null || portRef === undefined) return null;
 
     const block = this.patchStore.blocks.find((b) => b.id === portRef.blockId);
-    if (!block) return null;
+    if (block === null || block === undefined) return null;
 
     const slots = portRef.direction === 'input' ? block.inputs : block.outputs;
     const slot = slots.find((s) => s.id === portRef.slotId);
-    if (!slot) return null;
+    if (slot === null || slot === undefined) return null;
 
     return { block, slot, direction: portRef.direction };
   }
@@ -187,22 +187,23 @@ export class RootStore {
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   loadPatch(patch: Patch): void {
     this.patchStore.blocks = patch.blocks.map((block) => ({ ...block }));
     this.patchStore.connections = patch.connections.map((connection) => ({ ...connection }));
-    
+
     // View state
-    if (patch.lanes) {
+    if (patch.lanes !== undefined && patch.lanes !== null) {
       this.viewStore.lanes = patch.lanes;
     }
-    if (patch.settings?.currentLayoutId) {
+    if (patch.settings !== null && patch.settings !== undefined && patch.settings.currentLayoutId !== null && patch.settings.currentLayoutId !== undefined && patch.settings.currentLayoutId !== '') {
       this.viewStore.currentLayoutId = patch.settings.currentLayoutId;
     }
 
     this.uiStore.settings = {
       seed: patch.settings.seed,
       speed: patch.settings.speed,
-      currentLayoutId: patch.settings.currentLayoutId || 'default',
+      currentLayoutId: (patch.settings.currentLayoutId !== null && patch.settings.currentLayoutId !== undefined && patch.settings.currentLayoutId !== '') ? patch.settings.currentLayoutId : 'default',
       advancedLaneMode: patch.settings.advancedLaneMode ?? false,
       autoConnect: patch.settings.autoConnect ?? false,
       showTypeHints: patch.settings.showTypeHints ?? false,
@@ -221,17 +222,28 @@ export class RootStore {
     // Create default buses if none exist in loaded patch
     this.busStore.createDefaultBuses();
 
-    if ('composites' in patch && Array.isArray((patch as any).composites)) {
-      this.compositeStore.composites = (patch as any).composites;
+    // Load legacy composites if present
+    type PatchWithComposites = Patch & { composites?: unknown[] };
+    const patchWithComposites = patch as PatchWithComposites;
+    if ('composites' in patchWithComposites && Array.isArray(patchWithComposites.composites)) {
+      this.compositeStore.composites = patchWithComposites.composites;
     } else {
       this.compositeStore.composites = [];
     }
     this.uiStore.uiState.selectedBlockId = null;
 
-    const maxId = Math.max(
-      ...this.patchStore.blocks.map((b) => parseInt(b.id.split('-')[1]) || 0),
-      ...this.patchStore.connections.map((c) => parseInt(c.id.split('-')[1]) || 0)
-    );
+    const blockIds = this.patchStore.blocks.map((b) => {
+      const parsed = parseInt(b.id.split('-')[1], 10);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    });
+    const connectionIds = this.patchStore.connections.map((c) => {
+      const parsed = parseInt(c.id.split('-')[1], 10);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    });
+    const hasBlockIds = blockIds.length > 0;
+    const hasConnectionIds = connectionIds.length > 0;
+    const hasIds = hasBlockIds || hasConnectionIds;
+    const maxId = hasIds ? Math.max(...blockIds, ...connectionIds) : 0;
     this.nextId = maxId + 1;
 
     // Emit PatchLoaded event AFTER all state changes committed

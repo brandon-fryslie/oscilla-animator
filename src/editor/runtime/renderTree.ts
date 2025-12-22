@@ -167,8 +167,8 @@ export type RenderTree = DrawNode;
  */
 export function group(
   id: string,
-  children: DrawNode[],
-  opts?: { tags?: string[]; meta?: Record<string, unknown> }
+  children: readonly DrawNode[],
+  opts?: { readonly tags?: readonly string[]; readonly meta?: Readonly<Record<string, unknown>> }
 ): GroupNode {
   return {
     kind: 'group',
@@ -186,7 +186,7 @@ export function path(
   id: string,
   d: string,
   style?: Style,
-  opts?: { tags?: string[]; meta?: Record<string, unknown> }
+  opts?: { readonly tags?: readonly string[]; readonly meta?: Readonly<Record<string, unknown>> }
 ): ShapeNode {
   return {
     kind: 'shape',
@@ -207,7 +207,7 @@ export function circle(
   cy: number,
   r: number,
   style?: Style,
-  opts?: { tags?: string[]; meta?: Record<string, unknown> }
+  opts?: { readonly tags?: readonly string[]; readonly meta?: Readonly<Record<string, unknown>> }
 ): ShapeNode {
   return {
     kind: 'shape',

@@ -301,11 +301,14 @@ describe('Lens Presets', () => {
 describe('Lens Error Handling', () => {
   it('returns error for unknown lens type', () => {
     const input = createSignalArtifact(() => 0.5);
-    const lens = { type: 'unknown' as any, params: {} };
+    // Create a lens definition with an invalid type
+    const lens: LensDefinition = { type: 'unknown', params: {} };
 
     const result = applyLens(input, lens);
     expect(result.kind).toBe('Error');
-    expect((result as any).message).toContain('Unknown lens');
+    if (result.kind === 'Error') {
+      expect(result.message).toContain('Unknown lens');
+    }
   });
 
   it('handles Signal:Unit input for ease lens', () => {
@@ -472,7 +475,7 @@ describe('MapRangeLens', () => {
 describe('Lens Stacks', () => {
   it('applies multiple lenses in sequence', () => {
     const input = createSignalArtifact(() => 0.5);
-    
+
     // First scale by 2, then offset by 0.1
     const lens1: LensDefinition = { type: 'scale', params: { scale: 2, offset: 0 } };
     const lens2: LensDefinition = { type: 'scale', params: { scale: 1, offset: 0.1 } };
@@ -485,7 +488,7 @@ describe('Lens Stacks', () => {
 
   it('order matters in stacks', () => {
     const input = createSignalArtifact(() => 0.5);
-    
+
     // Offset first, then scale
     const lens1: LensDefinition = { type: 'scale', params: { scale: 1, offset: 0.1 } };
     const lens2: LensDefinition = { type: 'scale', params: { scale: 2, offset: 0 } };
@@ -498,7 +501,7 @@ describe('Lens Stacks', () => {
 
   it('clamp after mapRange prevents overflow', () => {
     const input = createSignalArtifact(() => 0.8);
-    
+
     // Map to [0, 360] then clamp to [0, 180]
     const lens1: LensDefinition = {
       type: 'mapRange',
@@ -514,7 +517,7 @@ describe('Lens Stacks', () => {
 
   it('deadzone before ease filters noise', () => {
     const input = createSignalArtifact(() => 0.02);
-    
+
     // Remove small values, then apply easing
     const lens1: LensDefinition = { type: 'deadzone', params: { width: 0.05 } };
     const lens2: LensDefinition = { type: 'ease', params: { easing: 'easeInOutSine' } };

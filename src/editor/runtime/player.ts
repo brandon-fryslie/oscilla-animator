@@ -198,7 +198,7 @@ export class Player {
     this.activePatchRevision = revision;
 
     // Emit ProgramSwapped event to sync DiagnosticHub's active revision
-    if (this.events && revision !== previousRevision) {
+    if (this.events !== null && this.events !== undefined && revision !== previousRevision) {
       this.events.emit({
         type: 'ProgramSwapped',
         patchId: 'default',
@@ -219,7 +219,7 @@ export class Player {
   }
 
   private instantiateProgram(): void {
-    if (!this.programFactory || !this.scene) return;
+    if (this.programFactory === null || this.programFactory === undefined || this.scene === null) return;
 
     this.program = this.programFactory(this.seed, this.scene, this.compileCtx);
 
@@ -347,7 +347,7 @@ export class Player {
   };
 
   private renderOnce(): void {
-    if (!this.program) return;
+    if (this.program === null || this.program === undefined) return;
 
     const tree = this.program.signal(this.tMs, this.runtimeCtx);
 
@@ -379,7 +379,7 @@ export class Player {
   private checkRenderHealth(tree: RenderTree): void {
     // For now, just check if tree exists and is valid
     // Future: could add deep traversal to check for NaN/Infinity in coordinates
-    if (!tree || typeof tree !== 'object') {
+    if (typeof tree !== 'object') {
       this.nanCount++;
     }
   }
@@ -388,7 +388,7 @@ export class Player {
    * Emit RuntimeHealthSnapshot event if interval has elapsed.
    */
   private emitHealthSnapshot(nowMs: number): void {
-    if (!this.events) return;
+    if (this.events === null || this.events === undefined) return;
 
     const elapsed = nowMs - this.lastHealthEmitMs;
     if (elapsed < Player.HEALTH_EMIT_INTERVAL_MS) return;

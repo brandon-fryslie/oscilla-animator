@@ -166,7 +166,7 @@ describe('Domain Pipeline', () => {
 
         // At 0 degrees, point should be at (center + radius, center)
         const firstPos = positions[0];
-        if (firstPos) {
+        if (firstPos !== undefined) {
           expect(firstPos.x).toBeCloseTo(150, 1);
           expect(firstPos.y).toBeCloseTo(100, 1);
         }

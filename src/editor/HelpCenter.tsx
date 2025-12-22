@@ -644,7 +644,7 @@ export interface HelpPanelProps {
   onPopOut: () => void; // Open in larger modal
 }
 
-export const HelpPanel = ({ topicId, collapsed, onToggleCollapse, onNavigate, onRetakeTour, onPopOut }: HelpPanelProps): JSX.Element => {
+export const HelpPanel = ({ topicId, collapsed, onToggleCollapse, onNavigate, onRetakeTour, onPopOut }: HelpPanelProps): React.ReactElement => {
   const topics = useMemo(() => buildTopics(onRetakeTour), [onRetakeTour]);
 
   // Build flat map of all topics

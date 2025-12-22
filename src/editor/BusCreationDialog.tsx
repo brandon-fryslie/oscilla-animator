@@ -248,7 +248,7 @@ function generateInitialName(
 /**
  * Bus creation dialog.
  */
-export const BusCreationDialog = observer((props: BusCreationDialogProps) => {
+export const BusCreationDialog = observer((props: BusCreationDialogProps): React.ReactElement | null => {
   const store = useStore();
   const {
     isOpen,

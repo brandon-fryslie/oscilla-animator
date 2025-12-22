@@ -87,7 +87,8 @@ function createFieldTestRegistry(): BlockRegistry {
             value: {
               signal: (_t: number, _ctx: unknown) => {
                 // Evaluate field for 5 elements
-                const values = fieldFn(42, 5, { env: {}, geom: null as unknown as any });
+                const ctx = createTestContext();
+                const values = fieldFn(42, 5, ctx);
                 const sum = values.reduce((a, b) => a + b, 0);
                 return {
                   kind: 'group' as const,

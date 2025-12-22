@@ -1,4 +1,5 @@
 import type { BlockDefinition, BlockSubcategory } from './types';
+import { isNonEmptyString } from '../types/helpers';
 
 // =============================================================================
 // Macro Factory Function
@@ -19,13 +20,13 @@ function createMacro(config: {
     type: config.type,
     label: config.label,
     // Note: form is derived from type prefix 'macro:' via getBlockForm()
-    subcategory: config.subcategory || 'Quick Start',
+    subcategory: isNonEmptyString(config.subcategory) ? config.subcategory : 'Quick Start',
     description: config.description,
     inputs: [],
     outputs: [],
     defaultParams: {},
     paramSchema: [],
-    color: config.color || '#fbbf24',
+    color: isNonEmptyString(config.color) ? config.color : '#fbbf24',
     laneKind: 'Program',
     priority: config.priority,
   };

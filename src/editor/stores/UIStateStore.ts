@@ -50,7 +50,7 @@ export class UIStateStore {
 
   root: RootStore;
 
-  constructor(root: RootStore) {
+  constructor(root: Readonly<Readonly<RootStore>>) {
     this.root = root;
     makeObservable(this, {
       uiState: observable,
@@ -186,17 +186,17 @@ export class UIStateStore {
   // Actions - Preview Management
   // =============================================================================
 
-  setPreviewedDefinition(definition: any): void {
+  setPreviewedDefinition(definition: Readonly<BlockDefinition | null>): void {
     this.previewedDefinition = definition;
   }
 
   /**
    * Preview a block definition from the library (before placement).
    */
-  previewDefinition(definition: any | null): void {
+  previewDefinition(definition: Readonly<BlockDefinition | null>): void {
     this.previewedDefinition = definition;
     // Clear selected block when previewing
-    if (definition) {
+    if (definition !== null && definition !== undefined) {
       this.uiState.selectedBlockId = null;
     }
   }

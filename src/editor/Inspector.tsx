@@ -50,7 +50,7 @@ const PortWiringPanel = observer(({
   portRef: PortRef;
   block: Block;
   slot: Slot;
-}) => {
+}): React.ReactElement => {
   const store = useStore();
   const [hoveredTarget, setHoveredTarget] = useState<PortRef | null>(null);
 
@@ -195,13 +195,14 @@ const PortWiringPanel = observer(({
   /**
    * Add a library block to its suggested lane and connect to the selected port.
    */
-  const handleAddAndConnect = (def: BlockDefinition, targetSlot: Slot) => {
+  const handleAddAndConnect = (def: BlockDefinition, targetSlot: Slot): void => {
     // Find the suggested lane
     const targetLane = store.viewStore.lanes.find((lane) => lane.kind === def.laneKind);
-    if (!targetLane) return;
+    if (targetLane === undefined || targetLane === null) return;
 
     // Add the block
-    const newBlockId = store.patchStore.addBlock(def.type, targetLane.id, def.defaultParams);
+    const newBlockId = store.patchStore.addBlock(def.type, def.defaultParams);
+    store.viewStore.moveBlockToLane(newBlockId, targetLane.id);
 
     // Connect the ports
     if (portRef.direction === 'output') {
@@ -222,7 +223,8 @@ const PortWiringPanel = observer(({
 
   const findLaneIdForBlock = (blockId: string): string | null => {
     const lane = store.viewStore.lanes.find((l) => l.blockIds.includes(blockId));
-    return lane?.id ?? null;
+    if (lane === undefined || lane === null) return null;
+    return lane.id;
   };
 
   const isInputOccupied = (blockId: string, slotId: string): boolean => {
@@ -242,8 +244,12 @@ const PortWiringPanel = observer(({
     const laneByKind = store.viewStore.lanes.find((l) => l.kind === suggestion.adapter.laneKind);
     const laneOfTarget = findLaneIdForBlock(suggestion.block.id);
     const laneFallback = store.viewStore.lanes[0]?.id ?? null;
-    const laneId = laneByKind?.id ?? laneOfTarget ?? laneFallback;
-    if (!laneId) return;
+    const laneId = laneByKind !== undefined && laneByKind !== null
+      ? laneByKind.id
+      : (laneOfTarget !== undefined && laneOfTarget !== null
+        ? laneOfTarget
+        : laneFallback);
+    if (laneId === undefined || laneId === null) return;
 
     // Guard against overwriting occupied inputs
     if (portRef.direction === 'output' && isInputOccupied(suggestion.block.id, suggestion.slot.id)) {
@@ -255,9 +261,9 @@ const PortWiringPanel = observer(({
 
     const adapterId = store.patchStore.addBlock(
       suggestion.adapter.type,
-      laneId,
       suggestion.adapter.defaultParams
     );
+    store.viewStore.moveBlockToLane(adapterId, laneId);
 
     if (portRef.direction === 'output') {
       // source -> adapter -> target
@@ -350,10 +356,10 @@ const PortWiringPanel = observer(({
                     onDoubleClick={() => store.uiStore.selectBlock(otherBlockId)}
                     title="Double-click to inspect this block"
                   >
-                    <span className="wiring-target-block">{otherBlock?.label ?? 'Unknown'}</span>
+                    <span className="wiring-target-block">{otherBlock !== undefined && otherBlock !== null ? otherBlock.label : 'Unknown'}</span>
                     <span className="wiring-target-slot">
-                      {otherSlot?.label ?? otherSlotId}
-                      {otherSlot ? renderTypeBadges(otherSlot.type) : null}
+                      {otherSlot !== undefined && otherSlot !== null ? otherSlot.label : otherSlotId}
+                      {otherSlot !== undefined && otherSlot !== null ? renderTypeBadges(otherSlot.type) : null}
                     </span>
                     <button
                       className="wiring-disconnect-btn"
@@ -592,7 +598,7 @@ const PortItem = observer(({
       : (c.from.blockId === blockId && c.from.slotId === slot.id)
   );
 
-  const connectedBlockId = connection
+  const connectedBlockId = connection !== null && connection !== undefined
     ? (direction === 'input' ? connection.from.blockId : connection.to.blockId)
     : null;
   const connectedBlock = connectedBlockId !== null && connectedBlockId !== undefined
@@ -608,9 +614,14 @@ const PortItem = observer(({
     if (connectedBlockId !== null && connectedBlockId !== undefined) onNavigate(connectedBlockId);
   }, [onNavigate, connectedBlockId]);
 
-  const isSelected = store.uiStore.uiState.selectedPort?.blockId === blockId &&
-                     store.uiStore.uiState.selectedPort?.slotId === slot.id &&
-                     store.uiStore.uiState.selectedPort?.direction === direction;
+  const selectedPort = store.uiStore.uiState.selectedPort;
+  const isSelected = selectedPort !== null &&
+                     selectedPort !== undefined &&
+                     selectedPort.blockId === blockId &&
+                     selectedPort.slotId === slot.id &&
+                     selectedPort.direction === direction
+    ? true
+    : false;
 
   return (
     <div className={`port-item ${isSelected ? 'selected' : ''}`}>
@@ -637,10 +648,10 @@ const PortItem = observer(({
   );
 });
 
-const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Slot }) => {
+const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Slot }): React.ReactElement | null => {
   const store = useStore();
   const defaultSource = slot.defaultSource;
-  if (!defaultSource) return null;
+  if (defaultSource === undefined || defaultSource === null) return null;
 
   const currentValue = block.params[slot.id] ?? defaultSource.value;
   const updateValue = (value: unknown) => {
@@ -716,7 +727,7 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
           />
         );
       case 'xy': {
-        const vec = typeof currentValue === 'object' && currentValue !== null
+        const vec = typeof currentValue === 'object' && currentValue !== null && 'x' in currentValue && 'y' in currentValue
           ? (currentValue as { x: number; y: number })
           : { x: 0, y: 0 };
         return (
@@ -754,7 +765,7 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
 /**
  * Compatible blocks section - shows blocks that can replace the current one
  */
-const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
+const CompatibleBlocksSection = observer(({ block }: { block: Block }): React.ReactElement | null => {
   const store = useStore();
   const [expanded, setExpanded] = useState(false);
 
@@ -780,7 +791,8 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
     const savedOut = outgoing.map(c => ({ to: c.to.blockId, toSlot: c.to.slotId, fromSlot: c.from.slotId }));
 
     store.patchStore.removeBlock(block.id);
-    const newId = store.patchStore.addBlock(newDef.type, lane.id, newDef.defaultParams);
+    const newId = store.patchStore.addBlock(newDef.type, newDef.defaultParams);
+    store.viewStore.moveBlockToLane(newId, lane.id);
 
     for (const c of savedIn) {
       const newBlock = store.patchStore.blocks.find(b => b.id === newId);
@@ -828,7 +840,7 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
 /**
  * Bus connections section
  */
-const BusConnectionsSection = observer(({ block }: { block: Block }) => {
+const BusConnectionsSection = observer(({ block }: { block: Block }): React.ReactElement | null => {
   const store = useStore();
 
   // Find bus publications from this block
@@ -1030,7 +1042,8 @@ export const Inspector = observer(() => {
 
                 <div className="insp-body">
                   {/* Wiring Panel for selected port on current block */}
-                  {store.uiStore.uiState.selectedPort &&
+                  {store.uiStore.uiState.selectedPort !== null &&
+                   store.uiStore.uiState.selectedPort !== undefined &&
                    store.uiStore.uiState.selectedPort.blockId === block.id ? (
                     <BlockInspectorWiringPanel
                       sourcePortRef={store.uiStore.uiState.selectedPort}

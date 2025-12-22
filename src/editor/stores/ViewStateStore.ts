@@ -39,6 +39,7 @@ export class ViewStateStore {
   /** Active view id (lane vs projection) */
   activeViewId: string = 'lane';
 
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   constructor(root: RootStore) {
     this.root = root;
     this.lanes = this.createLanesFromLayout(DEFAULT_LAYOUT);
@@ -66,18 +67,21 @@ export class ViewStateStore {
     this.setupEventListeners();
   }
 
-  private setupEventListeners() {
+  private setupEventListeners(): void {
     // React to blocks being added/removed/replaced in PatchStore
     this.root.events.on('BlockAdded', (event) => {
       // If block is already assigned to a lane (e.g. by explicit UI action), skip
-      if (this.findLaneForBlock(event.blockId)) return;
+      const laneForBlock = this.findLaneForBlock(event.blockId);
+      if (laneForBlock !== undefined && laneForBlock !== null) return;
 
       // Otherwise, auto-place based on affinity
       const def = getBlockDefinition(event.blockType);
-      if (def) {
-        const targetLane = this.lanes.find(l => l.kind === def.laneKind) || this.lanes[0];
-        if (targetLane) {
-          this.assignBlockToLane(event.blockId, targetLane.id);
+      if (def !== undefined && def !== null) {
+        const targetLane = this.lanes.find(l => l.kind === def.laneKind);
+        const fallbackLane = this.lanes[0];
+        const selectedLane = targetLane !== undefined ? targetLane : fallbackLane;
+        if (selectedLane !== undefined && selectedLane !== null) {
+          this.assignBlockToLane(event.blockId, selectedLane.id);
         }
       }
     });
@@ -89,7 +93,7 @@ export class ViewStateStore {
     this.root.events.on('BlockReplaced', (event) => {
       // Find lane of old block
       const lane = this.findLaneForBlock(event.oldBlockId);
-      if (lane) {
+      if (lane !== undefined && lane !== null) {
         // Replace ID in place
         const index = lane.blockIds.indexOf(event.oldBlockId);
         if (index !== -1) {
@@ -149,33 +153,34 @@ export class ViewStateStore {
 
   toggleLaneCollapsed(laneId: LaneId): void {
     const lane = this.lanes.find((l) => l.id === laneId);
-    if (!lane) return;
+    if (lane === undefined) return;
     lane.collapsed = !lane.collapsed;
   }
 
   toggleLanePinned(laneId: LaneId): void {
     const lane = this.lanes.find((l) => l.id === laneId);
-    if (!lane) return;
+    if (lane === undefined) return;
     lane.pinned = !lane.pinned;
   }
 
   renameLane(laneId: LaneId, newName: string): void {
     const lane = this.lanes.find((l) => l.id === laneId);
-    if (!lane) return;
+    if (lane === undefined) return;
     lane.label = newName;
   }
 
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   addLane(lane: Lane): void {
     this.lanes.push(lane);
   }
 
   removeLane(laneId: LaneId): void {
     const lane = this.lanes.find((l) => l.id === laneId);
-    if (!lane || lane.pinned) return;
+    if (lane === undefined || lane.pinned) return;
 
     // Move blocks to first available lane
     const firstLane = this.lanes.find((l) => l.id !== laneId);
-    if (firstLane) {
+    if (firstLane !== undefined) {
       firstLane.blockIds.push(...lane.blockIds);
     }
 
@@ -190,7 +195,7 @@ export class ViewStateStore {
 
     // Add to target lane
     const targetLane = this.lanes.find((l) => l.id === targetLaneId);
-    if (targetLane) {
+    if (targetLane !== undefined) {
       targetLane.blockIds.push(blockId);
     }
   }
@@ -203,7 +208,7 @@ export class ViewStateStore {
 
     // Add to target lane at specific index
     const targetLane = this.lanes.find((l) => l.id === targetLaneId);
-    if (targetLane) {
+    if (targetLane !== undefined) {
       const newBlockIds = [...targetLane.blockIds];
       newBlockIds.splice(index, 0, blockId);
       targetLane.blockIds = newBlockIds;
@@ -212,7 +217,7 @@ export class ViewStateStore {
 
   reorderBlockInLane(laneId: LaneId, blockId: BlockId, newIndex: number): void {
     const lane = this.lanes.find((l) => l.id === laneId);
-    if (!lane) return;
+    if (lane === undefined) return;
 
     const oldIndex = lane.blockIds.indexOf(blockId);
     if (oldIndex === -1) return;
@@ -227,11 +232,11 @@ export class ViewStateStore {
 
   switchLayout(layoutId: string): void {
     const newLayout = getLayoutById(layoutId);
-    if (!newLayout || layoutId === this.currentLayoutId) return;
+    if (newLayout === null || newLayout === undefined || layoutId === this.currentLayoutId) return;
 
     const oldLayout = this.currentLayout;
     const blockAssignments: Array<{ blockId: BlockId; oldLaneId: string }> = [];
-    
+
     for (const lane of this.lanes) {
       for (const blockId of lane.blockIds) {
         blockAssignments.push({ blockId, oldLaneId: lane.id });
@@ -244,7 +249,7 @@ export class ViewStateStore {
     for (const { blockId, oldLaneId } of blockAssignments) {
       const newLaneId = mapLaneToLayout(oldLaneId, oldLayout, newLayout);
       const newLane = this.lanes.find((l) => l.id === newLaneId);
-      if (newLane) {
+      if (newLane !== null && newLane !== undefined) {
         newLane.blockIds.push(blockId);
       } else {
         this.lanes[0]?.blockIds.push(blockId);
@@ -260,16 +265,17 @@ export class ViewStateStore {
     const blocks = this.root.patchStore.blocks;
     for (const block of blocks) {
       // Logic to place block in default lane
-      const defaultLane = this.lanes.find(l => l.kind === 'Program') || this.lanes[0];
-      if (defaultLane) {
-        defaultLane.blockIds.push(block.id);
+      const defaultLane = this.lanes.find(l => l.kind === 'Program');
+      const resolvedLane = defaultLane !== undefined && defaultLane !== null ? defaultLane : this.lanes[0];
+      if (resolvedLane !== undefined && resolvedLane !== null) {
+        resolvedLane.blockIds.push(block.id);
       }
     }
   }
 
   assignBlockToLane(blockId: BlockId, laneId: LaneId): void {
     const lane = this.lanes.find(l => l.id === laneId);
-    if (lane && !lane.blockIds.includes(blockId)) {
+    if (lane !== null && lane !== undefined && !lane.blockIds.includes(blockId)) {
       lane.blockIds.push(blockId);
     }
   }
@@ -281,6 +287,7 @@ export class ViewStateStore {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
 function computeProjectionLayout(root: RootStore): ProjectionLayout {
   const doc = storeToPatchDocument(root);
   const graph = SemanticGraph.fromPatch(doc);

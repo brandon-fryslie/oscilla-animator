@@ -67,7 +67,7 @@ const DEFAULT_TIME_MODEL: TimeModel = {
   windowMs: 10000,
 };
 
-export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }: PreviewPanelProps) => {
+export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }: PreviewPanelProps): React.ReactElement => {
   const store = useStore();
   const logStore = store.logStore;
   const svgRef = useRef<SVGSVGElement>(null);
@@ -101,7 +101,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const { width, height } = viewport;
 
   // Initialize player and renderer ONCE (never destroy/recreate)
-  // biome-ignore format: complex hook
+  // This effect intentionally has minimal dependencies to run only once on mount
   useEffect(() => {
     if (!svgRef.current) return;
     if (playerRef.current) return; // Already initialized
@@ -164,9 +164,8 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
       player.destroy();
       renderer.clear();
     };
-  // Intentionally run only once - initialization hook
-  // biome-ignore lint/correctness/useExhaustiveDependencies: run once on mount
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount - refs guard re-execution
+  }, []);
 
   // Sync with external isPlaying prop
   useEffect(() => {
@@ -212,9 +211,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     }, 500);
 
     return () => clearInterval(interval);
-  // viewport is tracked inside the effect via closure
-  // biome-ignore lint/correctness/useExhaustiveDependencies: compilerService is the true dependency
-  }, [compilerService, logStore, store.patchStore.patchRevision]);
+  }, [compilerService, logStore, store.patchStore.patchRevision, viewport]);
 
   // TimeConsole callbacks
   const handlePlay = useCallback(() => {

@@ -193,7 +193,7 @@ function PathsIcon() {
 /**
  * Settings Toolbar component.
  */
-export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModalOpen, showHelpNudge, onDesignerView, onPerformanceView }: SettingsToolbarProps) => {
+export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModalOpen, showHelpNudge, onDesignerView, onPerformanceView }: SettingsToolbarProps): React.ReactElement => {
   const store = useStore();
   const currentLayout = store.viewStore.currentLayout;
 

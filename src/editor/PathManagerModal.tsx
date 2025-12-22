@@ -42,7 +42,7 @@ function isLikelyJSON(text: string) {
   return trimmed.startsWith('{') || trimmed.startsWith('[');
 }
 
-export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalProps) => {
+export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalProps): React.ReactElement => {
   const [activeTab, setActiveTab] = useState<TabId>('library');
   const [importText, setImportText] = useState('');
   const [importName, setImportName] = useState('');
@@ -294,7 +294,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
 
   const handleExport = (id: string) => {
     const json = pathLibrary.exportAsJSON(id);
-    if (json === undefined) return;
+    if (json === null || json === undefined) return;
 
     const entry = pathLibrary.getById(id);
     const filename = `path-${entry?.name ?? 'export'}-${Date.now()}.json`;
@@ -309,10 +309,12 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
 
   const handleDelete = (id: string) => {
     const entry = pathLibrary.getById(id);
-    if (entry === undefined || entry.source === 'builtin') return;
+    if (entry === null || entry.source === 'builtin') {
+      return;
+    }
 
     const confirmDelete = window.confirm(`Delete "${entry.name}"?`);
-    if (confirmDelete === false) return;
+    if (!confirmDelete) return;
 
     setIsDeleting(id);
     try {
@@ -505,7 +507,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
                   <div className="path-card" key={entry.id}>
                     <div
                       className="path-card-thumbnail"
-                      dangerouslySetInnerHTML={{ __html: entry.thumbnail !== null ? entry.thumbnail : PLACEHOLDER_THUMBNAIL }}
+                      dangerouslySetInnerHTML={{ __html: entry.thumbnail ?? PLACEHOLDER_THUMBNAIL }}
                     />
                     <div className="path-card-body">
                       <div className="path-card-header">
@@ -572,11 +574,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
             <div
               className="preview-svg"
               dangerouslySetInnerHTML={{
-                __html: previewEntry.meta?.originalSVG !== undefined
-                  ? previewEntry.meta.originalSVG
-                  : previewEntry.thumbnail !== null
-                    ? previewEntry.thumbnail
-                    : PLACEHOLDER_THUMBNAIL,
+                __html: previewEntry.meta?.originalSVG ?? previewEntry.thumbnail ?? PLACEHOLDER_THUMBNAIL,
               }}
             />
             <div className="preview-meta">

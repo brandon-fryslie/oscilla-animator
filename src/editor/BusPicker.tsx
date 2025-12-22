@@ -50,7 +50,7 @@ function isPortSubscribedToBus(store: RootStore, portRef: PortRef, busId: string
 /**
  * Bus picker dropdown component with lens selection.
  */
-export const BusPicker = observer((props: BusPickerProps) => {
+export const BusPicker = observer((props: BusPickerProps): React.ReactElement | null => {
   const store = useStore();
   const { isOpen, onClose, portRef, position } = props;
   const [stage, setStage] = useState<Stage>('bus');
