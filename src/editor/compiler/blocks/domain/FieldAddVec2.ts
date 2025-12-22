@@ -6,6 +6,7 @@
  */
 
 import type { BlockCompiler, Vec2, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 export const FieldAddVec2Block: BlockCompiler = {
   type: 'FieldAddVec2',
@@ -23,7 +24,7 @@ export const FieldAddVec2Block: BlockCompiler = {
     const fieldA = inputs.a;
     const fieldB = inputs.b;
 
-    if (!fieldA || fieldA.kind !== 'Field:vec2') {
+    if (!isDefined(fieldA) || fieldA.kind !== 'Field:vec2') {
       return {
         out: {
           kind: 'Error',
@@ -32,7 +33,7 @@ export const FieldAddVec2Block: BlockCompiler = {
       };
     }
 
-    if (!fieldB || fieldB.kind !== 'Field:vec2') {
+    if (!isDefined(fieldB) || fieldB.kind !== 'Field:vec2') {
       return {
         out: {
           kind: 'Error',

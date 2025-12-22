@@ -11,7 +11,13 @@ import {
   getLaneIdFromDropData,
 } from './types/dnd';
 
-export function useEditorDnd() {
+export function useEditorDnd(): {
+  handleDragStart: (event: DragStartEvent) => void;
+  handleDragEnd: (event: DragEndEvent) => void;
+  activeDefinition: BlockDefinition | null;
+  activePlacedBlock: { label: string; color: string; blockId: string } | null;
+  isDraggingPlacedBlock: boolean;
+} {
   const store = useStore();
   const [activeDefinition, setActiveDefinition] = useState<BlockDefinition | null>(null);
   const [activePlacedBlock, setActivePlacedBlock] = useState<{

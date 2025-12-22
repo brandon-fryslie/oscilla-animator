@@ -5,7 +5,17 @@
  * graph nodes in Phase 2 compilation.
  */
 
-import type { Artifact, BlockId, PortType } from './types';
+import type {
+  Artifact,
+  BlockId,
+  PortType,
+  BlockInstance,
+  CompilerConnection,
+  CompileError,
+  CompileCtx,
+  Program,
+  RenderTree,
+} from './types';
 import type { Bus, Publisher, Listener } from '../types';
 
 // =============================================================================
@@ -16,8 +26,8 @@ import type { Bus, Publisher, Listener } from '../types';
  * Extended CompilerPatch with bus support.
  */
 export interface BusAwareCompilerPatch {
-  blocks: Map<BlockId, any>; // BlockInstance
-  connections: readonly any[]; // CompilerConnection[]
+  blocks: Map<BlockId, BlockInstance>;
+  connections: readonly CompilerConnection[];
   output?: { blockId: BlockId; port: string };
 
   // Bus-related additions
@@ -80,14 +90,14 @@ export type FieldExpr<T> =
   | { kind: 'const'; value: T }
   | {
       kind: 'map';
-      src: FieldExpr<any>;
+      src: FieldExpr<unknown>;
       fnId: string;
       params?: Record<string, unknown>
     }
   | {
       kind: 'zip';
-      a: FieldExpr<any>;
-      b: FieldExpr<any>;
+      a: FieldExpr<unknown>;
+      b: FieldExpr<unknown>;
       fnId: string;
       params?: Record<string, unknown>
     }
@@ -95,12 +105,12 @@ export type FieldExpr<T> =
   | {
       kind: 'bus';
       busId: string;
-      publishers: FieldExpr<any>[];
+      publishers: FieldExpr<unknown>[];
       combineMode: string;
     }
   | {
       kind: 'adapter';
-      src: FieldExpr<any>;
+      src: FieldExpr<unknown>;
       adapterId: string;
       params: Record<string, unknown>
     };
@@ -205,7 +215,7 @@ export interface BusCompileCtx {
   memoryBlocks: MemoryBlockRegistry;
 
   /** Compilation errors collected during process */
-  errors: any[];
+  errors: CompileError[];
 
   /** Dependency graph for validation */
   graph?: DependencyGraph;
@@ -220,8 +230,8 @@ export interface BusCompileCtx {
  */
 export interface BusCompileResult {
   ok: boolean;
-  program?: any; // Program<RenderTree>
-  errors: readonly any[];
+  program?: Program<RenderTree>;
+  errors: readonly CompileError[];
 
   // Bus-specific additions
   compiledPortMap?: Map<string, Artifact>;
@@ -308,7 +318,7 @@ export interface DomainOwner {
   readonly domainType: 'svg-path' | 'text-glyphs' | 'particles' | 'custom';
 
   /** Get element domain for current context */
-  getDomain(ctx: any): ElementDomain;
+  getDomain(ctx: CompileCtx): ElementDomain;
 
   /** Get stable key for element (required for ID generation) */
   getStableKey(elementIndex: number): number;

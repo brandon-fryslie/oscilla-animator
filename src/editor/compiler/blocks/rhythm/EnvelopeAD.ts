@@ -6,6 +6,7 @@
  */
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
@@ -22,7 +23,7 @@ export const EnvelopeADBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const triggerArtifact = inputs.trigger;
-    if (!triggerArtifact || triggerArtifact.kind !== 'Signal:Unit') {
+    if (!isDefined(triggerArtifact) || triggerArtifact.kind !== 'Signal:Unit') {
       return {
         env: {
           kind: 'Error',
@@ -41,7 +42,7 @@ export const EnvelopeADBlock: BlockCompiler = {
     let wasTriggered = false;
 
     // Envelope signal
-    const envelopeSignal: Signal<number> = (t: number, ctx: RuntimeCtx) => {
+    const envelopeSignal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
       const trig = triggerSignal(t, ctx);
 
       // Detect rising edge (event fires)

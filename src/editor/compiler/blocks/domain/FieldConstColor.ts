@@ -5,7 +5,8 @@
  * Takes a Domain and produces Field<color>.
  */
 
-import type { BlockCompiler, Domain, Field } from '../../types';
+import type { BlockCompiler, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 export const FieldConstColorBlock: BlockCompiler = {
   type: 'FieldConstColor',
@@ -20,7 +21,7 @@ export const FieldConstColorBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const domainArtifact = inputs.domain;
-    if (!domainArtifact || domainArtifact.kind !== 'Domain') {
+    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
         out: {
           kind: 'Error',
@@ -30,7 +31,7 @@ export const FieldConstColorBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value;
-    const color = String(params.color ?? '#3B82F6');
+    const color = typeof params.color === 'string' ? params.color : '#3B82F6';
 
     // Create constant field that returns the same color for all elements
     const field: Field<unknown> = (_seed, n) => {

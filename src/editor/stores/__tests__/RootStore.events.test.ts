@@ -78,7 +78,7 @@ describe('RootStore - Event Listeners', () => {
       const phaseA = root.busStore.buses.find(b => b.name === 'phaseA');
       expect(phaseA).toBeDefined();
 
-      if (phaseA) {
+      if (phaseA !== undefined) {
         root.uiStore.uiState.selectedBusId = phaseA.id;
 
         root.busStore.deleteBus(phaseA.id);

@@ -9,6 +9,7 @@
  */
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 type SignalNumber = (tMs: number, ctx: RuntimeCtx) => number;
 
@@ -25,7 +26,7 @@ export const TriggerOnWrapBlock: BlockCompiler = {
 
   compile({ inputs }) {
     const phaseArtifact = inputs.phase;
-    if (!phaseArtifact || phaseArtifact.kind !== 'Signal:number') {
+    if (!isDefined(phaseArtifact) || phaseArtifact.kind !== 'Signal:number') {
       return {
         trigger: {
           kind: 'Error',

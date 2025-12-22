@@ -138,13 +138,15 @@ describe('TreeRewrite', () => {
     const result = drawNodeRewrite.replaceAt(tree, [0], newNode);
 
     // Original unchanged
-    expect((tree as any).children[0].id).toBe('stroke-1');
+    const treeGroup = tree as { kind: string; id: string; children: readonly unknown[] };
+    expect(treeGroup.children[0] as { id: string }).toHaveProperty('id', 'stroke-1');
 
     // New tree has replacement
-    expect((result as any).children[0].id).toBe('replaced');
+    const resultGroup = result as { kind: string; id: string; children: readonly unknown[] };
+    expect(resultGroup.children[0] as { id: string }).toHaveProperty('id', 'replaced');
 
     // Structural sharing: particles group unchanged
-    expect((result as any).children[2]).toBe((tree as any).children[2]);
+    expect(resultGroup.children[2]).toBe(treeGroup.children[2]);
   });
 
   it('wraps nodes', () => {
@@ -162,9 +164,9 @@ describe('TreeRewrite', () => {
     expect(wrapperRefs.length).toBe(1);
 
     // Wrapper should contain particles
-    const wrapper = drawNodeRewrite.getAt(result, wrapperRefs[0].path) as any;
+    const wrapper = drawNodeRewrite.getAt(result, wrapperRefs[0].path) as { kind: string; id: string; children: readonly unknown[] };
     expect(wrapper.children.length).toBe(3);
-    expect(wrapper.children.map((c: any) => c.id)).toEqual(['p-1', 'p-2', 'p-3']);
+    expect((wrapper.children as { id: string }[]).map((c) => c.id)).toEqual(['p-1', 'p-2', 'p-3']);
   });
 
   it('maps over all nodes', () => {
@@ -196,12 +198,12 @@ describe('TreeRewrite', () => {
     );
 
     // Check particles have meta
-    const p1 = drawNodeRewrite.getAt(result, [2, 0]);
-    expect((p1 as any).meta?.transformed).toBe(true);
+    const p1 = drawNodeRewrite.getAt(result, [2, 0]) as { id: string; meta?: Record<string, unknown> };
+    expect(p1.meta?.transformed).toBe(true);
 
     // Check non-particles unchanged
-    const stroke = drawNodeRewrite.getAt(result, [0]);
-    expect((stroke as any).meta?.transformed).toBeUndefined();
+    const stroke = drawNodeRewrite.getAt(result, [0]) as { id: string; meta?: Record<string, unknown> };
+    expect(stroke.meta?.transformed).toBeUndefined();
   });
 });
 
@@ -224,10 +226,10 @@ describe('Compositor', () => {
 
     const result = addMeta.apply(tree, { timeMs: 1000, seed: 42 });
 
-    const root = result as any;
+    const root = result as { id: string; meta?: Record<string, unknown>; children?: readonly unknown[] };
     expect(root.meta?.time).toBe(1000);
 
-    const stroke1 = root.children[0];
+    const stroke1 = root.children?.[0] as { meta?: Record<string, unknown> };
     expect(stroke1.meta?.time).toBe(1000);
   });
 
@@ -265,8 +267,9 @@ describe('Compositor', () => {
     const p1Path = [2, 0]; // Updated path after potential tree changes
     const p1 = drawNodeRewrite.getAt(result, p1Path);
     expect(p1.kind).toBe('effect');
-    expect((p1 as any).effect.kind).toBe('opacityMul');
-    expect((p1 as any).effect.mul).toBe(0.5);
+    const p1Effect = p1 as { kind: string; id: string; effect: { kind: string; mul?: number }; child: unknown };
+    expect(p1Effect.effect.kind).toBe('opacityMul');
+    expect(p1Effect.effect.mul).toBe(0.5);
 
     // Strokes should NOT be wrapped
     const stroke1 = drawNodeRewrite.getAt(result, [0]);
@@ -287,8 +290,9 @@ describe('Compositor', () => {
     // stroke-1 has 'animated' tag, should be wrapped
     const stroke1 = drawNodeRewrite.getAt(result, [0]);
     expect(stroke1.kind).toBe('effect');
-    expect((stroke1 as any).effect.kind).toBe('opacityMul');
-    expect((stroke1 as any).effect.mul).toBe(0.5);
+    const stroke1Effect = stroke1 as { kind: string; id: string; effect: { kind: string; mul?: number }; child: unknown };
+    expect(stroke1Effect.effect.kind).toBe('opacityMul');
+    expect(stroke1Effect.effect.mul).toBe(0.5);
   });
 });
 
@@ -304,7 +308,10 @@ describe('Resources', () => {
     reg = addResource(reg, glowFilter('glow-2', 10));
 
     expect(reg.filters.size).toBe(2);
-    expect(reg.filters.get('glow-1')!.effects[0].type).toBe('gaussianBlur');
+    const glow1 = reg.filters.get('glow-1');
+    if (glow1 && 'effects' in glow1 && Array.isArray(glow1.effects)) {
+      expect(glow1.effects[0] as { type: string }).toHaveProperty('type', 'gaussianBlur');
+    }
   });
 
   it('deduplicates by id', () => {
@@ -315,7 +322,10 @@ describe('Resources', () => {
 
     expect(reg.filters.size).toBe(1);
     // First one wins
-    expect((reg.filters.get('glow')!.effects[0] as any).stdDeviation).toBe(5);
+    const glow = reg.filters.get('glow');
+    if (glow && 'effects' in glow && Array.isArray(glow.effects)) {
+      expect(glow.effects[0] as { stdDeviation: number }).toHaveProperty('stdDeviation', 5);
+    }
   });
 });
 
@@ -348,7 +358,8 @@ describe('Integration', () => {
     // Strokes are faded
     const stroke1 = drawNodeRewrite.getAt(result, [0]);
     expect(stroke1.kind).toBe('effect');
-    expect((stroke1 as any).effect.mul).toBe(0.7);
+    const stroke1Effect = stroke1 as { kind: string; effect: { mul?: number }; child: unknown };
+    expect(stroke1Effect.effect.mul).toBe(0.7);
 
     // Particles have meta
     // Need to find particles in the modified tree
@@ -356,8 +367,8 @@ describe('Integration', () => {
     expect(particleRefs.length).toBe(3);
 
     for (const ref of particleRefs) {
-      const node = drawNodeRewrite.getAt(result, ref.path);
-      expect((node as any).meta?.particle).toBe(true);
+      const node = drawNodeRewrite.getAt(result, ref.path) as { id: string; meta?: Record<string, unknown> };
+      expect(node.meta?.particle).toBe(true);
     }
   });
 });

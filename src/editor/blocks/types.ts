@@ -1,4 +1,5 @@
 import type { BlockForm, BlockSubcategory, Slot, BlockParams, LaneKind, LaneFlavor } from '../types';
+import type { CompositeDefinition } from '../composites';
 
 // Re-export types that are used by other modules
 export type {
@@ -83,7 +84,7 @@ export interface BlockDefinition {
    * For composite blocks: store the original composite definition.
    * This is used for compiler integration and parameter resolution.
    */
-  readonly compositeDefinition?: any; // CompositeDefinition imported to avoid circular dependency
+  readonly compositeDefinition?: CompositeDefinition;
 
   /**
    * Auto-bus subscriptions: map of input port IDs to bus names.

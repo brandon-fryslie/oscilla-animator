@@ -25,7 +25,7 @@ export const AddSignalBlock: BlockCompiler = {
     const aArtifact = inputs.a;
     const bArtifact = inputs.b;
 
-    if (!aArtifact || aArtifact.kind !== 'Signal:number') {
+    if (aArtifact === undefined || aArtifact.kind !== 'Signal:number') {
       return {
         out: {
           kind: 'Error',
@@ -34,7 +34,7 @@ export const AddSignalBlock: BlockCompiler = {
       };
     }
 
-    if (!bArtifact || bArtifact.kind !== 'Signal:number') {
+    if (bArtifact === undefined || bArtifact.kind !== 'Signal:number') {
       return {
         out: {
           kind: 'Error',
@@ -47,7 +47,7 @@ export const AddSignalBlock: BlockCompiler = {
     const bSignal = bArtifact.value as Signal<number>;
 
     // Create summed signal
-    const signal: Signal<number> = (t: number, ctx: RuntimeCtx) => {
+    const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
       return aSignal(t, ctx) + bSignal(t, ctx);
     };
 

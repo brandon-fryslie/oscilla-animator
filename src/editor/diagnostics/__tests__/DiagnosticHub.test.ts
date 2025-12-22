@@ -9,6 +9,7 @@ import { EventDispatcher } from '../../events/EventDispatcher';
 import { createDiagnostic } from '../types';
 import type { Diagnostic, DiagnosticCode } from '../types';
 import type { PatchStore } from '../../stores/PatchStore';
+import type { Block } from '../../types';
 
 /**
  * Create a minimal mock PatchStore for testing.
@@ -16,7 +17,7 @@ import type { PatchStore } from '../../stores/PatchStore';
  * Pass empty array explicitly to test missing TimeRoot scenarios.
  */
 function createMockPatchStore(
-  blocks: any[] = [{ id: 'time-root', type: 'CycleTimeRoot' }]
+  blocks: Block[] = [{ id: 'time-root', type: 'CycleTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' }]
 ): PatchStore {
   return {
     blocks,
@@ -84,7 +85,7 @@ describe('DiagnosticHub', () => {
     it('should not create missing TimeRoot diagnostic when TimeRoot exists', () => {
       // Create a patchStore with a CycleTimeRoot block
       patchStore = createMockPatchStore([
-        { id: 'block-1', type: 'CycleTimeRoot' },
+        { id: 'block-1', type: 'CycleTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' },
       ]);
       hub = new DiagnosticHub(events, patchStore);
 

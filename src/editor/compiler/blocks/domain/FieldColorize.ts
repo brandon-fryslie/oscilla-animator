@@ -6,6 +6,7 @@
  */
 
 import type { BlockCompiler, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 /**
  * Parse hex color to RGB
@@ -67,7 +68,7 @@ export const FieldColorizeBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const valuesArtifact = inputs.values;
-    if (!valuesArtifact || valuesArtifact.kind !== 'Field:number') {
+    if (!isDefined(valuesArtifact) || valuesArtifact.kind !== 'Field:number') {
       return {
         colors: {
           kind: 'Error',
@@ -77,9 +78,9 @@ export const FieldColorizeBlock: BlockCompiler = {
     }
 
     const valuesFn = valuesArtifact.value;
-    const colorA = String(params.colorA ?? '#3B82F6');
-    const colorB = String(params.colorB ?? '#EF4444');
-    const mode = String(params.mode ?? 'lerp');
+    const colorA = typeof params.colorA === 'string' ? params.colorA : '#3B82F6';
+    const colorB = typeof params.colorB === 'string' ? params.colorB : '#EF4444';
+    const mode = typeof params.mode === 'string' ? params.mode : 'lerp';
 
     const mapFn = mode === 'hue' ? hueRotateColor : lerpColor;
 

@@ -52,7 +52,7 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
     return false;
   }
   // Check if it's a plain object (not a special class instance)
-  const proto = Object.getPrototypeOf(value);
+  const proto = Object.getPrototypeOf(value) as object | null;
   return proto === null || proto === Object.prototype;
 }
 
@@ -433,10 +433,21 @@ export function safeStringify(value: unknown): string {
     try {
       return JSON.stringify(value);
     } catch {
-      return String(value);
+      return '(object)';
     }
   }
-  return String(value);
+  // Handle remaining types: function, symbol, bigint
+  if (typeof value === 'function') {
+    return '(function)';
+  }
+  if (typeof value === 'symbol') {
+    return '(symbol)';
+  }
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+  // Fallback for other types (should not reach here)
+  return '(unknown)';
 }
 
 // =============================================================================
@@ -462,9 +473,9 @@ export function castTo<T>(
  * Cast an `any` value to a specific type (use sparingly).
  * Only use when you're certain of the type but TypeScript can't infer it.
  */
-export function fromAny<T>(value: any, typeName?: string): T {
-  if (typeName && typeof value !== typeName) {
-    throw new Error(`Expected ${typeName}, got ${typeof value}`);
+export function fromAny<T>(value: unknown, typeName?: string): T {
+  if (typeName !== undefined && typeName !== null && typeName !== '' && typeof value !== typeName) {
+    throw new TypeError(`Expected ${typeName}, got ${typeof value}`);
   }
   return value as T;
 }
@@ -577,7 +588,7 @@ export function err<E = Error>(error: E): Result<never, E> {
 /**
  * Unwrap a result or throw if it's an error.
  */
-export function unwrap<T, E>(result: Result<T, E>): T {
+export function unwrap<T, E extends Error>(result: Result<T, E>): T {
   if (result.ok) {
     return result.value;
   }

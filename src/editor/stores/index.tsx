@@ -13,11 +13,11 @@ const store = new RootStore();
 
 const StoreContext = React.createContext<RootStore>(store);
 
-export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
+export const StoreProvider = ({ children }: { children: React.ReactNode }): React.ReactElement => {
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 };
 
-export const useStore = () => {
+export const useStore = (): RootStore => {
   return React.useContext(StoreContext);
 };
 

@@ -10,9 +10,10 @@ import type {
   CompiledProgram,
   CompilerConnection,
   CompilerPatch,
+  CompileErrorCode,
+  CompileError,
   Seed,
   PortRef,
-  CompileError,
 } from './types';
 import { buildDecorations, emptyDecorations, type DecorationSet } from './error-decorations';
 import { getBlockDefinition } from '../blocks';
@@ -266,7 +267,7 @@ export function editorToPatch(store: RootStore): CompilerPatch {
 
 function resolveParamValue(value: unknown, parentParams: Record<string, unknown>): unknown {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
-    const marker = (value as any).__fromParam;
+    const marker = (value as { __fromParam?: string }).__fromParam;
     if (typeof marker === 'string') {
       return parentParams[marker];
     }
@@ -507,8 +508,8 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
 function rewriteBusBindings(
   patch: CompilerPatch,
   rewriteMap: PortRefRewriteMap
-): { patch: CompilerPatch; errors: Array<{ code: string; message: string; where?: { blockId?: string; port?: string } }> } {
-  const errors: Array<{ code: string; message: string; where?: { blockId?: string; port?: string } }> = [];
+): { patch: CompilerPatch; errors: CompileError[] } {
+  const errors: CompileError[] = [];
 
   // Rewrite publishers
   const rewrittenPublishers = patch.publishers.map((pub) => {
@@ -655,7 +656,7 @@ export function createCompilerService(store: RootStore): CompilerService {
           lastResult = {
             ok: false,
             errors: rewriteErrors.map((e) => ({
-              code: e.code as any,
+              code: e.code as CompileErrorCode,
               message: e.message,
               where: e.where,
             })),

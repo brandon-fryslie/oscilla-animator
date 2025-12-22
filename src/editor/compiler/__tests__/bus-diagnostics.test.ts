@@ -6,7 +6,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
 import { createCompilerService } from '../integration';
-import type { CompileFinishedEvent, EditorEvent } from '../../events/types';
+import type { EditorEvent } from '../../events/types';
+import type { Diagnostic } from '../../diagnostics/types';
 
 describe('Bus Diagnostics', () => {
   let store: RootStore;
@@ -55,11 +56,11 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
+      const finishedEvents = events.filter((e): e is Extract<EditorEvent, { type: 'CompileFinished' }> => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
-      const busEmptyWarnings = diagnostics.filter((d) => d.code === 'W_BUS_EMPTY');
+      const busEmptyWarnings = diagnostics.filter((d): d is Diagnostic => d.code === 'W_BUS_EMPTY');
 
       expect(busEmptyWarnings).toHaveLength(1);
       expect(busEmptyWarnings[0].severity).toBe('warn');
@@ -106,11 +107,11 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
+      const finishedEvents = events.filter((e): e is Extract<EditorEvent, { type: 'CompileFinished' }> => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
-      const busEmptyWarnings = diagnostics.filter((d) => d.code === 'W_BUS_EMPTY');
+      const busEmptyWarnings = diagnostics.filter((d): d is Diagnostic => d.code === 'W_BUS_EMPTY');
 
       expect(busEmptyWarnings).toHaveLength(0);
     });
@@ -137,7 +138,7 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
+      const finishedEvents = events.filter((e): e is Extract<EditorEvent, { type: 'CompileFinished' }> => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
@@ -167,15 +168,15 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
+      const finishedEvents = events.filter((e): e is Extract<EditorEvent, { type: 'CompileFinished' }> => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
-      const unusedOutputWarnings = diagnostics.filter((d) => d.code === 'W_GRAPH_UNUSED_OUTPUT');
+      const unusedOutputWarnings = diagnostics.filter((d): d is Diagnostic => d.code === 'W_GRAPH_UNUSED_OUTPUT');
 
       // Should not have any warnings about TimeRoot outputs (phase, wrap)
       const timeRootWarnings = unusedOutputWarnings.filter(
-        (w) => w.primaryTarget.kind === 'port' && ['phase', 'wrap'].includes((w.primaryTarget as any).portRef?.slotId)
+        (w) => w.primaryTarget.kind === 'port' && w.primaryTarget.portRef?.slotId !== undefined && ['phase', 'wrap'].includes(w.primaryTarget.portRef.slotId)
       );
       expect(timeRootWarnings).toHaveLength(0);
     });
@@ -202,15 +203,15 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
+      const finishedEvents = events.filter((e): e is Extract<EditorEvent, { type: 'CompileFinished' }> => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
-      const unusedOutputWarnings = diagnostics.filter((d) => d.code === 'W_GRAPH_UNUSED_OUTPUT');
+      const unusedOutputWarnings = diagnostics.filter((d): d is Diagnostic => d.code === 'W_GRAPH_UNUSED_OUTPUT');
 
       // Should not have warning for pos0 since it's published
       const pos0Warnings = unusedOutputWarnings.filter(
-        (w) => w.primaryTarget.kind === 'port' && (w.primaryTarget as any).portRef?.slotId === 'pos0'
+        (w) => w.primaryTarget.kind === 'port' && w.primaryTarget.portRef?.slotId === 'pos0'
       );
       expect(pos0Warnings).toHaveLength(0);
     });

@@ -6,6 +6,7 @@
  */
 
 import type { BlockCompiler, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 /**
  * Apply curve transformation to value in [0,1]
@@ -39,7 +40,7 @@ export const FieldOpacityBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const valuesArtifact = inputs.values;
-    if (!valuesArtifact || valuesArtifact.kind !== 'Field:number') {
+    if (!isDefined(valuesArtifact) || valuesArtifact.kind !== 'Field:number') {
       return {
         opacity: {
           kind: 'Error',
@@ -51,7 +52,7 @@ export const FieldOpacityBlock: BlockCompiler = {
     const valuesFn = valuesArtifact.value;
     const min = Number(params.min ?? 0);
     const max = Number(params.max ?? 1);
-    const curve = String(params.curve ?? 'linear');
+    const curve = typeof params.curve === 'string' ? params.curve : 'linear';
 
     // Create opacity field
     const field: Field<number> = (seed, n, ctx) => {

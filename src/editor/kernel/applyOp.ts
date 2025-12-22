@@ -30,7 +30,7 @@ export function applyOp(doc: Patch, op: Op): void {
       const block = doc.blocks.find(b => b.id === op.blockId);
       if (block) {
         // block.type is readonly in type def but mutable in practice/store
-        (block as any).type = op.nextType;
+        (block as { type: string }).type = op.nextType;
         // Remap params if provided
         // TODO: Implement param remapping logic
       }
@@ -69,10 +69,10 @@ export function applyOp(doc: Patch, op: Op): void {
       const conn = doc.connections.find(c => c.id === op.connectionId);
       if (conn) {
         if (op.next.from) {
-          (conn.from as any) = op.next.from;
+          (conn as { from: typeof op.next.from }).from = op.next.from;
         }
         if (op.next.to) {
-          (conn.to as any) = op.next.to;
+          (conn as { to: typeof op.next.to }).to = op.next.to;
         }
       }
       break;

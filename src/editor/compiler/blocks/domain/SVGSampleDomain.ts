@@ -10,6 +10,7 @@
 
 import type { BlockCompiler, Vec2, Domain } from '../../types';
 import { createDomain } from '../../unified/Domain';
+import { isDefined, isNonEmptyString } from '../../../types/helpers';
 
 type PositionField = (seed: number, n: number) => readonly Vec2[];
 
@@ -23,7 +24,7 @@ function sampleSVGPath(
   sampleCount: number,
   distribution: 'even' | 'parametric'
 ): Vec2[] {
-  if (!pathData || pathData.trim() === '') {
+  if (!isDefined(pathData) || pathData.trim() === '') {
     // No path data - return a simple line as fallback
     const points: Vec2[] = [];
     for (let i = 0; i < sampleCount; i++) {
@@ -75,7 +76,10 @@ function parseSVGPath(pathData: string): PathSegment[] {
   let startPos: Vec2 = { x: 0, y: 0 };
 
   // Simple regex-based parser (not production-ready, but sufficient for MVP)
-  const commands = pathData.match(/[MmLlCcQqZz][^MmLlCcQqZz]*/g) || [];
+  const commands = pathData.match(/[MmLlCcQqZz][^MmLlCcQqZz]*/g);
+  if (commands === null || commands === undefined) {
+    return [];
+  }
 
   for (const cmd of commands) {
     const type = cmd[0].toUpperCase();
@@ -83,7 +87,7 @@ function parseSVGPath(pathData: string): PathSegment[] {
       .slice(1)
       .trim()
       .split(/[\s,]+/)
-      .filter(s => s)
+      .filter(isNonEmptyString)
       .map(Number);
 
     if (type === 'M') {
@@ -196,7 +200,7 @@ function sampleAtLength(segments: PathSegment[], targetLength: number): Vec2 {
   for (const seg of segments) {
     if (seg.type === 'M') continue;
 
-    const segLength = seg.length || 0;
+    const segLength = seg.length ?? 0;
     if (accumulated + segLength >= targetLength) {
       // Target is in this segment
       const localT = segLength > 0 ? (targetLength - accumulated) / segLength : 0;
@@ -207,7 +211,8 @@ function sampleAtLength(segments: PathSegment[], targetLength: number): Vec2 {
 
   // Return last point if we overshot
   const lastSeg = segments[segments.length - 1];
-  return lastSeg.points[lastSeg.points.length - 1] || { x: 0, y: 0 };
+  const lastPoint = lastSeg.points[lastSeg.points.length - 1];
+  return isDefined(lastPoint) ? lastPoint : { x: 0, y: 0 };
 }
 
 /**
@@ -245,7 +250,8 @@ function sampleSegmentAt(seg: PathSegment, t: number): Vec2 {
     return sampleBezier(seg, t);
   }
 
-  return seg.points[0] || { x: 0, y: 0 };
+  const firstPoint = seg.points[0];
+  return isDefined(firstPoint) ? firstPoint : { x: 0, y: 0 };
 }
 
 /**
@@ -278,7 +284,8 @@ function sampleBezier(seg: PathSegment, t: number): Vec2 {
     };
   }
 
-  return points[0];
+  const firstPoint = points[0];
+  return isDefined(firstPoint) ? firstPoint : { x: 0, y: 0 };
 }
 
 export const SVGSampleDomainBlock: BlockCompiler = {
@@ -292,10 +299,10 @@ export const SVGSampleDomainBlock: BlockCompiler = {
   ],
 
   compile({ id, params }) {
-    const asset = String(params.asset ?? '');
+    const asset = typeof params.asset === 'string' ? params.asset : '';
     const sampleCount = Math.max(1, Math.floor(Number(params.sampleCount ?? 100)));
     const seed = Number(params.seed ?? 0);
-    const distribution = (params.distribution as 'even' | 'parametric') ?? 'even';
+    const distribution = (typeof params.distribution === 'string' ? params.distribution as 'even' | 'parametric' : undefined) ?? 'even';
 
     // Create stable element IDs: "sample-N"
     const elementIds: string[] = [];

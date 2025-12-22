@@ -417,7 +417,7 @@ describe('Macro Registry', () => {
 
     // Should listen to phaseA bus (not publish to it)
     expect((macro.listeners || []).some(l => l.busName === 'phaseA')).toBe(true);
-    expect(macro.publishers?.length || 0).toBe(0);  // No publishers
+    expect(macro.publishers?.length ?? 0).toBe(0);  // No publishers
   });
 
   it('goldenPatch macro has complete structure', () => {
@@ -596,7 +596,7 @@ describe('Composite Compilation', () => {
 
     // Find or create phaseA bus (it may already exist from other tests)
     let busId = store.busStore.buses.find(b => b.name === 'phaseA')?.id;
-    if (!busId) {
+    if (busId === undefined) {
       busId = store.busStore.createBus(
         {
           world: 'signal',

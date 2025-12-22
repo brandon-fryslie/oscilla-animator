@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
 import { createCompilerService } from '../integration';
-import type { CompileStartedEvent, CompileFinishedEvent, EditorEvent } from '../../events/types';
+import type { EditorEvent } from '../../events/types';
 
 describe('Diagnostic Emission', () => {
   let store: RootStore;

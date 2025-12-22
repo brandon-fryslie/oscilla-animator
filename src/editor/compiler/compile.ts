@@ -131,7 +131,7 @@ export function topoSortBlocks(
   queue.sort();
 
   const out: BlockId[] = [];
-  while (queue.length) {
+  while (queue.length !== 0) {
     const x = queue.shift()!;
     out.push(x);
     for (const y of adj.get(x) ?? []) {

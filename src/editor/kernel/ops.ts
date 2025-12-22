@@ -160,7 +160,7 @@ export type CompositeDefReplaceGraph = {
     listeners?: Listener[];
   };
   // TODO: Define ExposedPort type if not in imports
-  nextExposed: { inputs: any[]; outputs: any[] };
+  nextExposed: { inputs: unknown[]; outputs: unknown[] };
 };
 
 // =============================================================================
@@ -183,7 +183,7 @@ export type PatchSettingsUpdate = {
 
 export type AssetAdd = {
   op: 'AssetAdd';
-  asset: { id: string; kind: string; data: any; meta: any };
+  asset: { id: string; kind: string; data: unknown; meta: Record<string, unknown> };
 };
 
 export type AssetRemove = {
@@ -194,7 +194,7 @@ export type AssetRemove = {
 export type AssetUpdate = {
   op: 'AssetUpdate';
   assetId: string;
-  patch: Partial<any>;
+  patch: Record<string, unknown>;
 };
 
 // =============================================================================

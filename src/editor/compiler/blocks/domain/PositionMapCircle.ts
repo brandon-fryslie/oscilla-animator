@@ -5,7 +5,8 @@
  * Supports even distribution and golden angle spiral patterns.
  */
 
-import type { BlockCompiler, Vec2, Domain } from '../../types';
+import type { BlockCompiler, Vec2 } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 type PositionField = (seed: number, n: number) => readonly Vec2[];
 
@@ -25,7 +26,7 @@ export const PositionMapCircleBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const domainArtifact = inputs.domain;
-    if (!domainArtifact || domainArtifact.kind !== 'Domain') {
+    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
         pos: {
           kind: 'Error',
@@ -40,7 +41,7 @@ export const PositionMapCircleBlock: BlockCompiler = {
     const radius = Number(params.radius ?? 150);
     const startAngle = Number(params.startAngle ?? 0);
     const winding = Number(params.winding ?? 1); // 1 = CW, -1 = CCW
-    const distribution = String(params.distribution ?? 'even');
+    const distribution = typeof params.distribution === 'string' ? params.distribution : 'even';
 
     // Convert degrees to radians
     const startAngleRad = (startAngle * Math.PI) / 180;

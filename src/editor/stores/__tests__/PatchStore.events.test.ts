@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RootStore } from '../RootStore';
 import type { WireAddedEvent, WireRemovedEvent, BlockReplacedEvent } from '../../events/types';
+import type { BlockDefinition } from '../../blocks';
 
 describe('PatchStore - Wire Events', () => {
   let root: RootStore;
@@ -71,7 +72,8 @@ describe('PatchStore - Wire Events', () => {
 
       // All events should be WireAdded
       listener.mock.calls.forEach((call) => {
-        expect(call[0].type).toBe('WireAdded');
+        const event = call[0] as WireAddedEvent;
+        expect(event.type).toBe('WireAdded');
       });
     });
 
@@ -348,7 +350,8 @@ describe('PatchStore - BlockReplaced Events', () => {
       const oldBlockId = root.patchStore.addBlock('FieldConstNumber');
 
       // Try to replace with invalid block type
-      root.patchStore.replaceBlock(oldBlockId, 'NonExistentBlockType' as any);
+      // Using a block type that doesn't exist in the registry
+      root.patchStore.replaceBlock(oldBlockId, 'NonExistentBlockType' as BlockDefinition['type']);
 
       // Event should NOT be emitted
       expect(listener).not.toHaveBeenCalled();

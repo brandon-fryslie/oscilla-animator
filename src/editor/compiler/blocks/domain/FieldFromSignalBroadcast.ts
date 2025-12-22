@@ -5,7 +5,17 @@
  * creating a Field<number> where all elements have the same value.
  */
 
-import type { BlockCompiler, Domain, Field } from '../../types';
+import type { BlockCompiler, Field, CompileCtx, RuntimeCtx } from '../../types';
+import { isDefined } from '../../../types/helpers';
+
+/**
+ * Extended context interface for field evaluation at runtime.
+ * The compile-time context is extended with time information during rendering.
+ */
+interface FieldEvalCtx extends CompileCtx {
+  /** Current time in milliseconds (available at runtime) */
+  t: number;
+}
 
 export const FieldFromSignalBroadcastBlock: BlockCompiler = {
   type: 'FieldFromSignalBroadcast',
@@ -23,7 +33,7 @@ export const FieldFromSignalBroadcastBlock: BlockCompiler = {
     const domainArtifact = inputs.domain;
     const signalArtifact = inputs.signal;
 
-    if (!domainArtifact || domainArtifact.kind !== 'Domain') {
+    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
         field: {
           kind: 'Error',
@@ -32,7 +42,7 @@ export const FieldFromSignalBroadcastBlock: BlockCompiler = {
       };
     }
 
-    if (!signalArtifact || signalArtifact.kind !== 'Signal:number') {
+    if (!isDefined(signalArtifact) || signalArtifact.kind !== 'Signal:number') {
       return {
         field: {
           kind: 'Error',
@@ -50,10 +60,11 @@ export const FieldFromSignalBroadcastBlock: BlockCompiler = {
       const count = Math.min(n, domain.elements.length);
 
       // Evaluate signal once per frame (ctx is extended with .t at runtime)
-      const val = signalFn((ctx as any).t, ctx as any);
+      const runtimeCtx = ctx as FieldEvalCtx;
+      const val = signalFn(runtimeCtx.t, runtimeCtx as unknown as RuntimeCtx);
 
       // Broadcast to all elements
-      return Array(count).fill(val);
+      return Array<number>(count).fill(val);
     };
 
     return {

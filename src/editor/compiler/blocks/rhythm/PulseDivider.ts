@@ -6,6 +6,7 @@
  */
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
@@ -22,7 +23,7 @@ export const PulseDividerBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const phaseArtifact = inputs.phase;
-    if (!phaseArtifact || phaseArtifact.kind !== 'Signal:phase') {
+    if (!isDefined(phaseArtifact) || phaseArtifact.kind !== 'Signal:phase') {
       return {
         tick: {
           kind: 'Error',
@@ -38,7 +39,7 @@ export const PulseDividerBlock: BlockCompiler = {
     let lastSubPhase = -1;
 
     // Event signal: returns 1 on tick frame, 0 otherwise
-    const eventSignal: Signal<number> = (t: number, ctx: RuntimeCtx) => {
+    const eventSignal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
       const phase = phaseSignal(t, ctx);
       const subPhase = Math.floor(phase * divisions);
 

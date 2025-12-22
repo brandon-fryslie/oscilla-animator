@@ -142,7 +142,7 @@ export const CycleTimeRootBlock: BlockCompiler = {
 
   compile({ params }): CompiledOutputs {
     const periodMs = Number(params.periodMs ?? 3000);
-    const mode = String(params.mode ?? 'loop');
+    const mode = typeof params.mode === 'string' ? params.mode : 'loop';
 
     // System time is identity
     const systemTime: SignalNumber = (tMs) => tMs;

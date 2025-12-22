@@ -4,7 +4,7 @@
  * Contains domain primitives and signal blocks.
  */
 
-import type { BlockRegistry } from '../types';
+import type { BlockRegistry, BlockCompiler } from '../types';
 
 // Domain primitives (new system)
 import {
@@ -125,7 +125,7 @@ export function createBlockRegistry(): BlockRegistry {
   return dynamicRegistry;
 }
 
-export function registerDynamicBlock(type: string, compiler: any): void {
+export function registerDynamicBlock(type: string, compiler: BlockCompiler): void {
   dynamicRegistry[type] = compiler;
 }
 

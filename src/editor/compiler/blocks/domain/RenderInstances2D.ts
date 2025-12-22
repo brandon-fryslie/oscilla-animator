@@ -14,7 +14,8 @@
  *   - render: RenderTree - SVG-compatible render tree with circles
  */
 
-import type { BlockCompiler, Vec2, Domain, Field, RuntimeCtx, DrawNode } from '../../types';
+import type { BlockCompiler, Field, RuntimeCtx, DrawNode } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 // Default compile context for field evaluation
 const DEFAULT_CTX = {
@@ -43,7 +44,7 @@ export const RenderInstances2DBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const domainArtifact = inputs.domain;
-    if (!domainArtifact || domainArtifact.kind !== 'Domain') {
+    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
         render: {
           kind: 'Error',
@@ -53,7 +54,7 @@ export const RenderInstances2DBlock: BlockCompiler = {
     }
 
     const positionsArtifact = inputs.positions;
-    if (!positionsArtifact || positionsArtifact.kind !== 'Field:vec2') {
+    if (!isDefined(positionsArtifact) || positionsArtifact.kind !== 'Field:vec2') {
       return {
         render: {
           kind: 'Error',
@@ -73,10 +74,10 @@ export const RenderInstances2DBlock: BlockCompiler = {
     let radiusField: Field<number> | undefined;
     let radiusSignal: ((t: number, ctx: RuntimeCtx) => number) | undefined;
 
-    if (radiusArtifact?.kind === 'Field:number') {
+    if (isDefined(radiusArtifact) && radiusArtifact.kind === 'Field:number') {
       radiusMode = 'field';
       radiusField = radiusArtifact.value;
-    } else if (radiusArtifact?.kind === 'Signal:number') {
+    } else if (isDefined(radiusArtifact) && radiusArtifact.kind === 'Signal:number') {
       radiusMode = 'signal';
       radiusSignal = radiusArtifact.value as (t: number, ctx: RuntimeCtx) => number;
     }
@@ -84,9 +85,9 @@ export const RenderInstances2DBlock: BlockCompiler = {
 
     // Optional color field - default to white if not provided
     const colorArtifact = inputs.color;
-    const colorField: Field<unknown> = colorArtifact?.kind === 'Field:color'
+    const colorField: Field<unknown> = isDefined(colorArtifact) && colorArtifact.kind === 'Field:color'
       ? colorArtifact.value
-      : (_seed, n) => new Array(n).fill('#ffffff');
+      : (_seed, n) => Array<string>(n).fill('#ffffff');
 
     // Params
     const opacity = Number(params.opacity ?? 1.0);
@@ -104,11 +105,11 @@ export const RenderInstances2DBlock: BlockCompiler = {
 
       // Radius: evaluate based on mode
       let radii: readonly number[];
-      if (radiusMode === 'field') {
-        radii = radiusField!(seed, n, DEFAULT_CTX);
-      } else if (radiusMode === 'signal') {
+      if (radiusMode === 'field' && isDefined(radiusField)) {
+        radii = radiusField(seed, n, DEFAULT_CTX);
+      } else if (radiusMode === 'signal' && isDefined(radiusSignal)) {
         // Sample signal once and broadcast to all elements
-        const broadcastRadius = radiusSignal!(tMs, ctx);
+        const broadcastRadius = radiusSignal(tMs, ctx);
         radii = new Array(n).fill(broadcastRadius);
       } else {
         // Default: constant radius of 5
@@ -122,7 +123,7 @@ export const RenderInstances2DBlock: BlockCompiler = {
         const r = radii[i] ?? 5;
         const color = colors[i] ?? '#ffffff';
 
-        if (pos) {
+        if (isDefined(pos)) {
           circles.push({
             kind: 'shape',
             id: `circle-${domain.elements[i]}`,

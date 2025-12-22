@@ -6,6 +6,7 @@
  */
 
 import type { BlockCompiler, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 /**
  * Smoothstep interpolation
@@ -61,7 +62,7 @@ export const FieldMapNumberBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const inputField = inputs.x;
-    if (!inputField || inputField.kind !== 'Field:number') {
+    if (!isDefined(inputField) || inputField.kind !== 'Field:number') {
       return {
         y: {
           kind: 'Error',
@@ -70,7 +71,7 @@ export const FieldMapNumberBlock: BlockCompiler = {
       };
     }
 
-    const fn = String(params.fn ?? 'sin');
+    const fn = typeof params.fn === 'string' ? params.fn : 'sin';
     const k = Number(params.k ?? 1);
     const a = Number(params.a ?? 0);
     const b = Number(params.b ?? 1);

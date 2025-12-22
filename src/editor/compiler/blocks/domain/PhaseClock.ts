@@ -27,7 +27,7 @@ export const PhaseClockBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     // Validate required input
-    if (!inputs.tIn) {
+    if (inputs.tIn === undefined || inputs.tIn === null) {
       throw new Error('PhaseClock: tIn input required');
     }
     if (inputs.tIn.kind !== 'Signal:Time') {
@@ -35,7 +35,7 @@ export const PhaseClockBlock: BlockCompiler = {
     }
 
     const periodSec = Number(params.period ?? 3.0);
-    const mode = String(params.mode ?? 'loop');
+    const mode = typeof params.mode === 'string' ? params.mode : 'loop';
 
     if (periodSec <= 0) {
       throw new Error('PhaseClock: period must be > 0');

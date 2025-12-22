@@ -5,7 +5,8 @@
  * Elements are distributed along the line segment.
  */
 
-import type { BlockCompiler, Vec2, Domain } from '../../types';
+import type { BlockCompiler, Vec2 } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 type PositionField = (seed: number, n: number) => readonly Vec2[];
 
@@ -22,7 +23,7 @@ export const PositionMapLineBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const domainArtifact = inputs.domain;
-    if (!domainArtifact || domainArtifact.kind !== 'Domain') {
+    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
         pos: {
           kind: 'Error',
@@ -36,7 +37,7 @@ export const PositionMapLineBlock: BlockCompiler = {
     const ay = Number(params.ay ?? 200);
     const bx = Number(params.bx ?? 700);
     const by = Number(params.by ?? 200);
-    const distribution = String(params.distribution ?? 'even');
+    const distribution = typeof params.distribution === 'string' ? params.distribution : 'even';
 
     // Create the position field based on domain element count
     const positionField: PositionField = (_seed, n) => {

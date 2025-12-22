@@ -113,18 +113,18 @@ export interface TxBuilder {
   removeWire(connectionId: string): void;
 
   // Bus Ops
-  addBus(spec: { name: string; type: any; combineMode: any; defaultValue: unknown; sortKey?: number; id?: string }): string;
+  addBus(spec: { name: string; type: import('../types').TypeDesc; combineMode: import('../types').BusCombineMode; defaultValue: unknown; sortKey?: number; id?: string }): string;
   removeBus(busId: string): void;
-  updateBus(busId: string, patch: Partial<any>): void; // Use Partial<Bus>
+  updateBus(busId: string, patch: Partial<import('../types').Bus>): void;
 
   // Binding Ops
-  addPublisher(spec: { busId: string; from: PortRef; enabled?: boolean; sortKey?: number; adapterChain?: any[]; id?: string }): string;
+  addPublisher(spec: { busId: string; from: PortRef; enabled?: boolean; sortKey?: number; adapterChain?: import('../types').AdapterStep[]; id?: string }): string;
   removePublisher(publisherId: string): void;
-  updatePublisher(publisherId: string, patch: Partial<any>): void;
+  updatePublisher(publisherId: string, patch: Partial<import('../types').Publisher>): void;
 
-  addListener(spec: { busId: string; to: PortRef; enabled?: boolean; adapterChain?: any[]; lensStack?: any[]; id?: string }): string;
+  addListener(spec: { busId: string; to: PortRef; enabled?: boolean; adapterChain?: import('../types').AdapterStep[]; lensStack?: import('../types').LensInstance[]; id?: string }): string;
   removeListener(listenerId: string): void;
-  updateListener(listenerId: string, patch: Partial<any>): void;
+  updateListener(listenerId: string, patch: Partial<import('../types').Listener>): void;
 
   // Time Ops
   setTimeRoot(blockId: string): void;

@@ -8,7 +8,8 @@
  * into a uniformly distributed number in [0, 1).
  */
 
-import type { BlockCompiler, Domain, Field } from '../../types';
+import type { BlockCompiler, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 /**
  * Simple hash function that produces a number in [0, 1)
@@ -37,7 +38,7 @@ export const StableIdHashBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const domainArtifact = inputs.domain;
-    if (!domainArtifact || domainArtifact.kind !== 'Domain') {
+    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
         u01: {
           kind: 'Error',
