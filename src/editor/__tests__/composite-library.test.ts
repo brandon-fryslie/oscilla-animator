@@ -488,16 +488,16 @@ describe('Composite Compilation', () => {
 
   it('GridPoints composite compiles successfully', () => {
     const store = new RootStore();
-    const lanes = store.patchStore.lanes;
+    const lanes = store.viewStore.lanes;
     const fieldsLane = lanes.find(l => l.kind === 'Fields') ?? lanes[0];
     const outputLane = lanes.find(l => l.kind === 'Output') ?? lanes[lanes.length - 1];
 
     // Add CycleTimeRoot - required for all patches
     const sceneLane = lanes.find(l => l.kind === 'Scene') ?? lanes[0];
-    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
+    store.patchStore.addBlockAtIndex('CycleTimeRoot', sceneLane.id, 0, { periodMs: 3000 });
 
     // Add GridPoints composite
-    const gridId = store.patchStore.addBlock('composite:GridPoints', fieldsLane.id, {
+    const gridId = store.patchStore.addBlockAtIndex('composite:GridPoints', fieldsLane.id, 0, {
       count: 16,
       rows: 4,
       cols: 4,
@@ -507,14 +507,14 @@ describe('Composite Compilation', () => {
     });
 
     // Add renderer
-    const renderId = store.patchStore.addBlock('RenderInstances2D', outputLane.id, {});
+    const renderId = store.patchStore.addBlockAtIndex('RenderInstances2D', outputLane.id, 0, {});
 
     // Connect grid to renderer
     store.patchStore.connect(gridId, 'domain', renderId, 'domain');
     store.patchStore.connect(gridId, 'positions', renderId, 'positions');
 
     // Add a constant radius field
-    const radiusId = store.patchStore.addBlock('FieldConstNumber', fieldsLane.id, { value: 5 });
+    const radiusId = store.patchStore.addBlockAtIndex('FieldConstNumber', fieldsLane.id, 0, { value: 5 });
     store.patchStore.connect(gridId, 'domain', radiusId, 'domain');
     store.patchStore.connect(radiusId, 'out', renderId, 'radius');
 
@@ -533,16 +533,16 @@ describe('Composite Compilation', () => {
 
   it('CirclePoints composite compiles successfully', () => {
     const store = new RootStore();
-    const lanes = store.patchStore.lanes;
+    const lanes = store.viewStore.lanes;
     const fieldsLane = lanes.find(l => l.kind === 'Fields') ?? lanes[0];
     const outputLane = lanes.find(l => l.kind === 'Output') ?? lanes[lanes.length - 1];
 
     // Add CycleTimeRoot - required for all patches
     const sceneLane = lanes.find(l => l.kind === 'Scene') ?? lanes[0];
-    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
+    store.patchStore.addBlockAtIndex('CycleTimeRoot', sceneLane.id, 0, { periodMs: 3000 });
 
     // Add CirclePoints composite
-    const circleId = store.patchStore.addBlock('composite:CirclePoints', fieldsLane.id, {
+    const circleId = store.patchStore.addBlockAtIndex('composite:CirclePoints', fieldsLane.id, 0, {
       count: 12,
       centerX: 400,
       centerY: 300,
@@ -550,14 +550,14 @@ describe('Composite Compilation', () => {
     });
 
     // Add renderer
-    const renderId = store.patchStore.addBlock('RenderInstances2D', outputLane.id, {});
+    const renderId = store.patchStore.addBlockAtIndex('RenderInstances2D', outputLane.id, 0, {});
 
     // Connect circle to renderer
     store.patchStore.connect(circleId, 'domain', renderId, 'domain');
     store.patchStore.connect(circleId, 'positions', renderId, 'positions');
 
     // Add constant radius
-    const radiusId = store.patchStore.addBlock('FieldConstNumber', fieldsLane.id, { value: 8 });
+    const radiusId = store.patchStore.addBlockAtIndex('FieldConstNumber', fieldsLane.id, 0, { value: 8 });
     store.patchStore.connect(circleId, 'domain', radiusId, 'domain');
     store.patchStore.connect(radiusId, 'out', renderId, 'radius');
 
@@ -571,30 +571,30 @@ describe('Composite Compilation', () => {
 
   it('DotsRenderer composite with bus-driven radius compiles', () => {
     const store = new RootStore();
-    const lanes = store.patchStore.lanes;
+    const lanes = store.viewStore.lanes;
     const fieldsLane = lanes.find(l => l.kind === 'Fields') ?? lanes[0];
     const phaseLane = lanes.find(l => l.kind === 'Phase') ?? lanes[1];
     const outputLane = lanes.find(l => l.kind === 'Output') ?? lanes[lanes.length - 1];
 
     // Add CycleTimeRoot - required for all patches
     const sceneLane = lanes.find(l => l.kind === 'Scene') ?? lanes[0];
-    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
+    store.patchStore.addBlockAtIndex('CycleTimeRoot', sceneLane.id, 0, { periodMs: 3000 });
 
     // Add domain
-    const domainId = store.patchStore.addBlock('DomainN', fieldsLane.id, { n: 25, seed: 42 });
+    const domainId = store.patchStore.addBlockAtIndex('DomainN', fieldsLane.id, 0, { n: 25, seed: 42 });
 
     // Add grid layout
-    const gridId = store.patchStore.addBlock('PositionMapGrid', fieldsLane.id, {
+    const gridId = store.patchStore.addBlockAtIndex('PositionMapGrid', fieldsLane.id, 0, {
       rows: 5,
       cols: 5,
       spacing: 60,
     });
 
     // Add phase clock
-    const clockId = store.patchStore.addBlock('PhaseClockLegacy', phaseLane.id, { duration: 2 });
+    const clockId = store.patchStore.addBlockAtIndex('PhaseClockLegacy', phaseLane.id, 0, { duration: 2 });
 
     // Add DotsRenderer composite
-    const renderId = store.patchStore.addBlock('composite:DotsRenderer', outputLane.id, {});
+    const renderId = store.patchStore.addBlockAtIndex('composite:DotsRenderer', outputLane.id, 0, {});
 
     // Connect domain and positions
     store.patchStore.connect(domainId, 'domain', gridId, 'domain');

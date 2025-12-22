@@ -10,8 +10,8 @@
 
 import { makeObservable, observable, computed, action } from 'mobx';
 import type { RootStore } from '../stores/RootStore';
-import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
-import type { TypeDesc, Slot, Listener, LensDefinition } from '../types';
+import { SLOT_TYPE_TO_TYPE_DESC, portRefToKey } from '../types';
+import type { TypeDesc, Slot, Listener, LensDefinition, PortKey } from '../types';
 import { getBlockDefinition } from '../blocks/registry';
 import type { BlockDefinition } from '../blocks/types';
 import {
@@ -26,7 +26,6 @@ import {
   type CellStatus,
   createRowKey,
   createGroupKey,
-  createPortRefKey,
   createDefaultViewState,
   parseRowKey,
 } from './types';
@@ -72,14 +71,14 @@ export class ModulationTableStore {
    * Build indexes for fast lookups.
    */
   get patchIndex(): PatchIndex {
-    const listenersByInputPort = new Map<string, string>();
+    const listenersByInputPort = new Map<PortKey, string>();
     const publishersByBus = new Map<string, string[]>();
     const listenersByBus = new Map<string, string[]>();
     const portsByBlock = new Map<string, { inputs: string[]; outputs: string[] }>();
 
     // Index listeners by input port
     for (const listener of this.root.busStore.listeners) {
-      const key = createPortRefKey(listener.to.blockId, listener.to.slotId);
+      const key = portRefToKey({ ...listener.to, direction: 'input' });
       listenersByInputPort.set(key, listener.id);
 
       // Also index by bus
@@ -237,7 +236,7 @@ export class ModulationTableStore {
     if (rowFilter.boundOnly) {
       const index = this.patchIndex;
       rows = rows.filter((r) => {
-        const portKey = createPortRefKey(r.blockId, r.portId);
+        const portKey = portRefToKey({ blockId: r.blockId, slotId: r.portId, direction: 'input' });
         return index.listenersByInputPort.has(portKey);
       });
     }
@@ -348,7 +347,7 @@ export class ModulationTableStore {
     const index = this.patchIndex;
 
     for (const row of this.rows) {
-      const portKey = createPortRefKey(row.blockId, row.portId);
+      const portKey = portRefToKey({ blockId: row.blockId, slotId: row.portId, direction: 'input' });
       const listenerId = index.listenersByInputPort.get(portKey);
 
       for (const column of this.columns) {
@@ -467,7 +466,7 @@ export class ModulationTableStore {
     const { blockId, portId } = parsed;
 
     // Check if there's already a listener for this port
-    const portKey = createPortRefKey(blockId, portId);
+    const portKey = portRefToKey({ blockId, slotId: portId, direction: 'input' });
     const existingListenerId = this.patchIndex.listenersByInputPort.get(portKey);
 
     // If exists, remove it first (one listener per port constraint)
@@ -486,7 +485,7 @@ export class ModulationTableStore {
     const parsed = parseRowKey(rowKey);
     if (!parsed) return;
 
-    const portKey = createPortRefKey(parsed.blockId, parsed.portId);
+    const portKey = portRefToKey({ blockId: parsed.blockId, slotId: parsed.portId, direction: 'input' });
     const listenerId = this.patchIndex.listenersByInputPort.get(portKey);
 
     if (listenerId) {
@@ -501,7 +500,7 @@ export class ModulationTableStore {
     const parsed = parseRowKey(rowKey);
     if (!parsed) return;
 
-    const portKey = createPortRefKey(parsed.blockId, parsed.portId);
+    const portKey = portRefToKey({ blockId: parsed.blockId, slotId: parsed.portId, direction: 'input' });
     const listenerId = this.patchIndex.listenersByInputPort.get(portKey);
 
     if (listenerId) {

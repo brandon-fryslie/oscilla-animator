@@ -16,11 +16,11 @@
  * Reference: design-docs/10-Refactor-for-UI-prep/5-DivergentTypes.md
  */
 
-import type { PatchDocument, PortKey, ValidationResult } from './types';
+import type { PatchDocument, ValidationResult } from './types';
 import { SemanticGraph } from './graph';
 import { createDiagnostic, type Diagnostic } from '../diagnostics/types';
 import { areSlotTypesCompatible } from './index';
-import type { SlotType } from '../types';
+import type { SlotType, PortRef } from '../types';
 import {
   RESERVED_BUS_CONTRACTS,
   validateReservedBus,
@@ -167,14 +167,14 @@ export class Validator {
     // Check each block's input ports
     for (const block of patch.blocks) {
       for (const input of block.inputs) {
-        const portKey: PortKey = {
+        const portRef: PortRef = {
           blockId: block.id,
           slotId: input.id,
-          dir: 'input',
+          direction: 'input',
         };
 
-        const incomingWires = this.graph.getIncomingWires(portKey);
-        const incomingListeners = this.graph.getIncomingListeners(portKey);
+        const incomingWires = this.graph.getIncomingWires(portRef);
+        const incomingListeners = this.graph.getIncomingListeners(portRef);
 
         const totalWriters = incomingWires.length + incomingListeners.length;
 
@@ -640,8 +640,8 @@ export class Validator {
    */
   canAddConnection(
     patch: PatchDocument,
-    from: { blockId: string; slotId: string },
-    to: { blockId: string; slotId: string }
+    from: PortRef,
+    to: PortRef
   ): ValidationResult {
     const errors: Diagnostic[] = [];
 

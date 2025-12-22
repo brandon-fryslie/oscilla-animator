@@ -279,12 +279,8 @@ export interface TargetScene {
 // Patch Graph Data Model
 // =============================================================================
 
-export type BlockId = string;
-
-export interface PortRef {
-  blockId: BlockId;
-  port: string;
-}
+import type { PortRef, Bus, Publisher, Listener } from '../types';
+export type { PortRef, Bus, Publisher, Listener };
 
 export interface CompilerConnection {
   from: PortRef; // output port
@@ -303,10 +299,8 @@ export interface BlockInstance {
  * Forward declaration of bus types (imported from main types)
  * These will be available when buses are present in a patch.
  */
-// Import types from main editor types for use in CompilerPatch
-import type { Bus, Publisher, Listener } from '../types';
 // Re-export for consumers
-export type { Bus, Publisher, Listener };
+// export type { Bus, Publisher, Listener }; // already exported above
 
 // Import Domain from unified compiler
 import type { Domain } from './unified/Domain';
@@ -393,7 +387,7 @@ export type Artifact =
   // Event artifacts for TimeRoot wrap/end events
   | { kind: 'Event'; value: (tMs: number, lastTMs: number, ctx: RuntimeCtx) => boolean }
 
-  | { kind: 'Error'; message: string; where?: { blockId?: string; port?: string } };
+  | { kind: 'Error'; message: string; where?: { blockId?: string; portRef?: PortRef } };
 
 /**
  * A compiled block returns one Artifact per declared output port.
@@ -460,7 +454,7 @@ export type CompileErrorCode =
 export interface CompileError {
   code: CompileErrorCode;
   message: string;
-  where?: { blockId?: string; port?: string; connection?: CompilerConnection; busId?: string };
+  where?: { blockId?: string; portRef?: PortRef; connection?: CompilerConnection; busId?: string };
 }
 
 export interface CompileResult {

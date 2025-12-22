@@ -45,7 +45,7 @@ export const GridPoints = registerComposite({
       },
     },
     edges: [
-      { from: 'domain.domain', to: 'grid.domain' },
+      { id: 'domain_domain_grid_domain', from: 'domain:out:domain', to: 'grid:in:domain' },
     ],
     inputMap: {},
     outputMap: {
@@ -112,7 +112,7 @@ export const CirclePoints = registerComposite({
       },
     },
     edges: [
-      { from: 'domain.domain', to: 'circle.domain' },
+      { id: 'domain_domain_circle_domain', from: 'domain:out:domain', to: 'circle:in:domain' },
     ],
     inputMap: {},
     outputMap: {
@@ -178,7 +178,7 @@ export const LinePoints = registerComposite({
       },
     },
     edges: [
-      { from: 'domain.domain', to: 'line.domain' },
+      { id: 'domain_domain_line_domain', from: 'domain:out:domain', to: 'line:in:domain' },
     ],
     inputMap: {},
     outputMap: {
@@ -352,7 +352,7 @@ export const PerElementPhaseOffset = registerComposite({
       },
     },
     edges: [
-      { from: 'hash.u', to: 'scale.x' },
+      { id: 'hash_u_scale_x', from: 'hash:out:u', to: 'scale:in:x' },
     ],
     inputMap: {
       domain: 'hash.domain',
@@ -425,8 +425,8 @@ export const SizeScatter = registerComposite({
       },
     },
     edges: [
-      { from: 'hash.u', to: 'mapToRange.x' },
-      { from: 'mapToRange.y', to: 'addMin.x' },
+      { id: 'hash_u_mapToRange_x', from: 'hash:out:u', to: 'mapToRange:in:x' },
+      { id: 'mapToRange_y_addMin_x', from: 'mapToRange:out:y', to: 'addMin:in:x' },
     ],
     inputMap: {
       domain: 'hash.domain',
@@ -561,9 +561,9 @@ export const WaveDisplace = registerComposite({
       },
     },
     edges: [
-      { from: 'hash.u', to: 'toRadians.x' },
-      { from: 'toRadians.y', to: 'sin.x' },
-      { from: 'sin.y', to: 'amplitude.x' },
+      { id: 'hash_u_toRadians_x', from: 'hash:out:u', to: 'toRadians:in:x' },
+      { id: 'toRadians_y_sin_x', from: 'toRadians:out:y', to: 'sin:in:x' },
+      { id: 'sin_y_amplitude_x', from: 'sin:out:y', to: 'amplitude:in:x' },
     ],
     inputMap: {
       domain: 'hash.domain',

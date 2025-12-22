@@ -152,9 +152,9 @@ export interface WireAddedEvent {
   /** ID of the wire connection */
   wireId: string;
   /** Source block and port */
-  from: { blockId: string; slotId: string };
+  from: PortRef;
   /** Target block and port */
-  to: { blockId: string; slotId: string };
+  to: PortRef;
 }
 
 /**
@@ -169,9 +169,9 @@ export interface WireRemovedEvent {
   /** ID of the wire connection */
   wireId: string;
   /** Source block and port */
-  from: { blockId: string; slotId: string };
+  from: PortRef;
   /** Target block and port */
-  to: { blockId: string; slotId: string };
+  to: PortRef;
 }
 
 /**
@@ -187,10 +187,8 @@ export interface BindingAddedEvent {
   bindingId: string;
   /** ID of the bus */
   busId: string;
-  /** ID of the block being connected */
-  blockId: string;
-  /** Port name on the block */
-  port: string;
+  /** Reference to the port involved in the binding */
+  portRef: PortRef;
   /** Direction of binding: 'publish' for publishers, 'subscribe' for listeners */
   direction: 'publish' | 'subscribe';
 }
@@ -208,10 +206,8 @@ export interface BindingRemovedEvent {
   bindingId: string;
   /** ID of the bus */
   busId: string;
-  /** ID of the block being disconnected */
-  blockId: string;
-  /** Port name on the block */
-  port: string;
+  /** Reference to the port involved in the binding */
+  portRef: PortRef;
   /** Direction of binding: 'publish' for publishers, 'subscribe' for listeners */
   direction: 'publish' | 'subscribe';
 }

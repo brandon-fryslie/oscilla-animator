@@ -48,8 +48,8 @@ export const RotationScatter = registerComposite({
       },
     },
     edges: [
-      { from: 'hash.u', to: 'toRadians.x' },
-      { from: 'toRadians.y', to: 'applyAmount.x' },
+      { id: 'hash_u_toRadians_x', from: 'hash:out:u', to: 'toRadians:in:x' },
+      { id: 'toRadians_y_applyAmount_x', from: 'toRadians:out:y', to: 'applyAmount:in:x' },
     ],
     inputMap: {
       domain: 'hash.domain',
@@ -123,8 +123,8 @@ export const BreathingScale = registerComposite({
       },
     },
     edges: [
-      { from: 'oscillator.out', to: 'scale.x' },
-      { from: 'scale.y', to: 'offset.x' },
+      { id: 'oscillator_out_scale_x', from: 'oscillator:out:out', to: 'scale:in:x' },
+      { id: 'scale_y_offset_x', from: 'scale:out:y', to: 'offset:in:x' },
     ],
     inputMap: {
       phase: 'oscillator.phase',
@@ -231,8 +231,8 @@ export const PerElementColorScatter = registerComposite({
       },
     },
     edges: [
-      { from: 'hash.u', to: 'toHueOffset.x' },
-      { from: 'toHueOffset.y', to: 'colorize.values' },
+      { id: 'hash_u_toHueOffset_x', from: 'hash:out:u', to: 'toHueOffset:in:x' },
+      { id: 'toHueOffset_y_colorize_values', from: 'toHueOffset:out:y', to: 'colorize:in:values' },
     ],
     inputMap: {
       domain: 'hash.domain',
@@ -476,7 +476,7 @@ export const JitterMotion = registerComposite({
       },
     },
     edges: [
-      { from: 'hash.u', to: 'jitter.idRand' },
+      { id: 'hash_u_jitter_idRand', from: 'hash:out:u', to: 'jitter:in:idRand' },
     ],
     inputMap: {
       domain: 'hash.domain',

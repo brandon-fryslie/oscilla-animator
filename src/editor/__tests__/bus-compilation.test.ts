@@ -113,7 +113,7 @@ describe('Bus Compilation - Happy Path', () => {
       {
         id: 'pub1',
         busId: 'bus1',
-        from: { blockId: 'source1', slotId: 'value', dir: 'output' },
+        from: { blockId: 'source1', slotId: 'value', direction: 'output' },
         enabled: true,
         sortKey: 0,
       },
@@ -123,13 +123,13 @@ describe('Bus Compilation - Happy Path', () => {
       {
         id: 'list1',
         busId: 'bus1',
-        to: { blockId: 'sink1', slotId: 'input', dir: 'input' },
+        to: { blockId: 'sink1', slotId: 'input', direction: 'input' },
         enabled: true,
       },
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [bus],
@@ -163,13 +163,13 @@ describe('Bus Compilation - Happy Path', () => {
       {
         id: 'list1',
         busId: 'bus1',
-        to: { blockId: 'sink1', slotId: 'input', dir: 'input' },
+        to: { blockId: 'sink1', slotId: 'input', direction: 'input' },
         enabled: true,
       },
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [bus],
@@ -206,17 +206,17 @@ describe('Bus Compilation - Happy Path', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
-      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 20 },
-      { id: 'pub3', busId: 'bus1', from: { blockId: 'source3', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 30 }, // Highest - should win
+      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 20 },
+      { id: 'pub3', busId: 'bus1', from: { blockId: 'source3', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 30 }, // Highest - should win
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', direction: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [bus],
@@ -253,17 +253,17 @@ describe('Bus Compilation - Happy Path', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
-      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 20 },
-      { id: 'pub3', busId: 'bus1', from: { blockId: 'source3', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 30 },
+      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 20 },
+      { id: 'pub3', busId: 'bus1', from: { blockId: 'source3', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 30 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', direction: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [bus],
@@ -306,16 +306,16 @@ describe('Bus Compilation - sortKey Determinism', () => {
 
     // Same sortKey - id tie-breaker should make pub2 win (alphabetically later)
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
-      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub_z', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub_a', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 0 }, // Should win due to ID
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', direction: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [bus],
@@ -352,12 +352,12 @@ describe('Bus Compilation - sortKey Determinism', () => {
 
     // First configuration: pub1 higher sortKey
     const publishers1: Publisher[] = [
-      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 20 },
-      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 20 },
+      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 10 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'bus1', to: { blockId: 'sink1', slotId: 'input', direction: 'input' }, enabled: true },
     ];
 
     const patch1: CompilerPatch = {
@@ -380,8 +380,8 @@ describe('Bus Compilation - sortKey Determinism', () => {
 
     // Second configuration: swap sortKeys
     const publishers2: Publisher[] = [
-      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 10 },
-      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', dir: 'output' }, enabled: true, sortKey: 20 },
+      { id: 'pub1', busId: 'bus1', from: { blockId: 'source1', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub2', busId: 'bus1', from: { blockId: 'source2', slotId: 'value', direction: 'output' }, enabled: true, sortKey: 20 },
     ];
 
     const patch2: CompilerPatch = {
@@ -427,7 +427,7 @@ describe('Bus Compilation - Error Handling', () => {
     };
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [bus],
@@ -459,13 +459,14 @@ describe('Bus Compilation - Backward Compatibility', () => {
 
     const connections = [
       {
-        from: { blockId: 'source1', port: 'value' },
-        to: { blockId: 'sink1', port: 'input' },
+        id: 'c1',
+        from: { blockId: 'source1', slotId: 'value', direction: 'output' as const },
+        to: { blockId: 'sink1', slotId: 'input', direction: 'input' as const },
       },
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections,
       // No buses - should use wire-only compiler

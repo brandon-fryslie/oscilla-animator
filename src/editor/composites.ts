@@ -12,7 +12,7 @@ export interface ExposedPort {
 
 export interface CompositeGraph {
   nodes: Record<string, { type: string; params?: Record<string, unknown> }>;
-  edges: readonly { from: string; to: string }[];
+  edges: readonly { id: string; from: PortKey; to: PortKey }[];
   inputMap: Record<string, string>;
   outputMap: Record<string, string>;
   /**

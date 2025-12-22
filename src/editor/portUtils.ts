@@ -10,6 +10,7 @@
 
 import type { SlotType, Connection, Block, Slot, PortRef } from './types';
 import { areSlotTypesCompatible, getCompatibilityHint } from './semantic';
+import { portRefToKey } from './types'; // Import portRefToKey
 
 // =============================================================================
 // Slot Type Descriptors
@@ -220,7 +221,7 @@ export function findCompatiblePorts(
           blockId: block.id,
           slotId: slot.id,
           direction: lookingForDirection,
-        },
+        } as PortRef,
       });
     }
   }
@@ -263,13 +264,13 @@ export function getConnectionColor(connectionIndex: number): string {
  */
 export function buildPortColorMap(
   connections: Connection[]
-): Map<string, string> {
-  const colorMap = new Map<string, string>();
+): Map<PortKey, string> {
+  const colorMap = new Map<PortKey, string>();
 
   connections.forEach((conn, index) => {
     const color = getConnectionColor(index);
-    const fromKey = `${conn.from.blockId}:${conn.from.slotId}`;
-    const toKey = `${conn.to.blockId}:${conn.to.slotId}`;
+    const fromKey = portRefToKey(conn.from);
+    const toKey = portRefToKey(conn.to);
 
     // Outputs can have multiple connections, so take the first color assigned
     if (!colorMap.has(fromKey)) {
@@ -286,11 +287,10 @@ export function buildPortColorMap(
  * Get the color for a specific port.
  */
 export function getPortColor(
-  blockId: string,
-  slotId: string,
-  colorMap: Map<string, string>
+  portRef: PortRef,
+  colorMap: Map<PortKey, string>
 ): string | null {
-  return colorMap.get(`${blockId}:${slotId}`) ?? null;
+  return colorMap.get(portRefToKey(portRef)) ?? null;
 }
 
 /**

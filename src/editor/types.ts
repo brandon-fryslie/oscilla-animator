@@ -162,18 +162,42 @@ export interface LensDefinition {
 }
 
 /**
- * Endpoint reference for routing (bus publishers/listeners).
- * Uses canonical slotId + direction for stable identity.
+ * Identifies a specific port on a specific block.
+ * Canonical port identity format used end-to-end.
  */
-export interface BindingEndpoint {
-  /** Block ID */
+export interface PortRef {
   readonly blockId: BlockId;
-
-  /** Canonical slot ID (stable across renames) */
   readonly slotId: string;
+  readonly direction: 'input' | 'output';
+}
 
-  /** Port direction */
-  readonly dir: 'input' | 'output';
+/**
+ * String representation of a PortRef for use as Map keys or stable IDs.
+ * Format: "blockId:in|out:slotId"
+ */
+export type PortKey = `${string}:${'in' | 'out'}:${string}`;
+
+/**
+ * Convert a PortRef to a PortKey string.
+ */
+export function portRefToKey(ref: PortRef): PortKey {
+  const dir = ref.direction === 'input' ? 'in' : 'out';
+  return `${ref.blockId}:${dir}:${ref.slotId}`;
+}
+
+/**
+ * Parse a PortKey string back to a PortRef object.
+ */
+export function portKeyToRef(key: string): PortRef | null {
+  const parts = key.split(':');
+  if (parts.length !== 3) return null;
+  const [blockId, dir, slotId] = parts;
+  if (dir !== 'in' && dir !== 'out') return null;
+  return {
+    blockId: blockId!,
+    slotId: slotId!,
+    direction: dir === 'in' ? 'input' : 'output',
+  };
 }
 
 /**
@@ -187,7 +211,7 @@ export interface Publisher {
   readonly busId: string;
 
   /** Source output endpoint */
-  readonly from: BindingEndpoint;
+  readonly from: PortRef;
 
   /** Optional adapter chain */
   readonly adapterChain?: AdapterStep[];
@@ -213,7 +237,7 @@ export interface Listener {
   readonly busId: string;
 
   /** Target input endpoint */
-  readonly to: BindingEndpoint;
+  readonly to: PortRef;
 
   /** Optional adapter chain */
   readonly adapterChain?: AdapterStep[];
@@ -367,6 +391,18 @@ export type BlockId = string;
  * Block type identifies the block's behavior (used to look up factory in registry).
  */
 export type BlockType = string; // e.g., 'RadialOrigin', 'PhaseMachine', 'ParticleRenderer'
+
+/**
+ * Key for a node in the semantic graph. Typically a block ID.
+ * Used for adjacency lists and cycle detection.
+ */
+export type NodeKey = BlockId;
+
+/**
+ * Key for an edge in the semantic graph.
+ * Format: "source_port_key=>target_port_key"
+ */
+export type EdgeKey = `${PortKey}=>${PortKey}`;
 
 // =============================================================================
 // Block Form System (Primitives, Compounds, Macros)
@@ -529,17 +565,29 @@ export interface Connection {
   /** Unique ID for this connection */
   readonly id: string;
 
-  /** Source block + slot */
-  readonly from: {
-    readonly blockId: BlockId;
-    readonly slotId: string;
-  };
+  /** Source output port */
+  readonly from: PortRef;
 
-  /** Destination block + slot */
-  readonly to: {
-    readonly blockId: BlockId;
-    readonly slotId: string;
-  };
+  /** Destination input port */
+  readonly to: PortRef;
+}
+
+/**
+ * An Edge is a directed connection in the semantic graph.
+ * It uses PortKeys for efficient lookups and includes adapter info.
+ */
+export interface Edge {
+  /** Unique ID for this edge (typically same as corresponding Connection) */
+  readonly id: string;
+
+  /** Source output port key */
+  readonly from: PortKey;
+
+  /** Destination input port key */
+  readonly to: PortKey;
+
+  /** Optional adapter chain if types do not match */
+  readonly adapter?: AdapterPath;
 }
 
 /**
@@ -557,27 +605,7 @@ export interface Composite {
   blocks: Block[];
 
   /** Internal connections between blocks */
-  connections: CompositeConnection[];
-}
-
-/**
- * Connection within a composite.
- */
-export interface CompositeConnection {
-  /** Connection identifier */
-  readonly id: string;
-
-  /** Source endpoint */
-  readonly from: {
-    readonly blockId: BlockId;
-    readonly slotId: string;
-  };
-
-  /** Destination endpoint */
-  readonly to: {
-    readonly blockId: BlockId;
-    readonly slotId: string;
-  };
+  connections: { id: string; from: PortKey; to: PortKey }[];
 }
 
 // =============================================================================
@@ -756,15 +784,6 @@ export interface Patch {
  * Editor UI state (selection, drag, etc.).
  * Not part of Patch (UI-only state).
  */
-/**
- * Identifies a specific port on a specific block.
- */
-export interface PortRef {
-  readonly blockId: BlockId;
-  readonly slotId: string;
-  readonly direction: 'input' | 'output';
-}
-
 /**
  * Context menu state for right-click actions.
  */

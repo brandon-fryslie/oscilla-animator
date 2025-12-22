@@ -45,7 +45,7 @@ export const BreathEnergy = registerComposite({
       },
     },
     edges: [
-      { from: 'osc.out', to: 'shaper.in' },
+      { id: 'osc_out_shaper_in', from: 'osc:out:out', to: 'shaper:in:in' },
     ],
     inputMap: {
       phase: 'osc.phase',
@@ -113,7 +113,7 @@ export const PulseAccentEnergy = registerComposite({
       },
     },
     edges: [
-      { from: 'divider.tick', to: 'envelope.trigger' },
+      { id: 'divider_tick_envelope_trigger', from: 'divider:out:tick', to: 'envelope:in:trigger' },
     ],
     inputMap: {
       phase: 'divider.phase',
@@ -290,18 +290,18 @@ export const BreathingDotsRenderer = registerComposite({
     },
     edges: [
       // Domain flows
-      { from: 'grid.domain', to: 'idHash.domain' },
-      { from: 'grid.domain', to: 'jitterHash.domain' },
-      { from: 'grid.domain', to: 'radiusField.domain' },
-      { from: 'grid.domain', to: 'render.domain' },
+      { id: 'grid_domain_idHash_domain', from: 'grid:out:domain', to: 'idHash:in:domain' },
+      { id: 'grid_domain_jitterHash_domain', from: 'grid:out:domain', to: 'jitterHash:in:domain' },
+      { id: 'grid_domain_radiusField_domain', from: 'grid:out:domain', to: 'radiusField:in:domain' },
+      { id: 'grid_domain_render_domain', from: 'grid:out:domain', to: 'render:in:domain' },
       // Jitter setup
-      { from: 'jitterHash.u01', to: 'jitter.idRand' },
+      { id: 'jitterHash_u01_jitter_idRand', from: 'jitterHash:out:u01', to: 'jitter:in:idRand' },
       // Position combination
-      { from: 'grid.pos0', to: 'posAdd.a' },
-      { from: 'jitter.drift', to: 'posAdd.b' },
-      { from: 'posAdd.out', to: 'render.positions' },
+      { id: 'grid_pos0_posAdd_a', from: 'grid:out:pos0', to: 'posAdd:in:a' },
+      { id: 'jitter_drift_posAdd_b', from: 'jitter:out:drift', to: 'posAdd:in:b' },
+      { id: 'posAdd_out_render_positions', from: 'posAdd:out:out', to: 'render:in:positions' },
       // Radius
-      { from: 'radiusField.out', to: 'render.radius' },
+      { id: 'radiusField_out_render_radius', from: 'radiusField:out:out', to: 'render:in:radius' },
     ],
     inputMap: {
       phase: 'jitter.phase', // For position animation

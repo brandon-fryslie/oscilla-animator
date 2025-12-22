@@ -9,7 +9,7 @@
  * Cells = Lens chains binding sources to targets
  */
 
-import type { BlockId, TypeDesc, BusCombineMode, LensDefinition } from '../types';
+import type { BlockId, TypeDesc, BusCombineMode, LensDefinition, PortKey } from '../types';
 import type { BlockDefinition } from '../blocks/types';
 
 // =============================================================================
@@ -274,18 +274,12 @@ export interface TableViewState {
 // =============================================================================
 
 /**
- * Port reference key for indexing.
- * Format: `${blockId}:${portId}`
- */
-export type PortRefKey = string;
-
-/**
  * Derived indexes for O(1) lookups.
  * Rebuilt on patch load / each transaction.
  */
 export interface PatchIndex {
   /** Listener by input port (one listener per port max) */
-  listenersByInputPort: Map<PortRefKey, string>;
+  listenersByInputPort: Map<PortKey, string>;
 
   /** Publisher IDs by bus */
   publishersByBus: Map<string, readonly string[]>;
@@ -337,13 +331,6 @@ export function parseGroupKey(key: GroupKey): { kind: string; blockId: BlockId }
     kind: key.slice(0, colonIndex),
     blockId: key.slice(colonIndex + 1),
   };
-}
-
-/**
- * Create a port reference key.
- */
-export function createPortRefKey(blockId: BlockId, portId: string): PortRefKey {
-  return `${blockId}:${portId}`;
 }
 
 /**

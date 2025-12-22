@@ -227,7 +227,7 @@ export class BusStore {
     const publisher: Publisher = {
       id: this.root.generateId('pub'),
       busId,
-      from: { blockId, slotId, dir: 'output' },
+      from: { blockId, slotId, direction: 'output' },
       adapterChain,
       enabled: true,
       sortKey: maxSortKey + 10,
@@ -309,7 +309,7 @@ export class BusStore {
     const listener: Listener = {
       id: this.root.generateId('list'),
       busId,
-      to: { blockId, slotId, dir: 'input' },
+      to: { blockId, slotId, direction: 'input' },
       adapterChain,
       enabled: true,
       lensStack,

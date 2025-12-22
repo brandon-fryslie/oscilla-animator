@@ -19,7 +19,7 @@ describe('GraphCommitted Event', () => {
 
   describe('GraphCommitted payload structure', () => {
     it('should include patchRevision', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events[0]).toHaveProperty('patchRevision');
@@ -27,7 +27,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include reason field', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events[0]).toHaveProperty('reason');
@@ -35,7 +35,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include diffSummary with all required fields', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events[0]).toHaveProperty('diffSummary');
@@ -48,7 +48,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include patchId', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events[0]).toHaveProperty('patchId');
@@ -56,7 +56,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include affectedBlockIds when blocks are affected', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockId = rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events[0]).toHaveProperty('affectedBlockIds');
@@ -66,7 +66,7 @@ describe('GraphCommitted Event', () => {
 
   describe('addBlock', () => {
     it('should emit GraphCommitted with blocksAdded=1', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events).toHaveLength(1);
@@ -76,21 +76,21 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include affectedBlockIds', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockId = rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events[0].affectedBlockIds).toContain(blockId);
     });
 
     it('should set timeRootChanged=true for TimeRoot blocks', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       rootStore.patchStore.addBlock('CycleTimeRoot', lane.id);
 
       expect(events[0].diffSummary.timeRootChanged).toBe(true);
     });
 
     it('should set timeRootChanged=false for non-TimeRoot blocks', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events[0].diffSummary.timeRootChanged).toBe(false);
@@ -99,7 +99,7 @@ describe('GraphCommitted Event', () => {
 
   describe('removeBlock', () => {
     it('should emit GraphCommitted with blocksRemoved=1', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockId = rootStore.patchStore.addBlock('Oscillator', lane.id);
       events.length = 0; // Clear addBlock event
 
@@ -111,7 +111,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include affectedBlockIds', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockId = rootStore.patchStore.addBlock('Oscillator', lane.id);
       events.length = 0;
 
@@ -121,7 +121,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should set timeRootChanged=true when removing TimeRoot block', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockId = rootStore.patchStore.addBlock('CycleTimeRoot', lane.id);
       events.length = 0;
 
@@ -133,7 +133,7 @@ describe('GraphCommitted Event', () => {
 
   describe('connect/disconnect', () => {
     it('should emit GraphCommitted with bindingsChanged=1 on connect', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockA = rootStore.patchStore.addBlock('Oscillator', lane.id);
       const blockB = rootStore.patchStore.addBlock('Oscillator', lane.id);
       events.length = 0;
@@ -145,7 +145,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should emit GraphCommitted with bindingsChanged=1 on disconnect', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockA = rootStore.patchStore.addBlock('Oscillator', lane.id);
       const blockB = rootStore.patchStore.addBlock('Oscillator', lane.id);
       rootStore.patchStore.connect(blockA, 'out', blockB, 'phase');
@@ -159,7 +159,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include affectedBlockIds on connect', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockA = rootStore.patchStore.addBlock('Oscillator', lane.id);
       const blockB = rootStore.patchStore.addBlock('Oscillator', lane.id);
       events.length = 0;
@@ -173,7 +173,7 @@ describe('GraphCommitted Event', () => {
 
   describe('patchRevision', () => {
     it('should increment monotonically on each mutation', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
 
       const id1 = rootStore.patchStore.addBlock('Oscillator', lane.id);
       expect(events[0].patchRevision).toBe(1);
@@ -186,14 +186,14 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should match patchStore.patchRevision after emission', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events[0].patchRevision).toBe(rootStore.patchStore.patchRevision);
     });
 
     it('should increment on connect', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockA = rootStore.patchStore.addBlock('Oscillator', lane.id);
       const blockB = rootStore.patchStore.addBlock('Oscillator', lane.id);
       const revisionBeforeConnect = rootStore.patchStore.patchRevision;
@@ -204,7 +204,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should increment on disconnect', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockA = rootStore.patchStore.addBlock('Oscillator', lane.id);
       const blockB = rootStore.patchStore.addBlock('Oscillator', lane.id);
       rootStore.patchStore.connect(blockA, 'out', blockB, 'phase');
@@ -219,7 +219,7 @@ describe('GraphCommitted Event', () => {
 
   describe('replaceBlock', () => {
     it('should emit exactly one GraphCommitted event', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       // Use CycleTimeRoot which has defined inputs/outputs
       const blockId = rootStore.patchStore.addBlock('CycleTimeRoot', lane.id);
       events.length = 0;
@@ -233,7 +233,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should have blocksAdded=1 and blocksRemoved=1', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockId = rootStore.patchStore.addBlock('CycleTimeRoot', lane.id);
       events.length = 0;
 
@@ -245,7 +245,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include both old and new block IDs in affectedBlockIds', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const oldBlockId = rootStore.patchStore.addBlock('CycleTimeRoot', lane.id);
       events.length = 0;
 
@@ -293,14 +293,14 @@ describe('GraphCommitted Event', () => {
 
   describe('patchId', () => {
     it('should be included in all GraphCommitted events', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events[0].patchId).toBe(rootStore.patchStore.patchId);
     });
 
     it('should remain consistent across multiple operations', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const patchId = rootStore.patchStore.patchId;
 
       rootStore.patchStore.addBlock('Oscillator', lane.id);
@@ -313,7 +313,7 @@ describe('GraphCommitted Event', () => {
 
   describe('diffSummary completeness', () => {
     it('should have all fields zeroed when adding a single block', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       rootStore.patchStore.addBlock('Oscillator', lane.id);
 
       expect(events[0].diffSummary).toEqual({
@@ -327,7 +327,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should track bindingsChanged correctly for removeBlock with connections', () => {
-      const lane = rootStore.patchStore.lanes[0];
+      const lane = rootStore.viewStore.lanes[0];
       const blockA = rootStore.patchStore.addBlock('Oscillator', lane.id);
       const blockB = rootStore.patchStore.addBlock('Oscillator', lane.id);
       rootStore.patchStore.connect(blockA, 'out', blockB, 'phase');

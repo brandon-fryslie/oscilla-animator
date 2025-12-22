@@ -15,14 +15,20 @@
 
 import type {
   PatchDocument,
-  PortKey,
   WireEdge,
   PublisherEdge,
   ListenerEdge,
   GraphEdge,
   BlockNode,
 } from './types';
-import { portKeyToString, portKeyFromConnection, portKeyFromPublisher, portKeyFromListener } from './types';
+import {
+  portRefToKey,
+  portKeyToRef,
+  portRefFromConnection,
+  portRefFromPublisher,
+  portRefFromListener
+} from './types';
+import type { PortRef } from '../types';
 
 /**
  * SemanticGraph provides fast indexed access to patch structure.
@@ -98,8 +104,8 @@ export class SemanticGraph {
       const edge: WireEdge = {
         kind: 'wire',
         connectionId: conn.id,
-        from: portKeyFromConnection(conn, 'from'),
-        to: portKeyFromConnection(conn, 'to'),
+        from: portRefFromConnection(conn, 'from'),
+        to: portRefFromConnection(conn, 'to'),
       };
 
       this.addWireEdge(edge);
@@ -116,7 +122,7 @@ export class SemanticGraph {
         const edge: PublisherEdge = {
           kind: 'publisher',
           publisherId: pub.id,
-          from: portKeyFromPublisher(pub),
+          from: portRefFromPublisher(pub),
           busId: pub.busId,
           sortKey: pub.sortKey,
         };
@@ -134,7 +140,7 @@ export class SemanticGraph {
           kind: 'listener',
           listenerId: listener.id,
           busId: listener.busId,
-          to: portKeyFromListener(listener),
+          to: portRefFromListener(listener),
         };
 
         this.addListenerEdge(edge);
@@ -155,8 +161,8 @@ export class SemanticGraph {
    * Add a wire edge to the indices.
    */
   private addWireEdge(edge: WireEdge): void {
-    const fromKey = portKeyToString(edge.from);
-    const toKey = portKeyToString(edge.to);
+    const fromKey = portRefToKey(edge.from);
+    const toKey = portRefToKey(edge.to);
 
     // Add to outgoing wires
     if (!this.outgoingWires.has(fromKey)) {
@@ -175,7 +181,7 @@ export class SemanticGraph {
    * Add a publisher edge to the indices.
    */
   private addPublisherEdge(edge: PublisherEdge): void {
-    const fromKey = portKeyToString(edge.from);
+    const fromKey = portRefToKey(edge.from);
 
     // Add to outgoing publishers
     if (!this.outgoingPublishers.has(fromKey)) {
@@ -194,7 +200,7 @@ export class SemanticGraph {
    * Add a listener edge to the indices.
    */
   private addListenerEdge(edge: ListenerEdge): void {
-    const toKey = portKeyToString(edge.to);
+    const toKey = portRefToKey(edge.to);
 
     // Add to incoming listeners
     if (!this.incomingListeners.has(toKey)) {
@@ -242,8 +248,7 @@ export class SemanticGraph {
    * Returns empty array if no incoming wires.
    */
   getIncomingWires(port: PortKey): WireEdge[] {
-    const key = portKeyToString(port);
-    return this.incomingWires.get(key) ?? [];
+    return this.incomingWires.get(port) ?? [];
   }
 
   /**
@@ -251,8 +256,7 @@ export class SemanticGraph {
    * Returns empty array if no outgoing wires.
    */
   getOutgoingWires(port: PortKey): WireEdge[] {
-    const key = portKeyToString(port);
-    return this.outgoingWires.get(key) ?? [];
+    return this.outgoingWires.get(port) ?? [];
   }
 
   /**
@@ -260,8 +264,7 @@ export class SemanticGraph {
    * Returns empty array if no listeners.
    */
   getIncomingListeners(port: PortKey): ListenerEdge[] {
-    const key = portKeyToString(port);
-    return this.incomingListeners.get(key) ?? [];
+    return this.incomingListeners.get(port) ?? [];
   }
 
   /**
@@ -269,8 +272,7 @@ export class SemanticGraph {
    * Returns empty array if no publishers.
    */
   getOutgoingPublishers(port: PortKey): PublisherEdge[] {
-    const key = portKeyToString(port);
-    return this.outgoingPublishers.get(key) ?? [];
+    return this.outgoingPublishers.get(port) ?? [];
   }
 
   /**

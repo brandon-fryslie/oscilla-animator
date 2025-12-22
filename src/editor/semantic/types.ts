@@ -13,8 +13,12 @@
  * Reference: design-docs/10-Refactor-for-UI-prep/5-DivergentTypes.md
  */
 
-import type { BlockId, Connection, Publisher, Listener, Bus } from '../types';
+import type { BlockId, Connection, Publisher, Listener, Bus, PortRef, PortKey } from '../types';
+import { portRefToKey, portKeyToRef } from '../types';
 import type { Diagnostic } from '../diagnostics/types';
+
+// Export utilities from here as well for convenience
+export { portRefToKey, portKeyToRef };
 
 // =============================================================================
 // Validation Result
@@ -66,21 +70,11 @@ export interface BlockNode {
 }
 
 /**
- * Port identifier within a block.
- * Uses canonical slotId + direction for stable identity.
- */
-export interface PortKey {
-  blockId: BlockId;
-  slotId: string;
-  dir: 'input' | 'output';
-}
-
-/**
  * Port node in the semantic graph.
  */
 export interface PortNode {
   kind: 'port';
-  key: PortKey;
+  key: PortRef;
   slotType: string;
 }
 
@@ -107,8 +101,8 @@ export type GraphNode = BlockNode | PortNode | BusNode;
 export interface WireEdge {
   kind: 'wire';
   connectionId: string;
-  from: PortKey;
-  to: PortKey;
+  from: PortRef;
+  to: PortRef;
 }
 
 /**
@@ -117,7 +111,7 @@ export interface WireEdge {
 export interface PublisherEdge {
   kind: 'publisher';
   publisherId: string;
-  from: PortKey;
+  from: PortRef;
   busId: string;
   sortKey: number;
 }
@@ -129,7 +123,7 @@ export interface ListenerEdge {
   kind: 'listener';
   listenerId: string;
   busId: string;
-  to: PortKey;
+  to: PortRef;
 }
 
 /**
@@ -164,57 +158,30 @@ export interface PatchDocument {
 // =============================================================================
 
 /**
- * Convert a PortKey to a stable string representation.
- * Format: "blockId:slotId:dir"
+ * Create a PortRef for a connection endpoint.
  */
-export function portKeyToString(key: PortKey): string {
-  return `${key.blockId}:${key.slotId}:${key.dir}`;
-}
-
-/**
- * Parse a port key string back to a PortKey object.
- */
-export function stringToPortKey(str: string): PortKey | null {
-  const parts = str.split(':');
-  if (parts.length !== 3) return null;
-  const [blockId, slotId, dir] = parts;
-  if (dir !== 'input' && dir !== 'output') return null;
-  return { blockId: blockId!, slotId: slotId!, dir };
-}
-
-/**
- * Create a PortKey for a connection endpoint.
- */
-export function portKeyFromConnection(
+export function portRefFromConnection(
   connection: Connection,
   end: 'from' | 'to'
-): PortKey {
+): PortRef {
   const endpoint = connection[end];
   return {
     blockId: endpoint.blockId,
     slotId: endpoint.slotId,
-    dir: end === 'from' ? 'output' : 'input',
+    direction: end === 'from' ? 'output' : 'input',
   };
 }
 
 /**
- * Create a PortKey from a Publisher endpoint.
+ * Create a PortRef from a Publisher endpoint.
  */
-export function portKeyFromPublisher(publisher: Publisher): PortKey {
-  return {
-    blockId: publisher.from.blockId,
-    slotId: publisher.from.slotId,
-    dir: 'output',
-  };
+export function portRefFromPublisher(publisher: Publisher): PortRef {
+  return publisher.from;
 }
 
 /**
- * Create a PortKey from a Listener endpoint.
+ * Create a PortRef from a Listener endpoint.
  */
-export function portKeyFromListener(listener: Listener): PortKey {
-  return {
-    blockId: listener.to.blockId,
-    slotId: listener.to.slotId,
-    dir: 'input',
-  };
+export function portRefFromListener(listener: Listener): PortRef {
+  return listener.to;
 }

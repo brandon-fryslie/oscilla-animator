@@ -130,7 +130,9 @@ describe('BusStore - Event Emission', () => {
       );
 
       // Create a test block
-      blockId = root.patchStore.addBlock('FieldConstNumber', root.patchStore.lanes[0].id, { value: 0 });
+      const lane = root.viewStore.lanes[0];
+      if (!lane) throw new Error('No lanes found');
+      blockId = root.patchStore.addBlockAtIndex('FieldConstNumber', lane.id, 0, { value: 0 });
 
       events.length = 0; // Clear setup events
     });
@@ -286,7 +288,9 @@ describe('BusStore - Event Emission', () => {
         'cascadeBus',
         'last'
       );
-      const blockId = root.patchStore.addBlock('FieldConstNumber', root.patchStore.lanes[0].id, { value: 0 });
+      const lane = root.viewStore.lanes[0];
+      if (!lane) throw new Error('No lanes found');
+      const blockId = root.patchStore.addBlockAtIndex('FieldConstNumber', lane.id, 0, { value: 0 });
 
       const publisherId = root.busStore.addPublisher(busId, blockId, 'value');
       const listenerId = root.busStore.addListener(busId, blockId, 'value');

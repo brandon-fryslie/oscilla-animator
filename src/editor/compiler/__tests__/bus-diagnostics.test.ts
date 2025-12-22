@@ -31,9 +31,17 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      const phaseLane = store.viewStore.lanes.find(l => l.kind === 'Phase');
+      if (!phaseLane) throw new Error('Phase lane not found');
+      store.patchStore.addBlockAtIndex('CycleTimeRoot', phaseLane.id, 0, { periodMs: 3000 });
+
+      const fieldsLane = store.viewStore.lanes.find(l => l.kind === 'Fields');
+      if (!fieldsLane) throw new Error('Fields lane not found');
+      const domainBlock = store.patchStore.addBlockAtIndex('GridDomain', fieldsLane.id, 0, { rows: 5, cols: 5 });
+      
+      const programLane = store.viewStore.lanes.find(l => l.kind === 'Program');
+      if (!programLane) throw new Error('Program lane not found');
+      const renderBlock = store.patchStore.addBlockAtIndex('RenderInstances2D', programLane.id, 0, {});
 
       // Connect the blocks
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -52,7 +60,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-1',
         busId: 'custom-bus',
-        from: { blockId: domainBlock, slotId: 'domain', dir: 'output' },
+        from: { blockId: domainBlock, slotId: 'domain', direction: 'output' },
         enabled: true,
         sortKey: 0,
       });
@@ -75,9 +83,17 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      const phaseLane = store.viewStore.lanes.find(l => l.kind === 'Phase');
+      if (!phaseLane) throw new Error('Phase lane not found');
+      store.patchStore.addBlockAtIndex('CycleTimeRoot', phaseLane.id, 0, { periodMs: 3000 });
+
+      const fieldsLane = store.viewStore.lanes.find(l => l.kind === 'Fields');
+      if (!fieldsLane) throw new Error('Fields lane not found');
+      const domainBlock = store.patchStore.addBlockAtIndex('GridDomain', fieldsLane.id, 0, { rows: 5, cols: 5 });
+
+      const programLane = store.viewStore.lanes.find(l => l.kind === 'Program');
+      if (!programLane) throw new Error('Program lane not found');
+      const renderBlock = store.patchStore.addBlockAtIndex('RenderInstances2D', programLane.id, 0, {});
 
       // Connect the blocks
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -96,7 +112,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-1',
         busId: 'custom-bus',
-        from: { blockId: domainBlock, slotId: 'domain', dir: 'output' },
+        from: { blockId: domainBlock, slotId: 'domain', direction: 'output' },
         enabled: true,
         sortKey: 0,
       });
@@ -104,7 +120,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.listeners.push({
         id: 'lis-1',
         busId: 'custom-bus',
-        to: { blockId: renderBlock, slotId: 'radius', dir: 'input' },
+        to: { blockId: renderBlock, slotId: 'radius', direction: 'input' },
         enabled: true,
       });
 
@@ -126,12 +142,19 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a TimeRoot
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
+      const phaseLane = store.viewStore.lanes.find(l => l.kind === 'Phase');
+      if (!phaseLane) throw new Error('Phase lane not found');
+      store.patchStore.addBlockAtIndex('CycleTimeRoot', phaseLane.id, 0, { periodMs: 3000 });
 
       // Add two GridDomains, only connect one fully
-      const domainBlock1 = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const domainBlock2 = store.patchStore.addBlock('GridDomain', 'fields', { rows: 3, cols: 3 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      const fieldsLane = store.viewStore.lanes.find(l => l.kind === 'Fields');
+      if (!fieldsLane) throw new Error('Fields lane not found');
+      const domainBlock1 = store.patchStore.addBlockAtIndex('GridDomain', fieldsLane.id, 0, { rows: 5, cols: 5 });
+      const domainBlock2 = store.patchStore.addBlockAtIndex('GridDomain', fieldsLane.id, 0, { rows: 3, cols: 3 });
+
+      const programLane = store.viewStore.lanes.find(l => l.kind === 'Program');
+      if (!programLane) throw new Error('Program lane not found');
+      const renderBlock = store.patchStore.addBlockAtIndex('RenderInstances2D', programLane.id, 0, {});
 
       // Connect GridDomain1 fully to Render
       store.patchStore.connect(domainBlock1, 'domain', renderBlock, 'domain');
@@ -162,9 +185,17 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add just a CycleTimeRoot - its outputs (phase, wrap) are auto-published
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      const phaseLane = store.viewStore.lanes.find(l => l.kind === 'Phase');
+      if (!phaseLane) throw new Error('Phase lane not found');
+      store.patchStore.addBlockAtIndex('CycleTimeRoot', phaseLane.id, 0, { periodMs: 3000 });
+
+      const fieldsLane = store.viewStore.lanes.find(l => l.kind === 'Fields');
+      if (!fieldsLane) throw new Error('Fields lane not found');
+      const domainBlock = store.patchStore.addBlockAtIndex('GridDomain', fieldsLane.id, 0, { rows: 5, cols: 5 });
+
+      const programLane = store.viewStore.lanes.find(l => l.kind === 'Program');
+      if (!programLane) throw new Error('Program lane not found');
+      const renderBlock = store.patchStore.addBlockAtIndex('RenderInstances2D', programLane.id, 0, {});
 
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
       store.patchStore.connect(domainBlock, 'pos0', renderBlock, 'positions');
@@ -188,9 +219,17 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      const phaseLane = store.viewStore.lanes.find(l => l.kind === 'Phase');
+      if (!phaseLane) throw new Error('Phase lane not found');
+      store.patchStore.addBlockAtIndex('CycleTimeRoot', phaseLane.id, 0, { periodMs: 3000 });
+
+      const fieldsLane = store.viewStore.lanes.find(l => l.kind === 'Fields');
+      if (!fieldsLane) throw new Error('Fields lane not found');
+      const domainBlock = store.patchStore.addBlockAtIndex('GridDomain', fieldsLane.id, 0, { rows: 5, cols: 5 });
+      
+      const programLane = store.viewStore.lanes.find(l => l.kind === 'Program');
+      if (!programLane) throw new Error('Program lane not found');
+      const renderBlock = store.patchStore.addBlockAtIndex('RenderInstances2D', programLane.id, 0, {});
 
       // Connect domain but publish pos0 to a bus instead of connecting
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -199,7 +238,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-pos0',
         busId: 'phaseA', // Use existing bus
-        from: { blockId: domainBlock, slotId: 'pos0', dir: 'output' },
+        from: { blockId: domainBlock, slotId: 'pos0', direction: 'output' },
         enabled: true,
         sortKey: 0,
       });

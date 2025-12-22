@@ -23,7 +23,7 @@ import type {
   BusCombineMode,
 } from '../types';
 
-import type { CompositeDefinition } from '../composites';
+import type { CompositeDefinition, ExposedPort } from '../composites';
 
 // =============================================================================
 // Block Ops
@@ -75,7 +75,7 @@ export type WireRemove = {
 export type WireRetarget = {
   op: 'WireRetarget';
   connectionId: string;
-  next: { from?: { blockId: BlockId; slotId: string }; to?: { blockId: BlockId; slotId: string } };
+  next: { from?: PortRef; to?: PortRef };
 };
 
 // =============================================================================
@@ -163,8 +163,7 @@ export type CompositeDefReplaceGraph = {
     publishers?: Publisher[];
     listeners?: Listener[];
   };
-  // TODO: Define ExposedPort type if not in imports
-  nextExposed: { inputs: any[]; outputs: any[] };
+  nextExposed: { inputs: ExposedPort[]; outputs: ExposedPort[] };
 };
 
 // =============================================================================

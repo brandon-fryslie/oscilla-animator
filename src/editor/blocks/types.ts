@@ -136,8 +136,9 @@ export interface CompoundNode {
 }
 
 export interface CompoundEdge {
-  readonly from: string;  // "nodeId.outputSlot"
-  readonly to: string;    // "nodeId.inputSlot"
+  readonly id: string;
+  readonly from: PortKey;
+  readonly to: PortKey;
 }
 export type ParamType = 'number' | 'string' | 'boolean' | 'select' | 'color';
 

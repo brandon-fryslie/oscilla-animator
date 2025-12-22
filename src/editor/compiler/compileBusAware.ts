@@ -21,14 +21,14 @@ import type {
   CompileResult,
   CompilerPatch,
   DrawNode,
-  PortRef,
   Program,
   RenderTree,
   RuntimeCtx,
   Seed,
   TimeModel,
 } from './types';
-import type { Bus, Publisher, Listener } from '../types';
+import type { PortRef, Bus, Publisher, Listener } from '../types';
+import { portRefToKey, portKeyToRef } from '../types';
 import { validateTimeRootConstraint } from './compile';
 import { extractTimeRootAutoPublications } from './blocks/domain/TimeRoot';
 // CRITICAL: Use busSemantics for ordering - single source of truth for UI and compiler
@@ -409,7 +409,7 @@ export function compileBusAwarePatch(
       errors.push({
         code: 'PortMissing',
         message: `Block ${conn.from.blockId} (${fromBlock.type}) does not have output port '${conn.from.port}' (referenced by wire connection)`,
-        where: { blockId: conn.from.blockId, port: conn.from.port },
+        where: { blockId: conn.from.blockId, portRef: conn.from },
       });
     }
   }
@@ -427,7 +427,7 @@ export function compileBusAwarePatch(
       errors.push({
         code: 'PortMissing',
         message: `Block ${pub.from.blockId} (${fromBlock.type}) does not have output port '${pub.from.slotId}' (referenced by publisher to bus '${pub.busId}')`,
-        where: { blockId: pub.from.blockId, port: pub.from.slotId },
+        where: { blockId: pub.from.blockId, portRef: pub.from },
       });
     }
   }
@@ -504,14 +504,14 @@ export function compileBusAwarePatch(
             inputs[p.name] = {
               kind: 'Error',
               message: `Missing required input ${blockId}.${p.name}`,
-              where: { blockId, port: p.name },
+              where: { blockId, portRef: { blockId, slotId: p.name, direction: 'input' } },
             };
           } else {
             // Optional input with no connection
             inputs[p.name] = {
               kind: 'Error',
               message: `Unwired optional input ${blockId}.${p.name}`,
-              where: { blockId, port: p.name },
+              where: { blockId, portRef: { blockId, slotId: p.name, direction: 'input' } },
             };
           }
         }
@@ -523,12 +523,11 @@ export function compileBusAwarePatch(
       if (art.kind === 'Error') {
         const def = compiler.inputs.find((x) => x.name === name);
         if (def?.required) {
-          errors.push({
-            code: 'UpstreamError',
-            message: art.message,
-            where: { blockId, port: name },
-          });
-        }
+                      errors.push({
+                        code: 'UpstreamError',
+                        message: art.message,
+                        where: { blockId, portRef: { blockId, slotId: p.name, direction: 'input' } },
+                      });        }
       }
     }
     if (errors.length) return { ok: false, errors };
@@ -555,7 +554,7 @@ export function compileBusAwarePatch(
         });
         continue;
       }
-      compiledPortMap.set(keyOf(blockId, outDef.name), produced);
+      compiledPortMap.set(keyOf(blockId, outDef.name, 'output'), produced);
     }
 
     if (errors.length) return { ok: false, errors };
@@ -573,7 +572,7 @@ export function compileBusAwarePatch(
     return { ok: false, errors };
   }
 
-  const outArt = compiledPortMap.get(keyOf(outputRef.blockId, outputRef.port));
+  const outArt = compiledPortMap.get(keyOf(outputRef.blockId, outputRef.slotId, 'output'));
   if (!outArt) {
     errors.push({
       code: 'OutputMissing',
@@ -603,7 +602,7 @@ export function compileBusAwarePatch(
   errors.push({
     code: 'OutputWrongType',
     message: `Patch output must be RenderTreeProgram or RenderTree, got ${outArt.kind}`,
-    where: { blockId: outputRef.blockId, port: outputRef.port },
+    where: { blockId: outputRef.blockId, portRef: outputRef },
   });
   return { ok: false, errors };
 }
@@ -695,16 +694,15 @@ function getBusValue(
   // Collect artifacts from publishers
   const artifacts: Artifact[] = [];
   for (const pub of sortedPublishers) {
-    const key = keyOf(pub.from.blockId, pub.from.slotId);
+    const key = keyOf(pub.from.blockId, pub.from.slotId, 'output');
     const artifact = compiledPortMap.get(key);
 
     if (!artifact) {
-      errors.push({
-        code: 'BusEvaluationError',
-        message: `Publisher ${pub.id} references missing artifact ${key}`,
-        where: { busId, blockId: pub.from.blockId, port: pub.from.slotId },
-      });
-      continue;
+              errors.push({
+                code: 'BusEvaluationError',
+                message: `Publisher ${pub.id} references missing artifact ${key}`,
+                where: { busId, blockId: pub.from.blockId, portRef: pub.from },
+              });      continue;
     }
 
     if (artifact.kind === 'Error') {
@@ -731,16 +729,16 @@ function getBusValue(
 // Helpers
 // =============================================================================
 
-function keyOf(blockId: string, port: string): string {
-  return `${blockId}:${port}`;
+function keyOf(blockId: string, slotId: string, direction: 'input' | 'output'): string {
+  return portRefToKey({ blockId, slotId, direction });
 }
 
 function indexIncoming(
-  conns: readonly any[]
-): Map<string, any[]> {
-  const m = new Map<string, any[]>();
+  conns: readonly CompilerConnection[]
+): Map<string, CompilerConnection[]> {
+  const m = new Map<string, CompilerConnection[]>();
   for (const c of conns) {
-    const k = keyOf(c.to.blockId, c.to.port);
+    const k = portRefToKey(c.to);
     const arr = m.get(k) ?? [];
     arr.push(c);
     m.set(k, arr);
@@ -757,7 +755,7 @@ function inferOutputPort(
 
   // Map of all ports that feed something
   const fed = new Set<string>();
-  for (const c of patch.connections) fed.add(keyOf(c.from.blockId, c.from.port));
+  for (const c of patch.connections) fed.add(portRefToKey(c.from));
 
   for (const [blockId, block] of patch.blocks.entries()) {
     const comp = registry[block.type];
@@ -766,10 +764,10 @@ function inferOutputPort(
       // Accept all render output types: Render, RenderTree, RenderTreeProgram
       const renderTypes = ['Render', 'RenderTree', 'RenderTreeProgram'];
       if (!renderTypes.includes(out.type.kind)) continue;
-      const k = keyOf(blockId, out.name);
+      const k = keyOf(blockId, out.name, 'output');
       if (!compiled.has(k)) continue;
       if (fed.has(k)) continue;
-      produced.push({ blockId, port: out.name });
+      produced.push({ blockId, slotId: out.name, direction: 'output' });
     }
   }
 

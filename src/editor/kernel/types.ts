@@ -109,7 +109,7 @@ export interface TxBuilder {
   patchBlockParams(blockId: string, patch: Record<string, unknown>): void;
 
   // Wire Ops
-  addWire(from: { blockId: string; slotId: string }, to: { blockId: string; slotId: string }, id?: string): string;
+  addWire(from: PortRef, to: PortRef, id?: string): string;
   removeWire(connectionId: string): void;
   
   // Bus Ops
@@ -118,11 +118,11 @@ export interface TxBuilder {
   updateBus(busId: string, patch: Partial<any>): void; // Use Partial<Bus>
 
   // Binding Ops
-  addPublisher(spec: { busId: string; from: { blockId: string; slotId: string; dir: 'output' }; enabled?: boolean; sortKey?: number; adapterChain?: any[]; id?: string }): string;
+  addPublisher(spec: { busId: string; from: PortRef; enabled?: boolean; sortKey?: number; adapterChain?: any[]; id?: string }): string;
   removePublisher(publisherId: string): void;
   updatePublisher(publisherId: string, patch: Partial<any>): void;
 
-  addListener(spec: { busId: string; to: { blockId: string; slotId: string; dir: 'input' }; enabled?: boolean; adapterChain?: any[]; lensStack?: any[]; id?: string }): string;
+  addListener(spec: { busId: string; to: PortRef; enabled?: boolean; adapterChain?: any[]; lensStack?: any[]; id?: string }): string;
   removeListener(listenerId: string): void;
   updateListener(listenerId: string, patch: Partial<any>): void;
 
