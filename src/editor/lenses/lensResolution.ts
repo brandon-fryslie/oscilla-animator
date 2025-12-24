@@ -1,4 +1,4 @@
-import type { Artifact, CompileCtx } from '../compiler/types';
+import type {Artifact, CompileCtx, Vec2} from '../compiler';
 import type { DefaultSourceState, LensParamBinding, LensInstance, AdapterStep } from '../types';
 
 export interface ParamResolutionContext {
@@ -21,7 +21,7 @@ export function resolveLensParam(binding: LensParamBinding, ctx: ParamResolution
   switch (binding.kind) {
     case 'default': {
       const source = ctx.defaultSources.get(binding.defaultSourceId);
-      if (!source) {
+      if (source == null) {
         return { kind: 'Error', message: `Default source not found: ${binding.defaultSourceId}` };
       }
       return artifactFromDefaultSource(source);
@@ -49,7 +49,7 @@ function artifactFromDefaultSource(source: DefaultSourceState): Artifact {
   if (type.world === 'scalar') {
     if (type.domain === 'number') return { kind: 'Scalar:number', value: value as number };
     if (type.domain === 'boolean') return { kind: 'Scalar:boolean', value: value as boolean };
-    if (type.domain === 'vec2') return { kind: 'Scalar:vec2', value: value as any };
+    if (type.domain === 'vec2') return { kind: 'Scalar:vec2', value: value as Vec2 };
     if (type.domain === 'color') return { kind: 'Scalar:color', value };
     if (type.domain === 'string') return { kind: 'Scalar:string', value: String(value) };
   }
@@ -59,13 +59,13 @@ function artifactFromDefaultSource(source: DefaultSourceState): Artifact {
       return { kind: 'Signal:number', value: () => value as number };
     }
     if (type.domain === 'vec2') {
-      return { kind: 'Signal:vec2', value: () => value as any };
+      return { kind: 'Signal:vec2', value: () => value as Vec2 };
     }
     if (type.domain === 'color') {
       return { kind: 'Signal:color', value: () => value as string };
     }
     if (type.domain === 'boolean') {
-      return { kind: 'Signal:number', value: () => (value ? 1 : 0) };
+      return { kind: 'Signal:number', value: () => ((value as number !== 0) ? 1 : 0) };
     }
     if (type.domain === 'phase') {
       return { kind: 'Signal:phase', value: () => value as number };

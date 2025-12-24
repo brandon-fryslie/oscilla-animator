@@ -12,7 +12,7 @@ export type { RootStore } from './RootStore';
 const store = new RootStore();
 
 // Expose store globally for debugging
-(window as any).__rootStore = store;
+(window as unknown as { __rootStore: RootStore }).__rootStore = store;
 
 const StoreContext = React.createContext<RootStore>(store);
 

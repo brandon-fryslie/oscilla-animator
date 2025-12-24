@@ -341,10 +341,10 @@ export function getLensPresetsByCategory(
  */
 export function createLensFromPreset(presetId: string): LensDefinition | null {
   const preset = getLensPreset(presetId);
-  if (!preset) return null;
+  if (preset === null || preset === undefined) return null;
   // Return a copy to prevent accidental mutation
   return {
     type: preset.lens.type,
-    params: { ...(preset.lens.params || {}) },
+    params: { ...(preset.lens.params !== undefined && preset.lens.params !== null ? preset.lens.params : {}) },
   };
 }

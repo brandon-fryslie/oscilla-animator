@@ -187,8 +187,7 @@ export class RootStore {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  loadPatch(patch: Patch): void {
+    loadPatch(patch: Patch): void {
     this.patchStore.blocks = patch.blocks.map((block) => ({ ...block }));
     this.patchStore.connections = patch.connections.map((connection) => ({ ...connection }));
 

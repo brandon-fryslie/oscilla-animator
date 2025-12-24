@@ -430,7 +430,7 @@ export class Validator {
     const errors: Diagnostic[] = [];
 
     // Check if patch has buses (may not exist in older patches)
-    if (!patch.buses) {
+    if (patch.buses == null) {
       return errors;
     }
 
@@ -527,9 +527,9 @@ export class Validator {
     }
 
     // Check bus listeners on TimeRoot inputs
-    const timeRootListeners = patch.listeners?.filter(
+    const timeRootListeners = (patch.listeners ?? []).filter(
       (l) => l.to.blockId === timeRoot.id
-    ) || [];
+    );
     for (const listener of timeRootListeners) {
       // Bus listeners are inherently evaluated signals, so always forbidden
       errors.push(
@@ -564,13 +564,13 @@ export class Validator {
   private validateCombineModeCompatibility(patch: PatchDocument): Diagnostic[] {
     const errors: Diagnostic[] = [];
 
-    if (!patch.buses) {
+    if (patch.buses == null) {
       return errors;
     }
 
     for (const bus of patch.buses) {
       // Skip reserved buses - they have their own validation
-      if (RESERVED_BUS_CONTRACTS[bus.name]) {
+      if (RESERVED_BUS_CONTRACTS[bus.name] != null) {
         continue;
       }
 
@@ -616,7 +616,7 @@ export class Validator {
   private warnEmptyBuses(patch: PatchDocument): Diagnostic[] {
     const warnings: Diagnostic[] = [];
 
-    if (!patch.buses || !patch.publishers) {
+    if (patch.buses == null || patch.publishers == null) {
       return warnings;
     }
 
@@ -651,7 +651,7 @@ export class Validator {
   private warnMultiplePublishersOnControlBuses(patch: PatchDocument): Diagnostic[] {
     const warnings: Diagnostic[] = [];
 
-    if (!patch.buses || !patch.publishers) {
+    if (patch.buses == null || patch.publishers == null) {
       return warnings;
     }
 
@@ -862,7 +862,7 @@ export class Validator {
  */
 function isWhitelistedTimeRootSource(block: {
   type: string;
-  tags?: Record<string, any>;
+  tags?: Record<string, unknown>;
 }): boolean {
   return (
     block.type === 'DefaultSource' ||

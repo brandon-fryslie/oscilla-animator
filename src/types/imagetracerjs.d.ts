@@ -25,10 +25,10 @@ declare module 'imagetracerjs' {
       options?: string | ImageTracerOptions
     ): void;
     imagedataToSVG(imagedata: ImageData, options?: string | ImageTracerOptions): string;
-    imagedataToTracedata(imagedata: ImageData, options?: string | ImageTracerOptions): any;
+    imagedataToTracedata(imagedata: ImageData, options?: string | ImageTracerOptions): unknown;
     imageToTracedata(
       url: string | HTMLImageElement | ImageData,
-      callback: (tracedata: any) => void,
+      callback: (tracedata: unknown) => void,
       options?: string | ImageTracerOptions
     ): void;
   }

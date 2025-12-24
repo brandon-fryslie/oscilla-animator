@@ -64,11 +64,11 @@ function paramToArtifact(type: TypeDesc, value: unknown): Artifact {
 
 export function applyLens(value: Artifact, lens: LensDefinition): Artifact {
   const def = getLens(lens.type);
-  if (!def) {
+  if (def == null) {
     return { kind: 'Error', message: `Unknown lens: ${lens.type}` };
   }
 
-  if (!def.apply) return value;
+  if (def.apply == null) return value;
 
   const params: Record<string, Artifact> = {};
   for (const [paramKey, spec] of Object.entries(def.params)) {
@@ -80,5 +80,5 @@ export function applyLens(value: Artifact, lens: LensDefinition): Artifact {
 }
 
 export function isValidLensType(type: string): boolean {
-  return !!getLens(type);
+  return !(getLens(type) == null);
 }

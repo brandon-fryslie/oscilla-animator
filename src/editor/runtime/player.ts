@@ -219,7 +219,7 @@ export class Player {
   }
 
   private instantiateProgram(): void {
-    if (this.programFactory === null || this.programFactory === undefined || this.scene === null) return;
+    if (this.programFactory === null || this.programFactory === undefined || this.scene === null || this.scene === undefined) return;
 
     this.program = this.programFactory(this.seed, this.scene, this.compileCtx);
 

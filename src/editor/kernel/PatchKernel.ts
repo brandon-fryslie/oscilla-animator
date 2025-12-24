@@ -39,8 +39,8 @@ export class Kernel implements PatchKernel {
     head: null
   };
 
-  constructor(initialPatch: Patch) {
-    this._doc = JSON.parse(JSON.stringify(initialPatch));
+  constructor(initialPatch: Readonly<Patch>) {
+    this._doc = JSON.parse(JSON.stringify(initialPatch)) as Patch;
     this._graph = GraphImpl.fromPatch(this._doc);
     this._report = { ok: true, errors: [], warnings: [] }; // Initial assumption
   }
@@ -91,7 +91,7 @@ export class Kernel implements PatchKernel {
     this.history.nodes.set(tx.id, tx);
 
     // Update parent's children
-    if (tx.parentId) {
+    if (tx.parentId !== null && tx.parentId !== undefined && tx.parentId !== '') {
       const children = this.history.children.get(tx.parentId) ?? [];
       children.push(tx.id);
       this.history.children.set(tx.parentId, children);
@@ -103,10 +103,10 @@ export class Kernel implements PatchKernel {
   }
 
   undo(): void {
-    if (!this.history.head) return;
+    if (this.history.head === null || this.history.head === undefined || this.history.head === '') return;
 
     const tx = this.history.nodes.get(this.history.head);
-    if (!tx) return;
+    if (tx === undefined) return;
 
     // Apply inverse ops
     for (const op of tx.inverseOps) {
@@ -129,16 +129,16 @@ export class Kernel implements PatchKernel {
       return;
     }
 
-    if (!this.history.head) return; // Should handle empty history case better
+    if (this.history.head === null || this.history.head === undefined || this.history.head === '') return; // Should handle empty history case better
 
     // Find children of current head
     const children = this.history.children.get(this.history.head);
-    if (children && children.length > 0) {
+    if (children !== undefined && children.length > 0) {
       // Default to last child (most recent branch)
       const nextId = children[children.length - 1];
       const tx = this.history.nodes.get(nextId);
 
-      if (tx) {
+      if (tx !== undefined) {
         // Re-apply ops
         for (const op of tx.ops) {
           applyOp(this._doc, op);

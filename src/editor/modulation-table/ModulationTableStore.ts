@@ -277,22 +277,22 @@ export class ModulationTableStore {
     rows = rows.filter((r) => !collapsedGroups[r.groupKey]);
 
     // Apply text filter
-    if (rowFilter.text) {
+    if (rowFilter.text != null && rowFilter.text !== '') {
       const text = rowFilter.text.toLowerCase();
       rows = rows.filter((r) => r.label.toLowerCase().includes(text));
     }
 
     // Apply block type filter
-    if (rowFilter.blockTypes && rowFilter.blockTypes.length > 0) {
+    if (rowFilter.blockTypes != null && rowFilter.blockTypes.length > 0) {
       const types = new Set(rowFilter.blockTypes);
       rows = rows.filter((r) => {
         const block = this.root.patchStore.blocks.find((b) => b.id === r.blockId);
-        return block && types.has(block.type);
+        return block != null && types.has(block.type);
       });
     }
 
     // Apply bound-only filter (checks both listeners and publishers)
-    if (rowFilter.boundOnly) {
+    if (rowFilter.boundOnly === true) {
       const index = this.patchIndex;
       rows = rows.filter((r) => {
         const portKey = createPortRefKey(r.blockId, r.portId);
@@ -301,7 +301,7 @@ export class ModulationTableStore {
         } else {
           // For outputs, check if there are any publishers
           const portPublishers = index.publishersByOutputPort.get(portKey);
-          return portPublishers && portPublishers.size > 0;
+          return portPublishers != null && portPublishers.size > 0;
         }
       });
     }
@@ -353,19 +353,19 @@ export class ModulationTableStore {
     columns = columns.filter((c) => !hiddenBusIds.includes(c.busId));
 
     // Apply text filter
-    if (colFilter.text) {
+    if (colFilter.text != null && colFilter.text !== '') {
       const text = colFilter.text.toLowerCase();
       columns = columns.filter((c) => c.name.toLowerCase().includes(text));
     }
 
     // Apply domain filter
-    if (colFilter.domains && colFilter.domains.length > 0) {
+    if (colFilter.domains != null && colFilter.domains.length > 0) {
       const domains = new Set(colFilter.domains);
       columns = columns.filter((c) => domains.has(c.type.domain));
     }
 
     // Apply active-only filter
-    if (colFilter.activeOnly) {
+    if (colFilter.activeOnly === true) {
       columns = columns.filter((c) => c.listenerCount > 0);
     }
 
@@ -419,7 +419,7 @@ export class ModulationTableStore {
         if (row.direction === 'input') {
           // Input row: check for listener
           const listenerId = index.listenersByInputPort.get(portKey);
-          const listener = listenerId
+          const listener = listenerId != null
             ? this.root.busStore.listeners.find((l) => l.id === listenerId && l.busId === column.busId)
             : undefined;
 
@@ -431,7 +431,7 @@ export class ModulationTableStore {
             direction: 'input',
             listenerId: listener?.id,
             enabled: listener?.enabled,
-            lensChain: listener?.lensStack
+            lensChain: listener?.lensStack != null
               ? listener.lensStack.map((lens) => lensInstanceToDefinition(lens, this.root.defaultSourceStore))
               : undefined,
             status,
@@ -442,7 +442,7 @@ export class ModulationTableStore {
           // Output row: check for publisher
           const portPublishers = index.publishersByOutputPort.get(portKey);
           const publisherId = portPublishers?.get(column.busId);
-          const publisher = publisherId
+          const publisher = publisherId != null
             ? this.root.busStore.publishers.find((p) => p.id === publisherId)
             : undefined;
 
@@ -478,12 +478,12 @@ export class ModulationTableStore {
    * Set focused cell.
    */
   setFocusedCell(rowKey: RowKey | undefined, busId: string | undefined): void {
-    if (rowKey && busId) {
+    if (rowKey != null && busId != null) {
       this.viewState.focusedCell = { rowKey, busId };
 
       // Also focus the block
       const parsed = parseRowKey(rowKey);
-      if (parsed) {
+      if (parsed != null) {
         this.viewState.focusedBlockId = parsed.blockId;
       }
       this.viewState.focusedBusId = busId;
@@ -497,7 +497,7 @@ export class ModulationTableStore {
    */
   setFocusedBlock(blockId: string | undefined): void {
     this.viewState.focusedBlockId = blockId;
-    if (blockId) {
+    if (blockId != null) {
       this.root.uiStore.selectBlock(blockId);
     }
   }
@@ -632,7 +632,7 @@ export class ModulationTableStore {
     if (direction === 'input') {
       // For inputs: one listener per port constraint
       const existingListenerId = this.patchIndex.listenersByInputPort.get(portKey);
-      if (existingListenerId) {
+      if (existingListenerId != null) {
         this.root.busStore.removeListener(existingListenerId);
       }
       this.root.busStore.addListener(busId, blockId, portId, adapterChain, lensChain);
@@ -641,7 +641,7 @@ export class ModulationTableStore {
       // Check if already publishing to this bus
       const portPublishers = this.patchIndex.publishersByOutputPort.get(portKey);
       const existingPublisherId = portPublishers?.get(busId);
-      if (existingPublisherId) {
+      if (existingPublisherId != null) {
         // Already bound to this bus, nothing to do
         return;
       }
@@ -656,22 +656,22 @@ export class ModulationTableStore {
    */
   unbindCell(rowKey: RowKey, busId?: string): void {
     const parsed = parseRowKey(rowKey);
-    if (!parsed) return;
+    if (parsed == null) return;
 
     const { direction, blockId, portId } = parsed;
     const portKey = createPortRefKey(blockId, portId);
 
     if (direction === 'input') {
       const listenerId = this.patchIndex.listenersByInputPort.get(portKey);
-      if (listenerId) {
+      if (listenerId != null) {
         this.root.busStore.removeListener(listenerId);
       }
     } else {
       // For outputs, need the busId to know which publisher to remove
-      if (!busId) return;
+      if (busId == null) return;
       const portPublishers = this.patchIndex.publishersByOutputPort.get(portKey);
       const publisherId = portPublishers?.get(busId);
-      if (publisherId) {
+      if (publisherId != null) {
         this.root.busStore.removePublisher(publisherId);
       }
     }
@@ -687,7 +687,7 @@ export class ModulationTableStore {
     const portKey = createPortRefKey(parsed.blockId, parsed.portId);
     const listenerId = this.patchIndex.listenersByInputPort.get(portKey);
 
-    if (!listenerId) return;
+    if (listenerId == null) return;
 
     const lensStack: LensInstance[] | undefined = lensChain
       ? lensChain.map((lens, index) =>

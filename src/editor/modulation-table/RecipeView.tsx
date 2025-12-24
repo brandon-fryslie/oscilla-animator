@@ -31,9 +31,11 @@ function describeLensChain(lensChain: readonly LensDefinition[] | undefined): st
 
   for (const lens of lensChain) {
     switch (lens.type) {
-      case 'ease':
-        descriptions.push(`smoothed with ${lens.params.easing || 'easing'}`);
+      case 'ease': {
+        const easingType = typeof lens.params.easing === 'string' ? lens.params.easing : 'easing';
+        descriptions.push(`smoothed with ${easingType}`);
         break;
+      }
       case 'Ease':
         descriptions.push('smoothed');
         break;
@@ -47,17 +49,22 @@ function describeLensChain(lensChain: readonly LensDefinition[] | undefined): st
           descriptions.push(`scaled ${scale}×`);
         }
         break;
-      case 'quantize':
-        descriptions.push(`snapped to ${lens.params.steps} steps`);
+      case 'quantize': {
+        const steps = typeof lens.params.steps === 'number' ? lens.params.steps : 'N';
+        descriptions.push(`snapped to ${steps} steps`);
         break;
+      }
       case 'slew':
       case 'Slew':
         descriptions.push('smoothed over time');
         break;
       case 'clamp':
-      case 'Clamp':
-        descriptions.push(`clamped to [${lens.params.min}, ${lens.params.max}]`);
+      case 'Clamp': {
+        const min = typeof lens.params.min === 'number' ? lens.params.min : 0;
+        const max = typeof lens.params.max === 'number' ? lens.params.max : 1;
+        descriptions.push(`clamped to [${min}, ${max}]`);
         break;
+      }
       case 'broadcast':
         descriptions.push('broadcast to all elements');
         break;
@@ -67,9 +74,11 @@ function describeLensChain(lensChain: readonly LensDefinition[] | undefined): st
       case 'warp':
         descriptions.push('warped');
         break;
-      case 'PhaseOffset':
-        descriptions.push(`offset by ${lens.params.offset}`);
+      case 'PhaseOffset': {
+        const offset = typeof lens.params.offset === 'number' ? lens.params.offset : 0;
+        descriptions.push(`offset by ${offset}`);
         break;
+      }
       case 'PingPong':
         descriptions.push('ping-pong');
         break;
@@ -185,7 +194,7 @@ export const RecipeView = observer(({ store, onJumpToCell }: RecipeViewProps) =>
   const groupedItems = useMemo(() => {
     const groups: Record<string, RecipeItem[]> = {};
     for (const item of recipeItems) {
-      if (!groups[item.blockLabel]) {
+      if (groups[item.blockLabel] == null) {
         groups[item.blockLabel] = [];
       }
       groups[item.blockLabel].push(item);

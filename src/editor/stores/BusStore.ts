@@ -231,8 +231,8 @@ export class BusStore {
       id: this.root.generateId('pub'),
       busId,
       from: { blockId, slotId, direction: 'output' },
-      adapterChain: adapterChain ? [...adapterChain] : undefined,
-      lensStack: lensStack ? [...lensStack] : undefined,
+      adapterChain: (adapterChain !== null && adapterChain !== undefined) ? [...adapterChain] : undefined,
+      lensStack: (lensStack !== null && lensStack !== undefined) ? [...lensStack] : undefined,
       enabled: true,
       sortKey: maxSortKey + 10,
     };
@@ -335,7 +335,7 @@ export class BusStore {
       id: listenerId,
       busId,
       to: { blockId, slotId, direction: 'input' },
-      adapterChain: adapterChain ? [...adapterChain] : undefined,
+      adapterChain: (adapterChain !== null && adapterChain !== undefined) ? [...adapterChain] : undefined,
       enabled: true,
       lensStack,
     };
@@ -480,7 +480,7 @@ export class BusStore {
    */
   reorderPublisher(publisherId: string, newSortKey: number): void {
     const publisher = this.publishers.find(p => p.id === publisherId);
-    if (publisher === null || publisher === undefined) {
+    if (publisher === undefined) {
       throw new Error(`Publisher ${publisherId} not found`);
     }
 

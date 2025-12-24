@@ -116,7 +116,7 @@ export class SemanticGraph {
 
       for (const input of block.inputs) {
         const desc = SLOT_TYPE_TO_TYPE_DESC[input.type as keyof typeof SLOT_TYPE_TO_TYPE_DESC];
-        if (desc) {
+        if (desc != null) {
           const key = portKeyToString({ blockId: block.id, slotId: input.id, direction: 'input' });
           this.typeByPort.set(key, desc);
         }
@@ -124,7 +124,7 @@ export class SemanticGraph {
 
       for (const output of block.outputs) {
         const desc = SLOT_TYPE_TO_TYPE_DESC[output.type as keyof typeof SLOT_TYPE_TO_TYPE_DESC];
-        if (desc) {
+        if (desc != null) {
           const key = portKeyToString({ blockId: block.id, slotId: output.id, direction: 'output' });
           this.typeByPort.set(key, desc);
         }
@@ -147,9 +147,9 @@ export class SemanticGraph {
     }
 
     // Index publisher edges
-    if (patch.publishers) {
+    if (patch.publishers != null) {
       for (const pub of patch.publishers) {
-        if (!pub.enabled) continue; // Skip disabled publishers
+        if (pub.enabled === false) continue; // Skip disabled publishers
 
         const edge: PublisherEdge = {
           kind: 'publisher',
@@ -164,9 +164,9 @@ export class SemanticGraph {
     }
 
     // Index listener edges
-    if (patch.listeners) {
+    if (patch.listeners != null) {
       for (const listener of patch.listeners) {
-        if (!listener.enabled) continue; // Skip disabled listeners
+        if (listener.enabled === false) continue; // Skip disabled listeners
 
         const edge: ListenerEdge = {
           kind: 'listener',
@@ -408,7 +408,7 @@ export class SemanticGraph {
    */
   wouldCreateCycle(fromBlockId: string, toBlockId: string): boolean {
     // Quick check: if adding the same edge twice
-    if (this.adjacency.get(fromBlockId)?.has(toBlockId)) {
+    if (this.adjacency.get(fromBlockId)?.has(toBlockId) === true) {
       return false; // Edge already exists, not a new cycle
     }
 

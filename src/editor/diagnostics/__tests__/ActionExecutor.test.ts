@@ -12,7 +12,6 @@ import type { DiagnosticHub } from '../DiagnosticHub';
 import type { BlockId, LaneId, Block, Connection } from '../../types';
 
 // Mock stores
-/* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 const createMockPatchStore = (): Partial<PatchStore> => {
   const blocks: Block[] = [];
   return {
@@ -28,7 +27,6 @@ const createMockPatchStore = (): Partial<PatchStore> => {
     disconnect: vi.fn(),
   };
 };
-/* eslint-enable @typescript-eslint/prefer-readonly-parameter-types */
 
 
 const createMockViewStore = (): Partial<ViewStateStore> => ({

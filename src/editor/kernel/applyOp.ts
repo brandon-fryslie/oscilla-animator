@@ -28,7 +28,7 @@ export function applyOp(doc: Patch, op: Op): void {
     }
     case 'BlockRetype': {
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (block) {
+      if (block !== null && block !== undefined) {
         // block.type is readonly in type def but mutable in practice/store
         (block as { type: string }).type = op.nextType;
         // Remap params if provided
@@ -38,14 +38,14 @@ export function applyOp(doc: Patch, op: Op): void {
     }
     case 'BlockSetLabel': {
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (block) {
+      if (block !== null && block !== undefined) {
         block.label = op.label;
       }
       break;
     }
     case 'BlockPatchParams': {
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (block) {
+      if (block !== null && block !== undefined) {
         Object.assign(block.params, op.patch);
       }
       break;
@@ -67,11 +67,11 @@ export function applyOp(doc: Patch, op: Op): void {
     }
     case 'WireRetarget': {
       const conn = doc.connections.find(c => c.id === op.connectionId);
-      if (conn) {
-        if (op.next.from) {
+      if (conn !== null && conn !== undefined) {
+        if (op.next.from !== undefined) {
           (conn as { from: typeof op.next.from }).from = op.next.from;
         }
-        if (op.next.to) {
+        if (op.next.to !== undefined) {
           (conn as { to: typeof op.next.to }).to = op.next.to;
         }
       }
@@ -82,12 +82,12 @@ export function applyOp(doc: Patch, op: Op): void {
     // Bus Ops
     // =========================================================================
     case 'BusAdd': {
-      if (!doc.buses) doc.buses = [];
+      if (doc.buses === undefined) doc.buses = [];
       doc.buses.push(op.bus);
       break;
     }
     case 'BusRemove': {
-      if (doc.buses) {
+      if (doc.buses !== undefined) {
         const index = doc.buses.findIndex(b => b.id === op.busId);
         if (index !== -1) {
           doc.buses.splice(index, 1);
@@ -97,7 +97,7 @@ export function applyOp(doc: Patch, op: Op): void {
     }
     case 'BusUpdate': {
       const bus = doc.buses?.find(b => b.id === op.busId);
-      if (bus) {
+      if (bus !== null && bus !== undefined) {
         Object.assign(bus, op.patch);
       }
       break;
@@ -107,12 +107,12 @@ export function applyOp(doc: Patch, op: Op): void {
     // Binding Ops
     // =========================================================================
     case 'PublisherAdd': {
-      if (!doc.publishers) doc.publishers = [];
+      if (doc.publishers === undefined) doc.publishers = [];
       doc.publishers.push(op.publisher);
       break;
     }
     case 'PublisherRemove': {
-      if (doc.publishers) {
+      if (doc.publishers !== undefined) {
         const index = doc.publishers.findIndex(p => p.id === op.publisherId);
         if (index !== -1) {
           doc.publishers.splice(index, 1);
@@ -122,18 +122,18 @@ export function applyOp(doc: Patch, op: Op): void {
     }
     case 'PublisherUpdate': {
       const pub = doc.publishers?.find(p => p.id === op.publisherId);
-      if (pub) {
+      if (pub !== null && pub !== undefined) {
         Object.assign(pub, op.patch);
       }
       break;
     }
     case 'ListenerAdd': {
-      if (!doc.listeners) doc.listeners = [];
+      if (doc.listeners === undefined) doc.listeners = [];
       doc.listeners.push(op.listener);
       break;
     }
     case 'ListenerRemove': {
-      if (doc.listeners) {
+      if (doc.listeners !== undefined) {
         const index = doc.listeners.findIndex(l => l.id === op.listenerId);
         if (index !== -1) {
           doc.listeners.splice(index, 1);
@@ -143,7 +143,7 @@ export function applyOp(doc: Patch, op: Op): void {
     }
     case 'ListenerUpdate': {
       const listener = doc.listeners?.find(l => l.id === op.listenerId);
-      if (listener) {
+      if (listener !== null && listener !== undefined) {
         Object.assign(listener, op.patch);
       }
       break;
@@ -153,12 +153,12 @@ export function applyOp(doc: Patch, op: Op): void {
     // Composite Ops
     // =============================================================================
     case 'CompositeDefAdd': {
-      if (!doc.composites) doc.composites = [];
+      if (doc.composites === undefined) doc.composites = [];
       doc.composites.push(op.def);
       break;
     }
     case 'CompositeDefRemove': {
-      if (doc.composites) {
+      if (doc.composites !== undefined) {
         const index = doc.composites.findIndex(c => c.id === op.defId);
         if (index !== -1) {
           doc.composites.splice(index, 1);
@@ -168,14 +168,14 @@ export function applyOp(doc: Patch, op: Op): void {
     }
     case 'CompositeDefUpdate': {
       const def = doc.composites?.find(c => c.id === op.defId);
-      if (def) {
+      if (def !== null && def !== undefined) {
         Object.assign(def, op.patch);
       }
       break;
     }
     case 'CompositeDefReplaceGraph': {
       const def = doc.composites?.find(c => c.id === op.defId);
-      if (def) {
+      if (def !== null && def !== undefined) {
         // TODO: Implement full graph replacement logic
         // This is complex, requires updating blocks/connections/bindings inside the definition
       }

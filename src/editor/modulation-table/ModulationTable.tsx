@@ -28,14 +28,14 @@ interface ModulationTableProps {
  * Format a lens chain for display.
  */
 function formatLensChain(lensChain: readonly LensDefinition[] | undefined): string {
-  if (!lensChain || lensChain.length === 0) {
+  if (lensChain == null || lensChain.length === 0) {
     return '';
   }
 
   return lensChain
     .map((lens) => {
-      const params = Object.entries(lens.params || {})
-        .map(([k, v]) => `${k}:${v}`)
+      const params = Object.entries(lens.params)
+        .map(([k, v]) => `${k}:${String(v)}`)
         .join(', ');
       return params ? `${lens.type}(${params})` : lens.type;
     })
@@ -718,7 +718,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
               <>
                 <button
                   onClick={() => {
-                    if (contextMenu.rowKey && contextMenu.busId) {
+                    if (contextMenu.rowKey != null && contextMenu.busId != null) {
                       const cell = store.getCell(contextMenu.rowKey, contextMenu.busId);
                       if (cell?.status === 'bound') {
                         store.unbindCell(contextMenu.rowKey, contextMenu.busId);
@@ -726,7 +726,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
                         store.bindCell(
                           contextMenu.rowKey,
                           contextMenu.busId,
-                          cell?.suggestedChain ? [...cell.suggestedChain] : undefined
+                          cell?.suggestedChain != null ? [...cell.suggestedChain] : undefined
                         );
                       }
                     }
@@ -741,14 +741,14 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
                 {store.getCell(contextMenu.rowKey!, contextMenu.busId!)?.direction === 'input' && (
                   <button
                     onClick={() => {
-                      if (contextMenu.rowKey && contextMenu.busId) {
+                      if (contextMenu.rowKey != null && contextMenu.busId != null) {
                         // If not bound, bind first then open editor
                         const cell = store.getCell(contextMenu.rowKey, contextMenu.busId);
                         if (cell?.status !== 'bound') {
                           store.bindCell(
                             contextMenu.rowKey,
                             contextMenu.busId,
-                            cell?.suggestedChain ? [...cell.suggestedChain] : undefined
+                            cell?.suggestedChain != null ? [...cell.suggestedChain] : undefined
                           );
                         }
                         openLensEditor(contextMenu.rowKey, contextMenu.busId, {
@@ -767,7 +767,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
               <>
                 <button
                   onClick={() => {
-                    if (contextMenu.busId) {
+                    if (contextMenu.busId != null) {
                       store.toggleBusPin(contextMenu.busId);
                     }
                     closeContextMenu();
@@ -777,7 +777,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
                 </button>
                 <button
                   onClick={() => {
-                    if (contextMenu.busId) {
+                    if (contextMenu.busId != null) {
                       store.toggleBusHide(contextMenu.busId);
                     }
                     closeContextMenu();

@@ -206,7 +206,7 @@ export function circle(
   cx: number,
   cy: number,
   r: number,
-  style?: Style,
+  style?: Readonly<Style>,
   opts?: { readonly tags?: readonly string[]; readonly meta?: Readonly<Record<string, unknown>> }
 ): ShapeNode {
   return {

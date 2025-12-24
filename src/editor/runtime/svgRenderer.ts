@@ -57,7 +57,7 @@ export class SvgRenderer {
 
     // Ensure root group exists
     let root = this.nodeMap.get('__root__') as SVGGElement | undefined;
-    if (root === null || root === undefined) {
+    if (root == null) {
       root = document.createElementNS(SVG_NS, 'g');
       root.setAttribute(ID_ATTR, '__root__');
       this.svg.appendChild(root);
@@ -77,7 +77,7 @@ export class SvgRenderer {
    */
   clear(): void {
     const root = this.nodeMap.get('__root__');
-    if (root !== null && root !== undefined) {
+    if (root != null) {
       root.innerHTML = '';
     }
     this.nodeMap.clear();

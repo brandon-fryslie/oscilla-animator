@@ -32,8 +32,8 @@ interface RecentLens {
 function getRecentLenses(): RecentLens[] {
   try {
     const stored = localStorage.getItem(RECENT_LENSES_KEY);
-    if (stored) {
-      return JSON.parse(stored);
+    if (stored != null && stored !== '') {
+      return JSON.parse(stored) as RecentLens[];
     }
   } catch {
     // Ignore errors
@@ -476,7 +476,7 @@ export function LensChainEditor({
   sourceType,
   targetType,
   onClose,
-}: LensChainEditorProps) {
+}: LensChainEditorProps): React.ReactElement {
   // Track enabled state per lens (default all enabled)
   const [enabledStates, setEnabledStates] = useState<boolean[]>(
     () => lensChain.map(() => true)
@@ -489,7 +489,7 @@ export function LensChainEditor({
   const presetsByCategory = useMemo(() => {
     const categories: Record<string, LensPreset[]> = {};
     LENS_PRESETS.forEach((p) => {
-      if (!categories[p.category]) categories[p.category] = [];
+      if (categories[p.category] == null) categories[p.category] = [];
       categories[p.category].push(p);
     });
     return categories;
@@ -571,7 +571,7 @@ export function LensChainEditor({
 
   const handleAddLens = useCallback(
     (type: string) => {
-      const params = DEFAULT_LENS_PARAMS[type] || {};
+      const params = DEFAULT_LENS_PARAMS[type] ?? {};
       const newLens: LensDefinition = { type, params };
       onChange([...lensChain, newLens]);
       setEnabledStates((prev) => [...prev, true]);
@@ -610,13 +610,13 @@ export function LensChainEditor({
 
   // Preview handlers for hover
   const handlePreviewLens = useCallback((type: string) => {
-    const params = DEFAULT_LENS_PARAMS[type] || {};
+    const params = DEFAULT_LENS_PARAMS[type] ?? {};
     setPreviewLens({ type, params });
   }, []);
 
   const handlePreviewPreset = useCallback((presetId: string) => {
     const lens = createLensFromPreset(presetId);
-    if (lens) {
+    if (lens != null) {
       setPreviewLens(lens);
     }
   }, []);
@@ -694,13 +694,13 @@ export function LensChainEditor({
               <span className="lens-preview-chain">
                 {displayChain.map((lens, i) => {
                   const isPreview = i === displayChain.length - 1;
-                  const params = Object.entries(lens.params || {})
-                    .map(([k, v]) => `${k}:${v}`)
+                  const params = Object.entries(lens.params)
+                    .map(([k, v]) => `${k}:${String(v)}`)
                     .join(', ');
                   return (
                     <span key={i} className={isPreview ? 'preview-lens' : ''}>
                       {i > 0 && ' → '}
-                      {params ? `${lens.type}(${params})` : lens.type}
+                      {params !== '' ? `${lens.type}(${params})` : lens.type}
                     </span>
                   );
                 })}
@@ -714,12 +714,12 @@ export function LensChainEditor({
               <div className="lens-add-section-title">Recently Used</div>
               <div className="lens-recent-list">
                 {recentLenses.map((recent, idx) => {
-                  const preset = recent.presetId
+                  const preset = recent.presetId != null
                     ? LENS_PRESETS.find((p) => p.id === recent.presetId)
                     : null;
-                  const label = preset?.name || recent.type;
+                  const label = preset?.name ?? recent.type;
                   const paramsStr = Object.entries(recent.params)
-                    .map(([k, v]) => `${k}:${v}`)
+                    .map(([k, v]) => `${k}:${String(v)}`)
                     .join(', ');
                   return (
                     <button
@@ -823,7 +823,7 @@ export function LensChainEditorPopover({
 }: LensChainEditorProps & {
   isOpen: boolean;
   position: { x: number; y: number };
-}) {
+}): React.ReactElement | null {
   if (!isOpen) return null;
 
   return (

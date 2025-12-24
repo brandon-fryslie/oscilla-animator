@@ -47,11 +47,12 @@ export function scoped(
       };
 
       // Find matching nodes
+      const getChildrenFn = drawNodeAdapter.getChildren.bind(drawNodeAdapter);
       const refs = find(
         tree,
         selection,
         selCtx,
-        drawNodeAdapter.getChildren
+        getChildrenFn
       );
 
       if (refs.length === 0) {

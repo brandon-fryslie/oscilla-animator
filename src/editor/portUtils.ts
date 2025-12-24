@@ -47,7 +47,7 @@ export function formatTypeDescriptor(desc: TypeDescriptor): string {
     unknown: '?',
   };
   const world = worldGlyph[desc.world] ?? '?';
-  if (!desc.domain) return world;
+  if (desc.domain === null || desc.domain === '') return world;
   return `${world} · ${desc.domain}`;
 }
 

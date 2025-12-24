@@ -39,8 +39,7 @@ export class ViewStateStore {
   /** Active view id (lane vs projection) */
   activeViewId: string = 'lane';
 
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  constructor(root: RootStore) {
+    constructor(root: RootStore) {
     this.root = root;
     this.lanes = this.createLanesFromLayout(DEFAULT_LAYOUT);
 
@@ -169,8 +168,7 @@ export class ViewStateStore {
     lane.label = newName;
   }
 
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  addLane(lane: Lane): void {
+    addLane(lane: Lane): void {
     this.lanes.push(lane);
   }
 
@@ -287,7 +285,6 @@ export class ViewStateStore {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
 function computeProjectionLayout(root: RootStore): ProjectionLayout {
   const doc = storeToPatchDocument(root);
   const graph = SemanticGraph.fromPatch(doc);

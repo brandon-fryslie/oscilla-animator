@@ -26,11 +26,11 @@ export interface LensDef {
 const lenses = new Map<string, LensDef>();
 const lensAliases = new Map<string, string>();
 
-export function registerLens(def: LensDef) {
+export function registerLens(def: LensDef): void {
   lenses.set(def.id, def);
 }
 
-export function registerLensAlias(aliasId: string, canonicalId: string) {
+export function registerLensAlias(aliasId: string, canonicalId: string): void {
   lensAliases.set(aliasId, canonicalId);
 }
 
@@ -59,7 +59,7 @@ function wrapPhase(value: number): number {
 }
 
 function resolveNumberParam(param: Artifact | undefined, t: number, ctx: RuntimeCtx): number {
-  if (!param) return 0;
+  if (param == null) return 0;
   if (param.kind === 'Scalar:number') return param.value;
   if (param.kind === 'Signal:number') return param.value(t, ctx);
   if (param.kind === 'Scalar:boolean') return param.value ? 1 : 0;
@@ -67,7 +67,7 @@ function resolveNumberParam(param: Artifact | undefined, t: number, ctx: Runtime
 }
 
 function resolveBooleanParam(param: Artifact | undefined, t: number, ctx: RuntimeCtx): boolean {
-  if (!param) return false;
+  if (param == null) return false;
   if (param.kind === 'Scalar:boolean') return param.value;
   if (param.kind === 'Signal:number') return param.value(t, ctx) !== 0;
   if (param.kind === 'Scalar:number') return param.value !== 0;
@@ -75,7 +75,7 @@ function resolveBooleanParam(param: Artifact | undefined, t: number, ctx: Runtim
 }
 
 function resolveEnumParam(param: Artifact | undefined): string {
-  if (!param) return '';
+  if (param == null) return '';
   if (param.kind === 'Scalar:string') return param.value;
   return '';
 }
@@ -137,7 +137,7 @@ function mapPhaseArtifact(
  * Initialize the registry with canonical lenses.
  * Ref: @design-docs/10-Refactor-for-UI-prep/17-CanonicalLenses.md
  */
-export function initLensRegistry() {
+export function initLensRegistry(): void {
   if (lenses.size > 0) return;
 
   // =========================================================================
@@ -243,7 +243,7 @@ export function initLensRegistry() {
         const time = t ?? 0;
         const runtime = ctx ?? DEFAULT_RUNTIME_CTX;
         const amount = clamp(resolveNumberParam(params.amount, time, runtime), 0, 1);
-        const shape = resolveEnumParam(params.shape) || 'tanh';
+        const shape = resolveEnumParam(params.shape) !== '' ? resolveEnumParam(params.shape) : 'tanh';
         if (amount <= 0) return value;
         const strength = 1 + amount * 4;
         if (shape === 'sigmoid') {
@@ -354,7 +354,7 @@ export function initLensRegistry() {
         const time = t ?? 0;
         const runtime = ctx ?? DEFAULT_RUNTIME_CTX;
         const steps = Math.max(1, resolveNumberParam(params.steps, time, runtime));
-        const mode = resolveEnumParam(params.mode) || 'round';
+        const mode = resolveEnumParam(params.mode) !== '' ? resolveEnumParam(params.mode) : 'round';
         const scaled = value * steps;
         const quantized = mode === 'floor'
           ? Math.floor(scaled)
@@ -381,7 +381,7 @@ export function initLensRegistry() {
         return { kind: 'Error', message: 'Ease lens requires Signal:number input' };
       }
 
-      const easingName = resolveEnumParam(params.easing) || 'easeInOutSine';
+      const easingName = resolveEnumParam(params.easing) !== '' ? resolveEnumParam(params.easing) : 'easeInOutSine';
       const easing = getEasingFunction(easingName);
       const signal = artifact.value;
 
@@ -567,7 +567,7 @@ export function initLensRegistry() {
     },
     apply: (artifact, params) =>
       mapPhaseArtifact(artifact, (value) => {
-        const mode = resolveEnumParam(params.mode) || 'wrap';
+        const mode = resolveEnumParam(params.mode) ?? 'wrap';
         if (mode === 'clamp') return clamp(value, 0, 1);
         if (mode === 'pingpong') {
           const p = wrapPhase(value);

@@ -13,7 +13,7 @@ export function createLensInstanceFromDefinition(
   defaultSourceStore: DefaultSourceStore
 ): LensInstance {
   const def = getLens(lens.type);
-  if (!def) {
+  if (def == null) {
     return {
       lensId: lens.type,
       params: {},
@@ -50,7 +50,7 @@ export function lensInstanceToDefinition(
   for (const [paramKey, binding] of Object.entries(lens.params)) {
     if (binding.kind === 'default') {
       const source = defaultSourceStore.sources.get(binding.defaultSourceId);
-      if (source) {
+      if (source != null) {
         params[paramKey] = source.value;
       }
     }

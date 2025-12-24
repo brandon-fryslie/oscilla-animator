@@ -143,7 +143,7 @@ export const ColorControlUI = observer(function ColorControlUI({ control, onChan
             </div>
 
             {/* Alpha slider (if enabled) */}
-            {allowAlpha && (
+            {(allowAlpha === true) && (
               <div className="color-alpha">
                 <label>Alpha</label>
                 <input

@@ -80,7 +80,7 @@ export const NumberControlUI = observer(function NumberControlUI({ control, onCh
       // Denormalize to actual range
       let newValue = curvedVal * (max - min) + min;
       // Apply step if specified
-      if (step) {
+      if (step !== undefined && step !== null && step !== 0 && !isNaN(step)) {
         newValue = Math.round(newValue / step) * step;
       }
       // Clamp to range

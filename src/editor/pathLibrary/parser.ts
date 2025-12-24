@@ -18,7 +18,7 @@ export interface ParseResult {
 }
 
 function deriveViewBoxFromSize(widthRaw?: string | null, heightRaw?: string | null): string | undefined {
-  if (!widthRaw || !heightRaw) return undefined;
+  if (widthRaw === undefined || widthRaw === null || widthRaw === '' || heightRaw === undefined || heightRaw === null || heightRaw === '') return undefined;
   const width = parseFloat(widthRaw);
   const height = parseFloat(heightRaw);
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
@@ -39,7 +39,7 @@ export function parseSVGString(svgString: string): ParseResult {
     const viewBoxMatch = svgString.match(/viewBox=["']([^"']+)["']/i);
     let viewBox = viewBoxMatch?.[1];
 
-    if (!viewBox) {
+    if (viewBox === undefined || viewBox === null || viewBox === '') {
       const widthMatch = svgString.match(/width=["']([^"']+)["']/i);
       const heightMatch = svgString.match(/height=["']([^"']+)["']/i);
       viewBox = deriveViewBoxFromSize(widthMatch?.[1], heightMatch?.[1]);
