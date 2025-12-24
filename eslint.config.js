@@ -96,7 +96,7 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-member-access': 'error',
       // Detect actual mutations instead of requiring readonly type annotations
       // TODO: Enable after reviewing violations
-      'functional/immutable-data': 'off',
+      'functional/immutable-data': 'warn',
       '@typescript-eslint/consistent-type-imports': ['error', {
         prefer: 'type-imports',
         disallowTypeAnnotations: false,

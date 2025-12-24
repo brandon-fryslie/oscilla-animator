@@ -95,7 +95,7 @@ export function createSimpleDomain(id: string, count: number): Domain {
  * @param elementIds - Explicit element IDs
  * @returns Domain with provided elements
  */
-export function createDomain(id: string, elementIds: readonly ElementId[]): Domain {
+export function createDomain(id: string, elementIds: ElementId[]): Domain {
   return {
     id,
     elements: [...elementIds],

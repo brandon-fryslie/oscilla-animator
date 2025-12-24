@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--chromeArg=--disable-blink-features=AutomationControlled",
+        "--chromeArg=--disable-infobars",
+        "--chromeArg=--no-first-run"
+      ]
+    },
+    "yagwt": {
+      "command": "/usr/local/bin/yagwt-mcp",
+      "args": [
+      ]
+    }
+  }
+}
