@@ -8,323 +8,21 @@
  * Features:
  * - Collapsible sections with rotated title bars
  * - Draggable resizer between sections
- * - Minimal-width columns that expand on click
- * - Block groups collapsed by default
+ * - MUI DataGrid for stable column widths
  */
 
 import { observer } from 'mobx-react-lite';
 import { useRef, useCallback, useState, useEffect } from 'react';
 import type { ModulationTableStore } from './ModulationTableStore';
-import type { TableRow, TableColumn, TableCell, RowGroup, RowKey } from './types';
+import type { RowKey } from './types';
 import type { LensDefinition } from '../types';
 import { LensChainEditorPopover } from './LensChainEditor';
-import { Tooltip } from './Tooltip';
+import { ModulationTableGrid } from './ModulationTableGrid';
 import './ModulationTable.css';
 
 interface ModulationTableProps {
   store: ModulationTableStore;
 }
-
-/**
- * Format a lens chain for display.
- */
-function formatLensChain(lensChain: readonly LensDefinition[] | undefined): string {
-  if (lensChain == null || lensChain.length === 0) {
-    return '';
-  }
-
-  return lensChain
-    .map((lens) => {
-      const params = Object.entries(lens.params)
-        .map(([k, v]) => `${k}:${String(v)}`)
-        .join(', ');
-      return params ? `${lens.type}(${params})` : lens.type;
-    })
-    .join(' → ');
-}
-
-/**
- * Cell component for a single table cell.
- */
-const TableCellComponent = observer(
-  ({
-    cell,
-    row,
-    column,
-    isFocused,
-    onCellClick,
-    onCellDoubleClick,
-    onCellRightClick,
-  }: {
-    cell: TableCell;
-    row: TableRow;
-    column: TableColumn;
-    isFocused: boolean;
-    onCellClick: (rowKey: RowKey, busId: string, e?: React.MouseEvent) => void;
-    onCellDoubleClick: (rowKey: RowKey, busId: string) => void;
-    onCellRightClick: (e: React.MouseEvent, rowKey: RowKey, busId: string) => void;
-  }) => {
-    const statusClass = cell.status;
-    const focusedClass = isFocused ? 'focused' : '';
-    const enabledClass = cell.enabled === false ? 'disabled' : '';
-
-    const handleClick = useCallback((e: React.MouseEvent) => {
-      e.stopPropagation();
-      onCellClick(row.key, column.busId, e);
-    }, [row.key, column.busId, onCellClick]);
-
-    const handleDoubleClick = useCallback(() => {
-      onCellDoubleClick(row.key, column.busId);
-    }, [row.key, column.busId, onCellDoubleClick]);
-
-    const handleRightClick = useCallback(
-      (e: React.MouseEvent) => {
-        e.preventDefault();
-        onCellRightClick(e, row.key, column.busId);
-      },
-      [row.key, column.busId, onCellRightClick]
-    );
-
-    return (
-      <td
-        className={`mod-table-cell ${statusClass} ${focusedClass} ${enabledClass}`}
-        onClick={handleClick}
-        onDoubleClick={handleDoubleClick}
-        onContextMenu={handleRightClick}
-      >
-        {cell.status === 'bound' && (
-          <div className="cell-binding">
-            {cell.lensChain && cell.lensChain.length > 0 ? (
-              <span className="lens-chip">{formatLensChain(cell.lensChain)}</span>
-            ) : (
-              <span className="direct-binding">•</span>
-            )}
-          </div>
-        )}
-        {cell.status === 'convertible' && (
-          <span className={`convertible-hint cost-${cell.costClass ?? 'cheap'}`}>
-            {cell.costClass === 'heavy' ? '⚡' : cell.costClass === 'moderate' ? '⚠' : '~'}
-          </span>
-        )}
-        {cell.status === 'incompatible' && <span className="incompatible-hint">×</span>}
-      </td>
-    );
-  }
-);
-
-/**
- * Row component for a single table row.
- */
-const TableRowComponent = observer(
-  ({
-    row,
-    columns,
-    cells,
-    focusedCell,
-    onCellClick,
-    onCellDoubleClick,
-    onCellRightClick,
-    onRowClick,
-  }: {
-    row: TableRow;
-    columns: readonly TableColumn[];
-    cells: readonly TableCell[];
-    focusedCell: { rowKey: RowKey; busId: string } | undefined;
-    onCellClick: (rowKey: RowKey, busId: string) => void;
-    onCellDoubleClick: (rowKey: RowKey, busId: string) => void;
-    onCellRightClick: (e: React.MouseEvent, rowKey: RowKey, busId: string) => void;
-    onRowClick: (rowKey: RowKey) => void;
-  }) => {
-    const rowCells = cells.filter((c) => c.rowKey === row.key);
-    const isFocusedRow = focusedCell?.rowKey === row.key;
-
-    return (
-      <tr className={`mod-table-row ${isFocusedRow ? 'focused-row' : ''}`}>
-        <th className="mod-table-row-header" onClick={() => onRowClick(row.key)}>
-          <span className="row-label">{row.label}</span>
-          <span className="row-type">{row.type.domain}</span>
-        </th>
-        {columns.map((column) => {
-          const cell = rowCells.find((c) => c.busId === column.busId);
-          if (!cell) return <td key={column.busId} className="mod-table-cell empty" />;
-
-          const isFocused = focusedCell?.rowKey === row.key && focusedCell?.busId === column.busId;
-
-          return (
-            <TableCellComponent
-              key={column.busId}
-              cell={cell}
-              row={row}
-              column={column}
-              isFocused={isFocused}
-              onCellClick={onCellClick}
-              onCellDoubleClick={onCellDoubleClick}
-              onCellRightClick={onCellRightClick}
-            />
-          );
-        })}
-      </tr>
-    );
-  }
-);
-
-/**
- * Group header row.
- */
-/**
- * Compute per-column bound/available counts for a group.
- */
-function computeColumnCounts(
-  group: RowGroup,
-  columns: readonly TableColumn[],
-  cells: readonly TableCell[]
-): Map<string, { bound: number; available: number }> {
-  const counts = new Map<string, { bound: number; available: number }>();
-
-  for (const col of columns) {
-    counts.set(col.busId, { bound: 0, available: 0 });
-  }
-
-  for (const rowKey of group.rowKeys) {
-    for (const col of columns) {
-      const cell = cells.find((c) => c.rowKey === rowKey && c.busId === col.busId);
-      if (!cell) continue;
-
-      const colCount = counts.get(col.busId)!;
-      if (cell.status === 'bound') {
-        colCount.bound++;
-      } else if (cell.status === 'convertible' || cell.status === 'empty') {
-        // empty cells that are compatible count as available
-        colCount.available++;
-      }
-    }
-  }
-
-  return counts;
-}
-
-const GroupHeaderRow = observer(
-  ({
-    group,
-    columns,
-    cells,
-    onToggleCollapse,
-    onGroupClick,
-  }: {
-    group: RowGroup;
-    columns: readonly TableColumn[];
-    cells: readonly TableCell[];
-    onToggleCollapse: (groupKey: string) => void;
-    onGroupClick: (blockId: string) => void;
-  }) => {
-    const isCollapsed = group.collapsed;
-    const columnCounts = isCollapsed ? computeColumnCounts(group, columns, cells) : null;
-
-    return (
-      <tr className={`mod-table-group-header ${isCollapsed ? 'collapsed' : ''}`}>
-        <th
-          className="group-header-cell"
-          onClick={() => onToggleCollapse(group.key)}
-          colSpan={isCollapsed ? 1 : columns.length + 1}
-        >
-          <span className="collapse-icon">{isCollapsed ? '▸' : '▾'}</span>
-          <span
-            className="group-label"
-            onClick={(e) => {
-              e.stopPropagation();
-              onGroupClick(group.blockId);
-            }}
-          >
-            {group.label}
-          </span>
-        </th>
-        {isCollapsed &&
-          columns.map((col) => {
-            const counts = columnCounts?.get(col.busId);
-            const bound = counts?.bound ?? 0;
-            const available = counts?.available ?? 0;
-
-            // Show nothing if both are 0
-            if (bound === 0 && available === 0) {
-              return <th key={col.busId} className="group-header-count-cell" onClick={() => onToggleCollapse(group.key)} />;
-            }
-
-            return (
-              <th key={col.busId} className="group-header-count-cell" onClick={() => onToggleCollapse(group.key)}>
-                <span className="group-count-pair">
-                  <span className="count-paren">(</span>
-                  {bound > 0 && <span className="count-bound">{bound}</span>}
-                  {bound > 0 && available > 0 && <span className="count-comma">,</span>}
-                  {available > 0 && <span className="count-available">{available}</span>}
-                  <span className="count-paren">)</span>
-                </span>
-              </th>
-            );
-          })}
-      </tr>
-    );
-  }
-);
-
-/**
- * Column header cell with expandable width.
- */
-const ColumnHeader = observer(
-  ({
-    column,
-    store,
-    isFocused,
-    isPinned,
-    onColumnClick,
-    onColumnRightClick,
-  }: {
-    column: TableColumn;
-    store: ModulationTableStore;
-    isFocused: boolean;
-    isPinned: boolean;
-    onColumnClick: (busId: string) => void;
-    onColumnRightClick: (e: React.MouseEvent, busId: string) => void;
-  }) => {
-    const isExpanded = store.isColumnExpanded(column.busId);
-    const displayName = store.getColumnDisplayName(column);
-
-    // Tooltip shows the expanded column info
-    const tooltipContent = (
-      <div className="col-tooltip">
-        <div className="col-tooltip-name">{column.name}</div>
-        <div className="col-tooltip-type">{column.type.domain}</div>
-        {column.publisherCount > 0 && (
-          <div className="col-tooltip-publishers">{column.publisherCount} publisher{column.publisherCount !== 1 ? 's' : ''}</div>
-        )}
-      </div>
-    );
-
-    return (
-      <Tooltip content={tooltipContent} placement="top">
-        <th
-          className={`mod-table-col-header ${isFocused ? 'focused' : ''} ${isPinned ? 'pinned' : ''} ${isExpanded ? 'expanded' : 'compact'}`}
-          onClick={() => onColumnClick(column.busId)}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            onColumnRightClick(e, column.busId);
-          }}
-        >
-          <div className="col-header-content">
-            <span className="col-name">{displayName}</span>
-            {isExpanded && (
-              <>
-                <span className="col-type">{column.type.domain}</span>
-                {column.publisherCount > 0 && (
-                  <span className="col-publishers">{column.publisherCount} pub</span>
-                )}
-              </>
-            )}
-          </div>
-        </th>
-      </Tooltip>
-    );
-  }
-);
 
 /**
  * Section table for either Publishers or Listeners.
@@ -333,85 +31,21 @@ const SectionTable = observer(
   ({
     title,
     direction,
-    groups,
-    rows,
-    columns,
-    cells,
-    focusedCell,
-    focusedBusId,
-    pinnedBusIds,
     store,
-    onCellClick,
-    onCellDoubleClick,
-    onCellRightClick,
-    onRowClick,
-    onColumnClick,
-    onColumnRightClick,
-    onGroupToggle,
-    onGroupClick,
     onSectionCollapse,
   }: {
     title: string;
     direction: 'input' | 'output';
-    groups: readonly RowGroup[];
-    rows: readonly TableRow[];
-    columns: readonly TableColumn[];
-    cells: readonly TableCell[];
-    focusedCell: { rowKey: RowKey; busId: string } | undefined;
-    focusedBusId: string | undefined;
-    pinnedBusIds: Set<string>;
     store: ModulationTableStore;
-    onCellClick: (rowKey: RowKey, busId: string) => void;
-    onCellDoubleClick: (rowKey: RowKey, busId: string) => void;
-    onCellRightClick: (e: React.MouseEvent, rowKey: RowKey, busId: string) => void;
-    onRowClick: (rowKey: RowKey) => void;
-    onColumnClick: (busId: string) => void;
-    onColumnRightClick: (e: React.MouseEvent, busId: string) => void;
-    onGroupToggle: (groupKey: string) => void;
-    onGroupClick: (blockId: string) => void;
     onSectionCollapse?: () => void;
   }) => {
-    const tableRef = useRef<HTMLTableElement>(null);
-
-    // Build table rows
-    const renderedRows: React.ReactNode[] = [];
-
-    for (const group of groups) {
-      renderedRows.push(
-        <GroupHeaderRow
-          key={`group-${group.key}`}
-          group={group}
-          columns={columns}
-          cells={cells}
-          onToggleCollapse={onGroupToggle}
-          onGroupClick={onGroupClick}
-        />
-      );
-
-      if (!group.collapsed) {
-        for (const rowKey of group.rowKeys) {
-          const row = rows.find((r) => r.key === rowKey);
-          if (row) {
-            renderedRows.push(
-              <TableRowComponent
-                key={rowKey}
-                row={row}
-                columns={columns}
-                cells={cells}
-                focusedCell={focusedCell}
-                onCellClick={onCellClick}
-                onCellDoubleClick={onCellDoubleClick}
-                onCellRightClick={onCellRightClick}
-                onRowClick={onRowClick}
-              />
-            );
-          }
-        }
-      }
-    }
-
     const icon = direction === 'output' ? '↑' : '↓';
     const hint = direction === 'output' ? 'output → bus' : 'bus → input';
+
+    // Get filtered rows and data for this direction
+    const rows = store.getRowsByDirection(direction);
+    const columns = store.visibleColumns;
+    const cells = store.cells;
 
     return (
       <div className="section-table-container">
@@ -436,35 +70,43 @@ const SectionTable = observer(
           <span className="section-hint">{hint}</span>
         </div>
         <div className="section-table-scroll">
-          <table ref={tableRef} className="modulation-table">
-            <thead>
-              <tr>
-                <th className="mod-table-corner" />
-                {columns.map((column) => (
-                  <ColumnHeader
-                    key={column.busId}
-                    column={column}
-                    store={store}
-                    isFocused={column.busId === focusedBusId}
-                    isPinned={pinnedBusIds.has(column.busId)}
-                    onColumnClick={onColumnClick}
-                    onColumnRightClick={onColumnRightClick}
-                  />
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {renderedRows.length > 0 ? (
-                renderedRows
-              ) : (
-                <tr>
-                  <td colSpan={columns.length + 1} className="section-empty">
-                    No {direction === 'output' ? 'publisher' : 'listener'} ports
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          {/* MUI DataGrid replaces HTML table */}
+          {rows.length > 0 ? (
+            <ModulationTableGrid
+              store={store}
+              rows={rows}
+              columns={columns}
+              cells={cells}
+              onCellClick={(rowKey, busId, _e) => store.setFocusedCell(rowKey, busId)}
+              onCellDoubleClick={(rowKey, busId) => {
+                const cell = store.getCell(rowKey, busId);
+                if (!cell) return;
+
+                if (cell.status === 'bound') {
+                  store.unbindCell(rowKey, busId);
+                } else if (cell.status === 'empty' || cell.status === 'convertible') {
+                  store.bindCell(rowKey, busId, cell.suggestedChain ? [...cell.suggestedChain] : undefined);
+                }
+              }}
+              onCellRightClick={(_e, _rowKey, _busId) => {
+                // Context menu handled in parent - placeholder for now
+              }}
+              onRowClick={(rowKey) => {
+                const row = rows.find((r) => r.key === rowKey);
+                if (row) {
+                  store.setFocusedBlock(row.blockId);
+                }
+              }}
+              onColumnClick={(busId) => store.toggleColumnExpanded(busId)}
+              onColumnRightClick={(_e, _busId) => {
+                // Context menu handled in parent - placeholder for now
+              }}
+            />
+          ) : (
+            <div className="section-empty">
+              No {direction === 'output' ? 'publisher' : 'listener'} ports
+            </div>
+          )}
         </div>
       </div>
     );
@@ -522,16 +164,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
 
   const rows = store.visibleRows;
   const columns = store.visibleColumns;
-  const cells = store.cells;
-  const focusedCell = store.viewState.focusedCell;
-  const focusedBusId = store.viewState.focusedBusId;
   const pinnedBusIds = new Set(store.viewState.pinnedBusIds);
-
-  // Separate groups by direction
-  const publisherGroups = store.getRowGroupsByDirection('output');
-  const listenerGroups = store.getRowGroupsByDirection('input');
-  const publisherRows = store.getRowsByDirection('output');
-  const listenerRows = store.getRowsByDirection('input');
 
   // Section collapse states
   const publishersCollapsed = store.viewState.publishersSectionCollapsed;
@@ -547,73 +180,6 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
       store.collapseAllGroups();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Handlers
-  const handleCellClick = useCallback(
-    (rowKey: RowKey, busId: string, _e?: React.MouseEvent) => {
-      store.setFocusedCell(rowKey, busId);
-    },
-    [store]
-  );
-
-  const handleCellDoubleClick = useCallback(
-    (rowKey: RowKey, busId: string) => {
-      const cell = store.getCell(rowKey, busId);
-      if (!cell) return;
-
-      if (cell.status === 'bound') {
-        store.unbindCell(rowKey, busId);
-      } else if (cell.status === 'empty' || cell.status === 'convertible') {
-        store.bindCell(rowKey, busId, cell.suggestedChain ? [...cell.suggestedChain] : undefined);
-      }
-    },
-    [store]
-  );
-
-  const handleCellRightClick = useCallback(
-    (e: React.MouseEvent, rowKey: RowKey, busId: string) => {
-      setContextMenu({ x: e.clientX, y: e.clientY, type: 'cell', rowKey, busId });
-    },
-    []
-  );
-
-  const handleRowClick = useCallback(
-    (rowKey: RowKey) => {
-      const row = rows.find((r) => r.key === rowKey);
-      if (row) {
-        store.setFocusedBlock(row.blockId);
-      }
-    },
-    [store, rows]
-  );
-
-  const handleColumnClick = useCallback(
-    (busId: string) => {
-      store.toggleColumnExpanded(busId);
-    },
-    [store]
-  );
-
-  const handleColumnRightClick = useCallback(
-    (e: React.MouseEvent, busId: string) => {
-      setContextMenu({ x: e.clientX, y: e.clientY, type: 'column', busId });
-    },
-    []
-  );
-
-  const handleGroupToggle = useCallback(
-    (groupKey: string) => {
-      store.toggleGroupCollapse(groupKey);
-    },
-    [store]
-  );
-
-  const handleGroupClick = useCallback(
-    (blockId: string) => {
-      store.setFocusedBlock(blockId);
-    },
-    [store]
-  );
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
@@ -732,22 +298,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
             <SectionTable
               title="Listeners"
               direction="input"
-              groups={listenerGroups}
-              rows={listenerRows}
-              columns={columns}
-              cells={cells}
-              focusedCell={focusedCell}
-              focusedBusId={focusedBusId}
-              pinnedBusIds={pinnedBusIds}
               store={store}
-              onCellClick={handleCellClick}
-              onCellDoubleClick={handleCellDoubleClick}
-              onCellRightClick={handleCellRightClick}
-              onRowClick={handleRowClick}
-              onColumnClick={handleColumnClick}
-              onColumnRightClick={handleColumnRightClick}
-              onGroupToggle={handleGroupToggle}
-              onGroupClick={handleGroupClick}
               onSectionCollapse={() => store.toggleListenersSection()}
             />
           </div>
@@ -774,22 +325,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
             <SectionTable
               title="Publishers"
               direction="output"
-              groups={publisherGroups}
-              rows={publisherRows}
-              columns={columns}
-              cells={cells}
-              focusedCell={focusedCell}
-              focusedBusId={focusedBusId}
-              pinnedBusIds={pinnedBusIds}
               store={store}
-              onCellClick={handleCellClick}
-              onCellDoubleClick={handleCellDoubleClick}
-              onCellRightClick={handleCellRightClick}
-              onRowClick={handleRowClick}
-              onColumnClick={handleColumnClick}
-              onColumnRightClick={handleColumnRightClick}
-              onGroupToggle={handleGroupToggle}
-              onGroupClick={handleGroupClick}
               onSectionCollapse={() => store.togglePublishersSection()}
             />
           </div>
