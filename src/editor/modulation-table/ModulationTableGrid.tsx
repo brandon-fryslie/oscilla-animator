@@ -2,7 +2,11 @@
  * ModulationTableGrid Component
  *
  * MUI DataGrid-based replacement for the HTML table.
- * Fixes column width stability issues.
+ * Implements row grouping with collapsible group headers.
+ *
+ * Structure:
+ * - Group header rows (collapsible) showing block names
+ * - Data rows showing individual port bindings
  */
 
 import { observer } from 'mobx-react-lite';
@@ -26,6 +30,28 @@ interface ModulationTableGridProps {
   onRowClick: (rowKey: RowKey) => void;
   onColumnClick: (busId: string) => void;
   onColumnRightClick: (e: React.MouseEvent, busId: string) => void;
+}
+
+/**
+ * Row types for the grid - either a group header or a data row.
+ */
+type GridRowType = 'group' | 'data';
+
+interface GridRowData {
+  id: string;
+  rowType: GridRowType;
+  // Group header fields
+  groupKey?: string;
+  groupLabel?: string;
+  groupCollapsed?: boolean;
+  groupRowCount?: number;
+  // Data row fields
+  rowKey?: RowKey;
+  rowLabel?: string;
+  portType?: string;
+  blockId?: string;
+  // Cell data for each column (keyed by busId)
+  [busId: string]: unknown;
 }
 
 /**
@@ -94,7 +120,7 @@ function getCellBackgroundColor(cell: TableCell): string {
 }
 
 /**
- * ModulationTableGrid using MUI DataGrid.
+ * ModulationTableGrid using MUI DataGrid with row grouping.
  */
 export const ModulationTableGrid = observer(({
   store,
@@ -111,41 +137,127 @@ export const ModulationTableGrid = observer(({
   const focusedCell = store.viewState.focusedCell;
   const focusedBusId = store.viewState.focusedBusId;
 
-  // Build DataGrid rows
+  // Determine direction from rows
+  const direction = rows.length > 0 ? rows[0].direction : 'input';
+
+  // Get row groups for this direction
+  const rowGroups = useMemo(() => {
+    return store.getRowGroupsByDirection(direction);
+  }, [store, direction]);
+
+  // Build DataGrid rows with group headers interleaved
   const gridRows = useMemo(() => {
-    return rows.map(row => {
-      const rowData: Record<string, unknown> = {
-        id: row.key,
-        rowLabel: row.label,
-        rowType: row.type.domain,
-        blockId: row.blockId,
+    const result: GridRowData[] = [];
+
+    for (const group of rowGroups) {
+      // Add group header row
+      const groupRow: GridRowData = {
+        id: `group:${group.key}`,
+        rowType: 'group',
+        groupKey: group.key,
+        groupLabel: group.label,
+        groupCollapsed: group.collapsed,
+        groupRowCount: group.rowKeys.length,
       };
+      result.push(groupRow);
 
-      // Add cell data for each column
-      for (const column of columns) {
-        const cell = cells.find(c => c.rowKey === row.key && c.busId === column.busId);
-        rowData[column.busId] = cell;
+      // Add data rows if group is not collapsed
+      if (!group.collapsed) {
+        for (const rowKey of group.rowKeys) {
+          const row = rows.find(r => r.key === rowKey);
+          if (!row) continue;
+
+          const dataRow: GridRowData = {
+            id: rowKey,
+            rowType: 'data',
+            rowKey: row.key,
+            rowLabel: row.label,
+            portType: row.type.domain,
+            blockId: row.blockId,
+          };
+
+          // Add cell data for each column
+          for (const column of columns) {
+            const cell = cells.find(c => c.rowKey === row.key && c.busId === column.busId);
+            dataRow[column.busId] = cell;
+          }
+
+          result.push(dataRow);
+        }
       }
+    }
 
-      return rowData;
-    });
-  }, [rows, columns, cells]);
+    return result;
+  }, [rowGroups, rows, columns, cells]);
+
+  // Handle group header click to toggle collapse
+  const handleGroupClick = useCallback((groupKey: string) => {
+    store.toggleGroupCollapse(groupKey);
+  }, [store]);
 
   // Build DataGrid columns
   const gridColumns = useMemo(() => {
     const cols: GridColDef[] = [];
 
-    // First column: Row header (pinned)
+    // First column: Row header (group name or port label)
     cols.push({
       field: 'rowLabel',
       headerName: '',
       width: 150,
-      minWidth: 80,
-      flex: 0.2,
+      minWidth: 100,
+      flex: 0.3,
       sortable: false,
       disableColumnMenu: true,
-      renderCell: (params: GridRenderCellParams) => {
-        const rowKey = params.row.id as RowKey;
+      renderCell: (params: GridRenderCellParams<GridRowData>) => {
+        const rowData = params.row;
+
+        // Group header row
+        if (rowData.rowType === 'group') {
+          const isCollapsed = rowData.groupCollapsed;
+          const chevron = isCollapsed ? '▸' : '▾';
+
+          return (
+            <div
+              onClick={() => handleGroupClick(rowData.groupKey!)}
+              style={{
+                width: '100%',
+                cursor: 'pointer',
+                padding: '6px 8px',
+                background: '#2a2a2a',
+                borderBottom: '1px solid #3a3a3a',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span style={{ fontSize: '12px', color: '#888' }}>{chevron}</span>
+              <span
+                style={{
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  color: '#e5e5e5',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {rowData.groupLabel}
+              </span>
+              <span
+                style={{
+                  fontSize: '10px',
+                  color: '#666',
+                  marginLeft: 'auto',
+                }}
+              >
+                {rowData.groupRowCount} port{rowData.groupRowCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+          );
+        }
+
+        // Data row
+        const rowKey = rowData.rowKey as RowKey;
         const isFocused = focusedCell?.rowKey === rowKey;
 
         return (
@@ -154,7 +266,7 @@ export const ModulationTableGrid = observer(({
             style={{
               width: '100%',
               cursor: 'pointer',
-              padding: '4px 6px',
+              padding: '4px 6px 4px 24px', // Indented under group
               background: isFocused ? 'rgba(74, 158, 255, 0.15)' : '#242424',
               overflow: 'hidden',
             }}
@@ -169,7 +281,7 @@ export const ModulationTableGrid = observer(({
                 textOverflow: 'ellipsis',
               }}
             >
-              {params.value as string}
+              {rowData.rowLabel as string}
             </div>
             <div
               style={{
@@ -181,7 +293,7 @@ export const ModulationTableGrid = observer(({
                 textOverflow: 'ellipsis',
               }}
             >
-              {params.row.rowType as string}
+              {rowData.portType as string}
             </div>
           </div>
         );
@@ -197,9 +309,9 @@ export const ModulationTableGrid = observer(({
       cols.push({
         field: column.busId,
         headerName: displayName,
-        width: isExpanded ? 100 : undefined,
+        width: isExpanded ? 100 : 45,
         minWidth: 32,
-        flex: isExpanded ? 0 : 1,
+        flex: 0,
         sortable: false,
         disableColumnMenu: true,
         headerClassName: isFocused ? 'focused-column' : undefined,
@@ -270,11 +382,28 @@ export const ModulationTableGrid = observer(({
             </Tooltip>
           );
         },
-        renderCell: (params: GridRenderCellParams) => {
+        renderCell: (params: GridRenderCellParams<GridRowData>) => {
+          const rowData = params.row;
+
+          // Group header rows get empty cells for data columns
+          if (rowData.rowType === 'group') {
+            return (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: '#2a2a2a',
+                  borderBottom: '1px solid #3a3a3a',
+                }}
+              />
+            );
+          }
+
+          // Data row
           const cell = params.value as TableCell | undefined;
           if (!cell) return null;
 
-          const rowKey = params.row.id as RowKey;
+          const rowKey = rowData.rowKey as RowKey;
           const isFocused = focusedCell?.rowKey === rowKey && focusedCell?.busId === column.busId;
           const bgColor = getCellBackgroundColor(cell);
 
@@ -316,14 +445,17 @@ export const ModulationTableGrid = observer(({
     onCellClick,
     onCellDoubleClick,
     onCellRightClick,
+    handleGroupClick,
   ]);
 
-  // Handle cell click to focus
-  const handleCellClick = useCallback((params: {row: {id: RowKey}; field: string}) => {
-    if (params.field === 'rowLabel') {
-      onRowClick(params.row.id);
+  // Get row height based on row type
+  const getRowHeight = useCallback((params: { id: string | number }) => {
+    const id = String(params.id);
+    if (id.startsWith('group:')) {
+      return 32; // Group header height
     }
-  }, [onRowClick]);
+    return 28; // Data row height
+  }, []);
 
   return (
     <ThemeProvider theme={modulationTableTheme}>
@@ -331,14 +463,13 @@ export const ModulationTableGrid = observer(({
         <DataGrid
           rows={gridRows}
           columns={gridColumns}
+          getRowHeight={getRowHeight}
           disableRowSelectionOnClick
           disableColumnSelector
           disableColumnFilter
           disableColumnMenu
           hideFooter
-          rowHeight={28}
           columnHeaderHeight={40}
-          onCellClick={handleCellClick}
           sx={{
             '& .MuiDataGrid-columnHeader:first-of-type': {
               position: 'sticky',
@@ -351,6 +482,10 @@ export const ModulationTableGrid = observer(({
               left: 0,
               zIndex: 1,
               backgroundColor: '#242424',
+            },
+            // Remove cell padding for custom content
+            '& .MuiDataGrid-cell': {
+              padding: 0,
             },
           }}
         />
