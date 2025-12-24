@@ -375,7 +375,13 @@ export const TimeConsole = memo(function TimeConsole({
         <span className={`chip-badge chip-${timeModel.kind}`}>
           {timeModel.kind.charAt(0).toUpperCase()}
         </span>
-        <span className="chip-time">{formatElapsedTime(currentTime)}</span>
+        {/* DO NOT add elapsed time display for cyclic/infinite modes.
+            Elapsed time is only meaningful for finite animations with a defined duration.
+            For cyclic mode, phase is the relevant metric (shown in expanded view).
+            For infinite mode, wall-clock time is irrelevant to the animation. */}
+        {timeModel.kind === 'finite' && (
+          <span className="chip-time">{formatElapsedTime(currentTime)}</span>
+        )}
         <button
           className={`chip-play ${isPlaying ? 'active' : ''}`}
           onClick={(e) => { e.stopPropagation(); handleToggle(); }}

@@ -18,6 +18,7 @@ import type { ModulationTableStore } from './ModulationTableStore';
 import type { TableRow, TableColumn, TableCell, RowGroup, RowKey } from './types';
 import type { LensDefinition } from '../types';
 import { LensChainEditorPopover } from './LensChainEditor';
+import { Tooltip } from './Tooltip';
 import './ModulationTable.css';
 
 interface ModulationTableProps {
@@ -68,6 +69,7 @@ const TableCellComponent = observer(
     const enabledClass = cell.enabled === false ? 'disabled' : '';
 
     const handleClick = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
       onCellClick(row.key, column.busId, e);
     }, [row.key, column.busId, onCellClick]);
 
@@ -89,7 +91,6 @@ const TableCellComponent = observer(
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleRightClick}
-        title={cell.status === 'bound' ? formatLensChain(cell.lensChain) : cell.status}
       >
         {cell.status === 'bound' && (
           <div className="cell-binding">
@@ -100,7 +101,11 @@ const TableCellComponent = observer(
             )}
           </div>
         )}
-        {cell.status === 'convertible' && <span className="convertible-hint">~</span>}
+        {cell.status === 'convertible' && (
+          <span className={`convertible-hint cost-${cell.costClass ?? 'cheap'}`}>
+            {cell.costClass === 'heavy' ? '⚡' : cell.costClass === 'moderate' ? '⚠' : '~'}
+          </span>
+        )}
         {cell.status === 'incompatible' && <span className="incompatible-hint">×</span>}
       </td>
     );
@@ -135,11 +140,7 @@ const TableRowComponent = observer(
 
     return (
       <tr className={`mod-table-row ${isFocusedRow ? 'focused-row' : ''}`}>
-        <th
-          className="mod-table-row-header"
-          onClick={() => onRowClick(row.key)}
-          title={`${row.blockId}:${row.portId} (${row.type.world}:${row.type.domain})`}
-        >
+        <th className="mod-table-row-header" onClick={() => onRowClick(row.key)}>
           <span className="row-label">{row.label}</span>
           <span className="row-type">{row.type.domain}</span>
         </th>
@@ -170,33 +171,96 @@ const TableRowComponent = observer(
 /**
  * Group header row.
  */
+/**
+ * Compute per-column bound/available counts for a group.
+ */
+function computeColumnCounts(
+  group: RowGroup,
+  columns: readonly TableColumn[],
+  cells: readonly TableCell[]
+): Map<string, { bound: number; available: number }> {
+  const counts = new Map<string, { bound: number; available: number }>();
+
+  for (const col of columns) {
+    counts.set(col.busId, { bound: 0, available: 0 });
+  }
+
+  for (const rowKey of group.rowKeys) {
+    for (const col of columns) {
+      const cell = cells.find((c) => c.rowKey === rowKey && c.busId === col.busId);
+      if (!cell) continue;
+
+      const colCount = counts.get(col.busId)!;
+      if (cell.status === 'bound') {
+        colCount.bound++;
+      } else if (cell.status === 'convertible' || cell.status === 'empty') {
+        // empty cells that are compatible count as available
+        colCount.available++;
+      }
+    }
+  }
+
+  return counts;
+}
+
 const GroupHeaderRow = observer(
   ({
     group,
     columns,
+    cells,
     onToggleCollapse,
     onGroupClick,
   }: {
     group: RowGroup;
     columns: readonly TableColumn[];
+    cells: readonly TableCell[];
     onToggleCollapse: (groupKey: string) => void;
     onGroupClick: (blockId: string) => void;
   }) => {
     const isCollapsed = group.collapsed;
+    const columnCounts = isCollapsed ? computeColumnCounts(group, columns, cells) : null;
 
     return (
       <tr className={`mod-table-group-header ${isCollapsed ? 'collapsed' : ''}`}>
         <th
           className="group-header-cell"
           onClick={() => onToggleCollapse(group.key)}
-          colSpan={columns.length + 1}
+          colSpan={isCollapsed ? 1 : columns.length + 1}
         >
           <span className="collapse-icon">{isCollapsed ? '▸' : '▾'}</span>
-          <span className="group-label" onClick={(e) => { e.stopPropagation(); onGroupClick(group.blockId); }}>
+          <span
+            className="group-label"
+            onClick={(e) => {
+              e.stopPropagation();
+              onGroupClick(group.blockId);
+            }}
+          >
             {group.label}
           </span>
-          <span className="group-count">({group.rowKeys.length} ports)</span>
         </th>
+        {isCollapsed &&
+          columns.map((col) => {
+            const counts = columnCounts?.get(col.busId);
+            const bound = counts?.bound ?? 0;
+            const available = counts?.available ?? 0;
+
+            // Show nothing if both are 0
+            if (bound === 0 && available === 0) {
+              return <th key={col.busId} className="group-header-count-cell" onClick={() => onToggleCollapse(group.key)} />;
+            }
+
+            return (
+              <th key={col.busId} className="group-header-count-cell" onClick={() => onToggleCollapse(group.key)}>
+                <span className="group-count-pair">
+                  <span className="count-paren">(</span>
+                  {bound > 0 && <span className="count-bound">{bound}</span>}
+                  {bound > 0 && available > 0 && <span className="count-comma">,</span>}
+                  {available > 0 && <span className="count-available">{available}</span>}
+                  <span className="count-paren">)</span>
+                </span>
+              </th>
+            );
+          })}
       </tr>
     );
   }
@@ -224,28 +288,40 @@ const ColumnHeader = observer(
     const isExpanded = store.isColumnExpanded(column.busId);
     const displayName = store.getColumnDisplayName(column);
 
+    // Tooltip shows the expanded column info
+    const tooltipContent = (
+      <div className="col-tooltip">
+        <div className="col-tooltip-name">{column.name}</div>
+        <div className="col-tooltip-type">{column.type.domain}</div>
+        {column.publisherCount > 0 && (
+          <div className="col-tooltip-publishers">{column.publisherCount} publisher{column.publisherCount !== 1 ? 's' : ''}</div>
+        )}
+      </div>
+    );
+
     return (
-      <th
-        className={`mod-table-col-header ${isFocused ? 'focused' : ''} ${isPinned ? 'pinned' : ''} ${isExpanded ? 'expanded' : 'compact'}`}
-        onClick={() => onColumnClick(column.busId)}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          onColumnRightClick(e, column.busId);
-        }}
-        title={`${column.name} (${column.type.world}:${column.type.domain}, ${column.combineMode})`}
-      >
-        <div className="col-header-content">
-          <span className="col-name">{displayName}</span>
-          {isExpanded && (
-            <>
-              <span className="col-type">{column.type.domain}</span>
-              {column.publisherCount > 0 && (
-                <span className="col-publishers">{column.publisherCount} pub</span>
-              )}
-            </>
-          )}
-        </div>
-      </th>
+      <Tooltip content={tooltipContent} placement="top">
+        <th
+          className={`mod-table-col-header ${isFocused ? 'focused' : ''} ${isPinned ? 'pinned' : ''} ${isExpanded ? 'expanded' : 'compact'}`}
+          onClick={() => onColumnClick(column.busId)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            onColumnRightClick(e, column.busId);
+          }}
+        >
+          <div className="col-header-content">
+            <span className="col-name">{displayName}</span>
+            {isExpanded && (
+              <>
+                <span className="col-type">{column.type.domain}</span>
+                {column.publisherCount > 0 && (
+                  <span className="col-publishers">{column.publisherCount} pub</span>
+                )}
+              </>
+            )}
+          </div>
+        </th>
+      </Tooltip>
     );
   }
 );
@@ -273,6 +349,7 @@ const SectionTable = observer(
     onColumnRightClick,
     onGroupToggle,
     onGroupClick,
+    onSectionCollapse,
   }: {
     title: string;
     direction: 'input' | 'output';
@@ -292,6 +369,7 @@ const SectionTable = observer(
     onColumnRightClick: (e: React.MouseEvent, busId: string) => void;
     onGroupToggle: (groupKey: string) => void;
     onGroupClick: (blockId: string) => void;
+    onSectionCollapse?: () => void;
   }) => {
     const tableRef = useRef<HTMLTableElement>(null);
 
@@ -304,6 +382,7 @@ const SectionTable = observer(
           key={`group-${group.key}`}
           group={group}
           columns={columns}
+          cells={cells}
           onToggleCollapse={onGroupToggle}
           onGroupClick={onGroupClick}
         />
@@ -336,7 +415,22 @@ const SectionTable = observer(
 
     return (
       <div className="section-table-container">
-        <div className="section-table-header">
+        <div
+          className={`section-table-header ${onSectionCollapse ? 'clickable' : ''}`}
+          onClick={onSectionCollapse}
+          role={onSectionCollapse ? 'button' : undefined}
+          tabIndex={onSectionCollapse ? 0 : undefined}
+          onKeyDown={
+            onSectionCollapse
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSectionCollapse();
+                  }
+                }
+              : undefined
+          }
+        >
           <span className="section-icon">{icon}</span>
           <span className="section-label">{title}</span>
           <span className="section-hint">{hint}</span>
@@ -635,9 +729,6 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
           />
         ) : (
           <div className="mod-table-section listeners-section" style={{ width: listenersWidth }}>
-            <div className="section-collapse-btn" onClick={() => store.toggleListenersSection()}>
-              ◂
-            </div>
             <SectionTable
               title="Listeners"
               direction="input"
@@ -657,6 +748,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
               onColumnRightClick={handleColumnRightClick}
               onGroupToggle={handleGroupToggle}
               onGroupClick={handleGroupClick}
+              onSectionCollapse={() => store.toggleListenersSection()}
             />
           </div>
         )}
@@ -679,9 +771,6 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
           />
         ) : (
           <div className="mod-table-section publishers-section" style={{ width: publishersWidth }}>
-            <div className="section-collapse-btn" onClick={() => store.togglePublishersSection()}>
-              ▸
-            </div>
             <SectionTable
               title="Publishers"
               direction="output"
@@ -701,6 +790,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
               onColumnRightClick={handleColumnRightClick}
               onGroupToggle={handleGroupToggle}
               onGroupClick={handleGroupClick}
+              onSectionCollapse={() => store.togglePublishersSection()}
             />
           </div>
         )}

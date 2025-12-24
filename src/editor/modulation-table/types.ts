@@ -401,10 +401,10 @@ export function createDefaultViewState(id: string, name: string = 'Default'): Ta
     busSort: 'alpha',
     rowSort: 'rendererFirst',
     showOnlyBoundCells: false,
-    showOnlyCompatibleColumnsForFocusedRow: false,
-    // Side-by-side layout - all sections collapsed by default
-    publishersSectionCollapsed: true,
-    listenersSectionCollapsed: true,
+    showOnlyCompatibleColumnsForFocusedRow: true,
+    // Side-by-side layout - sections expanded by default, individual block groups will be collapsed
+    publishersSectionCollapsed: false,
+    listenersSectionCollapsed: false,
     tableSplitRatio: 0.5,
     expandedColumnIds: [],
   };
@@ -421,7 +421,7 @@ export function getColumnAbbreviation(name: string): string {
     'phaseB': '◷B',
     'energy': '⚡',
     'pulse': '●',
-    'palette': '■',
+    'palette': '🌈',
     'progress': '▶',
   };
 

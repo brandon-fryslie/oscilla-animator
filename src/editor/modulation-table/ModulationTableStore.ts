@@ -156,6 +156,8 @@ export class ModulationTableStore {
       const blockDef = getBlockDefinition(block.type);
       if (!blockDef) continue;
 
+      let hasBusEligiblePort = false;
+
       // Add output rows (publishers) for blocks with bus-eligible outputs
       for (const output of blockDef.outputs) {
         const typeDesc = this.slotToTypeDesc(output);
@@ -164,6 +166,7 @@ export class ModulationTableStore {
         // Only show bus-eligible outputs as rows
         if (!typeDesc.busEligible) continue;
 
+        hasBusEligiblePort = true;
         const rowKey = createRowKey(block.id, output.id, 'output');
         const groupKey = createGroupKey('publishers', block.id);
 
@@ -187,8 +190,9 @@ export class ModulationTableStore {
         // Only show bus-eligible inputs as rows
         if (!typeDesc.busEligible) continue;
 
+        hasBusEligiblePort = true;
         const rowKey = createRowKey(block.id, input.id, 'input');
-        const groupKey = createGroupKey(blockDef.subcategory ?? 'Other', block.id);
+        const groupKey = createGroupKey('listeners', block.id);
 
         rows.push({
           key: rowKey,
@@ -201,6 +205,14 @@ export class ModulationTableStore {
           semantics: typeDesc.semantics,
           defaultValueSource: 'blockParam',
         });
+      }
+
+      // Log warning if block has no bus-eligible ports at all
+      if (!hasBusEligiblePort) {
+        console.warn(
+          `[ModulationTable] Block "${block.label}" (${block.type}) has no bus-eligible ports. ` +
+          `This is unexpected - all blocks in the patch should have at least one bus-eligible port.`
+        );
       }
     }
 
@@ -232,7 +244,7 @@ export class ModulationTableStore {
 
         group = {
           key: row.groupKey,
-          label: `${blockDef.subcategory ?? 'Other'}: ${block.label}`,
+          label: block.label,
           blockId: row.blockId,
           blockDef,
           rowKeys: [],

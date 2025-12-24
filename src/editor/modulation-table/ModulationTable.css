@@ -42,38 +42,6 @@
   overflow: hidden;
 }
 
-.section-collapse-btn {
-  position: absolute;
-  top: 0;
-  z-index: 10;
-  padding: 4px 6px;
-  background: var(--bg-secondary, #242424);
-  border: 1px solid var(--border-color, #333);
-  cursor: pointer;
-  font-size: 10px;
-  color: var(--text-secondary, #888);
-  transition: all 0.15s;
-}
-
-.listeners-section .section-collapse-btn {
-  right: 0;
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
-  border-right: none;
-}
-
-.publishers-section .section-collapse-btn {
-  left: 0;
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
-  border-left: none;
-}
-
-.section-collapse-btn:hover {
-  background: var(--bg-hover, #2a2a2a);
-  color: var(--text-primary, #e5e5e5);
-}
-
 /* Collapsed section bar with rotated text */
 .collapsed-section-bar {
   display: flex;
@@ -172,6 +140,20 @@
   color: var(--text-tertiary, #666);
 }
 
+.section-table-header.clickable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.section-table-header.clickable:hover {
+  background: var(--bg-section-hover, #242444);
+}
+
+.section-table-header.clickable:active {
+  background: var(--bg-section-active, #2a2a4a);
+}
+
 .section-table-scroll {
   flex: 1;
   overflow: auto;
@@ -235,19 +217,17 @@
 /* Table structure */
 .modulation-table {
   border-collapse: collapse;
-  width: 100%;
   table-layout: fixed;
 }
 
-/* Corner cell */
+/* Corner cell - defines row header column width with table-layout: fixed */
 .mod-table-corner {
   position: sticky;
   left: 0;
   top: 0;
   z-index: 3;
   background: var(--bg-secondary, #242424);
-  width: 140px;
-  min-width: 140px;
+  width: 100px;
 }
 
 /* Column headers */
@@ -256,25 +236,22 @@
   top: 0;
   z-index: 2;
   background: var(--bg-secondary, #242424);
-  padding: 8px 4px;
   text-align: center;
   border-bottom: 2px solid var(--border-color, #333);
   border-left: 1px solid var(--border-color, #333);
   cursor: pointer;
-  transition: background-color 0.15s, width 0.2s, min-width 0.2s;
+  transition: background-color 0.15s;
 }
 
 /* Compact column header (default) - minimal width with abbreviated name */
 .mod-table-col-header.compact {
-  min-width: 36px;
-  width: 36px;
+  width: 40px;
   padding: 6px 2px;
 }
 
 /* Expanded column header - full width with all info */
 .mod-table-col-header.expanded {
-  min-width: 80px;
-  width: 80px;
+  width: 90px;
   padding: 8px 6px;
 }
 
@@ -350,19 +327,18 @@
   transition: width 0.3s ease;
 }
 
-/* Row headers */
+/* Row headers - width inherited from corner cell via table-layout: fixed */
 .mod-table-row-header {
   position: sticky;
   left: 0;
   z-index: 1;
   background: var(--bg-secondary, #242424);
-  padding: 6px 8px;
+  padding: 4px 6px;
   text-align: left;
   border-right: 1px solid var(--border-color, #333);
   border-bottom: 1px solid var(--border-color-light, #2a2a2a);
   cursor: pointer;
   transition: background-color 0.15s;
-  white-space: nowrap;
   overflow: hidden;
 }
 
@@ -376,16 +352,23 @@
 }
 
 .row-label {
-  display: inline-block;
+  display: block;
   font-weight: 500;
+  font-size: 11px;
   color: var(--text-primary, #e5e5e5);
-  margin-right: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .row-type {
-  font-size: 10px;
+  display: block;
+  font-size: 9px;
   color: var(--text-secondary, #888);
   text-transform: lowercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Section headers (Publishers / Listeners) */
@@ -461,7 +444,44 @@
   font-weight: normal;
 }
 
-/* Cells */
+/* Per-column count cells in group header - width inherited from column headers */
+.group-header-count-cell {
+  padding: 4px 2px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color-light, #2a2a2a);
+  border-left: 1px solid var(--border-color-light, #2a2a2a);
+  font-size: 10px;
+  font-weight: normal;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.group-count-pair {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.count-paren {
+  color: var(--text-tertiary, #555);
+}
+
+.count-bound {
+  color: var(--success-color, #22c55e);
+  font-weight: 500;
+}
+
+.count-comma {
+  color: var(--text-tertiary, #555);
+  margin: 0 1px;
+}
+
+.count-available {
+  color: var(--warning-color, #eab308);
+  font-weight: 500;
+}
+
+/* Cells - width inherited from column headers via table-layout: fixed */
 .mod-table-cell {
   padding: 4px 2px;
   text-align: center;
@@ -470,8 +490,8 @@
   cursor: pointer;
   transition: background-color 0.15s;
   height: 28px;
-  min-width: 36px;
   vertical-align: middle;
+  overflow: hidden;
 }
 
 .mod-table-cell:hover {
@@ -532,9 +552,27 @@
 }
 
 .convertible-hint {
-  color: var(--warning-color, #f97316);
   font-size: 14px;
   font-weight: 500;
+}
+
+/* Cost-based adapter indicators */
+.convertible-hint.cost-cheap {
+  color: var(--success-color, #22c55e);
+}
+
+.convertible-hint.cost-moderate {
+  color: var(--warning-color, #eab308);
+}
+
+.convertible-hint.cost-heavy {
+  color: var(--error-color, #ef4444);
+  animation: pulse-heavy 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-heavy {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 .incompatible-hint {
@@ -1319,14 +1357,112 @@
     width: 100%;
   }
 
-  .mod-table-col-header,
-  .mod-table-cell {
-    min-width: 60px;
-    width: 60px;
+  .mod-table-corner {
+    width: 80px;
   }
 
-  .mod-table-row-header {
-    width: 100px;
-    min-width: 100px;
+  .mod-table-col-header.compact {
+    width: 32px;
   }
+
+  .mod-table-col-header.expanded {
+    width: 70px;
+  }
+}
+
+/* ============================================================================= */
+/* Tippy.js Custom Dark Theme                                                    */
+/* ============================================================================= */
+
+.tippy-box[data-theme~='dark-custom'] {
+  background-color: var(--bg-tooltip, #1a1a2e);
+  color: var(--text-primary, #e5e5e5);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  font-size: 11px;
+  padding: 2px;
+}
+
+.tippy-box[data-theme~='dark-custom'] > .tippy-content {
+  padding: 6px 10px;
+}
+
+.tippy-box[data-theme~='dark-custom'] > .tippy-arrow::before {
+  border-top-color: var(--bg-tooltip, #1a1a2e);
+  border-bottom-color: var(--bg-tooltip, #1a1a2e);
+  border-left-color: var(--bg-tooltip, #1a1a2e);
+  border-right-color: var(--bg-tooltip, #1a1a2e);
+}
+
+.tippy-box[data-theme~='dark-custom'][data-placement^='top'] > .tippy-arrow::before {
+  border-top-color: var(--bg-tooltip, #1a1a2e);
+}
+
+.tippy-box[data-theme~='dark-custom'][data-placement^='bottom'] > .tippy-arrow::before {
+  border-bottom-color: var(--bg-tooltip, #1a1a2e);
+}
+
+.tippy-box[data-theme~='dark-custom'][data-placement^='left'] > .tippy-arrow::before {
+  border-left-color: var(--bg-tooltip, #1a1a2e);
+}
+
+.tippy-box[data-theme~='dark-custom'][data-placement^='right'] > .tippy-arrow::before {
+  border-right-color: var(--bg-tooltip, #1a1a2e);
+}
+
+/* Tooltip content styling */
+.modulation-tooltip .tooltip-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-primary, #e5e5e5);
+}
+
+.modulation-tooltip .tooltip-type {
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+  font-family: monospace;
+}
+
+.modulation-tooltip .tooltip-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.modulation-tooltip .tooltip-status-icon {
+  font-size: 12px;
+}
+
+.modulation-tooltip .tooltip-lens-chain {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-color, #333);
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+}
+
+/* Column header tooltip */
+.col-tooltip {
+  text-align: center;
+}
+
+.col-tooltip-name {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-primary, #e5e5e5);
+  margin-bottom: 2px;
+}
+
+.col-tooltip-type {
+  font-size: 10px;
+  color: var(--accent-color, #4a9eff);
+  font-family: monospace;
+  text-transform: lowercase;
+}
+
+.col-tooltip-publishers {
+  font-size: 10px;
+  color: var(--text-tertiary, #666);
+  margin-top: 4px;
 }
