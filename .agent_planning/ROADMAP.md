@@ -124,6 +124,127 @@ Last updated: 2025-12-21-141500
 
 ---
 
+## Phase 5: Debugger [QUEUED]
+
+**Goal:** Build a non-technical debug system that feels like instrument diagnostics - "what's feeding this?", "why is it flat?", "what changed?"
+
+### Topics
+
+#### debug-hud [PROPOSED]
+**Description:** Always-visible health bar with Clock/Health/Performance/Stability lights. Clicking any light opens corresponding panel pre-filtered.
+**Epic:** None
+**Dependencies:** wp5-render-sink-buffer
+**Labels:** ui, debug, observability
+**Spec:** `design-docs/11-Debugger/1-NonTech-Overview.md` (§A)
+
+#### debug-graph-compile-time [PROPOSED]
+**Description:** Compiler emits DebugGraph alongside Program - structure of buses/publishers/listeners, pipelines, byPort index. Foundation for all debug features.
+**Epic:** None
+**Dependencies:** wp2-bus-aware-compiler
+**Labels:** architecture, debug, compiler
+**Spec:** `design-docs/11-Debugger/2-NonTech-Arch.md` (§2)
+
+#### debug-snapshot-runtime [PROPOSED]
+**Description:** Runtime emits DebugSnapshot at 10-15Hz with bus values, binding values (TRACE), perf counters, health stats. Ring buffers for sparklines.
+**Epic:** None
+**Dependencies:** debug-graph-compile-time
+**Labels:** runtime, debug, observability
+**Spec:** `design-docs/11-Debugger/2-NonTech-Arch.md` (§3)
+
+#### debug-tap-instrumentation [PROPOSED]
+**Description:** Add DebugTap interface to compiler/runtime. Tap points: bus combine, listener boundary, field materialization, adapter/lens invocation.
+**Epic:** None
+**Dependencies:** debug-snapshot-runtime
+**Labels:** architecture, debug, instrumentation
+**Spec:** `design-docs/11-Debugger/3-NonTech-LowLevel.md`
+
+#### probe-mode-ui [PROPOSED]
+**Description:** Probe toggle button + ProbeCard component. Hover any debuggable surface to see live value, source chain, and fix suggestions.
+**Epic:** None
+**Dependencies:** debug-tap-instrumentation
+**Labels:** ui, debug, ux
+**Spec:** `design-docs/11-Debugger/4-NonTech-UI-Spec.md` (§1-3)
+
+#### trace-view-panel [PROPOSED]
+**Description:** Expanded pipeline view: Sources → Combine → Transform → Destination. Reorderable lens stack, combine mode selector, live value ladder.
+**Epic:** None
+**Dependencies:** probe-mode-ui
+**Labels:** ui, debug, ux
+**Spec:** `design-docs/11-Debugger/4-NonTech-UI-Spec.md` (§4)
+
+#### diagnostics-rules-engine [PROPOSED]
+**Description:** Deterministic rules engine for diagnostics: NaN/Inf, silent bus, conflicts, flatline, jitter, clipping, performance. Hysteresis to prevent flicker.
+**Epic:** None
+**Dependencies:** debug-snapshot-runtime
+**Labels:** architecture, debug, diagnostics
+**Spec:** `design-docs/11-Debugger/5-NonTech-RulesEngine.md`
+
+#### fix-action-system [PROPOSED]
+**Description:** Canonical fix actions (EnablePublisher, AddLens, SetCombineMode, etc.) that map FixActionSpec to undoable transactions.
+**Epic:** None
+**Dependencies:** diagnostics-rules-engine
+**Labels:** architecture, debug, transactions
+**Spec:** `design-docs/11-Debugger/5-NonTech-RulesEngine.md` (§5-6)
+
+#### diagnostics-drawer [PROPOSED]
+**Description:** Diagnostics panel with Overview/Buses/Performance tabs. Shows actionable list of issues with Fix buttons. No logs or stack traces.
+**Epic:** None
+**Dependencies:** fix-action-system, probe-mode-ui
+**Labels:** ui, debug, ux
+**Spec:** `design-docs/11-Debugger/1-NonTech-Overview.md` (§C)
+
+#### main-ui-debug-affordances [PROPOSED]
+**Description:** Always-on debug hints: bus row meters/badges, port binding chips, block activity halos, Focus Mode for tracing connections.
+**Epic:** None
+**Dependencies:** debug-snapshot-runtime
+**Labels:** ui, debug, ux
+**Spec:** `design-docs/11-Debugger/6-NonTech-MainUI.md`
+
+#### mini-viz-primitives [PROPOSED]
+**Description:** Reusable visualization components: Meter, Sparkline, PhaseRing, Swatch, PulseStrip, XYDot. Type-specific value displays.
+**Epic:** None
+**Dependencies:** None
+**Labels:** ui, components, debug
+**Spec:** `design-docs/11-Debugger/4-NonTech-UI-Spec.md` (§7)
+
+---
+
+## Phase 6: Power-User Debug [QUEUED]
+
+**Goal:** Technical debugger for power users - exact evaluation order, deterministic causality, deep inspection
+
+### Topics
+
+#### trace-events-system [PROPOSED]
+**Description:** TraceEvents ring buffer with scoped recording. Events: BusEvalStart, PublisherEval, AdapterApplied, LensApplied, CombineStep, FieldMaterialize.
+**Epic:** None
+**Dependencies:** debug-tap-instrumentation
+**Labels:** architecture, debug, tracing
+**Spec:** `design-docs/11-Debugger/10-PowerUser-Overview.md` (§1.3)
+
+#### technical-debug-panel [PROPOSED]
+**Description:** Power-user panel with Graph/Buses/Bindings/Trace/Diff tabs. Full structural truth, deterministic ordering, type path visualization.
+**Epic:** None
+**Dependencies:** trace-events-system
+**Labels:** ui, debug, power-user
+**Spec:** `design-docs/11-Debugger/10-PowerUser-Overview.md` (§3)
+
+#### diff-tab-jank-detection [PROPOSED]
+**Description:** Diff tab showing what changed after edit, jank risk classification (SAFE/RISKY/BREAKING), suggested mitigations.
+**Epic:** None
+**Dependencies:** technical-debug-panel
+**Labels:** ui, debug, hot-swap
+**Spec:** `design-docs/11-Debugger/10-PowerUser-Overview.md` (§3.5)
+
+#### field-plan-explain [PROPOSED]
+**Description:** FieldExpr.explain() returns FieldPlan with cost estimate and dependencies. Enables "why is this field being rematerialized?" answers.
+**Epic:** None
+**Dependencies:** wp4-lazy-field-core
+**Labels:** architecture, debug, fields
+**Spec:** `design-docs/11-Debugger/10-PowerUser-Overview.md` (§4.3)
+
+---
+
 ## Format Reference
 
 ### Topic States

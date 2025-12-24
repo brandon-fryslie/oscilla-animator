@@ -8,9 +8,12 @@
         "--chromeArg=--disable-blink-features=AutomationControlled",
         "--chromeArg=--disable-infobars",
         "--chromeArg=--no-first-run"
-      ],
-      "env": {},
-      "type": "stdio"
+      ]
+    },
+    "yagwt": {
+      "command": "/usr/local/bin/yagwt-mcp",
+      "args": [
+      ]
     }
   }
 }
