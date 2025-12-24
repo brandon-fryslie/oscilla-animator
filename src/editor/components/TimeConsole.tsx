@@ -65,6 +65,12 @@ interface FiniteControlsProps {
   cuePoints: readonly CuePoint[];
 }
 
+interface CyclicControlsProps {
+  timeModel: TimeModel;
+  currentTime: number;
+  playState: PlayState;
+}
+
 interface InfiniteControlsProps {
   timeModel: TimeModel;
   currentTime: number;
@@ -161,15 +167,67 @@ const FiniteControls = memo(function FiniteControls({
 });
 
 // =============================================================================
-// CyclicControls Placeholder
+// CyclicControls Component
 // =============================================================================
 
-const CyclicControls = memo(function CyclicControls() {
+const CyclicControls = memo(function CyclicControls({
+  timeModel,
+  currentTime,
+  playState,
+}: CyclicControlsProps) {
+  // Guard: ensure we have a cyclic time model
+  if (timeModel.kind !== 'cyclic') {
+    return null;
+  }
+
+  const { periodMs, mode = 'loop' } = timeModel;
+  const isPaused = playState !== 'playing';
+
+  // Calculate phase (0..1)
+  const phase = currentTime >= 0 ? (currentTime % periodMs) / periodMs : 0;
+
+  // Calculate cycle index (number of completed cycles)
+  const cycleIndex = currentTime >= 0 ? Math.floor(currentTime / periodMs) : 0;
+
+  // For pingpong mode, adjust phase to show the actual direction
+  const displayPhase = mode === 'pingpong' && cycleIndex % 2 === 1
+    ? 1 - phase
+    : phase;
+
   return (
-    <div className="mode-placeholder">
-      <span className="mode-placeholder-icon">🔄</span>
-      <span className="mode-placeholder-text">CYCLE mode (coming soon)</span>
-      <span className="mode-placeholder-hint">Phase ring visualization</span>
+    <div className="cyclic-controls">
+      {/* Phase Ring Visualization */}
+      <div className="cyclic-ring-container">
+        <PhaseIndicator
+          timeModel={timeModel}
+          currentTime={currentTime}
+          playState={playState}
+          size="large"
+        />
+        {isPaused && <div className="cyclic-pause-overlay">⏸</div>}
+      </div>
+
+      {/* Readouts */}
+      <div className="cyclic-readouts">
+        <div className="cyclic-readout-row">
+          <span className="cyclic-readout-label">Phase A:</span>
+          <span className="cyclic-readout-value">{displayPhase.toFixed(2)}</span>
+        </div>
+        <div className="cyclic-readout-row">
+          <span className="cyclic-readout-label">Cycle #:</span>
+          <span className="cyclic-readout-value">{cycleIndex}</span>
+        </div>
+        <div className="cyclic-readout-row">
+          <span className="cyclic-readout-label">Period:</span>
+          <span className="cyclic-readout-value">{(periodMs / 1000).toFixed(2)}s</span>
+        </div>
+        <div className="cyclic-readout-row">
+          <span className="cyclic-readout-label">Mode:</span>
+          <span className={`cyclic-mode-badge mode-${mode}`}>
+            {mode === 'loop' ? '🔁 Loop' : '↔️ Pingpong'}
+          </span>
+        </div>
+      </div>
     </div>
   );
 });
@@ -424,7 +482,13 @@ export const TimeConsole = memo(function TimeConsole({
             cuePoints={cuePoints}
           />
         )}
-        {timeModel.kind === 'cyclic' && <CyclicControls />}
+        {timeModel.kind === 'cyclic' && (
+          <CyclicControls
+            timeModel={timeModel}
+            currentTime={currentTime}
+            playState={playState}
+          />
+        )}
         {timeModel.kind === 'infinite' && (
           <InfiniteControls
             timeModel={timeModel}

@@ -32,16 +32,17 @@ export function extractTimeRootAutoPublications(
       ];
 
     case 'FiniteTimeRoot':
+      // FiniteTimeRoot does NOT publish to phaseA - only CycleTimeRoot owns that bus
       return [
         { busName: 'progress', artifactKey: 'progress', sortKey: 0 },
-        { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'end', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
       ];
 
     case 'InfiniteTimeRoot':
+      // InfiniteTimeRoot does NOT publish to phaseA - only CycleTimeRoot owns that bus
+      // It has ambient phase but that's not the primary coordinating phase
       return [
-        { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
       ];
