@@ -218,6 +218,7 @@
 .modulation-table {
   border-collapse: collapse;
   table-layout: fixed;
+  width: 100%;
 }
 
 /* Corner cell - defines row header column width with table-layout: fixed */
@@ -227,7 +228,9 @@
   top: 0;
   z-index: 3;
   background: var(--bg-secondary, #242424);
-  width: 100px;
+  width: 20%;
+  min-width: 80px;
+  max-width: 150px;
 }
 
 /* Column headers */
@@ -243,15 +246,15 @@
   transition: background-color 0.15s;
 }
 
-/* Compact column header (default) - minimal width with abbreviated name */
+/* Compact column header (default) - auto-distributed with minimum */
 .mod-table-col-header.compact {
-  width: 40px;
+  min-width: 32px;
   padding: 6px 2px;
 }
 
-/* Expanded column header - full width with all info */
+/* Expanded column header - fixed width larger than compact columns */
 .mod-table-col-header.expanded {
-  width: 90px;
+  width: 100px;
   padding: 8px 6px;
 }
 
@@ -1358,15 +1361,16 @@
   }
 
   .mod-table-corner {
-    width: 80px;
+    width: 25%;
+    min-width: 60px;
   }
 
   .mod-table-col-header.compact {
-    width: 32px;
+    min-width: 24px;
   }
 
   .mod-table-col-header.expanded {
-    width: 70px;
+    min-width: 50px;
   }
 }
 

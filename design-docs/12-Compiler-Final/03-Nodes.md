@@ -1,4 +1,3 @@
-
 6) Nodes: the block/operator/state/render primitives
 
 6.1 Node table
@@ -60,6 +59,10 @@ export type InputSourceIR =
   | { kind: "bus"; busIndex: BusIndex }              // read bus value slot (resolved)
   | { kind: "const"; constId: string }               // typed constant
   | { kind: "defaultSource"; defaultId: DefaultSourceId }
-  | { kind: "external"; externalId: string };        // MIDI/OSC/etc, if present
+  | { kind: "external"; externalId: string }         // MIDI/OSC/etc, if present
+  | { kind: "rail"; railId: string };
+
+Rails are read-only InputSources for nodes. They reference the frame-latched RailStore, not the dependency graph.
+No rail may appear as a graph edge in scheduling.
 
 Hard rule: by runtime execution time, every input has a fully resolved InputSourceIR. No “look it up by name”.

@@ -143,6 +143,30 @@ Semantics:
 
 ⸻
 
+4.1) Global Rails (authoritative modulation plane)
+
+Global Rails are fixed-name, frame-latched modulation channels that exist outside the user dependency graph.
+
+They are not nodes, buses, or blocks. They are runtime registers resolved by schedule.
+
+Each rail has:
+  - a stable RailId (e.g. phaseA, phaseB, pulseA, pulseB, energy, palette)
+  - an internal generator (from the Time Console)
+  - an optional bus binding (sampled from bus fabric)
+  - a drive policy: 'internal' | 'patched' | 'mixed'
+  - a combineMode: 'last' | 'sum' | 'average' | 'max' | 'min'
+
+Rails are resolved once per frame in a dedicated schedule phase.
+
+Semantics:
+  - Reads of rails inside node evaluation always see the previous frame's railFinal value (frame-latched).
+  - Writes from Time Console and from user graph publishers contribute to railInternal and railUser respectively.
+  - railFinal[t] is resolved after user graph evaluation.
+
+This guarantees no algebraic cycles even when buses derive from rails and rails derive from buses.
+
+⸻
+
 5) Type table
 
 export interface TypeTable {
@@ -282,6 +306,25 @@ Stable ordering rules
 	•	skip step when deps unchanged this frame
 	•	persist caches across hot-swap for unchanged step ids
 
+21.4 Rail resolution phase
+
+Insert an explicit RailResolve phase between busEval and render:
+
+Schedule order:
+  1. timeDerive
+  2. timeConsole (internal rail generators)
+  3. preBus nodeEval
+  4. busEval
+  5. postBus nodeEval (if any)
+  6. railResolve (per-rail deterministic resolution)
+  7. materialize + render
+  8. renderAssemble
+
+railResolve step:
+  for each RailId in stable order:
+    railFinal = resolve(railInternal, railUser, drivePolicy, combineMode)
+    store railFinal in RailStore and (optionally) mirror to bus fabric
+
 ⸻
 
 22) Hot-swap / diff rules (non-jank requirement)
@@ -310,3 +353,4 @@ To ensure you’re not designing away from Rust:
 	•	Transform chains are table-driven
 	•	Scheduling is explicit
 
+</file>
