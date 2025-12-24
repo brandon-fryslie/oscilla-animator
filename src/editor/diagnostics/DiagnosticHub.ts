@@ -94,32 +94,36 @@ export class DiagnosticHub {
   }
 
   /**
-   * Clean up event subscriptions.
+   * Clean up event subscriptions and clear all diagnostic state.
    */
   dispose(): void {
     for (const unsubscribe of this.unsubscribers) {
       unsubscribe();
     }
     this.unsubscribers = [];
+    this.authoringSnapshot = [];
+    this.compileSnapshots.clear();
+    this.runtimeDiagnostics.clear();
+    this.mutedIds.clear();
   }
 
   // ===========================================================================
   // Event Handlers
   // ===========================================================================
 
-  private handleGraphCommitted(event: { patchRevision: number }): void {
+  private handleGraphCommitted(event: { readonly patchRevision: number }): void {
     // Run authoring validators on the current graph state
     this.authoringSnapshot = this.runAuthoringValidators(event.patchRevision);
   }
 
-  private handleCompileStarted(event: { patchRevision: number }): void {
+  private handleCompileStarted(event: { readonly patchRevision: number }): void {
     // Mark this revision as pending compilation
     this.pendingCompileRevision = event.patchRevision;
   }
 
   private handleCompileFinished(event: {
-    patchRevision: number;
-    diagnostics: Diagnostic[];
+    readonly patchRevision: number;
+    readonly diagnostics: Diagnostic[];
   }): void {
     // Replace compile snapshot for this revision completely
     this.compileSnapshots.set(event.patchRevision, event.diagnostics);
@@ -130,7 +134,7 @@ export class DiagnosticHub {
     }
   }
 
-  private handleProgramSwapped(event: { patchRevision: number }): void {
+  private handleProgramSwapped(event: { readonly patchRevision: number }): void {
     // Update active revision pointer
     this.activeRevision = event.patchRevision;
   }
@@ -153,7 +157,7 @@ export class DiagnosticHub {
     if (evalStats.nanCount > 0) {
       const diagId = `P_NAN_DETECTED:runtime:${patchRevision}`;
       const existing = this.runtimeDiagnostics.get(diagId);
-      if (existing) {
+      if (existing !== undefined) {
         existing.lastSeenAt = now;
         existing.diagnostic.metadata.lastSeenAt = now;
         existing.diagnostic.metadata.occurrenceCount++;
@@ -178,7 +182,7 @@ export class DiagnosticHub {
     if (evalStats.infCount > 0) {
       const diagId = `P_INFINITY_DETECTED:runtime:${patchRevision}`;
       const existing = this.runtimeDiagnostics.get(diagId);
-      if (existing) {
+      if (existing !== undefined) {
         existing.lastSeenAt = now;
         existing.diagnostic.metadata.lastSeenAt = now;
         existing.diagnostic.metadata.occurrenceCount++;
@@ -203,7 +207,7 @@ export class DiagnosticHub {
     if (frameBudget.avgFrameMs > 16.67) {
       const diagId = `P_FRAME_BUDGET_EXCEEDED:runtime:${patchRevision}`;
       const existing = this.runtimeDiagnostics.get(diagId);
-      if (existing) {
+      if (existing !== undefined) {
         existing.lastSeenAt = now;
         existing.diagnostic.metadata.lastSeenAt = now;
         existing.diagnostic.metadata.occurrenceCount++;
@@ -305,7 +309,7 @@ export class DiagnosticHub {
    */
   private runAuthoringValidators(patchRevision: number): Diagnostic[] {
     // Check if root is available (may not be in tests with minimal mocks)
-    if (!this.patchStore.root) {
+    if (this.patchStore.root === undefined || this.patchStore.root === null) {
       return [
         createDiagnostic({
           code: 'E_VALIDATION_FAILED',
@@ -326,7 +330,11 @@ export class DiagnosticHub {
 
       // Return only errors for authoring diagnostics (fast feedback for blocking issues)
       // Warnings like empty buses are better suited for compile diagnostics
-      return result.errors;
+      // Transform domain to 'authoring' since Validator produces 'compile' by default
+      return result.errors.map((diag) => ({
+        ...diag,
+        domain: 'authoring' as const,
+      }));
     } catch (error) {
       // If validation fails catastrophically, return a single error diagnostic
       console.error('[DiagnosticHub] Validation failed catastrophically:', error);
@@ -364,7 +372,7 @@ export class DiagnosticHub {
     if (filters?.patchRevision !== undefined) {
       // Only get diagnostics for the specified revision
       const compileDiags = this.compileSnapshots.get(filters.patchRevision);
-      if (compileDiags) {
+      if (compileDiags !== undefined) {
         allDiagnostics.push(...compileDiags);
       }
     } else {
@@ -402,7 +410,7 @@ export class DiagnosticHub {
 
     // Add compile diagnostics for this revision
     const compileDiags = this.compileSnapshots.get(patchRevision);
-    if (compileDiags) {
+    if (compileDiags !== undefined) {
       diagnostics.push(...compileDiags);
     }
 
@@ -414,7 +422,7 @@ export class DiagnosticHub {
     }
 
     // Filter out muted diagnostics unless includeMuted is true
-    if (!includeMuted) {
+    if (includeMuted !== true) {
       return diagnostics.filter((d) => !this.mutedIds.has(d.id));
     }
 
@@ -449,7 +457,7 @@ export class DiagnosticHub {
    */
   getCompileSnapshot(patchRevision: number): Diagnostic[] | undefined {
     const snapshot = this.compileSnapshots.get(patchRevision);
-    return snapshot ? [...snapshot] : undefined;
+    return snapshot !== undefined ? [...snapshot] : undefined;
   }
 
   /**
@@ -487,23 +495,23 @@ export class DiagnosticHub {
    * Apply filters to a diagnostic array.
    */
   private applyFilters(
-    diagnostics: Diagnostic[],
+    diagnostics: readonly Diagnostic[],
     filters?: DiagnosticFilter
   ): Diagnostic[] {
-    if (!filters) {
+    if (filters === undefined) {
       // Default: exclude muted diagnostics
       return diagnostics.filter((diag) => !this.mutedIds.has(diag.id));
     }
 
     return diagnostics.filter((diag) => {
       // Filter muted unless includeMuted is true
-      if (!filters.includeMuted && this.mutedIds.has(diag.id)) {
+      if (filters.includeMuted !== true && this.mutedIds.has(diag.id)) {
         return false;
       }
-      if (filters.domain && diag.domain !== filters.domain) {
+      if (filters.domain !== undefined && diag.domain !== filters.domain) {
         return false;
       }
-      if (filters.severity && diag.severity !== filters.severity) {
+      if (filters.severity !== undefined && diag.severity !== filters.severity) {
         return false;
       }
       if (
@@ -532,7 +540,7 @@ export class DiagnosticHub {
    *
    * @param now - Current timestamp (default: Date.now())
    */
-  expireRuntimeDiagnostics(now = Date.now()): void {
+  expireRuntimeDiagnostics(now: number = Date.now()): void {
     for (const [id, entry] of this.runtimeDiagnostics) {
       if (now - entry.lastSeenAt > DiagnosticHub.RUNTIME_EXPIRY_MS) {
         this.runtimeDiagnostics.delete(id);

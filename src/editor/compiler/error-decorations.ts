@@ -65,14 +65,14 @@ export function buildDecorations(errors: readonly CompileError[]): DecorationSet
   const wires: WireDecoration[] = [];
   const global: DecorationSet['global'] = [];
 
-  const addBlock = (blockId: string, msg: string, severity: Severity = 'error') => {
+  const addBlock = (blockId: string, msg: string, severity: Severity = 'error'): void => {
     const e = (blocks[blockId] ??= { blockId, severity, messages: [] });
     e.messages.push(msg);
     // Escalate severity if needed
     if (severity === 'error') e.severity = 'error';
   };
 
-  const addPort = (blockId: string, port: string, msg: string, severity: Severity = 'error') => {
+  const addPort = (blockId: string, port: string, msg: string, severity: Severity = 'error'): void => {
     const k = portKey(blockId, port);
     const e = (ports[k] ??= { blockId, port, severity, messages: [] });
     e.messages.push(msg);
@@ -83,7 +83,7 @@ export function buildDecorations(errors: readonly CompileError[]): DecorationSet
     const w = err.where;
 
     // Wire-attached errors (type mismatch on connection)
-    if (w?.connection) {
+    if (w != null && w.connection != null) {
       wires.push({
         from: w.connection.from,
         to: w.connection.to,
@@ -97,14 +97,14 @@ export function buildDecorations(errors: readonly CompileError[]): DecorationSet
     }
 
     // Port-attached errors (unwired required input)
-    if (w?.blockId && w?.port) {
+    if (w != null && w.blockId != null && w.port != null) {
       addPort(w.blockId, w.port, err.message, 'error');
       addBlock(w.blockId, err.message, 'error');
       continue;
     }
 
     // Block-attached errors (missing compiler, unknown block type)
-    if (w?.blockId) {
+    if (w != null && w.blockId != null && w.blockId !== '') {
       addBlock(w.blockId, err.message, 'error');
       continue;
     }

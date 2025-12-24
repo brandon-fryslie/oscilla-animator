@@ -419,6 +419,14 @@ export class PatchStore {
         to: { blockId: toId, slotId: conn.toSlot, direction: 'input' },
       };
       this.connections.push(connection);
+
+      // Emit WireAdded event for this connection
+      this.root.events.emit({
+        type: 'WireAdded',
+        wireId: connection.id,
+        from: connection.from,
+        to: connection.to,
+      });
     }
 
     // Create bus publishers if defined

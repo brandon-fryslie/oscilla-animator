@@ -1,7 +1,6 @@
-import React from 'react';
 import { Editor } from './editor/Editor';
 
-function App(): JSX.Element {
+function App(): React.JSX.Element {
   return <Editor />;
 }
 

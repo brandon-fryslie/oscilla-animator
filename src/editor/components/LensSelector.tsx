@@ -36,7 +36,7 @@ const LENS_TYPES: { value: string; label: string; description: string }[] = [
 /**
  * LensSelector - main component for selecting and configuring lenses.
  */
-export function LensSelector({ value, onChange, compact = false }: LensSelectorProps) {
+export function LensSelector({ value, onChange, compact = false }: LensSelectorProps): React.ReactElement {
   const [mode, setMode] = useState<Mode>(value ? 'custom' : 'preset');
 
   // Determine current preset ID if value matches a preset
@@ -72,7 +72,8 @@ export function LensSelector({ value, onChange, compact = false }: LensSelectorP
       slew: { riseMs: 120, fallMs: 120 },
     };
 
-    onChange({ type, params: defaultParams[type] || {} });
+    const params = defaultParams[type];
+    onChange({ type, params: params !== undefined ? params : {} });
   };
 
   const handleParamChange = (key: string, paramValue: unknown) => {
@@ -412,7 +413,7 @@ function LensParamsEditor({
 /**
  * LensBadge - small display of current lens for compact views.
  */
-export function LensBadge({ lens }: { lens?: LensDefinition }) {
+export function LensBadge({ lens }: { lens?: LensDefinition }): React.ReactElement | null {
   if (!lens) return null;
 
   const preset = LENS_PRESETS.find(

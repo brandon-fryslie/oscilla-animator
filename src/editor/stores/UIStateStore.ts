@@ -50,7 +50,7 @@ export class UIStateStore {
 
   root: RootStore;
 
-  constructor(root: Readonly<Readonly<RootStore>>) {
+  constructor(root: RootStore) {
     this.root = root;
     makeObservable(this, {
       uiState: observable,

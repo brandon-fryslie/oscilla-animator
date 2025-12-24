@@ -10,7 +10,6 @@ import type {
   CompiledProgram,
   CompilerConnection,
   CompilerPatch,
-  CompileErrorCode,
   CompileError,
   Seed,
   PortRef,
@@ -58,14 +57,25 @@ function compileErrorToDiagnostic(
 
   if (error.code === 'CycleDetected') {
     const cycleMatch = error.message.match(/Blocks in cycle: ([\w, ]+)/);
-    const blockIds = cycleMatch ? cycleMatch[1].split(', ').filter(Boolean) : [];
+    const blockIds = cycleMatch !== null ? cycleMatch[1].split(', ').filter(Boolean) : [];
     primaryTarget = { kind: 'graphSpan', blockIds, spanKind: 'cycle' };
   } else if (error.code === 'MissingTimeRoot') {
     // No specific target for missing TimeRoot - use a synthetic graph span
     primaryTarget = { kind: 'graphSpan', blockIds: [], spanKind: 'subgraph' };
-  } else if (error.code === 'MultipleTimeRoots' && error.where?.blockId) {
+  } else if (
+    error.code === 'MultipleTimeRoots' &&
+    error.where !== null &&
+    error.where !== undefined &&
+    error.where.blockId !== null &&
+    error.where.blockId !== undefined
+  ) {
     primaryTarget = { kind: 'timeRoot', blockId: error.where.blockId };
-  } else if (error.where?.connection) {
+  } else if (
+    error.where !== null &&
+    error.where !== undefined &&
+    error.where.connection !== null &&
+    error.where.connection !== undefined
+  ) {
     // Connection error - target both ends
     const conn = error.where.connection;
     primaryTarget = {
@@ -75,11 +85,30 @@ function compileErrorToDiagnostic(
     affectedTargets = [
       { kind: 'port', portRef: { blockId: conn.to.blockId, slotId: conn.to.port, direction: 'input' } },
     ];
-  } else if (error.where?.blockId && error.where?.port) {
+  } else if (
+    error.where !== null &&
+    error.where !== undefined &&
+    error.where.blockId !== null &&
+    error.where.blockId !== undefined &&
+    error.where.port !== null &&
+    error.where.port !== undefined &&
+    error.where.port !== ''
+  ) {
     primaryTarget = { kind: 'port', portRef: { blockId: error.where.blockId, slotId: error.where.port, direction: 'input' } };
-  } else if (error.where?.blockId) {
+  } else if (
+    error.where !== null &&
+    error.where !== undefined &&
+    error.where.blockId !== null &&
+    error.where.blockId !== undefined
+  ) {
     primaryTarget = { kind: 'block', blockId: error.where.blockId };
-  } else if (error.where?.busId) {
+  } else if (
+    error.where !== null &&
+    error.where !== undefined &&
+    error.where.busId !== null &&
+    error.where.busId !== undefined &&
+    error.where.busId !== ''
+  ) {
     primaryTarget = { kind: 'bus', busId: error.where.busId };
   } else {
     // No location - use synthetic graph span
@@ -90,19 +119,25 @@ function compileErrorToDiagnostic(
   let payload: Diagnostic['payload'] | undefined;
   let message = error.message;
 
-  if (error.code === 'PortTypeMismatch' && error.message) {
+  if (error.code === 'PortTypeMismatch' && error.message !== null && error.message !== undefined && error.message !== '') {
     // New, more robust regex to capture block/port info
     const match = error.message.match(
       /([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s\(([^)]+)\)\s→\s([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s\(([^)]+)\)/
     );
-    if (match) {
+    if (match !== null) {
       payload = {
         kind: 'typeMismatch',
-        expected: match[6] || 'unknown',
-        actual: match[3] || 'unknown',
+        expected: (match[6] ?? '') !== '' ? match[6] : 'unknown',
+        actual: (match[3] ?? '') !== '' ? match[3] : 'unknown',
       };
       // Keep the detailed message
-      message = `Type mismatch from ${match[1]}.${match[2]} (${match[3]}) to ${match[4]}.${match[5]} (${match[6]})`;
+      const fromBlock = match[1] ?? 'unknown';
+      const fromPort = match[2] ?? 'unknown';
+      const fromType = match[3] ?? 'unknown';
+      const toBlock = match[4] ?? 'unknown';
+      const toPort = match[5] ?? 'unknown';
+      const toType = match[6] ?? 'unknown';
+      message = `Type mismatch from ${fromBlock}.${fromPort} (${fromType}) to ${toBlock}.${toPort} (${toType})`;
     }
   }
 
@@ -186,7 +221,7 @@ function createRewriteMapBuilder(): {
           const key = `${ref.blockId}.${ref.port}`;
           const mapped = frozenMappings.get(key);
 
-          if (!mapped) {
+          if (mapped == null) {
             // Composite exists but port not mapped - this is an error
             return null;
           }
@@ -266,7 +301,7 @@ export function editorToPatch(store: RootStore): CompilerPatch {
 // =============================================================================
 
 function resolveParamValue(value: unknown, parentParams: Record<string, unknown>): unknown {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
+  if (value != null && typeof value === 'object' && !Array.isArray(value)) {
     const marker = (value as { __fromParam?: string }).__fromParam;
     if (typeof marker === 'string') {
       return parentParams[marker];
@@ -306,17 +341,17 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
   while (queue.length > 0) {
     const [blockId, block] = queue.shift()!;
     const definition = getBlockDefinition(block.type);
-    let graph = definition?.primitiveGraph;
-    let compositeDef = definition?.compositeDefinition;
+    let graph = definition?.primitiveGraph ?? null;
+    let compositeDef = definition?.compositeDefinition ?? null;
 
     // Handle composite blocks (composite: prefix)
-    if (block.type.startsWith('composite:') && definition?.compositeDefinition) {
+    if (block.type.startsWith('composite:') && definition?.compositeDefinition != null) {
       // Convert composite definition to primitive graph - use the stored primitiveGraph
-      graph = definition.primitiveGraph;
-      compositeDef = definition.compositeDefinition;
+      graph = definition.primitiveGraph ?? null;
+      compositeDef = definition.compositeDefinition ?? null;
     }
 
-    if (graph) {
+    if (graph != null) {
       // Mark this block as a composite that was expanded
       rewriteBuilder.markComposite(blockId);
 
@@ -342,7 +377,7 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
       for (const [boundaryPort, internalRef] of Object.entries(graph.inputMap)) {
         const [node, port] = internalRef.split('.');
         const internalBlockId = idMap.get(node);
-        if (internalBlockId) {
+        if (internalBlockId != null) {
           rewriteBuilder.addMapping(blockId, boundaryPort, {
             blockId: internalBlockId,
             port,
@@ -354,7 +389,7 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
       for (const [boundaryPort, internalRef] of Object.entries(graph.outputMap)) {
         const [node, port] = internalRef.split('.');
         const internalBlockId = idMap.get(node);
-        if (internalBlockId) {
+        if (internalBlockId != null) {
           rewriteBuilder.addMapping(blockId, boundaryPort, {
             blockId: internalBlockId,
             port,
@@ -363,14 +398,14 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
       }
 
       // Handle bus subscriptions (composite inputs auto-subscribed to buses)
-      if (compositeDef?.graph.busSubscriptions) {
+      if (compositeDef?.graph.busSubscriptions != null) {
         for (const [inputPort, busNameValue] of Object.entries(compositeDef.graph.busSubscriptions)) {
-          const busName = busNameValue as string;
+          const busName = busNameValue;
           const internalRef = graph.inputMap[inputPort];
-          if (internalRef) {
+          if (internalRef != null && internalRef !== '') {
             const [node, port] = internalRef.split('.');
             const internalBlockId = idMap.get(node);
-            if (internalBlockId) {
+            if (internalBlockId != null) {
               const listener: Listener = {
                 id: generateBusBindingId(blockId, 'sub', inputPort),
                 busId: busName,
@@ -388,14 +423,14 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
       }
 
       // Handle bus publications (composite outputs auto-published to buses)
-      if (compositeDef?.graph.busPublications) {
+      if (compositeDef?.graph.busPublications != null) {
         for (const [outputPort, busNameValue] of Object.entries(compositeDef.graph.busPublications)) {
-          const busName = busNameValue as string;
+          const busName = busNameValue;
           const internalRef = graph.outputMap[outputPort];
-          if (internalRef) {
+          if (internalRef != null && internalRef !== '') {
             const [node, port] = internalRef.split('.');
             const internalBlockId = idMap.get(node);
-            if (internalBlockId) {
+            if (internalBlockId != null) {
               const publisher: Publisher = {
                 id: generateBusBindingId(blockId, 'pub', outputPort),
                 busId: busName,
@@ -419,7 +454,7 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
         const [toNode, toPort] = edge.to.split('.');
         const fromId = idMap.get(fromNode);
         const toId = idMap.get(toNode);
-        if (fromId && toId) {
+        if (fromId != null && toId != null) {
           newConnections.push({
             from: { blockId: fromId, port: fromPort },
             to: { blockId: toId, port: toPort },
@@ -444,10 +479,10 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
 
       for (const conn of [...incoming, ...incomingFromNew]) {
         const internalRef = graph.inputMap[conn.to.port];
-        if (!internalRef) continue;
+        if (internalRef == null || internalRef === '') continue;
         const [node, port] = internalRef.split('.');
         const toId = idMap.get(node);
-        if (toId) {
+        if (toId != null) {
           newConnections.push({
             from: conn.from,
             to: { blockId: toId, port },
@@ -457,10 +492,10 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
 
       for (const conn of [...outgoing, ...outgoingFromNew]) {
         const internalRef = graph.outputMap[conn.from.port];
-        if (!internalRef) continue;
+        if (internalRef == null || internalRef === '') continue;
         const [node, port] = internalRef.split('.');
         const fromId = idMap.get(node);
-        if (fromId) {
+        if (fromId != null) {
           newConnections.push({
             from: { blockId: fromId, port },
             to: conn.to,
@@ -656,7 +691,7 @@ export function createCompilerService(store: RootStore): CompilerService {
           lastResult = {
             ok: false,
             errors: rewriteErrors.map((e) => ({
-              code: e.code as CompileErrorCode,
+              code: e.code,
               message: e.message,
               where: e.where,
             })),
@@ -755,8 +790,8 @@ export function createCompilerService(store: RootStore): CompilerService {
           } else {
             // Log each error
             for (const err of result.errors) {
-                          const location = err.where?.blockId
-                            ? ` [${err.where.blockId}${err.where.port ? '.' + err.where.port : ''}]`
+                          const location = err.where?.blockId != null && err.where.blockId !== ''
+                            ? ` [${err.where.blockId}${err.where.port != null && err.where.port !== '' ? '.' + err.where.port : ''}]`
                             : '';
                                       store.logStore.error('compiler', `${err.code}: ${err.message}${location}`);
                                     }
@@ -811,7 +846,7 @@ export function createCompilerService(store: RootStore): CompilerService {
     },
 
     getProgram(): CompiledProgram | null {
-      if (!lastResult?.program || !lastResult?.timeModel) {
+      if (lastResult?.program == null || lastResult?.timeModel == null) {
         return null;
       }
       return {
@@ -831,7 +866,7 @@ export function createCompilerService(store: RootStore): CompilerService {
     getViewport(): Viewport {
       // Find Canvas block in the store and extract its viewport params
       const canvasBlock = store.patchStore.blocks.find((b) => b.type === 'canvas');
-      if (canvasBlock) {
+      if (canvasBlock != null) {
         return {
           width: (canvasBlock.params.width as number) ?? 800,
           height: (canvasBlock.params.height as number) ?? 600,
@@ -864,7 +899,7 @@ function buildBusUsageSummary(patch: CompilerPatch): Record<string, { publishers
 
   // Count publishers per bus
   for (const pub of patch.publishers) {
-    if (!summary[pub.busId]) {
+    if (summary[pub.busId] === undefined) {
       summary[pub.busId] = { publishers: 0, listeners: 0 };
     }
     summary[pub.busId].publishers++;
@@ -872,7 +907,7 @@ function buildBusUsageSummary(patch: CompilerPatch): Record<string, { publishers
 
   // Count listeners per bus
   for (const listener of patch.listeners) {
-    if (!summary[listener.busId]) {
+    if (summary[listener.busId] === undefined) {
       summary[listener.busId] = { publishers: 0, listeners: 0 };
     }
     summary[listener.busId].listeners++;
@@ -919,7 +954,7 @@ export function setupAutoCompile(
     // React to changes
     () => {
       // Clear pending compile
-      if (timeoutId) {
+      if (timeoutId !== null) {
         clearTimeout(timeoutId);
       }
 
@@ -938,7 +973,7 @@ export function setupAutoCompile(
 
   // Return dispose function that also clears pending timeout
   return () => {
-    if (timeoutId) {
+    if (timeoutId !== null) {
       clearTimeout(timeoutId);
     }
     dispose();

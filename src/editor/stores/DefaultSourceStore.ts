@@ -23,7 +23,7 @@ export class DefaultSourceStore {
     spec: { type: TypeDesc; value: unknown; uiHint?: UIControlHint; rangeHint?: DefaultSourceState['rangeHint'] }
   ): DefaultSourceState {
     const existing = this.sources.get(id);
-    if (existing) return existing;
+    if (existing !== undefined) return existing;
 
     const created: DefaultSourceState = {
       id,
@@ -38,7 +38,7 @@ export class DefaultSourceStore {
 
   setDefaultValue(id: string, value: unknown): void {
     const existing = this.sources.get(id);
-    if (!existing) return;
+    if (existing === undefined) return;
     existing.value = value;
   }
 

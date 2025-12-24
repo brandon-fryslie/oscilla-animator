@@ -8,7 +8,7 @@ import type { Artifact } from '../types';
  * Type-safe artifact extraction with error messages.
  */
 export function expect<A extends Artifact['kind']>(
-  a: Artifact,
+  a: Readonly<Artifact>,
   kind: A,
   who: string
 ): Extract<Artifact, { kind: A }> {
@@ -19,7 +19,7 @@ export function expect<A extends Artifact['kind']>(
 /**
  * Extract scalar number from artifact with error context.
  */
-export function scalarNum(a: Artifact, who: string): number {
+export function scalarNum(a: Readonly<Artifact>, who: string): number {
   return expect(a, 'Scalar:number', who).value;
 }
 

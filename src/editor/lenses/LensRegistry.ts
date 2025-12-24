@@ -97,6 +97,12 @@ function mapNumberArtifact(
         kind: 'Signal:number',
         value: (t, ctx) => map(artifact.value(t, ctx), t, ctx),
       };
+    case 'Signal:phase':
+      // Phase is numerically 0-1, can be treated as number for mapping
+      return {
+        kind: 'Signal:number',
+        value: (t, ctx) => map(artifact.value(t, ctx), t, ctx),
+      };
     case 'Field:number':
       return {
         kind: 'Field:number',

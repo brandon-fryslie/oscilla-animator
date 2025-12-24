@@ -11,6 +11,11 @@ import type { CompositeDefinition, CompositeGraph } from './composites';
 import type { BlockCompiler } from './compiler/types';
 import { listCompositeDefinitions } from './composites';
 
+// Type declaration for dynamic require to avoid circular dependency
+declare function require(module: string): {
+  getBlockDefinitions: () => readonly BlockDefinition[];
+};
+
 // Import domain composites to trigger registration
 import './domain-composites';
 
@@ -47,7 +52,9 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
   return {
     type: `composite:${def.id}`,
     label: def.label,
-    description: def.description || `Composite: ${def.label}`,
+    description: def.description !== undefined && def.description !== ''
+      ? def.description
+      : `Composite: ${def.label}`,
     color: def.color ?? '#666666',
     subcategory: def.subcategory,
     laneKind: def.laneKind,
@@ -158,7 +165,7 @@ export function getCompositeBlockDefinitions(): readonly BlockDefinition[] {
  */
 export function getBlockDefinitionsWithComposites(): readonly BlockDefinition[] {
   // Import getBlockDefinitions to avoid circular dependency
-  const { getBlockDefinitions } = eval('require')('./blocks');
+  const getBlockDefinitions = require('./blocks').getBlockDefinitions as () => readonly BlockDefinition[];
 
   const baseBlocks = getBlockDefinitions();
   const compositeBlocks = getCompositeBlockDefinitions();
@@ -174,7 +181,10 @@ export function getBlockDefinitionsWithComposites(): readonly BlockDefinition[] 
  * Set up test environment with composite integration.
  * Initializes the composite system and returns test utilities.
  */
-export function setupTestCompositeEnvironment() {
+export function setupTestCompositeEnvironment(): {
+  composites: readonly CompositeDefinition[];
+  compositeBlocks: readonly BlockDefinition[];
+} {
   // Register all composites for the test
   registerAllComposites();
 

@@ -14,7 +14,7 @@ import { LogStore } from '../logStore';
 import { EventDispatcher } from '../events';
 import { DiagnosticHub } from '../diagnostics/DiagnosticHub';
 import { ActionExecutor } from '../diagnostics/ActionExecutor';
-import type { Block, Bus, Lane, Patch, Slot } from '../types';
+import type { Block, Bus, Composite, Lane, Patch, Slot } from '../types';
 
 export class RootStore {
   // Event dispatcher (created first so stores can set up listeners)
@@ -223,7 +223,7 @@ export class RootStore {
     this.busStore.createDefaultBuses();
 
     // Load legacy composites if present
-    type PatchWithComposites = Patch & { composites?: unknown[] };
+    type PatchWithComposites = Patch & { composites?: Composite[] };
     const patchWithComposites = patch as PatchWithComposites;
     if ('composites' in patchWithComposites && Array.isArray(patchWithComposites.composites)) {
       this.compositeStore.composites = patchWithComposites.composites;
@@ -275,7 +275,8 @@ export class RootStore {
   }
 
   loadDemoAnimation(): void {
-    // Demo animation temporarily disabled during refactor
-    console.warn('Demo animation disabled');
+    // Load demo animation by expanding the breathingDots macro
+    this.clearPatch();
+    this.patchStore.addBlock('macro:breathingDots', {});
   }
 }

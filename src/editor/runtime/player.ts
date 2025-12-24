@@ -44,14 +44,14 @@ export interface Scene {
 export type PlayState = 'playing' | 'paused';
 
 export interface PlayerOptions {
-  compileCtx: CompileCtx;
-  runtimeCtx: RuntimeCtx;
-  onFrame: (tree: RenderTree, tMs: number) => void;
-  onStateChange?: (state: PlayState) => void;
-  onTimeChange?: (tMs: number) => void;
-  onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
+  readonly compileCtx: CompileCtx;
+  readonly runtimeCtx: RuntimeCtx;
+  readonly onFrame: (tree: RenderTree, tMs: number) => void;
+  readonly onStateChange?: (state: PlayState) => void;
+  readonly onTimeChange?: (tMs: number) => void;
+  readonly onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
   /** Optional event dispatcher for runtime health snapshots */
-  events?: EventDispatcher;
+  readonly events?: EventDispatcher;
 }
 
 // =============================================================================
@@ -464,12 +464,12 @@ export class Player {
 export function createPlayer(
   onFrame: (tree: RenderTree, tMs: number) => void,
   opts?: {
-    width?: number;
-    height?: number;
-    onStateChange?: (state: PlayState) => void;
-    onTimeChange?: (tMs: number) => void;
-    onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
-    events?: EventDispatcher;
+    readonly width?: number;
+    readonly height?: number;
+    readonly onStateChange?: (state: PlayState) => void;
+    readonly onTimeChange?: (tMs: number) => void;
+    readonly onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
+    readonly events?: EventDispatcher;
   }
 ): Player {
   const compileCtx: CompileCtx = {

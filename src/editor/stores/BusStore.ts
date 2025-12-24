@@ -231,8 +231,8 @@ export class BusStore {
       id: this.root.generateId('pub'),
       busId,
       from: { blockId, slotId, direction: 'output' },
-      adapterChain,
-      lensStack,
+      adapterChain: adapterChain ? [...adapterChain] : undefined,
+      lensStack: lensStack ? [...lensStack] : undefined,
       enabled: true,
       sortKey: maxSortKey + 10,
     };
@@ -335,7 +335,7 @@ export class BusStore {
       id: listenerId,
       busId,
       to: { blockId, slotId, direction: 'input' },
-      adapterChain,
+      adapterChain: adapterChain ? [...adapterChain] : undefined,
       enabled: true,
       lensStack,
     };

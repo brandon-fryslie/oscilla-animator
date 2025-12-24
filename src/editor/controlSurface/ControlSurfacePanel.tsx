@@ -275,8 +275,7 @@ const ControlRenderer = observer(({ control, store }: ControlRendererProps) => {
 
   // Fallback for unknown control type - use exhaustive check pattern
   // This should never happen if all control types are properly handled
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _exhaustiveCheck: never = control;
+  ((_exhaustiveCheck: never) => {})(control);
   return (
     <div className="control-unknown">
       Unknown control type
