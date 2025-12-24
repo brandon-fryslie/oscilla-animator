@@ -1,0 +1,7 @@
+Agent: status-planner | 2025-12-23-052900
+Topic: Fix ALL failing tests
+Files: PLAN-2025-12-23-comprehensive.md, DOD-2025-12-23-comprehensive.md
+Items: 41 failures across 10 phases (P1: TimeRoot outputs, P2: Auto-pubs, P3: Bus count, P4: Macro count, P5-10: Investigation required)
+Critical Path: P1→P2→P8 (TimeRoot changes affect bus compilation)
+Estimate: 2.5 hours (trivial fixes: 30min, investigations: 2hrs)
+→ Ready for /do:it
