@@ -1,8 +1,4 @@
-## **4) How this impacts** 
-
 ## **Signals**
-
-  
 
 This section goes deep on **Signals as the primary carrier of phase, looping, rhythm, and “instrument-ness.”**
 
@@ -12,39 +8,22 @@ If Fields are the texture of the image, Signals are the _music_.
 
 # **A. Signals become the dominant temporal abstraction**
 
-  
-
 In a phase-driven, infinite system:
 
-- **Signals** are how time is _felt_
-    
+- **Signals** are how time is _felt_    
 - **Fields** are how time is _expressed per element_
-    
-
-  
 
 This is a deliberate inversion from typical node systems where everything becomes per-element too early.
 
-  
-
 Signals now carry:
 
-- phase
-    
+- phase    
 - rhythm
-    
 - energy
-    
 - regime
-    
 - palette intent
-    
 - global tension
-    
 - events / pulses
-    
-
-  
 
 Most looping behavior lives entirely in the Signal world.
 
@@ -52,48 +31,31 @@ Most looping behavior lives entirely in the Signal world.
 
 # **B. Signals are evaluated once per frame, per bus**
 
-  
-
 Architecturally:
 
-- Each Signal bus compiles to **one evaluator**
-    
+- Each Signal bus compiles to **one evaluator**    
 - That evaluator is called **once per frame**
-    
 - All consumers read the same value
-    
-
-  
 
 This has three major consequences:
 
 1. **Performance**
-    
     - Signals are cheap
-        
-    - Loop clocks are effectively free
-        
+    - Loop clocks are effectively free        
     
 2. **Coherence**
     
-    - Everything “moves together” unless explicitly desynchronized
+- Everything “moves together” unless explicitly desynchronized
         
-    
 3. **Musicality**
     
-    - Signals behave like shared control voltages
-        
-    
+- Signals behave like shared control voltages
 
 ---
 
 # **C. Phase is a first-class Signal domain**
 
-  
-
 Phase is not just number.
-
-  
 
 It has:
 
@@ -229,16 +191,11 @@ These are still Signals, not Fields.
 
 # **shared causality**
 
-  
-
 Because Signals are global:
 
 - multiple blocks can publish to energy
     
 - multiple attributes can interpret energy differently
-    
-
-  
 
 This creates:
 
@@ -247,9 +204,6 @@ This creates:
 - variation without chaos
     
 - musical dynamics
-    
-
-  
 
 This is the visual analog of:
 

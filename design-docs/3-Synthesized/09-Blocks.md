@@ -21,27 +21,28 @@ Pre-built combinations of primitives for common patterns.
 
 ## Time/Topology Primitives
 
+> **⚠️ PROVISIONAL (2025-12-23):** The unified output set across all TimeRoot types (phase, pulse, energy auto-publication) is under evaluation. This design provides API consistency but may be revised based on user feedback. Original spec had more minimal outputs per TimeRoot type.
+
 ### CycleTimeRoot
 **Role:** TimeRoot
 
 **Inputs:**
 | Port | Type | Description |
 |------|------|-------------|
-| period | Scalar<duration> | Cycle period |
+| periodMs | Scalar<duration> | Cycle period (default 3000ms) |
 | mode | Scalar<enum> | 'loop' or 'pingpong' |
-| phaseOffset | Signal<phase> | Optional offset |
-| drift | Signal<number> | Optional drift |
 
 **Outputs:**
 | Port | Type | Description |
 |------|------|-------------|
-| t | Signal<time> | Unbounded time |
-| cycleT | Signal<time> | 0..period or pingpong |
-| phase | Signal<phase> | Primary phase |
-| wrap | Event | Pulse on wrap |
-| cycleIndex | Signal<number> | Cycle count |
+| systemTime | Signal<time> | Monotonic time in ms |
+| cycleT | Signal<time> | Time within current cycle (0..period) |
+| phase | Signal<phase> | 0..1 wrapped at period |
+| wrap | Event | Fires on cycle boundary |
+| cycleIndex | Signal<number> | Number of completed cycles |
+| energy | Signal<number> | Constant 1.0 baseline |
 
-**Auto-publishes:** `phase` -> `phaseA`, `wrap` -> `pulse`
+**Auto-publishes:** `phase` -> `phaseA`, `wrap` -> `pulse`, `energy` -> `energy`
 
 ### FiniteTimeRoot
 **Role:** TimeRoot
@@ -49,29 +50,42 @@ Pre-built combinations of primitives for common patterns.
 **Inputs:**
 | Port | Type | Description |
 |------|------|-------------|
-| duration | Scalar<duration> | Total duration |
+| duration | Scalar<duration> | Total duration (default 5000ms) |
 
 **Outputs:**
 | Port | Type | Description |
 |------|------|-------------|
-| t | Signal<time> | Unbounded time |
-| localT | Signal<time> | Clamped 0..duration |
-| progress | Signal<unit> | 0..1 progress |
+| systemTime | Signal<time> | Monotonic time in ms |
+| progress | Signal<unit> | 0..1 clamped progress |
+| phase | Signal<phase> | Same as progress (0..1 clamped) *(provisional)* |
+| end | Event | Fires once when progress reaches 1 *(provisional)* |
+| energy | Signal<number> | 1.0 while animating, 0 when complete *(provisional)* |
 
-**Auto-publishes:** `progress` -> `progress`
+**Auto-publishes:** `progress` -> `progress`, `phase` -> `phaseA` *(provisional)*, `end` -> `pulse` *(provisional)*, `energy` -> `energy` *(provisional)*
+
+> *Provisional outputs added for API consistency with CycleTimeRoot. Original spec only required `systemTime`, `localT`, `progress`.*
 
 ### InfiniteTimeRoot
 **Role:** TimeRoot
 
+Ambient, unbounded time with an optional repeating cycle for bus publications.
+
 **Inputs:**
 | Port | Type | Description |
 |------|------|-------------|
-| window | Scalar<duration> | View window for UI |
+| periodMs | Scalar<duration> | Ambient cycle period (default 10000ms) *(provisional)* |
 
 **Outputs:**
 | Port | Type | Description |
 |------|------|-------------|
-| t | Signal<time> | Unbounded time |
+| systemTime | Signal<time> | Monotonic time in ms |
+| phase | Signal<phase> | Ambient 0..1 cycle based on periodMs *(provisional)* |
+| pulse | Event | Fires on ambient cycle boundary *(provisional)* |
+| energy | Signal<number> | Constant 1.0 *(provisional)* |
+
+**Auto-publishes:** `phase` -> `phaseA` *(provisional)*, `pulse` -> `pulse` *(provisional)*, `energy` -> `energy` *(provisional)*
+
+> *Provisional outputs added for API consistency. Original spec only required `systemTime` - phase/pulse should come from explicit PhaseClock blocks in generative patches. The `periodMs` input provides convenience but may encourage over-reliance on the ambient cycle.*
 
 ---
 

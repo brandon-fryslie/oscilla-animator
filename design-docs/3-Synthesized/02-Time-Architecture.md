@@ -96,22 +96,70 @@ The primary time declaration for looping patches.
 ### Ports
 
 **Inputs:**
-- `period`: Scalar<duration> - Cycle period
+- `periodMs`: Scalar<duration> - Cycle period (default 3000ms)
 - `mode`: Scalar<enum('loop'|'pingpong')>
-- `phaseOffset`: Signal<phase> (optional)
-- `drift`: Signal<number> (optional)
 
 **Outputs:**
-- `t`: Signal<time> (unbounded)
-- `cycleT`: Signal<time> (0..period or pingpong)
-- `phase`: Signal<phase> (primary)
-- `wrap`: Event (pulse)
-- `cycleIndex`: Signal<number>
+- `systemTime`: Signal<time> (monotonic, unbounded)
+- `cycleT`: Signal<time> (time within current cycle)
+- `phase`: Signal<phase> (0..1 wrapped at period)
+- `wrap`: Event (fires on cycle boundary)
+- `cycleIndex`: Signal<number> (completed cycles)
+- `energy`: Signal<number> (constant 1.0 baseline)
 
 ### Bus Publishing
 CycleTimeRoot automatically publishes:
 - `phase` -> reserved bus `phaseA`
 - `wrap` -> reserved bus `pulse`
+- `energy` -> reserved bus `energy`
+
+## FiniteTimeRoot
+
+For bounded animations with known duration (logo stingers, intros).
+
+### Ports
+
+**Inputs:**
+- `duration`: Scalar<duration> - Total duration (default 5000ms)
+
+**Outputs:**
+- `systemTime`: Signal<time> (monotonic, unbounded)
+- `progress`: Signal<unit> (0..1 clamped)
+- `phase`: Signal<phase> (same as progress) *(provisional)*
+- `end`: Event (fires once at completion) *(provisional)*
+- `energy`: Signal<number> (1.0 while running, 0 when done) *(provisional)*
+
+### Bus Publishing
+FiniteTimeRoot automatically publishes:
+- `progress` -> reserved bus `progress`
+- `phase` -> reserved bus `phaseA` *(provisional)*
+- `end` -> reserved bus `pulse` *(provisional)*
+- `energy` -> reserved bus `energy` *(provisional)*
+
+> *Provisional additions provide API consistency with CycleTimeRoot.*
+
+## InfiniteTimeRoot
+
+For unbounded generative animations (installations, "weather" systems).
+
+### Ports
+
+**Inputs:**
+- `periodMs`: Scalar<duration> - Ambient cycle period (default 10000ms) *(provisional)*
+
+**Outputs:**
+- `systemTime`: Signal<time> (monotonic, unbounded)
+- `phase`: Signal<phase> (ambient cycle based on periodMs) *(provisional)*
+- `pulse`: Event (ambient cycle boundary) *(provisional)*
+- `energy`: Signal<number> (constant 1.0) *(provisional)*
+
+### Bus Publishing *(all provisional)*
+InfiniteTimeRoot automatically publishes:
+- `phase` -> reserved bus `phaseA`
+- `pulse` -> reserved bus `pulse`
+- `energy` -> reserved bus `energy`
+
+> *Provisional additions provide API consistency. Original design had InfiniteTimeRoot publish only `systemTime`, with phase/pulse coming from explicit PhaseClock blocks. The ambient cycle is a convenience that may encourage over-reliance.*
 
 ## PhaseClock (Secondary Clock)
 
