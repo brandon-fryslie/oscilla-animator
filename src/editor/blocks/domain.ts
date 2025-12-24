@@ -1208,6 +1208,7 @@ export const RenderInstances2D = createBlock({
   type: 'RenderInstances2D',
   label: 'Render Instances 2D',
   description: 'Render domain elements as 2D circles',
+  subcategory: 'Render',
   inputs: [
     input('domain', 'Domain', 'Domain'),
     input('positions', 'Positions', 'Field<vec2>'),

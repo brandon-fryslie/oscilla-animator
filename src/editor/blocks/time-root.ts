@@ -59,6 +59,12 @@ export const FiniteTimeRoot = createBlock({
   laneKind: 'Phase',
   subcategory: 'TimeRoot',
   priority: -10, // High priority to appear first
+  // Auto-publish TimeRoot outputs to canonical buses (per design-docs/3-Synthesized/03-Buses.md)
+  autoBusPublications: {
+    phase: 'phaseA',
+    progress: 'progress',
+    energy: 'energy',
+  },
 });
 
 /**
@@ -131,6 +137,12 @@ export const CycleTimeRoot = createBlock({
   laneKind: 'Phase',
   subcategory: 'TimeRoot',
   priority: -9,
+  // Auto-publish TimeRoot outputs to canonical buses (per design-docs/3-Synthesized/03-Buses.md)
+  autoBusPublications: {
+    phase: 'phaseA',
+    wrap: 'pulse',
+    energy: 'energy',
+  },
 });
 
 /**
@@ -194,6 +206,12 @@ export const InfiniteTimeRoot = createBlock({
   laneKind: 'Phase',
   subcategory: 'TimeRoot',
   priority: -8,
+  // Auto-publish TimeRoot outputs to canonical buses (per design-docs/3-Synthesized/03-Buses.md)
+  autoBusPublications: {
+    phase: 'phaseA',
+    pulse: 'pulse',
+    energy: 'energy',
+  },
 });
 
 /**

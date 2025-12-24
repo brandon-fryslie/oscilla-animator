@@ -930,7 +930,15 @@ function applyLensStack(
     if (def === null || def === undefined) continue;
 
     const type = getArtifactType(current);
-    if (type === null || type === undefined || type.domain !== def.domain || type.world === 'field' && def.domain === 'phase') {
+    // Domain compatibility check:
+    // - Exact match (e.g., number -> number, phase -> phase)
+    // - Phase can use number lenses (phase is numerically 0-1)
+    const domainCompatible =
+      type !== null &&
+      type !== undefined &&
+      (type.domain === def.domain ||
+        (type.domain === 'phase' && def.domain === 'number'));
+    if (!domainCompatible || (type?.world === 'field' && def.domain === 'phase')) {
       errors.push({
         code: 'AdapterError',
         message: `Lens ${lens.lensId} is not type-preserving for ${current.kind}`,
@@ -1069,34 +1077,31 @@ function resolveDefaultSource(
 function createDefaultArtifact(value: unknown, kind: string): Artifact {
   switch (kind) {
     case 'Signal:number':
+      return { kind: 'Signal:number', value: () => Number(value) };
     case 'Signal:Unit':
+      return { kind: 'Signal:Unit', value: () => Number(value) };
     case 'Signal:phase':
-      return { kind: kind as Artifact['kind'], value: () => Number(value) };
+      return { kind: 'Signal:phase', value: () => Number(value) };
     case 'Signal:Time':
-      return { kind: kind as Artifact['kind'], value: () => Number(value) };
+      return { kind: 'Signal:Time', value: () => Number(value) };
     case 'Scalar:number':
-      return { kind: kind as Artifact['kind'], value: Number(value) };
+      return { kind: 'Scalar:number', value: Number(value) };
     case 'Scalar:boolean':
-      return { kind: kind as Artifact['kind'], value: Boolean(value) };
+      return { kind: 'Scalar:boolean', value: Boolean(value) };
     case 'Scalar:string':
-      return { kind: kind as Artifact['kind'], value: String(value) };
-    case 'Signal:boolean':
-      return { kind: kind as Artifact['kind'], value: () => Boolean(value) };
+      return { kind: 'Scalar:string', value: String(value) };
+    case 'Scalar:color':
+      return { kind: 'Scalar:color', value };
     case 'Signal:vec2':
-      return { kind: kind as Artifact['kind'], value: () => (value as Vec2) };
+      return { kind: 'Signal:vec2', value: () => (value as Vec2) };
     case 'Signal:color':
-      return { kind: kind as Artifact['kind'], value: () => String(value) };
-    case 'Signal:string':
-      return { kind: kind as Artifact['kind'], value: () => String(value) };
-    case 'Field:number':
+      return { kind: 'Signal:color', value: () => String(value) };
+    case 'Field:number': {
       // Broadcast scalar to field
       const num = Number(value);
-      return { kind: kind as Artifact['kind'], value: (_s: Seed, n: number) => Array.from({ length: n }, () => num) };
+      return { kind: 'Field:number', value: (_s: Seed, n: number) => Array.from({ length: n }, () => num) };
+    }
     default:
-      // Try best effort for scalars
-      if (kind.startsWith('Scalar:')) {
-         return { kind: kind as Artifact['kind'], value };
-      }
       return { kind: 'Error', message: `Default source not supported for ${kind}` };
   }
 }
