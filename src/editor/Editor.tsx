@@ -25,7 +25,7 @@ import { useStore } from './stores';
 import { BlockLibrary } from './BlockLibrary';
 import { PatchBay } from './PatchBay';
 import { BusBoard } from './BusBoard';
-import { ModulationTable, ModulationTableStore } from './modulation-table';
+import { ModulationTable, ModulationTableStore, RecipeView } from './modulation-table';
 import { Inspector } from './Inspector';
 import { LogWindow } from './LogWindow';
 import { PreviewPanel } from './PreviewPanel';
@@ -837,13 +837,13 @@ export const Editor = observer(() => {
                 {bayCollective ? '▸' : '▾'}
               </button>
 
-              {/* PatchBay Panel */}
+              {/* PatchBay Panel - takes full width in table view mode */}
               <div
                 className={`bay-panel patch-panel ${patchBayCollapsed ? 'collapsed' : ''}`}
                 style={{
                   flex: patchBayCollapsed
                     ? '0 0 auto'
-                    : busBoardCollapsed
+                    : (busBoardCollapsed || patchViewMode === 'table')
                       ? '1 1 0'
                       : `${baySplit} 1 0`,
                 }}
@@ -882,17 +882,23 @@ export const Editor = observer(() => {
                 </div>
                 {!patchBayCollapsed && (
                   <div className="patch-body">
-                    {patchViewMode === 'lanes' ? (
-                      <PatchBay />
-                    ) : (
-                      <ModulationTable store={modulationTableStore} />
+                    {patchViewMode === 'lanes' && <PatchBay />}
+                    {patchViewMode === 'table' && <ModulationTable store={modulationTableStore} />}
+                    {patchViewMode === 'recipe' && (
+                      <RecipeView
+                        store={modulationTableStore}
+                        onJumpToCell={(rowKey, busId) => {
+                          setPatchViewMode('table');
+                          modulationTableStore.setFocusedCell(rowKey, busId);
+                        }}
+                      />
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Bay Resizer */}
-              {!patchBayCollapsed && !busBoardCollapsed && (
+              {/* Bay Resizer - hidden in table view mode */}
+              {!patchBayCollapsed && !busBoardCollapsed && patchViewMode !== 'table' && (
                 <div
                   className="bay-resizer"
                   onMouseDown={() => setDragging('bay-split')}
@@ -900,42 +906,44 @@ export const Editor = observer(() => {
                 />
               )}
 
-              {/* BusBoard Panel */}
-              <div
-                className={`bay-panel busboard-panel ${busBoardCollapsed ? 'collapsed' : ''}`}
-                style={{
-                  flex: busBoardCollapsed
-                    ? '0 0 auto'
-                    : patchBayCollapsed
-                      ? '1 1 0'
-                      : `${1 - baySplit} 1 0`,
-                }}
-              >
-                <div className="panel-header busboard-header">
-                  <span className="panel-title">Bus</span>
-                  <div className="panel-header-actions">
-                    <button
-                      className="panel-collapse-icon"
-                      onClick={() => openHelpPanel('patch')}
-                      title="Help"
-                    >
-                      ?
-                    </button>
-                    <button
-                      className="panel-collapse-icon"
-                      onClick={() => setBusBoardCollapsed((v) => !v)}
-                      title={busBoardCollapsed ? 'Show bus board' : 'Hide bus board'}
-                    >
-                      {busBoardCollapsed ? '◂' : '▸'}
-                    </button>
+              {/* BusBoard Panel - hidden in table view mode (table has integrated bus columns) */}
+              {patchViewMode !== 'table' && (
+                <div
+                  className={`bay-panel busboard-panel ${busBoardCollapsed ? 'collapsed' : ''}`}
+                  style={{
+                    flex: busBoardCollapsed
+                      ? '0 0 auto'
+                      : patchBayCollapsed
+                        ? '1 1 0'
+                        : `${1 - baySplit} 1 0`,
+                  }}
+                >
+                  <div className="panel-header busboard-header">
+                    <span className="panel-title">Bus</span>
+                    <div className="panel-header-actions">
+                      <button
+                        className="panel-collapse-icon"
+                        onClick={() => openHelpPanel('patch')}
+                        title="Help"
+                      >
+                        ?
+                      </button>
+                      <button
+                        className="panel-collapse-icon"
+                        onClick={() => setBusBoardCollapsed((v) => !v)}
+                        title={busBoardCollapsed ? 'Show bus board' : 'Hide bus board'}
+                      >
+                        {busBoardCollapsed ? '◂' : '▸'}
+                      </button>
+                    </div>
                   </div>
+                  {!busBoardCollapsed && (
+                    <div className="busboard-body">
+                      <BusBoard />
+                    </div>
+                  )}
                 </div>
-                {!busBoardCollapsed && (
-                  <div className="busboard-body">
-                    <BusBoard />
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
 

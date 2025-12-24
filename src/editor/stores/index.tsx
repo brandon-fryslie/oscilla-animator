@@ -11,6 +11,9 @@ export type { RootStore } from './RootStore';
 
 const store = new RootStore();
 
+// Expose store globally for debugging
+(window as any).__rootStore = store;
+
 const StoreContext = React.createContext<RootStore>(store);
 
 export const StoreProvider = ({ children }: { children: React.ReactNode }): React.ReactElement => {

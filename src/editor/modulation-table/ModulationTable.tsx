@@ -1,17 +1,23 @@
 /**
  * Modulation Table Component
  *
- * The primary UI for modulation routing.
- * Columns = Buses (signal sources)
- * Rows = Ports (addressable targets)
- * Cells = Bindings with lens chains
+ * Side-by-side layout:
+ * - Left: Listeners (bus → input ports)
+ * - Right: Publishers (output ports → bus)
+ *
+ * Features:
+ * - Collapsible sections with rotated title bars
+ * - Draggable resizer between sections
+ * - Minimal-width columns that expand on click
+ * - Block groups collapsed by default
  */
 
 import { observer } from 'mobx-react-lite';
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import type { ModulationTableStore } from './ModulationTableStore';
 import type { TableRow, TableColumn, TableCell, RowGroup, RowKey } from './types';
 import type { LensDefinition } from '../types';
+import { LensChainEditorPopover } from './LensChainEditor';
 import './ModulationTable.css';
 
 interface ModulationTableProps {
@@ -53,7 +59,7 @@ const TableCellComponent = observer(
     row: TableRow;
     column: TableColumn;
     isFocused: boolean;
-    onCellClick: (rowKey: RowKey, busId: string) => void;
+    onCellClick: (rowKey: RowKey, busId: string, e?: React.MouseEvent) => void;
     onCellDoubleClick: (rowKey: RowKey, busId: string) => void;
     onCellRightClick: (e: React.MouseEvent, rowKey: RowKey, busId: string) => void;
   }) => {
@@ -61,8 +67,8 @@ const TableCellComponent = observer(
     const focusedClass = isFocused ? 'focused' : '';
     const enabledClass = cell.enabled === false ? 'disabled' : '';
 
-    const handleClick = useCallback(() => {
-      onCellClick(row.key, column.busId);
+    const handleClick = useCallback((e: React.MouseEvent) => {
+      onCellClick(row.key, column.busId, e);
     }, [row.key, column.busId, onCellClick]);
 
     const handleDoubleClick = useCallback(() => {
@@ -176,14 +182,16 @@ const GroupHeaderRow = observer(
     onToggleCollapse: (groupKey: string) => void;
     onGroupClick: (blockId: string) => void;
   }) => {
+    const isCollapsed = group.collapsed;
+
     return (
-      <tr className={`mod-table-group-header ${group.collapsed ? 'collapsed' : ''}`}>
+      <tr className={`mod-table-group-header ${isCollapsed ? 'collapsed' : ''}`}>
         <th
           className="group-header-cell"
           onClick={() => onToggleCollapse(group.key)}
           colSpan={columns.length + 1}
         >
-          <span className="collapse-icon">{group.collapsed ? '▸' : '▾'}</span>
+          <span className="collapse-icon">{isCollapsed ? '▸' : '▾'}</span>
           <span className="group-label" onClick={(e) => { e.stopPropagation(); onGroupClick(group.blockId); }}>
             {group.label}
           </span>
@@ -195,25 +203,30 @@ const GroupHeaderRow = observer(
 );
 
 /**
- * Column header cell.
+ * Column header cell with expandable width.
  */
 const ColumnHeader = observer(
   ({
     column,
+    store,
     isFocused,
     isPinned,
     onColumnClick,
     onColumnRightClick,
   }: {
     column: TableColumn;
+    store: ModulationTableStore;
     isFocused: boolean;
     isPinned: boolean;
     onColumnClick: (busId: string) => void;
     onColumnRightClick: (e: React.MouseEvent, busId: string) => void;
   }) => {
+    const isExpanded = store.isColumnExpanded(column.busId);
+    const displayName = store.getColumnDisplayName(column);
+
     return (
       <th
-        className={`mod-table-col-header ${isFocused ? 'focused' : ''} ${isPinned ? 'pinned' : ''}`}
+        className={`mod-table-col-header ${isFocused ? 'focused' : ''} ${isPinned ? 'pinned' : ''} ${isExpanded ? 'expanded' : 'compact'}`}
         onClick={() => onColumnClick(column.busId)}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -222,15 +235,15 @@ const ColumnHeader = observer(
         title={`${column.name} (${column.type.world}:${column.type.domain}, ${column.combineMode})`}
       >
         <div className="col-header-content">
-          <span className="col-name">{column.name}</span>
-          <span className="col-type">{column.type.domain}</span>
-          {column.publisherCount > 0 && (
-            <span className="col-publishers">{column.publisherCount} pub</span>
+          <span className="col-name">{displayName}</span>
+          {isExpanded && (
+            <>
+              <span className="col-type">{column.type.domain}</span>
+              {column.publisherCount > 0 && (
+                <span className="col-publishers">{column.publisherCount} pub</span>
+              )}
+            </>
           )}
-          <div
-            className="col-activity"
-            style={{ '--activity': column.activity } as React.CSSProperties}
-          />
         </div>
       </th>
     );
@@ -238,10 +251,165 @@ const ColumnHeader = observer(
 );
 
 /**
- * Main modulation table component.
+ * Section table for either Publishers or Listeners.
+ */
+const SectionTable = observer(
+  ({
+    title,
+    direction,
+    groups,
+    rows,
+    columns,
+    cells,
+    focusedCell,
+    focusedBusId,
+    pinnedBusIds,
+    store,
+    onCellClick,
+    onCellDoubleClick,
+    onCellRightClick,
+    onRowClick,
+    onColumnClick,
+    onColumnRightClick,
+    onGroupToggle,
+    onGroupClick,
+  }: {
+    title: string;
+    direction: 'input' | 'output';
+    groups: readonly RowGroup[];
+    rows: readonly TableRow[];
+    columns: readonly TableColumn[];
+    cells: readonly TableCell[];
+    focusedCell: { rowKey: RowKey; busId: string } | undefined;
+    focusedBusId: string | undefined;
+    pinnedBusIds: Set<string>;
+    store: ModulationTableStore;
+    onCellClick: (rowKey: RowKey, busId: string) => void;
+    onCellDoubleClick: (rowKey: RowKey, busId: string) => void;
+    onCellRightClick: (e: React.MouseEvent, rowKey: RowKey, busId: string) => void;
+    onRowClick: (rowKey: RowKey) => void;
+    onColumnClick: (busId: string) => void;
+    onColumnRightClick: (e: React.MouseEvent, busId: string) => void;
+    onGroupToggle: (groupKey: string) => void;
+    onGroupClick: (blockId: string) => void;
+  }) => {
+    const tableRef = useRef<HTMLTableElement>(null);
+
+    // Build table rows
+    const renderedRows: React.ReactNode[] = [];
+
+    for (const group of groups) {
+      renderedRows.push(
+        <GroupHeaderRow
+          key={`group-${group.key}`}
+          group={group}
+          columns={columns}
+          onToggleCollapse={onGroupToggle}
+          onGroupClick={onGroupClick}
+        />
+      );
+
+      if (!group.collapsed) {
+        for (const rowKey of group.rowKeys) {
+          const row = rows.find((r) => r.key === rowKey);
+          if (row) {
+            renderedRows.push(
+              <TableRowComponent
+                key={rowKey}
+                row={row}
+                columns={columns}
+                cells={cells}
+                focusedCell={focusedCell}
+                onCellClick={onCellClick}
+                onCellDoubleClick={onCellDoubleClick}
+                onCellRightClick={onCellRightClick}
+                onRowClick={onRowClick}
+              />
+            );
+          }
+        }
+      }
+    }
+
+    const icon = direction === 'output' ? '↑' : '↓';
+    const hint = direction === 'output' ? 'output → bus' : 'bus → input';
+
+    return (
+      <div className="section-table-container">
+        <div className="section-table-header">
+          <span className="section-icon">{icon}</span>
+          <span className="section-label">{title}</span>
+          <span className="section-hint">{hint}</span>
+        </div>
+        <div className="section-table-scroll">
+          <table ref={tableRef} className="modulation-table">
+            <thead>
+              <tr>
+                <th className="mod-table-corner" />
+                {columns.map((column) => (
+                  <ColumnHeader
+                    key={column.busId}
+                    column={column}
+                    store={store}
+                    isFocused={column.busId === focusedBusId}
+                    isPinned={pinnedBusIds.has(column.busId)}
+                    onColumnClick={onColumnClick}
+                    onColumnRightClick={onColumnRightClick}
+                  />
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {renderedRows.length > 0 ? (
+                renderedRows
+              ) : (
+                <tr>
+                  <td colSpan={columns.length + 1} className="section-empty">
+                    No {direction === 'output' ? 'publisher' : 'listener'} ports
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+);
+
+/**
+ * Collapsed section bar with rotated text.
+ */
+const CollapsedSectionBar = ({
+  title,
+  direction,
+  onClick,
+}: {
+  title: string;
+  direction: 'input' | 'output';
+  onClick: () => void;
+}) => {
+  const icon = direction === 'output' ? '↑' : '↓';
+
+  return (
+    <div
+      className={`collapsed-section-bar ${direction}`}
+      onClick={onClick}
+      title={`Click to expand ${title}`}
+    >
+      <span className="collapsed-section-text">
+        {icon} {title}
+      </span>
+    </div>
+  );
+};
+
+/**
+ * Main modulation table component with side-by-side layout.
  */
 export const ModulationTable = observer(({ store }: ModulationTableProps) => {
-  const tableRef = useRef<HTMLTableElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -250,17 +418,45 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
     busId?: string;
   } | null>(null);
 
+  // Lens editor state
+  const [lensEditor, setLensEditor] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    rowKey: RowKey;
+    busId: string;
+  } | null>(null);
+
   const rows = store.visibleRows;
   const columns = store.visibleColumns;
   const cells = store.cells;
-  const groups = store.rowGroups;
   const focusedCell = store.viewState.focusedCell;
   const focusedBusId = store.viewState.focusedBusId;
   const pinnedBusIds = new Set(store.viewState.pinnedBusIds);
 
+  // Separate groups by direction
+  const publisherGroups = store.getRowGroupsByDirection('output');
+  const listenerGroups = store.getRowGroupsByDirection('input');
+  const publisherRows = store.getRowsByDirection('output');
+  const listenerRows = store.getRowsByDirection('input');
+
+  // Section collapse states
+  const publishersCollapsed = store.viewState.publishersSectionCollapsed;
+  const listenersCollapsed = store.viewState.listenersSectionCollapsed;
+  const splitRatio = store.viewState.tableSplitRatio;
+
+  // Collapse all groups on mount if they haven't been initialized
+  useEffect(() => {
+    // Only run once when the component mounts
+    const groups = store.rowGroups;
+    const hasAnyCollapseState = Object.keys(store.viewState.collapsedGroups).length > 0;
+    if (groups.length > 0 && !hasAnyCollapseState) {
+      store.collapseAllGroups();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Handlers
   const handleCellClick = useCallback(
-    (rowKey: RowKey, busId: string) => {
+    (rowKey: RowKey, busId: string, _e?: React.MouseEvent) => {
       store.setFocusedCell(rowKey, busId);
     },
     [store]
@@ -272,10 +468,8 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
       if (!cell) return;
 
       if (cell.status === 'bound') {
-        // Unbind the cell
-        store.unbindCell(rowKey);
+        store.unbindCell(rowKey, busId);
       } else if (cell.status === 'empty' || cell.status === 'convertible') {
-        // Bind the cell
         store.bindCell(rowKey, busId, cell.suggestedChain ? [...cell.suggestedChain] : undefined);
       }
     },
@@ -301,7 +495,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
 
   const handleColumnClick = useCallback(
     (busId: string) => {
-      store.setFocusedBus(busId);
+      store.toggleColumnExpanded(busId);
     },
     [store]
   );
@@ -331,45 +525,72 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
     setContextMenu(null);
   }, []);
 
-  // Build rows grouped by block
-  const renderedRows: React.ReactNode[] = [];
-  for (const group of groups) {
-    // Add group header
-    renderedRows.push(
-      <GroupHeaderRow
-        key={`group-${group.key}`}
-        group={group}
-        columns={columns}
-        onToggleCollapse={handleGroupToggle}
-        onGroupClick={handleGroupClick}
-      />
-    );
+  // Open lens editor for a cell
+  const openLensEditor = useCallback(
+    (rowKey: RowKey, busId: string, position: { x: number; y: number }) => {
+      setLensEditor({
+        isOpen: true,
+        position,
+        rowKey,
+        busId,
+      });
+      closeContextMenu();
+    },
+    [closeContextMenu]
+  );
 
-    // Add rows if not collapsed
-    if (!group.collapsed) {
-      for (const rowKey of group.rowKeys) {
-        const row = rows.find((r) => r.key === rowKey);
-        if (row) {
-          renderedRows.push(
-            <TableRowComponent
-              key={rowKey}
-              row={row}
-              columns={columns}
-              cells={cells}
-              focusedCell={focusedCell}
-              onCellClick={handleCellClick}
-              onCellDoubleClick={handleCellDoubleClick}
-              onCellRightClick={handleCellRightClick}
-              onRowClick={handleRowClick}
-            />
-          );
-        }
-      }
-    }
-  }
+  // Close lens editor
+  const closeLensEditor = useCallback(() => {
+    setLensEditor(null);
+  }, []);
+
+  // Handle lens chain update
+  const handleLensChainChange = useCallback(
+    (lensChain: LensDefinition[]) => {
+      if (!lensEditor) return;
+      store.updateCellLenses(lensEditor.rowKey, lensChain.length > 0 ? lensChain : undefined);
+    },
+    [store, lensEditor]
+  );
+
+  // Drag handling for resizer
+  const handleResizerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const ratio = (e.clientX - rect.left) / rect.width;
+      store.setTableSplitRatio(ratio);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, store]);
+
+  // Calculate flex values for sections
+  const listenersWidth = listenersCollapsed ? 'auto' : `${splitRatio * 100}%`;
+  const publishersWidth = publishersCollapsed ? 'auto' : `${(1 - splitRatio) * 100}%`;
 
   return (
-    <div className="modulation-table-container">
+    <div
+      ref={containerRef}
+      className={`modulation-table-container side-by-side ${isDragging ? 'dragging' : ''}`}
+    >
       {/* Toolbar */}
       <div className="mod-table-toolbar">
         <input
@@ -403,42 +624,87 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
         </label>
       </div>
 
-      {/* Table */}
-      <div className="mod-table-scroll">
-        <table ref={tableRef} className="modulation-table">
-          <thead>
-            <tr>
-              <th className="mod-table-corner" />
-              {columns.map((column) => (
-                <ColumnHeader
-                  key={column.busId}
-                  column={column}
-                  isFocused={column.busId === focusedBusId}
-                  isPinned={pinnedBusIds.has(column.busId)}
-                  onColumnClick={handleColumnClick}
-                  onColumnRightClick={handleColumnRightClick}
-                />
-              ))}
-            </tr>
-          </thead>
-          <tbody>{renderedRows}</tbody>
-        </table>
+      {/* Side-by-side sections */}
+      <div className="mod-table-sections">
+        {/* Listeners Section (Left) */}
+        {listenersCollapsed ? (
+          <CollapsedSectionBar
+            title="Listeners"
+            direction="input"
+            onClick={() => store.toggleListenersSection()}
+          />
+        ) : (
+          <div className="mod-table-section listeners-section" style={{ width: listenersWidth }}>
+            <div className="section-collapse-btn" onClick={() => store.toggleListenersSection()}>
+              ◂
+            </div>
+            <SectionTable
+              title="Listeners"
+              direction="input"
+              groups={listenerGroups}
+              rows={listenerRows}
+              columns={columns}
+              cells={cells}
+              focusedCell={focusedCell}
+              focusedBusId={focusedBusId}
+              pinnedBusIds={pinnedBusIds}
+              store={store}
+              onCellClick={handleCellClick}
+              onCellDoubleClick={handleCellDoubleClick}
+              onCellRightClick={handleCellRightClick}
+              onRowClick={handleRowClick}
+              onColumnClick={handleColumnClick}
+              onColumnRightClick={handleColumnRightClick}
+              onGroupToggle={handleGroupToggle}
+              onGroupClick={handleGroupClick}
+            />
+          </div>
+        )}
+
+        {/* Resizer (only when both sections are visible) */}
+        {!listenersCollapsed && !publishersCollapsed && (
+          <div
+            className="mod-table-resizer"
+            onMouseDown={handleResizerMouseDown}
+            title="Drag to resize"
+          />
+        )}
+
+        {/* Publishers Section (Right) */}
+        {publishersCollapsed ? (
+          <CollapsedSectionBar
+            title="Publishers"
+            direction="output"
+            onClick={() => store.togglePublishersSection()}
+          />
+        ) : (
+          <div className="mod-table-section publishers-section" style={{ width: publishersWidth }}>
+            <div className="section-collapse-btn" onClick={() => store.togglePublishersSection()}>
+              ▸
+            </div>
+            <SectionTable
+              title="Publishers"
+              direction="output"
+              groups={publisherGroups}
+              rows={publisherRows}
+              columns={columns}
+              cells={cells}
+              focusedCell={focusedCell}
+              focusedBusId={focusedBusId}
+              pinnedBusIds={pinnedBusIds}
+              store={store}
+              onCellClick={handleCellClick}
+              onCellDoubleClick={handleCellDoubleClick}
+              onCellRightClick={handleCellRightClick}
+              onRowClick={handleRowClick}
+              onColumnClick={handleColumnClick}
+              onColumnRightClick={handleColumnRightClick}
+              onGroupToggle={handleGroupToggle}
+              onGroupClick={handleGroupClick}
+            />
+          </div>
+        )}
       </div>
-
-      {/* Empty state */}
-      {rows.length === 0 && (
-        <div className="mod-table-empty">
-          <p>No modulation targets available.</p>
-          <p>Add blocks with input ports to see them here.</p>
-        </div>
-      )}
-
-      {columns.length === 0 && rows.length > 0 && (
-        <div className="mod-table-empty">
-          <p>No signal buses available.</p>
-          <p>Create buses to route signals to parameters.</p>
-        </div>
-      )}
 
       {/* Context menu */}
       {contextMenu && (
@@ -455,7 +721,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
                     if (contextMenu.rowKey && contextMenu.busId) {
                       const cell = store.getCell(contextMenu.rowKey, contextMenu.busId);
                       if (cell?.status === 'bound') {
-                        store.unbindCell(contextMenu.rowKey);
+                        store.unbindCell(contextMenu.rowKey, contextMenu.busId);
                       } else {
                         store.bindCell(
                           contextMenu.rowKey,
@@ -471,7 +737,30 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
                     ? 'Unbind'
                     : 'Bind'}
                 </button>
-                <button onClick={closeContextMenu}>Edit Lenses...</button>
+                {/* Only show Edit Lenses for listener (input) cells */}
+                {store.getCell(contextMenu.rowKey!, contextMenu.busId!)?.direction === 'input' && (
+                  <button
+                    onClick={() => {
+                      if (contextMenu.rowKey && contextMenu.busId) {
+                        // If not bound, bind first then open editor
+                        const cell = store.getCell(contextMenu.rowKey, contextMenu.busId);
+                        if (cell?.status !== 'bound') {
+                          store.bindCell(
+                            contextMenu.rowKey,
+                            contextMenu.busId,
+                            cell?.suggestedChain ? [...cell.suggestedChain] : undefined
+                          );
+                        }
+                        openLensEditor(contextMenu.rowKey, contextMenu.busId, {
+                          x: contextMenu.x,
+                          y: contextMenu.y,
+                        });
+                      }
+                    }}
+                  >
+                    Edit Lenses...
+                  </button>
+                )}
               </>
             )}
             {contextMenu.type === 'column' && (
@@ -500,6 +789,21 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
             )}
           </div>
         </>
+      )}
+
+      {/* Lens chain editor popover */}
+      {lensEditor && (
+        <LensChainEditorPopover
+          isOpen={lensEditor.isOpen}
+          position={lensEditor.position}
+          lensChain={
+            store.getCell(lensEditor.rowKey, lensEditor.busId)?.lensChain ?? []
+          }
+          onChange={handleLensChainChange}
+          sourceType={columns.find((c) => c.busId === lensEditor.busId)?.type}
+          targetType={rows.find((r) => r.key === lensEditor.rowKey)?.type}
+          onClose={closeLensEditor}
+        />
       )}
     </div>
   );
