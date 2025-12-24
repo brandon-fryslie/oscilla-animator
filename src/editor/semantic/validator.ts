@@ -90,6 +90,10 @@ export class Validator {
     const emptyBusWarnings = this.warnEmptyBuses(patch);
     warnings.push(...emptyBusWarnings);
 
+    // Warning: Multiple publishers on control-plane buses
+    const multiPubWarnings = this.warnMultiplePublishersOnControlBuses(patch);
+    warnings.push(...multiPubWarnings);
+
     return {
       ok: errors.length === 0,
       errors,
@@ -630,6 +634,46 @@ export class Validator {
             },
             title: 'Bus has no publishers',
             message: `Bus "${bus.name}" has no publishers. It will use its default value.`,
+            patchRevision: this.patchRevision,
+          })
+        );
+      }
+    }
+
+    return warnings;
+  }
+
+  /**
+   * Warning: Multiple publishers on control-plane buses.
+   * Control-plane buses (phaseA, progress, palette) use 'last' combine mode
+   * and typically expect a single publisher. Multiple publishers can cause conflicts.
+   */
+  private warnMultiplePublishersOnControlBuses(patch: PatchDocument): Diagnostic[] {
+    const warnings: Diagnostic[] = [];
+
+    if (!patch.buses || !patch.publishers) {
+      return warnings;
+    }
+
+    // Control-plane buses use 'last' combine mode
+    const controlBuses = patch.buses.filter((b) => b.combineMode === 'last');
+
+    for (const bus of controlBuses) {
+      const enabledPublishers = patch.publishers.filter(
+        (p) => p.busId === bus.id && p.enabled !== false
+      );
+      if (enabledPublishers.length > 1) {
+        warnings.push(
+          createDiagnostic({
+            code: 'W_BUS_MULTIPLE_PUBLISHERS_CONTROL',
+            severity: 'warn',
+            domain: 'compile',
+            primaryTarget: {
+              kind: 'bus',
+              busId: bus.id,
+            },
+            title: 'Multiple publishers on control bus',
+            message: `Control-plane bus "${bus.name || bus.id}" has ${enabledPublishers.length} publishers. With 'last' combine mode, only the highest sortKey publisher's value will be used.`,
             patchRevision: this.patchRevision,
           })
         );
