@@ -19,9 +19,22 @@ import type { Block } from '../../types';
 function createMockPatchStore(
   blocks: Block[] = [{ id: 'time-root', type: 'CycleTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' }]
 ): PatchStore {
+  // Create a mock that provides the full root structure needed by storeToPatchDocument
+  const mockRoot = {
+    patchStore: {
+      blocks,
+      connections: [],
+    },
+    busStore: {
+      buses: [],
+      publishers: [],
+      listeners: [],
+    },
+  };
   return {
     blocks,
-  } as PatchStore;
+    root: mockRoot,
+  } as unknown as PatchStore;
 }
 
 /**

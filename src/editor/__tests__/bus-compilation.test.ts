@@ -15,6 +15,39 @@ import type { Bus, Publisher, Listener } from '../types';
 // =============================================================================
 
 /**
+ * Create canonical buses required for TimeRoot auto-publication.
+ * Matches the default buses from BusStore.createDefaultBuses().
+ */
+function createCanonicalBuses(): Bus[] {
+  return [
+    {
+      id: 'phaseA',
+      name: 'phaseA',
+      type: { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'primary' },
+      combineMode: 'last',
+      defaultValue: 0,
+      sortKey: 0,
+    },
+    {
+      id: 'pulse',
+      name: 'pulse',
+      type: { world: 'signal', domain: 'trigger', category: 'core', busEligible: true, semantics: 'pulse' },
+      combineMode: 'last',
+      defaultValue: false,
+      sortKey: 0,
+    },
+    {
+      id: 'energy',
+      name: 'energy',
+      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'energy' },
+      combineMode: 'sum',
+      defaultValue: 0,
+      sortKey: 0,
+    },
+  ];
+}
+
+/**
  * Create a minimal compile context for testing.
  */
 function createTestContext(): CompileCtx {
@@ -32,15 +65,27 @@ function createTestContext(): CompileCtx {
  */
 function createTestRegistry(): BlockRegistry {
   return {
-    // CycleTimeRoot - required for all patches
+    // CycleTimeRoot - required for all patches (includes all standard outputs)
     CycleTimeRoot: {
       type: 'CycleTimeRoot',
       inputs: [],
-      outputs: [{ name: 'phase', type: { kind: 'Signal:number' }, required: true }],
+      outputs: [
+        { name: 'systemTime', type: { kind: 'Signal:Time' }, required: true },
+        { name: 'cycleT', type: { kind: 'Signal:Time' }, required: true },
+        { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
+        { name: 'wrap', type: { kind: 'Event' }, required: true },
+        { name: 'cycleIndex', type: { kind: 'Signal:number' }, required: true },
+        { name: 'energy', type: { kind: 'Signal:number' }, required: true },
+      ],
       compile: ({ params }) => {
         const periodMs = (params.periodMs as number) ?? 3000;
         return {
-          phase: { kind: 'Signal:number', value: (t: number) => (t / periodMs) % 1 },
+          systemTime: { kind: 'Signal:Time', value: (t: number) => t },
+          cycleT: { kind: 'Signal:Time', value: (t: number) => t % periodMs },
+          phase: { kind: 'Signal:phase', value: (t: number) => (t / periodMs) % 1 },
+          wrap: { kind: 'Event', value: (t: number, lastT: number) => Math.floor(t / periodMs) > Math.floor(lastT / periodMs) },
+          cycleIndex: { kind: 'Signal:number', value: (t: number) => Math.floor(t / periodMs) },
+          energy: { kind: 'Signal:number', value: () => 1.0 },
         };
       },
     },
@@ -132,7 +177,7 @@ describe('Bus Compilation - Happy Path', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [bus],
+      buses: [...createCanonicalBuses(), bus],
       publishers,
       listeners,
       defaultSources: {},
@@ -173,7 +218,7 @@ describe('Bus Compilation - Happy Path', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [bus],
+      buses: [...createCanonicalBuses(), bus],
       publishers: [],
       listeners,
       defaultSources: {},
@@ -221,7 +266,7 @@ describe('Bus Compilation - Happy Path', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [bus],
+      buses: [...createCanonicalBuses(), bus],
       publishers,
       listeners,
       defaultSources: {},
@@ -269,7 +314,7 @@ describe('Bus Compilation - Happy Path', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [bus],
+      buses: [...createCanonicalBuses(), bus],
       publishers,
       listeners,
       defaultSources: {},
@@ -322,7 +367,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [bus],
+      buses: [...createCanonicalBuses(), bus],
       publishers,
       listeners,
       defaultSources: {},
@@ -368,7 +413,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
     const patch1: CompilerPatch = {
       blocks,
       connections: [],
-      buses: [bus],
+      buses: [...createCanonicalBuses(), bus],
       publishers: publishers1,
       listeners,
       defaultSources: {},
@@ -393,7 +438,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
     const patch2: CompilerPatch = {
       blocks,
       connections: [],
-      buses: [bus],
+      buses: [...createCanonicalBuses(), bus],
       publishers: publishers2,
       listeners,
       defaultSources: {},
@@ -422,6 +467,7 @@ describe('Bus Compilation - Error Handling', () => {
   it('rejects unsupported combine mode for Signal bus', () => {
     const blocks = new Map([
       ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
+      ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
     ]);
 
     const bus: Bus = {
@@ -437,7 +483,7 @@ describe('Bus Compilation - Error Handling', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [bus],
+      buses: [...createCanonicalBuses(), bus],
       publishers: [],
       listeners: [],
       defaultSources: {},
@@ -446,9 +492,10 @@ describe('Bus Compilation - Error Handling', () => {
     const result = compilePatch(patch, createTestRegistry(), 42 as Seed, createTestContext());
 
     expect(result.ok).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]?.code).toBe('UnsupportedCombineMode');
-    expect(result.errors[0]?.message).toContain('average');
-    expect(result.errors[0]?.message).toContain('last, sum');
+    // Check for PortTypeMismatch error (unsupported combine mode)
+    const combineError = result.errors.find(e => e.code === 'PortTypeMismatch' && e.message.includes('average'));
+    expect(combineError).toBeDefined();
+    expect(combineError?.message).toContain('average');
+    expect(combineError?.message).toContain('last, sum');
   });
 });

@@ -14,6 +14,39 @@ import type { Bus, Publisher, Listener } from '../types';
 // Test Helpers
 // =============================================================================
 
+/**
+ * Create canonical buses required for TimeRoot auto-publication.
+ * Matches the default buses from BusStore.createDefaultBuses().
+ */
+function createCanonicalBuses(): Bus[] {
+  return [
+    {
+      id: 'phaseA',
+      name: 'phaseA',
+      type: { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'primary' },
+      combineMode: 'last',
+      defaultValue: 0,
+      sortKey: 0,
+    },
+    {
+      id: 'pulse',
+      name: 'pulse',
+      type: { world: 'signal', domain: 'trigger', category: 'core', busEligible: true, semantics: 'pulse' },
+      combineMode: 'last',
+      defaultValue: false,
+      sortKey: 0,
+    },
+    {
+      id: 'energy',
+      name: 'energy',
+      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'energy' },
+      combineMode: 'sum',
+      defaultValue: 0,
+      sortKey: 0,
+    },
+  ];
+}
+
 function createTestContext(): CompileCtx {
   return {
     env: {},
@@ -29,15 +62,27 @@ function createTestContext(): CompileCtx {
  */
 function createFieldTestRegistry(): BlockRegistry {
   return {
-    // CycleTimeRoot - required for all patches
+    // CycleTimeRoot - required for all patches (includes all standard outputs)
     CycleTimeRoot: {
       type: 'CycleTimeRoot',
       inputs: [],
-      outputs: [{ name: 'phase', type: { kind: 'Signal:number' }, required: true }],
+      outputs: [
+        { name: 'systemTime', type: { kind: 'Signal:Time' }, required: true },
+        { name: 'cycleT', type: { kind: 'Signal:Time' }, required: true },
+        { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
+        { name: 'wrap', type: { kind: 'Event' }, required: true },
+        { name: 'cycleIndex', type: { kind: 'Signal:number' }, required: true },
+        { name: 'energy', type: { kind: 'Signal:number' }, required: true },
+      ],
       compile: ({ params }) => {
         const periodMs = (params.periodMs as number) ?? 3000;
         return {
-          phase: { kind: 'Signal:number', value: (t: number) => (t / periodMs) % 1 },
+          systemTime: { kind: 'Signal:Time', value: (t: number) => t },
+          cycleT: { kind: 'Signal:Time', value: (t: number) => t % periodMs },
+          phase: { kind: 'Signal:phase', value: (t: number) => (t / periodMs) % 1 },
+          wrap: { kind: 'Event', value: (t: number, lastT: number) => Math.floor(t / periodMs) > Math.floor(lastT / periodMs) },
+          cycleIndex: { kind: 'Signal:number', value: (t: number) => Math.floor(t / periodMs) },
+          energy: { kind: 'Signal:number', value: () => 1.0 },
         };
       },
     },
@@ -196,7 +241,7 @@ describe('Field Bus Compilation', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
       defaultSources: {},
@@ -248,7 +293,7 @@ describe('Field Bus Compilation', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
       defaultSources: {},
@@ -297,7 +342,7 @@ describe('Field Bus Compilation', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
       defaultSources: {},
@@ -337,7 +382,7 @@ describe('Field Bus Compilation', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers: [],
       listeners,
       defaultSources: {},
@@ -384,7 +429,7 @@ describe('Field Bus Compilation', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
       defaultSources: {},
@@ -433,7 +478,7 @@ describe('Field Bus Compilation', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
       defaultSources: {},
@@ -482,7 +527,7 @@ describe('Field Bus Compilation', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
       defaultSources: {},
@@ -563,7 +608,7 @@ describe('Mixed Signal and Field Buses', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [phaseBus, positionBus],
+      buses: [...createCanonicalBuses(), phaseBus, positionBus],
       publishers,
       listeners,
       defaultSources: {},

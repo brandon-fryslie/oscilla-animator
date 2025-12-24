@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { TypeDesc } from '../../types';
+import type { BusCombineMode, TypeDesc } from '../../types';
 import {
   RESERVED_BUS_CONTRACTS,
   validateReservedBus,
@@ -85,7 +85,7 @@ describe('Bus Contracts', () => {
         busEligible: true,
       };
 
-      const errors = validateReservedBus('phaseA', correctType, 'sum' as any);
+      const errors = validateReservedBus('phaseA', correctType, 'sum' as BusCombineMode);
       expect(errors).toHaveLength(1);
       expect(errors[0].code).toBe('E_RESERVED_BUS_COMBINE_MODE_MISMATCH');
       expect(errors[0].message).toContain('must use combineMode="last"');
@@ -100,7 +100,7 @@ describe('Bus Contracts', () => {
         busEligible: false, // Wrong busEligible
       };
 
-      const errors = validateReservedBus('energy', wrongType, 'last' as any);
+      const errors = validateReservedBus('energy', wrongType, 'last' as BusCombineMode);
       expect(errors).toHaveLength(2); // Type error + combine mode error
     });
 

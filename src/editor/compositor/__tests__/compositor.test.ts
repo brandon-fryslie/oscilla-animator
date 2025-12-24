@@ -56,7 +56,7 @@ function makeTestTree(): DrawNode {
 describe('Selection API', () => {
   it('finds all nodes', () => {
     const tree = makeTestTree();
-    const refs = find(tree, { selector: all }, {}, drawNodeAdapter.getChildren);
+    const refs = find(tree, { selector: all }, {}, (node) => drawNodeAdapter.getChildren(node));
 
     expect(refs.length).toBe(7); // root + 2 strokes + particles group + 3 particles
     expect(refs[0].id).toBe('root');
@@ -65,7 +65,7 @@ describe('Selection API', () => {
 
   it('finds nodes by tag', () => {
     const tree = makeTestTree();
-    const refs = find(tree, { selector: hasTag('stroke') }, {}, drawNodeAdapter.getChildren);
+    const refs = find(tree, { selector: hasTag('stroke') }, {}, (node) => drawNodeAdapter.getChildren(node));
 
     expect(refs.length).toBe(2);
     expect(refs.map(r => r.id)).toEqual(['stroke-1', 'stroke-2']);
@@ -73,7 +73,7 @@ describe('Selection API', () => {
 
   it('finds nodes by id', () => {
     const tree = makeTestTree();
-    const refs = find(tree, { selector: byId('p-2') }, {}, drawNodeAdapter.getChildren);
+    const refs = find(tree, { selector: byId('p-2') }, {}, (node) => drawNodeAdapter.getChildren(node));
 
     expect(refs.length).toBe(1);
     expect(refs[0].id).toBe('p-2');
@@ -88,7 +88,7 @@ describe('Selection API', () => {
       tree,
       { selector: and(hasTag('stroke'), hasTag('animated')) },
       {},
-      drawNodeAdapter.getChildren
+      (node) => drawNodeAdapter.getChildren(node)
     );
     expect(animated.length).toBe(1);
     expect(animated[0].id).toBe('stroke-1');
@@ -98,7 +98,7 @@ describe('Selection API', () => {
       tree,
       { selector: or(hasTag('particle'), hasTag('stroke')) },
       {},
-      drawNodeAdapter.getChildren
+      (node) => drawNodeAdapter.getChildren(node)
     );
     expect(particleOrStroke.length).toBe(5);
 
@@ -107,7 +107,7 @@ describe('Selection API', () => {
       tree,
       { selector: not(byKind('group')) },
       {},
-      drawNodeAdapter.getChildren
+      (node) => drawNodeAdapter.getChildren(node)
     );
     expect(notGroups.length).toBe(5); // 2 strokes + 3 particles
   });
@@ -151,7 +151,7 @@ describe('TreeRewrite', () => {
 
   it('wraps nodes', () => {
     const tree = makeTestTree();
-    const refs = find(tree, { selector: hasTag('particle') }, {}, drawNodeAdapter.getChildren);
+    const refs = find(tree, { selector: hasTag('particle') }, {}, (node) => drawNodeAdapter.getChildren(node));
 
     const result = drawNodeRewrite.wrap(
       tree,
@@ -160,7 +160,7 @@ describe('TreeRewrite', () => {
     );
 
     // Find the wrapper
-    const wrapperRefs = find(result, { selector: hasTag('wrapper') }, {}, drawNodeAdapter.getChildren);
+    const wrapperRefs = find(result, { selector: hasTag('wrapper') }, {}, (node) => drawNodeAdapter.getChildren(node));
     expect(wrapperRefs.length).toBe(1);
 
     // Wrapper should contain particles
@@ -363,7 +363,7 @@ describe('Integration', () => {
 
     // Particles have meta
     // Need to find particles in the modified tree
-    const particleRefs = find(result, { selector: hasTag('particle') }, {}, drawNodeAdapter.getChildren);
+    const particleRefs = find(result, { selector: hasTag('particle') }, {}, (node) => drawNodeAdapter.getChildren(node));
     expect(particleRefs.length).toBe(3);
 
     for (const ref of particleRefs) {

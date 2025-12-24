@@ -13,10 +13,12 @@ describe('composite registry', () => {
       laneKind: 'Spec',
       tags: { origin: 'test' },
       graph: {
-        nodes: {},
+        nodes: {
+          n1: { type: 'NumberSource', params: {} },
+        },
         edges: [],
-        inputMap: {},
-        outputMap: {},
+        inputMap: { in: 'n1.in' },
+        outputMap: { out: 'n1.out' },
       },
       exposedInputs: [
         { id: 'in', label: 'In', direction: 'input', slotType: 'Scalar:number', nodeId: 'n1', nodePort: 'in' },

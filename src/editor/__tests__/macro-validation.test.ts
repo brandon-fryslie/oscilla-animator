@@ -1,6 +1,6 @@
 /**
  * Comprehensive macro validation tests
- * Tests all 20 macros for:
+ * Tests all 21 macros for:
  * - Structure validity
  * - Block type references
  * - Connection integrity
@@ -14,8 +14,8 @@ import { getBlockDefinition } from '../blocks';
 describe('Macro Registry Validation', () => {
   const macroKeys = Object.keys(MACRO_REGISTRY);
   
-  it('should have exactly 20 macros registered', () => {
-    expect(macroKeys).toHaveLength(20);
+  it('should have exactly 21 macros registered', () => {
+    expect(macroKeys).toHaveLength(21);
   });
 
   describe('Quick Start Macros', () => {

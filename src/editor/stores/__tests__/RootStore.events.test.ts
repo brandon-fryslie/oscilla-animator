@@ -343,7 +343,7 @@ describe('RootStore - Event Listeners', () => {
       expect(busNames).toContain('energy');
       expect(busNames).toContain('pulse');
       expect(busNames).toContain('palette');
-      expect(root.busStore.buses.length).toBe(5);
+      expect(root.busStore.buses.length).toBe(6); // +progress
     });
   });
 });

@@ -36,6 +36,7 @@ const mockCompileCtx: CompileCtx = {
 };
 
 // Helper to extract signal function from compiled output
+/* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 function getSignalValue<T>(
   artifact: unknown,
   expectedKind: string
@@ -54,6 +55,7 @@ function getEventValue(
   expect(art.kind).toBe(expectedKind);
   return art.value as (t: number, lastT: number, ctx: RuntimeCtx) => boolean;
 }
+/* eslint-enable @typescript-eslint/prefer-readonly-parameter-types */
 
 describe('TimeRoot WP1 Features', () => {
   describe('FiniteTimeRoot - end event', () => {
@@ -255,6 +257,7 @@ describe('TimeRoot WP1 Features', () => {
 
       expect(autoPubs).toEqual([
         { busName: 'progress', artifactKey: 'progress', sortKey: 0 },
+        { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'end', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
       ]);
@@ -271,6 +274,8 @@ describe('TimeRoot WP1 Features', () => {
       const autoPubs = extractTimeRootAutoPublications('InfiniteTimeRoot', result);
 
       expect(autoPubs).toEqual([
+        { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
+        { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
       ]);
     });

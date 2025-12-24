@@ -210,9 +210,10 @@ describe('combineSignalArtifacts', () => {
 
     it('returns Error for unsupported type in sum mode', () => {
       // Need 2+ artifacts to trigger combine logic (single artifacts pass through)
+      const phaseArtifactKind = 'Signal:phase' as const;
       const artifacts: Artifact[] = [
-        { kind: 'Signal:phase' as any, value: () => 0.5 },
-        { kind: 'Signal:phase' as any, value: () => 0.7 },
+        { kind: phaseArtifactKind, value: () => 0.5 },
+        { kind: phaseArtifactKind, value: () => 0.7 },
       ];
       const result = combineSignalArtifacts(artifacts, 'sum', 0);
       expect(result.kind).toBe('Error');
@@ -259,7 +260,7 @@ describe('combineSignalArtifacts', () => {
 // =============================================================================
 
 describe('combineFieldArtifacts', () => {
-  const mockCtx: CompileCtx = { env: {}, geom: { get: () => null as any, invalidate: () => {} } };
+  const mockCtx: CompileCtx = { env: {}, geom: { get: () => null as never, invalidate: () => {} } };
   const seed: Seed = 12345; // Seed is just a number
 
   describe('with no artifacts', () => {
@@ -486,7 +487,7 @@ describe('getSupportedCombineModes', () => {
   });
 
   it('returns empty array for unknown world', () => {
-    const modes = getSupportedCombineModes('unknown' as any);
+    const modes = getSupportedCombineModes('unknown' as 'signal' | 'field');
     expect(modes).toEqual([]);
   });
 });

@@ -66,7 +66,7 @@ describe('BusStore - Event Emission', () => {
 
         // Default buses are created during initialization, so they've already emitted events
         // We need to check the buses that were created
-        expect(freshRoot.busStore.buses.length).toBe(5); // phaseA, phaseB, energy, pulse, palette
+        expect(freshRoot.busStore.buses.length).toBe(6); // phaseA, phaseB, energy, pulse, palette, progress
       });
     });
 

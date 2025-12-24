@@ -10,7 +10,7 @@ import type { EditorEvent } from '../types';
 
 describe('EventDispatcher', () => {
   let dispatcher: EventDispatcher;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: unknown;
 
   beforeEach(() => {
     dispatcher = new EventDispatcher();
@@ -18,7 +18,7 @@ describe('EventDispatcher', () => {
   });
 
   afterEach(() => {
-    consoleErrorSpy.mockRestore();
+    (consoleErrorSpy as { mockRestore: () => void }).mockRestore();
   });
 
   describe('emit()', () => {

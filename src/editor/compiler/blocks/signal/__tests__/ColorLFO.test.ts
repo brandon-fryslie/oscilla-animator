@@ -58,6 +58,7 @@ describe('ColorLFOBlock', () => {
       throw new Error('Expected Signal:color');
     }
 
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     const colorFn = result.color.value as (_t: number, _ctx: RuntimeCtx) => string;
     const color = colorFn(500, mockCtx);
 
@@ -84,6 +85,7 @@ describe('ColorLFOBlock', () => {
       throw new Error('Expected Signal:color');
     }
 
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     const colorFn = result.color.value as (_t: number, _ctx: RuntimeCtx) => string;
 
     // At phase 0, should be near red
@@ -131,6 +133,7 @@ describe('ColorLFOBlock', () => {
       throw new Error('Expected Signal:color');
     }
 
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     const colorFn = result.color.value as (_t: number, _ctx: RuntimeCtx) => string;
     const color = colorFn(0, mockCtx);
 

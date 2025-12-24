@@ -12,6 +12,7 @@ import type { DiagnosticHub } from '../DiagnosticHub';
 import type { BlockId, LaneId, Block, Connection } from '../../types';
 
 // Mock stores
+/* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 const createMockPatchStore = (): Partial<PatchStore> => {
   const blocks: Block[] = [];
   return {
@@ -27,6 +28,7 @@ const createMockPatchStore = (): Partial<PatchStore> => {
     disconnect: vi.fn(),
   };
 };
+/* eslint-enable @typescript-eslint/prefer-readonly-parameter-types */
 
 
 const createMockViewStore = (): Partial<ViewStateStore> => ({
@@ -359,7 +361,7 @@ describe('ActionExecutor', () => {
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         '[ActionExecutor] No connection found from port:',
-        expect.objectContaining({ portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } })
+        expect.objectContaining({ blockId: 'source-block', slotId: 'out', direction: 'output' })
       );
 
       consoleWarnSpy.mockRestore();

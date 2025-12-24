@@ -329,7 +329,7 @@ describe('DiagnosticStore', () => {
 
   describe('Invalidation', () => {
     it('should invalidate on CompileFinished events', () => {
-      const initialRevision = (rootStore.diagnosticStore as any).revisionCounter;
+      const initialRevision = rootStore.diagnosticStore._revisionCounter;
 
       rootStore.events.emit({
         type: 'CompileFinished',
@@ -341,11 +341,11 @@ describe('DiagnosticStore', () => {
         diagnostics: [],
       });
 
-      expect((rootStore.diagnosticStore as any).revisionCounter).toBe(initialRevision + 1);
+      expect(rootStore.diagnosticStore._revisionCounter).toBe(initialRevision + 1);
     });
 
     it('should invalidate on ProgramSwapped events', () => {
-      const initialRevision = (rootStore.diagnosticStore as any).revisionCounter;
+      const initialRevision = rootStore.diagnosticStore._revisionCounter;
 
       rootStore.events.emit({
         type: 'ProgramSwapped',
@@ -356,11 +356,11 @@ describe('DiagnosticStore', () => {
         swapLatencyMs: 5,
       });
 
-      expect((rootStore.diagnosticStore as any).revisionCounter).toBe(initialRevision + 1);
+      expect(rootStore.diagnosticStore._revisionCounter).toBe(initialRevision + 1);
     });
 
     it('should invalidate on GraphCommitted events', () => {
-      const initialRevision = (rootStore.diagnosticStore as any).revisionCounter;
+      const initialRevision = rootStore.diagnosticStore._revisionCounter;
 
       rootStore.events.emit({
         type: 'GraphCommitted',
@@ -377,7 +377,7 @@ describe('DiagnosticStore', () => {
         },
       });
 
-      expect((rootStore.diagnosticStore as any).revisionCounter).toBe(initialRevision + 1);
+      expect(rootStore.diagnosticStore._revisionCounter).toBe(initialRevision + 1);
     });
   });
 });
