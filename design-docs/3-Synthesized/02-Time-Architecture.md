@@ -126,7 +126,7 @@ Additional cycles beyond the curated rails (A/B) are created as explicit operato
 
 ## Patch‑Level Global Rails (aka "Rails")
 
-Every patch contains a small, fixed set of **Global Rails** (phase/pulse/energy/palette) without requiring explicit blocks on the canvas.
+Every patch contains a "Global Rails Container" which contains a small, fixed set of **Global Rails** (phase/pulse/energy/palette) without requiring explicit blocks on the canvas.
 
 These rails are conceptually distinct from user-created buses. Rails are curated, patch-global modulation channels with explicit drive policy (normalled/patched/mixed). Buses are arbitrary routing fabric created by the user.
 
@@ -149,7 +149,7 @@ Overlay cycles are editable only via the Time Console UI and may be materialized
 Oscilla distinguishes:
 
 - **Reserved bus**: `time` (Signal<time>) — infrastructure, always present.
-- **Global Rails**: a fixed set of named modulation channels authored in the Time Console.
+- **Global Rails**: a fixed set of named modulation channels (aka Rails) authored in the Time Console.
 - **User buses**: arbitrary routing fabric created by the user.
 
 ### Reserved Bus: `time`
@@ -172,14 +172,14 @@ The following rails always exist in a patch:
 Rails:
 - cannot be deleted
 - have locked TypeDesc
-- are driven by the Modulation Rack by default (normalled)
+- are driven by the Global Rails by default (normalled)
 
 ### Rail Drive Policy
 
 Each rail has an explicit drive policy, set in the Time Console:
 
-- **Normalled**: the Modulation Rack drives the rail (default).
-- **Patched**: the Modulation Rack is disconnected for that rail; only user publishers drive it.
+- **Normalled**: the Global Rails drives the rail (default).
+- **Patched**: the Global Rails is disconnected for that rail; only user publishers drive it.
 - **Mixed**: both rack and user publishers drive the rail; the rail’s combine rule applies.
 
 No hidden precedence is allowed. Publishing into a Normalled rail MUST surface a policy decision in UI.
@@ -206,7 +206,7 @@ These defaults are editable only in the Time Console (not in generic bus UI).
 ### Compilation Order
 
 1. TimeRoot emits `time`
-2. Modulation Rack derives rails from unbounded time
+2. Global Rails derives rails from unbounded time
 3. Rails are driven according to policy (Normalled/Patched/Mixed)
 4. If enabled, rail values are mirrored into the bus fabric
 5. User publishers are applied
@@ -241,7 +241,7 @@ These defaults are editable only in the Time Console (not in generic bus UI).
 ### Notes
 
 - TimeRoot publishes only the reserved `time` bus.
-- Phase/pulse/energy/palette are produced by the Modulation Rack (or explicit operators) and routed via rails and optional mirroring.
+- Phase/pulse/energy/palette are produced by the Global Rails (or explicit operators) and routed via rails and optional mirroring.
 
 ---
 
@@ -249,7 +249,7 @@ These defaults are editable only in the Time Console (not in generic bus UI).
 
 PhaseFromTime is a **derived operator** that produces phase and cycle signals from an unbounded time input.
 
-The Modulation Rack compiles to a small set of PhaseFromTime/Energy/Palette operators wired to the Global Rails.
+The "Global Rails" component compiles to a small set of PhaseFromTime/Energy/Palette operators wired to the outputs of the Global Rails.
 
 - **Inputs (one required):**
   - `tIn`: Signal<time> OR

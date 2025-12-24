@@ -248,7 +248,7 @@ export class ModulationTableStore {
           blockId: row.blockId,
           blockDef,
           rowKeys: [],
-          collapsed: this.viewState.collapsedGroups[row.groupKey] ?? false,
+          collapsed: this.viewState.collapsedGroups[row.groupKey] ?? true,
         };
         groupMap.set(row.groupKey, group);
       }
@@ -285,8 +285,8 @@ export class ModulationTableStore {
     // Filter out hidden rows
     rows = rows.filter((r) => !hiddenRowKeys[r.key]);
 
-    // Filter out collapsed groups
-    rows = rows.filter((r) => !collapsedGroups[r.groupKey]);
+    // Filter out collapsed groups (default to collapsed if no explicit state)
+    rows = rows.filter((r) => collapsedGroups[r.groupKey] === false);
 
     // Apply text filter
     if (rowFilter.text != null && rowFilter.text !== '') {
@@ -523,9 +523,11 @@ export class ModulationTableStore {
 
   /**
    * Toggle group collapse state.
+   * Default is collapsed (true), so toggling undefined -> false (expanded).
    */
   toggleGroupCollapse(groupKey: GroupKey): void {
-    this.viewState.collapsedGroups[groupKey] = !this.viewState.collapsedGroups[groupKey];
+    const currentState = this.viewState.collapsedGroups[groupKey] ?? true;
+    this.viewState.collapsedGroups[groupKey] = !currentState;
   }
 
   /**

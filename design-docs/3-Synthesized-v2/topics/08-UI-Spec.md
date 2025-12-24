@@ -1,3 +1,7 @@
+# UI Spec
+
+## Source: 07-UI-Spec.md
+
 # UI Specification
 
 ## Guiding Principle
@@ -49,7 +53,6 @@ This is the user's "what kind of thing am I building?" anchor.
 ### Controls
 - Scrub (drag playhead): sets localT
 - Jump to start/end
-- **Loop Controls:** [ Once | Loop | Ping-Pong ] (Affects view-time mapping only)
 
 ### Readouts
 - Time: `1.23s / 4.50s`
@@ -121,8 +124,7 @@ Elements:
 - **Window size editor**: `Window 10s` (click to edit)
 - **View scrub**: dragging shifts timeOffset (view transform, not system time)
 - **Optional "Hold View" toggle**: freezes view offset while system continues
-- **Loop Controls:** Disabled / Hidden
-- 
+
 ### Readouts
 - `Now: 12m 34s` (time since start)
 - `View Offset: -2.3s` if user scrubs away from "now"
@@ -154,6 +156,16 @@ Modal choice:
 - Apply when frozen
 
 No silent application.
+
+### Player Never Loops Time
+No `loopMode` in player UI anymore.
+
+Player only:
+- Advances system time
+- Freezes system time
+- Scales dt
+
+Looping lives entirely in CycleTimeRoot/phases.
 
 ## TimeRoot Picker
 
@@ -191,12 +203,9 @@ Shows:
 
 ## Scheduled Change UI
 
-### Note: this is a UI proposal / idea / example, NOT a specification
-### it can be safely ignored
-
 ### Class A Changes
 - No UI interruption
-- Subtle "Compiling..." indicator
+- Subtle "Compiling..." pill
 - Swap on next frame
 
 ### Class B Changes
@@ -225,3 +234,15 @@ Modal dialog (blocking, explicit):
 - Apply on next pulse (if available)
 - Apply when frozen
 - Cancel
+
+No hidden "don't show again."
+
+## Acceptance Criteria
+
+1. Player never shows linear timeline in Cycle or Infinite
+2. Looping is visually obvious in Cycle mode without words
+3. Infinite mode never implies repetition
+4. Scrubbing never causes a reset
+5. UI state is derived from timeModel only
+6. No "loop toggle" anywhere in player
+7. PhaseClock looping does not change player UI mode

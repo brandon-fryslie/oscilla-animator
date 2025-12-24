@@ -171,15 +171,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
   const listenersCollapsed = store.viewState.listenersSectionCollapsed;
   const splitRatio = store.viewState.tableSplitRatio;
 
-  // Collapse all groups on mount if they haven't been initialized
-  useEffect(() => {
-    // Only run once when the component mounts
-    const groups = store.rowGroups;
-    const hasAnyCollapseState = Object.keys(store.viewState.collapsedGroups).length > 0;
-    if (groups.length > 0 && !hasAnyCollapseState) {
-      store.collapseAllGroups();
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Note: Group collapse is handled in ModulationTableGrid
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);

@@ -1,3 +1,7 @@
+# Blocks
+
+## Source: 09-Blocks.md
+
 # Block Registry
 
 ## Block Categories
@@ -21,6 +25,29 @@ Pre-built combinations of primitives for common patterns.
 
 ## Time/Topology Primitives
 
+> **⚠️ PROVISIONAL (2025-12-23):** The unified output set across all TimeRoot types (phase, pulse, energy auto-publication) is under evaluation. This design provides API consistency but may be revised based on user feedback. Original spec had more minimal outputs per TimeRoot type.
+
+### CycleTimeRoot
+**Role:** TimeRoot
+
+**Inputs:**
+| Port | Type | Description |
+|------|------|-------------|
+| periodMs | Scalar<duration> | Cycle period (default 3000ms) |
+| mode | Scalar<enum> | 'loop' or 'pingpong' |
+
+**Outputs:**
+| Port | Type | Description |
+|------|------|-------------|
+| systemTime | Signal<time> | Monotonic time in ms |
+| cycleT | Signal<time> | Time within current cycle (0..period) |
+| phase | Signal<phase> | 0..1 wrapped at period |
+| wrap | Event | Fires on cycle boundary |
+| cycleIndex | Signal<number> | Number of completed cycles |
+| energy | Signal<number> | Constant 1.0 baseline |
+
+**Auto-publishes:** `phase` -> `phaseA`, `wrap` -> `pulse`, `energy` -> `energy`
+
 ### FiniteTimeRoot
 **Role:** TimeRoot
 
@@ -39,6 +66,8 @@ Pre-built combinations of primitives for common patterns.
 | energy | Signal<number> | 1.0 while animating, 0 when complete *(provisional)* |
 
 **Auto-publishes:** `progress` -> `progress`, `phase` -> `phaseA` *(provisional)*, `end` -> `pulse` *(provisional)*, `energy` -> `energy` *(provisional)*
+
+> *Provisional outputs added for API consistency with CycleTimeRoot. Original spec only required `systemTime`, `localT`, `progress`.*
 
 ### InfiniteTimeRoot
 **Role:** TimeRoot
@@ -61,25 +90,6 @@ Ambient, unbounded time with an optional repeating cycle for bus publications.
 **Auto-publishes:** `phase` -> `phaseA` *(provisional)*, `pulse` -> `pulse` *(provisional)*, `energy` -> `energy` *(provisional)*
 
 > *Provisional outputs added for API consistency. Original spec only required `systemTime` - phase/pulse should come from explicit PhaseClock blocks in generative patches. The `periodMs` input provides convenience but may encourage over-reliance on the ambient cycle.*
-
-### InfiniteTimeRoot (Gemini, v2, Supercedes previous definition)
-
-**Role:** TimeRoot
-
-Ambient, unbounded time. Generative cycles are handled by the Modulation Rack or Derived Operators.
-
-**Inputs:**
-| Port | Type | Description |
-|------|------|-------------|
-| (none) | - | Infinite roots have no inputs. Cycles are defined in the Modulation Rack. |
-
-**Outputs:**
-| Port | Type | Description |
-|------|------|-------------|
-| systemTime | Signal<time> | Monotonic time in ms |
-| energy | Signal<number> | Constant 1.0 *(provisional)* |
-
-### End TimeRoot v2
 
 ---
 
