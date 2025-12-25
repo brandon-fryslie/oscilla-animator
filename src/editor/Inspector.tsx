@@ -7,11 +7,30 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
+import Tippy from '@tippyjs/react';
+import 'tippy.js/dist/tippy.css';
 import { useStore } from './stores';
-import type { PortRef, Block, Slot, Connection } from './types';
+import type { PortRef, Block, Slot, Connection, Bus } from './types';
 import { getBlockDefinition, getBlockDefinitions, getBlockForm, type BlockDefinition } from './blocks';
-import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint } from './portUtils';
+import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint, isInputDriven } from './portUtils';
 import './Inspector.css';
+
+/**
+ * Get a color for a bus based on its domain type.
+ */
+function getBusColor(bus: Bus): string {
+  const domainColors: Record<string, string> = {
+    number: '#60a5fa',  // blue
+    vec2: '#4ade80',    // green
+    color: '#f472b6',   // pink
+    boolean: '#fbbf24', // yellow
+    time: '#c084fc',    // purple
+    phase: '#22d3ee',   // cyan
+    rate: '#f97316',    // orange
+    trigger: '#ef4444', // red
+  };
+  return domainColors[bus.type.domain] ?? '#666';
+}
 
 /**
  * Check if two blocks have compatible port signatures for replacement.
@@ -174,18 +193,12 @@ const PortWiringPanel = observer(({
   );
 
   const handleConnect = (target: { block: Block; slot: Slot; portRef: PortRef }) => {
+    // PatchStore.connect() auto-disconnects any existing connection to the target input
     if (portRef.direction === 'output') {
       // This port is an OUTPUT, target is an INPUT.
-      // An output can connect to multiple inputs, so we just add.
       store.patchStore.connect(portRef.blockId, portRef.slotId, target.portRef.blockId, target.portRef.slotId);
     } else {
       // This port is an INPUT, target is an OUTPUT.
-      // An input can only have one writer. Remove existing connections first.
-      const existing = getConnectionsForPort(portRef.blockId, portRef.slotId, 'input', store.patchStore.connections);
-      for (const conn of existing) {
-        store.patchStore.disconnect(conn.id);
-      }
-      // Now, add the new connection.
       store.patchStore.connect(target.portRef.blockId, target.portRef.slotId, portRef.blockId, portRef.slotId);
     }
     // Clear selection after connecting
@@ -227,12 +240,6 @@ const PortWiringPanel = observer(({
     return lane.id;
   };
 
-  const isInputOccupied = (blockId: string, slotId: string): boolean => {
-    return store.patchStore.connections.some(
-      (c) => c.to.blockId === blockId && c.to.slotId === slotId
-    );
-  };
-
   const handleInsertAdapter = (suggestion: {
     block: Block;
     slot: Slot;
@@ -251,14 +258,7 @@ const PortWiringPanel = observer(({
         : laneFallback);
     if (laneId === undefined || laneId === null) return;
 
-    // Guard against overwriting occupied inputs
-    if (portRef.direction === 'output' && isInputOccupied(suggestion.block.id, suggestion.slot.id)) {
-      return;
-    }
-    if (portRef.direction === 'input' && isInputOccupied(portRef.blockId, portRef.slotId)) {
-      return;
-    }
-
+    // PatchStore.connect() auto-disconnects any existing connection to target inputs
     const adapterId = store.patchStore.addBlock(
       suggestion.adapter.type,
       suggestion.adapter.defaultParams
@@ -648,14 +648,33 @@ const PortItem = observer(({
   );
 });
 
+/**
+ * DefaultSourceControl - Editable control for a slot's default source value.
+ *
+ * Default sources provide fallback values when no wire or bus is connected.
+ * When an input IS driven (has wire/bus), the control shows as disabled with a "Driven" indicator.
+ * When an input is NOT driven, the default source value is active and editable.
+ */
 const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Slot }): React.ReactElement | null => {
   const store = useStore();
   const defaultSource = slot.defaultSource;
   if (defaultSource === undefined || defaultSource === null) return null;
 
-  const currentValue = block.params[slot.id] ?? defaultSource.value;
+  // Check if this input is driven by a wire or bus listener
+  const isDriven = isInputDriven(
+    block.id,
+    slot.id,
+    store.patchStore.connections,
+    store.busStore.listeners
+  );
+
+  // Get value from DefaultSourceStore, falling back to the slot's defaultSource.value
+  const dsState = store.defaultSourceStore.getDefaultSourceForInput(block.id, slot.id);
+  const currentValue = dsState?.value ?? defaultSource.value;
+
   const updateValue = (value: unknown) => {
-    store.patchStore.updateBlockParams(block.id, { [slot.id]: value });
+    // Update through DefaultSourceStore
+    store.defaultSourceStore.setDefaultValueForInput(block.id, slot.id, value);
   };
 
   // Helper to convert value to string safely
@@ -668,12 +687,26 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
   };
 
   const renderControl = () => {
-    switch (defaultSource.uiHint.kind) {
+    // If no uiHint, render a simple text input as fallback
+    if (defaultSource.uiHint === undefined) {
+      return (
+        <input
+          type="text"
+          className="param-input"
+          value={valueToString(currentValue)}
+          disabled={isDriven}
+          onChange={(e) => updateValue(e.target.value)}
+        />
+      );
+    }
+
+    const uiHint = defaultSource.uiHint;
+    switch (uiHint.kind) {
       case 'slider':
       case 'number': {
-        const min = 'min' in defaultSource.uiHint ? defaultSource.uiHint.min : undefined;
-        const max = 'max' in defaultSource.uiHint ? defaultSource.uiHint.max : undefined;
-        const step = defaultSource.uiHint.step;
+        const min = 'min' in uiHint ? uiHint.min : undefined;
+        const max = 'max' in uiHint ? uiHint.max : undefined;
+        const step = 'step' in uiHint ? uiHint.step : undefined;
         return (
           <input
             type="number"
@@ -682,6 +715,7 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
             min={min}
             max={max}
             step={step}
+            disabled={isDriven}
             onChange={(e) => updateValue(parseFloat(e.target.value) || 0)}
           />
         );
@@ -691,9 +725,10 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
           <select
             className="param-input"
             value={String(currentValue)}
+            disabled={isDriven}
             onChange={(e) => updateValue(e.target.value)}
           >
-            {defaultSource.uiHint.options.map((opt) => (
+            {'options' in uiHint && uiHint.options.map((opt: { value: string; label: string }) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
@@ -706,6 +741,7 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
             type="color"
             className="param-input"
             value={String(currentValue)}
+            disabled={isDriven}
             onChange={(e) => updateValue(e.target.value)}
           />
         );
@@ -714,6 +750,7 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
           <input
             type="checkbox"
             checked={Boolean(currentValue)}
+            disabled={isDriven}
             onChange={(e) => updateValue(e.target.checked)}
           />
         );
@@ -723,6 +760,7 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
             type="text"
             className="param-input"
             value={valueToString(currentValue)}
+            disabled={isDriven}
             onChange={(e) => updateValue(e.target.value)}
           />
         );
@@ -737,6 +775,7 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
               className="param-input"
               value={vec.x}
               step={0.1}
+              disabled={isDriven}
               onChange={(e) => updateValue({ ...vec, x: parseFloat(e.target.value) || 0 })}
             />
             <input
@@ -744,6 +783,7 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
               className="param-input"
               value={vec.y}
               step={0.1}
+              disabled={isDriven}
               onChange={(e) => updateValue({ ...vec, y: parseFloat(e.target.value) || 0 })}
             />
           </div>
@@ -755,8 +795,11 @@ const DefaultSourceControl = observer(({ block, slot }: { block: Block; slot: Sl
   };
 
   return (
-    <div className="param-row">
-      <label className="param-key">{slot.label}</label>
+    <div className={`param-row ${isDriven ? 'param-row-driven' : ''}`}>
+      <label className="param-key">
+        {slot.label}
+        {isDriven && <span className="driven-badge">Driven</span>}
+      </label>
       {renderControl()}
     </div>
   );
@@ -838,10 +881,46 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }): React.Re
 });
 
 /**
+ * Bus tooltip content for showing bus details
+ */
+function BusTooltipContent({ bus, connectionType, slotId }: { bus: Bus | undefined; connectionType: 'publish' | 'listen'; slotId?: string }) {
+  if (!bus) return <span>Unknown bus</span>;
+  const busColor = getBusColor(bus);
+  return (
+    <div className="bus-tooltip">
+      <div className="bus-tooltip-header">
+        <span
+          className="bus-tooltip-color"
+          style={{ backgroundColor: busColor }}
+        />
+        <span className="bus-tooltip-name">{bus.name}</span>
+      </div>
+      <div className="bus-tooltip-details">
+        <div className="bus-tooltip-row">
+          <span className="bus-tooltip-key">Domain</span>
+          <span className="bus-tooltip-value">{bus.type.domain}</span>
+        </div>
+        <div className="bus-tooltip-row">
+          <span className="bus-tooltip-key">Combine</span>
+          <span className="bus-tooltip-value">{bus.combineMode}</span>
+        </div>
+        {slotId && (
+          <div className="bus-tooltip-row">
+            <span className="bus-tooltip-key">{connectionType === 'publish' ? 'From slot' : 'To slot'}</span>
+            <span className="bus-tooltip-value">{slotId}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Bus connections section
  */
 const BusConnectionsSection = observer(({ block }: { block: Block }): React.ReactElement | null => {
   const store = useStore();
+  const buses = store.busStore.buses;
 
   // Find bus publications from this block
   const publications = store.busStore.publishers.filter(p => p.from.blockId === block.id);
@@ -850,23 +929,56 @@ const BusConnectionsSection = observer(({ block }: { block: Block }): React.Reac
 
   if (publications.length === 0 && subscriptions.length === 0) return null;
 
+  // Helper to get bus by ID
+  const getBus = (busId: string) => buses.find(b => b.id === busId);
+
   return (
     <div className="insp-section">
       <span className="insp-section-title">Buses</span>
       {publications.length > 0 && (
         <div className="bus-group">
           <span className="bus-direction">Publishes:</span>
-          {publications.map(p => (
-            <span key={p.id} className="bus-tag publish">{p.busId}</span>
-          ))}
+          {publications.map(p => {
+            const bus = getBus(p.busId);
+            return (
+              <Tippy
+                key={p.id}
+                content={<BusTooltipContent bus={bus} connectionType="publish" slotId={p.from.slotId} />}
+                placement="top"
+                delay={[200, 0]}
+              >
+                <span
+                  className="bus-tag publish"
+                  style={{ backgroundColor: bus ? getBusColor(bus) : undefined }}
+                >
+                  {bus?.name ?? p.busId}
+                </span>
+              </Tippy>
+            );
+          })}
         </div>
       )}
       {subscriptions.length > 0 && (
         <div className="bus-group">
           <span className="bus-direction">Listens:</span>
-          {subscriptions.map(l => (
-            <span key={l.id} className="bus-tag listen">{l.busId}</span>
-          ))}
+          {subscriptions.map(l => {
+            const bus = getBus(l.busId);
+            return (
+              <Tippy
+                key={l.id}
+                content={<BusTooltipContent bus={bus} connectionType="listen" slotId={l.to.slotId} />}
+                placement="top"
+                delay={[200, 0]}
+              >
+                <span
+                  className="bus-tag listen"
+                  style={{ backgroundColor: bus ? getBusColor(bus) : undefined }}
+                >
+                  {bus?.name ?? l.busId}
+                </span>
+              </Tippy>
+            );
+          })}
         </div>
       )}
     </div>
@@ -893,17 +1005,12 @@ const BlockInspectorWiringPanel = observer(({
   );
 
   const handleConnect = useCallback((target: { block: Block; slot: Slot; portRef: PortRef }) => {
-    // Logic from PortWiringPanel's handleConnect
+    // PatchStore.connect() auto-disconnects any existing connection to target inputs
     if (sourcePortRef.direction === 'output') {
       // Current port is output, target is input
       store.patchStore.connect(sourcePortRef.blockId, sourcePortRef.slotId, target.portRef.blockId, target.portRef.slotId);
     } else {
       // Current port is input, target is output
-      // Remove existing connections to this input port first
-      const existing = getConnectionsForPort(sourcePortRef.blockId, sourcePortRef.slotId, 'input', store.patchStore.connections);
-      for (const conn of existing) {
-        store.patchStore.disconnect(conn.id);
-      }
       store.patchStore.connect(target.portRef.blockId, target.portRef.slotId, sourcePortRef.blockId, sourcePortRef.slotId);
     }
     store.uiStore.setSelectedPort(null); // Clear selection after connecting
@@ -1034,11 +1141,18 @@ export const Inspector = observer(() => {
       {/* Compact header */}
       <div className="insp-header" style={{ borderLeftColor: blockColor }}>
         <div className="insp-title-row">
-                    <span className="insp-title">{block.label}</span>
-                    <span className="insp-category" style={{ background: blockColor }}>{block.category}</span>
-                  </div>
-                  <code className="insp-type">{block.type}</code>
-                </div>
+          <span className="insp-title">{block.label}</span>
+          <span className="insp-category" style={{ background: blockColor }}>{block.category}</span>
+          <button
+            className="insp-close-btn"
+            onClick={() => store.uiStore.selectBlock(null)}
+            title="Close inspector (deselect block)"
+          >
+            ×
+          </button>
+        </div>
+        <code className="insp-type">{block.type}</code>
+      </div>
 
                 <div className="insp-body">
                   {/* Wiring Panel for selected port on current block */}
@@ -1105,7 +1219,8 @@ export const Inspector = observer(() => {
                         </div>
                       )}
 
-                      {/* Legacy Parameters */}
+                      {/* Legacy Parameters - HIDDEN: Using DefaultSource controls instead
+                         * TODO: Delete this section once DefaultSource migration is complete
                       {Object.keys(block.params).length > 0 && (
                         <div className="insp-section">
                           <span className="insp-section-title">Legacy Parameters</span>
@@ -1156,6 +1271,7 @@ export const Inspector = observer(() => {
                           </div>
                         </div>
                       )}
+                      */}
 
                       {/* Bus connections */}
                       <BusConnectionsSection block={block} />

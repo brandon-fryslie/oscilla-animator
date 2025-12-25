@@ -33,6 +33,9 @@ export {
 export { FieldAddVec2Block } from './FieldAddVec2';
 export { FieldColorizeBlock } from './FieldColorize';
 export { FieldOpacityBlock } from './FieldOpacity';
+export { FieldHueGradientBlock } from './FieldHueGradient';
+export { FieldFromExpressionBlock } from './FieldFromExpression';
+export { FieldStringToColorBlock } from './FieldStringToColor';
 export { ViewportInfoBlock } from './ViewportInfo';
 export { JitterFieldVec2Block } from './JitterFieldVec2';
 

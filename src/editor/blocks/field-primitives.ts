@@ -209,6 +209,189 @@ export const FieldOpacity = createBlock({
 });
 
 // =============================================================================
+// Field Color Generation
+// =============================================================================
+
+/**
+ * FieldHueGradient - Generate rainbow/gradient colors per element
+ *
+ * Creates a Field<color> by spreading hue across all elements in a domain.
+ * The hue spread and phase can be controlled for animated rainbow effects.
+ *
+ * Inputs with defaultSource:
+ * - hueOffset: Signal world - base hue to start from (0-360)
+ * - hueSpread: Signal world - how much of the spectrum to use (0-1 = full rainbow)
+ * - saturation: Signal world - color saturation (0-100)
+ * - lightness: Signal world - color lightness (0-100)
+ * - phase: Signal world - animate the hue rotation
+ */
+export const FieldHueGradient = createBlock({
+  type: 'FieldHueGradient',
+  label: 'Hue Gradient',
+  description: 'Generate per-element rainbow colors from domain',
+  inputs: [
+    input('domain', 'Domain', 'Domain'),
+    input('hueOffset', 'Hue Offset', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 360, step: 1 },
+      },
+    }),
+    input('hueSpread', 'Hue Spread', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 1,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 },
+      },
+    }),
+    input('saturation', 'Saturation', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 80,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 100, step: 1 },
+      },
+    }),
+    input('lightness', 'Lightness', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 60,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 100, step: 1 },
+      },
+    }),
+    input('phase', 'Phase', 'Signal<phase>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
+      },
+    }),
+  ],
+  outputs: [
+    output('colors', 'Colors', 'Field<color>'),
+  ],
+  paramSchema: [
+    {
+      key: 'hueOffset',
+      label: 'Hue Offset',
+      type: 'number',
+      min: 0,
+      max: 360,
+      step: 1,
+      defaultValue: 0,
+    },
+    {
+      key: 'hueSpread',
+      label: 'Hue Spread',
+      type: 'number',
+      min: 0,
+      max: 1,
+      step: 0.1,
+      defaultValue: 1,
+    },
+    {
+      key: 'saturation',
+      label: 'Saturation',
+      type: 'number',
+      min: 0,
+      max: 100,
+      step: 1,
+      defaultValue: 80,
+    },
+    {
+      key: 'lightness',
+      label: 'Lightness',
+      type: 'number',
+      min: 0,
+      max: 100,
+      step: 1,
+      defaultValue: 60,
+    },
+  ],
+  color: '#F472B6', // Pink for color blocks
+  laneKind: 'Fields',
+  priority: 42,
+});
+
+// =============================================================================
+// Field Expression Adapter
+// =============================================================================
+
+/**
+ * FieldFromExpression - Transform signals to fields using custom expressions
+ *
+ * Takes a Signal<number> and generates a Field<number> by evaluating a custom
+ * JavaScript expression for each element. The expression can use:
+ * - i: element index (0 to n-1)
+ * - n: total number of elements
+ * - signal: the current signal value
+ * - Math functions (sin, cos, abs, floor, etc.)
+ *
+ * Examples:
+ * - "signal * (i / n)" - linear gradient from 0 to signal value
+ * - "signal * Math.sin(i / n * Math.PI * 2)" - wave pattern
+ * - "i % 2 === 0 ? signal : 0" - alternating pattern
+ */
+export const FieldFromExpression = createBlock({
+  type: 'FieldFromExpression',
+  label: 'Expression Field',
+  description: 'Generate field from expression (i, n, signal). Returns strings.',
+  inputs: [
+    input('domain', 'Domain', 'Domain'),
+    input('signal', 'Signal', 'Signal<phase>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        defaultBus: 'phaseA',
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
+      },
+    }),
+  ],
+  outputs: [
+    output('field', 'Field', 'Field<string>'),
+  ],
+  paramSchema: [
+    {
+      key: 'expression',
+      label: 'Expression',
+      type: 'string',
+      defaultValue: 'hsl(i / n * 360 + signal * 360, 80, 60)',
+    },
+  ],
+  color: '#10B981', // Emerald for adapter blocks
+  laneKind: 'Fields',
+  priority: 43,
+});
+
+/**
+ * FieldStringToColor - Adapter from Field<string> to Field<color>
+ *
+ * Simple passthrough that reinterprets string values as colors.
+ * Use with FieldFromExpression when your expression returns color strings.
+ */
+export const FieldStringToColor = createBlock({
+  type: 'FieldStringToColor',
+  label: 'String → Color',
+  description: 'Convert Field<string> to Field<color>',
+  inputs: [
+    input('strings', 'Strings', 'Field<string>'),
+  ],
+  outputs: [
+    output('colors', 'Colors', 'Field<color>'),
+  ],
+  paramSchema: [],
+  color: '#F472B6',
+  laneKind: 'Fields',
+  priority: 44,
+});
+
+// =============================================================================
 // Slice 8: Viewport
 // =============================================================================
 

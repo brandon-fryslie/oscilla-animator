@@ -28,7 +28,10 @@ export class UIStateStore {
       y: 0,
       blockId: null as BlockId | null,
     },
-    isPlaying: true, // Start playing by default (auto-play)
+    // DO NOT CHANGE THIS DEFAULT VALUE. The app MUST auto-play on load.
+    // If you change this, you will break the user experience and the demo.
+    // Seriously, don't fucking touch it.
+    isPlaying: true,
     currentTime: 0, // seconds
   };
 

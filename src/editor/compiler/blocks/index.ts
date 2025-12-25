@@ -2,6 +2,10 @@
  * Block Compiler Registry
  *
  * Contains domain primitives and signal blocks.
+ *
+ * CRITICAL: Adding new blocks is strictly NOT ALLOWED unless the user explicitly
+ * asks you to, and you confirm it with them. Use existing blocks, composites,
+ * defaultSource, and adapters instead.
  */
 
 import type { BlockRegistry, BlockCompiler } from '../types';
@@ -32,6 +36,9 @@ import {
   FieldAddVec2Block,
   FieldColorizeBlock,
   FieldOpacityBlock,
+  FieldHueGradientBlock,
+  FieldFromExpressionBlock,
+  FieldStringToColorBlock,
   ViewportInfoBlock,
   JitterFieldVec2Block,
   // Field-Signal combination blocks (Slice 5)
@@ -93,6 +100,9 @@ export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   FieldAddVec2: FieldAddVec2Block,
   FieldColorize: FieldColorizeBlock,
   FieldOpacity: FieldOpacityBlock,
+  FieldHueGradient: FieldHueGradientBlock,
+  FieldFromExpression: FieldFromExpressionBlock,
+  FieldStringToColor: FieldStringToColorBlock,
   ViewportInfo: ViewportInfoBlock,
   JitterFieldVec2: JitterFieldVec2Block,
 

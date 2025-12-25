@@ -1101,6 +1101,16 @@ function createDefaultArtifact(value: unknown, kind: string): Artifact {
       const num = Number(value);
       return { kind: 'Field:number', value: (_s: Seed, n: number) => Array.from({ length: n }, () => num) };
     }
+    case 'Field:color': {
+      // Broadcast scalar color to field
+      const color = String(value);
+      return { kind: 'Field:color', value: (_s: Seed, n: number) => Array.from({ length: n }, () => color) };
+    }
+    case 'Field:vec2': {
+      // Broadcast vec2 to field
+      const vec = (value as Vec2) ?? { x: 0, y: 0 };
+      return { kind: 'Field:vec2', value: (_s: Seed, n: number) => Array.from({ length: n }, () => vec) };
+    }
     default:
       return { kind: 'Error', message: `Default source not supported for ${kind}` };
   }

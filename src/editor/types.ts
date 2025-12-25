@@ -359,7 +359,7 @@ export interface DefaultSource {
   readonly value: unknown;
 
   /** UI control metadata for inline editing */
-  readonly uiHint: UIControlHint;
+  readonly uiHint?: UIControlHint;
 
   /**
    * World classification - determines:
@@ -374,6 +374,13 @@ export interface DefaultSource {
    * | config  | Parameter edit  | Topology change (crossfade/freeze)   |
    */
   readonly world: SlotWorld;
+
+  /**
+   * Optional bus name to auto-connect when block is created.
+   * If specified, a bus listener will be added automatically.
+   * The value field is still used as fallback if the bus doesn't exist.
+   */
+  readonly defaultBus?: string;
 }
 
 // =============================================================================

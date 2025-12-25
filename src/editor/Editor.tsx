@@ -537,7 +537,7 @@ export const Editor = observer(() => {
 
   // Load a default macro on startup and generate its control surface
   useEffect(() => {
-    store.patchStore.addBlock('macro:simpleGrid');
+
     // Generate a default surface for the macro
     // Use setTimeout to ensure blocks are fully populated after macro expansion
     setTimeout(() => {
@@ -549,6 +549,8 @@ export const Editor = observer(() => {
       if (surface) {
         controlSurfaceStore.setSurface(surface);
       }
+
+      store.patchStore.addBlock('macro:rainbowGrid');
     }, 0);
   }, [store, controlSurfaceStore]);
 
@@ -908,41 +910,50 @@ export const Editor = observer(() => {
 
               {/* BusBoard Panel - hidden in table view mode (table has integrated bus columns) */}
               {patchViewMode !== 'table' && (
-                <div
-                  className={`bay-panel busboard-panel ${busBoardCollapsed ? 'collapsed' : ''}`}
-                  style={{
-                    flex: busBoardCollapsed
-                      ? '0 0 auto'
-                      : patchBayCollapsed
+                busBoardCollapsed ? (
+                  /* Collapsed state: thin vertical tab with rotated text */
+                  <div
+                    className="busboard-collapsed-tab"
+                    onClick={() => setBusBoardCollapsed(false)}
+                    title="Click to expand Bus Board"
+                  >
+                    <span className="busboard-collapsed-text">Bus Board</span>
+                  </div>
+                ) : (
+                  /* Expanded state: full panel */
+                  <div
+                    className="bay-panel busboard-panel"
+                    style={{
+                      flex: patchBayCollapsed
                         ? '1 1 0'
                         : `${1 - baySplit} 1 0`,
-                  }}
-                >
-                  <div className="panel-header busboard-header">
-                    <span className="panel-title">Bus</span>
-                    <div className="panel-header-actions">
-                      <button
-                        className="panel-collapse-icon"
-                        onClick={() => openHelpPanel('patch')}
-                        title="Help"
-                      >
-                        ?
-                      </button>
-                      <button
-                        className="panel-collapse-icon"
-                        onClick={() => setBusBoardCollapsed((v) => !v)}
-                        title={busBoardCollapsed ? 'Show bus board' : 'Hide bus board'}
-                      >
-                        {busBoardCollapsed ? '◂' : '▸'}
-                      </button>
+                    }}
+                  >
+                    <div
+                      className="panel-header busboard-header"
+                      onClick={() => setBusBoardCollapsed(true)}
+                      style={{ cursor: 'pointer' }}
+                      title="Click to collapse Bus Board"
+                    >
+                      <span className="panel-title">Bus Board</span>
+                      <div className="panel-header-actions">
+                        <button
+                          className="panel-collapse-icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openHelpPanel('patch');
+                          }}
+                          title="Help"
+                        >
+                          ?
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  {!busBoardCollapsed && (
                     <div className="busboard-body">
                       <BusBoard />
                     </div>
-                  )}
-                </div>
+                  </div>
+                )
               )}
             </div>
           </div>

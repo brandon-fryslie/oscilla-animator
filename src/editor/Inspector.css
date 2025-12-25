@@ -751,8 +751,27 @@ code.wiring-info-value {
 .insp-title-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 6px;
+}
+
+/* Close button in inspector header */
+.insp-close-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 6px;
+  margin-left: auto;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.1s, color 0.1s;
+}
+
+.insp-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .insp-title {
@@ -895,6 +914,29 @@ code.wiring-info-value {
   gap: 6px;
 }
 
+/* Driven state - input is receiving from wire or bus */
+.param-row-driven {
+  opacity: 0.6;
+}
+
+.param-row-driven .param-input {
+  background: #0d0d0d;
+  cursor: not-allowed;
+}
+
+.driven-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 4px;
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #22c55e;
+  color: #052e16;
+  border-radius: 3px;
+}
+
 .param-key {
   flex: 0 0 70px;
   font-size: 10px;
@@ -942,10 +984,16 @@ code.wiring-info-value {
 }
 
 .bus-tag {
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-size: 9px;
-  font-family: 'Monaco', 'Menlo', monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+
+.bus-tag:hover {
+  filter: brightness(1.2);
 }
 
 .bus-tag.publish {
@@ -956,6 +1004,59 @@ code.wiring-info-value {
 .bus-tag.listen {
   background: #1a1a2a;
   color: #60a5fa;
+}
+
+/* Bus tooltip styling */
+.bus-tooltip {
+  min-width: 140px;
+  font-size: 11px;
+}
+
+.bus-tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin: -5px -9px 0 -9px;
+  border-radius: 4px 4px 0 0;
+}
+
+.bus-tooltip-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.bus-tooltip-name {
+  font-weight: 600;
+  color: #fff;
+}
+
+.bus-tooltip-details {
+  padding: 6px 0 0 0;
+}
+
+.bus-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.bus-tooltip-key {
+  color: #888;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bus-tooltip-value {
+  color: #ddd;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 10px;
 }
 
 /* Replace list */

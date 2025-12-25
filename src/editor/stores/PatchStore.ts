@@ -12,6 +12,7 @@ import type {
   BlockSubcategory,
   BlockType,
 } from '../types';
+import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import { getBlockDefinition } from '../blocks';
 import { getMacroKey, getMacroExpansion, type MacroExpansion } from '../macros';
 import { listCompositeDefinitions } from '../composites';
@@ -162,9 +163,81 @@ export class PatchStore {
   // =============================================================================
 
   /**
+   * Internal block creation - the shared implementation for addBlock and expandMacro.
+   * Does NOT check for macros (caller must handle that).
+   * Does NOT emit GraphCommitted (caller emits one for the entire operation).
+   *
+   * @param type - Block type
+   * @param params - Block parameters
+   * @param laneKind - Optional lane kind to place block in
+   * @param label - Optional label override
+   * @returns The created block ID
+   */
+  private _createBlock(
+    type: BlockType,
+    params?: Record<string, unknown>,
+    laneKind?: LaneKind,
+    label?: string
+  ): BlockId {
+    const id = this.generateBlockId();
+    const definition = getBlockDefinition(type);
+
+    if (definition === undefined) {
+      throw new Error(`Block type "${type}" not found in registry`);
+    }
+
+    // Merge params with defaults and migrate old values
+    const rawParams = params ?? definition.defaultParams ?? {};
+    const migratedParams = migrateBlockParams(type, rawParams);
+
+    const block: Block = {
+      id,
+      type,
+      label: label ?? definition.label ?? type,
+      inputs: definition.inputs ?? [],
+      outputs: definition.outputs ?? [],
+      params: migratedParams,
+      category: definition.subcategory ?? 'Other',
+      description: definition.description ?? `${type} block`,
+    };
+
+    this.blocks.push(block);
+
+    // Add to lane if specified
+    if (laneKind !== undefined) {
+      const lane = this.root.viewStore.lanes.find((l) => l.kind === laneKind);
+      if (lane !== undefined) {
+        lane.blockIds = [...lane.blockIds, id];
+      }
+    }
+
+    // Create default sources for inputs with defaultSource metadata
+    this.root.defaultSourceStore.createDefaultSourcesForBlock(
+      id,
+      block.inputs,
+      SLOT_TYPE_TO_TYPE_DESC
+    );
+
+    // Process auto-bus connections for this block
+    this.processAutoBusConnections(id, type);
+
+    // Emit BlockAdded event
+    this.root.events.emit({
+      type: 'BlockAdded',
+      blockId: id,
+      blockType: type,
+      laneId: '', // Legacy payload, unused by ViewStore now
+    });
+
+    return id;
+  }
+
+  /**
    * Process auto-bus connections for a block based on its definition.
-   * This handles both primitive blocks with autoBusSubscriptions/autoBusPublications
-   * and composite blocks with busSubscriptions/busPublications in their graph.
+   * This handles:
+   * - Primitive blocks with autoBusSubscriptions/autoBusPublications
+   * - Composite blocks with busSubscriptions/busPublications in their graph
+   * - Input slots with defaultSource.defaultBus specified
    */
   private processAutoBusConnections(blockId: BlockId, blockType: string): void {
     const definition = getBlockDefinition(blockType);
@@ -187,6 +260,19 @@ export class PatchStore {
         const bus = this.root.busStore.buses.find(b => b.name === busName);
         if (bus !== undefined) {
           this.root.busStore.addPublisher(bus.id, blockId, outputPort);
+        }
+      }
+    }
+
+    // Check for input slots with defaultBus in their defaultSource
+    if (definition.inputs !== undefined) {
+      for (const inputSlot of definition.inputs) {
+        if (inputSlot.defaultSource?.defaultBus !== undefined) {
+          const busName = inputSlot.defaultSource.defaultBus;
+          const bus = this.root.busStore.buses.find(b => b.name === busName);
+          if (bus !== undefined) {
+            this.root.busStore.addListener(bus.id, blockId, inputSlot.id);
+          }
         }
       }
     }
@@ -237,39 +323,8 @@ export class PatchStore {
       throw new Error(`Cannot add macro block "${type}" directly. Macros must have an expansion in MACRO_REGISTRY.`);
     }
 
-    // Regular block addition
-    const id = this.generateBlockId();
-
-    // Look up block definition from registry
-    const definition = getBlockDefinition(type);
-
-    // Merge params with defaults and migrate old values
-    const rawParams = params ?? definition?.defaultParams ?? {};
-    const migratedParams = migrateBlockParams(type, rawParams);
-
-    const block: Block = {
-      id,
-      type,
-      label: definition?.label ?? type,
-      inputs: definition?.inputs ?? [],
-      outputs: definition?.outputs ?? [],
-      params: migratedParams,
-      category: definition?.subcategory ?? 'Other',
-      description: definition?.description ?? `${type} block`,
-    };
-
-    this.blocks.push(block);
-
-    // Process auto-bus connections for this block
-    this.processAutoBusConnections(id, type);
-
-    // Emit BlockAdded event AFTER state changes committed
-    this.root.events.emit({
-      type: 'BlockAdded',
-      blockId: id,
-      blockType: type,
-      laneId: '', // Legacy payload, unused by ViewStore now
-    });
+    // Use shared block creation logic
+    const id = this._createBlock(type, params);
 
     // Emit GraphCommitted for diagnostics
     this.emitGraphCommitted(
@@ -327,6 +382,13 @@ export class PatchStore {
 
     this.blocks.push(block);
 
+    // Create default sources for inputs with defaultSource metadata
+    this.root.defaultSourceStore.createDefaultSourcesForBlock(
+      id,
+      block.inputs,
+      SLOT_TYPE_TO_TYPE_DESC
+    );
+
     // Add to lane at specific index
     if (laneObj !== null && laneObj !== undefined) {
       const newBlockIds = [...laneObj.blockIds];
@@ -370,37 +432,17 @@ export class PatchStore {
     // Map from macro ref IDs to actual block IDs
     const refToId = new Map<string, BlockId>();
 
-    // Create all blocks
+    // Create all blocks using shared _createBlock method
+    // This ensures all automatic features work (defaultBus, autoBus, etc.)
     for (const macroBlock of expansion.blocks) {
-      // Find the appropriate lane for this block's kind
-      const lane = this.root.viewStore.lanes.find((l) => l.kind === macroBlock.laneKind);
-      if (lane === null || lane === undefined) {
-        throw new Error(`Macro block "${macroBlock.ref}" (${macroBlock.type}) references unknown lane kind "${macroBlock.laneKind}"`);
-      }
-
-      const id = this.generateBlockId();
-      const definition = getBlockDefinition(macroBlock.type);
-      if (definition === null || definition === undefined) {
-        throw new Error(`Macro block "${macroBlock.ref}" references unknown block type "${macroBlock.type}"`);
-      }
-
-      const block: Block = {
-        id,
-        type: macroBlock.type,
-        label: macroBlock.label ?? definition.label,
-        inputs: definition.inputs ?? [],
-        outputs: definition.outputs ?? [],
-        params: { ...definition.defaultParams, ...(macroBlock.params ?? {}) },
-        category: definition.subcategory ?? 'Other', // Set category based on definition or default
-        description: definition.description,
-      };
-
-      this.blocks.push(block);
-      lane.blockIds = [...lane.blockIds, id];
+      // Use shared block creation with lane placement and label override
+      const id = this._createBlock(
+        macroBlock.type,
+        macroBlock.params,
+        macroBlock.laneKind,
+        macroBlock.label
+      );
       refToId.set(macroBlock.ref, id);
-
-      // Process auto-bus connections for this newly added block
-      this.processAutoBusConnections(id, macroBlock.type);
     }
 
     // Create all connections
@@ -549,6 +591,9 @@ export class PatchStore {
     // Remove block
     this.blocks = this.blocks.filter((b) => b.id !== id);
 
+    // Remove default sources for this block's inputs
+    this.root.defaultSourceStore.removeDefaultSourcesForBlock(id);
+
     // Remove connections to/from this block (with cascade event emission)
     for (const conn of connectionsToRemove) {
       this.disconnect(conn.id, { suppressGraphCommitted: true });
@@ -643,6 +688,13 @@ export class PatchStore {
 
     // Add new block
     this.blocks.push(newBlock);
+
+    // Create default sources for inputs with defaultSource metadata
+    this.root.defaultSourceStore.createDefaultSourcesForBlock(
+      newBlockId,
+      newBlock.inputs,
+      SLOT_TYPE_TO_TYPE_DESC
+    );
 
     // Add to lane at the same position as old block
     const oldIndex = lane.blockIds.indexOf(oldBlockId);
@@ -749,8 +801,31 @@ export class PatchStore {
   }
 
   /**
+   * Disconnect everything connected to an input port (wires AND bus listeners).
+   * Call this before connecting to ensure exclusive input.
+   */
+  disconnectInputPort(blockId: BlockId, slotId: string): void {
+    // Remove any wire connections to this input
+    const wiresToRemove = this.connections.filter(
+      (c) => c.to.blockId === blockId && c.to.slotId === slotId
+    );
+    for (const wire of wiresToRemove) {
+      this.disconnect(wire.id, { suppressGraphCommitted: true });
+    }
+
+    // Remove any bus listeners to this input
+    const listenersToRemove = this.root.busStore.listeners.filter(
+      (l) => l.to.blockId === blockId && l.to.slotId === slotId
+    );
+    for (const listener of listenersToRemove) {
+      this.root.busStore.removeListener(listener.id);
+    }
+  }
+
+  /**
    * Create a connection between two blocks (helper method).
    * Uses semantic Validator for preflight validation.
+   * Automatically disconnects any existing connection to the target input.
    *
    * @param options - Optional settings
    * @param options.suppressGraphCommitted - If true, don't emit GraphCommitted (used internally)
@@ -771,6 +846,10 @@ export class PatchStore {
         c.to.slotId === toSlotId
     );
     if (exists) return;
+
+    // INVARIANT: An input can only have one source.
+    // Disconnect any existing wire or bus listener before connecting.
+    this.disconnectInputPort(toBlockId, toSlotId);
 
     // Preflight validation using Semantic Validator (warn-only, does not block)
     // The compiler will catch real errors during compilation.

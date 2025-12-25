@@ -214,6 +214,8 @@ export class DiagnosticHub {
         // Update message with latest stats
         existing.diagnostic.message = `Average frame time ${frameBudget.avgFrameMs.toFixed(1)}ms exceeds 60fps budget (16.67ms). FPS: ~${frameBudget.fpsEstimate.toFixed(0)}`;
       } else {
+        const avgFrameMs = frameBudget.avgFrameMs.toFixed(1);
+        const fpsEstimate = frameBudget.fpsEstimate.toFixed(0);
         this.runtimeDiagnostics.set(diagId, {
           lastSeenAt: now,
           diagnostic: createDiagnostic({
@@ -221,8 +223,8 @@ export class DiagnosticHub {
             severity: 'warn',
             domain: 'perf',
             primaryTarget: { kind: 'graphSpan', blockIds: [], spanKind: 'subgraph' },
-            title: 'Frame budget exceeded',
-            message: `Average frame time ${frameBudget.avgFrameMs.toFixed(1)}ms exceeds 60fps budget (16.67ms). FPS: ~${frameBudget.fpsEstimate.toFixed(0)}`,
+            title: `Frame budget exceeded (${avgFrameMs}/${fpsEstimate})`,
+            message: `Average frame time ${avgFrameMs}ms exceeds 60fps budget (16.67ms). FPS: ~${fpsEstimate}`,
             patchRevision,
             payload: {
               kind: 'perf',

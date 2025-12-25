@@ -5,10 +5,10 @@
  * This is the sink that turns per-element data into visual output.
  *
  * Takes:
- *   - Domain: element identity
- *   - positions: Field<vec2> - per-element positions
- *   - radius: Field<number> OR Signal<number> - per-element radii or broadcast radius (optional)
- *   - color: Field<color> - per-element colors (optional)
+ *   - Domain: element identity (required)
+ *   - positions: Field<vec2> - per-element positions (required)
+ *   - radius: Field<number> OR Signal<number> - per-element radii or broadcast radius (required)
+ *   - color: Field<color> - per-element colors (required)
  *
  * Produces:
  *   - render: RenderTree - SVG-compatible render tree with circles
@@ -34,12 +34,8 @@ export const RenderInstances2DBlock: BlockCompiler = {
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
     { name: 'positions', type: { kind: 'Field:vec2' }, required: true },
-    { name: 'radius', type: { kind: 'Field:number' }, required: false },
-    { name: 'color', type: { kind: 'Field:color' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'render', type: { kind: 'RenderTree' } },
+    { name: 'radius', type: { kind: 'Field:number' }, required: true },
+    { name: 'color', type: { kind: 'Field:color' }, required: true },
   ],
 
   compile({ params, inputs }) {
@@ -58,7 +54,7 @@ export const RenderInstances2DBlock: BlockCompiler = {
       return {
         render: {
           kind: 'Error',
-          message: 'RenderInstances2D requires a Field<vec2> positions input',
+          message: `RenderInstances2D requires a Field<vec2> positions input. Got ${positionsArtifact.kind}`,
         },
       };
     }
@@ -70,24 +66,47 @@ export const RenderInstances2DBlock: BlockCompiler = {
     // - Field<number>: per-element radii (static or varied)
     // - Signal<number>: broadcast same animated value to all elements
     const radiusArtifact = inputs.radius;
-    let radiusMode: 'field' | 'signal' | 'default' = 'default';
+    if (!isDefined(radiusArtifact)) {
+      return {
+        render: {
+          kind: 'Error',
+          message: 'RenderInstances2D requires a radius input',
+        },
+      };
+    }
+    if (radiusArtifact.kind !== 'Field:number' && radiusArtifact.kind !== 'Signal:number') {
+      return {
+        render: {
+          kind: 'Error',
+          message: `RenderInstances2D requires a Field<number> or Signal<number> radius input. Got ${radiusArtifact.kind}`,
+        },
+      };
+    }
+
+    let radiusMode: 'field' | 'signal';
     let radiusField: Field<number> | undefined;
     let radiusSignal: ((t: number, ctx: RuntimeCtx) => number) | undefined;
 
-    if (isDefined(radiusArtifact) && radiusArtifact.kind === 'Field:number') {
+    if (radiusArtifact.kind === 'Field:number') {
       radiusMode = 'field';
       radiusField = radiusArtifact.value;
-    } else if (isDefined(radiusArtifact) && radiusArtifact.kind === 'Signal:number') {
+    } else {
       radiusMode = 'signal';
       radiusSignal = radiusArtifact.value as (t: number, ctx: RuntimeCtx) => number;
     }
-    // else: radiusMode === 'default', use constant 5
 
-    // Optional color field - default to white if not provided
+    // Color field - required
     const colorArtifact = inputs.color;
-    const colorField: Field<unknown> = isDefined(colorArtifact) && colorArtifact.kind === 'Field:color'
-      ? colorArtifact.value
-      : (_seed, n) => Array<string>(n).fill('#ffffff');
+    if (!isDefined(colorArtifact) || colorArtifact.kind !== 'Field:color') {
+      return {
+        render: {
+          kind: 'Error',
+          message: `RenderInstances2D requires a Field<color> color input. Got ${colorArtifact.kind}`,
+        },
+      };
+    }
+
+    const colorField: Field<unknown> = colorArtifact.value;
 
     // Params
     const opacity = Number(params.opacity ?? 1.0);
@@ -99,21 +118,26 @@ export const RenderInstances2DBlock: BlockCompiler = {
       const n = domain.elements.length;
       const seed = 0; // Fixed seed for consistent rendering
 
+      // Create field evaluation context with time for signal-dependent fields
+      // IMPORTANT: t: tMs must come LAST to ensure it's not overwritten by ctx
+      const fieldCtx = {
+        ...DEFAULT_CTX,
+        ...ctx,
+        t: tMs,
+      };
+
       // Evaluate fields
-      const positions = positionField(seed, n, DEFAULT_CTX);
-      const colors = colorField(seed, n, DEFAULT_CTX);
+      const positions = positionField(seed, n, fieldCtx);
+      const colors = colorField(seed, n, fieldCtx);
 
       // Radius: evaluate based on mode
       let radii: readonly number[];
-      if (radiusMode === 'field' && isDefined(radiusField)) {
-        radii = radiusField(seed, n, DEFAULT_CTX);
-      } else if (radiusMode === 'signal' && isDefined(radiusSignal)) {
-        // Sample signal once and broadcast to all elements
-        const broadcastRadius = radiusSignal(tMs, ctx);
-        radii = new Array(n).fill(broadcastRadius);
+      if (radiusMode === 'field') {
+        radii = radiusField!(seed, n, fieldCtx);
       } else {
-        // Default: constant radius of 5
-        radii = new Array(n).fill(5);
+        // Signal mode: sample signal once and broadcast to all elements
+        const broadcastRadius = radiusSignal!(tMs, ctx);
+        radii = new Array(n).fill(broadcastRadius);
       }
 
       // Build circle nodes
@@ -167,4 +191,8 @@ export const RenderInstances2DBlock: BlockCompiler = {
       render: { kind: 'RenderTree', value: renderFn },
     };
   },
+
+  outputs: [
+    { name: 'render', type: { kind: 'RenderTree' } },
+  ],
 };

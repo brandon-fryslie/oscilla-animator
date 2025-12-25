@@ -190,6 +190,9 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
       if (compiledProgram && compiledProgram.program !== (lastGoodProgramRef.current as unknown)) {
         const player = playerRef.current;
         if (player) {
+          // Track if this is the first program load (for auto-play)
+          const isFirstProgram = lastGoodProgramRef.current === null;
+
           // Cast to runtime RenderTree type (structurally compatible)
           const program = compiledProgram.program as unknown as Program<RenderTree>;
           player.setFactory(() => program);
@@ -199,6 +202,14 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
           lastGoodProgramRef.current = program;
           setHasCompiledProgram(true);
           logStore.debug('renderer', `Hot swapped to new compiled program (timeModel: ${compiledProgram.timeModel.kind})`);
+
+          // DO NOT REMOVE: Auto-play when FIRST program loads.
+          // The app MUST auto-play on startup. This is critical for UX.
+          // Only auto-play on first load; respect user's pause on subsequent hot-swaps.
+          if (isFirstProgram) {
+            player.play();
+            store.uiStore.setPlaying(true);
+          }
         }
       }
 

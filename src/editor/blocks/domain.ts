@@ -1212,8 +1212,14 @@ export const RenderInstances2D = createBlock({
   inputs: [
     input('domain', 'Domain', 'Domain'),
     input('positions', 'Positions', 'Field<vec2>'),
-    input('radius', 'Radius', 'Field<number>'),
-    input('color', 'Color', 'Field<color>'),
+    input('radius', 'Radius', 'Field<number>', {
+      tier: 'primary',
+      defaultSource: { value: 5, world: 'field', uiHint: { kind: 'slider', min: 1, max: 50, step: 1 } },
+    }),
+    input('color', 'Color', 'Field<color>', {
+      tier: 'primary',
+      defaultSource: { value: '#ffffff', world: 'field', uiHint: { kind: 'color' } },
+    }),
     input('opacity', 'Opacity', 'Signal<number>', {
       tier: 'primary',
       defaultSource: { value: 1.0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 } },

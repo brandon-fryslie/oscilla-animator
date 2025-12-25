@@ -50,6 +50,7 @@ export class RootStore {
     this.viewStore = new ViewStateStore(this);
     this.compositeStore = new CompositeStore(this);
     this.defaultSourceStore = new DefaultSourceStore();
+    this.defaultSourceStore.setRoot(this);
 
     // Create diagnostic infrastructure (after patchStore)
     this.diagnosticHub = new DiagnosticHub(this.events, this.patchStore);
@@ -274,8 +275,8 @@ export class RootStore {
   }
 
   loadDemoAnimation(): void {
-    // Load demo animation by expanding the breathingDots macro
+    // Load demo animation by expanding the rainbowGrid macro
     this.clearPatch();
-    this.patchStore.addBlock('macro:breathingDots', {});
+    this.patchStore.addBlock('macro:rainbowGrid', {});
   }
 }

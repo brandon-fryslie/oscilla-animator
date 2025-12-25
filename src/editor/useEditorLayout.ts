@@ -35,7 +35,7 @@ const DEFAULT_LAYOUT: LayoutState = {
   leftSplit: 0.5,
   centerSplit: 0.4,
   patchBayCollapsed: false,
-  busBoardCollapsed: false,
+  busBoardCollapsed: true, // Start collapsed, extra room goes to lanes panel
   baySplit: 0.5,
   leftSidebarMode: '1x',
   rightSidebarMode: 'hidden', // Right sidebar collapsed by default

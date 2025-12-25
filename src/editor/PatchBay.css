@@ -364,20 +364,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+  width: 18px;
+  height: 14px; /* Reduced from 20px to fit more ports per block */
+  border-radius: 3px;
   cursor: pointer;
   transition: all 0.15s;
   /* Background/border set via inline styles based on connection state */
 }
 
 .port.input {
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 3px 3px 0;
 }
 
 .port.output {
-  border-radius: 4px 0 0 4px;
+  border-radius: 3px 0 0 3px;
 }
 
 .port:hover {
@@ -406,9 +406,15 @@
   }
 }
 
+/* Bus-connected port - subtle outline to indicate bus routing */
+.port.bus-connected {
+  outline: 1.5px dashed rgba(255, 255, 255, 0.5);
+  outline-offset: 1px;
+}
+
 /* Port glyph styling */
 .port-glyph {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   line-height: 1;
 }
