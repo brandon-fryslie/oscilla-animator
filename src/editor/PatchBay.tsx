@@ -17,18 +17,46 @@ import { useDroppable, useDraggable } from '@dnd-kit/core';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import { useStore } from './stores';
-import type { Lane, LaneKind, Block, Slot, PortRef } from './types';
+import type { Lane, LaneKind, Block, Slot, PortRef, Bus } from './types';
 import { getBlockDefinition } from './blocks';
 import { LayoutSelector } from './LayoutSelector';
 import { BlockContextMenu } from './BlockContextMenu';
 import {
   buildPortColorMap,
   getPortColor,
-  isPortConnected,
   areTypesCompatible,
   describeSlotType,
 } from './portUtils';
+import { isDefined } from './types/helpers';
 import './PatchBay.css';
+
+/**
+ * Get a color for a bus based on its domain type.
+ */
+function getBusDomainColor(bus: Bus): string {
+  const domainColors: Record<string, string> = {
+    number: '#60a5fa',  // blue
+    vec2: '#4ade80',    // green
+    color: '#f472b6',   // pink
+    boolean: '#fbbf24', // yellow
+    time: '#c084fc',    // purple
+    phase: '#22d3ee',   // cyan
+    rate: '#f97316',    // orange
+    trigger: '#ef4444', // red
+  };
+  return domainColors[bus.type.domain] ?? '#666';
+}
+
+/**
+ * Connection info for tooltip display
+ */
+interface ConnectionInfo {
+  hasBlockConnection: boolean;
+  hasBusConnection: boolean;
+  busName?: string;
+  busColor?: string;
+  connectedBlockLabel?: string;
+}
 
 /**
  * Lane colors by kind for visual identification.
@@ -83,10 +111,10 @@ function Port({
   blockId,
   direction,
   connectionColor,
-  isConnected,
   isHovered,
   isSelected,
   isCompatible,
+  connectionInfo,
   onHover,
   onClick,
   onContextMenu,
@@ -95,10 +123,10 @@ function Port({
   blockId: string;
   direction: 'input' | 'output';
   connectionColor: string | null;
-  isConnected: boolean;
   isHovered: boolean;
   isSelected: boolean;
   isCompatible: boolean;
+  connectionInfo: ConnectionInfo;
   onHover: (port: PortRef | null) => void;
   onClick: (port: PortRef) => void;
   onContextMenu: (e: React.MouseEvent, port: PortRef) => void;
@@ -107,8 +135,13 @@ function Port({
   const typeDescriptor = describeSlotType(slot.type);
   const typeGlyph = PORT_GLYPHS[typeDescriptor.world] ?? '○';
 
-  // Show dash when unconnected, type glyph when connected
-  const displayGlyph = isConnected ? typeGlyph : '–';
+  // Determine what glyph to show:
+  // - Unconnected: dash
+  // - Bus-only: bus icon (⊛)
+  // - Block-only or Block+Bus: type glyph
+  const hasBusOnly = connectionInfo.hasBusConnection && !connectionInfo.hasBlockConnection;
+  const hasAnyConnection = connectionInfo.hasBusConnection || connectionInfo.hasBlockConnection;
+  const displayGlyph = !hasAnyConnection ? '–' : hasBusOnly ? '⊛' : typeGlyph;
 
   const handleMouseEnter = () => onHover(portRef);
   const handleMouseLeave = () => onHover(null);
@@ -122,18 +155,23 @@ function Port({
     onContextMenu(e, portRef);
   };
 
-  // Determine port styling - grey when unconnected, connectionColor when connected
+  // Determine port styling - grey when unconnected
+  // Use bus color if only bus connected, connection color if block connected
+  const effectiveColor = connectionInfo.hasBusConnection && !connectionInfo.hasBlockConnection
+    ? connectionInfo.busColor ?? connectionColor
+    : connectionColor;
+
   const portStyle: React.CSSProperties = {
-    ...(isConnected && connectionColor ? {
-      backgroundColor: connectionColor,
-      borderColor: connectionColor,
+    ...(hasAnyConnection && isDefined(effectiveColor) ? {
+      backgroundColor: effectiveColor,
+      borderColor: effectiveColor,
       color: '#fff',
     } : {
       backgroundColor: '#4a5568',
       borderColor: '#4a5568',
       color: '#9ca3af',
     }),
-    ...(isCompatible && !isConnected && {
+    ...(isCompatible && !hasAnyConnection && {
       boxShadow: '0 0 8px 2px rgba(74, 222, 128, 0.6)',
     }),
   };
@@ -141,11 +179,29 @@ function Port({
   const className = [
     'port',
     direction,
-    isConnected ? 'connected' : 'disconnected',
+    hasAnyConnection ? 'connected' : 'disconnected',
+    connectionInfo.hasBusConnection ? 'bus-connected' : '',
     isHovered ? 'hovered' : '',
     isSelected ? 'selected' : '',
     isCompatible ? 'compatible' : '',
   ].filter(Boolean).join(' ');
+
+  // Build connection status text for tooltip
+  const getConnectionStatusText = () => {
+    if (!connectionInfo.hasBlockConnection && !connectionInfo.hasBusConnection) {
+      return null;
+    }
+    const parts: string[] = [];
+    if (connectionInfo.hasBlockConnection) {
+      parts.push(`Block${connectionInfo.connectedBlockLabel ? `: ${connectionInfo.connectedBlockLabel}` : ''}`);
+    }
+    if (connectionInfo.hasBusConnection && connectionInfo.busName) {
+      parts.push(`Bus: ${connectionInfo.busName}`);
+    }
+    return parts.join(' + ');
+  };
+
+  const connectionStatusText = getConnectionStatusText();
 
   const tooltipContent = (
     <div className="port-tooltip">
@@ -166,8 +222,10 @@ function Port({
           <span className="port-tooltip-key">Domain</span>
           <span className="port-tooltip-value">{typeDescriptor.domain}</span>
         </div>
-        {isConnected && (
-          <div className="port-tooltip-status connected">● Connected</div>
+        {connectionStatusText && (
+          <div className={`port-tooltip-status connected ${connectionInfo.hasBusConnection ? 'has-bus' : ''}`}>
+            ● {connectionStatusText}
+          </div>
         )}
       </div>
     </div>
@@ -209,7 +267,7 @@ function Port({
         onClick={handleClick}
         onContextMenu={handleContextMenu}
       >
-        <span className={`port-glyph ${isConnected ? typeDescriptor.world : 'disconnected'}`}>{displayGlyph}</span>
+        <span className={`port-glyph ${hasAnyConnection ? typeDescriptor.world : 'disconnected'}`}>{displayGlyph}</span>
       </div>
     </Tippy>
   );
@@ -268,7 +326,7 @@ const DraggablePatchBlock = observer(({
 
   // Get diagnostics state
   const diagnostics = store.diagnosticStore.getDiagnosticsForBlock(block.id);
-  console.log(`[DraggablePatchBlock] Render ${block.id}: Found ${diagnostics.length} diagnostics`);
+  // console.log(`[DraggablePatchBlock] Render ${block.id}: Found ${diagnostics.length} diagnostics`);
   const hasError = diagnostics.some(d => d.severity === 'error' || d.severity === 'fatal');
   const hasWarning = !hasError && diagnostics.some(d => d.severity === 'warn');
 
@@ -288,6 +346,69 @@ const DraggablePatchBlock = observer(({
         return slots.find((s) => s.id === sourcePort.slotId) ?? null;
       })()
     : null;
+
+  // Get bus connection info for this block's ports
+  const buses = store.busStore.buses;
+  const busListeners = store.busStore.listeners;
+  const publishers = store.busStore.publishers;
+
+  // Helper to get connection info for a specific port
+  const getConnectionInfo = (slotId: string, direction: 'input' | 'output'): ConnectionInfo => {
+    // Check for block-to-block connections
+    const hasBlockConnection = direction === 'input'
+      ? connections.some((c) => c.to.blockId === block.id && c.to.slotId === slotId)
+      : connections.some((c) => c.from.blockId === block.id && c.from.slotId === slotId);
+
+    // Get connected block label for block-to-block connections
+    let connectedBlockLabel: string | undefined;
+    if (hasBlockConnection) {
+      const conn = direction === 'input'
+        ? connections.find((c) => c.to.blockId === block.id && c.to.slotId === slotId)
+        : connections.find((c) => c.from.blockId === block.id && c.from.slotId === slotId);
+      if (conn) {
+        const otherBlockId = direction === 'input' ? conn.from.blockId : conn.to.blockId;
+        const otherBlock = store.patchStore.blocks.find((b) => b.id === otherBlockId);
+        connectedBlockLabel = otherBlock?.label;
+      }
+    }
+
+    // Check for bus connections
+    let hasBusConnection = false;
+    let busName: string | undefined;
+    let busColor: string | undefined;
+
+    if (direction === 'input') {
+      // Input ports can have listeners (bus → input)
+      const busListener = busListeners.find(
+        (l) => l.to.blockId === block.id && l.to.slotId === slotId
+      );
+      if (busListener) {
+        hasBusConnection = true;
+        const bus = buses.find((b) => b.id === busListener.busId);
+        busName = bus?.name;
+        busColor = bus ? getBusDomainColor(bus) : undefined;
+      }
+    } else {
+      // Output ports can have publishers (output → bus)
+      const publisher = publishers.find(
+        (p) => p.from.blockId === block.id && p.from.slotId === slotId
+      );
+      if (publisher) {
+        hasBusConnection = true;
+        const bus = buses.find((b) => b.id === publisher.busId);
+        busName = bus?.name;
+        busColor = bus ? getBusDomainColor(bus) : undefined;
+      }
+    }
+
+    return {
+      hasBlockConnection,
+      hasBusConnection,
+      busName,
+      busColor,
+      connectedBlockLabel,
+    };
+  };
 
   const style = transform
     ? {
@@ -331,7 +452,6 @@ const DraggablePatchBlock = observer(({
         <div className="block-ports inputs">
           {block.inputs.map((slot) => {
             const portConnColor = getPortColor(block.id, slot.id, portColorMap);
-            const connected = isPortConnected(block.id, slot.id, 'input', connections);
             const isThisHovered =
               hoveredPort?.blockId === block.id &&
               hoveredPort?.slotId === slot.id &&
@@ -350,6 +470,8 @@ const DraggablePatchBlock = observer(({
               }
             }
 
+            const connInfo = getConnectionInfo(slot.id, 'input');
+
             return (
               <Port
                 key={slot.id}
@@ -357,10 +479,10 @@ const DraggablePatchBlock = observer(({
                 blockId={block.id}
                 direction="input"
                 connectionColor={portConnColor}
-                isConnected={connected}
                 isHovered={isThisHovered}
                 isSelected={isThisSelected}
                 isCompatible={compatible}
+                connectionInfo={connInfo}
                 onHover={(p) => store.uiStore.setHoveredPort(p)}
                 onClick={(p) => store.uiStore.setSelectedPort(p)}
                 onContextMenu={(e, p) => store.uiStore.openContextMenu(e.clientX, e.clientY, p)}
@@ -380,7 +502,6 @@ const DraggablePatchBlock = observer(({
         <div className="block-ports outputs">
           {block.outputs.map((slot) => {
             const portConnColor = getPortColor(block.id, slot.id, portColorMap);
-            const connected = isPortConnected(block.id, slot.id, 'output', connections);
             const isThisHovered =
               hoveredPort?.blockId === block.id &&
               hoveredPort?.slotId === slot.id &&
@@ -399,6 +520,8 @@ const DraggablePatchBlock = observer(({
               }
             }
 
+            const connInfo = getConnectionInfo(slot.id, 'output');
+
             return (
               <Port
                 key={slot.id}
@@ -406,10 +529,10 @@ const DraggablePatchBlock = observer(({
                 blockId={block.id}
                 direction="output"
                 connectionColor={portConnColor}
-                isConnected={connected}
                 isHovered={isThisHovered}
                 isSelected={isThisSelected}
                 isCompatible={compatible}
+                connectionInfo={connInfo}
                 onHover={(p) => store.uiStore.setHoveredPort(p)}
                 onClick={(p) => store.uiStore.setSelectedPort(p)}
                 onContextMenu={(e, p) => store.uiStore.openContextMenu(e.clientX, e.clientY, p)}
@@ -487,7 +610,7 @@ const DroppableLane = observer(({
     data: {
       type: 'lane',
       laneId: lane.id,
-      laneName: lane.id, // Legacy compatibility
+      laneName: lane.id,
     },
   });
 

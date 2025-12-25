@@ -13,18 +13,19 @@
 import { observer } from 'mobx-react-lite';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import {
-  Player,
   createPlayer,
   SvgRenderer,
+  Canvas2DRenderer,
   group,
   type PlayState,
-  type RenderTree,
+  type SvgRenderTree,
   type Scene,
   type CuePoint,
   type TimeModel,
+  type Player,
 } from './runtime';
 import type { CompilerService, Viewport } from './compiler';
-import type { Program } from './compiler/types';
+import type { Program, CanvasProgram } from './compiler/types';
 import { useStore } from './stores';
 import { TimeConsole } from './components/TimeConsole';
 import './PreviewPanel.css';
@@ -33,7 +34,7 @@ import './PreviewPanel.css';
  * Empty placeholder program shown when no patch is compiled.
  * Renders nothing - just an empty group.
  */
-const EMPTY_PROGRAM: Program<RenderTree> = {
+const EMPTY_PROGRAM: Program<SvgRenderTree> = {
   signal: () => group('empty', []),
   event: () => [],
 };
@@ -67,13 +68,19 @@ const DEFAULT_TIME_MODEL: TimeModel = {
   windowMs: 10000,
 };
 
-export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }: PreviewPanelProps) => {
+export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }: PreviewPanelProps): React.ReactElement => {
   const store = useStore();
   const logStore = store.logStore;
   const svgRef = useRef<SVGSVGElement>(null);
+  const canvasElRef = useRef<HTMLCanvasElement>(null);
   const playerRef = useRef<Player | null>(null);
   const rendererRef = useRef<SvgRenderer | null>(null);
-  const lastGoodProgramRef = useRef<Program<RenderTree> | null>(null);
+  const canvasRendererRef = useRef<Canvas2DRenderer | null>(null);
+  const lastGoodProgramRef = useRef<Program<SvgRenderTree> | null>(null);
+  const lastGoodCanvasProgramRef = useRef<CanvasProgram | null>(null);
+
+  // Which renderer is active: 'svg' or 'canvas'
+  const [activeRenderer, setActiveRenderer] = useState<'svg' | 'canvas'>('svg');
 
   const [playState, setPlayState] = useState<PlayState>('playing');
   const [currentTime, setCurrentTime] = useState(0);
@@ -96,19 +103,25 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   // Speed and seed from store (with fallbacks)
   const speed = store.uiStore.settings.speed;
   const seed = store.uiStore.settings.seed;
-  const finiteLoopMode = store.uiStore.settings.finiteLoopMode;
 
   // Derive dimensions from viewport
   const { width, height } = viewport;
 
-  // Initialize player and renderer ONCE (never destroy/recreate)
+  // Initialize player and renderers ONCE (never destroy/recreate)
+  // This effect intentionally has minimal dependencies to run only once on mount
   useEffect(() => {
     if (!svgRef.current) return;
     if (playerRef.current) return; // Already initialized
 
     const svg = svgRef.current;
-    const renderer = new SvgRenderer(svg);
-    rendererRef.current = renderer;
+    const svgRenderer = new SvgRenderer(svg);
+    rendererRef.current = svgRenderer;
+
+    // Initialize Canvas renderer if canvas element is available
+    if (canvasElRef.current) {
+      const canvasRenderer = new Canvas2DRenderer(canvasElRef.current);
+      canvasRendererRef.current = canvasRenderer;
+    }
 
     const handleStateChange = (state: PlayState) => {
       setPlayState(state);
@@ -116,8 +129,8 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     };
 
     const player = createPlayer(
-      (tree: RenderTree, _tMs: number) => {
-        renderer.render(tree);
+      (tree: SvgRenderTree, _tMs: number) => {
+        svgRenderer.render(tree);
       },
       {
         width,
@@ -125,7 +138,6 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         onStateChange: handleStateChange,
         onTimeChange: setCurrentTime,
         onCuePointsChange: setCuePoints,
-        autoApplyTimeline: true,
         events: store.events, // Pass EventDispatcher for runtime health snapshots
       }
     );
@@ -138,15 +150,32 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     if (compilerService) {
       const compiledProgram = compilerService.getProgram();
       if (compiledProgram) {
-        // Cast to runtime RenderTree type (structurally compatible)
-        const program = compiledProgram.program as unknown as Program<RenderTree>;
-        player.setFactory(() => program);
-        player.applyTimeModel(compiledProgram.timeModel);
-        player.setActivePatchRevision(store.patchStore.patchRevision);
-        setTimeModel(compiledProgram.timeModel);
-        lastGoodProgramRef.current = program;
-        setHasCompiledProgram(true);
-        logStore.info('renderer', `Loaded compiled program (timeModel: ${compiledProgram.timeModel.kind})`);
+        if (compiledProgram.canvasProgram) {
+          // Canvas program - use canvas renderer
+          const canvasProgram = compiledProgram.canvasProgram;
+          lastGoodCanvasProgramRef.current = canvasProgram;
+          setActiveRenderer('canvas');
+          setHasCompiledProgram(true);
+
+          // For canvas, we use a custom render loop instead of the player
+          // The player still runs for time management, but we render via canvas
+          player.setFactory(() => EMPTY_PROGRAM); // Placeholder for time tracking
+          player.applyTimeModel(compiledProgram.timeModel);
+          player.setActivePatchRevision(store.patchStore.patchRevision);
+          setTimeModel(compiledProgram.timeModel);
+          logStore.info('renderer', `Loaded Canvas program (timeModel: ${compiledProgram.timeModel.kind})`);
+        } else if (compiledProgram.program) {
+          // SVG program
+          const program = compiledProgram.program as unknown as Program<SvgRenderTree>;
+          player.setFactory(() => program);
+          player.applyTimeModel(compiledProgram.timeModel);
+          player.setActivePatchRevision(store.patchStore.patchRevision);
+          setTimeModel(compiledProgram.timeModel);
+          lastGoodProgramRef.current = program;
+          setActiveRenderer('svg');
+          setHasCompiledProgram(true);
+          logStore.info('renderer', `Loaded SVG program (timeModel: ${compiledProgram.timeModel.kind})`);
+        }
       } else {
         // No compiled program yet - show empty canvas
         player.setFactory(() => EMPTY_PROGRAM);
@@ -163,29 +192,23 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
 
     return () => {
       player.destroy();
-      renderer.clear();
+      svgRenderer.clear();
+      canvasRendererRef.current?.clear();
     };
-  }, []); // Empty deps - only run once
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount - refs guard re-execution
+  }, []);
 
   // Sync with external isPlaying prop
   useEffect(() => {
     const player = playerRef.current;
     if (!player) return;
 
-    if (isPlaying && playState !== 'playing') {
+    if (isPlaying === true && playState !== 'playing') {
       player.play();
-    } else if (!isPlaying && playState === 'playing') {
+    } else if (isPlaying === false && playState === 'playing') {
       player.pause();
     }
   }, [isPlaying, playState]);
-
-  // Sync finiteLoopMode with player
-  useEffect(() => {
-    const player = playerRef.current;
-    if (!player) return;
-
-    player.setFiniteLoopMode(finiteLoopMode);
-  }, [finiteLoopMode]);
 
   // Watch for compiler service program and viewport changes
   useEffect(() => {
@@ -195,18 +218,51 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     const interval = setInterval(() => {
       // Check for program changes
       const compiledProgram = compilerService.getProgram();
-      if (compiledProgram && compiledProgram.program !== (lastGoodProgramRef.current as unknown)) {
+      if (compiledProgram) {
         const player = playerRef.current;
-        if (player) {
-          // Cast to runtime RenderTree type (structurally compatible)
-          const program = compiledProgram.program as unknown as Program<RenderTree>;
-          player.setFactory(() => program);
-          player.applyTimeModel(compiledProgram.timeModel);
-          player.setActivePatchRevision(store.patchStore.patchRevision);
-          setTimeModel(compiledProgram.timeModel);
-          lastGoodProgramRef.current = program;
-          setHasCompiledProgram(true);
-          logStore.debug('renderer', `Hot swapped to new compiled program (timeModel: ${compiledProgram.timeModel.kind})`);
+
+        if (compiledProgram.canvasProgram && compiledProgram.canvasProgram !== lastGoodCanvasProgramRef.current) {
+          // New canvas program
+          if (player) {
+            const isFirstProgram = lastGoodCanvasProgramRef.current === null && lastGoodProgramRef.current === null;
+
+            lastGoodCanvasProgramRef.current = compiledProgram.canvasProgram;
+            lastGoodProgramRef.current = null; // Clear SVG program
+            setActiveRenderer('canvas');
+            player.setFactory(() => EMPTY_PROGRAM); // Time tracking only
+            player.applyTimeModel(compiledProgram.timeModel);
+            player.setActivePatchRevision(store.patchStore.patchRevision);
+            setTimeModel(compiledProgram.timeModel);
+            setHasCompiledProgram(true);
+            logStore.debug('renderer', `Hot swapped to Canvas program (timeModel: ${compiledProgram.timeModel.kind})`);
+
+            if (isFirstProgram) {
+              player.play();
+              store.uiStore.setPlaying(true);
+            }
+          }
+        } else if (compiledProgram.program && compiledProgram.program !== (lastGoodProgramRef.current as unknown)) {
+          // New SVG program
+          if (player) {
+            const isFirstProgram = lastGoodProgramRef.current === null && lastGoodCanvasProgramRef.current === null;
+
+            const program = compiledProgram.program as unknown as Program<SvgRenderTree>;
+            player.setFactory(() => program);
+            player.applyTimeModel(compiledProgram.timeModel);
+            player.setActivePatchRevision(store.patchStore.patchRevision);
+            setTimeModel(compiledProgram.timeModel);
+            lastGoodProgramRef.current = program;
+            lastGoodCanvasProgramRef.current = null; // Clear canvas program
+            setActiveRenderer('svg');
+            setHasCompiledProgram(true);
+            logStore.debug('renderer', `Hot swapped to SVG program (timeModel: ${compiledProgram.timeModel.kind})`);
+
+            // DO NOT REMOVE: Auto-play when FIRST program loads.
+            if (isFirstProgram) {
+              player.play();
+              store.uiStore.setPlaying(true);
+            }
+          }
         }
       }
 
@@ -219,7 +275,44 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     }, 500);
 
     return () => clearInterval(interval);
-  }, [compilerService, viewport.width, viewport.height, store.patchStore.patchRevision]);
+  }, [compilerService, logStore, store.patchStore.patchRevision, viewport]);
+
+  // Canvas render loop - renders when canvas mode is active
+  useEffect(() => {
+    if (activeRenderer !== 'canvas') return;
+    if (!lastGoodCanvasProgramRef.current) return;
+    if (!canvasRendererRef.current) return;
+
+    const canvasRenderer = canvasRendererRef.current;
+    const canvasProgram = lastGoodCanvasProgramRef.current;
+    let animationFrameId: number;
+
+    // Update canvas size
+    canvasRenderer.setViewport(width, height, window.devicePixelRatio);
+
+    const renderFrame = () => {
+      if (playState === 'playing' || playState === 'paused') {
+        const tMs = currentTime;
+        const ctx = {
+          viewport: { w: width, h: height, dpr: window.devicePixelRatio },
+        };
+
+        // Get render tree from the canvas program
+        const renderTree = canvasProgram.signal(tMs, ctx);
+
+        // Execute the render tree
+        canvasRenderer.render(renderTree);
+      }
+
+      animationFrameId = requestAnimationFrame(renderFrame);
+    };
+
+    animationFrameId = requestAnimationFrame(renderFrame);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [activeRenderer, width, height, playState, currentTime]);
 
   // TimeConsole callbacks
   const handlePlay = useCallback(() => {
@@ -246,10 +339,6 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const handleSeedChange = useCallback((newSeed: number) => {
     store.uiStore.setSeed(newSeed);
     // Seed change triggers recompilation via autoCompile
-  }, [store]);
-
-  const handleFiniteLoopModeChange = useCallback((enabled: boolean) => {
-    store.uiStore.setFiniteLoopMode(enabled);
   }, [store]);
 
   // Pan handlers for mouse drag
@@ -352,6 +441,14 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
       <div className="preview-header">
         <span className="preview-title">Preview</span>
         <div className="preview-header-actions">
+          {hasCompiledProgram && (
+            <span
+              className={`preview-renderer-badge ${activeRenderer}`}
+              title={activeRenderer === 'canvas' ? 'Canvas 2D Renderer' : 'SVG Renderer'}
+            >
+              {activeRenderer === 'canvas' ? 'Canvas' : 'SVG'}
+            </span>
+          )}
           <button
             className="preview-help-btn"
             onClick={() => onShowHelp?.()}
@@ -381,12 +478,27 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         onDoubleClick={handleResetView}
         onWheel={handleWheel}
       >
+        {/* SVG Renderer - visible when activeRenderer is 'svg' */}
         <svg
           ref={svgRef}
           width={width}
           height={height}
           viewBox={`${panOffset.x} ${panOffset.y} ${width / zoom} ${height / zoom}`}
           className="preview-svg"
+          style={{ display: activeRenderer === 'svg' ? 'block' : 'none' }}
+        />
+
+        {/* Canvas Renderer - visible when activeRenderer is 'canvas' */}
+        <canvas
+          ref={canvasElRef}
+          width={width * window.devicePixelRatio}
+          height={height * window.devicePixelRatio}
+          className="preview-canvas-element"
+          style={{
+            display: activeRenderer === 'canvas' ? 'block' : 'none',
+            width: `${width}px`,
+            height: `${height}px`,
+          }}
         />
 
         {/* TimeConsole anchored inside preview canvas */}
@@ -397,14 +509,12 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
           speed={speed}
           seed={seed}
           cuePoints={cuePoints}
-          finiteLoopMode={finiteLoopMode}
           onScrub={handleScrub}
           onPlay={handlePlay}
           onPause={handlePause}
           onReset={handleReset}
           onSpeedChange={handleSpeedChange}
           onSeedChange={handleSeedChange}
-          onFiniteLoopModeChange={handleFiniteLoopModeChange}
         />
       </div>
     </div>

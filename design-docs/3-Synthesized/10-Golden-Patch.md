@@ -45,6 +45,45 @@ A loopable ambient system: a grid of dots that "breathes" (radius), slowly drift
   - `phaseA` <- phase (primary)
   - `pulse` <- wrap
 
+## Patch Contract
+
+### Time Topology
+- **TimeRoot:** InfiniteTimeRoot
+- **Compiled TimeModel:** `{ kind: 'infinite' }`
+- **Modulation Rack:**
+  - **Phase A:** Internal Generator (Period = 8.0s, Mode = Loop) -> drives `phaseA` Rail
+  - **Pulse:** Derived from Phase A wrap -> drives `pulse` Rail
+
+### Canonical Buses
+| Bus | Type | Source |
+|-----|------|---------|
+| phaseA | Signal<phase> | Modulation Rack (Internal) |
+| pulse | Event | Modulation Rack (Internal) |
+| energy | Signal<number> | Modulation Rack (Internal) |
+| palette | Signal<color> | Modulation Rack (Internal) |
+
+---
+
+## Block Graph
+
+### A) Time Topology Block
+
+**InfiniteTimeRoot**
+- Params: none
+- Publishes: `systemTime`
+
+### A) Time Topology v2
+
+## Block Graph
+
+### A) Time Topology Block
+
+**InfiniteTimeRoot**
+- Params: none
+- Publishes: `systemTime`
+
+### END v2
+
 ### B) Domain + Arrangement
 
 **GridDomain**

@@ -6,6 +6,7 @@
  */
 
 import type { BlockCompiler, Vec2, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 export const FieldAddVec2Block: BlockCompiler = {
   type: 'FieldAddVec2',
@@ -23,7 +24,7 @@ export const FieldAddVec2Block: BlockCompiler = {
     const fieldA = inputs.a;
     const fieldB = inputs.b;
 
-    if (!fieldA || fieldA.kind !== 'Field:vec2') {
+    if (!isDefined(fieldA) || fieldA.kind !== 'Field:vec2') {
       return {
         out: {
           kind: 'Error',
@@ -32,7 +33,7 @@ export const FieldAddVec2Block: BlockCompiler = {
       };
     }
 
-    if (!fieldB || fieldB.kind !== 'Field:vec2') {
+    if (!isDefined(fieldB) || fieldB.kind !== 'Field:vec2') {
       return {
         out: {
           kind: 'Error',
@@ -41,8 +42,8 @@ export const FieldAddVec2Block: BlockCompiler = {
       };
     }
 
-    const fieldAFn = fieldA.value as Field<Vec2>;
-    const fieldBFn = fieldB.value as Field<Vec2>;
+    const fieldAFn = fieldA.value;
+    const fieldBFn = fieldB.value;
 
     // Create summed field
     const field: Field<Vec2> = (seed, n, ctx) => {
@@ -52,8 +53,8 @@ export const FieldAddVec2Block: BlockCompiler = {
 
       const out = new Array<Vec2>(count);
       for (let i = 0; i < count; i++) {
-        const a = valuesA[i]!;
-        const b = valuesB[i]!;
+        const a = valuesA[i];
+        const b = valuesB[i];
         out[i] = { x: a.x + b.x, y: a.y + b.y };
       }
 

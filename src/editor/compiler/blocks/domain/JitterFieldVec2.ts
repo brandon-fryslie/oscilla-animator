@@ -8,7 +8,17 @@
  * evaluates them at runtime when the field is materialized.
  */
 
-import type { BlockCompiler, Vec2, Field } from '../../types';
+import type { BlockCompiler, Vec2, Field, CompileCtx, RuntimeCtx } from '../../types';
+import { isDefined } from '../../../types/helpers';
+
+/**
+ * Extended context interface for field evaluation at runtime.
+ * The compile-time context is extended with time information during rendering.
+ */
+interface FieldEvalCtx extends CompileCtx {
+  /** Current time in milliseconds (available at runtime) */
+  t: number;
+}
 
 export const JitterFieldVec2Block: BlockCompiler = {
   type: 'JitterFieldVec2',
@@ -26,7 +36,7 @@ export const JitterFieldVec2Block: BlockCompiler = {
     const idRandArtifact = inputs.idRand;
     const phaseArtifact = inputs.phase;
 
-    if (!idRandArtifact || idRandArtifact.kind !== 'Field:number') {
+    if (!isDefined(idRandArtifact) || idRandArtifact.kind !== 'Field:number') {
       return {
         drift: {
           kind: 'Error',
@@ -35,7 +45,7 @@ export const JitterFieldVec2Block: BlockCompiler = {
       };
     }
 
-    if (!phaseArtifact || phaseArtifact.kind !== 'Signal:phase') {
+    if (!isDefined(phaseArtifact) || phaseArtifact.kind !== 'Signal:phase') {
       return {
         drift: {
           kind: 'Error',
@@ -44,7 +54,7 @@ export const JitterFieldVec2Block: BlockCompiler = {
       };
     }
 
-    const idRandFn = idRandArtifact.value as Field<number>;
+    const idRandFn = idRandArtifact.value;
     const phaseFn = phaseArtifact.value;
     const amount = Number(params.amount ?? 10);
     const frequency = Number(params.frequency ?? 1);
@@ -58,11 +68,12 @@ export const JitterFieldVec2Block: BlockCompiler = {
 
       // Evaluate the phase signal once for this frame
       // Note: ctx is expected to have a .t property at runtime (similar to FieldZipSignal)
-      const phase = phaseFn((ctx as any).t, ctx as any);
+      const runtimeCtx = ctx as FieldEvalCtx;
+      const phase = phaseFn(runtimeCtx.t, runtimeCtx as unknown as RuntimeCtx);
 
       const out = new Array<Vec2>(randoms.length);
       for (let i = 0; i < randoms.length; i++) {
-        const r = randoms[i]!;
+        const r = randoms[i];
 
         // Each element gets a unique direction from 0 to 2π
         const angle = r * Math.PI * 2;

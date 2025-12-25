@@ -91,18 +91,18 @@ export function combineSignalArtifacts(
 
   // Single publisher: return as-is
   if (artifacts.length === 1) {
-    return artifacts[0]!;
+    return artifacts[0];
   }
 
   // Multiple publishers: combine based on mode
   if (mode === 'last') {
     // Highest sortKey wins (last in sorted array)
-    return artifacts[artifacts.length - 1]!;
+    return artifacts[artifacts.length - 1];
   }
 
   if (mode === 'sum') {
     // Sum all values - works for number and vec2
-    const first = artifacts[0]!;
+    const first = artifacts[0];
 
     if (first.kind === 'Signal:number') {
       const signals = artifacts.map(a => (a as typeof first).value);
@@ -207,11 +207,11 @@ export function combineFieldArtifacts(
 
   // Single publisher: return as-is
   if (artifacts.length === 1) {
-    return artifacts[0]!;
+    return artifacts[0];
   }
 
   // Multiple publishers: combine based on mode
-  const first = artifacts[0]!;
+  const first = artifacts[0];
 
   // Ensure all artifacts are Field:number
   if (first.kind !== 'Field:number') {
@@ -225,7 +225,7 @@ export function combineFieldArtifacts(
 
   if (mode === 'last') {
     // Highest sortKey wins (last in sorted array)
-    return artifacts[artifacts.length - 1]!;
+    return artifacts[artifacts.length - 1];
   }
 
   if (mode === 'sum') {

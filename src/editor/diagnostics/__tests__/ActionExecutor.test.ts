@@ -9,22 +9,34 @@ import type { PatchStore } from '../../stores/PatchStore';
 import type { UIStateStore } from '../../stores/UIStateStore';
 import type { ViewStateStore } from '../../stores/ViewStateStore';
 import type { DiagnosticHub } from '../DiagnosticHub';
-import type { BlockId, Connection, Block, LaneId } from '../../types';
+import type { BlockId, LaneId, Block, Connection } from '../../types';
 
 // Mock stores
-const createMockPatchStore = (): Partial<PatchStore> => ({
-  blocks: [],
-  connections: [],
-  addBlock: vi.fn((_type: string, _params?: any) => {
-    const newBlockId = `block-${Date.now()}` as BlockId;
-    (createMockPatchStore().blocks as any).push({ id: newBlockId, type: _type });
-    return newBlockId;
-  }),
-  removeBlock: vi.fn(),
-  connect: vi.fn(),
-  disconnect: vi.fn(),
-});
+const createMockPatchStore = (): Partial<PatchStore> => {
+  const blocks: Block[] = [];
+  return {
+    blocks,
+    connections: [],
+    addBlock: vi.fn((_type: string, _params?: Record<string, unknown>) => {
+      const newBlockId = `block-${Date.now()}`;
+      blocks.push({ id: newBlockId, type: _type, label: _type, inputs: [], outputs: [], params: {}, category: 'Other' });
+      return newBlockId;
+    }),
+    removeBlock: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  };
+};
 
+
+const createMockViewStore = (): Partial<ViewStateStore> => ({
+  lanes: [
+    { id: 'phase' as LaneId, kind: 'Phase', blockIds: [], label: 'Phase', description: '', flavor: 'General', flowStyle: 'patchbay', collapsed: false, pinned: false },
+    { id: 'fields' as LaneId, kind: 'Fields', blockIds: [], label: 'Fields', description: '', flavor: 'General', flowStyle: 'patchbay', collapsed: false, pinned: false },
+  ],
+  moveBlockToLane: vi.fn(),
+  reorderBlockInLane: vi.fn(),
+});
 
 const createMockUIStateStore = (): Partial<UIStateStore> => ({
   selectBlock: vi.fn(),
@@ -35,34 +47,23 @@ const createMockDiagnosticHub = (): Partial<DiagnosticHub> => ({
   muteDiagnostic: vi.fn(),
 });
 
-const createMockViewStateStore = (): Partial<ViewStateStore> => ({
-  lanes: [
-    { id: 'lane-1' as LaneId, kind: 'Program', label: 'Program', description: '', flowStyle: 'patchbay', blockIds: ['block-1'], collapsed: false, pinned: false },
-    { id: 'lane-2' as LaneId, kind: 'Phase', label: 'Phase', description: '', flowStyle: 'chain', blockIds: [], collapsed: false, pinned: false },
-  ],
-  moveBlockToLane: vi.fn(),
-  reorderBlockInLane: vi.fn(),
-});
-
 describe('ActionExecutor', () => {
   let actionExecutor: ActionExecutor;
   let mockPatchStore: Partial<PatchStore>;
+  let mockViewStore: Partial<ViewStateStore>;
   let mockUIStateStore: Partial<UIStateStore>;
-  let mockViewStateStore: Partial<ViewStateStore>;
   let mockDiagnosticHub: Partial<DiagnosticHub>;
 
   beforeEach(() => {
     mockPatchStore = createMockPatchStore();
-    mockViewStateStore = createMockViewStateStore();
+    mockViewStore = createMockViewStore();
     mockUIStateStore = createMockUIStateStore();
-    // Add root.viewStore to UIStateStore mock (used by createTimeRoot)
-    (mockUIStateStore as any).root = { viewStore: mockViewStateStore };
     mockDiagnosticHub = createMockDiagnosticHub();
 
     actionExecutor = new ActionExecutor(
       mockPatchStore as PatchStore,
       mockUIStateStore as UIStateStore,
-      mockViewStateStore as ViewStateStore,
+      mockViewStore as ViewStateStore,
       mockDiagnosticHub as DiagnosticHub
     );
   });
@@ -91,7 +92,7 @@ describe('ActionExecutor', () => {
     it('should select a port target (selects parent block)', () => {
       const result = actionExecutor.execute({
         kind: 'goToTarget',
-        target: { kind: 'port', blockId: 'block-1', portId: 'input-1' },
+        target: { kind: 'port', portRef: { blockId: 'block-1', slotId: 'input-1', direction: 'input' } },
       });
 
       expect(result).toBe(true);
@@ -130,7 +131,7 @@ describe('ActionExecutor', () => {
   });
 
   describe('insertBlock', () => {
-    it('should add a block when no nearBlockId specified', () => {
+    it('should add a block to the first lane when no nearBlockId specified', () => {
       const result = actionExecutor.execute({
         kind: 'insertBlock',
         blockType: 'SineWave',
@@ -141,6 +142,9 @@ describe('ActionExecutor', () => {
     });
 
     it('should add a block near an existing block', () => {
+      // Set up mock blocks in lane
+      mockViewStore.lanes![0].blockIds = ['block-1' as BlockId, 'block-2' as BlockId];
+
       const result = actionExecutor.execute({
         kind: 'insertBlock',
         blockType: 'SineWave',
@@ -299,23 +303,19 @@ describe('ActionExecutor', () => {
 
       const connection: Connection = {
         id: 'conn-1',
-        from: { blockId: 'source-block' as BlockId, slotId: 'out' },
-        to: { blockId: 'target-block' as BlockId, slotId: 'in' },
+        from: { blockId: 'source-block' as BlockId, slotId: 'out', direction: 'output' },
+        to: { blockId: 'target-block' as BlockId, slotId: 'in', direction: 'input' },
       };
 
       mockPatchStore.blocks = [sourceBlock, targetBlock];
       mockPatchStore.connections = [connection];
-
-      // Ensure the source block is in a lane (required by addAdapter)
-      mockViewStateStore.lanes = [
-        { id: 'lane-1' as LaneId, kind: 'Program', label: 'Program', description: '', flowStyle: 'patchbay', blockIds: ['source-block', 'target-block'], collapsed: false, pinned: false },
-        { id: 'lane-2' as LaneId, kind: 'Phase', label: 'Phase', description: '', flowStyle: 'chain', blockIds: [], collapsed: false, pinned: false },
-      ];
+      mockViewStore.lanes![0].blockIds = ['source-block' as BlockId, 'target-block' as BlockId];
 
       // Mock addBlock to return adapter and add it to blocks
-      (mockPatchStore.addBlock as any) = vi.fn((_adapterType: string) => {
+      (mockPatchStore.addBlock as ReturnType<typeof vi.fn>) = vi.fn((_adapterType: string, laneId: LaneId) => {
         const adapterId = 'adapter-block' as BlockId;
         mockPatchStore.blocks!.push(adapterBlock);
+        mockViewStore.lanes!.find(l => l.id === laneId)?.blockIds.push(adapterId);
         return adapterId;
       });
     });
@@ -323,7 +323,7 @@ describe('ActionExecutor', () => {
     it('should insert adapter between connected ports', () => {
       const result = actionExecutor.execute({
         kind: 'addAdapter',
-        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        fromPort: { kind: 'port', portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } },
         adapterType: 'ClampSignal',
       });
 
@@ -352,14 +352,35 @@ describe('ActionExecutor', () => {
 
       const result = actionExecutor.execute({
         kind: 'addAdapter',
-        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        fromPort: { kind: 'port', portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } },
         adapterType: 'ClampSignal',
       });
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         '[ActionExecutor] No connection found from port:',
-        expect.objectContaining({ blockId: 'source-block', portId: 'out' })
+        expect.objectContaining({ blockId: 'source-block', slotId: 'out', direction: 'output' })
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should return false if lane not found', () => {
+      // Remove all lanes
+      mockViewStore.lanes = [];
+
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const result = actionExecutor.execute({
+        kind: 'addAdapter',
+        fromPort: { kind: 'port', portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } },
+        adapterType: 'ClampSignal',
+      });
+
+      expect(result).toBe(false);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[ActionExecutor] Lane not found for block:',
+        'source-block'
       );
 
       consoleWarnSpy.mockRestore();
@@ -379,9 +400,10 @@ describe('ActionExecutor', () => {
       };
 
       // Override addBlock to add bad adapter
-      (mockPatchStore.addBlock as any) = vi.fn((_badAdapterType: string) => {
+      (mockPatchStore.addBlock as ReturnType<typeof vi.fn>) = vi.fn((_badAdapterType: string, laneId: LaneId) => {
         const adapterId = 'adapter-block' as BlockId;
         mockPatchStore.blocks!.push(badAdapterBlock);
+        mockViewStore.lanes!.find(l => l.id === laneId)?.blockIds.push(adapterId);
         return adapterId;
       });
 
@@ -389,7 +411,7 @@ describe('ActionExecutor', () => {
 
       const result = actionExecutor.execute({
         kind: 'addAdapter',
-        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
+        fromPort: { kind: 'port', portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } },
         adapterType: 'BadAdapter',
       });
 
@@ -419,16 +441,8 @@ describe('ActionExecutor', () => {
     it('should return false and warn for unknown action kind', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const result = actionExecutor.execute({
-        kind: 'openDocs',
-        docUrl: 'invalid',
-      } as any); // Cast to any to avoid TypeScript error
-
-      // Modify the action after creation to simulate unknown kind
-      void result; // Use result to avoid unused variable warning
-
       // Actually test with a simpler approach - just invoke with valid action and check logs
-      actionExecutor.execute({ kind: 'addAdapter', fromPort: { kind: 'port', blockId: 'b', portId: 'p' }, adapterType: 'test' });
+      actionExecutor.execute({ kind: 'addAdapter', fromPort: { kind: 'port', portRef: { blockId: 'b', slotId: 'p', direction: 'output' } }, adapterType: 'test' });
 
       expect(consoleWarnSpy).toHaveBeenCalled();
 
@@ -441,7 +455,7 @@ describe('ActionExecutor', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       // Force an error by making selectBlock throw
-      (mockUIStateStore.selectBlock as any) = vi.fn(() => {
+      (mockUIStateStore.selectBlock as ReturnType<typeof vi.fn>) = vi.fn(() => {
         throw new Error('Test error');
       });
 

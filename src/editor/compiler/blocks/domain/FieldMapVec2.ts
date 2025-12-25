@@ -6,6 +6,7 @@
  */
 
 import type { BlockCompiler, Vec2 } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 type Vec2Field = (seed: number, n: number) => readonly Vec2[];
 
@@ -22,7 +23,7 @@ export const FieldMapVec2Block: BlockCompiler = {
 
   compile({ params, inputs }) {
     const vecArtifact = inputs.vec;
-    if (!vecArtifact || vecArtifact.kind !== 'Field:vec2') {
+    if (!isDefined(vecArtifact) || vecArtifact.kind !== 'Field:vec2') {
       return {
         out: {
           kind: 'Error',
@@ -32,7 +33,7 @@ export const FieldMapVec2Block: BlockCompiler = {
     }
 
     const vecField = vecArtifact.value as Vec2Field;
-    const fn = String(params.fn ?? 'rotate');
+    const fn = typeof params.fn === 'string' ? params.fn : 'rotate';
     const angle = Number(params.angle ?? 0);
     const scaleX = Number(params.scaleX ?? 1);
     const scaleY = Number(params.scaleY ?? 1);
@@ -52,7 +53,7 @@ export const FieldMapVec2Block: BlockCompiler = {
       const out = new Array<Vec2>(n);
 
       for (let i = 0; i < n; i++) {
-        const v = inputVecs[i]!;
+        const v = inputVecs[i];
         let x = v.x;
         let y = v.y;
 

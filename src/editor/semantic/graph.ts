@@ -23,6 +23,8 @@ import type {
   BlockNode,
 } from './types';
 import { portKeyToString, portKeyFromConnection, portKeyFromPublisher, portKeyFromListener } from './types';
+import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
+import type { TypeDesc } from '../types';
 
 /**
  * SemanticGraph provides fast indexed access to patch structure.
@@ -50,6 +52,12 @@ export class SemanticGraph {
   /** Outgoing edges per port (publisher edges - port to bus) */
   private outgoingPublishers: Map<string, PublisherEdge[]> = new Map();
 
+  /** All incoming edges per port (wires + listeners) */
+  private incomingEdges: Map<string, GraphEdge[]> = new Map();
+
+  /** All outgoing edges per port (wires + publishers) */
+  private outgoingEdges: Map<string, GraphEdge[]> = new Map();
+
   /** Publishers per bus (sorted by sortKey for deterministic ordering) */
   private busPublishers: Map<string, PublisherEdge[]> = new Map();
 
@@ -58,6 +66,12 @@ export class SemanticGraph {
 
   /** Block adjacency for cycle detection (blockId -> downstream blockIds) */
   private adjacency: Map<string, Set<string>> = new Map();
+
+  /** TypeDesc per port */
+  private typeByPort: Map<string, TypeDesc> = new Map();
+
+  /** Ports by block */
+  private portsByBlock: Map<string, { inputs: string[]; outputs: string[] }> = new Map();
 
   /**
    * Build a SemanticGraph from a PatchDocument.
@@ -79,9 +93,13 @@ export class SemanticGraph {
     this.outgoingWires.clear();
     this.incomingListeners.clear();
     this.outgoingPublishers.clear();
+    this.incomingEdges.clear();
+    this.outgoingEdges.clear();
     this.busPublishers.clear();
     this.busListeners.clear();
     this.adjacency.clear();
+    this.typeByPort.clear();
+    this.portsByBlock.clear();
 
     // Index blocks
     for (const block of patch.blocks) {
@@ -91,6 +109,26 @@ export class SemanticGraph {
         blockType: block.type,
       });
       this.adjacency.set(block.id, new Set());
+      this.portsByBlock.set(block.id, {
+        inputs: block.inputs.map((input) => input.id),
+        outputs: block.outputs.map((output) => output.id),
+      });
+
+      for (const input of block.inputs) {
+        const desc = SLOT_TYPE_TO_TYPE_DESC[input.type as keyof typeof SLOT_TYPE_TO_TYPE_DESC];
+        if (desc != null) {
+          const key = portKeyToString({ blockId: block.id, slotId: input.id, direction: 'input' });
+          this.typeByPort.set(key, desc);
+        }
+      }
+
+      for (const output of block.outputs) {
+        const desc = SLOT_TYPE_TO_TYPE_DESC[output.type as keyof typeof SLOT_TYPE_TO_TYPE_DESC];
+        if (desc != null) {
+          const key = portKeyToString({ blockId: block.id, slotId: output.id, direction: 'output' });
+          this.typeByPort.set(key, desc);
+        }
+      }
     }
 
     // Index wire edges
@@ -109,9 +147,9 @@ export class SemanticGraph {
     }
 
     // Index publisher edges
-    if (patch.publishers) {
+    if (patch.publishers != null) {
       for (const pub of patch.publishers) {
-        if (!pub.enabled) continue; // Skip disabled publishers
+        if (pub.enabled === false) continue; // Skip disabled publishers
 
         const edge: PublisherEdge = {
           kind: 'publisher',
@@ -126,9 +164,9 @@ export class SemanticGraph {
     }
 
     // Index listener edges
-    if (patch.listeners) {
+    if (patch.listeners != null) {
       for (const listener of patch.listeners) {
-        if (!listener.enabled) continue; // Skip disabled listeners
+        if (listener.enabled === false) continue; // Skip disabled listeners
 
         const edge: ListenerEdge = {
           kind: 'listener',
@@ -141,9 +179,26 @@ export class SemanticGraph {
       }
     }
 
+    // Add bus dependency adjacency: publisher block -> listener block
+    for (const [busId, listeners] of this.busListeners.entries()) {
+      const publishers = this.busPublishers.get(busId) ?? [];
+      for (const listener of listeners) {
+        for (const publisher of publishers) {
+          const fromId = publisher.from.blockId;
+          const toId = listener.to.blockId;
+          if (fromId !== toId) {
+            this.addAdjacency(fromId, toId);
+          }
+        }
+      }
+    }
+
     // Sort bus publishers by sortKey for deterministic ordering
     for (const publishers of this.busPublishers.values()) {
-      publishers.sort((a, b) => a.sortKey - b.sortKey);
+      publishers.sort((a, b) => {
+        if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
+        return a.publisherId.localeCompare(b.publisherId);
+      });
     }
   }
 
@@ -169,6 +224,16 @@ export class SemanticGraph {
       this.incomingWires.set(toKey, []);
     }
     this.incomingWires.get(toKey)!.push(edge);
+
+    if (!this.outgoingEdges.has(fromKey)) {
+      this.outgoingEdges.set(fromKey, []);
+    }
+    this.outgoingEdges.get(fromKey)!.push(edge);
+
+    if (!this.incomingEdges.has(toKey)) {
+      this.incomingEdges.set(toKey, []);
+    }
+    this.incomingEdges.get(toKey)!.push(edge);
   }
 
   /**
@@ -188,6 +253,11 @@ export class SemanticGraph {
       this.busPublishers.set(edge.busId, []);
     }
     this.busPublishers.get(edge.busId)!.push(edge);
+
+    if (!this.outgoingEdges.has(fromKey)) {
+      this.outgoingEdges.set(fromKey, []);
+    }
+    this.outgoingEdges.get(fromKey)!.push(edge);
   }
 
   /**
@@ -207,6 +277,11 @@ export class SemanticGraph {
       this.busListeners.set(edge.busId, []);
     }
     this.busListeners.get(edge.busId)!.push(edge);
+
+    if (!this.incomingEdges.has(toKey)) {
+      this.incomingEdges.set(toKey, []);
+    }
+    this.incomingEdges.get(toKey)!.push(edge);
   }
 
   /**
@@ -293,20 +368,30 @@ export class SemanticGraph {
    * Get all incoming edges for a port (wires + listeners).
    */
   getAllIncomingEdges(port: PortKey): GraphEdge[] {
-    return [
-      ...this.getIncomingWires(port),
-      ...this.getIncomingListeners(port),
-    ];
+    const key = portKeyToString(port);
+    return this.incomingEdges.get(key) ?? [];
   }
 
   /**
    * Get all outgoing edges for a port (wires + publishers).
    */
   getAllOutgoingEdges(port: PortKey): GraphEdge[] {
-    return [
-      ...this.getOutgoingWires(port),
-      ...this.getOutgoingPublishers(port),
-    ];
+    const key = portKeyToString(port);
+    return this.outgoingEdges.get(key) ?? [];
+  }
+
+  /**
+   * Get the TypeDesc for a port if known.
+   */
+  getTypeForPort(port: PortKey): TypeDesc | undefined {
+    return this.typeByPort.get(portKeyToString(port));
+  }
+
+  /**
+   * Get the input/output slot IDs for a block.
+   */
+  getPortsForBlock(blockId: string): { inputs: string[]; outputs: string[] } | undefined {
+    return this.portsByBlock.get(blockId);
   }
 
   /**
@@ -323,7 +408,7 @@ export class SemanticGraph {
    */
   wouldCreateCycle(fromBlockId: string, toBlockId: string): boolean {
     // Quick check: if adding the same edge twice
-    if (this.adjacency.get(fromBlockId)?.has(toBlockId)) {
+    if (this.adjacency.get(fromBlockId)?.has(toBlockId) === true) {
       return false; // Edge already exists, not a new cycle
     }
 

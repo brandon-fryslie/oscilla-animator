@@ -31,14 +31,15 @@ export class DiagnosticStore {
   /**
    * Observable revision counter that gets incremented when diagnostics change.
    * This triggers MobX to recompute derived values.
+   * Public for testing purposes (prefixed with _ to indicate internal).
    */
-  private revisionCounter = 0;
+  public _revisionCounter = 0;
 
   constructor(hub: DiagnosticHub) {
     this.hub = hub;
 
-    makeObservable<DiagnosticStore, 'revisionCounter'>(this, {
-      revisionCounter: observable,
+    makeObservable<DiagnosticStore, '_revisionCounter'>(this, {
+      _revisionCounter: observable,
       activeDiagnostics: computed,
       errorCount: computed,
       warningCount: computed,
@@ -58,7 +59,7 @@ export class DiagnosticStore {
    * This should be called from event handlers or after DiagnosticHub updates.
    */
   invalidate(): void {
-    this.revisionCounter++;
+    this._revisionCounter++;
   }
 
   /**
@@ -67,7 +68,7 @@ export class DiagnosticStore {
    */
   get activeDiagnostics(): Diagnostic[] {
     // Touch revisionCounter to establish dependency
-    void this.revisionCounter;
+    void this._revisionCounter;
     return this.hub.getActive();
   }
 
@@ -117,7 +118,7 @@ export class DiagnosticStore {
    * Count of muted diagnostics.
    */
   get mutedCount(): number {
-    void this.revisionCounter;
+    void this._revisionCounter;
     return this.hub.getMutedCount();
   }
 
@@ -125,7 +126,7 @@ export class DiagnosticStore {
    * Get the currently active revision number.
    */
   get activeRevision(): number {
-    void this.revisionCounter;
+    void this._revisionCounter;
     return this.hub.getActiveRevision();
   }
 
@@ -147,7 +148,7 @@ export class DiagnosticStore {
    * Get diagnostics filtered by severity.
    */
   getDiagnosticsBySeverity(severity: Severity): Diagnostic[] {
-    void this.revisionCounter;
+    void this._revisionCounter;
     return this.activeDiagnostics.filter(d => d.severity === severity);
   }
 
@@ -155,11 +156,11 @@ export class DiagnosticStore {
    * Get diagnostics for a specific block.
    */
   getDiagnosticsForBlock(blockId: string): Diagnostic[] {
-    void this.revisionCounter;
+    void this._revisionCounter;
     return this.activeDiagnostics.filter(d => {
       const target = d.primaryTarget;
       if (target.kind === 'block') return target.blockId === blockId;
-      if (target.kind === 'port') return target.blockId === blockId;
+      if (target.kind === 'port') return target.portRef.blockId === blockId;
       if (target.kind === 'timeRoot') return target.blockId === blockId;
       if (target.kind === 'graphSpan') return target.blockIds.includes(blockId);
       return false;
@@ -170,7 +171,7 @@ export class DiagnosticStore {
    * Get diagnostics for a specific bus.
    */
   getDiagnosticsForBus(busId: string): Diagnostic[] {
-    void this.revisionCounter;
+    void this._revisionCounter;
     return this.activeDiagnostics.filter(d => {
       const target = d.primaryTarget;
       if (target.kind === 'bus') return target.busId === busId;
@@ -199,7 +200,7 @@ export class DiagnosticStore {
    * Check if a diagnostic is muted.
    */
   isMuted(diagnosticId: string): boolean {
-    void this.revisionCounter;
+    void this._revisionCounter;
     return this.hub.isMuted(diagnosticId);
   }
 
@@ -208,7 +209,7 @@ export class DiagnosticStore {
   // ============================================================================
 
   private countBySeverity(severity: Severity): number {
-    void this.revisionCounter;
+    void this._revisionCounter;
     return this.activeDiagnostics.filter(d => d.severity === severity).length;
   }
 }

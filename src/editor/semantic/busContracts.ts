@@ -172,14 +172,14 @@ export function validateReservedBus(
 ): Array<{
   code: 'E_RESERVED_BUS_TYPE_MISMATCH' | 'E_RESERVED_BUS_COMBINE_MODE_MISMATCH';
   message: string;
-  expected: any;
-  actual: any;
+  expected: unknown;
+  actual: unknown;
 }> {
   const errors: Array<{
     code: 'E_RESERVED_BUS_TYPE_MISMATCH' | 'E_RESERVED_BUS_COMBINE_MODE_MISMATCH';
     message: string;
-    expected: any;
-    actual: any;
+    expected: unknown;
+    actual: unknown;
   }> = [];
 
   const contract = getReservedBusContract(busName);
@@ -248,7 +248,7 @@ export function validateCombineModeCompatibility(
   const allowedModes = COMBINE_MODE_COMPATIBILITY[domain];
 
   // If domain is unknown, allow any mode but log a warning (not error)
-  if (!allowedModes) {
+  if (allowedModes == null) {
     return null;
   }
 

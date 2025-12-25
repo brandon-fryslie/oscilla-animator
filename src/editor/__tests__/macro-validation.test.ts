@@ -1,6 +1,6 @@
 /**
  * Comprehensive macro validation tests
- * Tests all 22 macros for:
+ * Tests all macros for:
  * - Structure validity
  * - Block type references
  * - Connection integrity
@@ -12,6 +12,8 @@ import { MACRO_REGISTRY, getMacroKey, getMacroExpansion } from '../macros';
 import { getBlockDefinition } from '../blocks';
 
 describe('Macro Registry Validation', () => {
+  const macroKeys = Object.keys(MACRO_REGISTRY);
+
   describe('Quick Start Macros', () => {
     const quickStartMacros = [
       'macro:simpleGrid',

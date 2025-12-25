@@ -11,6 +11,8 @@
  * Reference: design-docs/4-Event-System/3.5-Events-and-Payloads-Schema.md
  */
 
+import type { PortRef } from '../types';
+
 // ============================================================================
 // Target Reference Types (discriminated union)
 // ============================================================================
@@ -28,8 +30,7 @@ export interface BlockTargetRef {
  */
 export interface PortTargetRef {
   kind: 'port';
-  blockId: string;
-  portId: string;
+  portRef: PortRef;
 }
 
 /**
@@ -327,7 +328,7 @@ export function generateDiagnosticId(
 ): string {
   const targetStr = serializeTargetRef(primaryTarget);
   const base = `${code}:${targetStr}`;
-  return signature ? `${base}:${signature}` : base;
+  return signature !== undefined && signature !== '' ? `${base}:${signature}` : base;
 }
 
 /**
@@ -338,7 +339,7 @@ export function serializeTargetRef(target: TargetRef): string {
     case 'block':
       return `block:${target.blockId}`;
     case 'port':
-      return `port:${target.blockId}.${target.portId}`;
+      return `port:${target.portRef.blockId}.${target.portRef.slotId}.${target.portRef.direction}`;
     case 'bus':
       return `bus:${target.busId}`;
     case 'binding':
@@ -348,7 +349,7 @@ export function serializeTargetRef(target: TargetRef): string {
     case 'graphSpan':
       return `graphSpan:${target.blockIds.sort().join(',')}`;
     case 'composite':
-      return `composite:${target.compositeDefId}${target.instanceId ? `:${target.instanceId}` : ''}`;
+      return `composite:${target.compositeDefId}${target.instanceId !== undefined ? `:${target.instanceId}` : ''}`;
   }
 }
 
@@ -358,8 +359,8 @@ export function serializeTargetRef(target: TargetRef): string {
 export function createDiagnostic(
   params: Pick<Diagnostic, 'code' | 'severity' | 'domain' | 'primaryTarget' | 'title' | 'message'> &
     Partial<Omit<Diagnostic, 'id' | 'metadata'>> & {
-      patchRevision: number;
-      signature?: string;
+      readonly patchRevision: number;
+      readonly signature?: string;
     }
 ): Diagnostic {
   const now = Date.now();

@@ -6,6 +6,7 @@
  */
 
 import type { BlockCompiler, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 /**
  * Parse hex color to RGB
@@ -67,7 +68,7 @@ export const FieldColorizeBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const valuesArtifact = inputs.values;
-    if (!valuesArtifact || valuesArtifact.kind !== 'Field:number') {
+    if (!isDefined(valuesArtifact) || valuesArtifact.kind !== 'Field:number') {
       return {
         colors: {
           kind: 'Error',

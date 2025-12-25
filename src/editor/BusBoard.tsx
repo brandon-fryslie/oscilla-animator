@@ -81,7 +81,7 @@ function groupBuses(buses: Bus[]): BusGroup[] {
  * Filter buses by name (case-insensitive substring match).
  */
 function filterBuses(buses: Bus[], filterText: string): Bus[] {
-  if (!filterText) return buses;
+  if (filterText === undefined || filterText === null || filterText.length === 0) return buses;
   const lower = filterText.toLowerCase();
   return buses.filter(bus => bus.name.toLowerCase().includes(lower));
 }
@@ -92,7 +92,7 @@ function filterBuses(buses: Bus[], filterText: string): Bus[] {
 function loadGroupCollapseState(): Record<string, boolean> {
   try {
     const stored = localStorage.getItem('busboard-group-collapse');
-    if (stored) {
+    if (stored !== null && stored !== undefined && stored !== '') {
       return JSON.parse(stored) as Record<string, boolean>;
     }
   } catch (err) {
@@ -115,7 +115,7 @@ function saveGroupCollapseState(state: Record<string, boolean>): void {
 /**
  * Bus Board - vertical mixer panel for all buses.
  */
-export const BusBoard = observer(() => {
+export const BusBoard = observer((): React.ReactElement => {
   const store = useStore();
   const [collapsed, setCollapsed] = useState(false);
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
@@ -214,7 +214,7 @@ export const BusBoard = observer(() => {
               onChange={(e) => setFilterText(e.target.value)}
               title="Filter buses by name"
             />
-            {filterText && (
+            {filterText !== undefined && filterText !== null && filterText.length > 0 && (
               <button
                 className="bus-board-filter-clear"
                 onClick={clearFilter}

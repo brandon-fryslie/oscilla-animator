@@ -166,11 +166,11 @@ export function findLaneForKind(
   flavor?: string
 ): LaneTemplate | undefined {
   // First try to match both kind and flavor
-  if (flavor) {
+  if (flavor !== undefined && flavor !== null && flavor !== '') {
     const flavorMatch = layout.lanes.find(
       (l) => l.kind === kind && l.flavor === flavor
     );
-    if (flavorMatch) return flavorMatch;
+    if (flavorMatch !== undefined && flavorMatch !== null) return flavorMatch;
   }
 
   // Fall back to just kind match

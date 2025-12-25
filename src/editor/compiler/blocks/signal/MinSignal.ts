@@ -24,7 +24,7 @@ export const MinSignalBlock: BlockCompiler = {
     const aArtifact = inputs.a;
     const bArtifact = inputs.b;
 
-    if (!aArtifact || aArtifact.kind !== 'Signal:number') {
+    if (aArtifact === undefined || aArtifact.kind !== 'Signal:number') {
       return {
         out: {
           kind: 'Error',
@@ -33,7 +33,7 @@ export const MinSignalBlock: BlockCompiler = {
       };
     }
 
-    if (!bArtifact || bArtifact.kind !== 'Signal:number') {
+    if (bArtifact === undefined || bArtifact.kind !== 'Signal:number') {
       return {
         out: {
           kind: 'Error',
@@ -46,7 +46,7 @@ export const MinSignalBlock: BlockCompiler = {
     const bSignal = bArtifact.value as Signal<number>;
 
     // Create min signal
-    const signal: Signal<number> = (t: number, ctx: RuntimeCtx) => {
+    const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
       return Math.min(aSignal(t, ctx), bSignal(t, ctx));
     };
 

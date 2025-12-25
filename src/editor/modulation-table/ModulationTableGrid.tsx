@@ -201,9 +201,8 @@ const BlockTable = observer(({
 
     // Bus columns - compact
     for (const column of columns) {
-      // Columns are always in compact mode (no expansion state)
-      const isExpanded = false;
-      const displayName = column.name;
+      const isExpanded = store.isColumnExpanded(column.busId);
+      const displayName = store.getColumnDisplayName(column);
       const isFocused = column.busId === focusedBusId;
 
       cols.push({
@@ -373,8 +372,13 @@ export const ModulationTableGrid = observer(({
   onColumnClick,
   onColumnRightClick,
 }: ModulationTableGridProps) => {
-  // Get row groups from the store's computed property
-  const rowGroups = store.rowGroups;
+  // Determine direction from rows
+  const direction = rows.length > 0 ? rows[0].direction : 'input';
+
+  // Get row groups for this direction
+  const rowGroups = useMemo(() => {
+    return store.getRowGroupsByDirection(direction);
+  }, [store, direction]);
 
   if (rowGroups.length === 0) {
     return <div style={{ padding: '8px', color: '#666', fontSize: '11px' }}>No ports</div>;
@@ -383,7 +387,7 @@ export const ModulationTableGrid = observer(({
   return (
     <ThemeProvider theme={modulationTableTheme}>
       <div style={{ height: '100%', width: '100%', overflow: 'auto' }}>
-        {rowGroups.map((group: RowGroup) => (
+        {rowGroups.map(group => (
           <BlockTable
             key={group.key}
             group={group}

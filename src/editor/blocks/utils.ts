@@ -1,5 +1,6 @@
 import type { Slot, SlotType, SlotTier, DefaultSource, ParamSchema } from './types';
 import { pathLibrary } from '../pathLibrary';
+import { isDefined } from '../types/helpers';
 
 /**
  * Options for creating an input slot with default source metadata.
@@ -63,7 +64,7 @@ export function numberParam(key: string, label: string, config: {
     type: 'number',
     min: config.min,
     max: config.max,
-    step: config.step || 1,
+    step: isDefined(config.step) ? config.step : 1,
     defaultValue: config.defaultValue,
   };
 }
@@ -79,7 +80,7 @@ export function coordinateParam(key: string, label: string, defaultValue: number
   return numberParam(key, label, {
     min: config.min ?? -1000,
     max: config.max ?? 1000,
-    step: config.step ?? 10,
+    step: isDefined(config.step) ? config.step : 10,
     defaultValue,
   });
 }
@@ -95,7 +96,7 @@ export function radiusParam(key: string, label: string, defaultValue: number, co
   return numberParam(key, label, {
     min: config.min ?? 0,
     max: config.max ?? 1000,
-    step: config.step ?? 10,
+    step: isDefined(config.step) ? config.step : 10,
     defaultValue,
   });
 }
@@ -111,7 +112,7 @@ export function percentageParam(key: string, label: string, defaultValue: number
   return numberParam(key, label, {
     min: 0,
     max: asPercent ? 100 : 1,
-    step: config.step ?? (asPercent ? 1 : 0.01),
+    step: isDefined(config.step) ? config.step : (asPercent ? 1 : 0.01),
     defaultValue,
   });
 }
@@ -156,7 +157,7 @@ export const COMMON_PARAMS = {
  * Get dropdown options from the path library.
  * Called at module load and whenever paths change.
  */
-export function getPathOptions(): readonly { value: string; label: string }[] {
+export function getPathOptions(): Array<{ value: string; label: string }> {
   return pathLibrary.getAll().map(entry => ({
     value: entry.id,
     label: entry.name,

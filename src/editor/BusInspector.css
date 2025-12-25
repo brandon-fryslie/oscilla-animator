@@ -183,8 +183,8 @@
 
 .bus-routing-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   padding: 8px 12px;
   background: #1f2937;
   border: 1px solid #374151;
@@ -203,8 +203,9 @@
 
 .routing-item-info {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   flex: 1;
   min-width: 0;
 }
@@ -271,11 +272,6 @@
 }
 
 /* Expandable listener item with lens editing */
-.bus-routing-item {
-  flex-direction: column;
-  align-items: stretch;
-}
-
 .bus-routing-item .routing-item-row {
   display: flex;
   align-items: center;
@@ -286,12 +282,6 @@
 .bus-routing-item.expanded {
   background: #252d3b;
   border-color: #4f46e5;
-}
-
-.routing-item-info {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
 }
 
 /* Lens button */

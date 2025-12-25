@@ -42,7 +42,7 @@ function isLikelyJSON(text: string) {
   return trimmed.startsWith('{') || trimmed.startsWith('[');
 }
 
-export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalProps) => {
+export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalProps): React.ReactElement => {
   const [activeTab, setActiveTab] = useState<TabId>('library');
   const [importText, setImportText] = useState('');
   const [importName, setImportName] = useState('');
@@ -68,7 +68,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
   }, [isOpen]);
 
   useEffect(() => {
-    if (!success) return;
+    if (success === null) return;
     const timer = setTimeout(() => setSuccess(null), 3000);
     return () => clearTimeout(timer);
   }, [success]);
@@ -82,7 +82,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file === undefined) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -92,7 +92,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
       setActiveTab('import');
       setError(null);
       setSuccess(null);
-      if (fileInputRef.current) {
+      if (fileInputRef.current !== null) {
         fileInputRef.current.value = '';
       }
       requestAnimationFrame(() => {
@@ -105,9 +105,9 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
     reader.readAsText(file);
   };
 
-  const handleImport = async () => {
+  const handleImport = () => {
     const trimmed = importText.trim();
-    if (!trimmed) {
+    if (trimmed === '') {
       setError('Paste SVG code or choose a file to import.');
       return;
     }
@@ -130,8 +130,8 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
         result = pathLibrary.importFromString(trimmed, name);
       }
 
-      if (!result?.success || !result.entry) {
-        setError(result?.error || 'Import failed.');
+      if (result?.success !== true || result.entry === undefined) {
+        setError(result?.error ?? 'Import failed.');
         return;
       }
 
@@ -150,15 +150,15 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
   const deriveNameFromUrl = (url: string) => {
     try {
       const parsed = new URL(url);
-      const base = parsed.pathname.split('/').pop() || 'Remote SVG';
-      return ensureUniqueName(base.replace(/\.svg$/i, '') || 'Remote SVG');
+      const base = parsed.pathname.split('/').pop();
+      return ensureUniqueName((base?.replace(/\.svg$/i, '') ?? '') || 'Remote SVG');
     } catch {
       return ensureUniqueName('Remote SVG');
     }
   };
 
   const handleImportFromUrl = async () => {
-    if (!remoteUrl.trim()) {
+    if (remoteUrl.trim() === '') {
       setError('Enter a URL to import from (for example, an unDraw SVG link).');
       return;
     }
@@ -207,7 +207,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Could not create canvas context');
+    if (ctx === null) throw new Error('Could not create canvas context');
     ctx.drawImage(img, 0, 0, width, height);
     return ctx.getImageData(0, 0, width, height);
   };
@@ -252,7 +252,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
       const data = downsampleImage(image);
       const { svg, pathCount } = traceImageToSvg(data);
 
-      if (!svg) {
+      if (svg === '') {
         throw new Error('Tracing failed to generate SVG.');
       }
 
@@ -269,7 +269,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
       setError(message);
     } finally {
       setIsTracing(false);
-      if (traceInputRef.current) {
+      if (traceInputRef.current !== null) {
         traceInputRef.current.value = '';
       }
     }
@@ -278,7 +278,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
   const handleTraceDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
-    if (!file) return;
+    if (file === undefined) return;
     if (!file.type.startsWith('image/')) {
       setError('Please drop an image file (png or jpg).');
       return;
@@ -288,16 +288,16 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
 
   const handleTraceBrowse = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file === undefined) return;
     void handleTraceFile(file);
   };
 
   const handleExport = (id: string) => {
     const json = pathLibrary.exportAsJSON(id);
-    if (!json) return;
+    if (json === null || json === undefined) return;
 
     const entry = pathLibrary.getById(id);
-    const filename = `path-${entry?.name || 'export'}-${Date.now()}.json`;
+    const filename = `path-${entry?.name ?? 'export'}-${Date.now()}.json`;
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -307,9 +307,11 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
     URL.revokeObjectURL(url);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     const entry = pathLibrary.getById(id);
-    if (!entry || entry.source === 'builtin') return;
+    if (entry === null || entry.source === 'builtin') {
+      return;
+    }
 
     const confirmDelete = window.confirm(`Delete "${entry.name}"?`);
     if (!confirmDelete) return;
@@ -323,9 +325,9 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
   };
 
   const handleClose = () => {
-    if (importText.trim()) {
+    if (importText.trim() !== '') {
       const shouldClose = window.confirm('Discard your current import text?');
-      if (!shouldClose) return;
+      if (shouldClose === false) return;
     }
     onClose();
   };
@@ -423,7 +425,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
                     />
                     <button
                       className="import-secondary-btn"
-                      onClick={handleImportFromUrl}
+                      onClick={() => void handleImportFromUrl()}
                       disabled={isFetchingUrl}
                     >
                       {isFetchingUrl ? 'Fetching...' : 'Fetch'}
@@ -455,13 +457,13 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
 
                 <div className="import-actions">
                   <div className="import-messages">
-                    {error && (
+                    {error !== null && (
                       <div className="import-error">
                         <span className="import-error-icon">&#9888;</span>
                         <span>{error}</span>
                       </div>
                     )}
-                    {success && (
+                    {success !== null && (
                       <div className="import-success">
                         <span className="import-success-icon">&#10003;</span>
                         <span>{success}</span>
@@ -483,14 +485,14 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
                         setError(null);
                         setSuccess(null);
                       }}
-                      disabled={!importText && !importName}
+                      disabled={importText === '' && importName === ''}
                     >
                       Clear
                     </button>
                     <button
                       className="import-primary-btn"
-                      onClick={handleImport}
-                      disabled={!importText.trim() || isImporting}
+                      onClick={() => void handleImport()}
+                      disabled={importText.trim() === '' || isImporting}
                     >
                       {isImporting ? 'Importing...' : 'Import'}
                     </button>
@@ -505,7 +507,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
                   <div className="path-card" key={entry.id}>
                     <div
                       className="path-card-thumbnail"
-                      dangerouslySetInnerHTML={{ __html: entry.thumbnail || PLACEHOLDER_THUMBNAIL }}
+                      dangerouslySetInnerHTML={{ __html: entry.thumbnail ?? PLACEHOLDER_THUMBNAIL }}
                     />
                     <div className="path-card-body">
                       <div className="path-card-header">
@@ -560,7 +562,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
         </div>
       </Modal>
 
-      {previewEntry ? (
+      {previewEntry !== null ? (
         <Modal
           isOpen
           onClose={() => setPreviewEntry(null)}
@@ -572,7 +574,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
             <div
               className="preview-svg"
               dangerouslySetInnerHTML={{
-                __html: previewEntry.meta?.originalSVG || previewEntry.thumbnail || PLACEHOLDER_THUMBNAIL,
+                __html: previewEntry.meta?.originalSVG ?? previewEntry.thumbnail ?? PLACEHOLDER_THUMBNAIL,
               }}
             />
             <div className="preview-meta">
@@ -580,7 +582,7 @@ export const PathManagerModal = observer(({ isOpen, onClose }: PathManagerModalP
                 <span className="preview-label">Source</span>
                 <span className="preview-value">{formatSourceLabel(previewEntry.source)}</span>
               </div>
-              {previewEntry.meta?.viewBox && (
+              {previewEntry.meta?.viewBox !== undefined && (
                 <div className="preview-row">
                   <span className="preview-label">ViewBox</span>
                   <span className="preview-value">{previewEntry.meta.viewBox}</span>

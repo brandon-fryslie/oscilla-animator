@@ -20,32 +20,45 @@ The player:
 
 But never defines temporal structure.
 
+---
+
 ## TimeRoot
 
-Every patch must contain exactly one **TimeRoot** block that declares "what time means."
+Every patch must contain exactly one **TimeRoot** block that declares the patch’s fundamental time topology and meaning.
 
 ### TimeRoot Types
 
-| Type | Description | Use Case |
-|------|-------------|----------|
-| `FiniteTimeRoot` | Finite performance with known duration | Logo stingers, intro/outro animations |
-| `CycleTimeRoot` | Primary cycle that repeats | Ambient loops, music visualizers |
-| `InfiniteTimeRoot` | Runs forever without privileged cycle | Evolving installations, generative "weather" |
+| Type             | Description                           | Use Case                         |
+|------------------|-----------------------------------|---------------------------------|
+| `FiniteTimeRoot`  | Finite performance with known duration | Logo stingers, intro/outro animations |
+| `InfiniteTimeRoot`| Runs unbounded, no privileged cycle | Evolving installations, generative "weather" |
 
 ### Constraints
+
 - Exactly one TimeRoot per patch (compile error if 0 or >1)
 - TimeRoot cannot have upstream dependencies
 - TimeRoot cannot exist inside composite definitions
-- Conflicting topologies are compile errors
+- Conflicting topologies (e.g., multiple TimeRoots) are compile errors
+
+---
+
+## Patch Topology vs Player Playback Policy
+
+- **Patch topology** is defined solely by the TimeRoot block.
+- **Looping and cycles** are *derived signals* created by explicit operator blocks (e.g., cycle generators, phase mappers) and are **not** part of the TimeRoot.
+- The player **never** changes or wraps the patch’s fundamental time `t`.
+- The player may implement **view looping modes** (loop, ping-pong, once) for *finite* patches by mapping monotonic time `t` to a playback view time `tView`.
+- Infinite patches typically create cycles by applying cycle/phase operators as needed, possibly nested or multiple.
+
+---
 
 ## TimeModel
 
-TimeModel is the compiler output that describes the patch's time topology.
+The compiler outputs a `TimeModel` describing the patch’s time topology.
 
 ```typescript
 type TimeModel =
   | FiniteTimeModel
-  | CyclicTimeModel
   | InfiniteTimeModel
 
 interface FiniteTimeModel {
@@ -53,17 +66,13 @@ interface FiniteTimeModel {
   durationMs: number
 }
 
-interface CyclicTimeModel {
-  kind: 'cyclic'
-  periodMs: number
-  phaseDomain: '0..1'
-}
-
 interface InfiniteTimeModel {
   kind: 'infinite'
   windowMs: number  // View window, not duration
 }
 ```
+
+---
 
 ## Player Time
 
@@ -78,76 +87,191 @@ time += dt * speed
 // No clamp, no wrap, no reset. Ever.
 ```
 
-The player receives TimeModel from compiler and configures itself:
+The player receives the `TimeModel` from the compiler and configures itself accordingly:
+
 ```typescript
 player.applyTimeModel(timeModel)
 ```
 
-| TimeModel | Player Behavior |
-|-----------|-----------------|
-| finite | Shows bounded scrub window |
-| cyclic | Shows phase-wrapped view |
-| infinite | Shows sliding window |
+---
 
-## CycleTimeRoot
+## Player Playback Policy (View-Time Mapping)
 
-The primary time declaration for looping patches.
+| TimeModel  | Player Behavior (view-time)                         |
+|------------|----------------------------------------------------|
+| finite     | View time may loop, ping-pong, or play once within duration; scrubbing sets absolute time |
+| infinite   | View time is sliding window over monotonic time; no looping or wrapping |
 
-### Ports
+- **Looping modes** for finite patches affect only the *view-time* mapping, never the underlying monotonic time `t`.
+- Infinite patches never loop in playback; cycles are derived explicitly in the patch.
+
+---
+
+## Derived Cycle and Phase Operators
+
+- **Cycles and looping are derived signals**, created by explicit operator blocks such as `Cycle`, `PhaseFromTime`, or `CyclePhase`.
+- These operators can exist under either `FiniteTimeRoot` or `InfiniteTimeRoot` patches.
+- They produce signals such as:
+  - `phase` (0..1 wrapped)
+  - `wrap` events (cycle boundaries)
+  - `cycleIndex` (completed cycles)
+  - `energy` (activity level)
+- Multiple cycle operators can coexist, enabling nested or parallel loops.
+
+Additional cycles beyond the curated rails (A/B) are created as explicit operators in the patch and routed via user buses or direct connections. The rail set stays small to keep the UI legible; expressiveness comes from composition, not from expanding the privileged global surface.
+
+- These are **not** topology declarations and do not affect the TimeRoot.
+
+---
+
+## Patch‑Level Global Rails (aka "Rails")
+
+Every patch contains a "Global Rails Container" which contains a small, fixed set of **Global Rails** (phase/pulse/energy/palette) without requiring explicit blocks on the canvas.
+
+These rails are conceptually distinct from user-created buses. Rails are curated, patch-global modulation channels with explicit drive policy (normalled/patched/mixed). Buses are arbitrary routing fabric created by the user.
+
+These overlay cycles:
+- Are compiled as hidden PhaseFromTime operators
+- Publish to reserved rails (phaseA, phaseB, pulseA, pulseB, energy, palette)
+- Are part of the patch’s time semantics, not user graph topology
+
+The overlay exists so that:
+- New patches always have usable phase and pulse signals
+- Users are not forced to wire a PhaseFromTime block just to get motion
+- Cycles can be edited without polluting the graph
+
+Overlay cycles are editable only via the Time Console UI and may be materialized into blocks for advanced users.
+
+---
+
+## Global Rails, Drive Policy, and Optional Bus Publication
+
+Oscilla distinguishes:
+
+- **Reserved bus**: `time` (Signal<time>) — infrastructure, always present.
+- **Global Rails**: a fixed set of named modulation channels (aka Rails) authored in the Time Console.
+- **User buses**: arbitrary routing fabric created by the user.
+
+### Reserved Bus: `time`
+
+- `time` is a system-reserved bus and is always present in any bus-enabled patch.
+- `time` cannot be deleted or renamed.
+- `time` is published **only** by the TimeRoot.
+
+### Global Rails
+
+The following rails always exist in a patch:
+
+- `phaseA` (Signal<phase>)
+- `phaseB` (Signal<phase>)
+- `pulseA` (Event or Signal<Unit> with edge semantics)
+- `pulseB` (Event or Signal<Unit> with edge semantics)
+- `energy` (Signal<number>)
+- `palette` (Signal<color> or palette-domain signal)
+
+Rails:
+- cannot be deleted
+- have locked TypeDesc
+- are driven by the Global Rails by default (normalled)
+
+### Rail Drive Policy
+
+Each rail has an explicit drive policy, set in the Time Console:
+
+- **Normalled**: the Global Rails drives the rail (default).
+- **Patched**: the Global Rails is disconnected for that rail; only user publishers drive it.
+- **Mixed**: both rack and user publishers drive the rail; the rail’s combine rule applies.
+
+No hidden precedence is allowed. Publishing into a Normalled rail MUST surface a policy decision in UI.
+
+### Optional Bus Mirroring
+
+A rail MAY be mirrored into the user bus fabric only when explicitly enabled. Mirrored rail buses:
+
+- have locked names matching the rail (`phaseA`, `phaseB`, `pulseA`, `pulseB`, `energy`, `palette`)
+- cannot be deleted or renamed
+- exist solely as an interoperability bridge for the bus system
+
+### Combine Rules
+
+Combine rules apply only when a rail is in **Mixed** policy or when mirrored values are combined with user publishers. Defaults:
+
+- `phaseA`, `phaseB`: last
+- `pulseA`, `pulseB`: or
+- `energy`: sum
+- `palette`: mix
+
+These defaults are editable only in the Time Console (not in generic bus UI).
+
+### Compilation Order
+
+1. TimeRoot emits `time`
+2. Global Rails derives rails from unbounded time
+3. Rails are driven according to policy (Normalled/Patched/Mixed)
+4. If enabled, rail values are mirrored into the bus fabric
+5. User publishers are applied
+6. Bus combine is evaluated
+
+---
+
+## TimeRoot Ports and Bus Publishing
+
+### FiniteTimeRoot
 
 **Inputs:**
-- `period`: Scalar<duration> - Cycle period
-- `mode`: Scalar<enum('loop'|'pingpong')>
-- `phaseOffset`: Signal<phase> (optional)
-- `drift`: Signal<number> (optional)
+- `duration`: Scalar<duration> — total duration (default 5000ms)
 
 **Outputs:**
-- `t`: Signal<time> (unbounded)
-- `cycleT`: Signal<time> (0..period or pingpong)
-- `phase`: Signal<phase> (primary)
-- `wrap`: Event (pulse)
-- `cycleIndex`: Signal<number>
+- `systemTime`: Signal<time> (monotonic, unbounded)
 
-### Bus Publishing
-CycleTimeRoot automatically publishes:
-- `phase` -> reserved bus `phaseA`
-- `wrap` -> reserved bus `pulse`
+**Bus Publishing:**
+- `systemTime` → reserved bus `time`
 
-## PhaseClock (Secondary Clock)
+### InfiniteTimeRoot
 
-PhaseClock is a **derived** clock, not a topology declaration.
-
-**Rule: A patch loops only if it has a CycleTimeRoot.**
-
-### PhaseClock's Role
-- Secondary cycle generator in a CycleRoot patch
-- Local LFO in an InfiniteRoot patch
-- Progress mapper in a FiniteRoot patch
-
-It is **never** the primary time source.
-
-### Ports
-
-**Inputs (one required):**
-- `tIn`: Signal<time> OR
-- `phaseIn`: Signal<phase>
-
-**Configuration:**
-- `period`: Scalar<duration> (must be > 0)
-- `mode`: Scalar<enum('loop'|'pingpong'|'once')>
-- `rate`: Signal<number> (optional, default 1)
-- `phaseOffset`: Signal<phase> (optional)
-- `reset`: Event (optional, deterministic)
+**Inputs:**
+- *(No required inputs; optional ambient parameters may be implemented as derived operators)*
 
 **Outputs:**
-- `phase`: Signal<phase>
-- `u`: Signal<unit> (clamped [0,1])
-- `wrap`: Event
-- `cycleIndex`: Signal<number>
+- `systemTime`: Signal<time> (monotonic, unbounded)
+
+**Bus Publishing:**
+- `systemTime` → reserved bus `time`
+
+### Notes
+
+- TimeRoot publishes only the reserved `time` bus.
+- Phase/pulse/energy/palette are produced by the Global Rails (or explicit operators) and routed via rails and optional mirroring.
+
+---
+
+## PhaseFromTime (Secondary Clock / Derived Phase)
+
+PhaseFromTime is a **derived operator** that produces phase and cycle signals from an unbounded time input.
+
+The "Global Rails" component compiles to a small set of PhaseFromTime/Energy/Palette operators wired to the outputs of the Global Rails.
+
+- **Inputs (one required):**
+  - `tIn`: Signal<time> OR
+  - `phaseIn`: Signal<phase> (optional alternative)
+
+- **Configuration:**
+  - `period`: Scalar<duration> (must be > 0)
+  - `mode`: Scalar<enum('loop'|'pingpong'|'once')>
+  - `rate`: Signal<number> (optional, default 1)
+  - `phaseOffset`: Signal<phase> (optional)
+  - `reset`: Event (optional, deterministic)
+
+- **Outputs:**
+  - `phase`: Signal<phase> (0..1 clamped or wrapped depending on mode)
+  - `u`: Signal<unit> (clamped [0,1])
+  - `wrap`: Event (cycle boundary)
+  - `cycleIndex`: Signal<number>
 
 ### Semantics
 
 For `tIn`:
+
 ```
 raw = (t * rate) / period
 loop:     phase = frac(raw + offset)
@@ -155,50 +279,93 @@ once:     phase = clamp(raw + offset, 0, 1)
 pingpong: phase = triangle(raw + offset)
 ```
 
-Uses unbounded `t`. No dependence on player `maxTime`.
+- Uses unbounded `t`. No dependence on player `maxTime`.
+- Never topology; always derived from TimeRoot time.
+
+---
 
 ## Phase Scrubbing
 
 **Scrubbing never resets state.**
 
-| Action | Effect |
-|--------|--------|
-| Scrub in cyclic | Sets phase offset |
-| Scrub in infinite | Offsets time origin |
-| Scrub in finite | Sets absolute time |
+| Action         | Effect                                  |
+|----------------|-----------------------------------------|
+| Scrub in finite | Sets absolute time `t`                  |
+| Scrub in infinite | Offsets time origin                    |
+| Scrub in cycle operators | Sets phase offset                  |
 
 Requires:
 - Phase offset injection
 - NOT resetting player time
 - NOT reinitializing patch state
 
+---
+
 ## Signals and Fields Under TimeRoot
 
 ### Signals
-- Receive unbounded `t`
-- Phase generators map `t` to phase
+
+- Receive unbounded monotonic `t`
+- Phase generators and cycle operators map `t` to phase and cycle signals
 - Multiple phase generators can coexist
 - Signals never assume `t` wraps
 
 ### Fields
+
 - Inherit phase indirectly
-- FieldExpr remains lazy
+- Field expressions remain lazy
 - No bulk re-evaluation on wrap
 - Looping is topological, not evaluative
 
+---
+
 ## Determinism Guarantees
 
-- Player time is monotonic
-- Phase is deterministic
-- Scrub is reversible
+- Player time is monotonic and never wraps
+- Phase signals are deterministic functions of time and parameters
+- Scrubbing is reversible and deterministic
 - Seed reinitializes only on explicit user action
+
+---
 
 ## Failure Is Explicit
 
 Illegal cases are **compile errors**, not runtime hacks:
-- Conflicting cycles
-- Finite + infinite topology
-- Phase reset without state boundary
-- PhaseClock with no time input
-- PhaseClock with both tIn and phaseIn
-- Period <= 0
+
+- Multiple or zero TimeRoots in a patch
+- TimeRoot with upstream dependencies
+- TimeRoot inside composite definitions
+- Conflicting time topologies (e.g., finite + infinite)
+- Phase reset without a state boundary
+- PhaseFromTime (or equivalent) without time input
+- PhaseFromTime with both `tIn` and `phaseIn` connected
+- Period ≤ 0 in cycle operators
+
+---
+
+## Implementation Mapping
+
+- The compiler outputs:
+  - **Program**: the patch’s computational graph
+  - **TimeModel**: describing the patch’s time topology (`finite` or `infinite`)
+- Runtime state includes:
+  - Monotonic time `tMs` (milliseconds since patch start), unbounded and never wrapped
+- The player:
+  - Receives the `TimeModel`
+  - Configures playback viewport/scrub window accordingly
+  - Implements view-time mapping and looping modes for finite patches
+  - Never wraps or resets the monotonic time `tMs`
+
+---
+
+## Playback Policy
+
+- For **finite** patches, the player supports playback view modes:
+  - `once`: play from 0 to duration without looping
+  - `loop`: repeat playback continuously
+  - `pingpong`: play forward then backward repeatedly
+- These modes affect only the *view-time* mapping (`tView`) used for scrubbing and rendering
+- The underlying monotonic time `t` is never wrapped or reset
+- For **infinite** patches, playback is always monotonic sliding window, no looping or wrapping
+
+---

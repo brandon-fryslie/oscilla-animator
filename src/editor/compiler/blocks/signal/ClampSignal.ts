@@ -21,7 +21,7 @@ export const ClampSignalBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const inputArtifact = inputs.in;
-    if (!inputArtifact || inputArtifact.kind !== 'Signal:number') {
+    if (inputArtifact === undefined || inputArtifact.kind !== 'Signal:number') {
       return {
         out: {
           kind: 'Error',
@@ -35,7 +35,7 @@ export const ClampSignalBlock: BlockCompiler = {
     const max = Number(params.max ?? 1);
 
     // Create clamped signal
-    const signal: Signal<number> = (t: number, ctx: RuntimeCtx) => {
+    const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
       const value = inputSignal(t, ctx);
       return Math.max(min, Math.min(max, value));
     };

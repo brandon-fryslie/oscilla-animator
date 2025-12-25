@@ -6,17 +6,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
 import { createCompilerService } from '../integration';
-import type { CompileFinishedEvent, EditorEvent } from '../../events/types';
-import { resetFeatureFlags } from '../featureFlags';
+import type { EditorEvent } from '../../events/types';
+import type { Diagnostic } from '../../diagnostics/types';
 
 describe('Bus Diagnostics', () => {
   let store: RootStore;
   let events: EditorEvent[];
 
   beforeEach(() => {
-    // Reset feature flags to default state (requireTimeRoot is now enabled by default)
-    resetFeatureFlags();
-
     store = new RootStore();
     events = [];
 
@@ -52,18 +49,18 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-1',
         busId: 'custom-bus',
-        from: { blockId: domainBlock, slotId: 'domain', dir: 'output' },
+        from: { blockId: domainBlock, slotId: 'domain', direction: 'output' },
         enabled: true,
         sortKey: 0,
       });
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e): e is Extract<EditorEvent, { type: 'CompileFinished' }> => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
-      const busEmptyWarnings = diagnostics.filter((d) => d.code === 'W_BUS_EMPTY');
+      const busEmptyWarnings = diagnostics.filter((d): d is Diagnostic => d.code === 'W_BUS_EMPTY');
 
       expect(busEmptyWarnings).toHaveLength(1);
       expect(busEmptyWarnings[0].severity).toBe('warn');
@@ -96,7 +93,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-1',
         busId: 'custom-bus',
-        from: { blockId: domainBlock, slotId: 'domain', dir: 'output' },
+        from: { blockId: domainBlock, slotId: 'domain', direction: 'output' },
         enabled: true,
         sortKey: 0,
       });
@@ -104,17 +101,17 @@ describe('Bus Diagnostics', () => {
       store.busStore.listeners.push({
         id: 'lis-1',
         busId: 'custom-bus',
-        to: { blockId: renderBlock, slotId: 'radius', dir: 'input' },
+        to: { blockId: renderBlock, slotId: 'radius', direction: 'input' },
         enabled: true,
       });
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e): e is Extract<EditorEvent, { type: 'CompileFinished' }> => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
-      const busEmptyWarnings = diagnostics.filter((d) => d.code === 'W_BUS_EMPTY');
+      const busEmptyWarnings = diagnostics.filter((d): d is Diagnostic => d.code === 'W_BUS_EMPTY');
 
       expect(busEmptyWarnings).toHaveLength(0);
     });
@@ -141,7 +138,7 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e): e is Extract<EditorEvent, { type: 'CompileFinished' }> => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
@@ -154,7 +151,7 @@ describe('Bus Diagnostics', () => {
       // Should have warnings for GridDomain2's unused outputs (domain, pos0)
       expect(unusedOutputWarnings.length).toBeGreaterThanOrEqual(1);
       expect(unusedOutputWarnings.some((w) =>
-        w.primaryTarget.kind === 'port' && (w.primaryTarget as any).blockId === domainBlock2
+        w.primaryTarget.kind === 'port' && w.primaryTarget.portRef.blockId === domainBlock2
       )).toBe(true);
     });
 
@@ -171,15 +168,15 @@ describe('Bus Diagnostics', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e): e is Extract<EditorEvent, { type: 'CompileFinished' }> => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
-      const unusedOutputWarnings = diagnostics.filter((d) => d.code === 'W_GRAPH_UNUSED_OUTPUT');
+      const unusedOutputWarnings = diagnostics.filter((d): d is Diagnostic => d.code === 'W_GRAPH_UNUSED_OUTPUT');
 
       // Should not have any warnings about TimeRoot outputs (phase, wrap)
       const timeRootWarnings = unusedOutputWarnings.filter(
-        (w) => w.primaryTarget.kind === 'port' && ['phase', 'wrap'].includes((w.primaryTarget as any).portId)
+        (w) => w.primaryTarget.kind === 'port' && w.primaryTarget.portRef?.slotId !== undefined && ['phase', 'wrap'].includes(w.primaryTarget.portRef.slotId)
       );
       expect(timeRootWarnings).toHaveLength(0);
     });
@@ -199,22 +196,22 @@ describe('Bus Diagnostics', () => {
       store.busStore.publishers.push({
         id: 'pub-pos0',
         busId: 'phaseA', // Use existing bus
-        from: { blockId: domainBlock, slotId: 'pos0', dir: 'output' },
+        from: { blockId: domainBlock, slotId: 'pos0', direction: 'output' },
         enabled: true,
         sortKey: 0,
       });
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e): e is Extract<EditorEvent, { type: 'CompileFinished' }> => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const diagnostics = finishedEvents[0].diagnostics;
-      const unusedOutputWarnings = diagnostics.filter((d) => d.code === 'W_GRAPH_UNUSED_OUTPUT');
+      const unusedOutputWarnings = diagnostics.filter((d): d is Diagnostic => d.code === 'W_GRAPH_UNUSED_OUTPUT');
 
       // Should not have warning for pos0 since it's published
       const pos0Warnings = unusedOutputWarnings.filter(
-        (w) => w.primaryTarget.kind === 'port' && (w.primaryTarget as any).portId === 'pos0'
+        (w) => w.primaryTarget.kind === 'port' && w.primaryTarget.portRef?.slotId === 'pos0'
       );
       expect(pos0Warnings).toHaveLength(0);
     });

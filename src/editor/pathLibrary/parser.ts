@@ -18,7 +18,7 @@ export interface ParseResult {
 }
 
 function deriveViewBoxFromSize(widthRaw?: string | null, heightRaw?: string | null): string | undefined {
-  if (!widthRaw || !heightRaw) return undefined;
+  if (widthRaw === undefined || widthRaw === null || widthRaw === '' || heightRaw === undefined || heightRaw === null || heightRaw === '') return undefined;
   const width = parseFloat(widthRaw);
   const height = parseFloat(heightRaw);
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
@@ -39,7 +39,7 @@ export function parseSVGString(svgString: string): ParseResult {
     const viewBoxMatch = svgString.match(/viewBox=["']([^"']+)["']/i);
     let viewBox = viewBoxMatch?.[1];
 
-    if (!viewBox) {
+    if (viewBox === undefined || viewBox === null || viewBox === '') {
       const widthMatch = svgString.match(/width=["']([^"']+)["']/i);
       const heightMatch = svgString.match(/height=["']([^"']+)["']/i);
       viewBox = deriveViewBoxFromSize(widthMatch?.[1], heightMatch?.[1]);
@@ -51,7 +51,7 @@ export function parseSVGString(svgString: string): ParseResult {
     let pathIndex = 0;
 
     while ((pathMatch = pathRegex.exec(svgString)) !== null) {
-      const d = pathMatch[1]!;
+      const d = pathMatch[1];
 
       // Try to extract color from the path element
       const fullPath = pathMatch[0];
@@ -124,8 +124,8 @@ function parsePathD(d: string, color: string, index: number): LineData | null {
     switch (type.toUpperCase()) {
       case 'M': {
         // Move to
-        const x = relative ? currentX + args[0]! : args[0]!;
-        const y = relative ? currentY + args[1]! : args[1]!;
+        const x = relative ? currentX + args[0] : args[0];
+        const y = relative ? currentY + args[1] : args[1];
 
         if (!foundStart) {
           startX = x;
@@ -141,8 +141,8 @@ function parsePathD(d: string, color: string, index: number): LineData | null {
 
         // Handle implicit lineto for additional coordinate pairs
         for (let i = 2; i < args.length; i += 2) {
-          const lx = relative ? currentX + args[i]! : args[i]!;
-          const ly = relative ? currentY + args[i + 1]! : args[i + 1]!;
+          const lx = relative ? currentX + args[i] : args[i];
+          const ly = relative ? currentY + args[i + 1] : args[i + 1];
           points.push({ x: lx, y: ly, type: 'L' });
           currentX = lx;
           currentY = ly;
@@ -153,8 +153,8 @@ function parsePathD(d: string, color: string, index: number): LineData | null {
       case 'L': {
         // Line to
         for (let i = 0; i < args.length; i += 2) {
-          const x = relative ? currentX + args[i]! : args[i]!;
-          const y = relative ? currentY + args[i + 1]! : args[i + 1]!;
+          const x = relative ? currentX + args[i] : args[i];
+          const y = relative ? currentY + args[i + 1] : args[i + 1];
           points.push({ x, y, type: 'L' });
           currentX = x;
           currentY = y;
@@ -185,10 +185,10 @@ function parsePathD(d: string, color: string, index: number): LineData | null {
       case 'Q': {
         // Quadratic bezier
         for (let i = 0; i < args.length; i += 4) {
-          const cx = relative ? currentX + args[i]! : args[i]!;
-          const cy = relative ? currentY + args[i + 1]! : args[i + 1]!;
-          const x = relative ? currentX + args[i + 2]! : args[i + 2]!;
-          const y = relative ? currentY + args[i + 3]! : args[i + 3]!;
+          const cx = relative ? currentX + args[i] : args[i];
+          const cy = relative ? currentY + args[i + 1] : args[i + 1];
+          const x = relative ? currentX + args[i + 2] : args[i + 2];
+          const y = relative ? currentY + args[i + 3] : args[i + 3];
 
           points.push({ x, y, type: 'Q', cx, cy });
           lastControlX = cx;
@@ -204,8 +204,8 @@ function parsePathD(d: string, color: string, index: number): LineData | null {
         for (let i = 0; i < args.length; i += 2) {
           const cx = 2 * currentX - lastControlX;
           const cy = 2 * currentY - lastControlY;
-          const x = relative ? currentX + args[i]! : args[i]!;
-          const y = relative ? currentY + args[i + 1]! : args[i + 1]!;
+          const x = relative ? currentX + args[i] : args[i];
+          const y = relative ? currentY + args[i + 1] : args[i + 1];
 
           points.push({ x, y, type: 'Q', cx, cy });
           lastControlX = cx;
@@ -219,12 +219,12 @@ function parsePathD(d: string, color: string, index: number): LineData | null {
       case 'C': {
         // Cubic bezier - approximate with quadratic
         for (let i = 0; i < args.length; i += 6) {
-          const c1x = relative ? currentX + args[i]! : args[i]!;
-          const c1y = relative ? currentY + args[i + 1]! : args[i + 1]!;
-          const c2x = relative ? currentX + args[i + 2]! : args[i + 2]!;
-          const c2y = relative ? currentY + args[i + 3]! : args[i + 3]!;
-          const x = relative ? currentX + args[i + 4]! : args[i + 4]!;
-          const y = relative ? currentY + args[i + 5]! : args[i + 5]!;
+          const c1x = relative ? currentX + args[i] : args[i];
+          const c1y = relative ? currentY + args[i + 1] : args[i + 1];
+          const c2x = relative ? currentX + args[i + 2] : args[i + 2];
+          const c2y = relative ? currentY + args[i + 3] : args[i + 3];
+          const x = relative ? currentX + args[i + 4] : args[i + 4];
+          const y = relative ? currentY + args[i + 5] : args[i + 5];
 
           // Approximate cubic with quadratic using midpoint of control points
           const cx = (c1x + c2x) / 2;
@@ -244,10 +244,10 @@ function parsePathD(d: string, color: string, index: number): LineData | null {
         for (let i = 0; i < args.length; i += 4) {
           const c1x = 2 * currentX - lastControlX;
           const c1y = 2 * currentY - lastControlY;
-          const c2x = relative ? currentX + args[i]! : args[i]!;
-          const c2y = relative ? currentY + args[i + 1]! : args[i + 1]!;
-          const x = relative ? currentX + args[i + 2]! : args[i + 2]!;
-          const y = relative ? currentY + args[i + 3]! : args[i + 3]!;
+          const c2x = relative ? currentX + args[i] : args[i];
+          const c2y = relative ? currentY + args[i + 1] : args[i + 1];
+          const x = relative ? currentX + args[i + 2] : args[i + 2];
+          const y = relative ? currentY + args[i + 3] : args[i + 3];
 
           const cx = (c1x + c2x) / 2;
           const cy = (c1y + c2y) / 2;
@@ -264,13 +264,13 @@ function parsePathD(d: string, color: string, index: number): LineData | null {
       case 'A': {
         // Arc - convert to our arc format
         for (let i = 0; i < args.length; i += 7) {
-          const rx = args[i]!;
-          const ry = args[i + 1]!;
-          const rotation = args[i + 2]!;
-          const largeArc = args[i + 3]! as 0 | 1;
-          const sweep = args[i + 4]! as 0 | 1;
-          const x = relative ? currentX + args[i + 5]! : args[i + 5]!;
-          const y = relative ? currentY + args[i + 6]! : args[i + 6]!;
+          const rx = args[i];
+          const ry = args[i + 1];
+          const rotation = args[i + 2];
+          const largeArc = args[i + 3] as 0 | 1;
+          const sweep = args[i + 4] as 0 | 1;
+          const x = relative ? currentX + args[i + 5] : args[i + 5];
+          const y = relative ? currentY + args[i + 6] : args[i + 6];
 
           points.push({
             x, y, type: 'A',
@@ -323,8 +323,8 @@ function tokenizePathD(d: string): PathCommand[] {
   let match: RegExpExecArray | null;
 
   while ((match = regex.exec(d)) !== null) {
-    const type = match[1]!;
-    const argsStr = match[2]!.trim();
+    const type = match[1];
+    const argsStr = match[2].trim();
 
     // Parse numbers from args string
     const args: number[] = [];
@@ -333,7 +333,7 @@ function tokenizePathD(d: string): PathCommand[] {
       const numRegex = /-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/gi;
       let numMatch: RegExpExecArray | null;
       while ((numMatch = numRegex.exec(argsStr)) !== null) {
-        args.push(parseFloat(numMatch[0]!));
+        args.push(parseFloat(numMatch[0]));
       }
     }
 
@@ -359,7 +359,7 @@ function getDefaultColor(index: number): string {
     '#ff4488', // Pink
     '#8844ff', // Purple
   ];
-  return colors[index % colors.length]!;
+  return colors[index % colors.length];
 }
 
 /**

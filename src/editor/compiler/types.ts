@@ -44,24 +44,6 @@ export interface CuePoint {
   kind?: 'phase' | 'beat' | 'marker';
 }
 
-/**
- * TimelineHint describes the temporal structure of a program.
- * Programs can optionally expose this to inform the player.
- *
- * @deprecated Use TimeModel instead. TimelineHint is kept for backward compatibility.
- */
-export type TimelineHint =
-  | {
-      kind: 'finite';
-      durationMs: number;
-      recommendedLoop?: 'loop' | 'pingpong' | 'none';
-      cuePoints?: readonly CuePoint[];
-    }
-  | {
-      kind: 'infinite';
-      recommendedLoop?: 'loop' | 'none';
-      windowMs?: number; // Suggested preview window
-    };
 
 // =============================================================================
 // TimeModel: Authoritative Time Topology
@@ -126,22 +108,31 @@ export interface InfiniteTimeModel {
  *
  * This replaces the raw Program<RenderTree> return type, making
  * TimeModel a first-class artifact of compilation.
+ *
+ * Either `program` (SVG/RenderTree) or `canvasProgram` will be set,
+ * depending on which render sink the patch uses.
  */
 export interface CompiledProgram {
-  /** The runnable animation program */
-  program: Program<RenderTree>;
+  /** The runnable animation program (SVG path) */
+  program?: Program<RenderTree>;
+  /** The runnable canvas program (Canvas path) */
+  canvasProgram?: CanvasProgram;
   /** The time topology of the patch */
   timeModel: TimeModel;
 }
 
+// Canvas program returns a RenderTree for the Canvas2DRenderer to execute
+export interface CanvasProgram {
+  signal: (tMs: number, rt: RuntimeCtx) => import('../runtime/renderCmd').RenderTree;
+  event: (ev: KernelEvent) => KernelEvent[];
+}
+
 /**
  * Program is time-dependent: returns signal + event handlers.
- * Optionally includes timeline metadata for player-aware playback.
  */
 export interface Program<T> {
   signal: (tMs: number, rt: RuntimeCtx) => T;
   event: (ev: KernelEvent) => KernelEvent[];
-  timeline?: () => TimelineHint;
 }
 
 export interface Vec2 {
@@ -316,11 +307,10 @@ import type { Domain } from './unified/Domain';
 // Re-export Domain for consumers
 export type { Domain };
 
-import type { DefaultSource } from '../types';
+import type { DefaultSourceState } from '../types';
 
 /**
- * Extended CompilerPatch with optional bus support.
- * Maintains backward compatibility with existing wire-only patches.
+ * Extended CompilerPatch with bus support.
  */
 export interface CompilerPatch {
   blocks: Map<BlockId, BlockInstance>;
@@ -328,12 +318,12 @@ export interface CompilerPatch {
   output?: PortRef;
 
   // Bus-related additions (Phase 2)
-  buses?: Bus[];
-  publishers?: Publisher[];
-  listeners?: Listener[];
+  buses: Bus[];
+  publishers: Publisher[];
+  listeners: Listener[];
   
   // Default sources for lens parameters (Phase 3)
-  defaultSources?: Record<string, DefaultSource>;
+  defaultSources: Record<string, DefaultSourceState>;
 }
 
 // =============================================================================
@@ -471,7 +461,10 @@ export interface CompileError {
 
 export interface CompileResult {
   ok: boolean;
+  /** SVG render program (RenderTree-based) */
   program?: Program<RenderTree>;
+  /** Canvas render program (RenderCmd-based) */
+  canvasProgram?: CanvasProgram;
   /** TimeModel inferred from the patch (present when ok === true) */
   timeModel?: TimeModel;
   errors: readonly CompileError[];

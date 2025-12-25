@@ -17,7 +17,7 @@ const mockGeom: GeometryCache = {
 
 describe('ColorLFOBlock', () => {
   it('should compile with valid phase input', () => {
-    const phaseSignal = (t: number) => (t / 1000) % 1; // Simple phase function
+    const phaseSignal = (_t: number): number => (_t / 1000) % 1; // Simple phase function
 
     const result = ColorLFOBlock.compile({
       id: 'test-color-lfo',
@@ -38,7 +38,7 @@ describe('ColorLFOBlock', () => {
   });
 
   it('should produce valid hex colors', () => {
-    const phaseSignal = (_t: number) => 0.5; // Fixed phase
+    const phaseSignal = (_t: number): number => 0.5; // Fixed phase
 
     const result = ColorLFOBlock.compile({
       id: 'test-color-lfo',
@@ -58,7 +58,7 @@ describe('ColorLFOBlock', () => {
       throw new Error('Expected Signal:color');
     }
 
-    const colorFn = result.color.value as (t: number, ctx: RuntimeCtx) => string;
+        const colorFn = result.color.value as (_t: number, _ctx: RuntimeCtx) => string;
     const color = colorFn(500, mockCtx);
 
     // Should be a valid hex color
@@ -75,7 +75,7 @@ describe('ColorLFOBlock', () => {
         light: 0.5,
       },
       inputs: {
-        phase: { kind: 'Signal:phase', value: (t: number) => t / 1000 },
+        phase: { kind: 'Signal:phase', value: (t: number): number => t / 1000 },
       },
       ctx: { env: {}, geom: mockGeom },
     });
@@ -84,7 +84,7 @@ describe('ColorLFOBlock', () => {
       throw new Error('Expected Signal:color');
     }
 
-    const colorFn = result.color.value as (t: number, ctx: RuntimeCtx) => string;
+        const colorFn = result.color.value as (_t: number, _ctx: RuntimeCtx) => string;
 
     // At phase 0, should be near red
     const color0 = colorFn(0, mockCtx);
@@ -114,7 +114,7 @@ describe('ColorLFOBlock', () => {
   });
 
   it('should use default parameters', () => {
-    const phaseSignal = (_t: number) => 0;
+    const phaseSignal = (_t: number): number => 0;
 
     const result = ColorLFOBlock.compile({
       id: 'test-color-lfo',
@@ -131,7 +131,7 @@ describe('ColorLFOBlock', () => {
       throw new Error('Expected Signal:color');
     }
 
-    const colorFn = result.color.value as (t: number, ctx: RuntimeCtx) => string;
+        const colorFn = result.color.value as (_t: number, _ctx: RuntimeCtx) => string;
     const color = colorFn(0, mockCtx);
 
     // Should produce a valid hex color with defaults

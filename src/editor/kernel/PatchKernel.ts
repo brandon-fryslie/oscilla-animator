@@ -15,7 +15,7 @@ import type {
   TxId
 } from './types';
 import type { PatchDocument, ValidationResult } from '../semantic/types';
-import { SemanticGraph } from '../semantic';
+import type { SemanticGraph } from '../semantic';
 import type { Patch } from '../types';
 import { SemanticGraph as GraphImpl } from '../semantic/graph';
 import { Validator } from '../semantic/validator';
@@ -24,7 +24,7 @@ import { applyOp } from './applyOp';
 
 export class Kernel implements PatchKernel {
   // State
-  private _doc: Patch;
+  private readonly _doc: Patch;
   private _graph: GraphImpl;
   private _report: ValidationResult;
 
@@ -39,14 +39,14 @@ export class Kernel implements PatchKernel {
     head: null
   };
 
-  constructor(initialPatch: Patch) {
-    this._doc = JSON.parse(JSON.stringify(initialPatch));
-    this._graph = GraphImpl.fromPatch(this._doc as any);
+  constructor(initialPatch: Readonly<Patch>) {
+    this._doc = JSON.parse(JSON.stringify(initialPatch)) as Patch;
+    this._graph = GraphImpl.fromPatch(this._doc);
     this._report = { ok: true, errors: [], warnings: [] }; // Initial assumption
   }
 
   get doc(): PatchDocument {
-    return this._doc as any;
+    return this._doc as PatchDocument;
   }
 
   get graph(): SemanticGraph {
@@ -83,15 +83,15 @@ export class Kernel implements PatchKernel {
     }
 
     // 3. Update graph and validation
-    this._graph = GraphImpl.fromPatch(this._doc as any);
-    const validator = new Validator(this._doc as any);
-    this._report = validator.validateAll(this._doc as any);
+    this._graph = GraphImpl.fromPatch(this._doc);
+    const validator = new Validator(this._doc);
+    this._report = validator.validateAll(this._doc);
 
     // 4. Update history
     this.history.nodes.set(tx.id, tx);
-    
+
     // Update parent's children
-    if (tx.parentId) {
+    if (tx.parentId !== null && tx.parentId !== undefined && tx.parentId !== '') {
       const children = this.history.children.get(tx.parentId) ?? [];
       children.push(tx.id);
       this.history.children.set(tx.parentId, children);
@@ -103,10 +103,10 @@ export class Kernel implements PatchKernel {
   }
 
   undo(): void {
-    if (!this.history.head) return;
+    if (this.history.head === null || this.history.head === undefined || this.history.head === '') return;
 
     const tx = this.history.nodes.get(this.history.head);
-    if (!tx) return;
+    if (tx === undefined) return;
 
     // Apply inverse ops
     for (const op of tx.inverseOps) {
@@ -114,9 +114,9 @@ export class Kernel implements PatchKernel {
     }
 
     // Update graph/validation
-    this._graph = GraphImpl.fromPatch(this._doc as any);
-    const validator = new Validator(this._doc as any);
-    this._report = validator.validateAll(this._doc as any);
+    this._graph = GraphImpl.fromPatch(this._doc);
+    const validator = new Validator(this._doc);
+    this._report = validator.validateAll(this._doc);
 
     // Move head pointer
     this.history.head = tx.parentId;
@@ -129,25 +129,25 @@ export class Kernel implements PatchKernel {
       return;
     }
 
-    if (!this.history.head) return; // Should handle empty history case better
+    if (this.history.head === null || this.history.head === undefined || this.history.head === '') return; // Should handle empty history case better
 
     // Find children of current head
     const children = this.history.children.get(this.history.head);
-    if (children && children.length > 0) {
+    if (children !== undefined && children.length > 0) {
       // Default to last child (most recent branch)
       const nextId = children[children.length - 1];
       const tx = this.history.nodes.get(nextId);
-      
-      if (tx) {
+
+      if (tx !== undefined) {
         // Re-apply ops
         for (const op of tx.ops) {
           applyOp(this._doc, op);
         }
 
         // Update graph/validation
-        this._graph = GraphImpl.fromPatch(this._doc as any);
-        const validator = new Validator(this._doc as any);
-        this._report = validator.validateAll(this._doc as any);
+        this._graph = GraphImpl.fromPatch(this._doc);
+        const validator = new Validator(this._doc);
+        this._report = validator.validateAll(this._doc);
 
         // Move head
         this.history.head = nextId;

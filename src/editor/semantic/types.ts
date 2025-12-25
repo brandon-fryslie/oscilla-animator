@@ -72,7 +72,7 @@ export interface BlockNode {
 export interface PortKey {
   blockId: BlockId;
   slotId: string;
-  dir: 'input' | 'output';
+  direction: 'input' | 'output';
 }
 
 /**
@@ -154,9 +154,9 @@ export interface PatchDocument {
     readonly outputs: ReadonlyArray<{ readonly id: string; readonly type: string }>;
   }>;
   connections: readonly Connection[];
-  buses?: readonly Bus[];
-  publishers?: readonly Publisher[];
-  listeners?: readonly Listener[];
+  buses: readonly Bus[];
+  publishers: readonly Publisher[];
+  listeners: readonly Listener[];
 }
 
 // =============================================================================
@@ -165,10 +165,10 @@ export interface PatchDocument {
 
 /**
  * Convert a PortKey to a stable string representation.
- * Format: "blockId:slotId:dir"
+ * Format: "blockId:slotId:direction"
  */
 export function portKeyToString(key: PortKey): string {
-  return `${key.blockId}:${key.slotId}:${key.dir}`;
+  return `${key.blockId}:${key.slotId}:${key.direction}`;
 }
 
 /**
@@ -177,9 +177,9 @@ export function portKeyToString(key: PortKey): string {
 export function stringToPortKey(str: string): PortKey | null {
   const parts = str.split(':');
   if (parts.length !== 3) return null;
-  const [blockId, slotId, dir] = parts;
-  if (dir !== 'input' && dir !== 'output') return null;
-  return { blockId: blockId!, slotId: slotId!, dir };
+  const [blockId, slotId, direction] = parts;
+  if (direction !== 'input' && direction !== 'output') return null;
+  return { blockId: blockId, slotId: slotId, direction };
 }
 
 /**
@@ -193,7 +193,7 @@ export function portKeyFromConnection(
   return {
     blockId: endpoint.blockId,
     slotId: endpoint.slotId,
-    dir: end === 'from' ? 'output' : 'input',
+    direction: endpoint.direction,
   };
 }
 
@@ -204,7 +204,7 @@ export function portKeyFromPublisher(publisher: Publisher): PortKey {
   return {
     blockId: publisher.from.blockId,
     slotId: publisher.from.slotId,
-    dir: 'output',
+    direction: 'output',
   };
 }
 
@@ -215,6 +215,6 @@ export function portKeyFromListener(listener: Listener): PortKey {
   return {
     blockId: listener.to.blockId,
     slotId: listener.to.slotId,
-    dir: 'input',
+    direction: 'input',
   };
 }

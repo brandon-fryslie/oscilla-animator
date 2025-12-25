@@ -11,6 +11,8 @@ import { useStore } from './stores';
 import type { Bus, Publisher, Listener, CoreDomain, BusCombineMode, LensDefinition } from './types';
 import { formatTypeDesc, getCombineModesForDomain } from './semantic';
 import { LensSelector, LensBadge } from './components/LensSelector';
+import { InspectorContainer } from './components/InspectorContainer';
+import { createLensInstanceFromDefinition, lensInstanceToDefinition } from './lenses/lensInstances';
 import './BusInspector.css';
 
 interface BusInspectorProps {
@@ -117,11 +119,11 @@ function DefaultValueEditor({
 /**
  * Publisher list item.
  */
-function PublisherItem({
+const PublisherItem = observer(({
   publisher,
 }: {
   publisher: Publisher;
-}) {
+}) => {
   const store = useStore();
   const block = store.patchStore.blocks.find(b => b.id === publisher.from.blockId);
   const blockName = block?.label ?? 'Unknown Block';
@@ -160,21 +162,25 @@ function PublisherItem({
       </div>
     </li>
   );
-}
+});
 
 /**
  * Listener list item with lens display and editing.
  */
-function ListenerItem({
+const ListenerItem = observer(({
   listener,
 }: {
   listener: Listener;
-}) {
+}) => {
   const store = useStore();
   const [isEditingLens, setIsEditingLens] = useState(false);
   const block = store.patchStore.blocks.find(b => b.id === listener.to.blockId);
   const blockName = block?.label ?? 'Unknown Block';
   const portName = listener.to.slotId;
+  const primaryLens = listener.lensStack?.[0];
+  const lensDefinition = primaryLens
+    ? lensInstanceToDefinition(primaryLens, store.defaultSourceStore)
+    : undefined;
 
   const handleJumpToBlock = () => {
     store.uiStore.selectBlock(listener.to.blockId);
@@ -189,7 +195,17 @@ function ListenerItem({
   };
 
   const handleLensChange = (lens: LensDefinition | undefined) => {
-    store.busStore.updateListener(listener.id, { lens });
+    if (!lens) {
+      store.busStore.updateListener(listener.id, { lensStack: undefined });
+      return;
+    }
+    const instance = createLensInstanceFromDefinition(
+      lens,
+      listener.id,
+      0,
+      store.defaultSourceStore
+    );
+    store.busStore.updateListener(listener.id, { lensStack: [instance] });
   };
 
   return (
@@ -198,15 +214,15 @@ function ListenerItem({
         <div className="routing-item-info">
           <span className="routing-block-name">{blockName}</span>
           <span className="routing-port-name">{portName}</span>
-          <LensBadge lens={listener.lens} />
+          <LensBadge lens={lensDefinition} />
         </div>
         <div className="routing-item-actions">
           <button
-            className={`routing-lens-btn ${listener.lens ? 'has-lens' : ''}`}
+            className={`routing-lens-btn ${lensDefinition ? 'has-lens' : ''}`}
             onClick={handleEditLens}
-            title={listener.lens ? 'Edit lens' : 'Add lens'}
+            title={lensDefinition ? 'Edit lens' : 'Add lens'}
           >
-            {listener.lens ? '🔧' : '+🔧'}
+            {lensDefinition ? '🔧' : '+🔧'}
           </button>
           <button
             className="routing-toggle-btn"
@@ -227,14 +243,14 @@ function ListenerItem({
       {isEditingLens && (
         <div className="routing-item-lens-editor">
           <LensSelector
-            value={listener.lens}
+            value={lensDefinition}
             onChange={handleLensChange}
           />
         </div>
       )}
     </li>
   );
-}
+});
 
 /**
  * Bus Inspector Panel - displays when a bus is selected.
@@ -243,13 +259,22 @@ export const BusInspector = observer(({ busId }: BusInspectorProps) => {
   const store = useStore();
   const bus = store.busStore.getBusById(busId);
 
+  const handleBack = () => {
+    store.uiStore.deselectBus();
+  };
+
   if (!bus) {
     return (
-      <div className="inspector">
+      <InspectorContainer
+        title="Bus Not Found"
+        color="#666"
+        onBack={handleBack}
+        backLabel="Back"
+      >
         <div className="inspector-empty">
           <p>Bus not found</p>
         </div>
-      </div>
+      </InspectorContainer>
     );
   }
 
@@ -258,10 +283,6 @@ export const BusInspector = observer(({ busId }: BusInspectorProps) => {
   const typeDisplay = formatTypeDesc(bus.type);
   const domain = bus.type.domain as CoreDomain;
   const availableCombineModes = getCombineModesForDomain(domain);
-
-  const handleNameChange = (newName: string) => {
-    store.busStore.updateBus(busId, { name: newName });
-  };
 
   const handleCombineModeChange = (newMode: BusCombineMode) => {
     store.busStore.updateBus(busId, { combineMode: newMode });
@@ -272,23 +293,15 @@ export const BusInspector = observer(({ busId }: BusInspectorProps) => {
   };
 
   return (
-    <div className="inspector bus-inspector">
-      <div className="inspector-header" style={{ borderLeftColor: '#4f46e5' }}>
-        <h2>
-          <input
-            type="text"
-            className="bus-name-input"
-            value={bus.name}
-            onChange={(e) => handleNameChange(e.target.value)}
-            placeholder="Bus name"
-          />
-        </h2>
-        <div className="block-meta">
-          <span className="bus-type-badge">{typeDisplay}</span>
-        </div>
-      </div>
-
-      <div className="inspector-body">
+    <InspectorContainer
+      title={bus.name}
+      typeCode={typeDisplay}
+      category="Bus"
+      color="#4f46e5"
+      onBack={handleBack}
+      backLabel="Back"
+      className="bus-inspector"
+    >
         {/* Section A: Summary */}
         <div className="inspector-section">
           <h3>Summary</h3>
@@ -360,7 +373,6 @@ export const BusInspector = observer(({ busId }: BusInspectorProps) => {
           <h3>Diagnostics</h3>
           <p className="inspector-hint">No issues detected</p>
         </div>
-      </div>
-    </div>
+    </InspectorContainer>
   );
 });

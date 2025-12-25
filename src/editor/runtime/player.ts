@@ -13,7 +13,7 @@
  */
 
 import type { RenderTree } from './renderTree';
-import type { CompileCtx, RuntimeCtx, Program, Seed, TimelineHint, CuePoint, TimeModel } from '../compiler/types';
+import type { CompileCtx, RuntimeCtx, Program, Seed, CuePoint, TimeModel } from '../compiler/types';
 import type { EventDispatcher } from '../events/EventDispatcher';
 
 // =============================================================================
@@ -44,17 +44,14 @@ export interface Scene {
 export type PlayState = 'playing' | 'paused';
 
 export interface PlayerOptions {
-  compileCtx: CompileCtx;
-  runtimeCtx: RuntimeCtx;
-  onFrame: (tree: RenderTree, tMs: number) => void;
-  onStateChange?: (state: PlayState) => void;
-  onTimeChange?: (tMs: number) => void;
-  onTimelineChange?: (hint: TimelineHint | null) => void;
-  onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
-  /** If true, automatically apply timeline hints from programs */
-  autoApplyTimeline?: boolean;
+  readonly compileCtx: CompileCtx;
+  readonly runtimeCtx: RuntimeCtx;
+  readonly onFrame: (tree: RenderTree, tMs: number) => void;
+  readonly onStateChange?: (state: PlayState) => void;
+  readonly onTimeChange?: (tMs: number) => void;
+  readonly onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
   /** Optional event dispatcher for runtime health snapshots */
-  events?: EventDispatcher;
+  readonly events?: EventDispatcher;
 }
 
 // =============================================================================
@@ -68,8 +65,8 @@ export class Player {
   private seed: Seed = 1;
   private scene: Scene | null = null;
 
-  private compileCtx: CompileCtx;
-  private runtimeCtx: RuntimeCtx;
+  private readonly compileCtx: CompileCtx;
+  private readonly runtimeCtx: RuntimeCtx;
 
   private playState: PlayState = 'paused';
   private tMs = 0;
@@ -77,27 +74,18 @@ export class Player {
   private rafId: number | null = null;
 
   private speed = 1.0;
-  private maxTime = 10000; // 10 seconds default
-
-  // Timeline hints from the current program
-  private currentTimeline: TimelineHint | null = null;
   private cuePoints: readonly CuePoint[] = [];
-  private autoApplyTimeline: boolean;
 
   // TimeModel from compiler (Phase 3: TimeRoot)
   private timeModel: TimeModel | null = null;
 
-  // Finite loop mode: if true, finite animations loop; if false, they stop at end
-  private finiteLoopMode = false;
-
-  private onFrame: (tree: RenderTree, tMs: number) => void;
-  private onStateChange?: (state: PlayState) => void;
-  private onTimeChange?: (tMs: number) => void;
-  private onTimelineChange?: (hint: TimelineHint | null) => void;
-  private onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
+  private readonly onFrame: (tree: RenderTree, tMs: number) => void;
+  private readonly onStateChange?: (state: PlayState) => void;
+  private readonly onTimeChange?: (tMs: number) => void;
+  private readonly onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
 
   // Event dispatcher for runtime health snapshots
-  private events?: EventDispatcher;
+  private readonly events?: EventDispatcher;
 
   // Runtime health tracking
   private activePatchRevision = 0;
@@ -114,9 +102,7 @@ export class Player {
     this.onFrame = opts.onFrame;
     this.onStateChange = opts.onStateChange;
     this.onTimeChange = opts.onTimeChange;
-    this.onTimelineChange = opts.onTimelineChange;
     this.onCuePointsChange = opts.onCuePointsChange;
-    this.autoApplyTimeline = opts.autoApplyTimeline ?? true;
     this.events = opts.events;
   }
 
@@ -159,36 +145,6 @@ export class Player {
   }
 
   /**
-   * Set finite loop mode.
-   * When true, finite animations loop back to start when they reach the end.
-   * When false, finite animations pause at the end (default behavior).
-   */
-  setFiniteLoopMode(enabled: boolean): void {
-    this.finiteLoopMode = enabled;
-  }
-
-  /**
-   * Get current finite loop mode.
-   */
-  getFiniteLoopMode(): boolean {
-    return this.finiteLoopMode;
-  }
-
-  /**
-   * Set max time for looping.
-   */
-  setMaxTime(maxTime: number): void {
-    this.maxTime = maxTime;
-  }
-
-  /**
-   * Get max time.
-   */
-  getMaxTime(): number {
-    return this.maxTime;
-  }
-
-  /**
    * Get current program (for inspection/debugging).
    */
   getProgram(): Program<RenderTree> | null {
@@ -210,13 +166,6 @@ export class Player {
   }
 
   /**
-   * Get the current timeline hint from the program.
-   */
-  getTimeline(): TimelineHint | null {
-    return this.currentTimeline;
-  }
-
-  /**
    * Get cue points from the current timeline.
    */
   getCuePoints(): readonly CuePoint[] {
@@ -227,24 +176,17 @@ export class Player {
    * Check if the current program has a finite duration.
    */
   hasFiniteDuration(): boolean {
-    return this.currentTimeline?.kind === 'finite';
+    return this.timeModel?.kind === 'finite';
   }
 
   /**
    * Get the program's recommended duration (if finite).
    */
   getProgramDuration(): number | null {
-    if (this.currentTimeline?.kind === 'finite') {
-      return this.currentTimeline.durationMs;
+    if (this.timeModel?.kind === 'finite') {
+      return this.timeModel.durationMs;
     }
     return null;
-  }
-
-  /**
-   * Enable or disable automatic timeline application.
-   */
-  setAutoApplyTimeline(enabled: boolean): void {
-    this.autoApplyTimeline = enabled;
   }
 
   /**
@@ -256,7 +198,7 @@ export class Player {
     this.activePatchRevision = revision;
 
     // Emit ProgramSwapped event to sync DiagnosticHub's active revision
-    if (this.events && revision !== previousRevision) {
+    if (this.events !== null && this.events !== undefined && revision !== previousRevision) {
       this.events.emit({
         type: 'ProgramSwapped',
         patchId: 'default',
@@ -277,73 +219,15 @@ export class Player {
   }
 
   private instantiateProgram(): void {
-    if (!this.programFactory || !this.scene) return;
+    if (this.programFactory === null || this.programFactory === undefined || this.scene === null || this.scene === undefined) return;
 
     this.program = this.programFactory(this.seed, this.scene, this.compileCtx);
-
-    // Extract timeline hints from the program
-    this.extractTimelineHints();
 
     // NOTE: We intentionally do NOT reset tMs
     // This preserves scrubbing + temporal continuity during hot swap
 
     // Render once to show new program at current time
     this.renderOnce();
-  }
-
-  /**
-   * Extract and apply timeline hints from the current program.
-   */
-  private extractTimelineHints(): void {
-    if (!this.program) {
-      this.currentTimeline = null;
-      this.cuePoints = [];
-      this.onTimelineChange?.(null);
-      this.onCuePointsChange?.([]);
-      return;
-    }
-
-    // Get timeline from program if available
-    const timeline = this.program.timeline?.() ?? null;
-    this.currentTimeline = timeline;
-
-    // Extract cue points
-    if (timeline?.kind === 'finite' && timeline.cuePoints) {
-      this.cuePoints = timeline.cuePoints;
-    } else {
-      this.cuePoints = [];
-    }
-
-    // Notify listeners
-    this.onTimelineChange?.(timeline);
-    this.onCuePointsChange?.(this.cuePoints);
-
-    // Auto-apply timeline settings if enabled
-    if (this.autoApplyTimeline && timeline) {
-      this.applyTimelineHints(timeline);
-    }
-  }
-
-  /**
-   * Apply timeline hints to player settings.
-   */
-  private applyTimelineHints(timeline: TimelineHint): void {
-    if (timeline.kind === 'finite') {
-      // Set max time to program duration
-      this.maxTime = timeline.durationMs;
-    } else if (timeline.kind === 'infinite') {
-      // Use suggested preview window or default
-      this.maxTime = timeline.windowMs ?? 10000;
-    }
-  }
-
-  /**
-   * Manually apply timeline hints (for when autoApply is disabled).
-   */
-  applyCurrentTimeline(): void {
-    if (this.currentTimeline) {
-      this.applyTimelineHints(this.currentTimeline);
-    }
   }
 
   // ===========================================================================
@@ -353,32 +237,12 @@ export class Player {
   /**
    * Apply a TimeModel from the compiler.
    *
-   * This sets maxTime based on the time model kind:
-   * - finite: uses durationMs
-   * - cyclic: uses periodMs
-   * - infinite: uses windowMs
-   *
    * The Player no longer wraps time; signals handle their own phase/looping.
    */
   applyTimeModel(model: TimeModel): void {
     this.timeModel = model;
-
-    switch (model.kind) {
-      case 'finite':
-        this.maxTime = model.durationMs;
-        // Extract cue points if available
-        if (model.cuePoints) {
-          this.cuePoints = model.cuePoints;
-          this.onCuePointsChange?.(this.cuePoints);
-        }
-        break;
-      case 'cyclic':
-        this.maxTime = model.periodMs;
-        break;
-      case 'infinite':
-        this.maxTime = model.windowMs;
-        break;
-    }
+    this.cuePoints = model.kind === 'finite' ? (model.cuePoints ?? []) : [];
+    this.onCuePointsChange?.(this.cuePoints);
   }
 
   /**
@@ -457,7 +321,7 @@ export class Player {
   // Frame Loop
   // ===========================================================================
 
-  private tick = (): void => {
+  private readonly tick = (): void => {
     if (this.playState !== 'playing') return;
 
     const now = performance.now();
@@ -469,49 +333,8 @@ export class Player {
     // Track frame time for health monitoring
     this.trackFrameTime(realDt);
 
-    // Time advancement is now monotonic for cyclic and infinite modes.
-    // TimeRoot blocks handle phase derivation via modulo arithmetic.
-    // Player only provides unbounded time and clamps to non-negative.
-    if (this.timeModel) {
-      switch (this.timeModel.kind) {
-        case 'cyclic':
-          // Cyclic: TimeRoot handles phase derivation via modulo
-          // Player provides monotonic time - just clamp to non-negative
-          if (this.tMs < 0) {
-            this.tMs = 0;
-          }
-          break;
-
-        case 'finite':
-          // Finite: pause at end if not in loop mode
-          if (this.tMs >= this.maxTime) {
-            if (this.finiteLoopMode) {
-              // Loop mode: wrap back to start
-              this.tMs = this.tMs % this.maxTime;
-            } else {
-              // Once mode: pause at end
-              this.tMs = this.maxTime;
-              this.pause();
-            }
-          }
-          if (this.tMs < 0) {
-            this.tMs = 0;
-          }
-          break;
-
-        case 'infinite':
-          // Infinite: time advances unbounded
-          // Just clamp to non-negative
-          if (this.tMs < 0) {
-            this.tMs = 0;
-          }
-          break;
-      }
-    } else {
-      // Basic fallback when no TimeModel is set - just clamp to non-negative
-      if (this.tMs < 0) {
-        this.tMs = 0;
-      }
+    if (this.tMs < 0) {
+      this.tMs = 0;
     }
 
     this.onTimeChange?.(this.tMs);
@@ -524,7 +347,7 @@ export class Player {
   };
 
   private renderOnce(): void {
-    if (!this.program) return;
+    if (this.program === null || this.program === undefined) return;
 
     const tree = this.program.signal(this.tMs, this.runtimeCtx);
 
@@ -556,7 +379,7 @@ export class Player {
   private checkRenderHealth(tree: RenderTree): void {
     // For now, just check if tree exists and is valid
     // Future: could add deep traversal to check for NaN/Infinity in coordinates
-    if (!tree || typeof tree !== 'object') {
+    if (typeof tree !== 'object') {
       this.nanCount++;
     }
   }
@@ -565,7 +388,7 @@ export class Player {
    * Emit RuntimeHealthSnapshot event if interval has elapsed.
    */
   private emitHealthSnapshot(nowMs: number): void {
-    if (!this.events) return;
+    if (this.events === null || this.events === undefined) return;
 
     const elapsed = nowMs - this.lastHealthEmitMs;
     if (elapsed < Player.HEALTH_EMIT_INTERVAL_MS) return;
@@ -641,14 +464,12 @@ export class Player {
 export function createPlayer(
   onFrame: (tree: RenderTree, tMs: number) => void,
   opts?: {
-    width?: number;
-    height?: number;
-    onStateChange?: (state: PlayState) => void;
-    onTimeChange?: (tMs: number) => void;
-    onTimelineChange?: (hint: TimelineHint | null) => void;
-    onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
-    autoApplyTimeline?: boolean;
-    events?: EventDispatcher;
+    readonly width?: number;
+    readonly height?: number;
+    readonly onStateChange?: (state: PlayState) => void;
+    readonly onTimeChange?: (tMs: number) => void;
+    readonly onCuePointsChange?: (cuePoints: readonly CuePoint[]) => void;
+    readonly events?: EventDispatcher;
   }
 ): Player {
   const compileCtx: CompileCtx = {
@@ -673,9 +494,7 @@ export function createPlayer(
     onFrame,
     onStateChange: opts?.onStateChange,
     onTimeChange: opts?.onTimeChange,
-    onTimelineChange: opts?.onTimelineChange,
     onCuePointsChange: opts?.onCuePointsChange,
-    autoApplyTimeline: opts?.autoApplyTimeline,
     events: opts?.events,
   });
 }

@@ -12,6 +12,7 @@ import type {
   BlockSubcategory,
   BlockType,
 } from '../types';
+import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import { getBlockDefinition } from '../blocks';
 import { getMacroKey, getMacroExpansion, type MacroExpansion } from '../macros';
 import { listCompositeDefinitions } from '../composites';
@@ -31,8 +32,8 @@ import { storeToPatchDocument } from '../semantic/patchAdapter';
  * New: 'builtin:logo', 'builtin:text', 'builtin:heart'
  */
 function migrateBlockParams(type: string, params: Record<string, unknown>): Record<string, unknown> {
-  if (type === 'SVGPathSource' && params.target) {
-    const target = String(params.target);
+  if (type === 'SVGPathSource' && params.target !== undefined) {
+    const target = params.target;
     // Migrate old format to new
     if (target === 'logo') return { ...params, target: 'builtin:logo' };
     if (target === 'text') return { ...params, target: 'builtin:text' };
@@ -150,7 +151,7 @@ export class PatchStore {
   // =============================================================================
 
   generateBlockId(): BlockId {
-    return this.root.generateId('block') as BlockId;
+    return this.root.generateId('block');
   }
 
   generateConnectionId(): string {
@@ -162,31 +163,116 @@ export class PatchStore {
   // =============================================================================
 
   /**
+   * Internal block creation - the shared implementation for addBlock and expandMacro.
+   * Does NOT check for macros (caller must handle that).
+   * Does NOT emit GraphCommitted (caller emits one for the entire operation).
+   *
+   * @param type - Block type
+   * @param params - Block parameters
+   * @param laneKind - Optional lane kind to place block in
+   * @param label - Optional label override
+   * @returns The created block ID
+   */
+  private _createBlock(
+    type: BlockType,
+    params?: Record<string, unknown>,
+    laneKind?: LaneKind,
+    label?: string
+  ): BlockId {
+    const id = this.generateBlockId();
+    const definition = getBlockDefinition(type);
+
+    if (definition === undefined) {
+      throw new Error(`Block type "${type}" not found in registry`);
+    }
+
+    // Merge params with defaults and migrate old values
+    const rawParams = params ?? definition.defaultParams ?? {};
+    const migratedParams = migrateBlockParams(type, rawParams);
+
+    const block: Block = {
+      id,
+      type,
+      label: label ?? definition.label ?? type,
+      inputs: definition.inputs ?? [],
+      outputs: definition.outputs ?? [],
+      params: migratedParams,
+      category: definition.subcategory ?? 'Other',
+      description: definition.description ?? `${type} block`,
+    };
+
+    this.blocks.push(block);
+
+    // Add to lane if specified
+    if (laneKind !== undefined) {
+      const lane = this.root.viewStore.lanes.find((l) => l.kind === laneKind);
+      if (lane !== undefined) {
+        lane.blockIds = [...lane.blockIds, id];
+      }
+    }
+
+    // Create default sources for inputs with defaultSource metadata
+    this.root.defaultSourceStore.createDefaultSourcesForBlock(
+      id,
+      block.inputs,
+      SLOT_TYPE_TO_TYPE_DESC
+    );
+
+    // Process auto-bus connections for this block
+    this.processAutoBusConnections(id, type);
+
+    // Emit BlockAdded event
+    this.root.events.emit({
+      type: 'BlockAdded',
+      blockId: id,
+      blockType: type,
+      laneId: '', // Legacy payload, unused by ViewStore now
+    });
+
+    return id;
+  }
+
+  /**
    * Process auto-bus connections for a block based on its definition.
-   * This handles both primitive blocks with autoBusSubscriptions/autoBusPublications
-   * and composite blocks with busSubscriptions/busPublications in their graph.
+   * This handles:
+   * - Primitive blocks with autoBusSubscriptions/autoBusPublications
+   * - Composite blocks with busSubscriptions/busPublications in their graph
+   * - Input slots with defaultSource.defaultBus specified
    */
   private processAutoBusConnections(blockId: BlockId, blockType: string): void {
     const definition = getBlockDefinition(blockType);
-    if (!definition) {
+    if (definition === undefined) {
       throw new Error(`Cannot process auto-bus connections: block type "${blockType}" not found in registry`);
     }
 
     // Check for primitive block auto-bus definitions
-    if (definition.autoBusSubscriptions) {
+    if (definition.autoBusSubscriptions !== undefined) {
       for (const [inputPort, busName] of Object.entries(definition.autoBusSubscriptions)) {
         const bus = this.root.busStore.buses.find(b => b.name === busName);
-        if (bus) {
+        if (bus !== undefined) {
           this.root.busStore.addListener(bus.id, blockId, inputPort);
         }
       }
     }
 
-    if (definition.autoBusPublications) {
+    if (definition.autoBusPublications !== undefined) {
       for (const [outputPort, busName] of Object.entries(definition.autoBusPublications)) {
         const bus = this.root.busStore.buses.find(b => b.name === busName);
-        if (bus) {
+        if (bus !== undefined) {
           this.root.busStore.addPublisher(bus.id, blockId, outputPort);
+        }
+      }
+    }
+
+    // Check for input slots with defaultBus in their defaultSource
+    if (definition.inputs !== undefined) {
+      for (const inputSlot of definition.inputs) {
+        if (inputSlot.defaultSource?.defaultBus !== undefined) {
+          const busName = inputSlot.defaultSource.defaultBus;
+          const bus = this.root.busStore.buses.find(b => b.name === busName);
+          if (bus !== undefined) {
+            this.root.busStore.addListener(bus.id, blockId, inputSlot.id);
+          }
         }
       }
     }
@@ -197,19 +283,19 @@ export class PatchStore {
       const composites = listCompositeDefinitions();
       const compositeDef = composites.find(c => c.id === compositeId);
 
-      if (compositeDef?.graph.busSubscriptions) {
+      if (compositeDef !== undefined && compositeDef.graph.busSubscriptions !== undefined) {
         for (const [inputPort, busName] of Object.entries(compositeDef.graph.busSubscriptions)) {
           const bus = this.root.busStore.buses.find(b => b.name === busName);
-          if (bus) {
+          if (bus !== undefined) {
             this.root.busStore.addListener(bus.id, blockId, inputPort);
           }
         }
       }
 
-      if (compositeDef?.graph.busPublications) {
+      if (compositeDef !== undefined && compositeDef.graph.busPublications !== undefined) {
         for (const [outputPort, busName] of Object.entries(compositeDef.graph.busPublications)) {
           const bus = this.root.busStore.buses.find(b => b.name === busName);
-          if (bus) {
+          if (bus !== undefined) {
             this.root.busStore.addPublisher(bus.id, blockId, outputPort);
           }
         }
@@ -223,9 +309,9 @@ export class PatchStore {
   addBlock(type: BlockType, params?: Record<string, unknown>): BlockId {
     // Check if this is a macro that should expand
     const macroKey = getMacroKey(type, params);
-    if (macroKey) {
+    if (macroKey !== null && macroKey !== undefined && macroKey !== '') {
       const expansion = getMacroExpansion(macroKey);
-      if (expansion) {
+      if (expansion !== null && expansion !== undefined) {
         return this.expandMacro(expansion);
       }
       // Macro has no expansion - crash immediately
@@ -237,39 +323,8 @@ export class PatchStore {
       throw new Error(`Cannot add macro block "${type}" directly. Macros must have an expansion in MACRO_REGISTRY.`);
     }
 
-    // Regular block addition
-    const id = this.generateBlockId();
-
-    // Look up block definition from registry
-    const definition = getBlockDefinition(type);
-
-    // Merge params with defaults and migrate old values
-    const rawParams = params ?? definition?.defaultParams ?? {};
-    const migratedParams = migrateBlockParams(type, rawParams);
-
-    const block: Block = {
-      id,
-      type,
-      label: definition?.label ?? type,
-      inputs: definition?.inputs ?? [],
-      outputs: definition?.outputs ?? [],
-      params: migratedParams,
-      category: definition?.subcategory ?? 'Other',
-      description: definition?.description ?? `${type} block`,
-    };
-
-    this.blocks.push(block);
-
-    // Process auto-bus connections for this block
-    this.processAutoBusConnections(id, type);
-
-    // Emit BlockAdded event AFTER state changes committed
-    this.root.events.emit({
-      type: 'BlockAdded',
-      blockId: id,
-      blockType: type,
-      laneId: '', // Legacy payload, unused by ViewStore now
-    });
+    // Use shared block creation logic
+    const id = this._createBlock(type, params);
 
     // Emit GraphCommitted for diagnostics
     this.emitGraphCommitted(
@@ -295,9 +350,9 @@ export class PatchStore {
   addBlockAtIndex(type: BlockType, laneId: LaneId, index: number, params?: Record<string, unknown>): BlockId {
     // Check if this is a macro that should expand
     const macroKey = getMacroKey(type, params);
-    if (macroKey) {
+    if (macroKey !== null && macroKey !== undefined && macroKey !== '') {
       const expansion = getMacroExpansion(macroKey);
-      if (expansion) {
+      if (expansion !== null && expansion !== undefined) {
         return this.expandMacro(expansion);
       }
       throw new Error(`Macro "${macroKey}" has no expansion registered in MACRO_REGISTRY`);
@@ -327,8 +382,15 @@ export class PatchStore {
 
     this.blocks.push(block);
 
+    // Create default sources for inputs with defaultSource metadata
+    this.root.defaultSourceStore.createDefaultSourcesForBlock(
+      id,
+      block.inputs,
+      SLOT_TYPE_TO_TYPE_DESC
+    );
+
     // Add to lane at specific index
-    if (laneObj) {
+    if (laneObj !== null && laneObj !== undefined) {
       const newBlockIds = [...laneObj.blockIds];
       newBlockIds.splice(index, 0, id);
       laneObj.blockIds = newBlockIds;
@@ -370,68 +432,56 @@ export class PatchStore {
     // Map from macro ref IDs to actual block IDs
     const refToId = new Map<string, BlockId>();
 
-    // Create all blocks
+    // Create all blocks using shared _createBlock method
+    // This ensures all automatic features work (defaultBus, autoBus, etc.)
     for (const macroBlock of expansion.blocks) {
-      // Find the appropriate lane for this block's kind
-      const lane = this.root.viewStore.lanes.find((l) => l.kind === macroBlock.laneKind);
-      if (!lane) {
-        throw new Error(`Macro block "${macroBlock.ref}" (${macroBlock.type}) references unknown lane kind "${macroBlock.laneKind}"`);
-      }
-
-      const id = this.generateBlockId();
-      const definition = getBlockDefinition(macroBlock.type);
-      if (!definition) {
-        throw new Error(`Macro block "${macroBlock.ref}" references unknown block type "${macroBlock.type}"`);
-      }
-
-      const block: Block = {
-        id,
-        type: macroBlock.type,
-        label: macroBlock.label ?? definition.label,
-        inputs: definition.inputs ?? [],
-        outputs: definition.outputs ?? [],
-        params: { ...definition.defaultParams, ...(macroBlock.params ?? {}) },
-        category: definition.subcategory ?? 'Other', // Set category based on definition or default
-        description: definition.description,
-      };
-
-      this.blocks.push(block);
-      lane.blockIds = [...lane.blockIds, id];
+      // Use shared block creation with lane placement and label override
+      const id = this._createBlock(
+        macroBlock.type,
+        macroBlock.params,
+        macroBlock.laneKind,
+        macroBlock.label
+      );
       refToId.set(macroBlock.ref, id);
-
-      // Process auto-bus connections for this newly added block
-      this.processAutoBusConnections(id, macroBlock.type);
     }
 
     // Create all connections
     for (const conn of expansion.connections) {
       const fromId = refToId.get(conn.fromRef);
       const toId = refToId.get(conn.toRef);
-      if (!fromId) {
+      if (fromId === undefined) {
         throw new Error(`Macro connection references unknown source block ref "${conn.fromRef}"`);
       }
-      if (!toId) {
+      if (toId === undefined) {
         throw new Error(`Macro connection references unknown target block ref "${conn.toRef}"`);
       }
       const connection: Connection = {
         id: this.generateConnectionId(),
-        from: { blockId: fromId, slotId: conn.fromSlot },
-        to: { blockId: toId, slotId: conn.toSlot },
+        from: { blockId: fromId, slotId: conn.fromSlot, direction: 'output' },
+        to: { blockId: toId, slotId: conn.toSlot, direction: 'input' },
       };
       this.connections.push(connection);
+
+      // Emit WireAdded event for this connection
+      this.root.events.emit({
+        type: 'WireAdded',
+        wireId: connection.id,
+        from: connection.from,
+        to: connection.to,
+      });
     }
 
     // Create bus publishers if defined
-    if (expansion.publishers) {
+    if (expansion.publishers !== null && expansion.publishers !== undefined) {
       for (const pub of expansion.publishers) {
         const blockId = refToId.get(pub.fromRef);
-        if (!blockId) {
+        if (blockId === undefined) {
           throw new Error(`Macro publisher references unknown block ref "${pub.fromRef}"`);
         }
 
         // Find the bus by name
         const bus = this.root.busStore.buses.find((b) => b.name === pub.busName);
-        if (!bus) {
+        if (bus === null || bus === undefined) {
           throw new Error(`Macro publisher references unknown bus "${pub.busName}"`);
         }
 
@@ -441,21 +491,21 @@ export class PatchStore {
     }
 
     // Create bus listeners if defined
-    if (expansion.listeners) {
+    if (expansion.listeners !== null && expansion.listeners !== undefined) {
       for (const lis of expansion.listeners) {
         const blockId = refToId.get(lis.toRef);
-        if (!blockId) {
+        if (blockId === undefined) {
           throw new Error(`Macro listener references unknown block ref "${lis.toRef}"`);
         }
 
         // Find the bus by name
         const bus = this.root.busStore.buses.find((b) => b.name === lis.busName);
-        if (!bus) {
+        if (bus === null || bus === undefined) {
           throw new Error(`Macro listener references unknown bus "${lis.busName}"`);
         }
 
         // Add listener with optional lens
-        const lensDefinition = lis.lens
+        const lensDefinition = lis.lens !== undefined && lis.lens !== null
           ? { type: lis.lens.type, params: lis.lens.params }
           : undefined;
         this.root.busStore.addListener(bus.id, blockId, lis.toSlot, undefined, lensDefinition);
@@ -490,7 +540,11 @@ export class PatchStore {
 
     // Return the first block ID (for selection purposes)
     const firstRef = expansion.blocks[0]?.ref;
-    return firstRef ? refToId.get(firstRef) ?? '' : '';
+    if (firstRef !== undefined && firstRef !== null && firstRef !== '') {
+      const mappedId = refToId.get(firstRef);
+      return mappedId !== undefined && mappedId !== null ? mappedId : '';
+    }
+    return '';
   }
 
   /**
@@ -511,7 +565,7 @@ export class PatchStore {
 
   updateBlock(id: BlockId, updates: Partial<Block>): void {
     const block = this.blocks.find((b) => b.id === id);
-    if (!block) return;
+    if (block === undefined || block === null) return;
     Object.assign(block, updates);
   }
 
@@ -537,6 +591,9 @@ export class PatchStore {
     // Remove block
     this.blocks = this.blocks.filter((b) => b.id !== id);
 
+    // Remove default sources for this block's inputs
+    this.root.defaultSourceStore.removeDefaultSourcesForBlock(id);
+
     // Remove connections to/from this block (with cascade event emission)
     for (const conn of connectionsToRemove) {
       this.disconnect(conn.id, { suppressGraphCommitted: true });
@@ -559,7 +616,7 @@ export class PatchStore {
     });
 
     // Emit GraphCommitted unless suppressed (used by replaceBlock)
-    if (!options?.suppressGraphCommitted) {
+    if (options?.suppressGraphCommitted !== true) {
       this.emitGraphCommitted(
         'userEdit',
         {
@@ -580,7 +637,7 @@ export class PatchStore {
    */
   replaceBlock(oldBlockId: BlockId, newBlockType: BlockType): ReplacementResult {
     const oldBlock = this.blocks.find((b) => b.id === oldBlockId);
-    if (!oldBlock) {
+    if (oldBlock === undefined || oldBlock === null) {
       return {
         success: false,
         preservedConnections: 0,
@@ -590,7 +647,7 @@ export class PatchStore {
     }
 
     const newDef = getBlockDefinition(newBlockType);
-    if (!newDef) {
+    if (newDef === undefined || newDef === null) {
       return {
         success: false,
         preservedConnections: 0,
@@ -601,7 +658,7 @@ export class PatchStore {
 
     // Find the lane for this block
     const lane = this.root.viewStore.lanes.find((l) => l.blockIds.includes(oldBlockId));
-    if (!lane) {
+    if (lane === undefined || lane === null) {
       return {
         success: false,
         preservedConnections: 0,
@@ -632,6 +689,13 @@ export class PatchStore {
     // Add new block
     this.blocks.push(newBlock);
 
+    // Create default sources for inputs with defaultSource metadata
+    this.root.defaultSourceStore.createDefaultSourcesForBlock(
+      newBlockId,
+      newBlock.inputs,
+      SLOT_TYPE_TO_TYPE_DESC
+    );
+
     // Add to lane at the same position as old block
     const oldIndex = lane.blockIds.indexOf(oldBlockId);
     lane.blockIds = [...lane.blockIds];
@@ -650,9 +714,9 @@ export class PatchStore {
     for (const oldPub of oldPublishers) {
       // Try to find a compatible output slot on new block
       const oldSlot = oldBlock.outputs.find((s) => s.id === oldPub.from.slotId);
-      if (oldSlot) {
+      if (oldSlot !== undefined && oldSlot !== null) {
         const newSlot = newBlock.outputs.find((s) => s.type === oldSlot.type);
-        if (newSlot) {
+        if (newSlot !== undefined && newSlot !== null) {
           this.root.busStore.addPublisher(oldPub.busId, newBlockId, newSlot.id, oldPub.adapterChain);
         }
       }
@@ -663,15 +727,15 @@ export class PatchStore {
     for (const oldLis of oldListeners) {
       // Try to find a compatible input slot on new block
       const oldSlot = oldBlock.inputs.find((s) => s.id === oldLis.to.slotId);
-      if (oldSlot) {
+      if (oldSlot !== undefined && oldSlot !== null) {
         const newSlot = newBlock.inputs.find((s) => s.type === oldSlot.type);
-        if (newSlot) {
+        if (newSlot !== undefined && newSlot !== null) {
           this.root.busStore.addListener(
             oldLis.busId,
             newBlockId,
             newSlot.id,
             oldLis.adapterChain,
-            oldLis.lens
+            oldLis.lensStack
           );
         }
       }
@@ -722,7 +786,7 @@ export class PatchStore {
    */
   updateBlockParams(blockId: BlockId, params: Record<string, unknown>): void {
     const block = this.blocks.find((b) => b.id === blockId);
-    if (block) {
+    if (block !== null && block !== undefined) {
       // Use Object.assign to mutate in place for MobX reactivity
       Object.assign(block.params, params);
     }
@@ -737,8 +801,31 @@ export class PatchStore {
   }
 
   /**
+   * Disconnect everything connected to an input port (wires AND bus listeners).
+   * Call this before connecting to ensure exclusive input.
+   */
+  disconnectInputPort(blockId: BlockId, slotId: string): void {
+    // Remove any wire connections to this input
+    const wiresToRemove = this.connections.filter(
+      (c) => c.to.blockId === blockId && c.to.slotId === slotId
+    );
+    for (const wire of wiresToRemove) {
+      this.disconnect(wire.id, { suppressGraphCommitted: true });
+    }
+
+    // Remove any bus listeners to this input
+    const listenersToRemove = this.root.busStore.listeners.filter(
+      (l) => l.to.blockId === blockId && l.to.slotId === slotId
+    );
+    for (const listener of listenersToRemove) {
+      this.root.busStore.removeListener(listener.id);
+    }
+  }
+
+  /**
    * Create a connection between two blocks (helper method).
    * Uses semantic Validator for preflight validation.
+   * Automatically disconnects any existing connection to the target input.
    *
    * @param options - Optional settings
    * @param options.suppressGraphCommitted - If true, don't emit GraphCommitted (used internally)
@@ -760,6 +847,10 @@ export class PatchStore {
     );
     if (exists) return;
 
+    // INVARIANT: An input can only have one source.
+    // Disconnect any existing wire or bus listener before connecting.
+    this.disconnectInputPort(toBlockId, toSlotId);
+
     // Preflight validation using Semantic Validator (warn-only, does not block)
     // The compiler will catch real errors during compilation.
     // This provides early warnings for invalid connections.
@@ -768,8 +859,8 @@ export class PatchStore {
       const validator = new Validator(patchDoc, this.patchRevision);
       const validationResult = validator.canAddConnection(
         patchDoc,
-        { blockId: fromBlockId, slotId: fromSlotId },
-        { blockId: toBlockId, slotId: toSlotId }
+        { blockId: fromBlockId, slotId: fromSlotId, direction: 'output' },
+        { blockId: toBlockId, slotId: toSlotId, direction: 'input' }
       );
 
       if (!validationResult.ok) {
@@ -787,8 +878,8 @@ export class PatchStore {
 
     const connection: Connection = {
       id,
-      from: { blockId: fromBlockId, slotId: fromSlotId },
-      to: { blockId: toBlockId, slotId: toSlotId },
+      from: { blockId: fromBlockId, slotId: fromSlotId, direction: 'output' },
+      to: { blockId: toBlockId, slotId: toSlotId, direction: 'input' },
     };
 
     this.connections.push(connection);
@@ -802,7 +893,7 @@ export class PatchStore {
     });
 
     // Emit GraphCommitted unless suppressed
-    if (!options?.suppressGraphCommitted) {
+    if (options?.suppressGraphCommitted !== true) {
       this.emitGraphCommitted(
         'userEdit',
         {
@@ -826,7 +917,7 @@ export class PatchStore {
   disconnect(connectionId: string, options?: { suppressGraphCommitted?: boolean }): void {
     // Capture connection data BEFORE removal (for event)
     const connection = this.connections.find((c) => c.id === connectionId);
-    if (!connection) return;
+    if (connection === null || connection === undefined) return;
 
     this.connections = this.connections.filter((c) => c.id !== connectionId);
 
@@ -839,7 +930,7 @@ export class PatchStore {
     });
 
     // Emit GraphCommitted unless suppressed
-    if (!options?.suppressGraphCommitted) {
+    if (options?.suppressGraphCommitted !== true) {
       this.emitGraphCommitted(
         'userEdit',
         {

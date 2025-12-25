@@ -16,6 +16,7 @@ import type {
   Publisher,
   Listener,
   Patch,
+  PortRef,
 } from '../types';
 
 import type { CompositeDefinition } from '../composites';
@@ -59,7 +60,7 @@ export type BlockPatchParams = {
 
 export type WireAdd = {
   op: 'WireAdd';
-  connection: Connection; // includes id, from {blockId, slotId}, to {blockId, slotId}
+  connection: Connection; // includes id, from/to PortRef
 };
 
 export type WireRemove = {
@@ -70,7 +71,7 @@ export type WireRemove = {
 export type WireRetarget = {
   op: 'WireRetarget';
   connectionId: string;
-  next: { from?: { blockId: BlockId; slotId: string }; to?: { blockId: BlockId; slotId: string } };
+  next: { from?: PortRef; to?: PortRef };
 };
 
 // =============================================================================
@@ -110,7 +111,7 @@ export type PublisherRemove = {
 export type PublisherUpdate = {
   op: 'PublisherUpdate';
   publisherId: string;
-  patch: Partial<Pick<Publisher, 'enabled' | 'sortKey' | 'adapterChain'>>;
+  patch: Partial<Pick<Publisher, 'enabled' | 'sortKey' | 'adapterChain' | 'lensStack'>>;
 };
 
 export type ListenerAdd = {
@@ -159,7 +160,7 @@ export type CompositeDefReplaceGraph = {
     listeners?: Listener[];
   };
   // TODO: Define ExposedPort type if not in imports
-  nextExposed: { inputs: any[]; outputs: any[] };
+  nextExposed: { inputs: unknown[]; outputs: unknown[] };
 };
 
 // =============================================================================
@@ -182,7 +183,7 @@ export type PatchSettingsUpdate = {
 
 export type AssetAdd = {
   op: 'AssetAdd';
-  asset: { id: string; kind: string; data: any; meta: any };
+  asset: { id: string; kind: string; data: unknown; meta: Record<string, unknown> };
 };
 
 export type AssetRemove = {
@@ -193,7 +194,7 @@ export type AssetRemove = {
 export type AssetUpdate = {
   op: 'AssetUpdate';
   assetId: string;
-  patch: Partial<any>;
+  patch: Record<string, unknown>;
 };
 
 // =============================================================================

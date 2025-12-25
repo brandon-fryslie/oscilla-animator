@@ -1,5 +1,5 @@
 import type { RootStore } from '../stores/RootStore';
-import type { Block, Connection, Bus, Publisher, Listener } from '../types';
+import type { Block, Connection, Publisher, Listener } from '../types';
 import { compilePatch } from './compile';
 import { createCompileCtx } from './context';
 import { createBlockRegistry, registerDynamicBlock } from './blocks';
@@ -10,19 +10,14 @@ import type {
   CompiledProgram,
   CompilerConnection,
   CompilerPatch,
+  CompileError,
   Seed,
   PortRef,
-  CompileError,
 } from './types';
 import { buildDecorations, emptyDecorations, type DecorationSet } from './error-decorations';
 import { getBlockDefinition } from '../blocks';
 import { registerAllComposites, getCompositeCompilers } from '../composite-bridge';
-import { getFeatureFlags } from './featureFlags';
 import { createDiagnostic, type Diagnostic, type DiagnosticCode, type TargetRef } from '../diagnostics/types';
-
-// Unified compiler imports
-import { UnifiedCompiler, RuntimeAdapter } from './unified';
-import type { PatchDefinition as UnifiedPatchDef } from './unified';
 
 // =============================================================================
 // Diagnostic Conversion
@@ -62,25 +57,58 @@ function compileErrorToDiagnostic(
 
   if (error.code === 'CycleDetected') {
     const cycleMatch = error.message.match(/Blocks in cycle: ([\w, ]+)/);
-    const blockIds = cycleMatch ? cycleMatch[1].split(', ').filter(Boolean) : [];
+    const blockIds = cycleMatch !== null ? cycleMatch[1].split(', ').filter(Boolean) : [];
     primaryTarget = { kind: 'graphSpan', blockIds, spanKind: 'cycle' };
   } else if (error.code === 'MissingTimeRoot') {
     // No specific target for missing TimeRoot - use a synthetic graph span
     primaryTarget = { kind: 'graphSpan', blockIds: [], spanKind: 'subgraph' };
-  } else if (error.code === 'MultipleTimeRoots' && error.where?.blockId) {
+  } else if (
+    error.code === 'MultipleTimeRoots' &&
+    error.where !== null &&
+    error.where !== undefined &&
+    error.where.blockId !== null &&
+    error.where.blockId !== undefined
+  ) {
     primaryTarget = { kind: 'timeRoot', blockId: error.where.blockId };
-  } else if (error.where?.connection) {
+  } else if (
+    error.where !== null &&
+    error.where !== undefined &&
+    error.where.connection !== null &&
+    error.where.connection !== undefined
+  ) {
     // Connection error - target both ends
     const conn = error.where.connection;
-    primaryTarget = { kind: 'port', blockId: conn.from.blockId, portId: conn.from.port };
+    primaryTarget = {
+      kind: 'port',
+      portRef: { blockId: conn.from.blockId, slotId: conn.from.port, direction: 'output' },
+    };
     affectedTargets = [
-      { kind: 'port', blockId: conn.to.blockId, portId: conn.to.port },
+      { kind: 'port', portRef: { blockId: conn.to.blockId, slotId: conn.to.port, direction: 'input' } },
     ];
-  } else if (error.where?.blockId && error.where?.port) {
-    primaryTarget = { kind: 'port', blockId: error.where.blockId, portId: error.where.port };
-  } else if (error.where?.blockId) {
+  } else if (
+    error.where !== null &&
+    error.where !== undefined &&
+    error.where.blockId !== null &&
+    error.where.blockId !== undefined &&
+    error.where.port !== null &&
+    error.where.port !== undefined &&
+    error.where.port !== ''
+  ) {
+    primaryTarget = { kind: 'port', portRef: { blockId: error.where.blockId, slotId: error.where.port, direction: 'input' } };
+  } else if (
+    error.where !== null &&
+    error.where !== undefined &&
+    error.where.blockId !== null &&
+    error.where.blockId !== undefined
+  ) {
     primaryTarget = { kind: 'block', blockId: error.where.blockId };
-  } else if (error.where?.busId) {
+  } else if (
+    error.where !== null &&
+    error.where !== undefined &&
+    error.where.busId !== null &&
+    error.where.busId !== undefined &&
+    error.where.busId !== ''
+  ) {
     primaryTarget = { kind: 'bus', busId: error.where.busId };
   } else {
     // No location - use synthetic graph span
@@ -91,19 +119,25 @@ function compileErrorToDiagnostic(
   let payload: Diagnostic['payload'] | undefined;
   let message = error.message;
 
-  if (error.code === 'PortTypeMismatch' && error.message) {
+  if (error.code === 'PortTypeMismatch' && error.message !== null && error.message !== undefined && error.message !== '') {
     // New, more robust regex to capture block/port info
     const match = error.message.match(
       /([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s\(([^)]+)\)\s→\s([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s\(([^)]+)\)/
     );
-    if (match) {
+    if (match !== null) {
       payload = {
         kind: 'typeMismatch',
-        expected: match[6] || 'unknown',
-        actual: match[3] || 'unknown',
+        expected: (match[6] ?? '') !== '' ? match[6] : 'unknown',
+        actual: (match[3] ?? '') !== '' ? match[3] : 'unknown',
       };
       // Keep the detailed message
-      message = `Type mismatch from ${match[1]}.${match[2]} (${match[3]}) to ${match[4]}.${match[5]} (${match[6]})`;
+      const fromBlock = match[1] ?? 'unknown';
+      const fromPort = match[2] ?? 'unknown';
+      const fromType = match[3] ?? 'unknown';
+      const toBlock = match[4] ?? 'unknown';
+      const toPort = match[5] ?? 'unknown';
+      const toType = match[6] ?? 'unknown';
+      message = `Type mismatch from ${fromBlock}.${fromPort} (${fromType}) to ${toBlock}.${toPort} (${toType})`;
     }
   }
 
@@ -128,9 +162,7 @@ function compileErrorToDiagnostic(
  * Generate bus-related diagnostics for successful compilations.
  * Produces W_BUS_EMPTY and W_GRAPH_UNUSED_OUTPUT warnings.
  */
-// @ts-expect-error - Currently unused but will be needed for future diagnostics
-
-function _generateBusDiagnostics(
+function generateBusDiagnostics(
   patch: CompilerPatch,
   _store: RootStore,
   patchRevision: number
@@ -138,40 +170,42 @@ function _generateBusDiagnostics(
   const diagnostics: Diagnostic[] = [];
 
   // W_BUS_EMPTY: Buses with 0 listeners
-  const busListenerCounts = new Map<string, number>();
+  if (patch.buses && patch.listeners) {
+    const busListenerCounts = new Map<string, number>();
 
-  // Count listeners per bus
-  for (const listener of patch.listeners ?? []) {
-    busListenerCounts.set(listener.busId, (busListenerCounts.get(listener.busId) ?? 0) + 1);
-  }
+    // Count listeners per bus
+    for (const listener of patch.listeners) {
+      busListenerCounts.set(listener.busId, (busListenerCounts.get(listener.busId) ?? 0) + 1);
+    }
 
-  // Find buses with 0 listeners
-  for (const bus of patch.buses ?? []) {
-    const listenerCount = busListenerCounts.get(bus.id) ?? 0;
+    // Find buses with 0 listeners
+    for (const bus of patch.buses) {
+      const listenerCount = busListenerCounts.get(bus.id) ?? 0;
 
-    // Find publishers for this bus
-    const publishers = (patch.publishers ?? []).filter(p => p.busId === bus.id);
+      // Find publishers for this bus
+      const publishers = (patch.publishers ?? []).filter(p => p.busId === bus.id);
 
-    // Only warn if there are publishers but no listeners
-    // (Don't warn about buses that aren't being used at all)
-    if (listenerCount === 0 && publishers.length > 0) {
-      const affectedTargets: TargetRef[] = publishers.map(p => ({
-        kind: 'block',
-        blockId: p.from.blockId,
-      }));
+      // Only warn if there are publishers but no listeners
+      // (Don't warn about buses that aren't being used at all)
+      if (listenerCount === 0 && publishers.length > 0) {
+        const affectedTargets: TargetRef[] = publishers.map(p => ({
+          kind: 'block',
+          blockId: p.from.blockId,
+        }));
 
-      diagnostics.push(
-        createDiagnostic({
-          code: 'W_BUS_EMPTY',
-          severity: 'warn',
-          domain: 'compile',
-          primaryTarget: { kind: 'bus', busId: bus.id },
-          affectedTargets: affectedTargets.length > 0 ? affectedTargets : undefined,
-          title: 'Empty Bus',
-          message: `Bus "${bus.name}" has no listeners. Published values are not being used.`,
-          patchRevision,
-        })
-      );
+        diagnostics.push(
+          createDiagnostic({
+            code: 'W_BUS_EMPTY',
+            severity: 'warn',
+            domain: 'compile',
+            primaryTarget: { kind: 'bus', busId: bus.id },
+            affectedTargets: affectedTargets.length > 0 ? affectedTargets : undefined,
+            title: 'Empty Bus',
+            message: `Bus "${bus.name}" has no listeners. Published values are not being used.`,
+            patchRevision,
+          })
+        );
+      }
     }
   }
 
@@ -185,8 +219,10 @@ function _generateBusDiagnostics(
   }
 
   // Track published outputs
-  for (const pub of patch.publishers ?? []) {
-    publishedOutputs.add(`${pub.from.blockId}.${pub.from.slotId}`);
+  if (patch.publishers) {
+    for (const pub of patch.publishers) {
+      publishedOutputs.add(`${pub.from.blockId}.${pub.from.slotId}`);
+    }
   }
 
   // Check each block's outputs
@@ -197,7 +233,7 @@ function _generateBusDiagnostics(
     }
 
     const def = getBlockDefinition(block.type);
-    if (def === undefined || def.outputs === undefined) continue;
+    if (!def?.outputs) continue;
 
     for (const output of def.outputs) {
       const outputKey = `${blockId}.${output.id}`;
@@ -212,7 +248,7 @@ function _generateBusDiagnostics(
             domain: 'compile',
             primaryTarget: {
               kind: 'port',
-              blockId, portId: output.id,
+              portRef: { blockId, slotId: output.id, direction: 'output' },
             },
             title: 'Unused Output',
             message: `Output "${output.label ?? output.id}" on block is not connected or published to a bus.`,
@@ -293,7 +329,7 @@ function createRewriteMapBuilder(): {
           const key = `${ref.blockId}.${ref.port}`;
           const mapped = frozenMappings.get(key);
 
-          if (!mapped) {
+          if (mapped == null) {
             // Composite exists but port not mapped - this is an error
             return null;
           }
@@ -363,6 +399,7 @@ export function editorToPatch(store: RootStore): CompilerPatch {
     buses: store.busStore.buses,
     publishers: store.busStore.publishers,
     listeners: store.busStore.listeners,
+    defaultSources: Object.fromEntries(store.defaultSourceStore.sources.entries()),
     // output is auto-inferred
   };
 }
@@ -372,8 +409,8 @@ export function editorToPatch(store: RootStore): CompilerPatch {
 // =============================================================================
 
 function resolveParamValue(value: unknown, parentParams: Record<string, unknown>): unknown {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    const marker = (value as any).__fromParam;
+  if (value != null && typeof value === 'object' && !Array.isArray(value)) {
+    const marker = (value as { __fromParam?: string }).__fromParam;
     if (typeof marker === 'string') {
       return parentParams[marker];
     }
@@ -412,17 +449,17 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
   while (queue.length > 0) {
     const [blockId, block] = queue.shift()!;
     const definition = getBlockDefinition(block.type);
-    let graph = definition?.primitiveGraph;
-    let compositeDef = definition?.compositeDefinition;
+    let graph = definition?.primitiveGraph ?? null;
+    let compositeDef = definition?.compositeDefinition ?? null;
 
     // Handle composite blocks (composite: prefix)
-    if (block.type.startsWith('composite:') && definition?.compositeDefinition) {
+    if (block.type.startsWith('composite:') && definition?.compositeDefinition != null) {
       // Convert composite definition to primitive graph - use the stored primitiveGraph
-      graph = definition.primitiveGraph;
-      compositeDef = definition.compositeDefinition;
+      graph = definition.primitiveGraph ?? null;
+      compositeDef = definition.compositeDefinition ?? null;
     }
 
-    if (graph) {
+    if (graph != null) {
       // Mark this block as a composite that was expanded
       rewriteBuilder.markComposite(blockId);
 
@@ -448,7 +485,7 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
       for (const [boundaryPort, internalRef] of Object.entries(graph.inputMap)) {
         const [node, port] = internalRef.split('.');
         const internalBlockId = idMap.get(node);
-        if (internalBlockId) {
+        if (internalBlockId != null) {
           rewriteBuilder.addMapping(blockId, boundaryPort, {
             blockId: internalBlockId,
             port,
@@ -460,7 +497,7 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
       for (const [boundaryPort, internalRef] of Object.entries(graph.outputMap)) {
         const [node, port] = internalRef.split('.');
         const internalBlockId = idMap.get(node);
-        if (internalBlockId) {
+        if (internalBlockId != null) {
           rewriteBuilder.addMapping(blockId, boundaryPort, {
             blockId: internalBlockId,
             port,
@@ -469,21 +506,21 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
       }
 
       // Handle bus subscriptions (composite inputs auto-subscribed to buses)
-      if (compositeDef?.graph.busSubscriptions) {
+      if (compositeDef?.graph.busSubscriptions != null) {
         for (const [inputPort, busNameValue] of Object.entries(compositeDef.graph.busSubscriptions)) {
-          const busName = busNameValue as string;
+          const busName = busNameValue;
           const internalRef = graph.inputMap[inputPort];
-          if (internalRef) {
+          if (internalRef != null && internalRef !== '') {
             const [node, port] = internalRef.split('.');
             const internalBlockId = idMap.get(node);
-            if (internalBlockId) {
+            if (internalBlockId != null) {
               const listener: Listener = {
                 id: generateBusBindingId(blockId, 'sub', inputPort),
                 busId: busName,
                 to: {
                   blockId: internalBlockId,
                   slotId: port,
-                  dir: 'input',
+                  direction: 'input',
                 },
                 enabled: true,
               };
@@ -494,21 +531,21 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
       }
 
       // Handle bus publications (composite outputs auto-published to buses)
-      if (compositeDef?.graph.busPublications) {
+      if (compositeDef?.graph.busPublications != null) {
         for (const [outputPort, busNameValue] of Object.entries(compositeDef.graph.busPublications)) {
-          const busName = busNameValue as string;
+          const busName = busNameValue;
           const internalRef = graph.outputMap[outputPort];
-          if (internalRef) {
+          if (internalRef != null && internalRef !== '') {
             const [node, port] = internalRef.split('.');
             const internalBlockId = idMap.get(node);
-            if (internalBlockId) {
+            if (internalBlockId != null) {
               const publisher: Publisher = {
                 id: generateBusBindingId(blockId, 'pub', outputPort),
                 busId: busName,
                 from: {
                   blockId: internalBlockId,
                   slotId: port,
-                  dir: 'output',
+                  direction: 'output',
                 },
                 enabled: true,
                 sortKey: 0, // Default sort key, can be customized if needed
@@ -525,7 +562,7 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
         const [toNode, toPort] = edge.to.split('.');
         const fromId = idMap.get(fromNode);
         const toId = idMap.get(toNode);
-        if (fromId && toId) {
+        if (fromId != null && toId != null) {
           newConnections.push({
             from: { blockId: fromId, port: fromPort },
             to: { blockId: toId, port: toPort },
@@ -550,10 +587,10 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
 
       for (const conn of [...incoming, ...incomingFromNew]) {
         const internalRef = graph.inputMap[conn.to.port];
-        if (!internalRef) continue;
+        if (internalRef == null || internalRef === '') continue;
         const [node, port] = internalRef.split('.');
         const toId = idMap.get(node);
-        if (toId) {
+        if (toId != null) {
           newConnections.push({
             from: conn.from,
             to: { blockId: toId, port },
@@ -563,10 +600,10 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
 
       for (const conn of [...outgoing, ...outgoingFromNew]) {
         const internalRef = graph.outputMap[conn.from.port];
-        if (!internalRef) continue;
+        if (internalRef == null || internalRef === '') continue;
         const [node, port] = internalRef.split('.');
         const fromId = idMap.get(node);
-        if (fromId) {
+        if (fromId != null) {
           newConnections.push({
             from: { blockId: fromId, port },
             to: conn.to,
@@ -591,7 +628,14 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
   }
 
   return {
-    expandedPatch: { blocks: newBlocks, connections: newConnections },
+    expandedPatch: {
+      blocks: newBlocks,
+      connections: newConnections,
+      buses: patch.buses,
+      publishers: [], // Will be merged with newPublishers by caller
+      listeners: [], // Will be merged with newListeners by caller
+      defaultSources: patch.defaultSources,
+    },
     rewriteMap: rewriteBuilder.build(),
     newPublishers,
     newListeners,
@@ -607,11 +651,11 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
 function rewriteBusBindings(
   patch: CompilerPatch,
   rewriteMap: PortRefRewriteMap
-): { patch: CompilerPatch; errors: Array<{ code: string; message: string; where?: { blockId?: string; port?: string } }> } {
-  const errors: Array<{ code: string; message: string; where?: { blockId?: string; port?: string } }> = [];
+): { patch: CompilerPatch; errors: CompileError[] } {
+  const errors: CompileError[] = [];
 
   // Rewrite publishers
-  const rewrittenPublishers = patch.publishers?.map((pub) => {
+  const rewrittenPublishers = patch.publishers.map((pub) => {
     const ref: PortRef = { blockId: pub.from.blockId, port: pub.from.slotId };
     const rewritten = rewriteMap.rewrite(ref);
 
@@ -628,12 +672,12 @@ function rewriteBusBindings(
     // Return publisher with rewritten port reference
     return {
       ...pub,
-      from: { blockId: rewritten.blockId, slotId: rewritten.port, dir: 'output' as const },
+      from: { blockId: rewritten.blockId, slotId: rewritten.port, direction: 'output' as const },
     };
   });
 
   // Rewrite listeners
-  const rewrittenListeners = patch.listeners?.map((listener) => {
+  const rewrittenListeners = patch.listeners.map((listener) => {
     const ref: PortRef = { blockId: listener.to.blockId, port: listener.to.slotId };
     const rewritten = rewriteMap.rewrite(ref);
 
@@ -650,7 +694,7 @@ function rewriteBusBindings(
     // Return listener with rewritten port reference
     return {
       ...listener,
-      to: { blockId: rewritten.blockId, slotId: rewritten.port, dir: 'input' as const },
+      to: { blockId: rewritten.blockId, slotId: rewritten.port, direction: 'input' as const },
     };
   });
 
@@ -661,95 +705,6 @@ function rewriteBusBindings(
       listeners: rewrittenListeners,
     },
     errors,
-  };
-}
-
-// =============================================================================
-// Unified Compiler Integration
-// =============================================================================
-
-/**
- * Convert CompilerPatch to UnifiedCompiler PatchDefinition.
- */
-function toUnifiedPatchDef(patch: CompilerPatch): UnifiedPatchDef {
-  // Convert connections
-  const connections = patch.connections.map((c) => ({
-    from: { blockId: c.from.blockId, port: c.from.port },
-    to: { blockId: c.to.blockId, port: c.to.port },
-  }));
-
-  // Convert buses if present
-  const buses = patch.buses
-    ? patch.buses.map((bus: Bus) => ({
-        id: bus.id,
-        name: bus.name,
-        type: bus.type,
-        combineMode: bus.combineMode,
-        defaultValue: bus.defaultValue,
-        sortKey: bus.sortKey ?? 0,
-      }))
-    : [];
-
-  // Convert publishers if present
-  const publishers = patch.publishers
-    ? patch.publishers.map((pub: Publisher) => ({
-        id: pub.id,
-        blockId: pub.from.blockId,
-        busId: pub.busId,
-        port: pub.from.slotId,
-        sortKey: pub.sortKey,
-        disabled: !pub.enabled,
-      }))
-    : [];
-
-  // Convert listeners if present
-  const listeners = patch.listeners
-    ? patch.listeners.map((listener: Listener) => ({
-        id: listener.id,
-        blockId: listener.to.blockId,
-        busId: listener.busId,
-        port: listener.to.slotId,
-        disabled: !listener.enabled,
-      }))
-    : [];
-
-  return {
-    blocks: new Map(patch.blocks),
-    connections,
-    buses,
-    publishers,
-    listeners,
-  };
-}
-
-/**
- * Compile using UnifiedCompiler and adapt result to CompileResult.
- */
-function compileWithUnified(patch: CompilerPatch): CompileResult {
-  const unifiedPatch = toUnifiedPatchDef(patch);
-  const compiler = new UnifiedCompiler();
-  const result = compiler.compile(unifiedPatch);
-
-  // If compilation failed, convert errors
-  if (result.errors.length > 0) {
-    return {
-      ok: false,
-      errors: result.errors.map((err) => ({
-        code: err.type === 'cycle' ? 'CycleDetected' : 'UpstreamError',
-        message: err.message,
-        where: err.nodes ? { blockId: err.nodes[0] } : undefined,
-      })),
-    };
-  }
-
-  // Create runtime adapter and program
-  const adapter = new RuntimeAdapter(result);
-  const program = adapter.createProgram();
-
-  return {
-    ok: true,
-    program,
-    errors: [],
   };
 }
 
@@ -805,7 +760,6 @@ export function createCompilerService(store: RootStore): CompilerService {
   return {
     compile(): CompileResult {
       const startTime = performance.now();
-      const flags = getFeatureFlags();
 
       // Generate compileId
       const compileId = crypto.randomUUID();
@@ -820,25 +774,22 @@ export function createCompilerService(store: RootStore): CompilerService {
                 patchRevision,
                 trigger: 'graphCommitted',
               });
-      
+
               store.logStore.debug('compiler', 'Starting compilation...');
-              if (flags.useUnifiedCompiler) {
-                store.logStore.info('compiler', 'Using UnifiedCompiler (feature flag enabled)');
-              }
-      
+
               try {
                 let patch = editorToPatch(store);
-      
+
                 // Step 1: Expand composites and build rewrite map
                 const { expandedPatch, rewriteMap, newPublishers, newListeners } = expandComposites(patch);
-      
+
         // Step 2: Apply rewrite map to bus publishers/listeners and merge new bus bindings
         const { patch: rewrittenPatch, errors: rewriteErrors } = rewriteBusBindings(
           {
             ...expandedPatch,
             buses: patch.buses,
-            publishers: [...(patch.publishers ?? []), ...newPublishers],
-            listeners: [...(patch.listeners ?? []), ...newListeners],
+            publishers: [...patch.publishers, ...newPublishers],
+            listeners: [...patch.listeners, ...newListeners],
           },
           rewriteMap
         );
@@ -848,7 +799,7 @@ export function createCompilerService(store: RootStore): CompilerService {
           lastResult = {
             ok: false,
             errors: rewriteErrors.map((e) => ({
-              code: e.code as any,
+              code: e.code,
               message: e.message,
               where: e.where,
             })),
@@ -896,20 +847,21 @@ export function createCompilerService(store: RootStore): CompilerService {
           );
         }
 
-        // Choose compiler based on feature flag
-        const result = flags.useUnifiedCompiler
-          ? compileWithUnified(patch)
-          : (() => {
-              const seed: Seed = store.uiStore.settings.seed;
-              return compilePatch(patch, registry, seed, ctx);
-            })();
+        const seed: Seed = store.uiStore.settings.seed;
+        const result = compilePatch(patch, registry, seed, ctx);
 
         const durationMs = performance.now() - startTime;
 
         // Convert errors to diagnostics
-        const diagnostics = result.errors.map((err) =>
+        const errorDiagnostics = result.errors.map((err) =>
           compileErrorToDiagnostic(err, patchRevision)
         );
+
+        // Generate bus-related diagnostics on successful compilation
+        const busDiagnostics = result.ok ? generateBusDiagnostics(patch, store, patchRevision) : [];
+
+        // Combine all diagnostics
+        const diagnostics = [...errorDiagnostics, ...busDiagnostics];
 
         if (result.ok) {
           store.logStore.info('compiler', `Compiled successfully (${durationMs.toFixed(1)}ms)`);
@@ -924,16 +876,10 @@ export function createCompilerService(store: RootStore): CompilerService {
             durationMs,
             diagnostics,
             programMeta: {
-              timelineHint: result.timeModel?.kind ?? 'infinite',
+              timeModelKind: result.timeModel?.kind ?? 'infinite',
               timeRootKind: inferTimeRootKind(patch),
               busUsageSummary: buildBusUsageSummary(patch),
             },
-          });
-
-          // Emit legacy CompileSucceeded event for backward compatibility
-          store.events.emit({
-            type: 'CompileSucceeded',
-            durationMs,
           });
 
           lastDecorations = emptyDecorations();
@@ -958,8 +904,8 @@ export function createCompilerService(store: RootStore): CompilerService {
           } else {
             // Log each error
             for (const err of result.errors) {
-                          const location = err.where?.blockId
-                            ? ` [${err.where.blockId}${err.where.port ? '.' + err.where.port : ''}]`
+                          const location = err.where?.blockId != null && err.where.blockId !== ''
+                            ? ` [${err.where.blockId}${err.where.port != null && err.where.port !== '' ? '.' + err.where.port : ''}]`
                             : '';
                                       store.logStore.error('compiler', `${err.code}: ${err.message}${location}`);
                                     }
@@ -972,12 +918,6 @@ export function createCompilerService(store: RootStore): CompilerService {
               status: 'failed',
               durationMs,
               diagnostics,
-            });
-
-            // Emit legacy CompileFailed event for backward compatibility
-            store.events.emit({
-              type: 'CompileFailed',
-              errorCount: result.errors.length,
             });
 
             // Build decorations for UI display
@@ -1020,11 +960,14 @@ export function createCompilerService(store: RootStore): CompilerService {
     },
 
     getProgram(): CompiledProgram | null {
-      if (!lastResult?.program || !lastResult?.timeModel) {
+      // Check if we have a valid program (either SVG or Canvas)
+      const hasProgram = lastResult?.program != null || lastResult?.canvasProgram != null;
+      if (!hasProgram || lastResult?.timeModel == null) {
         return null;
       }
       return {
         program: lastResult.program,
+        canvasProgram: lastResult.canvasProgram,
         timeModel: lastResult.timeModel,
       };
     },
@@ -1040,7 +983,7 @@ export function createCompilerService(store: RootStore): CompilerService {
     getViewport(): Viewport {
       // Find Canvas block in the store and extract its viewport params
       const canvasBlock = store.patchStore.blocks.find((b) => b.type === 'canvas');
-      if (canvasBlock) {
+      if (canvasBlock != null) {
         return {
           width: (canvasBlock.params.width as number) ?? 800,
           height: (canvasBlock.params.height as number) ?? 600,
@@ -1072,16 +1015,16 @@ function buildBusUsageSummary(patch: CompilerPatch): Record<string, { publishers
   const summary: Record<string, { publishers: number; listeners: number }> = {};
 
   // Count publishers per bus
-  for (const pub of patch.publishers ?? []) {
-    if (!summary[pub.busId]) {
+  for (const pub of patch.publishers) {
+    if (summary[pub.busId] === undefined) {
       summary[pub.busId] = { publishers: 0, listeners: 0 };
     }
     summary[pub.busId].publishers++;
   }
 
   // Count listeners per bus
-  for (const listener of patch.listeners ?? []) {
-    if (!summary[listener.busId]) {
+  for (const listener of patch.listeners) {
+    if (summary[listener.busId] === undefined) {
       summary[listener.busId] = { publishers: 0, listeners: 0 };
     }
     summary[listener.busId].listeners++;
@@ -1124,13 +1067,11 @@ export function setupAutoCompile(
       connectionCount: store.patchStore.connections.length,
       connections: store.patchStore.connections.map((c: Connection) => `${c.from.blockId}:${c.from.slotId}->${c.to.blockId}:${c.to.slotId}`),
       seed: store.uiStore.settings.seed,
-      // Include patchRevision to support debug mode recompiles
-      patchRevision: store.patchStore.patchRevision,
     }),
     // React to changes
     () => {
       // Clear pending compile
-      if (timeoutId) {
+      if (timeoutId !== null) {
         clearTimeout(timeoutId);
       }
 
@@ -1149,7 +1090,7 @@ export function setupAutoCompile(
 
   // Return dispose function that also clears pending timeout
   return () => {
-    if (timeoutId) {
+    if (timeoutId !== null) {
       clearTimeout(timeoutId);
     }
     dispose();

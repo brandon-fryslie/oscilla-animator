@@ -19,9 +19,9 @@ export { FieldMapNumberBlock } from './FieldMapNumber';
 export { FieldMapVec2Block } from './FieldMapVec2';
 export { FieldZipNumberBlock } from './FieldZipNumber';
 export { PhaseClockBlock } from './PhaseClock';
-export { PhaseClockLegacyBlock } from './PhaseClockLegacy';
 export { TriggerOnWrapBlock } from './TriggerOnWrap';
 export { RenderInstances2DBlock } from './RenderInstances2D';
+export { Render2dCanvasBlock } from './Render2dCanvas';
 
 // TimeRoot blocks (Phase 3: TimeRoot)
 export {
@@ -34,6 +34,9 @@ export {
 export { FieldAddVec2Block } from './FieldAddVec2';
 export { FieldColorizeBlock } from './FieldColorize';
 export { FieldOpacityBlock } from './FieldOpacity';
+export { FieldHueGradientBlock } from './FieldHueGradient';
+export { FieldFromExpressionBlock } from './FieldFromExpression';
+export { FieldStringToColorBlock } from './FieldStringToColor';
 export { ViewportInfoBlock } from './ViewportInfo';
 export { JitterFieldVec2Block } from './JitterFieldVec2';
 

@@ -7,6 +7,7 @@
 
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { PathEntry, PathLibraryState, PathLibraryEvent, PathLibraryListener } from './types';
+import type { LineData } from '../../data/pathData';
 import { getBuiltinPaths } from './builtins';
 import { loadLibrary, saveLibrary } from './storage';
 import { parseSVGString, validateSVG } from './parser';
@@ -163,7 +164,7 @@ class PathLibrary {
     const index = this.state.entries.findIndex(e => e.id === id);
     if (index === -1) return null;
 
-    const entry = this.state.entries[index]!;
+    const entry = this.state.entries[index];
 
     // Cannot update built-in paths (except name for display)
     if (entry.source === 'builtin' && Object.keys(updates).some(k => k !== 'name')) {
@@ -220,8 +221,8 @@ class PathLibrary {
     }
 
     // Create the entry
-    const entryName = this.ensureUniqueName(name || `Imported ${new Date().toLocaleTimeString()}`);
-    const viewBox = result.viewBox || DEFAULT_VIEWBOX;
+    const entryName = this.ensureUniqueName((name !== undefined && name !== null && name !== '') ? name : `Imported ${new Date().toLocaleTimeString()}`);
+    const viewBox = (result.viewBox !== undefined && result.viewBox !== null && result.viewBox !== '') ? result.viewBox : DEFAULT_VIEWBOX;
     const entry = this.add({
       name: entryName,
       source: 'pasted',
@@ -241,28 +242,37 @@ class PathLibrary {
    */
   importFromJSON(jsonString: string): { success: boolean; entry?: PathEntry; error?: string } {
     try {
-      const parsed = JSON.parse(jsonString);
+      const parsed = JSON.parse(jsonString) as unknown;
+
+      // Type guard for parsed JSON
+      if (typeof parsed !== 'object' || parsed === null) {
+        return { success: false, error: 'Invalid JSON format: not an object' };
+      }
+
+      const parsedObj = parsed as Record<string, unknown>;
 
       // Validate structure
-      if (!parsed.name || !Array.isArray(parsed.data)) {
+      if (typeof parsedObj.name !== 'string' || parsedObj.name === '' || !Array.isArray(parsedObj.data)) {
         return { success: false, error: 'Invalid JSON format: missing name or data' };
       }
 
       // Validate data array
-      if (parsed.data.length === 0) {
+      if (parsedObj.data.length === 0) {
         return { success: false, error: 'Invalid JSON format: data array is empty' };
       }
 
-      const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
-      const viewBox = meta.viewBox || DEFAULT_VIEWBOX;
-      const name = this.ensureUniqueName(parsed.name);
-      const thumbnail = parsed.thumbnail ?? generateThumbnail(parsed.data, viewBox);
+      const meta = (parsedObj.meta !== undefined && parsedObj.meta !== null && typeof parsedObj.meta === 'object') ? parsedObj.meta as Record<string, unknown> : {};
+      const viewBox = (typeof meta.viewBox === 'string' && meta.viewBox !== '') ? meta.viewBox : DEFAULT_VIEWBOX;
+      const name = this.ensureUniqueName(parsedObj.name);
+      // parsedObj.data validated as Array above; runtime structure is user-provided JSON
+      const validatedData: LineData[] = parsedObj.data as LineData[];
+      const thumbnail = (typeof parsedObj.thumbnail === 'string') ? parsedObj.thumbnail : generateThumbnail(validatedData, viewBox);
 
       // Create the entry
       const entry = this.add({
         name,
         source: 'imported',
-        data: parsed.data,
+        data: validatedData,
         thumbnail,
         meta: { ...meta, viewBox },
       });

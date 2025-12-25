@@ -5,6 +5,7 @@
 import { makeObservable, observable, action } from 'mobx';
 import type { BlockId, LaneId, LaneKind, PortRef } from '../types';
 import type { RootStore } from './RootStore';
+import type { BlockDefinition } from '../blocks';
 
 export class UIStateStore {
   uiState = {
@@ -27,7 +28,10 @@ export class UIStateStore {
       y: 0,
       blockId: null as BlockId | null,
     },
-    isPlaying: true, // Start playing by default (auto-play)
+    // DO NOT CHANGE THIS DEFAULT VALUE. The app MUST auto-play on load.
+    // If you change this, you will break the user experience and the demo.
+    // Seriously, don't fucking touch it.
+    isPlaying: true,
     currentTime: 0, // seconds
   };
 
@@ -35,7 +39,6 @@ export class UIStateStore {
     seed: 0,
     speed: 1.0,
     currentLayoutId: 'default' as string,
-    finiteLoopMode: true, // false = 'once' (stop at end), true = 'loop' (rewind and continue)
     advancedLaneMode: false, // Controls lane visibility (Simple vs Detailed)
     autoConnect: false, // Auto-create connections on block drop
     showTypeHints: false, // Show type labels on ports
@@ -46,7 +49,7 @@ export class UIStateStore {
   };
 
   // Compiled program for preview (cached)
-  previewedDefinition: any = null;
+  previewedDefinition: BlockDefinition | null = null;
 
   root: RootStore;
 
@@ -68,7 +71,6 @@ export class UIStateStore {
       togglePlayPause: action,
       setSeed: action,
       setSpeed: action,
-      setFiniteLoopMode: action,
       setAdvancedLaneMode: action,
       setAutoConnect: action,
       setShowTypeHints: action,
@@ -144,10 +146,6 @@ export class UIStateStore {
     this.settings.speed = speed;
   }
 
-  setFiniteLoopMode(enabled: boolean): void {
-    this.settings.finiteLoopMode = enabled;
-  }
-
   // =============================================================================
   // Actions - Settings
   // =============================================================================
@@ -191,17 +189,17 @@ export class UIStateStore {
   // Actions - Preview Management
   // =============================================================================
 
-  setPreviewedDefinition(definition: any): void {
+  setPreviewedDefinition(definition: Readonly<BlockDefinition | null>): void {
     this.previewedDefinition = definition;
   }
 
   /**
    * Preview a block definition from the library (before placement).
    */
-  previewDefinition(definition: any | null): void {
+  previewDefinition(definition: Readonly<BlockDefinition | null>): void {
     this.previewedDefinition = definition;
     // Clear selected block when previewing
-    if (definition) {
+    if (definition !== null && definition !== undefined) {
       this.uiState.selectedBlockId = null;
     }
   }

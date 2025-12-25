@@ -34,8 +34,15 @@ export type GroupKey = string;
 export type DefaultValueSource = 'blockParam' | 'silent' | 'literal';
 
 /**
+ * Direction of a row - input (listener) or output (publisher).
+ */
+export type RowDirection = 'input' | 'output';
+
+/**
  * A row in the modulation table.
- * Represents an input port that can receive modulation from a bus.
+ * Represents a port that can participate in bus routing.
+ * - Input ports receive modulation from buses (listeners)
+ * - Output ports publish values to buses (publishers)
  */
 export interface TableRow {
   /** Stable key for this row: `${blockId}:${portId}` */
@@ -50,17 +57,20 @@ export interface TableRow {
   /** Owning block ID */
   readonly blockId: BlockId;
 
-  /** Input port ID on the block */
+  /** Port ID on the block */
   readonly portId: string;
 
-  /** Expected type for this input */
+  /** Direction: input (listener) or output (publisher) */
+  readonly direction: RowDirection;
+
+  /** Expected type for this port */
   readonly type: TypeDesc;
 
   /** Optional semantic information */
   readonly semantics?: string;
 
-  /** How default value is determined */
-  readonly defaultValueSource: DefaultValueSource;
+  /** How default value is determined (only for inputs) */
+  readonly defaultValueSource?: DefaultValueSource;
 }
 
 /**
@@ -136,7 +146,9 @@ export type CostClass = 'cheap' | 'moderate' | 'heavy';
 
 /**
  * A cell in the modulation table.
- * Represents the intersection of a row (input port) and column (bus).
+ * Represents the intersection of a row (port) and column (bus).
+ * - For input rows: binding creates a listener (bus → port)
+ * - For output rows: binding creates a publisher (port → bus)
  */
 export interface TableCell {
   /** Row key this cell belongs to */
@@ -145,13 +157,19 @@ export interface TableCell {
   /** Bus ID this cell belongs to */
   readonly busId: string;
 
-  /** Listener ID if bound */
+  /** Direction of the row this cell belongs to */
+  readonly direction: RowDirection;
+
+  /** Listener ID if bound (for input rows) */
   readonly listenerId?: string;
+
+  /** Publisher ID if bound (for output rows) */
+  readonly publisherId?: string;
 
   /** Whether the binding is enabled */
   readonly enabled?: boolean;
 
-  /** Lens chain if bound */
+  /** Lens chain if bound (for listeners) */
   readonly lensChain?: readonly LensDefinition[];
 
   /** Compatibility status */
@@ -267,6 +285,20 @@ export interface TableViewState {
 
   /** Only show compatible columns for focused row */
   showOnlyCompatibleColumnsForFocusedRow: boolean;
+
+  // === Side-by-side layout ===
+
+  /** Whether publishers section is collapsed */
+  publishersSectionCollapsed: boolean;
+
+  /** Whether listeners section is collapsed */
+  listenersSectionCollapsed: boolean;
+
+  /** Split ratio between listeners (left) and publishers (right), 0-1 */
+  tableSplitRatio: number;
+
+  /** Expanded column IDs (showing full header instead of abbreviation) */
+  expandedColumnIds: string[];
 }
 
 // =============================================================================
@@ -287,6 +319,9 @@ export interface PatchIndex {
   /** Listener by input port (one listener per port max) */
   listenersByInputPort: Map<PortRefKey, string>;
 
+  /** Publisher by output port (can have multiple publishers per port to different buses) */
+  publishersByOutputPort: Map<PortRefKey, Map<string, string>>; // portKey -> busId -> publisherId
+
   /** Publisher IDs by bus */
   publishersByBus: Map<string, readonly string[]>;
 
@@ -302,21 +337,25 @@ export interface PatchIndex {
 // =============================================================================
 
 /**
- * Create a row key from block and port IDs.
+ * Create a row key from block, port IDs, and direction.
+ * Format: `${direction}:${blockId}:${portId}`
  */
-export function createRowKey(blockId: BlockId, portId: string): RowKey {
-  return `${blockId}:${portId}`;
+export function createRowKey(blockId: BlockId, portId: string, direction: RowDirection = 'input'): RowKey {
+  return `${direction}:${blockId}:${portId}`;
 }
 
 /**
- * Parse a row key into block and port IDs.
+ * Parse a row key into direction, block, and port IDs.
  */
-export function parseRowKey(key: RowKey): { blockId: BlockId; portId: string } | null {
-  const colonIndex = key.indexOf(':');
-  if (colonIndex === -1) return null;
+export function parseRowKey(key: RowKey): { direction: RowDirection; blockId: BlockId; portId: string } | null {
+  const parts = key.split(':');
+  if (parts.length < 3) return null;
+  const direction = parts[0] as RowDirection;
+  if (direction !== 'input' && direction !== 'output') return null;
   return {
-    blockId: key.slice(0, colonIndex),
-    portId: key.slice(colonIndex + 1),
+    direction,
+    blockId: parts[1],
+    portId: parts.slice(2).join(':'), // Handle port IDs that might contain colons
   };
 }
 
@@ -363,5 +402,33 @@ export function createDefaultViewState(id: string, name: string = 'Default'): Ta
     rowSort: 'rendererFirst',
     showOnlyBoundCells: false,
     showOnlyCompatibleColumnsForFocusedRow: false,
+    // Side-by-side layout - sections expanded by default, individual block groups will be collapsed
+    publishersSectionCollapsed: false,
+    listenersSectionCollapsed: false,
+    tableSplitRatio: 0.5,
+    expandedColumnIds: [],
   };
+}
+
+/**
+ * Get abbreviated column name (max 3 chars or emoji).
+ * Returns emoji if available, otherwise first 3 chars.
+ */
+export function getColumnAbbreviation(name: string): string {
+  // Common bus name abbreviations
+  const abbreviations: Record<string, string> = {
+    'phaseA': '◷A',
+    'phaseB': '◷B',
+    'energy': '⚡',
+    'pulse': '●',
+    'palette': '🌈',
+    'progress': '▶',
+  };
+
+  if (abbreviations[name]) {
+    return abbreviations[name];
+  }
+
+  // Return first 3 characters capitalized
+  return name.slice(0, 3).toUpperCase();
 }

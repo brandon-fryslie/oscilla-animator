@@ -17,6 +17,20 @@ import { RootStore } from '../stores/RootStore';
 import { createCompilerService } from '../compiler';
 import { getBlockForm } from '../blocks/types';
 
+// Type for parameter forwarding objects
+interface ParamFromParam {
+  __fromParam: string;
+}
+
+function isParamFromParam(value: unknown): value is ParamFromParam {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '__fromParam' in value &&
+    typeof (value as ParamFromParam).__fromParam === 'string'
+  );
+}
+
 describe('Composite Registration', () => {
   beforeEach(() => {
     registerAllComposites();
@@ -155,8 +169,9 @@ describe('Composite Graph Validation', () => {
       for (const [_nodeId, nodeSpec] of Object.entries(comp.graph.nodes)) {
         if (nodeSpec.params) {
           for (const [_paramKey, paramValue] of Object.entries(nodeSpec.params)) {
-            if (typeof paramValue === 'object' && paramValue !== null && '__fromParam' in paramValue) {
-              expect(typeof (paramValue as any).__fromParam).toBe('string');
+            if (isParamFromParam(paramValue)) {
+              expect(paramValue.__fromParam).toBeTruthy();
+              expect(typeof paramValue.__fromParam).toBe('string');
             }
           }
         }
@@ -402,7 +417,7 @@ describe('Macro Registry', () => {
 
     // Should listen to phaseA bus (not publish to it)
     expect((macro.listeners || []).some(l => l.busName === 'phaseA')).toBe(true);
-    expect(macro.publishers?.length || 0).toBe(0);  // No publishers
+    expect(macro.publishers?.length ?? 0).toBe(0);  // No publishers
   });
 
   it('goldenPatch macro has complete structure', () => {
@@ -488,8 +503,6 @@ describe('Composite Compilation', () => {
 
   it('GridPoints composite compiles successfully', () => {
     const store = new RootStore();
-
-    // Add CycleTimeRoot - required for all patches
     store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
     // Add GridPoints composite
@@ -503,7 +516,7 @@ describe('Composite Compilation', () => {
     });
 
     // Add renderer
-    const renderId = store.patchStore.addBlock('RenderInstances2D');
+    const renderId = store.patchStore.addBlock('RenderInstances2D', {});
 
     // Connect grid to renderer
     store.patchStore.connect(gridId, 'domain', renderId, 'domain');
@@ -529,8 +542,6 @@ describe('Composite Compilation', () => {
 
   it('CirclePoints composite compiles successfully', () => {
     const store = new RootStore();
-
-    // Add CycleTimeRoot - required for all patches
     store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
     // Add CirclePoints composite
@@ -542,7 +553,7 @@ describe('Composite Compilation', () => {
     });
 
     // Add renderer
-    const renderId = store.patchStore.addBlock('RenderInstances2D');
+    const renderId = store.patchStore.addBlock('RenderInstances2D', {});
 
     // Connect circle to renderer
     store.patchStore.connect(circleId, 'domain', renderId, 'domain');
@@ -563,9 +574,7 @@ describe('Composite Compilation', () => {
 
   it('DotsRenderer composite with bus-driven radius compiles', () => {
     const store = new RootStore();
-
-    // Add CycleTimeRoot - required for all patches
-    store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+    const timeRootId = store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
     // Add domain
     const domainId = store.patchStore.addBlock('DomainN', { n: 25, seed: 42 });
@@ -577,11 +586,8 @@ describe('Composite Compilation', () => {
       spacing: 60,
     });
 
-    // Add phase clock
-    const clockId = store.patchStore.addBlock('PhaseClockLegacy', { duration: 2 });
-
     // Add DotsRenderer composite
-    const renderId = store.patchStore.addBlock('composite:DotsRenderer');
+    const renderId = store.patchStore.addBlock('composite:DotsRenderer', {});
 
     // Connect domain and positions
     store.patchStore.connect(domainId, 'domain', gridId, 'domain');
@@ -590,7 +596,7 @@ describe('Composite Compilation', () => {
 
     // Find or create phaseA bus (it may already exist from other tests)
     let busId = store.busStore.buses.find(b => b.name === 'phaseA')?.id;
-    if (!busId) {
+    if (busId === undefined) {
       busId = store.busStore.createBus(
         {
           world: 'signal',
@@ -605,7 +611,7 @@ describe('Composite Compilation', () => {
     }
 
     // Publish clock phase to bus
-    store.busStore.addPublisher(busId, clockId, 'phase');
+    store.busStore.addPublisher(busId, timeRootId, 'phase');
 
     // Listen on renderer radius with scale lens
     store.busStore.addListener(busId, renderId, 'radius', undefined, {

@@ -22,9 +22,9 @@ import type { Artifact, RuntimeCtx, CompileCtx, Seed } from '../../compiler/type
 describe('getSortedPublishers', () => {
   it('sorts by sortKey ascending', () => {
     const publishers: Publisher[] = [
-      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', dir: 'output' }, sortKey: 2, enabled: true },
-      { id: 'p2', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', dir: 'output' }, sortKey: 1, enabled: true },
-      { id: 'p3', busId: 'bus1', from: { blockId: 'b3', slotId: 's3', dir: 'output' }, sortKey: 3, enabled: true },
+      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', direction: 'output' }, sortKey: 2, enabled: true },
+      { id: 'p2', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', direction: 'output' }, sortKey: 1, enabled: true },
+      { id: 'p3', busId: 'bus1', from: { blockId: 'b3', slotId: 's3', direction: 'output' }, sortKey: 3, enabled: true },
     ];
     const sorted = getSortedPublishers('bus1', publishers);
     expect(sorted.map(p => p.id)).toEqual(['p2', 'p1', 'p3']);
@@ -32,9 +32,9 @@ describe('getSortedPublishers', () => {
 
   it('uses id as tie-breaker when sortKey equal', () => {
     const publishers: Publisher[] = [
-      { id: 'charlie', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', dir: 'output' }, sortKey: 0, enabled: true },
-      { id: 'alpha', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', dir: 'output' }, sortKey: 0, enabled: true },
-      { id: 'bravo', busId: 'bus1', from: { blockId: 'b3', slotId: 's3', dir: 'output' }, sortKey: 0, enabled: true },
+      { id: 'charlie', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', direction: 'output' }, sortKey: 0, enabled: true },
+      { id: 'alpha', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', direction: 'output' }, sortKey: 0, enabled: true },
+      { id: 'bravo', busId: 'bus1', from: { blockId: 'b3', slotId: 's3', direction: 'output' }, sortKey: 0, enabled: true },
     ];
     const sorted = getSortedPublishers('bus1', publishers);
     expect(sorted.map(p => p.id)).toEqual(['alpha', 'bravo', 'charlie']);
@@ -42,8 +42,8 @@ describe('getSortedPublishers', () => {
 
   it('filters disabled publishers by default', () => {
     const publishers: Publisher[] = [
-      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', dir: 'output' }, sortKey: 1, enabled: true },
-      { id: 'p2', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', dir: 'output' }, sortKey: 2, enabled: false },
+      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', direction: 'output' }, sortKey: 1, enabled: true },
+      { id: 'p2', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', direction: 'output' }, sortKey: 2, enabled: false },
     ];
     const sorted = getSortedPublishers('bus1', publishers);
     expect(sorted).toHaveLength(1);
@@ -52,8 +52,8 @@ describe('getSortedPublishers', () => {
 
   it('includes disabled publishers when requested', () => {
     const publishers: Publisher[] = [
-      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', dir: 'output' }, sortKey: 1, enabled: true },
-      { id: 'p2', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', dir: 'output' }, sortKey: 2, enabled: false },
+      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', direction: 'output' }, sortKey: 1, enabled: true },
+      { id: 'p2', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', direction: 'output' }, sortKey: 2, enabled: false },
     ];
     const sorted = getSortedPublishers('bus1', publishers, true);
     expect(sorted).toHaveLength(2);
@@ -62,8 +62,8 @@ describe('getSortedPublishers', () => {
 
   it('filters by busId', () => {
     const publishers: Publisher[] = [
-      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', dir: 'output' }, sortKey: 1, enabled: true },
-      { id: 'p2', busId: 'bus2', from: { blockId: 'b2', slotId: 's2', dir: 'output' }, sortKey: 2, enabled: true },
+      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', direction: 'output' }, sortKey: 1, enabled: true },
+      { id: 'p2', busId: 'bus2', from: { blockId: 'b2', slotId: 's2', direction: 'output' }, sortKey: 2, enabled: true },
     ];
     const sorted = getSortedPublishers('bus1', publishers);
     expect(sorted).toHaveLength(1);
@@ -72,7 +72,7 @@ describe('getSortedPublishers', () => {
 
   it('returns empty array when no publishers match', () => {
     const publishers: Publisher[] = [
-      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', dir: 'output' }, sortKey: 1, enabled: true },
+      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', direction: 'output' }, sortKey: 1, enabled: true },
     ];
     const sorted = getSortedPublishers('bus2', publishers);
     expect(sorted).toEqual([]);
@@ -80,9 +80,9 @@ describe('getSortedPublishers', () => {
 
   it('handles negative sortKey values correctly', () => {
     const publishers: Publisher[] = [
-      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', dir: 'output' }, sortKey: 1, enabled: true },
-      { id: 'p2', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', dir: 'output' }, sortKey: -1, enabled: true },
-      { id: 'p3', busId: 'bus1', from: { blockId: 'b3', slotId: 's3', dir: 'output' }, sortKey: 0, enabled: true },
+      { id: 'p1', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', direction: 'output' }, sortKey: 1, enabled: true },
+      { id: 'p2', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', direction: 'output' }, sortKey: -1, enabled: true },
+      { id: 'p3', busId: 'bus1', from: { blockId: 'b3', slotId: 's3', direction: 'output' }, sortKey: 0, enabled: true },
     ];
     const sorted = getSortedPublishers('bus1', publishers);
     expect(sorted.map(p => p.id)).toEqual(['p2', 'p3', 'p1']);
@@ -90,8 +90,8 @@ describe('getSortedPublishers', () => {
 
   it('preserves original array (immutability)', () => {
     const publishers: Publisher[] = [
-      { id: 'p2', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', dir: 'output' }, sortKey: 2, enabled: true },
-      { id: 'p1', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', dir: 'output' }, sortKey: 1, enabled: true },
+      { id: 'p2', busId: 'bus1', from: { blockId: 'b1', slotId: 's1', direction: 'output' }, sortKey: 2, enabled: true },
+      { id: 'p1', busId: 'bus1', from: { blockId: 'b2', slotId: 's2', direction: 'output' }, sortKey: 1, enabled: true },
     ];
     const originalOrder = publishers.map(p => p.id);
     getSortedPublishers('bus1', publishers);
@@ -210,9 +210,10 @@ describe('combineSignalArtifacts', () => {
 
     it('returns Error for unsupported type in sum mode', () => {
       // Need 2+ artifacts to trigger combine logic (single artifacts pass through)
+      const phaseArtifactKind = 'Signal:phase' as const;
       const artifacts: Artifact[] = [
-        { kind: 'Signal:phase' as any, value: () => 0.5 },
-        { kind: 'Signal:phase' as any, value: () => 0.7 },
+        { kind: phaseArtifactKind, value: () => 0.5 },
+        { kind: phaseArtifactKind, value: () => 0.7 },
       ];
       const result = combineSignalArtifacts(artifacts, 'sum', 0);
       expect(result.kind).toBe('Error');
@@ -259,7 +260,7 @@ describe('combineSignalArtifacts', () => {
 // =============================================================================
 
 describe('combineFieldArtifacts', () => {
-  const mockCtx: CompileCtx = { env: {}, geom: { get: () => null as any, invalidate: () => {} } };
+  const mockCtx: CompileCtx = { env: {}, geom: { get: () => null as never, invalidate: () => {} } };
   const seed: Seed = 12345; // Seed is just a number
 
   describe('with no artifacts', () => {
@@ -486,7 +487,7 @@ describe('getSupportedCombineModes', () => {
   });
 
   it('returns empty array for unknown world', () => {
-    const modes = getSupportedCombineModes('unknown' as any);
+    const modes = getSupportedCombineModes('unknown' as 'signal' | 'field');
     expect(modes).toEqual([]);
   });
 });

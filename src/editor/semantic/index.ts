@@ -278,7 +278,7 @@ export function isSlotBusEligible(slotType: SlotType): boolean {
  */
 export function formatTypeDesc(typeDesc: TypeDesc): string {
   const parts: string[] = [typeDesc.world, typeDesc.domain];
-  if (typeDesc.semantics) {
+  if (typeDesc.semantics != null && typeDesc.semantics !== '') {
     parts.push(`(${typeDesc.semantics})`);
   }
   return parts.join(':');

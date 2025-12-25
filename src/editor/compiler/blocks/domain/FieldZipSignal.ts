@@ -5,7 +5,17 @@
  * The signal is evaluated once per frame and the operation is applied to each element.
  */
 
-import type { BlockCompiler, Field } from '../../types';
+import type { BlockCompiler, Field, CompileCtx, RuntimeCtx } from '../../types';
+import { isDefined } from '../../../types/helpers';
+
+/**
+ * Extended context interface for field evaluation at runtime.
+ * The compile-time context is extended with time information during rendering.
+ */
+interface FieldEvalCtx extends CompileCtx {
+  /** Current time in milliseconds (available at runtime) */
+  t: number;
+}
 
 /**
  * Get the binary operation by name
@@ -43,7 +53,7 @@ export const FieldZipSignalBlock: BlockCompiler = {
     const fieldArtifact = inputs.field;
     const signalArtifact = inputs.signal;
 
-    if (!fieldArtifact || fieldArtifact.kind !== 'Field:number') {
+    if (!isDefined(fieldArtifact) || fieldArtifact.kind !== 'Field:number') {
       return {
         out: {
           kind: 'Error',
@@ -52,7 +62,7 @@ export const FieldZipSignalBlock: BlockCompiler = {
       };
     }
 
-    if (!signalArtifact || signalArtifact.kind !== 'Signal:number') {
+    if (!isDefined(signalArtifact) || signalArtifact.kind !== 'Signal:number') {
       return {
         out: {
           kind: 'Error',
@@ -61,9 +71,9 @@ export const FieldZipSignalBlock: BlockCompiler = {
       };
     }
 
-    const fieldFn = fieldArtifact.value as Field<number>;
+    const fieldFn = fieldArtifact.value;
     const signalFn = signalArtifact.value;
-    const fn = String(params.fn ?? 'add');
+    const fn = typeof params.fn === 'string' ? params.fn : 'add';
     const zipOp = getZipOperation(fn);
 
     // Create combined field
@@ -73,12 +83,13 @@ export const FieldZipSignalBlock: BlockCompiler = {
       const fieldValues = fieldFn(seed, n, ctx);
 
       // Evaluate signal once for this frame (ctx is extended with .t at runtime)
-      const signalValue = signalFn((ctx as any).t, ctx as any);
+      const runtimeCtx = ctx as FieldEvalCtx;
+      const signalValue = signalFn(runtimeCtx.t, runtimeCtx as unknown as RuntimeCtx);
 
       // Apply operation to each element
       const out = new Array<number>(fieldValues.length);
       for (let i = 0; i < fieldValues.length; i++) {
-        out[i] = zipOp(fieldValues[i]!, signalValue);
+        out[i] = zipOp(fieldValues[i], signalValue);
       }
 
       return out;

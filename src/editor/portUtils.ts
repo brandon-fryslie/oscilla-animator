@@ -8,7 +8,7 @@
  * is retained for UI display purposes (badges, hints).
  */
 
-import type { SlotType, Connection, Block, Slot, PortRef } from './types';
+import type { SlotType, Connection, Block, Slot, PortRef, Listener } from './types';
 import { areSlotTypesCompatible, getCompatibilityHint } from './semantic';
 
 // =============================================================================
@@ -47,7 +47,7 @@ export function formatTypeDescriptor(desc: TypeDescriptor): string {
     unknown: '?',
   };
   const world = worldGlyph[desc.world] ?? '?';
-  if (!desc.domain) return world;
+  if (desc.domain === null || desc.domain === '') return world;
   return `${world} · ${desc.domain}`;
 }
 
@@ -254,7 +254,7 @@ const CONNECTION_COLORS = [
  * Colors cycle through the palette.
  */
 export function getConnectionColor(connectionIndex: number): string {
-  return CONNECTION_COLORS[connectionIndex % CONNECTION_COLORS.length]!;
+  return CONNECTION_COLORS[connectionIndex % CONNECTION_COLORS.length];
 }
 
 /**
@@ -331,4 +331,32 @@ export function getConnectionsForPort(
       (c) => c.to.blockId === blockId && c.to.slotId === slotId
     );
   }
+}
+
+/**
+ * Check if an input port is "driven" by an external source.
+ * An input is driven if it has either:
+ * - A wire connection from another block's output
+ * - A bus listener attached
+ *
+ * When an input is NOT driven, its DefaultSource provides the value.
+ * When an input IS driven, the DefaultSource is inactive (but still exists).
+ */
+export function isInputDriven(
+  blockId: string,
+  slotId: string,
+  connections: readonly Connection[],
+  listeners: readonly Listener[]
+): boolean {
+  // Check for wire connection
+  const hasWire = connections.some(
+    (c) => c.to.blockId === blockId && c.to.slotId === slotId
+  );
+  if (hasWire) return true;
+
+  // Check for bus listener
+  const hasListener = listeners.some(
+    (l) => l.to.blockId === blockId && l.to.slotId === slotId
+  );
+  return hasListener;
 }

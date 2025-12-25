@@ -278,8 +278,7 @@
 @media (max-width: 768px) {
   /* Ensure all interactive elements are at least 44x44px (Apple HIG) */
   .panel-icon-btn,
-  .panel-collapse-icon,
-  .panel-help-btn {
+  .panel-collapse-icon {
     min-width: 44px;
     min-height: 44px;
   }
@@ -288,7 +287,7 @@
   .port {
     padding: 4px 8px;
     font-size: 10px;
-    min-height: 32px;
+    min-height: 14px;
   }
 
   /* Make resizers easier to grab on touch */

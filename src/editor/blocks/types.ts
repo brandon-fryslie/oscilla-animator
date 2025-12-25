@@ -1,4 +1,5 @@
 import type { BlockForm, BlockSubcategory, Slot, BlockParams, LaneKind, LaneFlavor } from '../types';
+import type { CompositeDefinition } from '../composites';
 
 // Re-export types that are used by other modules
 export type {
@@ -26,7 +27,7 @@ export type BlockTags = Record<string, BlockTagValue>;
 export interface BlockDefinition {
   /**
    * Flexible map of string tags for organization and filtering.
-   * Example: { role: 'input', domain: 'Scene', legacyCategory: 'Fields' }
+   * Example: { role: 'input', domain: 'Scene' }
    */
   tags?: BlockTags;
 
@@ -37,17 +38,8 @@ export interface BlockDefinition {
   readonly label: string;
 
   /**
-   * @deprecated Form is now derived from structure. Use getBlockForm() instead.
-   * - Macros: type starts with 'macro:'
-   * - Composites: have compositeDefinition
-   * - Primitives: everything else
-   */
-  readonly form?: BlockForm;
-
-  /**
    * Subcategory within form for organization.
    * e.g., 'Sources', 'Fields', 'Timing', 'Spatial', 'Math', etc.
-   * Optional - defaults to category mapping for legacy blocks.
    */
   readonly subcategory?: BlockSubcategory;
 
@@ -85,7 +77,6 @@ export interface BlockDefinition {
   /**
    * For composites: the primitive graph that defines this block.
    * For primitives: undefined.
-   * For legacy-composite: undefined (pending migration).
    */
   readonly primitiveGraph?: CompoundGraph;
 
@@ -93,7 +84,7 @@ export interface BlockDefinition {
    * For composite blocks: store the original composite definition.
    * This is used for compiler integration and parameter resolution.
    */
-  readonly compositeDefinition?: any; // CompositeDefinition imported to avoid circular dependency
+  readonly compositeDefinition?: CompositeDefinition;
 
   /**
    * Auto-bus subscriptions: map of input port IDs to bus names.

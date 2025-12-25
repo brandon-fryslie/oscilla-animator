@@ -70,7 +70,7 @@ export function find<Node extends { id: string }>(
     const children = getChildren(node);
     if (children) {
       for (let i = 0; i < children.length; i++) {
-        traverse(children[i]!, [...path, i]);
+        traverse(children[i], [...path, i]);
       }
     }
   }
@@ -95,7 +95,7 @@ export function first<Node extends { id: string }>(
     const children = getChildren(node);
     if (children) {
       for (let i = 0; i < children.length; i++) {
-        const found = traverse(children[i]!, [...path, i]);
+        const found = traverse(children[i], [...path, i]);
         if (found) return found;
       }
     }

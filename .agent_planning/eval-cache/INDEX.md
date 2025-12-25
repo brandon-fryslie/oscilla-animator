@@ -1,42 +1,22 @@
 # Evaluation Cache Index
 
-Reusable knowledge extracted from project evaluations. Use this to avoid re-discovering the same information.
-
-**Last Updated**: 2025-12-21 16:30:00
-
----
-
-## Cached Topics
-
 | Topic | File | Cached | Source | Confidence |
 |-------|------|--------|--------|------------|
-| Replace Block Feature | replace-block-feature.md | 2025-12-21 14:35 | replace-block eval | HIGH |
-| Time Architecture | time-architecture.md | 2025-12-21 12:31 | wp1-timeroot-compilers eval | HIGH |
-| Layout Architecture | layout-architecture.md | 2025-12-21 12:31 | wp1-timeroot-compilers eval | HIGH |
-| Bus Compiler Architecture | bus-compiler-architecture.md | 2025-12-21 13:35 | wp2-bus-aware-compiler eval | HIGH |
-| Compiler Architecture | compiler-architecture.md | 2025-12-21 13:35 | phase4-default-sources eval | HIGH |
-| Bus Semantics Module | bus-semantics.md | 2025-12-21 13:35 | project-evaluator | HIGH |
-| Bus Initialization | findings-buses-init.md | 2025-12-20 21:14 | bus-semantics-module eval | MEDIUM |
-| Runtime Macros | runtime-macros-expansion.md | 2025-12-20 21:14 | bus-semantics-module eval | MEDIUM |
+| Test Infrastructure | test-infrastructure.md | 2025-12-23 05:13 | project-evaluator | HIGH |
+| Architecture | architecture.md | 2025-12-23 05:13 | project-evaluator + design docs | HIGH |
+| Rendering Architecture | rendering-architecture.md | 2025-12-24 16:52 | project-evaluator (canvas-renderer eval v2) | HIGH |
 
----
+## Cache Freshness Guidelines
+- **FRESH**: < 1 hour - trust fully
+- **RECENT**: < 24 hours - trust with light verification
+- **STALE**: > 24 hours - use as hints only, re-validate critical findings
+- **ANCIENT**: > 7 days - ignore
 
-## Usage Guidelines
+## What's Cached
+- **test-infrastructure.md**: Test framework, organization, failure patterns, reliability assessment
+- **architecture.md**: Core patterns, TimeRoot spec violations, type system, stores, compiler pipeline
+- **rendering-architecture.md**: RenderTree IR, Player loop, SvgRenderer, RenderInstances2D, Canvas extension points
 
-**Confidence Levels**:
-- **HIGH**: Just evaluated/implemented, highest trust
-- **MEDIUM**: < 7 days old, no changes to files
-- **LOW**: 7-30 days old, or dependencies changed
-- **STALE**: > 30 days old, or files in scope changed
-
-**When to Invalidate**:
-1. Files mentioned in cache entry are modified
-2. Related tests fail
-3. Architecture decisions change
-4. > 30 days since caching
-
-**How to Use**:
-1. Check INDEX.md for relevant topics
-2. Read cached entry for quick context
-3. Verify confidence level (STALE entries need re-validation)
-4. Reference original source if deep dive needed- wp1-implementation-status.md (FRESH) - complete WP1 implementation status
+## Not Yet Cached
+- project-structure.md (directory layout, entry points)
+- runtime-*.md (runtime behavior findings)

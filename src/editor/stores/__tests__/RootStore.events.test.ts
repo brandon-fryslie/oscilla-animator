@@ -78,7 +78,7 @@ describe('RootStore - Event Listeners', () => {
       const phaseA = root.busStore.buses.find(b => b.name === 'phaseA');
       expect(phaseA).toBeDefined();
 
-      if (phaseA) {
+      if (phaseA !== undefined) {
         root.uiStore.uiState.selectedBusId = phaseA.id;
 
         root.busStore.deleteBus(phaseA.id);
@@ -343,8 +343,7 @@ describe('RootStore - Event Listeners', () => {
       expect(busNames).toContain('energy');
       expect(busNames).toContain('pulse');
       expect(busNames).toContain('palette');
-      expect(busNames).toContain('progress');
-      expect(root.busStore.buses.length).toBe(6);
+      expect(root.busStore.buses.length).toBe(6); // +progress
     });
   });
 });

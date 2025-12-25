@@ -78,7 +78,7 @@ function hslToHex(h: number, s: number, l: number): string {
     b = x;
   }
 
-  const toHex = (n: number) =>
+  const toHex = (n: number): string =>
     Math.round((n + m) * 255)
       .toString(16)
       .padStart(2, '0');
@@ -95,7 +95,7 @@ export const ColorLFOBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const phaseArtifact = inputs.phase;
-    if (!phaseArtifact || phaseArtifact.kind !== 'Signal:phase') {
+    if (phaseArtifact === undefined || phaseArtifact.kind !== 'Signal:phase') {
       return {
         color: {
           kind: 'Error',
@@ -105,7 +105,7 @@ export const ColorLFOBlock: BlockCompiler = {
     }
 
     const phaseSignal = phaseArtifact.value as Signal<number>;
-    const base = String(params.base ?? '#3B82F6');
+    const base = typeof params.base === 'string' ? params.base : '#3B82F6';
     const hueSpan = Number(params.hueSpan ?? 180);
     const sat = Number(params.sat ?? 0.8);
     const light = Number(params.light ?? 0.5);
@@ -115,7 +115,7 @@ export const ColorLFOBlock: BlockCompiler = {
     const baseHue = baseHSL.h;
 
     // Create color signal
-    const signal: Signal<string> = (t: number, ctx: RuntimeCtx) => {
+    const signal: Signal<string> = (t: number, ctx: RuntimeCtx): string => {
       const phase = phaseSignal(t, ctx);
       const hue = baseHue + phase * hueSpan;
       return hslToHex(hue, sat, light);

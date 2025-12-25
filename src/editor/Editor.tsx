@@ -25,7 +25,7 @@ import { useStore } from './stores';
 import { BlockLibrary } from './BlockLibrary';
 import { PatchBay } from './PatchBay';
 import { BusBoard } from './BusBoard';
-import { ModulationTable, ModulationTableStore } from './modulation-table';
+import { ModulationTable, ModulationTableStore, RecipeView } from './modulation-table';
 import { Inspector } from './Inspector';
 import { LogWindow } from './LogWindow';
 import { PreviewPanel } from './PreviewPanel';
@@ -37,7 +37,16 @@ import { createCompilerService, setupAutoCompile } from './compiler';
 import { ControlSurfaceStore, ControlSurfacePanel, generateSurfaceForMacro } from './controlSurface';
 import { useEditorLayout, PATCH_VIEW_MODES } from './useEditorLayout';
 import type { BlockDefinition } from './blocks';
-import type { LaneId } from './types';
+import {
+  isLibraryBlockDragData,
+  isPatchBlockDragData,
+  isLaneDropData,
+  isPatchBlockDropData,
+  isInsertionPointDropData,
+  isTrashDropData,
+  getLaneIdFromDropData,
+} from './types/dnd';
+import { isNonEmptyString } from './types/helpers';
 import './Editor.css';
 import './mobile.css';
 import { HelpCenterModal, HelpPanel, type HelpCenterTopicId } from './HelpCenter';
@@ -378,7 +387,7 @@ function DragOverlayContent({
   const label = definition?.label ?? placedBlockLabel;
   const color = definition?.color ?? placedBlockColor ?? '#666';
 
-  if (!label) return null;
+  if (!isNonEmptyString(label)) return null;
 
   return (
     <div
@@ -548,6 +557,8 @@ export const Editor = observer(() => {
         if (surface) {
           controlSurfaceStore.setSurface(surface);
         }
+
+      store.patchStore.addBlock('macro:rainbowGrid');
       }, 0);
     }
   }, [store, controlSurfaceStore]);
@@ -566,11 +577,11 @@ export const Editor = observer(() => {
     const { active } = event;
     const data = active.data.current;
 
-    if (data?.type === 'library-block') {
+    if (isLibraryBlockDragData(data)) {
       setActiveDefinition(data.definition);
       // Set dragging lane kind for highlighting suggested lanes
-      store.uiStore.setDraggingLaneKind(data.definition?.laneKind ?? null);
-    } else if (data?.type === 'patch-block') {
+      store.uiStore.setDraggingLaneKind(data.definition.laneKind ?? null);
+    } else if (isPatchBlockDragData(data)) {
       // Dragging a placed block
       const block = store.patchStore.blocks.find((b) => b.id === data.blockId);
       if (block) {
@@ -609,15 +620,13 @@ export const Editor = observer(() => {
     const overData = over.data.current;
 
     // Dropping placed block onto another block (reorder/move)
-    if (activeData?.type === 'patch-block' && overData?.type === 'patch-target') {
-      const blockId = activeData.blockId as string;
-      const sourceLaneId = activeData.sourceLaneId as string;
-      const targetLaneId = overData.laneId as LaneId;
-      const targetIndex = overData.index as number;
+    if (isPatchBlockDragData(activeData) && isPatchBlockDropData(overData)) {
+      const { blockId, sourceLaneId, sourceIndex } = activeData;
+      const { laneId: targetLaneId, index: targetIndex } = overData;
 
       if (sourceLaneId === targetLaneId) {
-        if (activeData.sourceIndex !== targetIndex) {
-          store.viewStore.reorderBlockInLane(sourceLaneId as LaneId, blockId, targetIndex);
+        if (sourceIndex !== targetIndex) {
+          store.viewStore.reorderBlockInLane(sourceLaneId, blockId, targetIndex);
         }
       } else {
         store.viewStore.moveBlockToLane(blockId, targetLaneId);
@@ -626,9 +635,9 @@ export const Editor = observer(() => {
     }
 
     // Dropping library block onto a lane
-    if (activeData?.type === 'library-block' && overData?.type === 'lane') {
-      const blockType = activeData.blockType as string;
-      const laneId = (overData.laneId ?? overData.laneName) as LaneId;
+    if (isLibraryBlockDragData(activeData) && isLaneDropData(overData)) {
+      const { blockType } = activeData;
+      const laneId = getLaneIdFromDropData(overData);
       const blockId = store.patchStore.addBlock(blockType);
 
       // Explicitly move to target lane
@@ -636,10 +645,9 @@ export const Editor = observer(() => {
     }
 
     // Dropping library block onto an insertion point
-    if (activeData?.type === 'library-block' && overData?.type === 'insertion-point') {
-      const blockType = activeData.blockType as string;
-      const laneId = overData.laneId as LaneId;
-      const index = overData.index as number;
+    if (isLibraryBlockDragData(activeData) && isInsertionPointDropData(overData)) {
+      const { blockType } = activeData;
+      const { laneId, index } = overData;
       const blockId = store.patchStore.addBlock(blockType);
 
       // Explicitly move and reorder in target lane
@@ -647,19 +655,16 @@ export const Editor = observer(() => {
     }
 
     // Dropping placed block onto an insertion point (reorder)
-    if (activeData?.type === 'patch-block' && overData?.type === 'insertion-point') {
-      const blockId = activeData.blockId as string;
-      const sourceLaneId = activeData.sourceLaneId as string;
-      const targetLaneId = overData.laneId as LaneId;
-      const targetIndex = overData.index as number;
+    if (isPatchBlockDragData(activeData) && isInsertionPointDropData(overData)) {
+      const { blockId, sourceLaneId, sourceIndex } = activeData;
+      const { laneId: targetLaneId, index: targetIndex } = overData;
 
       if (sourceLaneId === targetLaneId) {
         // Reorder within same lane
-        const sourceIndex = activeData.sourceIndex as number;
         // Adjust target index if moving forward (since we remove first)
         const adjustedIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
         if (sourceIndex !== adjustedIndex) {
-          store.viewStore.reorderBlockInLane(sourceLaneId as LaneId, blockId, adjustedIndex);
+          store.viewStore.reorderBlockInLane(sourceLaneId, blockId, adjustedIndex);
         }
       } else {
         // Move to different lane at specific position
@@ -668,16 +673,14 @@ export const Editor = observer(() => {
     }
 
     // Dropping placed block onto trash
-    if (activeData?.type === 'patch-block' && overData?.type === 'trash') {
-      const blockId = activeData.blockId as string;
-      store.patchStore.removeBlock(blockId);
+    if (isPatchBlockDragData(activeData) && isTrashDropData(overData)) {
+      store.patchStore.removeBlock(activeData.blockId);
     }
 
     // Dropping placed block onto a lane (move/reorder)
-    if (activeData?.type === 'patch-block' && overData?.type === 'lane') {
-      const blockId = activeData.blockId as string;
-      const sourceLaneId = activeData.sourceLaneId as string;
-      const targetLaneId = (overData.laneId ?? overData.laneName) as LaneId;
+    if (isPatchBlockDragData(activeData) && isLaneDropData(overData)) {
+      const { blockId, sourceLaneId } = activeData;
+      const targetLaneId = getLaneIdFromDropData(overData);
 
       if (sourceLaneId !== targetLaneId) {
         // Move to different lane
@@ -845,13 +848,13 @@ export const Editor = observer(() => {
                 {bayCollective ? '▸' : '▾'}
               </button>
 
-              {/* PatchBay Panel */}
+              {/* PatchBay Panel - takes full width in table view mode */}
               <div
                 className={`bay-panel patch-panel ${patchBayCollapsed ? 'collapsed' : ''}`}
                 style={{
                   flex: patchBayCollapsed
                     ? '0 0 auto'
-                    : busBoardCollapsed
+                    : (busBoardCollapsed || patchViewMode === 'table')
                       ? '1 1 0'
                       : `${baySplit} 1 0`,
                 }}
@@ -890,17 +893,23 @@ export const Editor = observer(() => {
                 </div>
                 {!patchBayCollapsed && (
                   <div className="patch-body">
-                    {patchViewMode === 'lanes' ? (
-                      <PatchBay />
-                    ) : (
-                      <ModulationTable store={modulationTableStore} />
+                    {patchViewMode === 'lanes' && <PatchBay />}
+                    {patchViewMode === 'table' && <ModulationTable store={modulationTableStore} />}
+                    {patchViewMode === 'recipe' && (
+                      <RecipeView
+                        store={modulationTableStore}
+                        onJumpToCell={(rowKey, busId) => {
+                          setPatchViewMode('table');
+                          modulationTableStore.setFocusedCell(rowKey, busId);
+                        }}
+                      />
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Bay Resizer */}
-              {!patchBayCollapsed && !busBoardCollapsed && (
+              {/* Bay Resizer - hidden in table view mode */}
+              {!patchBayCollapsed && !busBoardCollapsed && patchViewMode !== 'table' && (
                 <div
                   className="bay-resizer"
                   onMouseDown={() => setDragging('bay-split')}
@@ -908,42 +917,53 @@ export const Editor = observer(() => {
                 />
               )}
 
-              {/* BusBoard Panel */}
-              <div
-                className={`bay-panel busboard-panel ${busBoardCollapsed ? 'collapsed' : ''}`}
-                style={{
-                  flex: busBoardCollapsed
-                    ? '0 0 auto'
-                    : patchBayCollapsed
-                      ? '1 1 0'
-                      : `${1 - baySplit} 1 0`,
-                }}
-              >
-                <div className="panel-header busboard-header">
-                  <span className="panel-title">Bus</span>
-                  <div className="panel-header-actions">
-                    <button
-                      className="panel-collapse-icon"
-                      onClick={() => openHelpPanel('patch')}
-                      title="Help"
-                    >
-                      ?
-                    </button>
-                    <button
-                      className="panel-collapse-icon"
-                      onClick={() => setBusBoardCollapsed((v) => !v)}
-                      title={busBoardCollapsed ? 'Show bus board' : 'Hide bus board'}
-                    >
-                      {busBoardCollapsed ? '◂' : '▸'}
-                    </button>
+              {/* BusBoard Panel - hidden in table view mode (table has integrated bus columns) */}
+              {patchViewMode !== 'table' && (
+                busBoardCollapsed ? (
+                  /* Collapsed state: thin vertical tab with rotated text */
+                  <div
+                    className="busboard-collapsed-tab"
+                    onClick={() => setBusBoardCollapsed(false)}
+                    title="Click to expand Bus Board"
+                  >
+                    <span className="busboard-collapsed-text">Bus Board</span>
                   </div>
-                </div>
-                {!busBoardCollapsed && (
-                  <div className="busboard-body">
-                    <BusBoard />
+                ) : (
+                  /* Expanded state: full panel */
+                  <div
+                    className="bay-panel busboard-panel"
+                    style={{
+                      flex: patchBayCollapsed
+                        ? '1 1 0'
+                        : `${1 - baySplit} 1 0`,
+                    }}
+                  >
+                    <div
+                      className="panel-header busboard-header"
+                      onClick={() => setBusBoardCollapsed(true)}
+                      style={{ cursor: 'pointer' }}
+                      title="Click to collapse Bus Board"
+                    >
+                      <span className="panel-title">Bus Board</span>
+                      <div className="panel-header-actions">
+                        <button
+                          className="panel-collapse-icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openHelpPanel('patch');
+                          }}
+                          title="Help"
+                        >
+                          ?
+                        </button>
+                      </div>
+                    </div>
+                    <div className="busboard-body">
+                      <BusBoard />
+                    </div>
                   </div>
-                )}
-              </div>
+                )
+              )}
             </div>
           </div>
 

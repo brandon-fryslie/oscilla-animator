@@ -1208,11 +1208,18 @@ export const RenderInstances2D = createBlock({
   type: 'RenderInstances2D',
   label: 'Render Instances 2D',
   description: 'Render domain elements as 2D circles',
+  subcategory: 'Render',
   inputs: [
     input('domain', 'Domain', 'Domain'),
     input('positions', 'Positions', 'Field<vec2>'),
-    input('radius', 'Radius', 'Field<number>'),
-    input('color', 'Color', 'Field<color>'),
+    input('radius', 'Radius', 'Field<number>', {
+      tier: 'primary',
+      defaultSource: { value: 5, world: 'field', uiHint: { kind: 'slider', min: 1, max: 50, step: 1 } },
+    }),
+    input('color', 'Color', 'Field<color>', {
+      tier: 'primary',
+      defaultSource: { value: '#ffffff', world: 'field', uiHint: { kind: 'color' } },
+    }),
     input('opacity', 'Opacity', 'Signal<number>', {
       tier: 'primary',
       defaultSource: { value: 1.0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 } },
@@ -1263,4 +1270,27 @@ export const RenderInstances2D = createBlock({
   color: '#EF4444',
   laneKind: 'Program',
   priority: 100,
+});
+
+/**
+ * Render2dCanvas - Render sink for Canvas 2D.
+ *
+ * Currently outputs a minimal Canvas RenderTree (just clears the canvas).
+ * When Instances2D block is implemented, this will take a RenderTree input.
+ */
+export const Render2dCanvas = createBlock({
+  type: 'Render2dCanvas',
+  label: 'Render Canvas 2D',
+  description: 'Canvas 2D render sink',
+  subcategory: 'Render',
+  inputs: [
+    // No inputs yet - will take RenderTree input when Instances2D is implemented
+  ],
+  outputs: [
+    output('render', 'Render', 'CanvasRender'),
+  ],
+  paramSchema: [],
+  color: '#F97316', // Orange, distinct from SVG red
+  laneKind: 'Program',
+  priority: 101,
 });

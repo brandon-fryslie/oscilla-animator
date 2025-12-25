@@ -74,7 +74,8 @@ export class ActionExecutor {
           return true;
 
         default:
-          console.warn('[ActionExecutor] Unknown action kind:', (action as any).kind);
+          const _exhaustiveCheck: never = action;
+          console.warn('[ActionExecutor] Unknown action kind:', _exhaustiveCheck);
           return false;
       }
     } catch (error) {
@@ -101,7 +102,7 @@ export class ActionExecutor {
 
       case 'port':
         // Select the block containing the port
-        this.uiStore.selectBlock(target.blockId);
+        this.uiStore.selectBlock(target.portRef.blockId);
         // TODO: Expand port panel and highlight port (future enhancement)
         return true;
 
@@ -131,7 +132,8 @@ export class ActionExecutor {
         return false;
 
       default:
-        console.warn('[ActionExecutor] Unknown target kind:', (target as any).kind);
+        const _exhaustiveCheck: never = target;
+        console.warn('[ActionExecutor] Unknown target kind:', _exhaustiveCheck);
         return false;
     }
   }
@@ -147,17 +149,17 @@ export class ActionExecutor {
     // Find the appropriate lane
     let targetLane = this.viewStore.lanes[0]; // Default to first lane
 
-    if (nearBlockId) {
+    if (nearBlockId !== undefined && nearBlockId !== null && nearBlockId !== '') {
       // Find the lane containing the reference block
       const refLane = this.viewStore.lanes.find((lane) =>
         lane.blockIds.includes(nearBlockId)
       );
-      if (refLane) {
+      if (refLane !== undefined && refLane !== null) {
         targetLane = refLane;
       }
     }
 
-    if (!targetLane) {
+    if (targetLane === undefined || targetLane === null) {
       console.warn('[ActionExecutor] No target lane found for insertBlock');
       return false;
     }
@@ -166,7 +168,13 @@ export class ActionExecutor {
     const newBlockId = this.patchStore.addBlock(blockType);
 
     // Reorder if position is specified
-    if (nearBlockId && position && targetLane.blockIds.includes(nearBlockId)) {
+    if (
+      nearBlockId !== undefined &&
+      nearBlockId !== null &&
+      nearBlockId !== '' &&
+      position !== undefined &&
+      targetLane.blockIds.includes(nearBlockId)
+    ) {
       const nearIndex = targetLane.blockIds.indexOf(nearBlockId);
       const newIndex = position === 'before' ? nearIndex : nearIndex + 1;
       
@@ -186,7 +194,7 @@ export class ActionExecutor {
    */
   removeBlock(blockId: string): boolean {
     const block = this.patchStore.blocks.find((b) => b.id === blockId);
-    if (!block) {
+    if (block === undefined || block === null) {
       console.warn('[ActionExecutor] Block not found:', blockId);
       return false;
     }
@@ -201,29 +209,30 @@ export class ActionExecutor {
    * and rewires the connections to go through the adapter.
    */
   addAdapter(fromPort: PortTargetRef, adapterType: string): boolean {
+    const portRef = fromPort.portRef;
     // 1. Find the connection from this port
     const connection = this.patchStore.connections.find(
-      (c) => c.from.blockId === fromPort.blockId && c.from.slotId === fromPort.portId
+      (c) => c.from.blockId === portRef.blockId && c.from.slotId === portRef.slotId
     );
 
-    if (!connection) {
-      console.warn('[ActionExecutor] No connection found from port:', fromPort);
+    if (connection === undefined || connection === null) {
+      console.warn('[ActionExecutor] No connection found from port:', portRef);
       return false;
     }
 
     // 2. Find the lane containing the source block
     const lane = this.viewStore.lanes.find((l) =>
-      l.blockIds.includes(fromPort.blockId)
+      l.blockIds.includes(portRef.blockId)
     );
 
-    if (!lane) {
-      console.warn('[ActionExecutor] Lane not found for block:', fromPort.blockId);
+    if (lane === undefined || lane === null) {
+      console.warn('[ActionExecutor] Lane not found for block:', portRef.blockId);
       return false;
     }
 
     // 3. Add the adapter block
     const adapterId = this.patchStore.addBlock(adapterType);
-    
+
     // Move to the correct lane
     this.viewStore.moveBlockToLane(adapterId, lane.id);
 
@@ -234,7 +243,7 @@ export class ActionExecutor {
     // Adapter blocks typically have 'in' input and 'out' output ports
     // For blocks like ClampSignal, Shaper, etc.
     const adapterBlock = this.patchStore.blocks.find((b) => b.id === adapterId);
-    if (!adapterBlock) {
+    if (adapterBlock === undefined || adapterBlock === null) {
       console.warn('[ActionExecutor] Adapter block not found after creation:', adapterId);
       return false;
     }
@@ -249,7 +258,10 @@ export class ActionExecutor {
       out.id === 'out' || out.id === 'output'
     );
 
-    if (!adapterInput || !adapterOutput) {
+    if (
+      (adapterInput === undefined || adapterInput === null) ||
+      (adapterOutput === undefined || adapterOutput === null)
+    ) {
       console.warn('[ActionExecutor] Adapter block missing expected ports:', {
         adapterType,
         inputs: adapterBlock.inputs.map((i) => i.id),
@@ -296,7 +308,7 @@ export class ActionExecutor {
   createTimeRoot(timeRootKind: 'Finite' | 'Cycle' | 'Infinite'): boolean {
     // Find the Time lane (Phase lane is the time lane in the current layouts)
     const timeLane = this.viewStore.lanes.find((lane) => lane.kind === 'Phase');
-    if (!timeLane) {
+    if (timeLane === undefined || timeLane === null) {
       console.warn('[ActionExecutor] Time lane not found');
       return false;
     }
@@ -318,9 +330,9 @@ export class ActionExecutor {
 
     // Add the new TimeRoot block
     const newBlockId = this.patchStore.addBlock(blockType);
-    
+
     // Ensure it's in the time lane
-    this.uiStore.root.viewStore.moveBlockToLane(newBlockId, timeLane.id);
+    this.viewStore.moveBlockToLane(newBlockId, timeLane.id);
 
     // Auto-publish to buses (handled by PatchStore.addBlock via processAutoBusConnections)
     // CycleTimeRoot auto-publishes 'phase' -> 'phaseA' and 'wrap' -> 'pulse'

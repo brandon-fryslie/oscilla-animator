@@ -1,4 +1,5 @@
 import type { BlockDefinition, ParamSchema } from './types';
+import { isNonEmptyString } from '../types/helpers';
 
 type BlockDefinitionInput = Omit<BlockDefinition, 'defaultParams'> & {
   paramSchema: ParamSchema[];
@@ -9,10 +10,10 @@ export function createBlock(
 ): BlockDefinition {
   const { paramSchema = [] } = definition;
 
-  if (!definition.type) {
+  if (!isNonEmptyString(definition.type)) {
     throw new Error('Block definition must have a type.');
   }
-  if (!definition.label) {
+  if (!isNonEmptyString(definition.label)) {
     throw new Error(`Block definition '${definition.type}' must have a label.`);
   }
 

@@ -8,7 +8,8 @@
  * Essential for publishing field-derived values to buses (which expect Signals).
  */
 
-import type { BlockCompiler, Field } from '../../types';
+import type { BlockCompiler, CompileCtx, RuntimeCtx, GeometryCache } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 type ReduceOp = 'avg' | 'max' | 'min' | 'sum' | 'first';
 
@@ -44,9 +45,9 @@ export const FieldReduceBlock: BlockCompiler = {
 
   compile({ inputs, params }) {
     const fieldArtifact = inputs.field;
-    const op = (params.op as ReduceOp) || 'avg';
+    const op = (typeof params.op === 'string' ? params.op : 'avg') as ReduceOp;
 
-    if (!fieldArtifact || fieldArtifact.kind !== 'Field:number') {
+    if (!isDefined(fieldArtifact) || fieldArtifact.kind !== 'Field:number') {
       return {
         signal: {
           kind: 'Error',
@@ -55,7 +56,7 @@ export const FieldReduceBlock: BlockCompiler = {
       };
     }
 
-    const fieldFn = fieldArtifact.value as Field<number>;
+    const fieldFn = fieldArtifact.value;
 
     // We need a domain to evaluate the field. The field function captures its domain
     // from the upstream block that created it. We'll evaluate with a reasonable count.
@@ -63,10 +64,18 @@ export const FieldReduceBlock: BlockCompiler = {
 
     // Create a signal that evaluates the field and reduces it
     // Note: At runtime, ctx contains time information
-    const signalFn = (_t: number, ctx: any) => {
+    const signalFn = (_t: number, _ctx: RuntimeCtx): number => {
       // Evaluate the field - use a default seed and get all elements
       // The field has captured its domain, so n here is max elements to retrieve
-      const values = fieldFn(0, 1000, ctx);
+      // Create a minimal CompileCtx for field evaluation
+      const geom: GeometryCache = {
+        get<K extends object, V>(_key: K, compute: () => V): V {
+          return compute();
+        },
+        invalidate() {},
+      };
+      const compileCtx: CompileCtx = { env: {}, geom };
+      const values = fieldFn(0, 1000, compileCtx);
       return reduceArray(values, op);
     };
 

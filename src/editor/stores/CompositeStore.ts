@@ -109,12 +109,12 @@ export class CompositeStore {
 
   instantiateComposite(compositeId: string, laneId: LaneId, _position: { x: number; y: number }): void {
     const composite = this.composites.find((c) => c.id === compositeId);
-    if (!composite) {
+    if (composite === undefined) {
       throw new Error(`Composite "${compositeId}" not found`);
     }
 
     const lane = this.root.viewStore.lanes.find((l) => l.id === laneId);
-    if (!lane) {
+    if (lane === undefined) {
       throw new Error(`Lane "${laneId}" not found for composite instantiation`);
     }
 
@@ -133,11 +133,11 @@ export class CompositeStore {
     for (const conn of composite.connections) {
       const fromId = idMap.get(conn.from.blockId);
       const toId = idMap.get(conn.to.blockId);
-      if (!fromId) {
+      if (fromId === undefined) {
         throw new Error(`Composite connection references unknown source block "${conn.from.blockId}"`);
       }
-      if (!toId) {
-        throw new Error(`Composite connection references unknown target block "${conn.from.blockId}"`);
+      if (toId === undefined) {
+        throw new Error(`Composite connection references unknown target block "${conn.to.blockId}"`);
       }
 
       this.root.patchStore.connect(fromId, conn.from.slotId, toId, conn.to.slotId);

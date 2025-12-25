@@ -2,7 +2,7 @@
  * PhaseClock Block Compiler
  *
  * Derived clock that transforms upstream time into phase [0,1].
- * Unlike the legacy PhaseClock, this block requires a time input from a TimeRoot.
+ * Requires a time input from a TimeRoot.
  *
  * Outputs:
  * - phase: Signal<phase> in [0,1] based on mode (loop/once/pingpong)
@@ -10,6 +10,7 @@
  */
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 type SignalNumber = (tMs: number, ctx: RuntimeCtx) => number;
 
@@ -27,22 +28,32 @@ export const PhaseClockBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     // Validate required input
-    if (!inputs.tIn) {
-      throw new Error('PhaseClock: tIn input required');
+    const tInArtifact = inputs.tIn;
+    if (!isDefined(tInArtifact)) {
+      return {
+        phase: { kind: 'Error', message: 'PhaseClock requires a tIn input' },
+        u: { kind: 'Error', message: 'PhaseClock requires a tIn input' },
+      };
     }
-    if (inputs.tIn.kind !== 'Signal:Time') {
-      throw new Error(`PhaseClock: tIn must be Signal<time>, got ${inputs.tIn.kind}`);
+    if (tInArtifact.kind !== 'Signal:Time') {
+      return {
+        phase: { kind: 'Error', message: `PhaseClock requires Signal<Time> tIn input, got ${tInArtifact.kind}` },
+        u: { kind: 'Error', message: `PhaseClock requires Signal<Time> tIn input, got ${tInArtifact.kind}` },
+      };
     }
 
     const periodSec = Number(params.period ?? 3.0);
-    const mode = String(params.mode ?? 'loop');
+    const mode = typeof params.mode === 'string' ? params.mode : 'loop';
 
     if (periodSec <= 0) {
-      throw new Error('PhaseClock: period must be > 0');
+      return {
+        phase: { kind: 'Error', message: 'PhaseClock: period must be > 0' },
+        u: { kind: 'Error', message: 'PhaseClock: period must be > 0' },
+      };
     }
 
     const periodMs = periodSec * 1000;
-    const tInSignal = inputs.tIn.value as SignalNumber;
+    const tInSignal = tInArtifact.value as SignalNumber;
 
     // Compute phase from upstream time
     const phaseSignal: SignalNumber = (tMs, ctx) => {

@@ -14,6 +14,39 @@ import type { Bus, Publisher, Listener } from '../types';
 // Test Helpers
 // =============================================================================
 
+/**
+ * Create canonical buses required for TimeRoot auto-publication.
+ * Matches the default buses from BusStore.createDefaultBuses().
+ */
+function createCanonicalBuses(): Bus[] {
+  return [
+    {
+      id: 'phaseA',
+      name: 'phaseA',
+      type: { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'primary' },
+      combineMode: 'last',
+      defaultValue: 0,
+      sortKey: 0,
+    },
+    {
+      id: 'pulse',
+      name: 'pulse',
+      type: { world: 'signal', domain: 'trigger', category: 'core', busEligible: true, semantics: 'pulse' },
+      combineMode: 'last',
+      defaultValue: false,
+      sortKey: 0,
+    },
+    {
+      id: 'energy',
+      name: 'energy',
+      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'energy' },
+      combineMode: 'sum',
+      defaultValue: 0,
+      sortKey: 0,
+    },
+  ];
+}
+
 function createTestContext(): CompileCtx {
   return {
     env: {},
@@ -29,15 +62,27 @@ function createTestContext(): CompileCtx {
  */
 function createFieldTestRegistry(): BlockRegistry {
   return {
-    // CycleTimeRoot - required for all patches
+    // CycleTimeRoot - required for all patches (includes all standard outputs)
     CycleTimeRoot: {
       type: 'CycleTimeRoot',
       inputs: [],
-      outputs: [{ name: 'phase', type: { kind: 'Signal:number' }, required: true }],
+      outputs: [
+        { name: 'systemTime', type: { kind: 'Signal:Time' }, required: true },
+        { name: 'cycleT', type: { kind: 'Signal:Time' }, required: true },
+        { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
+        { name: 'wrap', type: { kind: 'Event' }, required: true },
+        { name: 'cycleIndex', type: { kind: 'Signal:number' }, required: true },
+        { name: 'energy', type: { kind: 'Signal:number' }, required: true },
+      ],
       compile: ({ params }) => {
         const periodMs = (params.periodMs as number) ?? 3000;
         return {
-          phase: { kind: 'Signal:number', value: (t: number) => (t / periodMs) % 1 },
+          systemTime: { kind: 'Signal:Time', value: (t: number) => t },
+          cycleT: { kind: 'Signal:Time', value: (t: number) => t % periodMs },
+          phase: { kind: 'Signal:phase', value: (t: number) => (t / periodMs) % 1 },
+          wrap: { kind: 'Event', value: (t: number, lastT: number) => Math.floor(t / periodMs) > Math.floor(lastT / periodMs) },
+          cycleIndex: { kind: 'Signal:number', value: (t: number) => Math.floor(t / periodMs) },
+          energy: { kind: 'Signal:number', value: () => 1.0 },
         };
       },
     },
@@ -87,7 +132,8 @@ function createFieldTestRegistry(): BlockRegistry {
             value: {
               signal: (_t: number, _ctx: unknown) => {
                 // Evaluate field for 5 elements
-                const values = fieldFn(42, 5, { env: {}, geom: null as unknown as any });
+                const ctx = createTestContext();
+                const values = fieldFn(42, 5, ctx);
                 const sum = values.reduce((a, b) => a + b, 0);
                 return {
                   kind: 'group' as const,
@@ -133,7 +179,12 @@ function createFieldTestRegistry(): BlockRegistry {
           const bValues = bField(seed, n, ctx);
           const result: number[] = [];
           for (let i = 0; i < n; i++) {
-            result.push(aValues[i]! + bValues[i]!);
+            const aVal = aValues[i];
+            const bVal = bValues[i];
+            // Both arrays should have valid indices since we loop from 0 to n
+            if (aVal !== undefined && bVal !== undefined) {
+              result.push(aVal + bVal);
+            }
           }
           return result;
         };
@@ -171,7 +222,7 @@ describe('Field Bus Compilation', () => {
       {
         id: 'pub1',
         busId: 'fieldBus1',
-        from: { blockId: 'source1', slotId: 'field', dir: 'output' },
+        from: { blockId: 'source1', slotId: 'field', direction: 'output' },
         enabled: true,
         sortKey: 0,
       },
@@ -181,7 +232,7 @@ describe('Field Bus Compilation', () => {
       {
         id: 'list1',
         busId: 'fieldBus1',
-        to: { blockId: 'sink1', slotId: 'field', dir: 'input' },
+        to: { blockId: 'sink1', slotId: 'field', direction: 'input' },
         enabled: true,
       },
     ];
@@ -190,9 +241,10 @@ describe('Field Bus Compilation', () => {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
+      defaultSources: {},
     };
 
     const result = compilePatch(patch, createFieldTestRegistry(), 42 as Seed, createTestContext());
@@ -229,21 +281,22 @@ describe('Field Bus Compilation', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 0 },
-      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 1 },
+      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 1 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', direction: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
+      defaultSources: {},
     };
 
     const result = compilePatch(patch, createFieldTestRegistry(), 42 as Seed, createTestContext());
@@ -277,21 +330,22 @@ describe('Field Bus Compilation', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 10 },
-      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 20 }, // Wins
+      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 10 },
+      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 20 }, // Wins
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', direction: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
+      defaultSources: {},
     };
 
     const result = compilePatch(patch, createFieldTestRegistry(), 42 as Seed, createTestContext());
@@ -321,16 +375,17 @@ describe('Field Bus Compilation', () => {
     };
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', direction: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers: [],
       listeners,
+      defaultSources: {},
     };
 
     const result = compilePatch(patch, createFieldTestRegistry(), 42 as Seed, createTestContext());
@@ -362,21 +417,22 @@ describe('Field Bus Compilation', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 0 },
-      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 1 },
+      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 1 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', direction: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
+      defaultSources: {},
     };
 
     const result = compilePatch(patch, createFieldTestRegistry(), 42 as Seed, createTestContext());
@@ -410,21 +466,22 @@ describe('Field Bus Compilation', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 0 },
-      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 1 },
+      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 1 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', direction: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
+      defaultSources: {},
     };
 
     const result = compilePatch(patch, createFieldTestRegistry(), 42 as Seed, createTestContext());
@@ -458,21 +515,22 @@ describe('Field Bus Compilation', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 0 },
-      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 1 },
+      { id: 'pub1', busId: 'fieldBus1', from: { blockId: 'source1', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub2', busId: 'fieldBus1', from: { blockId: 'source2', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 1 },
     ];
 
     const listeners: Listener[] = [
-      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'fieldBus1', to: { blockId: 'sink1', slotId: 'field', direction: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [fieldBus],
+      buses: [...createCanonicalBuses(), fieldBus],
       publishers,
       listeners,
+      defaultSources: {},
     };
 
     const result = compilePatch(patch, createFieldTestRegistry(), 42 as Seed, createTestContext());
@@ -537,22 +595,23 @@ describe('Mixed Signal and Field Buses', () => {
     };
 
     const publishers: Publisher[] = [
-      { id: 'pub1', busId: 'phaseA', from: { blockId: 'phaseSource', slotId: 'phase', dir: 'output' }, enabled: true, sortKey: 0 },
-      { id: 'pub2', busId: 'positions', from: { blockId: 'fieldSource', slotId: 'field', dir: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub1', busId: 'phaseA', from: { blockId: 'phaseSource', slotId: 'phase', direction: 'output' }, enabled: true, sortKey: 0 },
+      { id: 'pub2', busId: 'positions', from: { blockId: 'fieldSource', slotId: 'field', direction: 'output' }, enabled: true, sortKey: 0 },
     ];
 
     const listeners: Listener[] = [
       // Sink listens to positions field bus
-      { id: 'list1', busId: 'positions', to: { blockId: 'sink1', slotId: 'field', dir: 'input' }, enabled: true },
+      { id: 'list1', busId: 'positions', to: { blockId: 'sink1', slotId: 'field', direction: 'input' }, enabled: true },
     ];
 
     const patch: CompilerPatch = {
       output: { blockId: 'sink1', port: 'program' },
       blocks,
       connections: [],
-      buses: [phaseBus, positionBus],
+      buses: [...createCanonicalBuses(), phaseBus, positionBus],
       publishers,
       listeners,
+      defaultSources: {},
     };
 
     const result = compilePatch(patch, registry, 42 as Seed, createTestContext());

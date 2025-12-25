@@ -12,6 +12,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useStore } from './stores';
 import { PRESET_LAYOUTS } from './laneLayouts';
 import { getAllMacroKeys, getMacroDisplayName } from './macros';
+import { isDefined } from './types/helpers';
 import './SettingsToolbar.css';
 
 const STARTUP_MACRO_KEY = 'oscilla-startup-macro';
@@ -95,14 +96,14 @@ function MenuItem({
 }) {
   return (
     <button
-      className={`dropdown-menu-item ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}`}
+      className={`dropdown-menu-item ${checked === true ? 'checked' : ''} ${disabled ? 'disabled' : ''}`}
       onClick={() => !disabled && onClick()}
       disabled={disabled}
     >
-      <span className="menu-item-check">{checked ? '✓' : ''}</span>
+      <span className="menu-item-check">{checked === true ? '✓' : ''}</span>
       <span className="menu-item-content">
         <span className="menu-item-label">{label}</span>
-        {description && <span className="menu-item-description">{description}</span>}
+        {isDefined(description) && <span className="menu-item-description">{description}</span>}
       </span>
     </button>
   );
@@ -266,7 +267,7 @@ function StartupMacroDropdown() {
 /**
  * Settings Toolbar component.
  */
-export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModalOpen, showHelpNudge, onDesignerView, onPerformanceView }: SettingsToolbarProps) => {
+export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModalOpen, showHelpNudge, onDesignerView, onPerformanceView }: SettingsToolbarProps): React.ReactElement => {
   const store = useStore();
   const currentLayout = store.viewStore.currentLayout;
 
@@ -294,13 +295,13 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
           <MenuItem
             label="Simple Mode"
             description="Fixed lane structure, guided workflow"
-            checked={!store.uiStore.settings.advancedLaneMode}
+            checked={store.uiStore.settings.advancedLaneMode === false}
             onClick={() => store.uiStore.setAdvancedLaneMode(false)}
           />
           <MenuItem
             label="Advanced Mode"
             description="Customize lanes freely"
-            checked={store.uiStore.settings.advancedLaneMode}
+            checked={store.uiStore.settings.advancedLaneMode === true}
             onClick={() => store.uiStore.setAdvancedLaneMode(true)}
             disabled={true}
           />
@@ -312,7 +313,7 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
           <MenuItem
             label="Auto-connect on drop"
             description="Wire obvious connections automatically"
-            checked={store.uiStore.settings.autoConnect}
+            checked={store.uiStore.settings.autoConnect === true}
             onClick={() => store.uiStore.setAutoConnect(!store.uiStore.settings.autoConnect)}
             disabled={true}
           />
@@ -321,19 +322,19 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
           <MenuItem
             label="Show type hints"
             description="Display port types on hover"
-            checked={store.uiStore.settings.showTypeHints}
+            checked={store.uiStore.settings.showTypeHints === true}
             onClick={() => store.uiStore.setShowTypeHints(!store.uiStore.settings.showTypeHints)}
           />
           <MenuItem
             label="Highlight compatible"
             description="Glow compatible ports when dragging"
-            checked={store.uiStore.settings.highlightCompatible}
+            checked={store.uiStore.settings.highlightCompatible === true}
             onClick={() => store.uiStore.setHighlightCompatible(!store.uiStore.settings.highlightCompatible)}
           />
           <MenuItem
             label="Warn before disconnect"
             description="Show confirmation when disconnecting"
-            checked={store.uiStore.settings.warnBeforeDisconnect}
+            checked={store.uiStore.settings.warnBeforeDisconnect === true}
             onClick={() => store.uiStore.setWarnBeforeDisconnect(!store.uiStore.settings.warnBeforeDisconnect)}
           />
         </Dropdown>
@@ -344,13 +345,13 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
           <MenuItem
             label="Filter by lane"
             description="Show blocks matching lane type"
-            checked={store.uiStore.settings.filterByLane}
+            checked={store.uiStore.settings.filterByLane === true}
             onClick={() => store.uiStore.setFilterByLane(!store.uiStore.settings.filterByLane)}
           />
           <MenuItem
             label="Filter by connection"
             description="Show blocks that can connect to selection"
-            checked={store.uiStore.settings.filterByConnection}
+            checked={store.uiStore.settings.filterByConnection === true}
             onClick={() => store.uiStore.setFilterByConnection(!store.uiStore.settings.filterByConnection)}
           />
           <MenuDivider />
@@ -358,7 +359,7 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
           <MenuItem
             label="Show all blocks"
             description="Always show full library"
-            checked={!store.uiStore.settings.filterByLane && !store.uiStore.settings.filterByConnection}
+            checked={store.uiStore.settings.filterByLane === false && store.uiStore.settings.filterByConnection === false}
             onClick={() => {
               store.uiStore.setFilterByLane(false);
               store.uiStore.setFilterByConnection(false);
@@ -403,7 +404,7 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
         )}
 
         <button
-          className={`toolbar-help-btn ${showHelpNudge ? 'nudge' : ''}`}
+          className={`toolbar-help-btn ${showHelpNudge === true ? 'nudge' : ''}`}
           onClick={() => onShowHelp?.()}
           title="Quick tour / Help"
         >

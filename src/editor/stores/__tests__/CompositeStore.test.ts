@@ -38,8 +38,8 @@ describe('Composite Validation', () => {
         connections: [
           {
             id: 'conn1',
-            from: { blockId: 'block1', slotId: 'value' },
-            to: { blockId: 'block2', slotId: 'value' },
+            from: { blockId: 'block1', slotId: 'value', direction: 'output' },
+            to: { blockId: 'block2', slotId: 'value', direction: 'input' },
           },
         ],
       };

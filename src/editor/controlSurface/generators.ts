@@ -39,7 +39,7 @@ export function generateSurfaceForMacro(
   blockIds: Map<string, string>
 ): ControlSurface | null {
   const generator = generators[macroType];
-  if (!generator) {
+  if (generator === undefined || generator === null) {
     // Return a default surface for unknown macros
     return generateDefaultSurface(macroType, blockIds);
   }

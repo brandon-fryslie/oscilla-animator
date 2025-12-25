@@ -6,6 +6,7 @@
  */
 
 import type { BlockCompiler, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 /**
  * Get the binary operation by name
@@ -43,7 +44,7 @@ export const FieldZipNumberBlock: BlockCompiler = {
     const fieldA = inputs.a;
     const fieldB = inputs.b;
 
-    if (!fieldA || fieldA.kind !== 'Field:number') {
+    if (!isDefined(fieldA) || fieldA.kind !== 'Field:number') {
       return {
         out: {
           kind: 'Error',
@@ -52,7 +53,7 @@ export const FieldZipNumberBlock: BlockCompiler = {
       };
     }
 
-    if (!fieldB || fieldB.kind !== 'Field:number') {
+    if (!isDefined(fieldB) || fieldB.kind !== 'Field:number') {
       return {
         out: {
           kind: 'Error',
@@ -61,10 +62,10 @@ export const FieldZipNumberBlock: BlockCompiler = {
       };
     }
 
-    const op = String(params.op ?? 'add');
+    const op = typeof params.op === 'string' ? params.op : 'add';
 
-    const fieldAFn = fieldA.value as Field<number>;
-    const fieldBFn = fieldB.value as Field<number>;
+    const fieldAFn = fieldA.value;
+    const fieldBFn = fieldB.value;
     const zipOp = getZipOperation(op);
 
     // Create zipped field
@@ -75,7 +76,7 @@ export const FieldZipNumberBlock: BlockCompiler = {
 
       const out = new Array<number>(count);
       for (let i = 0; i < count; i++) {
-        out[i] = zipOp(valuesA[i]!, valuesB[i]!);
+        out[i] = zipOp(valuesA[i], valuesB[i]);
       }
 
       return out;

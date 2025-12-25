@@ -42,6 +42,7 @@ import type { EditorEvent, EventHandler, EventOfType } from './types';
  */
 export class EventDispatcher {
   /** Type-specific handlers (keyed by event type) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private handlers = new Map<string, Set<EventHandler<any>>>();
 
   /** Global handlers that receive all events */

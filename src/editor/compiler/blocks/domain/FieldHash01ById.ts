@@ -7,7 +7,8 @@
  * Uses a simple hash function based on element ID and seed.
  */
 
-import type { BlockCompiler, Domain, Field } from '../../types';
+import type { BlockCompiler, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 /**
  * Simple hash function that produces a number in [0, 1)
@@ -39,7 +40,7 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const domainArtifact = inputs.domain;
-    if (!domainArtifact || domainArtifact.kind !== 'Domain') {
+    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
         u: {
           kind: 'Error',
@@ -48,7 +49,7 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const blockSeed = Number(params.seed ?? 0);
 
     // Create field that produces deterministic random per element
@@ -58,7 +59,7 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
       const combinedSeed = seed + blockSeed;
 
       for (let i = 0; i < count; i++) {
-        const elementId = domain.elements[i]!;
+        const elementId = domain.elements[i];
         out[i] = hash01(elementId, combinedSeed);
       }
 

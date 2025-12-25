@@ -10,7 +10,7 @@ import type { EditorEvent } from '../types';
 
 describe('EventDispatcher', () => {
   let dispatcher: EventDispatcher;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: unknown;
 
   beforeEach(() => {
     dispatcher = new EventDispatcher();
@@ -18,7 +18,7 @@ describe('EventDispatcher', () => {
   });
 
   afterEach(() => {
-    consoleErrorSpy.mockRestore();
+    (consoleErrorSpy as { mockRestore: () => void }).mockRestore();
   });
 
   describe('emit()', () => {
@@ -123,24 +123,48 @@ describe('EventDispatcher', () => {
   describe('on()', () => {
     it('returns unsubscribe function that works', () => {
       const handler = vi.fn();
-      const unsubscribe = dispatcher.on('CompileSucceeded', handler);
+      const unsubscribe = dispatcher.on('CompileFinished', handler);
 
-      dispatcher.emit({ type: 'CompileSucceeded', durationMs: 100 });
+      dispatcher.emit({
+        type: 'CompileFinished',
+        compileId: 'c1',
+        patchId: 'p1',
+        patchRevision: 1,
+        status: 'ok',
+        durationMs: 100,
+        diagnostics: [],
+      });
       expect(handler).toHaveBeenCalledTimes(1);
 
       unsubscribe();
 
-      dispatcher.emit({ type: 'CompileSucceeded', durationMs: 200 });
+      dispatcher.emit({
+        type: 'CompileFinished',
+        compileId: 'c2',
+        patchId: 'p1',
+        patchRevision: 2,
+        status: 'ok',
+        durationMs: 200,
+        diagnostics: [],
+      });
       expect(handler).toHaveBeenCalledTimes(1); // Not called again
     });
 
     it('allows same handler to be registered multiple times', () => {
       const handler = vi.fn();
 
-      dispatcher.on('CompileFailed', handler);
-      dispatcher.on('CompileFailed', handler);
+      dispatcher.on('CompileFinished', handler);
+      dispatcher.on('CompileFinished', handler);
 
-      dispatcher.emit({ type: 'CompileFailed', errorCount: 2 });
+      dispatcher.emit({
+        type: 'CompileFinished',
+        compileId: 'c3',
+        patchId: 'p1',
+        patchRevision: 3,
+        status: 'failed',
+        durationMs: 50,
+        diagnostics: [],
+      });
 
       expect(handler).toHaveBeenCalledTimes(1) // Sets deduplicate;
     });
@@ -163,12 +187,20 @@ describe('EventDispatcher', () => {
 
       dispatcher.emit({ type: 'PatchLoaded', blockCount: 1, connectionCount: 0 });
       dispatcher.emit({ type: 'PatchCleared' });
-      dispatcher.emit({ type: 'CompileSucceeded', durationMs: 50 });
+      dispatcher.emit({
+        type: 'CompileFinished',
+        compileId: 'c4',
+        patchId: 'p1',
+        patchRevision: 4,
+        status: 'ok',
+        durationMs: 50,
+        diagnostics: [],
+      });
 
       expect(events).toHaveLength(3);
       expect(events[0].type).toBe('PatchLoaded');
       expect(events[1].type).toBe('PatchCleared');
-      expect(events[2].type).toBe('CompileSucceeded');
+      expect(events[2].type).toBe('CompileFinished');
     });
 
     it('returns unsubscribe function that works', () => {

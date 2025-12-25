@@ -279,6 +279,81 @@
 }
 
 /* =============================================================================
+   Cyclic Mode Controls
+   ============================================================================= */
+
+.cyclic-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.cyclic-ring-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cyclic-pause-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: rgba(74, 158, 255, 0.9);
+  text-shadow: 0 0 4px rgba(74, 158, 255, 0.5);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.cyclic-readouts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cyclic-readout-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cyclic-readout-label {
+  font-size: 9px;
+  color: #666;
+  min-width: 50px;
+}
+
+.cyclic-readout-value {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 10px;
+  color: #2196f3;
+  font-weight: 600;
+}
+
+.cyclic-mode-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.cyclic-mode-badge.mode-loop {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196f3;
+  border: 1px solid rgba(33, 150, 243, 0.4);
+}
+
+.cyclic-mode-badge.mode-pingpong {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+  border: 1px solid rgba(255, 152, 0, 0.4);
+}
+
+/* =============================================================================
    Always-Present Controls
    ============================================================================= */
 

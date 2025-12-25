@@ -5,7 +5,8 @@
  * Elements are laid out in rows and columns from the origin point.
  */
 
-import type { BlockCompiler, Vec2, Domain } from '../../types';
+import type { BlockCompiler, Vec2 } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 type PositionField = (seed: number, n: number) => readonly Vec2[];
 
@@ -22,7 +23,7 @@ export const PositionMapGridBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const domainArtifact = inputs.domain;
-    if (!domainArtifact || domainArtifact.kind !== 'Domain') {
+    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
         pos: {
           kind: 'Error',
@@ -31,12 +32,12 @@ export const PositionMapGridBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const cols = Number(params.cols ?? 10);
     const spacing = Number(params.spacing ?? 20);
     const originX = Number(params.originX ?? 100);
     const originY = Number(params.originY ?? 100);
-    const order = String(params.order ?? 'rowMajor');
+    const order = typeof params.order === 'string' ? params.order : 'rowMajor';
 
     // Create the position field based on domain element count
     const positionField: PositionField = (_seed, n) => {

@@ -6,17 +6,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
 import { createCompilerService } from '../integration';
-import type { CompileStartedEvent, CompileFinishedEvent, EditorEvent } from '../../events/types';
-import { resetFeatureFlags, setFeatureFlags } from '../featureFlags';
+import type { EditorEvent } from '../../events/types';
 
 describe('Diagnostic Emission', () => {
   let store: RootStore;
   let events: EditorEvent[];
 
   beforeEach(() => {
-    // Reset feature flags to default state
-    resetFeatureFlags();
-
     store = new RootStore();
     events = [];
 
@@ -34,11 +30,11 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a simple block to trigger compilation
-      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
       service.compile();
 
-      const startedEvents = events.filter((e) => e.type === 'CompileStarted') as CompileStartedEvent[];
+      const startedEvents = events.filter((e) => e.type === 'CompileStarted');
       expect(startedEvents).toHaveLength(1);
 
       const event = startedEvents[0];
@@ -52,13 +48,13 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a simple block
-      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
       // Compile twice
       service.compile();
       service.compile();
 
-      const startedEvents = events.filter((e) => e.type === 'CompileStarted') as CompileStartedEvent[];
+      const startedEvents = events.filter((e) => e.type === 'CompileStarted');
       expect(startedEvents).toHaveLength(2);
 
       const compileId1 = startedEvents[0].compileId;
@@ -73,9 +69,9 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a valid complete patch (TimeRoot + Domain + Render)
-      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D',{});
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       // Connect: GridDomain.domain -> RenderInstances2D.domain (required)
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -84,16 +80,19 @@ describe('Diagnostic Emission', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
       expect(event.status).toBe('ok');
       expect(event.durationMs).toBeGreaterThanOrEqual(0);
-      expect(event.diagnostics).toEqual([]);
+      // Bus diagnostics (W_BUS_EMPTY, W_GRAPH_UNUSED_OUTPUT) may be present as warnings
+      // but there should be no errors for a successful compilation
+      const errorDiagnostics = event.diagnostics.filter((d: { severity: string }) => d.severity === 'error');
+      expect(errorDiagnostics).toEqual([]);
       expect(event.programMeta).toBeDefined();
-      // timelineHint should be a valid value (finite, cyclic, or infinite)
-      expect(['finite', 'cyclic', 'infinite']).toContain(event.programMeta?.timelineHint);
+      // timeModelKind should be a valid value (finite, cyclic, or infinite)
+      expect(['finite', 'cyclic', 'infinite']).toContain(event.programMeta?.timeModelKind);
       // timeRootKind should be present
       expect(event.programMeta?.timeRootKind).toBeDefined();
     });
@@ -101,12 +100,12 @@ describe('Diagnostic Emission', () => {
     it('should include compileId matching CompileStarted', () => {
       const service = createCompilerService(store);
 
-      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
       service.compile();
 
-      const startedEvents = events.filter((e) => e.type === 'CompileStarted') as CompileStartedEvent[];
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const startedEvents = events.filter((e) => e.type === 'CompileStarted');
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
 
       expect(startedEvents).toHaveLength(1);
       expect(finishedEvents).toHaveLength(1);
@@ -116,11 +115,11 @@ describe('Diagnostic Emission', () => {
     it('should measure compilation duration', () => {
       const service = createCompilerService(store);
 
-      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
@@ -131,9 +130,6 @@ describe('Diagnostic Emission', () => {
 
   describe('Diagnostic Conversion', () => {
     it('should convert E_TIME_ROOT_MISSING diagnostic when patch has no TimeRoot', () => {
-      // Enable requireTimeRoot flag for this test
-      setFeatureFlags({ requireTimeRoot: true });
-
       store = new RootStore();
       events = [];
 
@@ -144,11 +140,11 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a non-TimeRoot block (should trigger missing TimeRoot error)
-      store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
+      store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
@@ -163,9 +159,6 @@ describe('Diagnostic Emission', () => {
     });
 
     it('should convert E_TIME_ROOT_MULTIPLE diagnostic when multiple TimeRoots exist', () => {
-      // Enable requireTimeRoot flag for this test
-      setFeatureFlags({ requireTimeRoot: true });
-
       store = new RootStore();
       events = [];
 
@@ -176,12 +169,12 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add two TimeRoot blocks (should trigger multiple TimeRoot error)
-      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
-      store.patchStore.addBlock('FiniteTimeRoot',{ durationMs: 5000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('FiniteTimeRoot', { durationMs: 5000 });
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
@@ -197,15 +190,13 @@ describe('Diagnostic Emission', () => {
   });
 
   describe('ProgramMeta', () => {
-    it('should include timelineHint and timeRootKind in programMeta on success', () => {
-      // With requireTimeRoot: false (default), compiler should still infer from TimeRoot if present
-      // This test verifies TimeRoot inference works correctly
+    it('should include timeModelKind and timeRootKind in programMeta on success', () => {
       const service = createCompilerService(store);
 
       // Create a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D',{});
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       // Connect domain and positions
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -213,13 +204,13 @@ describe('Diagnostic Emission', () => {
 
       service.compile();
 
-      const finishedEvents = events.filter((e) => e.type === 'CompileFinished') as CompileFinishedEvent[];
+      const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
 
       const event = finishedEvents[0];
       expect(event.programMeta).toBeDefined();
       // With TimeRoot present, should correctly infer cyclic time
-      expect(event.programMeta?.timelineHint).toBe('cyclic');
+      expect(event.programMeta?.timeModelKind).toBe('cyclic');
       // timeRootKind should match the block type
       expect(event.programMeta?.timeRootKind).toBe('CycleTimeRoot');
     });

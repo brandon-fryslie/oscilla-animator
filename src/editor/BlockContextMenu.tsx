@@ -25,7 +25,7 @@ export const BlockContextMenu = observer(() => {
 
   // Close menu when clicking outside
   useEffect(() => {
-    if (!blockContextMenu.isOpen) return;
+    if (blockContextMenu.isOpen === false) return;
 
     const handleClick = (e: MouseEvent) => {
       console.log("clicked menu")
@@ -57,7 +57,7 @@ export const BlockContextMenu = observer(() => {
     };
   }, [blockContextMenu.isOpen, store]);
 
-  if (!blockContextMenu.isOpen || !blockContextMenu.blockId) {
+  if (blockContextMenu.isOpen === false || blockContextMenu.blockId === undefined || blockContextMenu.blockId === null) {
     return null;
   }
 
@@ -78,7 +78,7 @@ export const BlockContextMenu = observer(() => {
   // Group by subcategory for better organization
   const blocksBySubcategory = compatibleBlocks.reduce((acc, def) => {
     const subcategory = def.subcategory ?? 'Other';
-    if (!acc[subcategory]) {
+    if (acc[subcategory] === undefined) {
       acc[subcategory] = [];
     }
     acc[subcategory].push(def);

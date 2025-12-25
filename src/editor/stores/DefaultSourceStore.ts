@@ -11,8 +11,7 @@
  * @see design-docs/10-Refactor-for-UI-prep/14-RemoveParams.md
  */
 import { makeObservable, observable, action } from 'mobx';
-import type { DefaultSourceState, TypeDesc, UIControlHint, Slot, BlockId, SlotWorld } from '../types';
-import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
+import type { DefaultSourceState, TypeDesc, UIControlHint, Slot, BlockId, SlotWorld, SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import type { RootStore } from './RootStore';
 
 /**

@@ -5,7 +5,8 @@
  * Takes a Domain and produces Field<number>.
  */
 
-import type { BlockCompiler, Domain, Field } from '../../types';
+import type { BlockCompiler, Field } from '../../types';
+import { isDefined } from '../../../types/helpers';
 
 export const FieldConstNumberBlock: BlockCompiler = {
   type: 'FieldConstNumber',
@@ -20,7 +21,7 @@ export const FieldConstNumberBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const domainArtifact = inputs.domain;
-    if (!domainArtifact || domainArtifact.kind !== 'Domain') {
+    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
         out: {
           kind: 'Error',
@@ -29,13 +30,13 @@ export const FieldConstNumberBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value as Domain;
+    const domain = domainArtifact.value;
     const value = Number(params.value);
 
     // Create constant field that returns the same value for all elements
     const field: Field<number> = (_seed, n) => {
       const count = Math.min(n, domain.elements.length);
-      return new Array(count).fill(value);
+      return Array<number>(count).fill(value);
     };
 
     return {

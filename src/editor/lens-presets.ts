@@ -35,7 +35,7 @@ export const LENS_PRESET_SNAP: LensDefinition = {
  */
 export const LENS_PRESET_SMOOTH: LensDefinition = {
   type: 'slew',
-  params: { rate: 2.0 },
+  params: { riseMs: 120, fallMs: 120 },
 };
 
 /**
@@ -123,7 +123,7 @@ export const LENS_PRESET_SAFE_UNIT: LensDefinition = {
  */
 export const LENS_PRESET_DEADZONE_5PCT: LensDefinition = {
   type: 'deadzone',
-  params: { threshold: 0.05 },
+  params: { width: 0.05 },
 };
 
 /**
@@ -131,7 +131,7 @@ export const LENS_PRESET_DEADZONE_5PCT: LensDefinition = {
  */
 export const LENS_PRESET_DEADZONE_10PCT: LensDefinition = {
   type: 'deadzone',
-  params: { threshold: 0.1 },
+  params: { width: 0.1 },
 };
 
 /**
@@ -154,8 +154,8 @@ export const LENS_PRESET_BIPOLAR: LensDefinition = {
  * Offset Half preset - shift values up by 0.5 (center around 0.5).
  */
 export const LENS_PRESET_OFFSET_HALF: LensDefinition = {
-  type: 'offset',
-  params: { amount: 0.5 },
+  type: 'scale',
+  params: { scale: 1, offset: 0.5 },
 };
 
 // =============================================================================
@@ -341,10 +341,10 @@ export function getLensPresetsByCategory(
  */
 export function createLensFromPreset(presetId: string): LensDefinition | null {
   const preset = getLensPreset(presetId);
-  if (!preset) return null;
+  if (preset === null || preset === undefined) return null;
   // Return a copy to prevent accidental mutation
   return {
     type: preset.lens.type,
-    params: { ...(preset.lens.params || {}) },
+    params: { ...(preset.lens.params !== undefined && preset.lens.params !== null ? preset.lens.params : {}) },
   };
 }

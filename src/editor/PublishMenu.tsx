@@ -14,6 +14,7 @@ import type { RootStore } from './stores';
 import type { Bus, TypeDesc, PortRef, Publisher, Block, Slot } from './types';
 import { SLOT_TYPE_TO_TYPE_DESC, isDirectlyCompatible } from './types';
 import { BusCreationDialog } from './BusCreationDialog';
+import { isDefined } from './types/helpers';
 import './PublishMenu.css';
 
 interface PublishMenuProps {
@@ -74,7 +75,7 @@ export const PublishMenu = observer((props: PublishMenuProps) => {
   }
 
   const portTypeDesc = SLOT_TYPE_TO_TYPE_DESC[slot.type];
-  if (!portTypeDesc) {
+  if (!isDefined(portTypeDesc)) {
     console.warn(`No TypeDesc found for slot type: ${slot.type}`);
     return null;
   }
@@ -197,7 +198,7 @@ export const PublishMenu = observer((props: PublishMenuProps) => {
             <div className="publish-menu-separator" />
             {currentPublishers.map((publisher: Publisher) => {
               const bus = store.busStore.buses.find((b: Bus) => b.id === publisher.busId);
-              const busName = bus?.name || 'Unknown';
+              const busName = isDefined(bus?.name) ? bus.name : 'Unknown';
               return (
                 <div
                   key={publisher.id}

@@ -1,95 +1,106 @@
-# Vision: What This System Is
+## TimeRoot, TimeModel, and TimeCtx
 
-## Core Identity
+A patch declares exactly one **TimeRoot**. TimeRoot does not generate time — it declares the *time contract* of the patch.
 
-This system is **not**:
-- A timeline editor with looping bolted on
-- A node graph that happens to animate things
-- A generative toy with randomization
+### TimeModel (Compile‑time contract)
 
-This system **is**:
+`TimeModel` is a static declaration produced by the compiler. It describes what kind of time the program is authored against.
 
-> **A deterministic, continuously-running visual instrument where time is explicit, topology is declared, and behavior emerges from signal flow rather than playback tricks.**
+```ts
+type TimeModel =
+  | { kind: 'finite'; durationMs: number }
+  | { kind: 'infinite' };
+```
 
-## The Organizing Principle
+Meaning:
 
-**Animations are not timelines. They are living systems that happen to be observed over time.**
+- `finite(durationMs)`  
+  The patch has a meaningful authored duration.  
+  Exporters, cue systems, and timeline UIs may reference this duration.  
+  Playback may still loop or window the view, but the program itself is finite.
 
-Everything in this architecture aligns with that statement:
-- Buses replace wires for shared energy, phase, and intent
-- Lazy Fields enable scalable per-element computation without jank
-- Composites remain opaque for abstraction without flattening
-- TimeRoot provides explicit declaration of "what time means here"
+- `infinite()`  
+  The patch has no end.  
+  There is no canonical duration.  
+  Playback UI presents a movable *time window* for viewing or recording.
 
-The looping system is not a feature. It is the organizing principle of the entire runtime.
+**TimeModel is immutable during execution.**  
+Changing it recompiles the patch.
 
-## Why This Matters
+---
 
-Before TimeRoot, the system had implicit time:
-- The player wrapped `t`
-- PhaseClock wrapped `t` again
-- Blocks quietly transformed time
-- UI pretended everything had a "duration"
+### TimeCtx (Runtime input)
 
-This led to:
-- Accidental loops
-- Broken scrubbing
-- Cut-off animations
-- No way to reason globally about behavior
+`TimeCtx` is what actually flows into the program every frame.
 
-**Time topology is now declared, not inferred.**
+```ts
+interface TimeCtx {
+  t: number;        // Unbounded, monotonically increasing time in ms
+  dt: number;       // Delta time
+  seed: number;    // Deterministic seed
+}
+```
 
-Finite / Cycle / Infinite are not modes - they are contracts.
+Rules:
 
-## The Three Pillars
+- `t` never wraps
+- `t` never resets when looping playback
+- `t` is never clamped by TimeModel
 
-### 1. Buses
-- Establish shared intent
-- Remove brittle wiring
-- Allow many-to-many influence
-- Mirror audio sends/returns
+TimeModel constrains **how time is interpreted**, not how time flows.
 
-### 2. Lazy Fields
-- Allow per-element identity
-- Make large systems feasible
-- Enable hot swaps without recompute storms
-- Preserve determinism
+---
 
-### 3. TimeRoot
-- Stabilizes evaluation order
-- Defines loop closure rules
-- Enables no-jank edits
-- Makes export sane
+### Cycles are derived, not roots
 
-Together they produce something rare: **a system where complexity scales horizontally without collapsing into unpredictability.**
+Cycles are created by **CycleSpecs** layered on top of `TimeCtx.t`.
 
-This is the difference between "generative chaos" and structured emergence.
+A CycleSpec produces:
 
-## Design Consequences
+- phase signals (0..1)
+- pulse events
+- energy envelopes
 
-### No-Jank Live Editing
-Because time topology is stable, fields are lazy, identities are preserved, and evaluation sinks are explicit, you get for free:
-- Hot swapping blocks
-- Changing loop duration without resets
-- Inserting feedback without visual tearing
-- Editing while running
+Example:
 
-No hacks. No fallbacks. The system is always live.
+```ts
+CycleSpec {
+  periodMs: 4000
+  phaseBus: "phaseA"
+  pulseBus: "pulse"
+  energyBus: "energy"
+}
+```
 
-### Export Is Not a Compromise
-Export used to be "record whatever the player is doing." Now it is a formal evaluation of the program under a declared time model. That's why:
-- Cycle exports can be truly seamless
-- SVG exports can be honest about approximation
-- Infinite systems can be sampled meaningfully
-- Determinism is guaranteed
+Multiple CycleSpecs may coexist.  
+They all read from the same unbounded `t`.
 
-Export becomes **another view of the same program, not a special case.**
+---
 
-## Success Criteria
+### Player responsibility
 
-You know this architecture worked if:
-- Users let patches run for hours
-- People share systems, not clips
-- Edits feel playful, not risky
-- Complexity grows without collapse
-- You don't need to redesign time again
+The Player never alters `t`.
+
+It may:
+- loop the *view*
+- ping‑pong the *view*
+- window the *view*
+- record a window
+
+But the program always sees the same absolute time axis.
+
+This is what makes:
+- nested cycles
+- seamless exports
+- no‑jank hot‑swap
+- deterministic replay  
+possible.
+
+Do not confuse:
+- **TimeModel** → what kind of time this patch is
+- **TimeCtx** → the actual time flowing through the system
+- **Cycles** → derived oscillators layered on top
+
+TimeRoot selects TimeModel.  
+Player selects how TimeCtx is presented.  
+Nothing ever wraps time.

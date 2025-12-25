@@ -97,8 +97,8 @@ function ConceptsPage() {
       </p>
       <h3>Fields</h3>
       <p>
-        A <strong>Field</strong> is a value that varies per element. Instead of saying “all particles start at x = 200”, you
-        say “each particle has its own start position inside this region, or at some radial distance, with jitter”.
+        A <strong>Field</strong> is a value that varies per element. Instead of saying "all particles start at x = 200", you
+        say "each particle has its own start position inside this region, or at some radial distance, with jitter".
       </p>
       <p>
         In the kernel, a Field is a function:
@@ -129,8 +129,8 @@ function ConceptsPage() {
         <li>raw time <code>tLocal</code> since the phase started.</li>
       </ul>
       <p>
-        This lets you write animation logic that thinks in terms of “where in the entrance are we?” rather than “what is the
-        absolute time in milliseconds?”.
+        This lets you write animation logic that thinks in terms of "where in the entrance are we?" rather than "what is the
+        absolute time in milliseconds?".
       </p>
       <h3>Programs and Render Trees</h3>
       <p>
@@ -138,8 +138,8 @@ function ConceptsPage() {
         a <strong>RenderTree</strong>.
       </p>
       <p>
-        The RenderTree is a nested structure of groups, shapes, and effects that maps neatly onto SVG. Programs may also expose
-        <strong>timeline hints</strong> so the player can present finite shots and ambient loops in a friendly way.
+        The RenderTree is a nested structure of groups, shapes, and effects that maps neatly onto SVG. Time topology comes from
+        the TimeRoot, which produces a TimeModel for the UI and runtime.
       </p>
     </div>
   );
@@ -214,7 +214,7 @@ function RoadmapPage() {
       <ul>
         <li>
           <strong>Richer ambient loops:</strong> better primitives and presets for multi-scale looping, so animations can run for a
-          long time while still “rhyming”.
+          long time while still "rhyming".
         </li>
         <li>
           <strong>More compositors:</strong> global post-effects that can be layered onto any program without changing the core logic.
@@ -297,10 +297,6 @@ function BlocksCompositesPage() {
       <p>
         <strong>Composite</strong> blocks wrap a small internal graph of primitives into a single, reusable unit with its own parameters
         and ports. They help keep complex patches readable.
-      </p>
-      <p>
-        In the current editor, some &quot;legacy-composite&quot; blocks still exist while the system moves toward explicit composite
-        definitions. These act like composites in the UI but are backed by older code.
       </p>
       <p>
         Over time, more behaviors will be expressed as composites, making it easier to:
@@ -510,9 +506,6 @@ function PreviewPage() {
           <strong>Scrubber</strong> – scrub through time, including into future phases.
         </li>
         <li>
-          <strong>Loop mode</strong> – choose between looping, ping-pong, or single-shot behavior.
-        </li>
-        <li>
           <strong>Speed</strong> – multiply the effective time speed (slow down or speed up).
         </li>
         <li>
@@ -520,8 +513,7 @@ function PreviewPage() {
         </li>
       </ul>
       <p>
-        For programs that expose timeline hints, the Preview shows whether the animation is a finite shot or an infinite/ambient
-        loop, and can display structural cue points.
+        The Preview reflects the active TimeModel (finite, cyclic, or infinite) and can display structural cue points.
       </p>
     </div>
   );
@@ -652,7 +644,7 @@ export interface HelpPanelProps {
   onPopOut: () => void; // Open in larger modal
 }
 
-export const HelpPanel = ({ topicId, collapsed, onToggleCollapse, onNavigate, onRetakeTour, onPopOut }: HelpPanelProps) => {
+export const HelpPanel = ({ topicId, collapsed, onToggleCollapse, onNavigate, onRetakeTour, onPopOut }: HelpPanelProps): React.ReactElement => {
   const topics = useMemo(() => buildTopics(onRetakeTour), [onRetakeTour]);
 
   // Build flat map of all topics
@@ -736,7 +728,7 @@ export const HelpPanel = ({ topicId, collapsed, onToggleCollapse, onNavigate, on
   );
 };
 
-export function HelpCenterModal({ isOpen, initialTopicId = 'overview', onClose, onRetakeTour }: HelpCenterProps) {
+export function HelpCenterModal({ isOpen, initialTopicId = 'overview', onClose, onRetakeTour }: HelpCenterProps): React.ReactElement | null {
   const topics = useMemo(() => buildTopics(onRetakeTour), [onRetakeTour]);
   const [activeId, setActiveId] = useState<HelpCenterTopicId>(initialTopicId);
 
@@ -800,4 +792,3 @@ export function HelpCenterModal({ isOpen, initialTopicId = 'overview', onClose, 
     </div>
   );
 }
-

@@ -36,7 +36,7 @@ interface RenderCtx {
 // =============================================================================
 
 export class SvgRenderer {
-  private svg: SVGSVGElement;
+  private readonly svg: SVGSVGElement;
   private nodeMap = new Map<string, SVGElement>();
   private usedIds = new Set<string>();
 
@@ -57,7 +57,7 @@ export class SvgRenderer {
 
     // Ensure root group exists
     let root = this.nodeMap.get('__root__') as SVGGElement | undefined;
-    if (!root) {
+    if (root == null) {
       root = document.createElementNS(SVG_NS, 'g');
       root.setAttribute(ID_ATTR, '__root__');
       this.svg.appendChild(root);
@@ -77,7 +77,7 @@ export class SvgRenderer {
    */
   clear(): void {
     const root = this.nodeMap.get('__root__');
-    if (root) {
+    if (root != null) {
       root.innerHTML = '';
     }
     this.nodeMap.clear();
@@ -101,7 +101,7 @@ export class SvgRenderer {
     let el = this.nodeMap.get(node.id);
 
     // Create element if it doesn't exist
-    if (!el) {
+    if (el === null || el === undefined) {
       el = this.createElement(node);
       el.setAttribute(ID_ATTR, node.id);
       this.nodeMap.set(node.id, el);
@@ -134,7 +134,7 @@ export class SvgRenderer {
     const existingChildren = Array.from(parent.children);
     for (const child of existingChildren) {
       const childId = child.getAttribute(ID_ATTR);
-      if (childId && childId !== '__root__' && !childIds.includes(childId)) {
+      if (childId !== null && childId !== '' && childId !== '__root__' && !childIds.includes(childId)) {
         // Will be cleaned up in cleanup phase
       }
     }
@@ -146,13 +146,13 @@ export class SvgRenderer {
 
     // Reorder children to match tree order
     for (let i = 0; i < children.length; i++) {
-      const expectedId = children[i]!.id;
+      const expectedId = children[i].id;
       const el = this.nodeMap.get(expectedId);
-      if (el && el.parentNode === parent) {
+      if (el !== null && el !== undefined && el.parentNode === parent) {
         const currentIndex = Array.from(parent.children).indexOf(el);
         if (currentIndex !== i) {
           const refNode = parent.children[i];
-          if (refNode) {
+          if (refNode !== null && refNode !== undefined) {
             parent.insertBefore(el, refNode);
           } else {
             parent.appendChild(el);
@@ -184,7 +184,7 @@ export class SvgRenderer {
         const elStyle = (el as unknown as ElementCSSInlineStyle).style;
         elStyle.transform = cssTransform;
         elStyle.transformStyle = 'preserve-3d';
-        if (effect.transform.perspective) {
+        if (effect.transform.perspective !== null && effect.transform.perspective !== undefined) {
           elStyle.perspective = `${effect.transform.perspective}px`;
         }
       }
@@ -195,14 +195,14 @@ export class SvgRenderer {
       }
 
       // Apply accumulated transform and opacity to group wrapper
-      if (transform) {
+      if (transform !== '') {
         el.setAttribute('transform', transform);
       }
       el.setAttribute('opacity', String(opacity));
     }
 
     if (node.kind === 'group') {
-      if (transform) {
+      if (transform !== '') {
         el.setAttribute('transform', transform);
       }
       el.setAttribute('opacity', String(opacity));
@@ -216,7 +216,7 @@ export class SvgRenderer {
       applyStyle(el, node.style, opacity);
 
       // Apply transform
-      if (transform) {
+      if (transform !== '') {
         el.setAttribute('transform', transform);
       }
     }
@@ -288,19 +288,19 @@ function applyStyle(el: SVGElement, style: Style | undefined, ctxOpacity: number
   el.setAttribute('stroke-width', String(strokeWidth));
   el.setAttribute('opacity', String(opacity));
 
-  if (style?.strokeLinecap) {
+  if (style?.strokeLinecap !== undefined) {
     el.setAttribute('stroke-linecap', style.strokeLinecap);
   }
-  if (style?.strokeLinejoin) {
+  if (style?.strokeLinejoin !== undefined) {
     el.setAttribute('stroke-linejoin', style.strokeLinejoin);
   }
-  if (style?.strokeDasharray) {
+  if (style?.strokeDasharray !== undefined && style?.strokeDasharray !== '') {
     el.setAttribute('stroke-dasharray', style.strokeDasharray);
   }
   if (style?.strokeDashoffset !== undefined) {
     el.setAttribute('stroke-dashoffset', String(style.strokeDashoffset));
   }
-  if (style?.filter) {
+  if (style?.filter !== undefined && style?.filter !== '') {
     el.setAttribute('filter', style.filter);
   }
 }
@@ -320,7 +320,7 @@ export function transform2dToSvg(t: Transform2D): string {
     parts.push(`translate(${ox}, ${oy})`);
   }
 
-  if (t.translate) {
+  if (t.translate !== undefined && t.translate !== null) {
     parts.push(`translate(${t.translate.x}, ${t.translate.y})`);
   }
 
@@ -349,11 +349,11 @@ export function transform2dToSvg(t: Transform2D): string {
 export function transform3dToCss(t: Transform3D): string {
   const parts: string[] = [];
 
-  if (t.translate) {
+  if (t.translate !== undefined && t.translate !== null) {
     parts.push(`translate3d(${t.translate.x}px, ${t.translate.y}px, ${t.translate.z}px)`);
   }
 
-  if (t.rotate) {
+  if (t.rotate !== undefined && t.rotate !== null) {
     if (t.rotate.x !== 0) parts.push(`rotateX(${t.rotate.x}deg)`);
     if (t.rotate.y !== 0) parts.push(`rotateY(${t.rotate.y}deg)`);
     if (t.rotate.z !== 0) parts.push(`rotateZ(${t.rotate.z}deg)`);
@@ -374,8 +374,8 @@ export function transform3dToCss(t: Transform3D): string {
  * Combine two transform strings.
  */
 function combineTransform(a: string, b: string): string {
-  if (!a) return b;
-  if (!b) return a;
+  if (a === '') return b;
+  if (b === '') return a;
   return `${a} ${b}`;
 }
 

@@ -2,47 +2,110 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import functional from 'eslint-plugin-functional'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+const criticalPathPatterns = [
+  'src/editor/compiler/**',
+  'src/editor/stores/**',
+  'src/editor/runtime/**',
+  'src/editor/lenses/**',
+  'src/editor/kernel/**',
+  'src/editor/diagnostics/**',
+]
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', '.worktrees', '.git', 'worktree']),
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-    ],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+      parserOptions: {
+        tsconfigRootDir: __dirname,
+        project: ['./tsconfig.app.json', './tsconfig.node.json'],
+      },
     },
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.recommended,
+      tseslint.configs.recommendedTypeChecked,
+      reactHooks.configs.flat.recommended,
+      reactRefresh.configs.vite,
+    ],
     rules: {
-      // Allow explicit any (legacy code uses this)
-      '@typescript-eslint/no-explicit-any': 'off',
-      // Allow unused vars with underscore prefix
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['error', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
       }],
-      // Allow @ts-ignore comments
       '@typescript-eslint/ban-ts-comment': 'off',
-      // Allow empty interfaces
       '@typescript-eslint/no-empty-object-type': 'off',
-      // Allow case declarations (used in switch statements)
+      '@typescript-eslint/consistent-type-imports': ['error', {
+        prefer: 'type-imports',
+        disallowTypeAnnotations: false,
+      }],
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/explicit-module-boundary-types': 'warn',
+      '@typescript-eslint/strict-boolean-expressions': 'warn',
       'no-case-declarations': 'off',
-      // Allow let for potentially reassignable vars
       'prefer-const': 'warn',
-      // Downgrade React hooks warnings
       'react-hooks/exhaustive-deps': 'warn',
-      // Allow setState in effects (MobX patterns)
       'react-hooks/set-state-in-effect': 'off',
-      // Allow manual memoization patterns
       'react-hooks/preserve-manual-memoization': 'off',
-      // Allow non-component exports (store exports)
       'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: criticalPathPatterns,
+    plugins: {
+      functional,
+    },
+    languageOptions: {
+      parserOptions: {
+        tsconfigRootDir: __dirname,
+        project: ['./tsconfig.app.json', './tsconfig.node.json'],
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/strict-boolean-expressions': ['error', {
+        allowString: false,
+        allowNumber: false,
+        allowNullableObject: false,
+      }],
+      '@typescript-eslint/prefer-readonly': ['error', {
+        onlyInlineLambdas: true,
+      }],
+      '@typescript-eslint/consistent-type-exports': 'error',
+      '@typescript-eslint/explicit-function-return-type': ['error', {
+        allowExpressions: true,
+        allowTypedFunctionExpressions: true,
+      }],
+      '@typescript-eslint/explicit-module-boundary-types': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-call': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
+      // Detect actual mutations instead of requiring readonly type annotations
+      // TODO: Enable after reviewing violations
+      'functional/immutable-data': 'warn',
+      '@typescript-eslint/consistent-type-imports': ['error', {
+        prefer: 'type-imports',
+        disallowTypeAnnotations: false,
+      }],
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      }],
     },
   },
 ])

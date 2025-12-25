@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RootStore } from '../RootStore';
 import type { WireAddedEvent, WireRemovedEvent, BlockReplacedEvent } from '../../events/types';
+import type { BlockDefinition } from '../../blocks';
 
 describe('PatchStore - Wire Events', () => {
   let root: RootStore;
@@ -56,19 +57,24 @@ describe('PatchStore - Wire Events', () => {
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
-    it('does NOT emit WireAdded for connections in macro expansion (bulk operation)', () => {
+    it('emits WireAdded for each connection in macro expansion', () => {
       const listener = vi.fn();
       root.events.on('WireAdded', listener);
 
       // Load a macro that creates multiple connections
-      // The 'PulsingGrid' macro creates 3 connections
+      // The 'PulsingGrid' macro creates 4-5 connections typically
       root.patchStore.addBlock('macro:pulsingGrid');
 
-      // Macro expansion is a bulk operation - it bypasses individual connection events
-      // for performance. This is intentional: macros replace the entire patch,
-      // so emitting N individual WireAdded events would be wasteful.
-      // Instead, a GraphCommitted event should be used for bulk changes.
-      expect(listener).not.toHaveBeenCalled();
+      // Should emit multiple WireAdded events (at least 3 connections in pulsing grid)
+      expect(listener).toHaveBeenCalled();
+      const callCount = listener.mock.calls.length;
+      expect(callCount).toBeGreaterThanOrEqual(3);
+
+      // All events should be WireAdded
+      listener.mock.calls.forEach((call) => {
+        const event = call[0] as WireAddedEvent;
+        expect(event.type).toBe('WireAdded');
+      });
     });
 
     it('includes valid connection data in event payload', () => {
@@ -180,14 +186,16 @@ describe('PatchStore - Wire Events', () => {
       const listener = vi.fn();
       root.events.on('WireRemoved', listener);
 
-      const block1 = root.patchStore.addBlock('FieldConstNumber');
-      const block2 = root.patchStore.addBlock('FieldConstNumber');
-      const block3 = root.patchStore.addBlock('FieldConstNumber');
+      // Use Oscillator blocks (output: 'out') and AddSignal (inputs: 'a', 'b')
+      // to allow multiple connections without input conflicts
+      const block1 = root.patchStore.addBlock('Oscillator');
+      const block2 = root.patchStore.addBlock('Oscillator');
+      const block3 = root.patchStore.addBlock('AddSignal');
 
-      // Create 3 connections involving block2
-      root.patchStore.connect(block1, 'value', block2, 'value');
-      root.patchStore.connect(block2, 'value', block3, 'value');
-      root.patchStore.connect(block1, 'value', block3, 'value');
+      // Create 3 connections: 2 involving block2, 1 not
+      root.patchStore.connect(block1, 'out', block2, 'freq');  // block2 involved
+      root.patchStore.connect(block2, 'out', block3, 'a');     // block2 involved
+      root.patchStore.connect(block1, 'out', block3, 'b');     // block2 NOT involved
 
       expect(root.patchStore.connections.length).toBe(3);
 
@@ -344,7 +352,8 @@ describe('PatchStore - BlockReplaced Events', () => {
       const oldBlockId = root.patchStore.addBlock('FieldConstNumber');
 
       // Try to replace with invalid block type
-      root.patchStore.replaceBlock(oldBlockId, 'NonExistentBlockType' as any);
+      // Using a block type that doesn't exist in the registry
+      root.patchStore.replaceBlock(oldBlockId, 'NonExistentBlockType' as BlockDefinition['type']);
 
       // Event should NOT be emitted
       expect(listener).not.toHaveBeenCalled();

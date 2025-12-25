@@ -1,73 +1,76 @@
-# React + TypeScript + Vite
+# Oscilla Animator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Visual animation editor with a node-based patch bay interface.
 
-Currently, two official plugins are available:
+> **Animations are not timelines. They are living systems observed over time.**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Philosophy
 
-## React Compiler
+Oscilla treats animation as signal flow, not keyframe manipulation. Patches define time topology through TimeRoots, and the player observes—never controls—the time axis.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Signals** are time-indexed values evaluated once per frame
+- **Fields** are per-element lazy expressions evaluated at render sinks
+- **Events** are discrete triggers with edge detection
+- **Buses** connect blocks through typed publish/subscribe channels
 
-## Expanding the ESLint configuration
+## Quick Start
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
+just dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Commands
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+All commands run through `just`:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Command | Description |
+|---------|-------------|
+| `just dev` | Start development server |
+| `just build` | Production build |
+| `just check` | Full check: typecheck + lint + test |
+| `just typecheck` | TypeScript type checking |
+| `just test` | Run tests |
+| `just lint` | Run ESLint |
+
+Run `just` with no arguments to see all available commands.
+
+## Architecture
+
 ```
+src/
+  core/           # Animation kernel (Signal, Field, Event, Program)
+  editor/
+    stores/       # MobX state (RootStore, PatchStore, BusStore)
+    blocks/       # Block definitions and registry
+    compiler/     # Patch → Program compilation
+    runtime/      # Player, render tree, SVG renderer
+    components/   # React UI (TimeConsole, BusBoard, Inspector)
+```
+
+### Time System
+
+TimeRoot blocks declare time topology:
+
+| TimeRoot | Output | Use Case |
+|----------|--------|----------|
+| Finite | `progress: Signal<unit>` | One-shot animations |
+| Cycle | `phase: Signal<phase>`, `wrap: Event` | Loops, music viz |
+| Infinite | `t: Signal<time>` | Generative installations |
+
+The player never wraps time. It may loop or window the *view*, but programs always see the same unbounded time axis.
+
+## Design Documentation
+
+Authoritative specs live in `design-docs/3-Synthesized/`. If code conflicts with spec, the spec is authoritative.
+
+## Tech Stack
+
+- React 19 + TypeScript
+- MobX for state management
+- Vite for build tooling
+- Vitest for testing
+
+## License
+
+Private

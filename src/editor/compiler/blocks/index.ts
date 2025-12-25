@@ -1,11 +1,14 @@
 /**
  * Block Compiler Registry
  *
- * Contains domain primitives and signal blocks (new system).
- * Legacy blocks have been archived to .agent_planning/LEGACY-BLOCKS-ARCHIVE.md
+ * Contains domain primitives and signal blocks.
+ *
+ * CRITICAL: Adding new blocks is strictly NOT ALLOWED unless the user explicitly
+ * asks you to, and you confirm it with them. Use existing blocks, composites,
+ * defaultSource, and adapters instead.
  */
 
-import type { BlockRegistry } from '../types';
+import type { BlockRegistry, BlockCompiler } from '../types';
 
 // Domain primitives (new system)
 import {
@@ -23,9 +26,9 @@ import {
   FieldMapVec2Block,
   FieldZipNumberBlock,
   PhaseClockBlock,
-  PhaseClockLegacyBlock,
   TriggerOnWrapBlock,
   RenderInstances2DBlock,
+  Render2dCanvasBlock,
   // TimeRoot blocks (Phase 3: TimeRoot)
   FiniteTimeRootBlock,
   CycleTimeRootBlock,
@@ -34,6 +37,9 @@ import {
   FieldAddVec2Block,
   FieldColorizeBlock,
   FieldOpacityBlock,
+  FieldHueGradientBlock,
+  FieldFromExpressionBlock,
+  FieldStringToColorBlock,
   ViewportInfoBlock,
   JitterFieldVec2Block,
   // Field-Signal combination blocks (Slice 5)
@@ -83,9 +89,9 @@ export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   FieldMapVec2: FieldMapVec2Block,
   FieldZipNumber: FieldZipNumberBlock,
   PhaseClock: PhaseClockBlock,
-  PhaseClockLegacy: PhaseClockLegacyBlock,
   TriggerOnWrap: TriggerOnWrapBlock,
   RenderInstances2D: RenderInstances2DBlock,
+  Render2dCanvas: Render2dCanvasBlock,
 
   // TimeRoot blocks (Phase 3: TimeRoot)
   FiniteTimeRoot: FiniteTimeRootBlock,
@@ -96,6 +102,9 @@ export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   FieldAddVec2: FieldAddVec2Block,
   FieldColorize: FieldColorizeBlock,
   FieldOpacity: FieldOpacityBlock,
+  FieldHueGradient: FieldHueGradientBlock,
+  FieldFromExpression: FieldFromExpressionBlock,
+  FieldStringToColor: FieldStringToColorBlock,
   ViewportInfo: ViewportInfoBlock,
   JitterFieldVec2: JitterFieldVec2Block,
 
@@ -128,7 +137,7 @@ export function createBlockRegistry(): BlockRegistry {
   return dynamicRegistry;
 }
 
-export function registerDynamicBlock(type: string, compiler: any): void {
+export function registerDynamicBlock(type: string, compiler: BlockCompiler): void {
   dynamicRegistry[type] = compiler;
 }
 

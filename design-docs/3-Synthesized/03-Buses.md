@@ -27,21 +27,25 @@ These buses are reserved names with reserved semantics. The UI and default macro
 
 ### Required Buses by TimeRoot Kind
 
+> **⚠️ PROVISIONAL (2025-12-23):** The unified auto-publication across all TimeRoot types is under evaluation. This provides API consistency but the original spec had minimal publications per TimeRoot type. FiniteTimeRoot originally only published `progress`; InfiniteTimeRoot originally published nothing (phase/pulse came from explicit PhaseClock blocks).
+
+All TimeRoot types auto-publish to the standard buses for unified API.
+
 **FiniteTimeRoot:**
-- `progress` (Signal) - **required**
-- `phaseA` - optional
-- `pulse` - optional
-- `energy` - optional
+- `progress` (Signal) - **required** (0..1 clamped)
+- `phaseA` (Signal) - **auto-published** *(provisional)* (same as progress)
+- `pulse` (Event) - **auto-published** *(provisional)* (end event)
+- `energy` (Signal) - **auto-published** *(provisional)* (1.0 while running, 0 when complete)
 
 **CycleTimeRoot:**
-- `phaseA` (Signal) - **required**
-- `pulse` (Event) - **required**
-- `energy` - strongly encouraged
+- `phaseA` (Signal) - **auto-published** (primary phase)
+- `pulse` (Event) - **auto-published** (wrap event)
+- `energy` (Signal) - **auto-published** (constant 1.0)
 
 **InfiniteTimeRoot:**
-- None required
-- `energy` - strongly encouraged
-- `phaseA` - optional (local oscillators), does NOT imply cyclic UI
+- `phaseA` (Signal) - **auto-published** *(provisional)* (ambient cycle based on periodMs)
+- `pulse` (Event) - **auto-published** *(provisional)* (ambient cycle boundary)
+- `energy` (Signal) - **auto-published** *(provisional)* (constant 1.0)
 
 ### Canonical Bus Type Contracts
 
@@ -87,16 +91,25 @@ TypeDesc: { world: 'signal', domain: 'unit', semantics: 'progress' }
 
 ### TimeRoot Publishing
 
-TimeRoot outputs are the canonical source for required buses:
+All TimeRoot blocks auto-publish to the canonical buses for unified API:
 
 **CycleTimeRoot publishes:**
 - `phaseA` <- TimeRoot.phase
 - `pulse` <- TimeRoot.wrap
+- `energy` <- TimeRoot.energy
 
 **FiniteTimeRoot publishes:**
 - `progress` <- TimeRoot.progress
+- `phaseA` <- TimeRoot.phase *(provisional)*
+- `pulse` <- TimeRoot.end *(provisional)*
+- `energy` <- TimeRoot.energy *(provisional)*
 
-This is automatic - compiler ensures these are published.
+**InfiniteTimeRoot publishes:** *(all provisional)*
+- `phaseA` <- TimeRoot.phase (ambient cycle)
+- `pulse` <- TimeRoot.pulse (ambient cycle boundary)
+- `energy` <- TimeRoot.energy
+
+This is automatic - the compiler ensures these are published.
 
 ### Secondary Clock Publishing
 

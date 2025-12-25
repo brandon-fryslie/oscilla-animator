@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export type HelpTopic = 'intro' | 'library' | 'inspector' | 'preview' | 'patch' | 'controlSurface';
 
@@ -7,7 +7,7 @@ interface HelpModalProps {
   onClose: () => void;
 }
 
-export function HelpModal({ topic, onClose }: HelpModalProps) {
+export function HelpModal({ topic, onClose }: HelpModalProps): React.ReactElement {
   const steps: { title: string; body: React.ReactNode }[] =
     topic === 'intro'
       ? [
@@ -216,9 +216,10 @@ export function HelpModal({ topic, onClose }: HelpModalProps) {
 
     pointers.forEach((ptr) => {
       const selector = selectorMap[ptr.id];
-      if (!selector || typeof document === 'undefined') return;
+      if (selector === undefined || selector === null) return;
+      if (typeof document === 'undefined' || document === null) return;
       const el = document.querySelector<HTMLElement>(selector);
-      if (!el) return;
+      if (el === null || el === undefined) return;
       const rect = el.getBoundingClientRect();
       const top = Math.max(8, rect.top + window.scrollY - 28);
       const left = rect.left + window.scrollX + rect.width / 2;
@@ -231,7 +232,7 @@ export function HelpModal({ topic, onClose }: HelpModalProps) {
     });
 
     setPointerStyles(nextStyles);
-  }, [topic, stepIndex, pointers.length]);
+  }, [topic, stepIndex, pointers]);
 
   return (
     <div className="editor-help-overlay" onClick={onClose}>

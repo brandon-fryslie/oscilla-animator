@@ -15,27 +15,27 @@ type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 function getShaper(kind: string, amount: number): (x: number) => number {
   switch (kind) {
     case 'tanh':
-      return (x) => Math.tanh(x * amount);
+      return (x: number): number => Math.tanh(x * amount);
 
     case 'softclip':
-      return (x) => x / (1 + Math.abs(x * amount));
+      return (x: number): number => x / (1 + Math.abs(x * amount));
 
     case 'sigmoid':
-      return (x) => 1 / (1 + Math.exp(-x * amount));
+      return (x: number): number => 1 / (1 + Math.exp(-x * amount));
 
     case 'smoothstep': {
       // Smoothstep expects input in [0,1], so normalize first
-      return (x) => {
+      return (x: number): number => {
         const t = Math.max(0, Math.min(1, x));
         return t * t * (3 - 2 * t);
       };
     }
 
     case 'pow':
-      return (x) => Math.sign(x) * Math.pow(Math.abs(x), amount);
+      return (x: number): number => Math.sign(x) * Math.pow(Math.abs(x), amount);
 
     default:
-      return (x) => x; // identity
+      return (x: number): number => x; // identity
   }
 }
 
@@ -52,7 +52,7 @@ export const ShaperBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const inputArtifact = inputs.in;
-    if (!inputArtifact || inputArtifact.kind !== 'Signal:number') {
+    if (inputArtifact === undefined || inputArtifact.kind !== 'Signal:number') {
       return {
         out: {
           kind: 'Error',
@@ -62,13 +62,13 @@ export const ShaperBlock: BlockCompiler = {
     }
 
     const inputSignal = inputArtifact.value as Signal<number>;
-    const kind = String(params.kind ?? 'smoothstep');
+    const kind = typeof params.kind === 'string' ? params.kind : 'smoothstep';
     const amount = Number(params.amount ?? 1);
 
     const shapeFn = getShaper(kind, amount);
 
     // Create shaped signal
-    const signal: Signal<number> = (t: number, ctx: RuntimeCtx) => {
+    const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
       const value = inputSignal(t, ctx);
       return shapeFn(value);
     };

@@ -1,9 +1,10 @@
+import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 
 /**
  * Trash zone that appears when dragging placed blocks.
  */
-export function TrashZone({ isVisible }: { isVisible: boolean }) {
+export function TrashZone({ isVisible }: { isVisible: boolean }): React.ReactElement | null {
   const { isOver, setNodeRef } = useDroppable({
     id: 'trash-zone',
     data: { type: 'trash' },

@@ -101,7 +101,7 @@ export function isStackCssSvgSafe<TreeT>(
 
   for (const c of stack.compositors) {
     const caps = c.capabilities?.();
-    if (caps && !caps.cssSvgSafe) {
+    if (caps !== null && caps !== undefined && caps.cssSvgSafe === false) {
       reasons.push(`${c.id}: ${caps.reasons?.join(', ') ?? 'not CSS/SVG safe'}`);
     }
   }

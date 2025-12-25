@@ -68,7 +68,7 @@ function formatTarget(target: TargetRef): string {
     case 'block':
       return `Block: ${target.blockId}`;
     case 'port':
-      return `Port: ${target.blockId}.${target.portId}`;
+      return `Port: ${target.portRef.blockId}.${target.portRef.slotId}`;
     case 'bus':
       return `Bus: ${target.busId}`;
     case 'binding':

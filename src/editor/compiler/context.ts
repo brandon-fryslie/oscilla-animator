@@ -82,7 +82,7 @@ export function createRuntimeCtx(opts: {
   height?: number;
   dpr?: number;
   reducedMotion?: boolean;
-} = {}) {
+} = {}): { viewport: { w: number; h: number; dpr: number }; reducedMotion: boolean } {
   return {
     viewport: {
       w: opts.width ?? 800,

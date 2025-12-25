@@ -11,11 +11,11 @@ export function DragOverlayContent({
   definition: BlockDefinition | null;
   placedBlockLabel: string | null;
   placedBlockColor: string | null;
-}) {
+}): React.ReactElement | null {
   const label = definition?.label ?? placedBlockLabel;
   const color = definition?.color ?? placedBlockColor ?? '#666';
 
-  if (!label) return null;
+  if (label === undefined || label === null || label === '') return null;
 
   return (
     <div

@@ -18,19 +18,14 @@ import type { CompileCtx, RuntimeCtx } from '../../../types';
 // Test Helpers
 // =============================================================================
 
-function createCompileCtx(): CompileCtx {
+function createTestContext(): CompileCtx & RuntimeCtx {
   return {
     env: {},
     geom: {
       get: <K extends object, V>(_key: K, compute: () => V): V => compute(),
       invalidate: () => {},
     },
-  };
-}
-
-function createRuntimeCtx(): RuntimeCtx {
-  return {
-    viewport: { w: 800, h: 600, dpr: 1 },
+    viewport: { w: 1920, h: 1080, dpr: 1 },
   };
 }
 
@@ -60,13 +55,12 @@ describe('FiniteTimeRootBlock', () => {
   });
 
   it('should compile with default duration', () => {
-    const compileCtx = createCompileCtx();
-    const runtimeCtx = createRuntimeCtx();
+    const ctx = createTestContext();
     const result = FiniteTimeRootBlock.compile({
       id: 'test',
       params: {},
       inputs: {},
-      ctx: compileCtx,
+      ctx,
     });
 
     expect(result.systemTime?.kind).toBe('Signal:Time');
@@ -77,44 +71,43 @@ describe('FiniteTimeRootBlock', () => {
     // Test signal behavior
     if (result.systemTime?.kind === 'Signal:Time') {
       const signal = result.systemTime.value;
-      expect(signal(1000, runtimeCtx)).toBe(1000); // Identity
-      expect(signal(5000, runtimeCtx)).toBe(5000);
-      expect(signal(6000, runtimeCtx)).toBe(6000);
+      expect(signal(1000, ctx)).toBe(1000); // Identity
+      expect(signal(5000, ctx)).toBe(5000);
+      expect(signal(6000, ctx)).toBe(6000);
     }
 
     // Test progress clamping
     if (result.progress?.kind === 'Signal:number') {
       const progress = result.progress.value;
-      expect(progress(-1000, runtimeCtx)).toBe(0); // Before start
-      expect(progress(0, runtimeCtx)).toBe(0); // Start
-      expect(progress(2500, runtimeCtx)).toBe(0.5); // Halfway
-      expect(progress(5000, runtimeCtx)).toBe(1); // End
-      expect(progress(6000, runtimeCtx)).toBe(1); // After end (clamped)
+      expect(progress(-1000, ctx)).toBe(0); // Before start
+      expect(progress(0, ctx)).toBe(0); // Start
+      expect(progress(2500, ctx)).toBe(0.5); // Halfway
+      expect(progress(5000, ctx)).toBe(1); // End
+      expect(progress(6000, ctx)).toBe(1); // After end (clamped)
     }
 
     // Test end event
     if (result.end?.kind === 'Event') {
       const endEvent = result.end.value;
-      expect(endEvent(4999, 4000, runtimeCtx)).toBe(false); // Before end
-      expect(endEvent(5000, 4000, runtimeCtx)).toBe(true); // At end
-      expect(endEvent(5001, 5000, runtimeCtx)).toBe(false); // After end (not edge)
+      expect(endEvent(4999, 4000, ctx)).toBe(false); // Before end
+      expect(endEvent(5000, 4000, ctx)).toBe(true); // At end
+      expect(endEvent(5001, 5000, ctx)).toBe(false); // After end (not edge)
     }
   });
 
   it('should compile with custom duration', () => {
-    const compileCtx = createCompileCtx();
-    const runtimeCtx = createRuntimeCtx();
+    const ctx = createTestContext();
     const result = FiniteTimeRootBlock.compile({
       id: 'test',
       params: { durationMs: 10000 },
       inputs: {},
-      ctx: compileCtx,
+      ctx,
     });
 
     if (result.progress?.kind === 'Signal:number') {
       const progress = result.progress.value;
-      expect(progress(5000, runtimeCtx)).toBe(0.5); // Halfway through 10s
-      expect(progress(10000, runtimeCtx)).toBe(1); // End at 10s
+      expect(progress(5000, ctx)).toBe(0.5); // Halfway through 10s
+      expect(progress(10000, ctx)).toBe(1); // End at 10s
     }
   });
 });
@@ -146,13 +139,12 @@ describe('CycleTimeRootBlock', () => {
   });
 
   it('should compile with default period', () => {
-    const compileCtx = createCompileCtx();
-    const runtimeCtx = createRuntimeCtx();
+    const ctx = createTestContext();
     const result = CycleTimeRootBlock.compile({
       id: 'test',
       params: {},
       inputs: {},
-      ctx: compileCtx,
+      ctx,
     });
 
     expect(result.systemTime?.kind).toBe('Signal:Time');
@@ -165,52 +157,51 @@ describe('CycleTimeRootBlock', () => {
     // Test phase (0..1 normalized)
     if (result.phase?.kind === 'Signal:phase') {
       const phase = result.phase.value;
-      expect(phase(0, runtimeCtx)).toBe(0);
-      expect(phase(1500, runtimeCtx)).toBe(0.5); // Halfway through 3s period
-      expect(phase(3000, runtimeCtx)).toBeCloseTo(0); // Complete cycle
-      expect(phase(4500, runtimeCtx)).toBe(0.5); // Second cycle halfway
+      expect(phase(0, ctx)).toBe(0);
+      expect(phase(1500, ctx)).toBe(0.5); // Halfway through 3s period
+      expect(phase(3000, ctx)).toBeCloseTo(0); // Complete cycle
+      expect(phase(4500, ctx)).toBe(0.5); // Second cycle halfway
     }
 
     // Test cycleT (time within current cycle)
     if (result.cycleT?.kind === 'Signal:Time') {
       const cycleT = result.cycleT.value;
-      expect(cycleT(0, runtimeCtx)).toBe(0);
-      expect(cycleT(1500, runtimeCtx)).toBe(1500);
-      expect(cycleT(3000, runtimeCtx)).toBe(0); // Reset at cycle boundary
-      expect(cycleT(4500, runtimeCtx)).toBe(1500); // Second cycle
+      expect(cycleT(0, ctx)).toBe(0);
+      expect(cycleT(1500, ctx)).toBe(1500);
+      expect(cycleT(3000, ctx)).toBe(0); // Reset at cycle boundary
+      expect(cycleT(4500, ctx)).toBe(1500); // Second cycle
     }
 
     // Test wrap event
     if (result.wrap?.kind === 'Event') {
       const wrap = result.wrap.value;
-      expect(wrap(2999, 2000, runtimeCtx)).toBe(false); // Before wrap
-      expect(wrap(3000, 2000, runtimeCtx)).toBe(true); // At wrap boundary
-      expect(wrap(3001, 3000, runtimeCtx)).toBe(false); // After wrap
+      expect(wrap(2999, 2000, ctx)).toBe(false); // Before wrap
+      expect(wrap(3000, 2000, ctx)).toBe(true); // At wrap boundary
+      expect(wrap(3001, 3000, ctx)).toBe(false); // After wrap
     }
 
     // Test cycle index
     if (result.cycleIndex?.kind === 'Signal:number') {
       const cycleIndex = result.cycleIndex.value;
-      expect(cycleIndex(1000, runtimeCtx)).toBe(0); // First cycle
-      expect(cycleIndex(3000, runtimeCtx)).toBe(1); // Second cycle
-      expect(cycleIndex(6000, runtimeCtx)).toBe(2); // Third cycle
+      expect(cycleIndex(1000, ctx)).toBe(0); // First cycle
+      expect(cycleIndex(3000, ctx)).toBe(1); // Second cycle
+      expect(cycleIndex(6000, ctx)).toBe(2); // Third cycle
     }
   });
 
   it('should compile with custom period', () => {
-    const compileCtx = createCompileCtx();
-    const runtimeCtx = createRuntimeCtx();
+    const ctx = createTestContext();
     const result = CycleTimeRootBlock.compile({
       id: 'test',
       params: { periodMs: 6000 },
       inputs: {},
-      ctx: compileCtx,
+      ctx,
     });
 
     if (result.phase?.kind === 'Signal:phase') {
       const phase = result.phase.value;
-      expect(phase(1500, runtimeCtx)).toBe(0.25); // Quarter through 6s period
-      expect(phase(3000, runtimeCtx)).toBe(0.5); // Halfway through 6s period
+      expect(phase(1500, ctx)).toBe(0.25); // Quarter through 6s period
+      expect(phase(3000, ctx)).toBe(0.5); // Halfway through 6s period
     }
   });
 });
@@ -240,13 +231,12 @@ describe('InfiniteTimeRootBlock', () => {
   });
 
   it('should compile correctly', () => {
-    const compileCtx = createCompileCtx();
-    const runtimeCtx = createRuntimeCtx();
+    const ctx = createTestContext();
     const result = InfiniteTimeRootBlock.compile({
       id: 'test',
       params: {},
       inputs: {},
-      ctx: compileCtx,
+      ctx,
     });
 
     expect(result.systemTime?.kind).toBe('Signal:Time');
@@ -255,16 +245,16 @@ describe('InfiniteTimeRootBlock', () => {
     // Test system time (identity)
     if (result.systemTime?.kind === 'Signal:Time') {
       const signal = result.systemTime.value;
-      expect(signal(1000, runtimeCtx)).toBe(1000);
-      expect(signal(5000, runtimeCtx)).toBe(5000);
+      expect(signal(1000, ctx)).toBe(1000);
+      expect(signal(5000, ctx)).toBe(5000);
     }
 
     // Test energy (constant 1.0)
     if (result.energy?.kind === 'Signal:number') {
       const energy = result.energy.value;
-      expect(energy(0, runtimeCtx)).toBe(1.0);
-      expect(energy(1000, runtimeCtx)).toBe(1.0);
-      expect(energy(5000, runtimeCtx)).toBe(1.0);
+      expect(energy(0, ctx)).toBe(1.0);
+      expect(energy(1000, ctx)).toBe(1.0);
+      expect(energy(5000, ctx)).toBe(1.0);
     }
   });
 });
@@ -284,19 +274,19 @@ describe('extractTimeRootAutoPublications', () => {
   });
 
   it('should extract publications for FiniteTimeRoot', () => {
+    // FiniteTimeRoot does NOT publish to phaseA - only CycleTimeRoot owns that bus
     const result = extractTimeRootAutoPublications('FiniteTimeRoot', {});
     expect(result).toEqual([
       { busName: 'progress', artifactKey: 'progress', sortKey: 0 },
-      { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
       { busName: 'pulse', artifactKey: 'end', sortKey: 0 },
       { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
     ]);
   });
 
   it('should extract publications for InfiniteTimeRoot', () => {
+    // InfiniteTimeRoot does NOT publish to phaseA - only CycleTimeRoot owns that bus
     const result = extractTimeRootAutoPublications('InfiniteTimeRoot', {});
     expect(result).toEqual([
-      { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
       { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
       { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
     ]);

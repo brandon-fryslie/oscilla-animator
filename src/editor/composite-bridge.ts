@@ -8,7 +8,13 @@
 import type { BlockDefinition, BlockTags } from './blocks/types';
 import type { CompoundGraph } from './blocks/types';
 import type { CompositeDefinition, CompositeGraph } from './composites';
+import type { BlockCompiler } from './compiler/types';
 import { listCompositeDefinitions } from './composites';
+
+// Type declaration for dynamic require to avoid circular dependency
+declare function require(module: string): {
+  getBlockDefinitions: () => readonly BlockDefinition[];
+};
 
 // Import domain composites to trigger registration
 import './domain-composites';
@@ -46,7 +52,9 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
   return {
     type: `composite:${def.id}`,
     label: def.label,
-    description: def.description || `Composite: ${def.label}`,
+    description: def.description !== undefined && def.description !== ''
+      ? def.description
+      : `Composite: ${def.label}`,
     color: def.color ?? '#666666',
     subcategory: def.subcategory,
     laneKind: def.laneKind,
@@ -90,17 +98,16 @@ export function compositeToPrimitiveGraph(graph: CompositeGraph): CompoundGraph 
  * Create a block compiler for a composite definition.
  * This compiler handles the expansion of composites into their internal graph.
  */
-export function createCompositeCompiler(def: CompositeDefinition): any {
-  const primitiveGraph = compositeToPrimitiveGraph(def.graph);
-
+export function createCompositeCompiler(def: CompositeDefinition): BlockCompiler {
   return {
-    compile: (_ctx: any) => {
+    type: `composite:${def.id}`,
+    inputs: [],
+    outputs: [],
+    compile: () => {
       // Composites don't compile directly - they're expanded by expandComposites()
       // This compiler exists mainly to satisfy the registry interface
       throw new Error(`Composite blocks should be expanded before compilation: ${def.id}`);
     },
-    // Store the primitive graph for expansion logic
-    primitiveGraph,
   };
 }
 
@@ -121,7 +128,7 @@ export function registerAllComposites(): void {
 }
 
 // Global registry for composite compilers to avoid circular dependencies
-const compositeCompilers: Record<string, any> = {};
+const compositeCompilers: Record<string, BlockCompiler> = {};
 
 /**
  * Register a single composite definition with the compiler system.
@@ -135,7 +142,7 @@ export function registerComposite(def: CompositeDefinition): void {
  * Get composite compilers for registration with the main block registry.
  * This should be called by the compiler system to integrate composites.
  */
-export function getCompositeCompilers(): Record<string, any> {
+export function getCompositeCompilers(): Record<string, BlockCompiler> {
   return compositeCompilers;
 }
 
@@ -158,7 +165,7 @@ export function getCompositeBlockDefinitions(): readonly BlockDefinition[] {
  */
 export function getBlockDefinitionsWithComposites(): readonly BlockDefinition[] {
   // Import getBlockDefinitions to avoid circular dependency
-  const { getBlockDefinitions } = eval('require')('./blocks');
+  const getBlockDefinitions = require('./blocks').getBlockDefinitions as () => readonly BlockDefinition[];
 
   const baseBlocks = getBlockDefinitions();
   const compositeBlocks = getCompositeBlockDefinitions();
@@ -174,7 +181,10 @@ export function getBlockDefinitionsWithComposites(): readonly BlockDefinition[] 
  * Set up test environment with composite integration.
  * Initializes the composite system and returns test utilities.
  */
-export function setupTestCompositeEnvironment() {
+export function setupTestCompositeEnvironment(): {
+  composites: readonly CompositeDefinition[];
+  compositeBlocks: readonly BlockDefinition[];
+} {
   // Register all composites for the test
   registerAllComposites();
 

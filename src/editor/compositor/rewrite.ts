@@ -128,7 +128,7 @@ export function createTreeRewrite<Node>(
     let current = root;
 
     for (let i = 0; i < path.length; i++) {
-      const idx = path[i]!;
+      const idx = path[i];
       const children = adapter.getChildren(current);
 
       if (children === null) {
@@ -157,11 +157,11 @@ export function createTreeRewrite<Node>(
       throw new Error('replaceAt: cannot descend into leaf node');
     }
 
-    if (head! < 0 || head! >= children.length) {
+    if (head < 0 || head >= children.length) {
       throw new Error(`replaceAt: index ${head} out of bounds`);
     }
 
-    const child = children[head!]!;
+    const child = children[head];
     const newChild = replaceAt(child, tail, next);
 
     // Structural sharing: if child unchanged, return same root
@@ -170,7 +170,7 @@ export function createTreeRewrite<Node>(
     }
 
     const newChildren = [...children];
-    newChildren[head!] = newChild;
+    newChildren[head] = newChild;
     return adapter.withChildren(root, newChildren);
   }
 
@@ -189,7 +189,7 @@ export function createTreeRewrite<Node>(
 
     // For single node, simple wrap
     if (refs.length === 1) {
-      const ref = refs[0]!;
+      const ref = refs[0];
       const node = getAt(root, ref.path);
       const wrapped = wrapper([node]);
       return replaceAt(root, ref.path, wrapped);
@@ -197,7 +197,7 @@ export function createTreeRewrite<Node>(
 
     // For multiple nodes, we need to check if they're siblings
     // (share same parent path except last index)
-    const parentPath = refs[0]!.path.slice(0, -1);
+    const parentPath = refs[0].path.slice(0, -1);
     const allSiblings = refs.every((ref) => {
       const rParent = ref.path.slice(0, -1);
       return (
@@ -220,7 +220,7 @@ export function createTreeRewrite<Node>(
       }
       for (let i = 0; i < a.path.length; i++) {
         if (a.path[i] !== b.path[i]) {
-          return b.path[i]! - a.path[i]!;
+          return b.path[i] - a.path[i];
         }
       }
       return 0;
@@ -242,7 +242,7 @@ export function createTreeRewrite<Node>(
     wrapper: (children: readonly Node[]) => Node
   ): Node {
     // Get indices within parent
-    const indices = refs.map((r) => r.path[r.path.length - 1]!).sort((a, b) => a - b);
+    const indices = refs.map((r) => r.path[r.path.length - 1]).sort((a, b) => a - b);
 
     // Get parent node
     const parent = parentPath.length === 0 ? root : getAt(root, parentPath);
@@ -253,14 +253,14 @@ export function createTreeRewrite<Node>(
     }
 
     // Collect the nodes to wrap
-    const toWrap = indices.map((i) => parentChildren[i]!);
+    const toWrap = indices.map((i) => parentChildren[i]);
 
     // Create wrapper
     const wrappedGroup = wrapper(toWrap);
 
     // Build new children array: replace the range with the wrapper
-    const minIdx = indices[0]!;
-    const maxIdx = indices[indices.length - 1]!;
+    const minIdx = indices[0];
+    const maxIdx = indices[indices.length - 1];
 
     const newChildren: Node[] = [];
     for (let i = 0; i < parentChildren.length; i++) {
@@ -270,7 +270,7 @@ export function createTreeRewrite<Node>(
         // Skip - already included in wrapper
         continue;
       } else if (!indices.includes(i)) {
-        newChildren.push(parentChildren[i]!);
+        newChildren.push(parentChildren[i]);
       }
     }
 
@@ -307,7 +307,7 @@ export function createTreeRewrite<Node>(
     }
 
     const parentPath = path.slice(0, -1);
-    const idx = path[path.length - 1]!;
+    const idx = path[path.length - 1];
 
     const parent = parentPath.length === 0 ? root : getAt(root, parentPath);
     const children = adapter.getChildren(parent);

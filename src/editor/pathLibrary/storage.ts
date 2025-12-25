@@ -42,9 +42,9 @@ export function saveLibrary(state: Pick<PathLibraryState, 'entries' | 'activeId'
 export function loadLibrary(): Pick<PathLibraryState, 'entries' | 'activeId'> | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    if (raw === null || raw === undefined || raw === '') return null;
 
-    const stored: StoredLibrary = JSON.parse(raw);
+    const stored = JSON.parse(raw) as StoredLibrary;
 
     // Version check for future migrations
     if (stored.version !== 1) {
@@ -60,7 +60,8 @@ export function loadLibrary(): Pick<PathLibraryState, 'entries' | 'activeId'> | 
 
     // Filter out any invalid entries
     const validEntries = stored.entries.filter(entry =>
-      entry &&
+      entry !== null &&
+      entry !== undefined &&
       typeof entry.id === 'string' &&
       typeof entry.name === 'string' &&
       Array.isArray(entry.data)

@@ -91,8 +91,8 @@ export class Validator {
     warnings.push(...emptyBusWarnings);
 
     // Warning: Multiple publishers on control-plane buses
-    const multiPublisherWarnings = this.warnMultiplePublishersOnControlBuses(patch);
-    warnings.push(...multiPublisherWarnings);
+    const multiPubWarnings = this.warnMultiplePublishersOnControlBuses(patch);
+    warnings.push(...multiPubWarnings);
 
     return {
       ok: errors.length === 0,
@@ -145,7 +145,7 @@ export class Validator {
           domain: 'compile',
           primaryTarget: {
             kind: 'timeRoot',
-            blockId: timeRootBlocks[0]!.id,
+            blockId: timeRootBlocks[0].id,
           },
           affectedTargets: timeRootBlocks.slice(1).map((b) => ({
             kind: 'block' as const,
@@ -174,7 +174,7 @@ export class Validator {
         const portKey: PortKey = {
           blockId: block.id,
           slotId: input.id,
-          dir: 'input',
+          direction: 'input',
         };
 
         const incomingWires = this.graph.getIncomingWires(portKey);
@@ -196,8 +196,11 @@ export class Validator {
               domain: 'compile',
               primaryTarget: {
                 kind: 'port',
-                blockId: block.id,
-                portId: input.id,
+                portRef: {
+                  blockId: block.id,
+                  slotId: input.id,
+                  direction: 'input',
+                },
               },
               title: 'Multiple writers',
               message: `Input port ${block.id}.${input.id} has ${totalWriters} incoming connections (wires + listeners). Only one writer is allowed.`,
@@ -254,14 +257,20 @@ export class Validator {
             domain: 'compile',
             primaryTarget: {
               kind: 'port',
-              blockId: toBlock.id,
-              portId: toSlot.id,
+              portRef: {
+                blockId: toBlock.id,
+                slotId: toSlot.id,
+                direction: 'input',
+              },
             },
             affectedTargets: [
               {
                 kind: 'port',
-                blockId: fromBlock.id,
-                portId: fromSlot.id,
+                portRef: {
+                  blockId: fromBlock.id,
+                  slotId: fromSlot.id,
+                  direction: 'output',
+                },
               },
             ],
             title: 'Type mismatch',
@@ -354,8 +363,11 @@ export class Validator {
             domain: 'compile',
             primaryTarget: {
               kind: 'port',
-              blockId: conn.from.blockId,
-              portId: conn.from.slotId,
+              portRef: {
+                blockId: conn.from.blockId,
+                slotId: conn.from.slotId,
+                direction: 'output',
+              },
             },
             title: 'Invalid connection source',
             message: `Connection references missing output slot: ${conn.from.blockId}.${conn.from.slotId}`,
@@ -393,8 +405,11 @@ export class Validator {
             domain: 'compile',
             primaryTarget: {
               kind: 'port',
-              blockId: conn.to.blockId,
-              portId: conn.to.slotId,
+              portRef: {
+                blockId: conn.to.blockId,
+                slotId: conn.to.slotId,
+                direction: 'input',
+              },
             },
             title: 'Invalid connection target',
             message: `Connection references missing input slot: ${conn.to.blockId}.${conn.to.slotId}`,
@@ -415,7 +430,7 @@ export class Validator {
     const errors: Diagnostic[] = [];
 
     // Check if patch has buses (may not exist in older patches)
-    if (!patch.buses) {
+    if (patch.buses == null) {
       return errors;
     }
 
@@ -512,9 +527,9 @@ export class Validator {
     }
 
     // Check bus listeners on TimeRoot inputs
-    const timeRootListeners = patch.listeners?.filter(
+    const timeRootListeners = (patch.listeners ?? []).filter(
       (l) => l.to.blockId === timeRoot.id
-    ) || [];
+    );
     for (const listener of timeRootListeners) {
       // Bus listeners are inherently evaluated signals, so always forbidden
       errors.push(
@@ -549,13 +564,13 @@ export class Validator {
   private validateCombineModeCompatibility(patch: PatchDocument): Diagnostic[] {
     const errors: Diagnostic[] = [];
 
-    if (!patch.buses) {
+    if (patch.buses == null) {
       return errors;
     }
 
     for (const bus of patch.buses) {
       // Skip reserved buses - they have their own validation
-      if (RESERVED_BUS_CONTRACTS[bus.name]) {
+      if (RESERVED_BUS_CONTRACTS[bus.name] != null) {
         continue;
       }
 
@@ -601,7 +616,7 @@ export class Validator {
   private warnEmptyBuses(patch: PatchDocument): Diagnostic[] {
     const warnings: Diagnostic[] = [];
 
-    if (!patch.buses || !patch.publishers) {
+    if (patch.buses == null || patch.publishers == null) {
       return warnings;
     }
 
@@ -629,32 +644,25 @@ export class Validator {
   }
 
   /**
-   * Warning: Control-plane buses (combineMode: 'last') should typically have
-   * only one publisher to avoid ambiguity.
-   *
-   * Control-plane buses use combineMode: 'last' which means only the last
-   * publisher's value is used. Multiple publishers on such buses can lead
-   * to non-deterministic behavior.
-   *
-   * Data-plane buses (combineMode: 'sum', 'average', etc.) are designed
-   * for multiple publishers, so no warning is needed.
+   * Warning: Multiple publishers on control-plane buses.
+   * Control-plane buses (phaseA, progress, palette) use 'last' combine mode
+   * and typically expect a single publisher. Multiple publishers can cause conflicts.
    */
   private warnMultiplePublishersOnControlBuses(patch: PatchDocument): Diagnostic[] {
     const warnings: Diagnostic[] = [];
 
-    if (!patch.buses || !patch.publishers) {
+    if (patch.buses == null || patch.publishers == null) {
       return warnings;
     }
 
-    for (const bus of patch.buses) {
-      // Only warn for buses using 'last' combineMode (control-plane)
-      // Buses using 'sum', 'average', 'max', 'min' are data-plane and designed for multiple publishers
-      if (bus.combineMode !== 'last') {
-        continue;
-      }
+    // Control-plane buses use 'last' combine mode
+    const controlBuses = patch.buses.filter((b) => b.combineMode === 'last');
 
-      const publishers = patch.publishers.filter((p) => p.busId === bus.id && p.enabled);
-      if (publishers.length > 1) {
+    for (const bus of controlBuses) {
+      const enabledPublishers = patch.publishers.filter(
+        (p) => p.busId === bus.id && p.enabled !== false
+      );
+      if (enabledPublishers.length > 1) {
         warnings.push(
           createDiagnostic({
             code: 'W_BUS_MULTIPLE_PUBLISHERS_CONTROL',
@@ -665,7 +673,7 @@ export class Validator {
               busId: bus.id,
             },
             title: 'Multiple publishers on control bus',
-            message: `Control-plane bus "${bus.name}" has ${publishers.length} publishers. Only the last publisher's value will be used.`,
+            message: `Control-plane bus "${bus.name || bus.id}" has ${enabledPublishers.length} publishers. With 'last' combine mode, only the highest sortKey publisher's value will be used.`,
             patchRevision: this.patchRevision,
           })
         );
@@ -691,8 +699,8 @@ export class Validator {
    */
   canAddConnection(
     patch: PatchDocument,
-    from: { blockId: string; slotId: string },
-    to: { blockId: string; slotId: string }
+    from: { blockId: string; slotId: string; direction: 'output' },
+    to: { blockId: string; slotId: string; direction: 'input' }
   ): ValidationResult {
     const errors: Diagnostic[] = [];
 
@@ -741,8 +749,11 @@ export class Validator {
           domain: 'authoring',
           primaryTarget: {
             kind: 'port',
-            blockId: from.blockId,
-            portId: from.slotId,
+            portRef: {
+              blockId: from.blockId,
+              slotId: from.slotId,
+              direction: 'output',
+            },
           },
           title: 'Invalid source port',
           message: `Output slot not found: ${from.blockId}.${from.slotId}`,
@@ -760,8 +771,11 @@ export class Validator {
           domain: 'authoring',
           primaryTarget: {
             kind: 'port',
-            blockId: to.blockId,
-            portId: to.slotId,
+            portRef: {
+              blockId: to.blockId,
+              slotId: to.slotId,
+              direction: 'input',
+            },
           },
           title: 'Invalid target port',
           message: `Input slot not found: ${to.blockId}.${to.slotId}`,
@@ -785,8 +799,11 @@ export class Validator {
           domain: 'authoring',
           primaryTarget: {
             kind: 'port',
-            blockId: toBlock.id,
-            portId: toSlot.id,
+            portRef: {
+              blockId: toBlock.id,
+              slotId: toSlot.id,
+              direction: 'input',
+            },
           },
           title: 'Type mismatch',
           message: `Cannot connect ${fromBlock.id}.${fromSlot.id} (${fromSlot.type}) to ${toBlock.id}.${toSlot.id} (${toSlot.type})`,
@@ -813,8 +830,11 @@ export class Validator {
           domain: 'authoring',
           primaryTarget: {
             kind: 'port',
-            blockId: to.blockId,
-            portId: toSlot.id,
+            portRef: {
+              blockId: to.blockId,
+              slotId: toSlot.id,
+              direction: 'input',
+            },
           },
           title: 'Multiple writers',
           message: `Input port ${toBlock.id}.${toSlot.id} already has a connection`,
@@ -842,7 +862,7 @@ export class Validator {
  */
 function isWhitelistedTimeRootSource(block: {
   type: string;
-  tags?: Record<string, any>;
+  tags?: Record<string, unknown>;
 }): boolean {
   return (
     block.type === 'DefaultSource' ||

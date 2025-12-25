@@ -314,7 +314,7 @@ export function fieldFromRand<A>(rand: Rand<A>): Field<A> {
  * Create a Field that generates constant values.
  */
 export function constantField<A>(value: A): Field<A> {
-  return (_seed: Seed, n: number, _ctx: CompileCtx) => Array(n).fill(value);
+  return (_seed: Seed, n: number, _ctx: CompileCtx) => Array<A>(n).fill(value);
 }
 
 /**
