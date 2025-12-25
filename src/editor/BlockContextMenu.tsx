@@ -28,6 +28,7 @@ export const BlockContextMenu = observer(() => {
     if (!blockContextMenu.isOpen) return;
 
     const handleClick = (e: MouseEvent) => {
+      console.log("clicked menu")
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         store.uiStore.closeBlockContextMenu();
         setShowReplacements(false);

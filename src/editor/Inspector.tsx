@@ -196,12 +196,8 @@ const PortWiringPanel = observer(({
    * Add a library block to its suggested lane and connect to the selected port.
    */
   const handleAddAndConnect = (def: BlockDefinition, targetSlot: Slot) => {
-    // Find the suggested lane
-    const targetLane = store.viewStore.lanes.find((lane) => lane.kind === def.laneKind);
-    if (!targetLane) return;
-
     // Add the block
-    const newBlockId = store.patchStore.addBlock(def.type, targetLane.id, def.defaultParams);
+    const newBlockId = store.patchStore.addBlock(def.type, def.defaultParams);
 
     // Connect the ports
     if (portRef.direction === 'output') {
@@ -220,11 +216,6 @@ const PortWiringPanel = observer(({
     store.patchStore.disconnect(connectionId);
   };
 
-  const findLaneIdForBlock = (blockId: string): string | null => {
-    const lane = store.viewStore.lanes.find((l) => l.blockIds.includes(blockId));
-    return lane?.id ?? null;
-  };
-
   const isInputOccupied = (blockId: string, slotId: string): boolean => {
     return store.patchStore.connections.some(
       (c) => c.to.blockId === blockId && c.to.slotId === slotId
@@ -238,13 +229,6 @@ const PortWiringPanel = observer(({
     adapterInput: Slot;
     adapterOutput: Slot;
   }) => {
-    // Determine lane to place adapter
-    const laneByKind = store.viewStore.lanes.find((l) => l.kind === suggestion.adapter.laneKind);
-    const laneOfTarget = findLaneIdForBlock(suggestion.block.id);
-    const laneFallback = store.viewStore.lanes[0]?.id ?? null;
-    const laneId = laneByKind?.id ?? laneOfTarget ?? laneFallback;
-    if (!laneId) return;
-
     // Guard against overwriting occupied inputs
     if (portRef.direction === 'output' && isInputOccupied(suggestion.block.id, suggestion.slot.id)) {
       return;
@@ -255,7 +239,6 @@ const PortWiringPanel = observer(({
 
     const adapterId = store.patchStore.addBlock(
       suggestion.adapter.type,
-      laneId,
       suggestion.adapter.defaultParams
     );
 
@@ -666,7 +649,7 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
     const savedOut = outgoing.map(c => ({ to: c.to.blockId, toSlot: c.to.slotId, fromSlot: c.from.slotId }));
 
     store.patchStore.removeBlock(block.id);
-    const newId = store.patchStore.addBlock(newDef.type, lane.id, newDef.defaultParams);
+    const newId = store.patchStore.addBlock(newDef.type, newDef.defaultParams);
 
     for (const c of savedIn) {
       const newBlock = store.patchStore.blocks.find(b => b.id === newId);
@@ -913,7 +896,7 @@ export const Inspector = observer(() => {
                   </div>
                   <code className="insp-type">{block.type}</code>
                 </div>
-          
+
                 <div className="insp-body">
                   {/* Wiring Panel for selected port on current block */}
                   {store.uiStore.uiState.selectedPort &&
@@ -963,7 +946,7 @@ export const Inspector = observer(() => {
                           }
                         </div>
                       </div>
-          
+
                       {/* Parameters */}
                       {Object.keys(block.params).length > 0 && (
                         <div className="insp-section">
@@ -1015,13 +998,13 @@ export const Inspector = observer(() => {
                           </div>
                         </div>
                       )}
-          
+
                       {/* Bus connections */}
                       <BusConnectionsSection block={block} />
-          
+
                       {/* Compatible replacement blocks */}
                       <CompatibleBlocksSection block={block} />
-          
+
                       {/* Delete */}
                       <button
                         className="insp-delete"

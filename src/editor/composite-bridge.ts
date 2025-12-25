@@ -5,7 +5,7 @@
  * (in composites.ts) and the existing block registry and compiler systems.
  */
 
-import type { BlockDefinition, BlockSubcategory, BlockTags } from './blocks/types';
+import type { BlockDefinition, BlockTags } from './blocks/types';
 import type { CompoundGraph } from './blocks/types';
 import type { CompositeDefinition, CompositeGraph } from './composites';
 import { listCompositeDefinitions } from './composites';

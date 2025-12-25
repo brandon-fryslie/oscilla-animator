@@ -77,9 +77,9 @@ export const FieldColorizeBlock: BlockCompiler = {
     }
 
     const valuesFn = valuesArtifact.value as Field<number>;
-    const colorA = String(params.colorA ?? '#3B82F6');
-    const colorB = String(params.colorB ?? '#EF4444');
-    const mode = String(params.mode ?? 'lerp');
+    const colorA = String(params.colorA);
+    const colorB = String(params.colorB);
+    const mode = String(params.mode );
 
     const mapFn = mode === 'hue' ? hueRotateColor : lerpColor;
 

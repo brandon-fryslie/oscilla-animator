@@ -121,6 +121,112 @@ function compileErrorToDiagnostic(
 }
 
 // =============================================================================
+// Bus Diagnostics
+// =============================================================================
+
+/**
+ * Generate bus-related diagnostics for successful compilations.
+ * Produces W_BUS_EMPTY and W_GRAPH_UNUSED_OUTPUT warnings.
+ */
+// @ts-expect-error - Currently unused but will be needed for future diagnostics
+
+function _generateBusDiagnostics(
+  patch: CompilerPatch,
+  _store: RootStore,
+  patchRevision: number
+): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+
+  // W_BUS_EMPTY: Buses with 0 listeners
+  const busListenerCounts = new Map<string, number>();
+
+  // Count listeners per bus
+  for (const listener of patch.listeners ?? []) {
+    busListenerCounts.set(listener.busId, (busListenerCounts.get(listener.busId) ?? 0) + 1);
+  }
+
+  // Find buses with 0 listeners
+  for (const bus of patch.buses ?? []) {
+    const listenerCount = busListenerCounts.get(bus.id) ?? 0;
+
+    // Find publishers for this bus
+    const publishers = (patch.publishers ?? []).filter(p => p.busId === bus.id);
+
+    // Only warn if there are publishers but no listeners
+    // (Don't warn about buses that aren't being used at all)
+    if (listenerCount === 0 && publishers.length > 0) {
+      const affectedTargets: TargetRef[] = publishers.map(p => ({
+        kind: 'block',
+        blockId: p.from.blockId,
+      }));
+
+      diagnostics.push(
+        createDiagnostic({
+          code: 'W_BUS_EMPTY',
+          severity: 'warn',
+          domain: 'compile',
+          primaryTarget: { kind: 'bus', busId: bus.id },
+          affectedTargets: affectedTargets.length > 0 ? affectedTargets : undefined,
+          title: 'Empty Bus',
+          message: `Bus "${bus.name}" has no listeners. Published values are not being used.`,
+          patchRevision,
+        })
+      );
+    }
+  }
+
+  // W_GRAPH_UNUSED_OUTPUT: Block outputs not connected and not published to bus
+  const connectedOutputs = new Set<string>();
+  const publishedOutputs = new Set<string>();
+
+  // Track connected outputs
+  for (const conn of patch.connections) {
+    connectedOutputs.add(`${conn.from.blockId}.${conn.from.port}`);
+  }
+
+  // Track published outputs
+  for (const pub of patch.publishers ?? []) {
+    publishedOutputs.add(`${pub.from.blockId}.${pub.from.slotId}`);
+  }
+
+  // Check each block's outputs
+  for (const [blockId, block] of patch.blocks) {
+    // Skip TimeRoot blocks - they auto-publish to buses
+    if (block.type === 'FiniteTimeRoot' || block.type === 'CycleTimeRoot' || block.type === 'InfiniteTimeRoot') {
+      continue;
+    }
+
+    const def = getBlockDefinition(block.type);
+    if (def === undefined || def.outputs === undefined) continue;
+
+    for (const output of def.outputs) {
+      const outputKey = `${blockId}.${output.id}`;
+      const isConnected = connectedOutputs.has(outputKey);
+      const isPublished = publishedOutputs.has(outputKey);
+
+      if (!isConnected && !isPublished) {
+        diagnostics.push(
+          createDiagnostic({
+            code: 'W_GRAPH_UNUSED_OUTPUT',
+            severity: 'warn',
+            domain: 'compile',
+            primaryTarget: {
+              kind: 'port',
+              blockId, portId: output.id,
+            },
+            title: 'Unused Output',
+            message: `Output "${output.label ?? output.id}" on block is not connected or published to a bus.`,
+            patchRevision,
+          })
+        );
+      }
+    }
+  }
+
+  return diagnostics;
+}
+
+// =============================================================================
 // PortRef Rewrite Map (per Design Doc Section 7)
 // =============================================================================
 
@@ -1018,6 +1124,8 @@ export function setupAutoCompile(
       connectionCount: store.patchStore.connections.length,
       connections: store.patchStore.connections.map((c: Connection) => `${c.from.blockId}:${c.from.slotId}->${c.to.blockId}:${c.to.slotId}`),
       seed: store.uiStore.settings.seed,
+      // Include patchRevision to support debug mode recompiles
+      patchRevision: store.patchStore.patchRevision,
     }),
     // React to changes
     () => {

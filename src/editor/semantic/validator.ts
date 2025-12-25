@@ -90,6 +90,10 @@ export class Validator {
     const emptyBusWarnings = this.warnEmptyBuses(patch);
     warnings.push(...emptyBusWarnings);
 
+    // Warning: Multiple publishers on control-plane buses
+    const multiPublisherWarnings = this.warnMultiplePublishersOnControlBuses(patch);
+    warnings.push(...multiPublisherWarnings);
+
     return {
       ok: errors.length === 0,
       errors,
@@ -615,6 +619,53 @@ export class Validator {
             },
             title: 'Bus has no publishers',
             message: `Bus "${bus.name}" has no publishers. It will use its default value.`,
+            patchRevision: this.patchRevision,
+          })
+        );
+      }
+    }
+
+    return warnings;
+  }
+
+  /**
+   * Warning: Control-plane buses (combineMode: 'last') should typically have
+   * only one publisher to avoid ambiguity.
+   *
+   * Control-plane buses use combineMode: 'last' which means only the last
+   * publisher's value is used. Multiple publishers on such buses can lead
+   * to non-deterministic behavior.
+   *
+   * Data-plane buses (combineMode: 'sum', 'average', etc.) are designed
+   * for multiple publishers, so no warning is needed.
+   */
+  private warnMultiplePublishersOnControlBuses(patch: PatchDocument): Diagnostic[] {
+    const warnings: Diagnostic[] = [];
+
+    if (!patch.buses || !patch.publishers) {
+      return warnings;
+    }
+
+    for (const bus of patch.buses) {
+      // Only warn for buses using 'last' combineMode (control-plane)
+      // Buses using 'sum', 'average', 'max', 'min' are data-plane and designed for multiple publishers
+      if (bus.combineMode !== 'last') {
+        continue;
+      }
+
+      const publishers = patch.publishers.filter((p) => p.busId === bus.id && p.enabled);
+      if (publishers.length > 1) {
+        warnings.push(
+          createDiagnostic({
+            code: 'W_BUS_MULTIPLE_PUBLISHERS_CONTROL',
+            severity: 'warn',
+            domain: 'compile',
+            primaryTarget: {
+              kind: 'bus',
+              busId: bus.id,
+            },
+            title: 'Multiple publishers on control bus',
+            message: `Control-plane bus "${bus.name}" has ${publishers.length} publishers. Only the last publisher's value will be used.`,
             patchRevision: this.patchRevision,
           })
         );

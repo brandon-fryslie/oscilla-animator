@@ -1,0 +1,440 @@
+/**
+ * Debug Panel Styles
+ *
+ * Tabbed debug panel with Overview, Probes, and Console tabs.
+ * Dark theme with instrument-like visualizations.
+ */
+
+/* =============================================================================
+   Panel Container
+   ============================================================================= */
+
+.debug-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  background: #0a0a14;
+  border-top: 1px solid #1a1a2e;
+  overflow: hidden;
+}
+
+.debug-panel.collapsed {
+  flex: 0 0 auto;
+}
+
+.debug-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: #0c0c16;
+  border-bottom: 1px solid #1a1a2e;
+  min-height: 36px;
+}
+
+.debug-panel-header .panel-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.debug-panel-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* =============================================================================
+   Tabs
+   ============================================================================= */
+
+.debug-tabs {
+  display: flex;
+  padding: 4px 8px 0;
+  background: #0c0c16;
+  border-bottom: 1px solid #1a1a2e;
+  gap: 2px;
+}
+
+.debug-tab {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #888;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.debug-tab:hover {
+  color: #bbb;
+}
+
+.debug-tab.active {
+  color: #4a9eff;
+  border-bottom-color: #4a9eff;
+}
+
+.debug-tab-badge {
+  background: #4a9eff;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.debug-tab-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* =============================================================================
+   Overview Tab
+   ============================================================================= */
+
+.debug-overview {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overview-section {
+  background: #111120;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.overview-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.overview-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.overview-detail {
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.overview-hint {
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+  padding: 8px;
+}
+
+.overview-hint code {
+  background: #1a1a2e;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #4a9eff;
+}
+
+/* =============================================================================
+   Probes Tab
+   ============================================================================= */
+
+.probes-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+}
+
+.probes-empty-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.probes-empty-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.probes-empty-hint {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.6;
+}
+
+.probes-empty-hint code {
+  background: #1a1a2e;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #4a9eff;
+}
+
+.probes-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+/* =============================================================================
+   Probe Card
+   ============================================================================= */
+
+.probe-card {
+  background: #111120;
+  border-radius: 6px;
+  padding: 8px 10px;
+  border: 1px solid #1a1a2e;
+}
+
+.probe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.probe-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.probe-remove {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.probe-remove:hover {
+  color: #ef4444;
+}
+
+.probe-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.probe-value {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: #4a9eff;
+}
+
+.probe-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: #666;
+}
+
+.probe-age {
+  color: #888;
+}
+
+.probe-kind {
+  color: #555;
+}
+
+/* =============================================================================
+   Sparkline
+   ============================================================================= */
+
+.sparkline {
+  color: #4a9eff;
+  flex-shrink: 0;
+}
+
+/* =============================================================================
+   Phase Meter
+   ============================================================================= */
+
+.phase-meter {
+  height: 18px;
+  background: #1a1a2e;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.phase-meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a9eff 0%, #22c55e 100%);
+  border-radius: 4px;
+  transition: width 0.1s ease-out;
+}
+
+.phase-meter-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* =============================================================================
+   Console Tab
+   ============================================================================= */
+
+.console-tab {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.console-output {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.console-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+}
+
+.console-empty-hint {
+  font-size: 11px;
+}
+
+.console-empty-hint code {
+  background: #1a1a2e;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #4a9eff;
+}
+
+/* Console lines */
+.console-line {
+  padding: 1px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.console-line-input {
+  color: #4a9eff;
+}
+
+.console-line-output {
+  color: #e0e0e0;
+}
+
+.console-line-error {
+  color: #ef4444;
+}
+
+.console-line-info {
+  color: #22c55e;
+  font-style: italic;
+}
+
+.console-line-content {
+  display: inline;
+}
+
+/* Console input form */
+.console-input-form {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  background: #0c0c16;
+  border-top: 1px solid #1a1a2e;
+  gap: 4px;
+}
+
+.console-prompt {
+  color: #4a9eff;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.console-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e0e0e0;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 11px;
+  padding: 4px 0;
+}
+
+.console-input::placeholder {
+  color: #555;
+}
+
+.console-input:focus {
+  outline: none;
+}
+
+/* =============================================================================
+   Scrollbar
+   ============================================================================= */
+
+.console-output::-webkit-scrollbar,
+.debug-tab-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.console-output::-webkit-scrollbar-track,
+.debug-tab-content::-webkit-scrollbar-track {
+  background: #0a0a14;
+}
+
+.console-output::-webkit-scrollbar-thumb,
+.debug-tab-content::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+.console-output::-webkit-scrollbar-thumb:hover,
+.debug-tab-content::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}

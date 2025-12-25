@@ -162,6 +162,45 @@ export interface LensDefinition {
 }
 
 /**
+ * Lens type identifier.
+ */
+export type LensType = string;
+
+/**
+ * Lens parameter binding - how a lens param gets its value.
+ */
+export type LensParamBinding =
+  | { kind: 'default'; defaultSourceId: string }
+  | { kind: 'bus'; busId: string }
+  | { kind: 'wire'; wireId: string };
+
+/**
+ * Runtime lens instance with parameter bindings.
+ */
+export interface LensInstance {
+  lensId: string;
+  params: Record<string, LensParamBinding>;
+  enabled: boolean;
+  sortKey: number;
+}
+
+/**
+ * Default source state - stored value for unconnected inputs.
+ */
+export interface DefaultSourceState {
+  /** Unique identifier for this default source */
+  id: string;
+  /** The slot type descriptor */
+  type: TypeDesc;
+  /** The current value */
+  value: unknown;
+  /** UI control hint for editing */
+  uiHint?: UIControlHint;
+  /** Optional range hint for numeric values */
+  rangeHint?: { min: number; max: number; step?: number };
+}
+
+/**
  * Endpoint reference for routing (bus publishers/listeners).
  * Uses canonical slotId + direction for stable identity.
  */
@@ -245,16 +284,9 @@ export type SlotType =
   | 'Scalar:vec2'       // Compile-time constant vec2
   | 'Field<Point>'      // Per-element positions
   | 'Field<vec2>'       // Per-element positions (alias)
-  | 'Field<Duration>'   // Per-element delays/durations
   | 'Field<number>'     // Per-element scalars (radius, opacity)
   | 'Field<color>'      // Per-element colors
-  | 'Field<HSL>'        // Per-element colors (HSL)
   | 'Field<string>'     // Per-element strings (colors, easing names)
-  | 'Field<Path>'       // Per-element path data
-  | 'Field<Wobble>'     // Per-element wobble parameters
-  | 'Field<Spiral>'     // Per-element spiral parameters
-  | 'Field<Wave>'       // Per-element wave parameters
-  | 'Field<Jitter>'     // Per-element jitter parameters
   | 'Signal<Point>'     // Time-varying position
   | 'Signal<number>'    // Time-varying scalar
   | 'Signal<Unit>'      // Time-varying progress [0,1]
@@ -865,15 +897,8 @@ export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc> = {
   // Special types (Phase 3)
   'Domain': { world: 'field', domain: 'elementCount', category: 'internal', busEligible: false, semantics: 'domain' },
 
-  // Internal types (not bus-eligible by default)
+  // Internal types (not bus-eligible - structural/container types)
   'Field<Point>': { world: 'field', domain: 'point', category: 'internal', busEligible: false, semantics: 'position' },
-  'Field<Duration>': { world: 'field', domain: 'time', category: 'internal', busEligible: false, semantics: 'offset', unit: 'seconds' },
-  'Field<HSL>': { world: 'field', domain: 'color', category: 'internal', busEligible: false, semantics: 'hsl' },
-  'Field<Path>': { world: 'field', domain: 'path', category: 'internal', busEligible: false },
-  'Field<Wobble>': { world: 'field', domain: 'number', category: 'internal', busEligible: false, semantics: 'wobble' },
-  'Field<Spiral>': { world: 'field', domain: 'number', category: 'internal', busEligible: false, semantics: 'spiral' },
-  'Field<Wave>': { world: 'field', domain: 'number', category: 'internal', busEligible: false, semantics: 'wave' },
-  'Field<Jitter>': { world: 'field', domain: 'number', category: 'internal', busEligible: false, semantics: 'jitter' },
   'Program': { world: 'signal', domain: 'program', category: 'internal', busEligible: false },
   'Render': { world: 'field', domain: 'renderTree', category: 'internal', busEligible: false },
   'RenderTree': { world: 'field', domain: 'renderTree', category: 'internal', busEligible: false },

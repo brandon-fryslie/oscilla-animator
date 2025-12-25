@@ -11,7 +11,10 @@ import { observer } from 'mobx-react-lite';
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from './stores';
 import { PRESET_LAYOUTS } from './laneLayouts';
+import { getAllMacroKeys, getMacroDisplayName } from './macros';
 import './SettingsToolbar.css';
+
+const STARTUP_MACRO_KEY = 'oscilla-startup-macro';
 
 interface SettingsToolbarProps {
   onShowHelp?: () => void;
@@ -190,6 +193,77 @@ function PathsIcon() {
 }
 
 /**
+ * Startup/Play icon.
+ */
+function StartupIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path
+        d="M4 3L13 8L4 13V3Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Get the startup macro from localStorage, or return the first macro if not set/invalid.
+ */
+export function getStartupMacro(): string {
+  const allMacros = getAllMacroKeys();
+  if (allMacros.length === 0) return '';
+
+  try {
+    const saved = localStorage.getItem(STARTUP_MACRO_KEY);
+    if (saved && allMacros.includes(saved)) {
+      return saved;
+    }
+  } catch {
+    // Ignore storage errors
+  }
+
+  return allMacros[0];
+}
+
+/**
+ * Save the startup macro to localStorage.
+ */
+function setStartupMacro(macroKey: string): void {
+  try {
+    localStorage.setItem(STARTUP_MACRO_KEY, macroKey);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Startup Macro dropdown - allows selecting which macro loads on startup.
+ */
+function StartupMacroDropdown() {
+  const [currentMacro, setCurrentMacro] = useState(() => getStartupMacro());
+  const allMacros = getAllMacroKeys();
+
+  const handleSelect = (macroKey: string) => {
+    setStartupMacro(macroKey);
+    setCurrentMacro(macroKey);
+  };
+
+  return (
+    <Dropdown icon={<StartupIcon />} label="Startup">
+      <MenuHeader>Load on Startup</MenuHeader>
+      {allMacros.map((macroKey) => (
+        <MenuItem
+          key={macroKey}
+          label={getMacroDisplayName(macroKey)}
+          checked={currentMacro === macroKey}
+          onClick={() => handleSelect(macroKey)}
+        />
+      ))}
+    </Dropdown>
+  );
+}
+
+/**
  * Settings Toolbar component.
  */
 export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModalOpen, showHelpNudge, onDesignerView, onPerformanceView }: SettingsToolbarProps) => {
@@ -301,6 +375,9 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
           <span className="dropdown-icon"><PathsIcon /></span>
           <span className="dropdown-label">Paths...</span>
         </button>
+
+        {/* Startup Macro Selector */}
+        <StartupMacroDropdown />
 
       </div>
 

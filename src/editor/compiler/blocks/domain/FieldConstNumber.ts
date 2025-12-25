@@ -30,7 +30,7 @@ export const FieldConstNumberBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value as Domain;
-    const value = Number(params.value ?? 1);
+    const value = Number(params.value);
 
     // Create constant field that returns the same value for all elements
     const field: Field<number> = (_seed, n) => {

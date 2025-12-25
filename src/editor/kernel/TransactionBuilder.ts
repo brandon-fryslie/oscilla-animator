@@ -6,25 +6,19 @@
  * Reference: design-docs/10-Refactor-for-UI-prep/9-TransactionBuilderContract.md
  */
 
-import {
+import type {
   TxBuilder,
   TxView,
   TxResult,
   TxMeta,
   CommittedTx,
-  PreviewTx,
-  TxError,
   PatchKernel
 } from './types';
-import type {
-  PatchDocument,
-  ValidationResult
-} from '../semantic/types';
-import type { SemanticGraph } from '../semantic';
+import type { PatchDocument } from '../semantic/types';
 import type { Patch, Block, Connection, Bus, Publisher, Listener } from '../types';
 import { Validator } from '../semantic/validator';
 import { applyOp } from './applyOp';
-import { Op } from './ops';
+import type { Op } from './ops';
 import { generateDiff } from './diff';
 
 // Helper to deep clone patch
@@ -33,7 +27,6 @@ function clonePatch(patch: Patch): Patch {
 }
 
 export class TransactionBuilder implements TxBuilder {
-  private baseDoc: Patch;
   private stagedDoc: Patch; // Mutable working copy
   private stagedOps: Op[] = [];
   private inverseOps: Op[] = []; // Accumulated in REVERSE order of application
@@ -44,7 +37,6 @@ export class TransactionBuilder implements TxBuilder {
 
   constructor(kernel: PatchKernel, baseDoc: Patch, meta: TxMeta) {
     this.kernel = kernel;
-    this.baseDoc = baseDoc;
     this.stagedDoc = clonePatch(baseDoc);
     this.meta = meta;
   }
@@ -375,7 +367,6 @@ export class TransactionBuilder implements TxBuilder {
     // Assuming we can find it in stagedDoc (or baseDoc).
     // For now, simpler to not invert or require lookup.
     // Let's iterate.
-    let prevTimeRoot: string | undefined;
     // Find TimeRoot blocks in stagedDoc? No specific flag.
     // Rely on caller?
     // Actually applyOp('TimeRootSet') currently does nothing (TODO in applyOp.ts).
@@ -407,7 +398,7 @@ export class TransactionBuilder implements TxBuilder {
     this.committed = true;
   }
 
-  abort(reason?: string): void {
+  abort(_reason?: string): void {
     this.aborted = true;
   }
 

@@ -25,6 +25,7 @@ interface LayoutState {
   rightSidebarMode: SidebarMode;
   controlsCollapsed: boolean;
   helpPanelCollapsed: boolean;
+  debugPanelCollapsed: boolean;
   patchViewMode: PatchViewMode;
 }
 
@@ -40,6 +41,7 @@ const DEFAULT_LAYOUT: LayoutState = {
   rightSidebarMode: 'hidden', // Right sidebar collapsed by default
   controlsCollapsed: true,
   helpPanelCollapsed: true,
+  debugPanelCollapsed: true,
   patchViewMode: 'lanes', // Default to traditional lane view
 };
 
@@ -65,7 +67,45 @@ function saveLayoutState(state: LayoutState): void {
   }
 }
 
-export function useEditorLayout() {
+export function useEditorLayout(): {
+  libraryCollapsed: boolean;
+  setLibraryCollapsed: (value: boolean | ((prev: boolean) => boolean)) => void;
+  inspectorCollapsed: boolean;
+  setInspectorCollapsed: (value: boolean | ((prev: boolean) => boolean)) => void;
+  leftSplit: number;
+  setLeftSplit: (value: number | ((prev: number) => number)) => void;
+  centerSplit: number;
+  setCenterSplit: (value: number | ((prev: number) => number)) => void;
+  patchBayCollapsed: boolean;
+  setPatchBayCollapsed: (value: boolean | ((prev: boolean) => boolean)) => void;
+  busBoardCollapsed: boolean;
+  setBusBoardCollapsed: (value: boolean | ((prev: boolean) => boolean)) => void;
+  baySplit: number;
+  setBaySplit: (value: number | ((prev: number) => number)) => void;
+  bayCollective: boolean;
+  toggleBayCollective: () => void;
+  leftSidebarMode: SidebarMode;
+  setLeftSidebarMode: (value: SidebarMode | ((prev: SidebarMode) => SidebarMode)) => void;
+  rightSidebarMode: SidebarMode;
+  setRightSidebarMode: (value: SidebarMode | ((prev: SidebarMode) => SidebarMode)) => void;
+  controlsCollapsed: boolean;
+  setControlsCollapsed: (value: boolean | ((prev: boolean) => boolean)) => void;
+  helpPanelCollapsed: boolean;
+  setHelpPanelCollapsed: (value: boolean | ((prev: boolean) => boolean)) => void;
+  debugPanelCollapsed: boolean;
+  setDebugPanelCollapsed: (value: boolean | ((prev: boolean) => boolean)) => void;
+  patchViewMode: PatchViewMode;
+  setPatchViewMode: (value: PatchViewMode | ((prev: PatchViewMode) => PatchViewMode)) => void;
+  dragging: null | 'left-split' | 'center-split' | 'bay-split';
+  setDragging: (value: null | 'left-split' | 'center-split' | 'bay-split') => void;
+  leftColumnRef: React.RefObject<HTMLDivElement | null>;
+  centerColumnRef: React.RefObject<HTMLDivElement | null>;
+  bayRef: React.RefObject<HTMLDivElement | null>;
+  getLeftSidebarWidth: () => string;
+  getRightSidebarWidth: () => string;
+  applyDesignerView: () => void;
+  applyPerformanceView: () => void;
+} {
   // Load initial state from localStorage
   const [layoutState] = useState<LayoutState>(loadLayoutState);
 
@@ -81,6 +121,7 @@ export function useEditorLayout() {
   const [rightSidebarMode, setRightSidebarModeRaw] = useState<SidebarMode>(layoutState.rightSidebarMode);
   const [controlsCollapsed, setControlsCollapsedRaw] = useState(layoutState.controlsCollapsed);
   const [helpPanelCollapsed, setHelpPanelCollapsedRaw] = useState(layoutState.helpPanelCollapsed);
+  const [debugPanelCollapsed, setDebugPanelCollapsedRaw] = useState(layoutState.debugPanelCollapsed);
   const [patchViewMode, setPatchViewModeRaw] = useState<PatchViewMode>(layoutState.patchViewMode);
 
   // P1: Bay collective collapse state (not persisted - ephemeral)
@@ -137,6 +178,10 @@ export function useEditorLayout() {
     setHelpPanelCollapsedRaw(value);
   }, []);
 
+  const setDebugPanelCollapsed = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setDebugPanelCollapsedRaw(value);
+  }, []);
+
   const setPatchViewMode = useCallback((value: PatchViewMode | ((prev: PatchViewMode) => PatchViewMode)) => {
     setPatchViewModeRaw(value);
   }, []);
@@ -155,6 +200,7 @@ export function useEditorLayout() {
       rightSidebarMode,
       controlsCollapsed,
       helpPanelCollapsed,
+      debugPanelCollapsed,
       patchViewMode,
     };
     saveLayoutState(newState);
@@ -170,6 +216,7 @@ export function useEditorLayout() {
     rightSidebarMode,
     controlsCollapsed,
     helpPanelCollapsed,
+    debugPanelCollapsed,
     patchViewMode,
   ]);
 
@@ -289,6 +336,8 @@ export function useEditorLayout() {
     setControlsCollapsed,
     helpPanelCollapsed,
     setHelpPanelCollapsed,
+    debugPanelCollapsed,
+    setDebugPanelCollapsed,
     patchViewMode,
     setPatchViewMode,
     dragging,

@@ -1,8 +1,61 @@
 # Project Roadmap
 
-Last updated: 2025-12-21-141500
+Last updated: 2025-12-24-000000
 
-## Phase 1: Core Editor UX [ACTIVE]
+---
+
+## Phase 0: IR Compiler Migration - Contracts & Types [COMPLETED]
+
+**Goal:** Migrate from closure-based compiler to data-driven IR architecture (Phase 1 of IR spec)
+
+> **Core insight:** The "program" becomes data, not JavaScript functions. This enables determinism, debuggability, hot-swap without jank, and future Rust/WASM runtime.
+
+### Topics
+
+#### type-unification [COMPLETED]
+**Description:** Unify editor TypeDesc and compiler ValueKind into one canonical type system
+**Epic:** None
+**Dependencies:** None
+**Labels:** ir, types, architecture
+**Deliverables:**
+- `src/editor/ir/types/TypeDesc.ts` - Unified TypeDesc with TypeWorld, TypeDomain
+- `src/editor/ir/types/typeConversion.ts` - Bridge utilities (ValueKind→TypeDesc, SlotType→TypeDesc)
+- `typeEquals()`, `isCompatible()`, `isBusEligible()`, `getTypeCategory()` helpers
+
+#### dense-id-system [COMPLETED]
+**Description:** Introduce dense numeric indices for runtime lookups, string keys become debug-only
+**Epic:** None
+**Dependencies:** None
+**Labels:** ir, types, performance
+**Deliverables:**
+- `src/editor/ir/types/Indices.ts` - Branded types (NodeIndex, BusIndex, ValueSlot, etc.)
+- `src/editor/ir/types/DebugIndex.ts` - String↔index mapping for debugging
+- `DebugIndexBuilder` class for interning entities
+
+#### ir-core-types [COMPLETED]
+**Description:** Define core IR TypeScript interfaces - pure types, no implementation
+**Epic:** None
+**Dependencies:** type-unification, dense-id-system
+**Labels:** ir, schema, architecture
+**Deliverables:**
+- `src/editor/ir/schema/CompiledProgramIR.ts` - Main IR schema
+- NodeIR, BusIR, StepIR interfaces
+- InputSourceIR, OpCode unions
+- TransformChainIR, ScheduleIR, PhasePartitionIR
+
+#### timemodel-ir [COMPLETED]
+**Description:** Define TimeModelIR with canonical time signals (finite, cyclic, infinite)
+**Epic:** None
+**Dependencies:** ir-core-types
+**Labels:** ir, time, architecture
+**Deliverables:**
+- FiniteTimeModelIR, CyclicTimeModelIR, InfiniteTimeModelIR variants
+- `src/editor/ir/time/TimeDerivation.ts` - Time signal derivation
+- `deriveTimeSignals()`, `validateTimeModel()`, `calculateTimeDerivedValues()`
+
+---
+
+## Phase 1: Core Editor UX [QUEUED]
 
 **Goal:** Deliver essential editor interactions and usability improvements
 
@@ -15,13 +68,13 @@ Last updated: 2025-12-21-141500
 **Labels:** ui, ux, editor
 
 #### bus-semantics-module [COMPLETED]
-**Description:** Create canonical busSemantics module to eliminate duplicate publisher ordering logic between BusStore and compiler (3-5 hours)
+**Description:** Create canonical busSemantics module to eliminate duplicate publisher ordering logic between BusStore and compiler
 **Epic:** None
 **Dependencies:** None
 **Labels:** architecture, bus-system, deterministic
 
 #### complete-time-authority [COMPLETED]
-**Description:** Flip requireTimeRoot flag to enforce exactly one TimeRoot per patch rule (1-2 hours)
+**Description:** Flip requireTimeRoot flag to enforce exactly one TimeRoot per patch rule
 **Epic:** None
 **Dependencies:** None
 **Labels:** architecture, timeroot, validation
@@ -34,7 +87,7 @@ Last updated: 2025-12-21-141500
 
 ### Topics
 
-#### wp0-lock-contracts [PROPOSED]
+#### wp0-lock-contracts [COMPLETED]
 **Description:** WP0: Lock the Contracts - TypeDesc validation, reserved bus enforcement, TimeRoot dependency rules
 **Epic:** None
 **Dependencies:** complete-time-authority
@@ -46,7 +99,7 @@ Last updated: 2025-12-21-141500
 **Dependencies:** wp0-lock-contracts, bus-semantics-module
 **Labels:** architecture, timeroot, runtime, player
 
-#### wp2-bus-aware-compiler [PROPOSED]
+#### wp2-bus-aware-compiler [COMPLETED]
 **Description:** WP2: Bus-Aware Compiler Graph - complete lens compilation and validation
 **Epic:** None
 **Dependencies:** wp1-timeroot-compilers
@@ -138,3 +191,36 @@ Last updated: 2025-12-21-141500
 - `QUEUED` - Planned but not started
 - `COMPLETED` - All topics completed
 - `ARCHIVED` - No longer relevant
+
+---
+
+## IR Compiler Migration Reference
+
+**Handoff document:** `HANDOFF-IR-COMPILER.md`
+**Design docs:** `design-docs/12-Compiler-Final/`
+
+### File Structure to Create
+```
+src/editor/ir/
+├── types/
+│   ├── TypeDesc.ts           # Unified type descriptors
+│   ├── Indices.ts            # Dense numeric indices
+│   ├── DebugIndex.ts         # String↔index mapping
+│   ├── typeConversion.ts     # Legacy type bridges
+│   └── __tests__/
+├── schema/
+│   ├── CompiledProgramIR.ts  # Main IR schema
+│   └── __tests__/
+├── time/
+│   ├── TimeDerivation.ts     # Time signal derivation
+│   └── __tests__/
+└── index.ts                  # Public exports
+```
+
+### Key Design Invariants
+1. **Program is data** - No user-meaningful logic in closures
+2. **Determinism** - Same inputs → identical outputs
+3. **Lazy Fields** - Fields are expressions until forced by sink
+4. **Stable identity** - All nodes/buses/steps have stable IDs for diffing
+5. **Central value store** - All values in indexed ValueStore
+6. **Instrumentation is structural** - Every runtime event maps to IR step

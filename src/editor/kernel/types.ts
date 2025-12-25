@@ -11,7 +11,6 @@ import type { PatchDocument, ValidationResult } from '../semantic/types';
 import type { SemanticGraph } from '../semantic';
 import type { Op } from './ops';
 import type { Diagnostic } from '../diagnostics/types';
-import type { BlockId, Connection, Bus, Publisher, Listener } from '../types';
 
 // =============================================================================
 // Diff Summary

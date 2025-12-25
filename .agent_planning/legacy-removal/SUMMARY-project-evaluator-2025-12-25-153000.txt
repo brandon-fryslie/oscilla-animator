@@ -1,0 +1,9 @@
+Agent: project-evaluator | 2025-12-25-153000
+Scope: project/full - Legacy Code Audit
+Legacy Items: 10 categories | 28 blocks with paramSchema TODOs
+Highest Risk: TimelineHint removal (player refactor)
+Lowest Risk: CSS classes, type aliases
+Primary Blocker: PhaseClockLegacy used in 3 test files
+Cache: N/A (fresh evaluation)
+Workflow: CONTINUE
+Next: Migrate PhaseClockLegacy tests, then remove block

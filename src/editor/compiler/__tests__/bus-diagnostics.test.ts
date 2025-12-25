@@ -31,9 +31,9 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      store.patchStore.addBlock('CycleTimeRoot');
+      const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       // Connect the blocks
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -75,9 +75,9 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
       // Connect the blocks
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
@@ -126,12 +126,12 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a TimeRoot
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
 
       // Add two GridDomains, only connect one fully
-      const domainBlock1 = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const domainBlock2 = store.patchStore.addBlock('GridDomain', 'fields', { rows: 3, cols: 3 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      const domainBlock1 = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
+      const domainBlock2 = store.patchStore.addBlock('GridDomain',{ rows: 3, cols: 3 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D',{});
 
       // Connect GridDomain1 fully to Render
       store.patchStore.connect(domainBlock1, 'domain', renderBlock, 'domain');
@@ -162,9 +162,9 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add just a CycleTimeRoot - its outputs (phase, wrap) are auto-published
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D',{});
 
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
       store.patchStore.connect(domainBlock, 'pos0', renderBlock, 'positions');
@@ -188,9 +188,9 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete patch
-      store.patchStore.addBlock('CycleTimeRoot', 'phase', { periodMs: 3000 });
-      const domainBlock = store.patchStore.addBlock('GridDomain', 'fields', { rows: 5, cols: 5 });
-      const renderBlock = store.patchStore.addBlock('RenderInstances2D', 'program', {});
+      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
+      const domainBlock = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
+      const renderBlock = store.patchStore.addBlock('RenderInstances2D',{});
 
       // Connect domain but publish pos0 to a bus instead of connecting
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');

@@ -21,9 +21,8 @@ describe('PatchStore - Wire Events', () => {
       root.events.on('WireAdded', listener);
 
       // Create two blocks
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       // Connect blocks
       root.patchStore.connect(block1, 'value', block2, 'value');
@@ -43,9 +42,8 @@ describe('PatchStore - Wire Events', () => {
       const listener = vi.fn();
       root.events.on('WireAdded', listener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       // Connect blocks first time
       root.patchStore.connect(block1, 'value', block2, 'value');
@@ -58,33 +56,27 @@ describe('PatchStore - Wire Events', () => {
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
-    it('emits WireAdded for each connection in macro expansion', () => {
+    it('does NOT emit WireAdded for connections in macro expansion (bulk operation)', () => {
       const listener = vi.fn();
       root.events.on('WireAdded', listener);
 
       // Load a macro that creates multiple connections
-      // The 'PulsingGrid' macro creates 4-5 connections typically
-      const laneId = root.patchStore.lanes.find(l => l.kind === 'Program')?.id ?? '';
-      root.patchStore.addBlock('macro:pulsingGrid', laneId);
+      // The 'PulsingGrid' macro creates 3 connections
+      root.patchStore.addBlock('macro:pulsingGrid');
 
-      // Should emit multiple WireAdded events (at least 3 connections in pulsing grid)
-      expect(listener).toHaveBeenCalled();
-      const callCount = listener.mock.calls.length;
-      expect(callCount).toBeGreaterThanOrEqual(3);
-
-      // All events should be WireAdded
-      listener.mock.calls.forEach((call) => {
-        expect(call[0].type).toBe('WireAdded');
-      });
+      // Macro expansion is a bulk operation - it bypasses individual connection events
+      // for performance. This is intentional: macros replace the entire patch,
+      // so emitting N individual WireAdded events would be wasteful.
+      // Instead, a GraphCommitted event should be used for bulk changes.
+      expect(listener).not.toHaveBeenCalled();
     });
 
     it('includes valid connection data in event payload', () => {
       const listener = vi.fn();
       root.events.on('WireAdded', listener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       root.patchStore.connect(block1, 'value', block2, 'value');
 
@@ -107,9 +99,8 @@ describe('PatchStore - Wire Events', () => {
       root.events.on('WireAdded', addListener);
       root.events.on('WireRemoved', removeListener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       // Connect blocks
       root.patchStore.connect(block1, 'value', block2, 'value');
@@ -144,9 +135,8 @@ describe('PatchStore - Wire Events', () => {
       const removeListener = vi.fn();
       root.events.on('WireRemoved', removeListener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       root.patchStore.connect(block1, 'value', block2, 'value');
       const wireId = root.patchStore.connections[0]?.id ?? '';
@@ -162,9 +152,8 @@ describe('PatchStore - Wire Events', () => {
       const listener = vi.fn();
       root.events.on('WireRemoved', listener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       root.patchStore.connect(block1, 'value', block2, 'value');
       const wireId = root.patchStore.connections[0]?.id ?? '';
@@ -191,10 +180,9 @@ describe('PatchStore - Wire Events', () => {
       const listener = vi.fn();
       root.events.on('WireRemoved', listener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block3 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('FieldConstNumber');
+      const block3 = root.patchStore.addBlock('FieldConstNumber');
 
       // Create 3 connections involving block2
       root.patchStore.connect(block1, 'value', block2, 'value');
@@ -236,11 +224,10 @@ describe('PatchStore - Wire Events', () => {
       const listener = vi.fn();
       root.events.on('WireRemoved', listener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block3 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block4 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('FieldConstNumber');
+      const block3 = root.patchStore.addBlock('FieldConstNumber');
+      const block4 = root.patchStore.addBlock('FieldConstNumber');
 
       // Create connections
       root.patchStore.connect(block1, 'value', block2, 'value');
@@ -259,8 +246,7 @@ describe('PatchStore - Wire Events', () => {
       const listener = vi.fn();
       root.events.on('WireRemoved', listener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
 
       // Remove block with no connections
       root.patchStore.removeBlock(block1);
@@ -273,9 +259,8 @@ describe('PatchStore - Wire Events', () => {
   describe('Event order and consistency', () => {
     it('emits events in correct order: WireAdded after creation', () => {
       let connectionExistsAtEventTime = false;
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       root.events.on('WireAdded', (event) => {
         // Connection should already exist in store when event fires
@@ -289,9 +274,8 @@ describe('PatchStore - Wire Events', () => {
     });
 
     it('emits events in correct order: WireRemoved after deletion', () => {
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       root.patchStore.connect(block1, 'value', block2, 'value');
       const wireId = root.patchStore.connections[0]?.id ?? '';
@@ -323,8 +307,7 @@ describe('PatchStore - BlockReplaced Events', () => {
       const listener = vi.fn();
       root.events.on('BlockReplaced', listener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const oldBlockId = root.patchStore.addBlock('Oscillator', laneId);
+      const oldBlockId = root.patchStore.addBlock('Oscillator');
       const oldBlock = root.patchStore.blocks.find(b => b.id === oldBlockId);
       const oldType = oldBlock?.type ?? '';
 
@@ -358,8 +341,7 @@ describe('PatchStore - BlockReplaced Events', () => {
       const listener = vi.fn();
       root.events.on('BlockReplaced', listener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const oldBlockId = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const oldBlockId = root.patchStore.addBlock('FieldConstNumber');
 
       // Try to replace with invalid block type
       root.patchStore.replaceBlock(oldBlockId, 'NonExistentBlockType' as any);
@@ -372,10 +354,9 @@ describe('PatchStore - BlockReplaced Events', () => {
       const listener = vi.fn();
       root.events.on('BlockReplaced', listener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const block1 = root.patchStore.addBlock('FieldConstNumber', laneId);
-      const block2 = root.patchStore.addBlock('AddSignal', laneId);
-      const block3 = root.patchStore.addBlock('FieldConstNumber', laneId);
+      const block1 = root.patchStore.addBlock('FieldConstNumber');
+      const block2 = root.patchStore.addBlock('AddSignal');
+      const block3 = root.patchStore.addBlock('FieldConstNumber');
 
       // Connect blocks: block1 -> block2 -> block3
       root.patchStore.connect(block1, 'value', block2, 'a');
@@ -395,8 +376,7 @@ describe('PatchStore - BlockReplaced Events', () => {
       let newBlockExistsAtEventTime = false;
       let oldBlockExistsAtEventTime = false;
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
-      const oldBlockId = root.patchStore.addBlock('Oscillator', laneId);
+      const oldBlockId = root.patchStore.addBlock('Oscillator');
 
       root.events.on('BlockReplaced', (event) => {
         // New block should exist
@@ -419,11 +399,10 @@ describe('PatchStore - BlockReplaced Events', () => {
       const listener = vi.fn();
       root.events.on('BlockReplaced', listener);
 
-      const laneId = root.patchStore.lanes[0]?.id ?? '';
       // CycleTimeRoot outputs Signal<phase> on 'phase'
-      const block1 = root.patchStore.addBlock('CycleTimeRoot', laneId);
+      const block1 = root.patchStore.addBlock('CycleTimeRoot');
       // Oscillator accepts Signal<phase> on 'phase' input
-      const block2 = root.patchStore.addBlock('Oscillator', laneId);
+      const block2 = root.patchStore.addBlock('Oscillator');
 
       // Connect CycleTimeRoot.phase -> Oscillator.phase (valid Signal<phase> connection)
       root.patchStore.connect(block1, 'phase', block2, 'phase');

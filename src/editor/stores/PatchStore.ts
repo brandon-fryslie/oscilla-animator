@@ -2,11 +2,10 @@
  * @file Patch Store
  * @description Manages the core patch data: blocks, connections, and lanes.
  */
-import { makeObservable, observable, action, computed } from 'mobx';
+import { makeObservable, observable, action } from 'mobx';
 import type {
   Block,
   Connection,
-  Lane,
   BlockId,
   LaneId,
   LaneKind,

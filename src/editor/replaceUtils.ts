@@ -102,7 +102,7 @@ export function findCompatibleReplacements(
 
 /**
  * Get the lane kind from a block instance by looking up its definition.
- * Falls back to 'Signal' if unknown.
+ * Falls back to 'Scalars' if unknown (most common lane for math/utility blocks).
  */
 function getLaneKindFromBlock(block: Block): string {
   // Look up the block definition to get the lane kind
@@ -114,18 +114,21 @@ function getLaneKindFromBlock(block: Block): string {
   // Fallback: Check if block has a category that maps to a lane kind
   const categoryToLane: Record<string, string> = {
     'Time': 'Phase',
-    'Domain': 'Domain',
-    'Field': 'Field',
+    'Math': 'Scalars',
+    'Fields': 'Fields',
+    'Field': 'Fields',
     'Render': 'Program',
     'Output': 'Program',
+    'Program': 'Program',
+    'Scene': 'Scene',
   };
 
   if (block.category && categoryToLane[block.category]) {
     return categoryToLane[block.category];
   }
 
-  // Default to Signal for most blocks
-  return 'Signal';
+  // Default to Scalars for most utility blocks (a valid LaneKind)
+  return 'Scalars';
 }
 
 /**

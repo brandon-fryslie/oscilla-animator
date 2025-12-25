@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 repomix-output.md
 repomix.config.jsonc
+
+# Worktree backups and recovery
+.worktrees_backup*/
+.worktrees_recovered/
+.worktrees

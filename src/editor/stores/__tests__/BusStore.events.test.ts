@@ -66,7 +66,7 @@ describe('BusStore - Event Emission', () => {
 
         // Default buses are created during initialization, so they've already emitted events
         // We need to check the buses that were created
-        expect(freshRoot.busStore.buses.length).toBe(5); // phaseA, phaseB, energy, pulse, palette
+        expect(freshRoot.busStore.buses.length).toBe(6); // phaseA, phaseB, energy, pulse, palette, progress
       });
     });
 
@@ -130,7 +130,7 @@ describe('BusStore - Event Emission', () => {
       );
 
       // Create a test block
-      blockId = root.patchStore.addBlock('FieldConstNumber', root.patchStore.lanes[0].id, { value: 0 });
+      blockId = root.patchStore.addBlock('FieldConstNumber', { value: 0 });
 
       events.length = 0; // Clear setup events
     });
@@ -286,7 +286,7 @@ describe('BusStore - Event Emission', () => {
         'cascadeBus',
         'last'
       );
-      const blockId = root.patchStore.addBlock('FieldConstNumber', root.patchStore.lanes[0].id, { value: 0 });
+      const blockId = root.patchStore.addBlock('FieldConstNumber', { value: 0 });
 
       const publisherId = root.busStore.addPublisher(busId, blockId, 'value');
       const listenerId = root.busStore.addListener(busId, blockId, 'value');

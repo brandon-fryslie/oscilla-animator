@@ -73,7 +73,6 @@ export class RootStore {
       selectedPortInfo: computed,
       loadPatch: action,
       clearPatch: action,
-      loadDemoAnimation: action,
     });
 
     // Initialize default buses for a new patch
@@ -281,10 +280,5 @@ export class RootStore {
 
     // Emit PatchCleared event AFTER state changes committed
     this.events.emit({ type: 'PatchCleared' });
-  }
-
-  loadDemoAnimation(): void {
-    // Demo animation temporarily disabled during refactor
-    console.warn('Demo animation disabled');
   }
 }

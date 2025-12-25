@@ -22,7 +22,7 @@ describe('ModulationTableStore', () => {
       expect(tableStore.rowGroups.length).toBe(0);
 
       // Add macro
-      rootStore.patchStore.addBlock('macro:simpleGrid', 'scene');
+      rootStore.patchStore.addBlock('macro:simpleGrid');
 
       // Now should have rows (count increased after Remove Parameters refactor)
       // RenderInstances2D now exposes: positions, radius, color, opacity, glow, glowIntensity
@@ -39,7 +39,7 @@ describe('ModulationTableStore', () => {
   describe('macro expansion and row derivation', () => {
     it('should create blocks when macro:simpleGrid is added', () => {
       // Add the macro
-      rootStore.patchStore.addBlock('macro:simpleGrid', 'scene');
+      rootStore.patchStore.addBlock('macro:simpleGrid');
 
       // Check blocks were created
       const blocks = rootStore.patchStore.blocks;
@@ -57,9 +57,9 @@ describe('ModulationTableStore', () => {
       expect(types).toContain('RenderInstances2D');
     });
 
-    it('should derive rows from RenderInstances2D inputs', () => {
+    it('should derive rows from GridDomain inputs (Scene lane blocks)', () => {
       // Add the macro
-      rootStore.patchStore.addBlock('macro:simpleGrid', 'scene');
+      rootStore.patchStore.addBlock('macro:simpleGrid');
 
       // Check rows
       const rows = tableStore.rows;
@@ -68,19 +68,19 @@ describe('ModulationTableStore', () => {
         console.log(`  - ${row.key}: ${row.label} (${row.type.domain})`);
       }
 
-      // RenderInstances2D has bus-eligible inputs: positions, radius, color
-      // (domain is not bus-eligible)
+      // GridDomain (Scene lane) has bus-eligible inputs that show as rows
+      // shouldBlockShowRows() includes blocks with laneKind: 'Scene'
       expect(rows.length).toBeGreaterThan(0);
 
       const labels = rows.map(r => r.label);
-      // At minimum should have these
-      expect(labels).toContain('Positions');
-      expect(labels).toContain('Radius');
-      expect(labels).toContain('Color');
+      // GridDomain bus-eligible inputs
+      expect(labels).toContain('Spacing');
+      expect(labels).toContain('Origin X');
+      expect(labels).toContain('Origin Y');
     });
 
     it('should create row groups for blocks', () => {
-      rootStore.patchStore.addBlock('macro:simpleGrid', 'scene');
+      rootStore.patchStore.addBlock('macro:simpleGrid');
 
       const groups = tableStore.rowGroups;
       console.log('Row groups:');
@@ -93,7 +93,7 @@ describe('ModulationTableStore', () => {
     });
 
     it('should derive columns from buses', () => {
-      rootStore.patchStore.addBlock('macro:simpleGrid', 'scene');
+      rootStore.patchStore.addBlock('macro:simpleGrid');
 
       const columns = tableStore.columns;
       console.log('Columns (buses):');

@@ -1,25 +1,82 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { createCompilerService, editorToPatch } from '../compiler';
+import { createCompilerService } from '../compiler';
 import { RootStore } from '../stores/RootStore';
 import { registerComposite } from '../composites';
 import { registerAllComposites } from '../composite-bridge';
 
-describe('demo patch loading', () => {
+/**
+ * Helper to set up a patch with composites and bus listeners
+ * Recreates the structure of the old breathing-dots demo:
+ * - CycleTimeRoot (2s period, publishes phase to phaseA)
+ * - composite:GridPoints (5x5 grid)
+ * - composite:DotsRenderer (listens to phaseA on radius with scale lens)
+ */
+function setupCompositeDemo(store: RootStore): void {
+  // Clear any existing state
+  store.clearPatch();
+
+  // Add CycleTimeRoot - will auto-publish phase to phaseA
+  store.patchStore.addBlock('CycleTimeRoot', { periodMs: 2000 });
+
+  // Add GridPoints composite
+  const gridId = store.patchStore.addBlock('composite:GridPoints', {
+    rows: 5,
+    cols: 5,
+    spacing: 60,
+    originX: 400,
+    originY: 300,
+  });
+
+  // Add DotsRenderer composite
+  const renderId = store.patchStore.addBlock('composite:DotsRenderer', {
+    color: '#00ccff',
+    opacity: 0.9,
+    glow: true,
+    glowIntensity: 1.5,
+  });
+
+  // Connect grid outputs to renderer inputs
+  store.patchStore.addConnection({
+    id: store.patchStore.generateConnectionId(),
+    from: { blockId: gridId, slotId: 'domain' },
+    to: { blockId: renderId, slotId: 'domain' },
+  });
+  store.patchStore.addConnection({
+    id: store.patchStore.generateConnectionId(),
+    from: { blockId: gridId, slotId: 'positions' },
+    to: { blockId: renderId, slotId: 'positions' },
+  });
+
+  // Find the phaseA bus
+  const phaseABus = store.busStore.buses.find((b) => b.name === 'phaseA');
+  if (!phaseABus) {
+    throw new Error('phaseA bus not found');
+  }
+
+  // Add listener: phaseA -> renderer.radius with scale lens
+  // addListener(busId, blockId, slotId, adapterChain?, lensOrStack?)
+  store.busStore.addListener(phaseABus.id, renderId, 'radius', undefined, {
+    type: 'scale',
+    params: { scale: 12, offset: 8 },
+  });
+}
+
+describe('macro patch loading', () => {
   beforeEach(() => {
     registerAllComposites();
   });
 
-  it('loads and compiles breathing-dots demo without errors', () => {
+  it('loads and compiles breathingDots macro without errors', () => {
     const store = new RootStore();
 
-    // Load the demo patch
-    store.loadDemoAnimation();
+    // Load a macro instead of demo patch
+    store.patchStore.addBlock('macro:breathingDots');
 
     // Verify patch loaded
     expect(store.patchStore.blocks.length).toBeGreaterThan(0);
     expect(store.patchStore.connections.length).toBeGreaterThan(0);
     expect(store.busStore.buses.length).toBeGreaterThan(0);
-    expect(store.busStore.publishers.length).toBeGreaterThan(0);
+    // breathingDots macro only has listeners, not publishers
     expect(store.busStore.listeners.length).toBeGreaterThan(0);
 
     // Compile the patch
@@ -78,11 +135,8 @@ describe('composite expansion', () => {
     registerAllComposites();
 
     // Get first lane (should be Fields lane)
-    const lanes = store.patchStore.lanes;
-    const lane = lanes.find((l: any) => l.kind === 'Fields') ?? lanes[0];
-
-    const compositeId = store.patchStore.addBlock(`composite:${def.id}`, lane.id, { factor: 2 });
-    const debugId = store.patchStore.addBlock('debugOutput', lane.id, {});
+    const compositeId = store.patchStore.addBlock(`composite:${def.id}`, { factor: 2 });
+    const debugId = store.patchStore.addBlock('debugOutput', {});
     store.patchStore.connect(compositeId, 'out', debugId, 'field');
 
     const compiler = createCompilerService(store);
@@ -108,10 +162,8 @@ describe('RewriteMap correctness (Test Matrix Section A)', () => {
   it('A2: listener targeting composite boundary input rewrites to internal primitive', () => {
     const store = new RootStore();
 
-    // Load demo patch which has:
-    // - composite:DotsRenderer (block-3) with radius input
-    // - listener targeting block-3.radius
-    store.loadDemoAnimation();
+    // Set up a patch with composites and bus listeners
+    setupCompositeDemo(store);
 
     // Compile the patch
     const compiler = createCompilerService(store);
@@ -122,11 +174,9 @@ describe('RewriteMap correctness (Test Matrix Section A)', () => {
     expect(result.errors).toHaveLength(0);
     expect(result.program).toBeDefined();
 
-    // Verify that the composite block (block-3) is NOT in the compiled graph
-    // (it should have been expanded to block-3::render)
-    const patch = editorToPatch(store);
-    const originalBlocks = Array.from(patch.blocks.keys());
-    expect(originalBlocks).toContain('block-3'); // Before expansion
+    // Verify that a composite:DotsRenderer block exists
+    const dotsRenderer = store.patchStore.blocks.find(b => b.type === 'composite:DotsRenderer');
+    expect(dotsRenderer).toBeDefined();
 
     // The program should work at runtime
     if (result.program) {
@@ -146,15 +196,10 @@ describe('RewriteMap correctness (Test Matrix Section A)', () => {
   it('A4: two composites of same definition have distinct internal IDs', () => {
     const store = new RootStore();
 
-    // Add two GridPoints composites
-    const lanes = store.patchStore.lanes;
-    const fieldsLane = lanes.find((l) => l.kind === 'Fields') ?? lanes[0];
-
     // Add CycleTimeRoot - required for all patches
-    const sceneLane = lanes.find((l) => l.kind === 'Scene') ?? lanes[0];
-    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
+    store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
-    const grid1 = store.patchStore.addBlock('composite:GridPoints', fieldsLane.id, {
+    const grid1 = store.patchStore.addBlock('composite:GridPoints', {
       count: 16,
       rows: 4,
       cols: 4,
@@ -164,7 +209,7 @@ describe('RewriteMap correctness (Test Matrix Section A)', () => {
     });
 
     // Add second grid (we don't use it directly but it tests ID uniqueness)
-    store.patchStore.addBlock('composite:GridPoints', fieldsLane.id, {
+    store.patchStore.addBlock('composite:GridPoints', {
       count: 9,
       rows: 3,
       cols: 3,
@@ -174,8 +219,7 @@ describe('RewriteMap correctness (Test Matrix Section A)', () => {
     });
 
     // Add a renderer connected to one of them
-    const outputLane = lanes.find((l) => l.kind === 'Output') ?? lanes[lanes.length - 1];
-    const renderer = store.patchStore.addBlock('RenderInstances2D', outputLane.id, {});
+    const renderer = store.patchStore.addBlock('RenderInstances2D', {});
 
     // Connect first grid to renderer
     store.patchStore.connect(grid1, 'domain', renderer, 'domain');
@@ -204,13 +248,17 @@ describe('Bus bindings through composites (Test Matrix Section B)', () => {
   it('B1: listener to composite boundary input remaps to internal primitive port', () => {
     const store = new RootStore();
 
-    // Load demo which has listener -> block-3.radius where block-3 is DotsRenderer composite
-    store.loadDemoAnimation();
+    // Set up a patch with listener targeting DotsRenderer.radius
+    setupCompositeDemo(store);
+
+    // Find the DotsRenderer block
+    const dotsRenderer = store.patchStore.blocks.find(b => b.type === 'composite:DotsRenderer');
+    expect(dotsRenderer).toBeDefined();
 
     // Verify the listener exists before compilation
     expect(store.busStore.listeners.length).toBeGreaterThan(0);
     const listener = store.busStore.listeners[0];
-    expect(listener.to.blockId).toBe('block-3'); // Targets composite
+    expect(listener.to.blockId).toBe(dotsRenderer!.id); // Targets composite
     expect(listener.to.slotId).toBe('radius');
 
     // Compile
@@ -237,14 +285,16 @@ describe('Bus bindings through composites (Test Matrix Section B)', () => {
   it('B5: lens transformation preserved after rewrite', () => {
     const store = new RootStore();
 
-    // Load demo which has listener with scale lens (scale=12, offset=8)
-    store.loadDemoAnimation();
+    // Set up a patch with listener with scale lens (scale=12, offset=8)
+    setupCompositeDemo(store);
 
     const listener = store.busStore.listeners[0];
-    expect(listener.lens).toBeDefined();
-    expect(listener.lens?.type).toBe('scale');
-    expect(listener.lens?.params.scale).toBe(12);
-    expect(listener.lens?.params.offset).toBe(8);
+    // addListener uses lensStack, not lens
+    expect(listener.lensStack).toBeDefined();
+    expect(listener.lensStack?.length).toBe(1);
+    expect(listener.lensStack?.[0].type).toBe('scale');
+    expect(listener.lensStack?.[0].params.scale).toBe(12);
+    expect(listener.lensStack?.[0].params.offset).toBe(8);
 
     // Compile
     const compiler = createCompilerService(store);
@@ -276,7 +326,7 @@ describe('Deterministic identity (Test Matrix Section D)', () => {
   // D1 — Internal ID determinism across compiles
   it('D1: same patch compiled twice produces identical results', () => {
     const store = new RootStore();
-    store.loadDemoAnimation();
+    setupCompositeDemo(store);
 
     const compiler = createCompilerService(store);
 
@@ -305,7 +355,7 @@ describe('Deterministic identity (Test Matrix Section D)', () => {
   // D2 — Internal ID stability under unrelated edits
   it('D2: adding unrelated block does not change composite expansion IDs', () => {
     const store = new RootStore();
-    store.loadDemoAnimation();
+    setupCompositeDemo(store);
 
     // Compile first
     const compiler = createCompilerService(store);
@@ -313,9 +363,7 @@ describe('Deterministic identity (Test Matrix Section D)', () => {
     expect(result1.ok).toBe(true);
 
     // Add an unrelated block
-    const lanes = store.patchStore.lanes;
-    const phaseLane = lanes.find((l) => l.kind === 'Phase') ?? lanes[0];
-    store.patchStore.addBlock('PhaseClockLegacy', phaseLane.id, { duration: 5 });
+    store.patchStore.addBlock('PhaseClockLegacy', { duration: 5 });
 
     // Compile again
     const result2 = compiler.compile();
@@ -344,27 +392,20 @@ describe('Error handling (Test Matrix Section H)', () => {
     const store = new RootStore();
 
     // Add a composite and a bus binding to a non-existent port
-    const lanes = store.patchStore.lanes;
-    const fieldsLane = lanes.find((l) => l.kind === 'Fields') ?? lanes[0];
-    const phaseLane = lanes.find((l) => l.kind === 'Phase') ?? lanes[1];
-    const outputLane = lanes.find((l) => l.kind === 'Output') ?? lanes[lanes.length - 1];
-
-    // Add CycleTimeRoot - required for all patches
-    const sceneLane = lanes.find((l) => l.kind === 'Scene') ?? lanes[0];
-    store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
+    store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
 
     // Add GridPoints composite (has domain, positions outputs but no "foobar" port)
-    const gridId = store.patchStore.addBlock('composite:GridPoints', fieldsLane.id, {
+    const gridId = store.patchStore.addBlock('composite:GridPoints', {
       count: 16,
       rows: 4,
       cols: 4,
     });
 
     // Add a phase clock (legacy, doesn't require tIn input)
-    const clockId = store.patchStore.addBlock('PhaseClockLegacy', phaseLane.id, { duration: 2 });
+    const clockId = store.patchStore.addBlock('PhaseClockLegacy', { duration: 2 });
 
     // Add a renderer
-    const rendererId = store.patchStore.addBlock('RenderInstances2D', outputLane.id, {});
+    const rendererId = store.patchStore.addBlock('RenderInstances2D', {});
 
     // Connect grid to renderer
     store.patchStore.connect(gridId, 'domain', rendererId, 'domain');

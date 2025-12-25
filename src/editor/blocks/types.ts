@@ -1,4 +1,4 @@
-import type { BlockCategory, BlockForm, BlockSubcategory, Slot, BlockParams, LaneKind, LaneFlavor } from '../types';
+import type { BlockForm, BlockSubcategory, Slot, BlockParams, LaneKind, LaneFlavor } from '../types';
 
 // Re-export types that are used by other modules
 export type {

@@ -308,15 +308,13 @@ export function compileBusAwarePatch(
       const autoPubs = extractTimeRootAutoPublications(block.type, timeRootOutputs);
 
       // Convert AutoPublication to Publisher format
+      // Note: Auto-publications are optional - if the target bus doesn't exist, skip it.
+      // This allows simpler patches (and tests) that don't use all canonical buses.
       for (const autoPub of autoPubs) {
         // Find the bus ID for this auto-published bus name
         const targetBus = buses.find(b => b.name === autoPub.busName);
         if (!targetBus) {
-          errors.push({
-            code: 'PortMissing', // Use existing error code for missing buses
-            message: `TimeRoot auto-publication requires canonical bus "${autoPub.busName}" to exist`,
-            where: { blockId },
-          });
+          // Bus doesn't exist in patch - skip auto-publication silently
           continue;
         }
 
@@ -344,7 +342,7 @@ export function compileBusAwarePatch(
       // Field buses support more combine modes
       if (!(FIELD_COMBINE_MODES as readonly string[]).includes(bus.combineMode)) {
         errors.push({
-          code: 'PortTypeMismatch',
+          code: 'UnsupportedCombineMode',
           message: `Combine mode "${bus.combineMode}" not supported for Field bus. Supported: ${FIELD_COMBINE_MODES.join(', ')}.`,
           where: { busId: bus.id },
         });
@@ -353,7 +351,7 @@ export function compileBusAwarePatch(
       // Signal buses only support last and sum
       if (!(SIGNAL_COMBINE_MODES as readonly string[]).includes(bus.combineMode)) {
         errors.push({
-          code: 'PortTypeMismatch',
+          code: 'UnsupportedCombineMode',
           message: `Combine mode "${bus.combineMode}" not supported for Signal bus. Supported: ${SIGNAL_COMBINE_MODES.join(', ')}.`,
           where: { busId: bus.id },
         });

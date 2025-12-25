@@ -6,7 +6,7 @@
  * Reference: design-docs/10-Refactor-for-UI-prep/9-TransactionBuilderContract.md
  */
 
-import {
+import type {
   PatchKernel,
   TxMeta,
   TxResult,

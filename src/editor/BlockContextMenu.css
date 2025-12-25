@@ -2,6 +2,18 @@
  * BlockContextMenu Styles
  */
 
+/* Overlay captures clicks outside menu to close it */
+.context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  /* Allow clicks to pass through to elements below, except the menu */
+  pointer-events: none;
+}
+
 .block-context-menu {
   position: fixed;
   background: #1e1e1e;
@@ -14,6 +26,8 @@
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 13px;
   color: #e0e0e0;
+  /* Re-enable pointer events on the menu itself */
+  pointer-events: auto;
 }
 
 .block-context-menu .context-menu-header {
@@ -52,11 +66,21 @@
   gap: 8px;
   font-size: 13px;
   text-align: left;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
+  position: relative;
 }
 
 .block-context-menu .context-menu-action:hover {
-  background: #2a2a2a;
+  background: #3a3a4a;
+  color: #fff;
+}
+
+.block-context-menu .context-menu-action:hover .context-menu-icon {
+  color: #4a9eff;
+}
+
+.block-context-menu .context-menu-action:active {
+  background: #4a4a5a;
 }
 
 .block-context-menu .context-menu-icon {
@@ -106,12 +130,25 @@
   flex-direction: column;
   gap: 2px;
   text-align: left;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .replacement-option:hover {
-  background: #2a2a2a;
+  background: #3a3a4a;
   border-left-color: currentColor !important;
+  color: #fff;
+}
+
+.replacement-option:hover .replacement-label {
+  color: #fff;
+}
+
+.replacement-option:hover .replacement-type {
+  color: #aaa;
+}
+
+.replacement-option:active {
+  background: #4a4a5a;
 }
 
 .replacement-label {

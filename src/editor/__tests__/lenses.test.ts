@@ -46,7 +46,7 @@ describe('EaseLens', () => {
     const input = createSignalArtifact((t) => t / 1000); // Linear 0-1 over 1 second
     const lens: LensDefinition = { type: 'ease', params: {} };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(result.kind).toBe('Signal:number');
 
     // easeInOutSine: at t=0.5, should be 0.5
@@ -64,7 +64,7 @@ describe('EaseLens', () => {
     const input = createSignalArtifact((t) => t / 1000);
     const lens: LensDefinition = { type: 'ease', params: { easing: 'easeInQuad' } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
 
     // easeInQuad: at t=0.5, should be 0.25 (0.5^2)
     const midValue = evalSignal(result, 500);
@@ -75,11 +75,11 @@ describe('EaseLens', () => {
     const input = createSignalArtifact(() => 1.5); // Always > 1
     const lens: LensDefinition = { type: 'ease', params: { easing: 'linear' } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(1); // Clamped to 1
 
     const negativeInput = createSignalArtifact(() => -0.5);
-    const negResult = applyLens(negativeInput, lens);
+    const negResult = applyLens(negativeInput, lens) as Artifact;
     expect(evalSignal(negResult, 0)).toBe(0); // Clamped to 0
   });
 
@@ -87,7 +87,7 @@ describe('EaseLens', () => {
     const input: Artifact = { kind: 'Scalar:number', value: 0.5 };
     const lens: LensDefinition = { type: 'ease', params: {} };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(result.kind).toBe('Error');
   });
 });
@@ -102,7 +102,7 @@ describe('SlewLens', () => {
     const input = createSignalArtifact((t) => (t >= 100 ? 1 : 0));
     const lens: LensDefinition = { type: 'slew', params: { rate: 2.0 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
 
     // At t=0, value is 0 (initialized to input)
     expect(evalSignal(result, 0)).toBe(0);
@@ -121,7 +121,7 @@ describe('SlewLens', () => {
     const input = createSignalArtifact(() => 1.0);
     const lens: LensDefinition = { type: 'slew', params: { rate: 10.0 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
 
     // Initialize at target
     evalSignal(result, 0);
@@ -140,7 +140,7 @@ describe('QuantizeLens', () => {
     const input = createSignalArtifact((t) => t / 1000);
     const lens: LensDefinition = { type: 'quantize', params: { steps: 4 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
 
     // With 4 steps: values snap to 0, 0.25, 0.5, 0.75, 1
     expect(evalSignal(result, 0)).toBe(0);
@@ -157,7 +157,7 @@ describe('QuantizeLens', () => {
     const input = createSignalArtifact(() => 0.125);
     const lens: LensDefinition = { type: 'quantize', params: {} };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(0.25); // Rounds to nearest 0.25
   });
 
@@ -165,7 +165,7 @@ describe('QuantizeLens', () => {
     const input = createSignalArtifact(() => 0.7);
     const lens: LensDefinition = { type: 'quantize', params: { steps: 1 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(1); // Rounds to nearest: 0 or 1
   });
 });
@@ -179,7 +179,7 @@ describe('ScaleLens', () => {
     const input = createSignalArtifact(() => 0.5);
     const lens: LensDefinition = { type: 'scale', params: { scale: 2, offset: 0.1 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBeCloseTo(1.1, 5); // 0.5 * 2 + 0.1
   });
 
@@ -187,7 +187,7 @@ describe('ScaleLens', () => {
     const input = createSignalArtifact(() => 0.7);
     const lens: LensDefinition = { type: 'scale', params: {} };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBeCloseTo(0.7, 5);
   });
 
@@ -195,7 +195,7 @@ describe('ScaleLens', () => {
     const input = createSignalArtifact(() => 0.3);
     const lens: LensDefinition = { type: 'scale', params: { scale: -1, offset: 1 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBeCloseTo(0.7, 5); // 1 - 0.3
   });
 });
@@ -209,7 +209,7 @@ describe('WarpLens', () => {
     const input = createSignalArtifact(() => 0.5);
     const lens: LensDefinition = { type: 'warp', params: { power: 2 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBeCloseTo(0.25, 5); // 0.5^2
   });
 
@@ -217,7 +217,7 @@ describe('WarpLens', () => {
     const input = createSignalArtifact(() => 0.7);
     const lens: LensDefinition = { type: 'warp', params: {} };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBeCloseTo(0.7, 5);
   });
 
@@ -225,7 +225,7 @@ describe('WarpLens', () => {
     const input = createSignalArtifact(() => 1.5);
     const lens: LensDefinition = { type: 'warp', params: { power: 2 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(1); // Clamped then squared
   });
 });
@@ -239,7 +239,7 @@ describe('BroadcastLens', () => {
     const input = createSignalArtifact(() => 0.75);
     const lens: LensDefinition = { type: 'broadcast', params: {} };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(result.kind).toBe('Field:number');
 
     // Evaluate the field - need to narrow type first
@@ -261,7 +261,7 @@ describe('PerElementOffsetLens', () => {
     const input = createSignalArtifact(() => 0);
     const lens: LensDefinition = { type: 'perElementOffset', params: { range: 1.0 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(result.kind).toBe('Field:number');
 
     // Need to narrow type first
@@ -349,7 +349,7 @@ describe('Lens Presets', () => {
 
   it('breathing preset applies easeInOutSine', () => {
     const input = createSignalArtifact((t) => t / 1000);
-    const result = applyLens(input, LENS_PRESET_BREATHING);
+    const result = applyLens(input, LENS_PRESET_BREATHING) as Artifact;
 
     expect(result.kind).toBe('Signal:number');
     // Mid-point should be exactly 0.5 for easeInOutSine
@@ -358,14 +358,14 @@ describe('Lens Presets', () => {
 
   it('snap preset quantizes to 4 steps', () => {
     const input = createSignalArtifact(() => 0.6);
-    const result = applyLens(input, LENS_PRESET_SNAP);
+    const result = applyLens(input, LENS_PRESET_SNAP) as Artifact;
 
     expect(evalSignal(result, 0)).toBe(0.5); // 0.6 rounds to 0.5 with 4 steps
   });
 
   it('smooth preset applies slew', () => {
     const input = createSignalArtifact(() => 1.0);
-    const result = applyLens(input, LENS_PRESET_SMOOTH);
+    const result = applyLens(input, LENS_PRESET_SMOOTH) as Artifact;
 
     expect(result.kind).toBe('Signal:number');
     // First evaluation initializes
@@ -384,7 +384,7 @@ describe('Lens Error Handling', () => {
     const input = createSignalArtifact(() => 0.5);
     const lens = { type: 'unknown' as any, params: {} };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(result.kind).toBe('Error');
     expect((result as any).message).toContain('Unknown lens type');
   });
@@ -396,7 +396,7 @@ describe('Lens Error Handling', () => {
     };
     const lens: LensDefinition = { type: 'ease', params: {} };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(result.kind).toBe('Signal:number');
   });
 });
@@ -410,7 +410,7 @@ describe('ClampLens', () => {
     const input = createSignalArtifact(() => 1.5);
     const lens: LensDefinition = { type: 'clamp', params: { min: 0, max: 1 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(1);
   });
 
@@ -418,7 +418,7 @@ describe('ClampLens', () => {
     const input = createSignalArtifact(() => -0.5);
     const lens: LensDefinition = { type: 'clamp', params: { min: 0, max: 1 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(0);
   });
 
@@ -426,7 +426,7 @@ describe('ClampLens', () => {
     const input = createSignalArtifact(() => 0.5);
     const lens: LensDefinition = { type: 'clamp', params: { min: 0, max: 1 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(0.5);
   });
 
@@ -434,7 +434,7 @@ describe('ClampLens', () => {
     const input = createSignalArtifact(() => 50);
     const lens: LensDefinition = { type: 'clamp', params: { min: 0, max: 100 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(50);
   });
 });
@@ -448,7 +448,7 @@ describe('OffsetLens', () => {
     const input = createSignalArtifact(() => 0.5);
     const lens: LensDefinition = { type: 'offset', params: { amount: 0.3 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBeCloseTo(0.8, 5);
   });
 
@@ -456,7 +456,7 @@ describe('OffsetLens', () => {
     const input = createSignalArtifact(() => 0.8);
     const lens: LensDefinition = { type: 'offset', params: { amount: -0.3 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBeCloseTo(0.5, 5);
   });
 
@@ -464,7 +464,7 @@ describe('OffsetLens', () => {
     const input = createSignalArtifact(() => 0.5);
     const lens: LensDefinition = { type: 'offset', params: {} };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(0.5);
   });
 });
@@ -478,7 +478,7 @@ describe('DeadzoneLens', () => {
     const input = createSignalArtifact(() => 0.03);
     const lens: LensDefinition = { type: 'deadzone', params: { threshold: 0.05 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(0);
   });
 
@@ -486,7 +486,7 @@ describe('DeadzoneLens', () => {
     const input = createSignalArtifact(() => 0.8);
     const lens: LensDefinition = { type: 'deadzone', params: { threshold: 0.05 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(0.8);
   });
 
@@ -494,7 +494,7 @@ describe('DeadzoneLens', () => {
     const input = createSignalArtifact(() => -0.03);
     const lens: LensDefinition = { type: 'deadzone', params: { threshold: 0.05 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(0);
   });
 
@@ -502,7 +502,7 @@ describe('DeadzoneLens', () => {
     const input = createSignalArtifact(() => -0.1);
     const lens: LensDefinition = { type: 'deadzone', params: { threshold: 0.05 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBe(-0.1); // Preserved because abs(-0.1) >= 0.05
   });
 });
@@ -519,7 +519,7 @@ describe('MapRangeLens', () => {
       params: { inMin: 0, inMax: 1, outMin: 0, outMax: 360 }
     };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBeCloseTo(180, 5);
   });
 
@@ -530,7 +530,7 @@ describe('MapRangeLens', () => {
       params: { inMin: 0, inMax: 1, outMin: -1, outMax: 1 }
     };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBeCloseTo(0, 5);
   });
 
@@ -541,7 +541,7 @@ describe('MapRangeLens', () => {
       params: { inMin: 0, inMax: 1, outMin: 1, outMax: 0 }
     };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(evalSignal(result, 0)).toBeCloseTo(0.75, 5);
   });
 });
@@ -553,33 +553,33 @@ describe('MapRangeLens', () => {
 describe('Lens Stacks', () => {
   it('applies multiple lenses in sequence', () => {
     const input = createSignalArtifact(() => 0.5);
-    
+
     // First scale by 2, then offset by 0.1
     const lens1: LensDefinition = { type: 'scale', params: { scale: 2, offset: 0 } };
     const lens2: LensDefinition = { type: 'offset', params: { amount: 0.1 } };
 
-    let result = applyLens(input, lens1);
-    result = applyLens(result, lens2);
+    let result = applyLens(input, lens1) as Artifact;
+    result = applyLens(result, lens2) as Artifact;
 
     expect(evalSignal(result, 0)).toBeCloseTo(1.1, 5); // (0.5 * 2) + 0.1
   });
 
   it('order matters in stacks', () => {
     const input = createSignalArtifact(() => 0.5);
-    
+
     // Offset first, then scale
     const lens1: LensDefinition = { type: 'offset', params: { amount: 0.1 } };
     const lens2: LensDefinition = { type: 'scale', params: { scale: 2, offset: 0 } };
 
-    let result = applyLens(input, lens1);
-    result = applyLens(result, lens2);
+    let result = applyLens(input, lens1) as Artifact;
+    result = applyLens(result, lens2) as Artifact;
 
     expect(evalSignal(result, 0)).toBeCloseTo(1.2, 5); // (0.5 + 0.1) * 2
   });
 
   it('clamp after mapRange prevents overflow', () => {
     const input = createSignalArtifact(() => 0.8);
-    
+
     // Map to [0, 360] then clamp to [0, 180]
     const lens1: LensDefinition = {
       type: 'mapRange',
@@ -587,21 +587,21 @@ describe('Lens Stacks', () => {
     };
     const lens2: LensDefinition = { type: 'clamp', params: { min: 0, max: 180 } };
 
-    let result = applyLens(input, lens1);
-    result = applyLens(result, lens2);
+    let result = applyLens(input, lens1) as Artifact;
+    result = applyLens(result, lens2) as Artifact;
 
     expect(evalSignal(result, 0)).toBe(180); // 288 clamped to 180
   });
 
   it('deadzone before ease filters noise', () => {
     const input = createSignalArtifact(() => 0.02);
-    
+
     // Remove small values, then apply easing
     const lens1: LensDefinition = { type: 'deadzone', params: { threshold: 0.05 } };
     const lens2: LensDefinition = { type: 'ease', params: { easing: 'easeInOutSine' } };
 
-    let result = applyLens(input, lens1);
-    result = applyLens(result, lens2);
+    let result = applyLens(input, lens1) as Artifact;
+    result = applyLens(result, lens2) as Artifact;
 
     expect(evalSignal(result, 0)).toBeCloseTo(0, 5); // Deadzone zeroed it out
   });
@@ -610,7 +610,7 @@ describe('Lens Stacks', () => {
     const input: Artifact = { kind: 'Scalar:number', value: 0.5 };
     const lens: LensDefinition = { type: 'scale', params: { scale: 2, offset: 0 } };
 
-    const result = applyLens(input, lens);
+    const result = applyLens(input, lens) as Artifact;
     expect(result.kind).toBe('Error');
   });
 });

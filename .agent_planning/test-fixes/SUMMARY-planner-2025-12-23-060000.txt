@@ -1,0 +1,6 @@
+Agent: status-planner | 2025-12-23 06:00:00
+Topic: Fix failing tests
+Files: PLAN-2025-12-23-060000.md, DOD-2025-12-23-060000.md
+Items: 7 (P0: 2, P1: 3, P2: 3)
+Sprint Scope: P0 quick wins + P1.1 mute/unmute + P1.3 bus compilation
+Target: 93.6% → 98%+ test pass rate (35+ of 41 failures fixed)

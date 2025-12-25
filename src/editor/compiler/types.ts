@@ -236,7 +236,10 @@ export type ValueKind =
   // Additional artifact kinds (can be produced by compilers)
   | 'ElementCount'  // Number of elements from scene
   | 'FieldExpr'    // Lazy field expression (Phase 2)
-  | 'Event';      // TimeRoot wrap/end events
+  | 'Event'       // TimeRoot wrap/end events
+
+  // Canvas 2D render output
+  | 'CanvasRender'; // Canvas 2D render function (returns renderCmd.RenderTree)
 
 /**
  * PortType can be extended with refinements (units, constraints, etc.)
@@ -392,6 +395,9 @@ export type Artifact =
   
   // Event artifacts for TimeRoot wrap/end events
   | { kind: 'Event'; value: (tMs: number, lastTMs: number, ctx: RuntimeCtx) => boolean }
+
+  // Canvas 2D render artifact
+  | { kind: 'CanvasRender'; value: (tMs: number, ctx: RuntimeCtx) => import('../runtime/renderCmd').RenderTree }
 
   | { kind: 'Error'; message: string; where?: { blockId?: string; port?: string } };
 

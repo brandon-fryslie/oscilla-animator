@@ -148,7 +148,7 @@ export class ModulationTableStore {
         if (!typeDesc.busEligible) continue;
 
         const rowKey = createRowKey(block.id, input.id);
-        const groupKey = createGroupKey(blockDef.subcategory, block.id);
+        const groupKey = createGroupKey(blockDef.subcategory ?? 'Other', block.id);
 
         rows.push({
           key: rowKey,
@@ -183,7 +183,7 @@ export class ModulationTableStore {
 
         group = {
           key: row.groupKey,
-          label: `${blockDef.subcategory}: ${block.label}`,
+          label: `${blockDef.subcategory ?? 'Other'}: ${block.label}`,
           blockId: row.blockId,
           blockDef,
           rowKeys: [],
@@ -520,7 +520,7 @@ export class ModulationTableStore {
   private shouldBlockShowRows(blockDef: BlockDefinition): boolean {
     // Show rows for render/domain/camera blocks
     const showCategories = ['Render', 'Scene', 'Derivers'];
-    if (showCategories.includes(blockDef.subcategory)) {
+    if (blockDef.subcategory && showCategories.includes(blockDef.subcategory)) {
       return true;
     }
 

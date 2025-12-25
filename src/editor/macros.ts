@@ -1,17 +1,18 @@
 /**
  * Macro Expansion System
  *
- * Macros are "recipe starters" that expand into multiple primitive blocks
+ * Macros are "recipe starters" that expand into multiple blocks
  * with pre-wired connections. When a macro is dropped, the user sees all
  * the individual blocks - nothing is hidden.
  *
  * Think of it like a modular synth preset: you load it and see all the
  * modules and patch cables, ready to tweak.
  *
- * ALL MACROS USE ONLY PRIMITIVE BLOCKS - no composites.
+ * Macros can use both primitives and composites - they work exactly like
+ * a user dragging blocks into the patch manually.
  */
 
-import type { LaneKind } from './types';
+import type { LaneKind, LensType } from './types';
 
 /**
  * A block placement in a macro expansion.
@@ -821,4 +822,25 @@ export function getMacroKey(blockType: string, _params?: Record<string, unknown>
  */
 export function getMacroExpansion(key: string): MacroExpansion | null {
   return MACRO_REGISTRY[key] ?? null;
+}
+
+/**
+ * Get all registered macro keys.
+ */
+export function getAllMacroKeys(): string[] {
+  return Object.keys(MACRO_REGISTRY);
+}
+
+/**
+ * Get a display name for a macro key.
+ * Converts 'macro:breathingDots' to 'Breathing Dots'.
+ */
+export function getMacroDisplayName(key: string): string {
+  // Remove 'macro:' prefix
+  const name = key.replace(/^macro:/, '');
+  // Convert camelCase to Title Case with spaces
+  return name
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (str) => str.toUpperCase())
+    .trim();
 }

@@ -29,8 +29,9 @@ import { ModulationTable, ModulationTableStore } from './modulation-table';
 import { Inspector } from './Inspector';
 import { LogWindow } from './LogWindow';
 import { PreviewPanel } from './PreviewPanel';
-import { SettingsToolbar } from './SettingsToolbar';
+import { SettingsToolbar, getStartupMacro } from './SettingsToolbar';
 import { ContextMenu } from './ContextMenu';
+import { BlockContextMenu } from './BlockContextMenu';
 import { PathManagerModal } from './PathManagerModal';
 import { createCompilerService, setupAutoCompile } from './compiler';
 import { ControlSurfaceStore, ControlSurfacePanel, generateSurfaceForMacro } from './controlSurface';
@@ -40,6 +41,7 @@ import type { LaneId } from './types';
 import './Editor.css';
 import './mobile.css';
 import { HelpCenterModal, HelpPanel, type HelpCenterTopicId } from './HelpCenter';
+import {DebugReplPanel} from "./components/DebugReplPanel.tsx";
 
 type HelpTopic = 'intro' | 'library' | 'inspector' | 'preview' | 'patch' | 'controlSurface';
 const TOUR_COMPLETE_KEY = 'loom-editor-tour-complete';
@@ -436,6 +438,8 @@ export const Editor = observer(() => {
     setControlsCollapsed,
     helpPanelCollapsed,
     setHelpPanelCollapsed,
+    debugPanelCollapsed,
+    setDebugPanelCollapsed,
     patchViewMode,
     setPatchViewMode,
     dragging,
@@ -526,21 +530,26 @@ export const Editor = observer(() => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Load a default macro on startup and generate its control surface
+  // Load the selected startup macro and generate its control surface
   useEffect(() => {
-    store.patchStore.addBlock('macro:simpleGrid');
-    // Generate a default surface for the macro
-    // Use setTimeout to ensure blocks are fully populated after macro expansion
-    setTimeout(() => {
-      const blockIds = new Map<string, string>();
-      store.patchStore.blocks.forEach((block) => {
-        blockIds.set(block.type, block.id);
-      });
-      const surface = generateSurfaceForMacro('simpleGrid', blockIds);
-      if (surface) {
-        controlSurfaceStore.setSurface(surface);
-      }
-    }, 0);
+    const startupMacro = getStartupMacro();
+    if (startupMacro) {
+      store.patchStore.addBlock(startupMacro);
+      // Generate a default surface for the macro
+      // Use setTimeout to ensure blocks are fully populated after macro expansion
+      setTimeout(() => {
+        const blockIds = new Map<string, string>();
+        store.patchStore.blocks.forEach((block) => {
+          blockIds.set(block.type, block.id);
+        });
+        // Extract macro name from key (e.g., 'macro:simpleGrid' -> 'simpleGrid')
+        const macroName = startupMacro.replace(/^macro:/, '');
+        const surface = generateSurfaceForMacro(macroName, blockIds);
+        if (surface) {
+          controlSurfaceStore.setSurface(surface);
+        }
+      }, 0);
+    }
   }, [store, controlSurfaceStore]);
 
   // Track active drag state
@@ -621,7 +630,7 @@ export const Editor = observer(() => {
       const blockType = activeData.blockType as string;
       const laneId = (overData.laneId ?? overData.laneName) as LaneId;
       const blockId = store.patchStore.addBlock(blockType);
-      
+
       // Explicitly move to target lane
       store.viewStore.moveBlockToLane(blockId, laneId);
     }
@@ -632,7 +641,7 @@ export const Editor = observer(() => {
       const laneId = overData.laneId as LaneId;
       const index = overData.index as number;
       const blockId = store.patchStore.addBlock(blockType);
-      
+
       // Explicitly move and reorder in target lane
       store.viewStore.moveBlockToLaneAtIndex(blockId, laneId, index);
     }
@@ -991,6 +1000,12 @@ export const Editor = observer(() => {
                 )}
               </div>
 
+              {/* Debug REPL Panel */}
+              <DebugReplPanel
+                collapsed={debugPanelCollapsed}
+                onToggleCollapse={() => setDebugPanelCollapsed((v) => !v)}
+              />
+
               {/* Embedded Help Panel */}
               <HelpPanel
                 topicId={helpPanelTopicId}
@@ -1024,6 +1039,7 @@ export const Editor = observer(() => {
 
         {/* Context menu for right-click actions */}
         <ContextMenu />
+        <BlockContextMenu />
       </div>
 
       <PathManagerModal

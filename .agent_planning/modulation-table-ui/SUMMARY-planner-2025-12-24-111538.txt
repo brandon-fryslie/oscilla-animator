@@ -1,0 +1,24 @@
+Agent: status-planner | 2025-12-24-111538
+Topic: Modulation Table Responsive Layout
+Files: PLAN-2025-12-24-111538.md, DOD-2025-12-24-111538.md
+Items: 5 (P0: 2, P1: 2, P2: 1)
+Effort: LOW (< 30 minutes)
+Risk: LOW (CSS-only changes)
+Source: STATUS-responsive-20251224-155100.md
+
+Sprint Goal: Make modulation table fill its container responsively
+
+Deliverables:
+1. Table fills container at all widths
+2. Works with resizable panels
+3. Handles varying column counts (6-26+)
+
+Changes Required:
+- Add width: 100% to .modulation-table
+- Convert corner cell to percentage (20%)
+- Remove compact column fixed widths
+- Make expanded column responsive (2.5%)
+- Update mobile media query
+
+Testing: Chrome DevTools visual verification (7 test scenarios)
+No React/TypeScript changes needed - CSS-only fix

@@ -7,28 +7,20 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ActionExecutor } from '../ActionExecutor';
 import type { PatchStore } from '../../stores/PatchStore';
 import type { UIStateStore } from '../../stores/UIStateStore';
+import type { ViewStateStore } from '../../stores/ViewStateStore';
 import type { DiagnosticHub } from '../DiagnosticHub';
-import type { BlockId, LaneId, Connection, Block } from '../../types';
+import type { BlockId, Connection, Block, LaneId } from '../../types';
 
 // Mock stores
 const createMockPatchStore = (): Partial<PatchStore> => ({
   blocks: [],
   connections: [],
-  lanes: [
-    { id: 'phase' as LaneId, kind: 'Phase', blockIds: [], label: 'Phase', description: '', flavor: 'General', flowStyle: 'patchbay', collapsed: false, pinned: false, name: 'phase' },
-    { id: 'fields' as LaneId, kind: 'Fields', blockIds: [], label: 'Fields', description: '', flavor: 'General', flowStyle: 'patchbay', collapsed: false, pinned: false, name: 'fields' },
-  ],
-  addBlock: vi.fn((_type: string, _laneId: LaneId) => {
+  addBlock: vi.fn((_type: string, _params?: any) => {
     const newBlockId = `block-${Date.now()}` as BlockId;
     (createMockPatchStore().blocks as any).push({ id: newBlockId, type: _type });
-    const lane = createMockPatchStore().lanes?.find(l => l.id === _laneId);
-    if (lane) {
-      lane.blockIds.push(newBlockId);
-    }
     return newBlockId;
   }),
   removeBlock: vi.fn(),
-  reorderBlockInLane: vi.fn(),
   connect: vi.fn(),
   disconnect: vi.fn(),
 });
@@ -43,20 +35,34 @@ const createMockDiagnosticHub = (): Partial<DiagnosticHub> => ({
   muteDiagnostic: vi.fn(),
 });
 
+const createMockViewStateStore = (): Partial<ViewStateStore> => ({
+  lanes: [
+    { id: 'lane-1' as LaneId, kind: 'Program', label: 'Program', description: '', flowStyle: 'patchbay', blockIds: ['block-1'], collapsed: false, pinned: false },
+    { id: 'lane-2' as LaneId, kind: 'Phase', label: 'Phase', description: '', flowStyle: 'chain', blockIds: [], collapsed: false, pinned: false },
+  ],
+  moveBlockToLane: vi.fn(),
+  reorderBlockInLane: vi.fn(),
+});
+
 describe('ActionExecutor', () => {
   let actionExecutor: ActionExecutor;
   let mockPatchStore: Partial<PatchStore>;
   let mockUIStateStore: Partial<UIStateStore>;
+  let mockViewStateStore: Partial<ViewStateStore>;
   let mockDiagnosticHub: Partial<DiagnosticHub>;
 
   beforeEach(() => {
     mockPatchStore = createMockPatchStore();
+    mockViewStateStore = createMockViewStateStore();
     mockUIStateStore = createMockUIStateStore();
+    // Add root.viewStore to UIStateStore mock (used by createTimeRoot)
+    (mockUIStateStore as any).root = { viewStore: mockViewStateStore };
     mockDiagnosticHub = createMockDiagnosticHub();
 
     actionExecutor = new ActionExecutor(
       mockPatchStore as PatchStore,
       mockUIStateStore as UIStateStore,
+      mockViewStateStore as ViewStateStore,
       mockDiagnosticHub as DiagnosticHub
     );
   });
@@ -124,20 +130,17 @@ describe('ActionExecutor', () => {
   });
 
   describe('insertBlock', () => {
-    it('should add a block to the first lane when no nearBlockId specified', () => {
+    it('should add a block when no nearBlockId specified', () => {
       const result = actionExecutor.execute({
         kind: 'insertBlock',
         blockType: 'SineWave',
       });
 
       expect(result).toBe(true);
-      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('SineWave', 'phase');
+      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('SineWave');
     });
 
     it('should add a block near an existing block', () => {
-      // Set up mock blocks in lane
-      mockPatchStore.lanes![0].blockIds = ['block-1' as BlockId, 'block-2' as BlockId];
-
       const result = actionExecutor.execute({
         kind: 'insertBlock',
         blockType: 'SineWave',
@@ -186,7 +189,7 @@ describe('ActionExecutor', () => {
       });
 
       expect(result).toBe(true);
-      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('CycleTimeRoot', 'phase');
+      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('CycleTimeRoot');
     });
 
     it('should create a FiniteTimeRoot', () => {
@@ -196,7 +199,7 @@ describe('ActionExecutor', () => {
       });
 
       expect(result).toBe(true);
-      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('FiniteTimeRoot', 'phase');
+      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('FiniteTimeRoot');
     });
 
     it('should create an InfiniteTimeRoot', () => {
@@ -206,7 +209,7 @@ describe('ActionExecutor', () => {
       });
 
       expect(result).toBe(true);
-      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('InfiniteTimeRoot', 'phase');
+      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('InfiniteTimeRoot');
     });
 
     it('should remove existing TimeRoots before creating new one', () => {
@@ -223,7 +226,7 @@ describe('ActionExecutor', () => {
       expect(result).toBe(true);
       expect(mockPatchStore.removeBlock).toHaveBeenCalledWith('block-1');
       expect(mockPatchStore.removeBlock).toHaveBeenCalledWith('block-2');
-      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('InfiniteTimeRoot', 'phase');
+      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('InfiniteTimeRoot');
     });
   });
 
@@ -302,13 +305,17 @@ describe('ActionExecutor', () => {
 
       mockPatchStore.blocks = [sourceBlock, targetBlock];
       mockPatchStore.connections = [connection];
-      mockPatchStore.lanes![0].blockIds = ['source-block' as BlockId, 'target-block' as BlockId];
+
+      // Ensure the source block is in a lane (required by addAdapter)
+      mockViewStateStore.lanes = [
+        { id: 'lane-1' as LaneId, kind: 'Program', label: 'Program', description: '', flowStyle: 'patchbay', blockIds: ['source-block', 'target-block'], collapsed: false, pinned: false },
+        { id: 'lane-2' as LaneId, kind: 'Phase', label: 'Phase', description: '', flowStyle: 'chain', blockIds: [], collapsed: false, pinned: false },
+      ];
 
       // Mock addBlock to return adapter and add it to blocks
-      (mockPatchStore.addBlock as any) = vi.fn((_adapterType: string, laneId: LaneId) => {
+      (mockPatchStore.addBlock as any) = vi.fn((_adapterType: string) => {
         const adapterId = 'adapter-block' as BlockId;
         mockPatchStore.blocks!.push(adapterBlock);
-        mockPatchStore.lanes!.find(l => l.id === laneId)?.blockIds.push(adapterId);
         return adapterId;
       });
     });
@@ -323,7 +330,7 @@ describe('ActionExecutor', () => {
       expect(result).toBe(true);
 
       // Verify adapter block was added
-      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('ClampSignal', 'phase');
+      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('ClampSignal');
 
       // Verify old connection was removed
       expect(mockPatchStore.disconnect).toHaveBeenCalledWith('conn-1');
@@ -358,27 +365,6 @@ describe('ActionExecutor', () => {
       consoleWarnSpy.mockRestore();
     });
 
-    it('should return false if lane not found', () => {
-      // Remove all lanes
-      mockPatchStore.lanes = [];
-
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const result = actionExecutor.execute({
-        kind: 'addAdapter',
-        fromPort: { kind: 'port', blockId: 'source-block', portId: 'out' },
-        adapterType: 'ClampSignal',
-      });
-
-      expect(result).toBe(false);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        '[ActionExecutor] Lane not found for block:',
-        'source-block'
-      );
-
-      consoleWarnSpy.mockRestore();
-    });
-
     it('should handle adapter block with missing ports gracefully', () => {
       // Create an adapter block with non-standard port names
       const badAdapterBlock: Block = {
@@ -393,10 +379,9 @@ describe('ActionExecutor', () => {
       };
 
       // Override addBlock to add bad adapter
-      (mockPatchStore.addBlock as any) = vi.fn((_badAdapterType: string, laneId: LaneId) => {
+      (mockPatchStore.addBlock as any) = vi.fn((_badAdapterType: string) => {
         const adapterId = 'adapter-block' as BlockId;
         mockPatchStore.blocks!.push(badAdapterBlock);
-        mockPatchStore.lanes!.find(l => l.id === laneId)?.blockIds.push(adapterId);
         return adapterId;
       });
 

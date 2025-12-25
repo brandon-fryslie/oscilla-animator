@@ -16,11 +16,6 @@ import type {
   Publisher,
   Listener,
   Patch,
-  BindingEndpoint,
-  PortRef,
-  AdapterStep,
-  LensDefinition,
-  BusCombineMode,
 } from '../types';
 
 import type { CompositeDefinition } from '../composites';

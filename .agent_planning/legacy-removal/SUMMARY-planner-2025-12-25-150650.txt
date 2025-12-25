@@ -1,0 +1,7 @@
+Agent: status-planner | 2025-12-25-150650
+Topic: legacy-removal
+Files: PLAN-2025-12-25-150650.md, DOD-2025-12-25-150650.md
+Items: 11 major categories + 7 subcategories (P0: 3, P1: 1, P2: 4, P3: 3)
+Phases: 4 (Quick Wins → Test Infrastructure → API Cleanup → Core Architecture)
+Risk: MEDIUM-HIGH (Phase 4 has high-risk architectural changes)
+Estimated: 3.5-4.5 weeks total
