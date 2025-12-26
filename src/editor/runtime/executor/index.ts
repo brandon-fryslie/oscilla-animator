@@ -5,7 +5,7 @@
  */
 
 // Main executor
-export { ScheduleExecutor, type RenderOutput } from "./ScheduleExecutor";
+export { ScheduleExecutor } from "./ScheduleExecutor";
 
 // Runtime state
 export { type RuntimeState, type FrameCache, createRuntimeState } from "./RuntimeState";

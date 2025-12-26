@@ -140,29 +140,30 @@ describe("ScheduleExecutor", () => {
       const runtime = createRuntimeState(program);
 
       // Execute frame at t=500ms
-      const output = executor.executeFrame(program, runtime, 500);
+      const tree = executor.executeFrame(program, runtime, 500);
 
-      // Verify output structure
-      expect(output).toBeDefined();
-      expect(output.frameId).toBe(1); // First frame
-
-      // Note: We can't verify slot values yet because ValueStore.read() is stubbed
-      // That's OK for Sprint 1 - we're just testing the execution loop structure
+      // Verify output is a RenderTree (empty group when no outputs defined)
+      expect(tree).toBeDefined();
+      expect(tree.kind).toBe('group');
+      expect(tree.id).toBe('empty');
     });
 
-    it("increments frameId on each execution", () => {
+    it("returns empty group when program has no outputs", () => {
       const timeModel: TimeModelIR = { kind: "infinite", windowMs: 10000 };
       const program = createMinimalProgram(timeModel, []);
       const runtime = createRuntimeState(program);
 
-      const output1 = executor.executeFrame(program, runtime, 0);
-      expect(output1.frameId).toBe(1);
+      const tree1 = executor.executeFrame(program, runtime, 0);
+      expect(tree1.kind).toBe('group');
+      expect(tree1.id).toBe('empty');
 
-      const output2 = executor.executeFrame(program, runtime, 16.67);
-      expect(output2.frameId).toBe(2);
+      const tree2 = executor.executeFrame(program, runtime, 16.67);
+      expect(tree2.kind).toBe('group');
+      expect(tree2.id).toBe('empty');
 
-      const output3 = executor.executeFrame(program, runtime, 33.33);
-      expect(output3.frameId).toBe(3);
+      const tree3 = executor.executeFrame(program, runtime, 33.33);
+      expect(tree3.kind).toBe('group');
+      expect(tree3.id).toBe('empty');
     });
 
     it("executes steps in schedule order", () => {

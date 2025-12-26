@@ -116,10 +116,10 @@ function BusEndpointDisplay({
 }
 
 /**
- * Wire Connection Inspector - displays wire details.
+ * Wire Connection Inspector - displays wire details with lens support.
  */
 const WireConnectionView = observer(({
-  connection: _connection,
+  connection,
   sourceBlock,
   sourceSlot,
   targetBlock,
@@ -135,7 +135,6 @@ const WireConnectionView = observer(({
   onDisconnect: () => void;
   onBack: () => void;
 }) => {
-  // _connection is available for future use (e.g., display connection ID)
   const store = useStore();
 
   const navigateToSource = useCallback(() => {
@@ -145,6 +144,24 @@ const WireConnectionView = observer(({
   const navigateToTarget = useCallback(() => {
     store.uiStore.selectBlock(targetBlock.id);
   }, [store, targetBlock.id]);
+
+  const handleToggleEnabled = useCallback(() => {
+    store.patchStore.setConnectionEnabled(connection.id, connection.enabled === false);
+  }, [store, connection.id, connection.enabled]);
+
+  const handleRemoveLens = useCallback((index: number) => {
+    store.patchStore.removeLensFromConnection(connection.id, index);
+  }, [store, connection.id]);
+
+  const handleToggleLensEnabled = useCallback((index: number) => {
+    const lens = connection.lensStack?.[index];
+    if (lens) {
+      store.patchStore.updateConnectionLens(connection.id, index, { enabled: !lens.enabled });
+    }
+  }, [store, connection.id, connection.lensStack]);
+
+  const hasLenses = connection.lensStack && connection.lensStack.length > 0;
+  const isEnabled = connection.enabled !== false;
 
   return (
     <InspectorContainer
@@ -171,6 +188,48 @@ const WireConnectionView = observer(({
           portType={targetSlot.type}
           onNavigate={navigateToTarget}
         />
+      </div>
+
+      <div className="conn-section">
+        <label className="conn-toggle-row">
+          <input
+            type="checkbox"
+            checked={isEnabled}
+            onChange={handleToggleEnabled}
+          />
+          <span>Enabled</span>
+        </label>
+      </div>
+
+      {/* Lens section */}
+      <div className="conn-section">
+        <h4 className="conn-section-title">Lenses</h4>
+        {hasLenses ? (
+          <div className="conn-lens-list">
+            {connection.lensStack!.map((lens, i) => (
+              <div key={i} className={`conn-lens-item ${lens.enabled === false ? 'disabled' : ''}`}>
+                <label className="conn-lens-toggle">
+                  <input
+                    type="checkbox"
+                    checked={lens.enabled !== false}
+                    onChange={() => handleToggleLensEnabled(i)}
+                  />
+                </label>
+                <span className="conn-lens-name">{lens.lensId}</span>
+                <button
+                  className="conn-lens-remove"
+                  onClick={() => handleRemoveLens(i)}
+                  title="Remove lens"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="conn-hint">No lenses applied</p>
+        )}
+        {/* TODO: Add lens picker button for adding new lenses */}
       </div>
 
       <div className="conn-actions">
@@ -216,6 +275,27 @@ const PublisherConnectionView = observer(({
     store.busStore.updatePublisher(publisher.id, { enabled: !publisher.enabled });
   }, [store, publisher.id, publisher.enabled]);
 
+  const handleRemoveLens = useCallback((index: number) => {
+    const currentStack = publisher.lensStack ?? [];
+    const newStack = currentStack.filter((_, i) => i !== index);
+    store.busStore.updatePublisher(publisher.id, {
+      lensStack: newStack.length > 0 ? newStack : undefined,
+    });
+  }, [store, publisher.id, publisher.lensStack]);
+
+  const handleToggleLensEnabled = useCallback((index: number) => {
+    const currentStack = publisher.lensStack ?? [];
+    const lens = currentStack[index];
+    if (lens) {
+      const newStack = currentStack.map((l, i) =>
+        i === index ? { ...l, enabled: !l.enabled } : l
+      );
+      store.busStore.updatePublisher(publisher.id, { lensStack: newStack });
+    }
+  }, [store, publisher.id, publisher.lensStack]);
+
+  const hasLenses = publisher.lensStack && publisher.lensStack.length > 0;
+
   return (
     <InspectorContainer
       title="Publisher"
@@ -252,7 +332,35 @@ const PublisherConnectionView = observer(({
         </label>
       </div>
 
-      {/* TODO P0-3: Lens section for publisher (if publishers support lenses) */}
+      {/* Lens section with editable list */}
+      <div className="conn-section">
+        <h4 className="conn-section-title">Lenses</h4>
+        {hasLenses ? (
+          <div className="conn-lens-list">
+            {publisher.lensStack!.map((lens, i) => (
+              <div key={i} className={`conn-lens-item ${lens.enabled === false ? 'disabled' : ''}`}>
+                <label className="conn-lens-toggle">
+                  <input
+                    type="checkbox"
+                    checked={lens.enabled !== false}
+                    onChange={() => handleToggleLensEnabled(i)}
+                  />
+                </label>
+                <span className="conn-lens-name">{lens.lensId}</span>
+                <button
+                  className="conn-lens-remove"
+                  onClick={() => handleRemoveLens(i)}
+                  title="Remove lens"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="conn-hint">No lenses applied</p>
+        )}
+      </div>
 
       <div className="conn-actions">
         <button className="conn-action-btn conn-action-danger" onClick={onDisconnect}>
@@ -297,7 +405,25 @@ const ListenerConnectionView = observer(({
     store.busStore.updateListener(listener.id, { enabled: !listener.enabled });
   }, [store, listener.id, listener.enabled]);
 
-  // TODO P0-3: Add lens chain editing here using embedded LensChainEditor
+  const handleRemoveLens = useCallback((index: number) => {
+    const currentStack = listener.lensStack ?? [];
+    const newStack = currentStack.filter((_, i) => i !== index);
+    store.busStore.updateListener(listener.id, {
+      lensStack: newStack.length > 0 ? newStack : undefined,
+    });
+  }, [store, listener.id, listener.lensStack]);
+
+  const handleToggleLensEnabled = useCallback((index: number) => {
+    const currentStack = listener.lensStack ?? [];
+    const lens = currentStack[index];
+    if (lens) {
+      const newStack = currentStack.map((l, i) =>
+        i === index ? { ...l, enabled: !l.enabled } : l
+      );
+      store.busStore.updateListener(listener.id, { lensStack: newStack });
+    }
+  }, [store, listener.id, listener.lensStack]);
+
   const hasLenses = listener.lensStack && listener.lensStack.length > 0;
 
   return (
@@ -336,19 +462,34 @@ const ListenerConnectionView = observer(({
         </label>
       </div>
 
-      {/* Lens section - placeholder until P0-3 adds embedded LensChainEditor */}
+      {/* Lens section with editable list */}
       <div className="conn-section">
         <h4 className="conn-section-title">Lenses</h4>
         {hasLenses ? (
-          <div className="conn-lens-preview">
+          <div className="conn-lens-list">
             {listener.lensStack!.map((lens, i) => (
-              <span key={i} className="conn-lens-badge">{lens.lensId}</span>
+              <div key={i} className={`conn-lens-item ${lens.enabled === false ? 'disabled' : ''}`}>
+                <label className="conn-lens-toggle">
+                  <input
+                    type="checkbox"
+                    checked={lens.enabled !== false}
+                    onChange={() => handleToggleLensEnabled(i)}
+                  />
+                </label>
+                <span className="conn-lens-name">{lens.lensId}</span>
+                <button
+                  className="conn-lens-remove"
+                  onClick={() => handleRemoveLens(i)}
+                  title="Remove lens"
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         ) : (
           <p className="conn-hint">No lenses applied</p>
         )}
-        {/* TODO P0-3: Replace with embedded LensChainEditor */}
       </div>
 
       <div className="conn-actions">

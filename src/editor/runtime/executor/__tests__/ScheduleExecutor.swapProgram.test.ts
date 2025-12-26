@@ -304,15 +304,15 @@ describe("ScheduleExecutor.swapProgram()", () => {
       let runtime = createRuntimeState(program1);
 
       // Execute frame sequence: program1, swap, program2, program2
-      const output1 = executor.executeFrame(program1, runtime, 0);
-      runtime = executor.swapProgram(program2, runtime);
-      const output2 = executor.executeFrame(program2, runtime, 16.67);
-      const output3 = executor.executeFrame(program2, runtime, 33.33);
+      executor.executeFrame(program1, runtime, 0);
+      expect(runtime.frameId).toBe(1);
 
-      // Frame IDs should increment monotonically
-      expect(output1.frameId).toBe(1);
-      expect(output2.frameId).toBe(2);
-      expect(output3.frameId).toBe(3);
+      runtime = executor.swapProgram(program2, runtime);
+      executor.executeFrame(program2, runtime, 16.67);
+      expect(runtime.frameId).toBe(2);
+
+      executor.executeFrame(program2, runtime, 33.33);
+      expect(runtime.frameId).toBe(3);
     });
   });
 });

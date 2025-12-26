@@ -171,7 +171,7 @@
   accent-color: #4f46e5;
 }
 
-/* Lens preview */
+/* Lens preview (for compact display) */
 .conn-lens-preview {
   display: flex;
   flex-wrap: wrap;
@@ -186,6 +186,71 @@
   padding: 2px 6px;
   font-size: 10px;
   color: #94a3b8;
+}
+
+/* Lens list (for editable lens UI) */
+.conn-lens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.conn-lens-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.conn-lens-item.disabled {
+  opacity: 0.5;
+  background: #1a1a2e;
+}
+
+.conn-lens-toggle {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.conn-lens-toggle input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: #4f46e5;
+}
+
+.conn-lens-name {
+  flex: 1;
+  font-size: 11px;
+  color: #e0e0e0;
+  font-weight: 500;
+}
+
+.conn-lens-remove {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.conn-lens-remove:hover {
+  background: #3a1f1f;
+  border-color: #5c2424;
+  color: #f87171;
 }
 
 /* Hint text */

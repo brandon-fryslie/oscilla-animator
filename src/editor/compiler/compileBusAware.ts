@@ -598,15 +598,43 @@ export function compileBusAwarePatch(
 
       if (wireConn !== null && wireConn !== undefined) {
         // Wire takes precedence over bus
-        const srcKey = keyOf(wireConn.from.blockId, wireConn.from.port);
-        const src = compiledPortMap.get(srcKey);
-        const errorArtifact: Artifact = src ?? {
-          kind: 'Error',
-          message: `Missing upstream artifact for ${srcKey}`,
-          where: { blockId: wireConn.from.blockId, port: wireConn.from.port },
-        };
-        inputs[p.name] = errorArtifact;
-      } else {
+        // Skip disabled connections
+        if (wireConn.enabled === false) {
+          // Connection is disabled - treat as if no connection exists
+          // Fall through to check for bus listener or default source
+        } else {
+          const srcKey = keyOf(wireConn.from.blockId, wireConn.from.port);
+          let src = compiledPortMap.get(srcKey);
+          if (src === null || src === undefined) {
+            src = {
+              kind: 'Error',
+              message: `Missing upstream artifact for ${srcKey}`,
+              where: { blockId: wireConn.from.blockId, port: wireConn.from.port },
+            };
+          } else {
+            // Apply adapter chain first, then lens stack (matching bus listener pattern)
+            if (wireConn.adapterChain && wireConn.adapterChain.length > 0) {
+              src = applyAdapterChain(src, wireConn.adapterChain, ctx, errors);
+            }
+            if (wireConn.lensStack && wireConn.lensStack.length > 0) {
+              src = applyLensStack(
+                src,
+                wireConn.lensStack,
+                ctx,
+                defaultSources,
+                buses,
+                publishers,
+                compiledPortMap,
+                errors
+              );
+            }
+          }
+          inputs[p.name] = src;
+          continue; // Move to next input port
+        }
+      }
+      // No wire connection (or wire disabled) - check for bus listener
+      {
         // Check for bus listener
         const busListener = listeners.find(
           l => l.enabled && l.to.blockId === blockId && l.to.slotId === p.name

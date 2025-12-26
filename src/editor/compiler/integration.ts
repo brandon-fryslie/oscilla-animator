@@ -390,11 +390,16 @@ function convertBlocks(blocks: Block[]): Map<string, BlockInstance> {
 
 /**
  * Convert EditorStore connections to compiler format.
+ * Preserves lens stacks, adapter chains, and enabled state for wire transformations.
  */
 function convertConnections(connections: Connection[]): CompilerConnection[] {
   return connections.map((c: Connection) => ({
+    id: c.id,
     from: { blockId: c.from.blockId, port: c.from.slotId },
     to: { blockId: c.to.blockId, port: c.to.slotId },
+    lensStack: c.lensStack,
+    adapterChain: c.adapterChain,
+    enabled: c.enabled,
   }));
 }
 

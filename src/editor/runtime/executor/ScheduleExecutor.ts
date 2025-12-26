@@ -15,6 +15,7 @@
 
 import type { CompiledProgramIR, StepIR } from "../../compiler/ir";
 import type { RuntimeState } from "./RuntimeState";
+import type { RenderTree } from "../renderTree";
 import { resolveTime, type EffectiveTime } from "./timeResolution";
 
 // Step executors
@@ -26,27 +27,25 @@ import { executeRenderAssemble } from "./steps/executeRenderAssemble";
 import { executeDebugProbe } from "./steps/executeDebugProbe";
 
 // ============================================================================
-// Render Output (Stub for Sprint 1)
+// Type Guard for RenderTree
 // ============================================================================
 
 /**
- * RenderOutput - Final Frame Output
+ * Type guard to check if a value is a valid RenderTree.
  *
- * Stub type for Sprint 1. Full definition will be in Phase 5.
- * For now, just a placeholder shape.
- *
- * TODO: Phase 5 - Define complete RenderOutput structure
- * - RenderTree or RenderCommands
- * - Instance buffers
- * - Uniform values
- * - Camera/viewport info
+ * A RenderTree is a DrawNode (group, shape, or effect).
  */
-export interface RenderOutput {
-  /** Stub: just indicate frame completed */
-  frameId: number;
+function isRenderTree(value: unknown): value is RenderTree {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
 
-  /** Stub: placeholder for render data */
-  renderData?: unknown;
+  const node = value as { kind?: string };
+  return (
+    node.kind === 'group' ||
+    node.kind === 'shape' ||
+    node.kind === 'effect'
+  );
 }
 
 // ============================================================================
@@ -62,7 +61,7 @@ export interface RenderOutput {
  * 1. Frame lifecycle (new frame setup, clear per-frame state)
  * 2. Time resolution (compute effective time from tAbsMs + TimeModel)
  * 3. Step dispatch (execute each StepIR in schedule order)
- * 4. Output extraction (produce RenderOutput)
+ * 4. Output extraction (produce RenderTree)
  * 5. Hot-swap (jank-free program replacement)
  *
  * Key invariants:
@@ -84,13 +83,13 @@ export class ScheduleExecutor {
    * @param program - Compiled program IR
    * @param runtime - Runtime state (values, state, caches)
    * @param tMs - Absolute time in milliseconds
-   * @returns Render output for this frame
+   * @returns RenderTree for this frame
    */
   public executeFrame(
     program: CompiledProgramIR,
     runtime: RuntimeState,
     tMs: number,
-  ): RenderOutput {
+  ): RenderTree {
     // 1. New frame lifecycle
     runtime.frameCache.newFrame();
     runtime.values.clear();
@@ -104,8 +103,8 @@ export class ScheduleExecutor {
       this.executeStep(step, program, runtime, effectiveTime);
     }
 
-    // 4. Extract render output (stub for Sprint 1)
-    return this.extractRenderOutput(runtime);
+    // 4. Extract render output
+    return this.extractRenderOutput(program, runtime);
   }
 
   /**
@@ -207,22 +206,42 @@ export class ScheduleExecutor {
   /**
    * Extract render output from runtime state.
    *
-   * Stub implementation for Sprint 1.
-   * Full implementation will read from output slots specified in program.outputs.
+   * Reads the RenderTree from the output slot specified in program.outputs[0].
+   * Validates that the value is a valid RenderTree structure.
    *
-   * TODO: Phase 5 - Extract actual render data
-   * - Read from program.outputs[0].slot (render root)
-   * - Validate render tree structure
-   * - Return properly typed RenderOutput
-   *
-   * @param runtime - Runtime state
-   * @returns Render output (stub)
+   * @param program - Compiled program (contains output specification)
+   * @param runtime - Runtime state (contains ValueStore with render tree)
+   * @returns RenderTree for this frame
+   * @throws Error if no outputs defined or output slot is empty/invalid
    */
-  private extractRenderOutput(runtime: RuntimeState): RenderOutput {
-    // Stub: just return frame ID
-    return {
-      frameId: runtime.frameId,
-      renderData: undefined, // TODO: Extract from output slots
-    };
+  private extractRenderOutput(
+    program: CompiledProgramIR,
+    runtime: RuntimeState,
+  ): RenderTree {
+    // Handle case where program has no outputs
+    if (!program.outputs || program.outputs.length === 0) {
+      // Return empty group as graceful degradation
+      return {
+        kind: 'group',
+        id: 'empty',
+        children: [],
+      };
+    }
+
+    // Get first output specification (render root)
+    const outputSpec = program.outputs[0];
+
+    // Read render tree from output slot
+    const value = runtime.values.read(outputSpec.slot);
+
+    // Validate that value is a RenderTree
+    if (!isRenderTree(value)) {
+      throw new Error(
+        `extractRenderOutput: output slot ${outputSpec.slot} does not contain a valid RenderTree. ` +
+        `Expected DrawNode (group/shape/effect), got: ${typeof value === 'object' && value !== null ? (value as { kind?: string }).kind : typeof value}`
+      );
+    }
+
+    return value;
   }
 }
