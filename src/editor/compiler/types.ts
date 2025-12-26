@@ -304,6 +304,12 @@ export interface CompilerConnection {
   id?: string;
   from: PortRef; // output port
   to: PortRef; // input port
+  /** Optional lens stack for value transformation (applied after adapters) */
+  lensStack?: LensInstance[];
+  /** Optional adapter chain for type conversion (applied before lenses) */
+  adapterChain?: AdapterStep[];
+  /** Whether this connection is enabled (default: true) */
+  enabled?: boolean;
 }
 
 export interface BlockInstance {
@@ -319,9 +325,9 @@ export interface BlockInstance {
  * These will be available when buses are present in a patch.
  */
 // Import types from main editor types for use in CompilerPatch
-import type { Bus, Publisher, Listener } from '../types';
+import type { Bus, Publisher, Listener, LensInstance, AdapterStep } from '../types';
 // Re-export for consumers
-export type { Bus, Publisher, Listener };
+export type { Bus, Publisher, Listener, LensInstance, AdapterStep };
 
 // Import Domain from unified compiler
 import type { Domain } from './unified/Domain';

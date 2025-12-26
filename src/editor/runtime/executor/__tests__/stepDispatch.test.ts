@@ -132,7 +132,10 @@ describe("Step Dispatch", () => {
       } as CompiledProgramIR;
       const runtime = createRuntimeState(program);
 
-      // Should not throw (stub writes empty buffer)
+      // Write domain count to slot 0 (required by executeMaterialize)
+      runtime.values.write(0, 100); // 100 elements in domain
+
+      // Should not throw - materializes field and writes buffer handle
       expect(() => {
         executeMaterialize(step, program, runtime);
       }).not.toThrow();
@@ -140,7 +143,7 @@ describe("Step Dispatch", () => {
       // Verify buffer handle was written
       const bufferHandle = runtime.values.read(1);
       expect(bufferHandle).toBeDefined();
-      expect((bufferHandle as any).kind).toBe("buffer");
+      expect((bufferHandle as unknown as { kind: string }).kind).toBe("buffer");
     });
   });
 

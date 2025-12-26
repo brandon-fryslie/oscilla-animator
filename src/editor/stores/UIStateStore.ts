@@ -7,6 +7,24 @@ import type { BlockId, LaneId, LaneKind, PortRef } from '../types';
 import type { RootStore } from './RootStore';
 import type { BlockDefinition } from '../blocks';
 
+/**
+ * Selected connection - can be wire, publisher, or listener
+ */
+export type SelectedConnection = {
+  type: 'wire' | 'publisher' | 'listener';
+  id: string;
+} | null;
+
+/**
+ * Inspector history entry - tracks where we came from for back navigation
+ */
+export type InspectorHistoryEntry = {
+  type: 'block' | 'bus' | 'port';
+  blockId?: string | null;
+  busId?: string | null;
+  portRef?: PortRef | null;
+};
+
 export class UIStateStore {
   uiState = {
     selectedBlockId: null as BlockId | null,
@@ -33,7 +51,12 @@ export class UIStateStore {
     // Seriously, don't fucking touch it.
     isPlaying: true,
     currentTime: 0, // seconds
+    // Connection selection - mutually exclusive with block/bus selection
+    selectedConnection: null as SelectedConnection,
   };
+
+  // Inspector history stack for back navigation (max 10 entries)
+  inspectorHistory: InspectorHistoryEntry[] = [];
 
   settings = {
     seed: 0,
@@ -59,12 +82,18 @@ export class UIStateStore {
       uiState: observable,
       settings: observable,
       previewedDefinition: observable,
+      inspectorHistory: observable,
 
       // Actions
       selectBlock: action,
       deselectBlock: action,
       selectBus: action,
       deselectBus: action,
+      selectConnection: action,
+      deselectConnection: action,
+      pushInspectorHistory: action,
+      popInspectorHistory: action,
+      clearInspectorHistory: action,
       play: action,
       pause: action,
       seek: action,
@@ -100,6 +129,8 @@ export class UIStateStore {
     this.uiState.selectedBlockId = id;
     if (id !== null) {
       this.uiState.selectedBusId = null; // Deselect bus when block selected
+      this.uiState.selectedConnection = null; // Deselect connection when block selected
+      this.clearInspectorHistory(); // Clear history on direct selection
     }
   }
 
@@ -111,11 +142,81 @@ export class UIStateStore {
     this.uiState.selectedBusId = id;
     if (id !== null) {
       this.uiState.selectedBlockId = null; // Deselect block when bus selected
+      this.uiState.selectedConnection = null; // Deselect connection when bus selected
+      this.clearInspectorHistory(); // Clear history on direct selection
     }
   }
 
   deselectBus(): void {
     this.uiState.selectedBusId = null;
+  }
+
+  /**
+   * Select a connection (wire, publisher, or listener).
+   * Clears block/bus selection - mutually exclusive.
+   */
+  selectConnection(type: 'wire' | 'publisher' | 'listener', id: string): void {
+    // Push current state to history before navigating to connection
+    this.pushInspectorHistory();
+
+    this.uiState.selectedConnection = { type, id };
+    this.uiState.selectedBlockId = null;
+    this.uiState.selectedBusId = null;
+    this.uiState.selectedPort = null;
+  }
+
+  deselectConnection(): void {
+    this.uiState.selectedConnection = null;
+  }
+
+  /**
+   * Push current inspector state to history for back navigation.
+   */
+  pushInspectorHistory(): void {
+    const entry: InspectorHistoryEntry = {
+      type: this.uiState.selectedBusId !== null ? 'bus' :
+            this.uiState.selectedPort !== null ? 'port' : 'block',
+      blockId: this.uiState.selectedBlockId,
+      busId: this.uiState.selectedBusId,
+      portRef: this.uiState.selectedPort,
+    };
+
+    // Only push if there's something to go back to
+    if (entry.blockId !== null || entry.busId !== null || entry.portRef !== null) {
+      this.inspectorHistory.push(entry);
+      // Limit to 10 entries
+      if (this.inspectorHistory.length > 10) {
+        this.inspectorHistory.shift();
+      }
+    }
+  }
+
+  /**
+   * Pop from history and restore previous inspector state.
+   * Returns the popped entry or null if history is empty.
+   */
+  popInspectorHistory(): InspectorHistoryEntry | null {
+    const entry = this.inspectorHistory.pop();
+    if (entry === undefined) {
+      // No history - just clear connection
+      this.uiState.selectedConnection = null;
+      return null;
+    }
+
+    // Restore state from history entry
+    this.uiState.selectedConnection = null;
+    this.uiState.selectedBlockId = entry.blockId ?? null;
+    this.uiState.selectedBusId = entry.busId ?? null;
+    this.uiState.selectedPort = entry.portRef ?? null;
+
+    return entry;
+  }
+
+  /**
+   * Clear inspector history (called on direct selection).
+   */
+  clearInspectorHistory(): void {
+    this.inspectorHistory = [];
   }
 
   // =============================================================================

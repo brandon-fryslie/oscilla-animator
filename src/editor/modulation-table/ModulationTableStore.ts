@@ -537,6 +537,13 @@ export class ModulationTableStore {
   }
 
   /**
+   * Select a connection and open the Connection Inspector.
+   */
+  selectConnection(type: 'publisher' | 'listener', connectionId: string): void {
+    this.root.uiStore.selectConnection(type, connectionId);
+  }
+
+  /**
    * Toggle group collapse state.
    */
   toggleGroupCollapse(groupKey: GroupKey): void {

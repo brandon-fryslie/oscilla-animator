@@ -11,6 +11,7 @@ import type {
   LaneKind,
   BlockSubcategory,
   BlockType,
+  LensInstance,
 } from '../types';
 import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import { getBlockDefinition } from '../blocks';
@@ -82,6 +83,11 @@ export class PatchStore {
       connect: action,
       disconnect: action,
       removeConnection: action,
+      updateConnection: action,
+      addLensToConnection: action,
+      removeLensFromConnection: action,
+      updateConnectionLens: action,
+      setConnectionEnabled: action,
       updateBlockParams: action,
       resetPatchId: action,
       incrementRevision: action,
@@ -953,5 +959,119 @@ export class PatchStore {
    */
   removeConnection(id: string): void {
     this.disconnect(id);
+  }
+
+  // ===========================================================================
+  // Wire Lens Management
+  // ===========================================================================
+
+  /**
+   * Update a connection's properties (lensStack, adapterChain, enabled).
+   */
+  updateConnection(
+    connectionId: string,
+    updates: Partial<Pick<Connection, 'lensStack' | 'adapterChain' | 'enabled'>>
+  ): void {
+    const index = this.connections.findIndex((c) => c.id === connectionId);
+    if (index === -1) return;
+
+    const connection = this.connections[index];
+    const updated: Connection = {
+      ...connection,
+      ...updates,
+    };
+
+    this.connections[index] = updated;
+
+    this.emitGraphCommitted(
+      'userEdit',
+      {
+        blocksAdded: 0,
+        blocksRemoved: 0,
+        busesAdded: 0,
+        busesRemoved: 0,
+        bindingsChanged: 1,
+        timeRootChanged: false,
+      },
+      [connection.from.blockId, connection.to.blockId]
+    );
+  }
+
+  /**
+   * Add a lens to a connection's lens stack.
+   * @param connectionId - The connection to modify
+   * @param lens - The lens instance to add
+   * @param index - Optional position (default: end of stack)
+   */
+  addLensToConnection(connectionId: string, lens: LensInstance, index?: number): void {
+    const connection = this.connections.find((c) => c.id === connectionId);
+    if (!connection) return;
+
+    const currentStack = connection.lensStack ?? [];
+    const newStack = [...currentStack];
+
+    if (index !== undefined && index >= 0 && index <= newStack.length) {
+      newStack.splice(index, 0, lens);
+    } else {
+      newStack.push(lens);
+    }
+
+    // Update sortKeys to maintain order
+    const sortedStack = newStack.map((l, i) => ({ ...l, sortKey: i }));
+
+    this.updateConnection(connectionId, { lensStack: sortedStack });
+  }
+
+  /**
+   * Remove a lens from a connection's lens stack.
+   * @param connectionId - The connection to modify
+   * @param index - The index of the lens to remove
+   */
+  removeLensFromConnection(connectionId: string, index: number): void {
+    const connection = this.connections.find((c) => c.id === connectionId);
+    if (!connection) return;
+
+    const currentStack = connection.lensStack ?? [];
+    if (index < 0 || index >= currentStack.length) return;
+
+    const newStack = currentStack.filter((_, i) => i !== index);
+
+    // Update sortKeys to maintain order
+    const sortedStack = newStack.map((l, i) => ({ ...l, sortKey: i }));
+
+    this.updateConnection(connectionId, {
+      lensStack: sortedStack.length > 0 ? sortedStack : undefined,
+    });
+  }
+
+  /**
+   * Update a specific lens in a connection's lens stack.
+   * @param connectionId - The connection to modify
+   * @param index - The index of the lens to update
+   * @param updates - The lens properties to update
+   */
+  updateConnectionLens(
+    connectionId: string,
+    index: number,
+    updates: Partial<Pick<LensInstance, 'params' | 'enabled'>>
+  ): void {
+    const connection = this.connections.find((c) => c.id === connectionId);
+    if (!connection) return;
+
+    const currentStack = connection.lensStack ?? [];
+    if (index < 0 || index >= currentStack.length) return;
+
+    const newStack = currentStack.map((lens, i) =>
+      i === index ? { ...lens, ...updates } : lens
+    );
+
+    this.updateConnection(connectionId, { lensStack: newStack });
+  }
+
+  /**
+   * Enable or disable a connection.
+   */
+  setConnectionEnabled(connectionId: string, enabled: boolean): void {
+    this.updateConnection(connectionId, { enabled });
   }
 }

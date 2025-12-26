@@ -527,6 +527,69 @@ code.wiring-info-value {
   border-left: 3px solid #4ade80;
 }
 
+.wiring-connection-item.clickable {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.wiring-connection-item.clickable:hover {
+  background: #3a4a3a;
+  border-left-color: #6ee7b7;
+}
+
+/* Wire connections (green) */
+.wiring-connection-item.wiring-connection-wire {
+  background: #2a3a2a;
+  border-left-color: #4ade80;
+}
+
+.wiring-connection-item.wiring-connection-wire:hover {
+  background: #3a4a3a;
+  border-left-color: #6ee7b7;
+}
+
+/* Bus connections (blue) */
+.wiring-connection-item.wiring-connection-bus {
+  background: #1e2a3a;
+  border-left-color: #60a5fa;
+}
+
+.wiring-connection-item.wiring-connection-bus:hover {
+  background: #2a3a4a;
+  border-left-color: #93c5fd;
+}
+
+.wiring-connection-item.wiring-connection-bus.disabled {
+  opacity: 0.6;
+}
+
+.wiring-connection-type-icon {
+  font-size: 12px;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.wiring-target-bus {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: #93c5fd;
+}
+
+.wiring-lens-indicator {
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.wiring-disabled-badge {
+  font-size: 9px;
+  padding: 1px 4px;
+  background: #374151;
+  border-radius: 2px;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
 .wiring-connection-item .wiring-target-block {
   flex: 1;
   font-size: 12px;

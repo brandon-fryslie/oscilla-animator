@@ -419,6 +419,7 @@ Reference: `design-docs/12-Compiler-Final/`
 
 **Started:** 2025-12-26
 **Sprint 1 Complete:** 2025-12-26
+**Sprint 2 Complete:** 2025-12-26
 
 ### Topics
 
@@ -452,14 +453,31 @@ Reference: `design-docs/12-Compiler-Final/`
 **Dependencies:** value-store, state-buffer-system
 **Labels:** runtime, schedule, execution
 **Test Strategy:** Scheduled execution matches closure execution
-**Status:** Frame loop works, executeTimeDerive implemented, other step executors are stubs (Sprint 2)
+**Status:** Frame loop works, executeTimeDerive + executeBusEval + executeMaterialize implemented. Remaining: executeNodeEval, executeRenderAssemble (Sprint 3)
 
-#### frame-cache-system [PROPOSED]
+#### frame-cache-system [COMPLETED]
 **Description:** Implement `FrameCache` with per-frame memo for signals/fields. Cache key validation from `CacheKeySpec`.
 **Spec:** 17-Scheduler-Full (§8), 09-Caching
 **Dependencies:** schedule-executor
 **Labels:** runtime, caching, performance
 **Test Strategy:** Cache hits/misses are correct
+**Implementation:** `src/editor/runtime/executor/RuntimeState.ts` - createFrameCache() with stamp-based invalidation (41 tests)
+
+#### execute-bus-eval [COMPLETED]
+**Description:** Implement executeBusEval step executor with combine modes, silent values, publisher filtering.
+**Spec:** 17-Scheduler-Full (§3.3)
+**Dependencies:** frame-cache-system
+**Labels:** runtime, buses, step-executor
+**Test Strategy:** All combine modes (sum, avg, min, max, last, product) work correctly
+**Implementation:** `src/editor/runtime/executor/steps/executeBusEval.ts` (10 tests)
+
+#### execute-materialize [COMPLETED]
+**Description:** Implement executeMaterialize step executor with FieldMaterializer integration, buffer caching.
+**Spec:** 17-Scheduler-Full (§3.4)
+**Dependencies:** frame-cache-system
+**Labels:** runtime, materialization, step-executor
+**Test Strategy:** Field buffers materialized correctly, buffer pool caching works
+**Implementation:** `src/editor/runtime/executor/steps/executeMaterialize.ts` (20 tests)
 
 #### hot-swap-semantics [PROPOSED]
 **Description:** Implement no-jank hot swap: state preservation via layout-hash matching, cache discard policy, time continuity.

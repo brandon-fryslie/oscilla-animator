@@ -1,0 +1,65 @@
+Agent: iterative-implementer | 2025-12-26-094800
+Mode: tdd
+Completed: FrameCache + executeBusEval (2/3 deliverables) | Files: 5 | Commits: 2
+Tests: 1775 passing (baseline 1724 + 51 new)
+Cache invalidated: N/A (no eval cache present)
+Status: in_progress
+
+Summary:
+========
+Implemented Phase 6 Sprint 2 deliverables 1-2 of 3:
+
+✓ Deliverable 1: FrameCache Implementation (COMPLETE)
+  - Full FrameCache with signal/field caches and buffer pool
+  - Stamp-based cache invalidation (no array clearing)
+  - newFrame() increments frameId and clears buffer pool
+  - invalidate() zeros stamps for hot-swap
+  - 41 comprehensive tests (all passing)
+  - Files: RuntimeState.ts, FrameCache.test.ts
+
+✓ Deliverable 2: executeBusEval Integration (COMPLETE)
+  - All combine modes: sum, average, min, max, last, product
+  - Silent value handling (zero, default, const)
+  - Publisher filtering (enabled/disabled)
+  - 10 comprehensive tests (all passing)
+  - Files: executeBusEval.ts, executeBusEval.test.ts
+  - Note: Transform chain deferred (not in schedule IR yet)
+
+⏸ Deliverable 3: executeMaterialize Integration (INCOMPLETE - ran out of tokens)
+  - Would require: MaterializationRequest construction, FieldMaterializer integration
+  - Estimated: 15-20 tests, ~150 lines impl
+  - Status: Not started
+
+Test Results:
+=============
+- Total: 1775 passing
+- New: 51 tests (41 FrameCache + 10 executeBusEval)
+- Baseline: 1724
+- Regressions: 0
+- All existing tests passing
+
+Files Modified:
+===============
+- src/editor/runtime/executor/RuntimeState.ts (FrameCache impl)
+- src/editor/runtime/executor/__tests__/FrameCache.test.ts (NEW - 41 tests)
+- src/editor/runtime/executor/steps/executeBusEval.ts (combine logic)
+- src/editor/runtime/executor/__tests__/executeBusEval.test.ts (NEW - 10 tests)
+- src/editor/runtime/executor/__tests__/RuntimeState.test.ts (fix frameId expectation)
+
+Commits:
+========
+1. bc726d0 - feat(runtime): Implement FrameCache with signal/field caching
+2. 1826255 - feat(runtime): Implement executeBusEval with combine logic
+
+Next Steps:
+===========
+- Deliverable 3: executeMaterialize Integration (remaining)
+  - Read domain count from ValueStore
+  - Construct MaterializationRequest from StepMaterialize
+  - Call FieldMaterializer.materialize()
+  - Write buffer handle to outBufferSlot
+  - Implement buffer pool caching
+  - 15-20 tests for materialization
+
+- Sprint 2 will be 67% complete (2/3 deliverables)
+- Recommend continuing in fresh session for deliverable 3

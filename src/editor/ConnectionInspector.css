@@ -1,0 +1,240 @@
+/**
+ * Connection Inspector Styles
+ *
+ * Styles for the ConnectionInspector component that displays
+ * wire, publisher, and listener connection details.
+ */
+
+/* Section container */
+.conn-section {
+  padding: 8px 0;
+  border-bottom: 1px solid #252525;
+}
+
+.conn-section:last-child {
+  border-bottom: none;
+}
+
+.conn-section-title {
+  font-size: 10px;
+  font-weight: 500;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 6px 0;
+}
+
+/* Endpoint display */
+.conn-endpoint {
+  margin: 6px 0;
+}
+
+.conn-endpoint-label {
+  display: block;
+  font-size: 9px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.conn-endpoint-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.conn-endpoint-block {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #e0e0e0;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.conn-endpoint-block:hover:not(:disabled) {
+  background: #252525;
+  border-color: #444;
+}
+
+.conn-endpoint-block:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.conn-endpoint-port {
+  font-size: 10px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.conn-endpoint-type {
+  font-size: 9px;
+  color: #666;
+  font-family: monospace;
+}
+
+/* Bus endpoint */
+.conn-endpoint-bus .conn-endpoint-content {
+  flex-direction: row;
+  align-items: center;
+}
+
+.conn-endpoint-bus-name {
+  background: #1e1b4b;
+  border: 1px solid #4f46e5;
+  border-radius: 3px;
+  padding: 4px 10px;
+  color: #a5b4fc;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.conn-endpoint-bus-name:hover:not(:disabled) {
+  background: #312e81;
+}
+
+.conn-endpoint-bus-name:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* Arrow between endpoints */
+.conn-arrow {
+  text-align: center;
+  font-size: 16px;
+  color: #555;
+  padding: 4px 0;
+}
+
+/* Type badges */
+.conn-type-badges {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.conn-type-badge {
+  font-size: 8px;
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.conn-type-badge.world {
+  background: #1a1a2e;
+  color: #666;
+}
+
+.conn-type-badge.world.signal {
+  background: #1a2e1a;
+  color: #4ade80;
+}
+
+.conn-type-badge.world.field {
+  background: #2e1a2e;
+  color: #c084fc;
+}
+
+.conn-type-badge.world.scalar {
+  background: #2e2e1a;
+  color: #facc15;
+}
+
+.conn-type-badge.domain {
+  background: #1a1a1a;
+  color: #888;
+}
+
+/* Toggle row */
+.conn-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.conn-toggle-row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #4f46e5;
+}
+
+/* Lens preview */
+.conn-lens-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.conn-lens-badge {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/* Hint text */
+.conn-hint {
+  font-size: 10px;
+  color: #666;
+  font-style: italic;
+  margin: 4px 0;
+}
+
+/* Actions */
+.conn-actions {
+  padding: 12px 0 4px;
+  display: flex;
+  gap: 8px;
+}
+
+.conn-action-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #ccc;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.conn-action-btn:hover {
+  background: #252525;
+  border-color: #444;
+}
+
+.conn-action-btn.conn-action-danger {
+  background: #2a1515;
+  border-color: #5c2424;
+  color: #f87171;
+}
+
+.conn-action-btn.conn-action-danger:hover {
+  background: #3a1f1f;
+  border-color: #7c3434;
+}
+
+/* Empty state */
+.conn-empty {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-size: 11px;
+}

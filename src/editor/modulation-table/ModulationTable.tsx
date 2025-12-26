@@ -562,6 +562,16 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
   const handleCellClick = useCallback(
     (rowKey: RowKey, busId: string, _e?: React.MouseEvent) => {
       store.setFocusedCell(rowKey, busId);
+
+      // If the cell is bound, open ConnectionInspector
+      const cell = store.getCell(rowKey, busId);
+      if (cell?.status === 'bound') {
+        if (cell.listenerId) {
+          store.selectConnection('listener', cell.listenerId);
+        } else if (cell.publisherId) {
+          store.selectConnection('publisher', cell.publisherId);
+        }
+      }
     },
     [store]
   );

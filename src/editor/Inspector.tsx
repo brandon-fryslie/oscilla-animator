@@ -12,6 +12,8 @@ import type { PortRef, Block, Slot, Connection, DefaultSourceState } from './typ
 import { getBlockDefinition, getBlockDefinitions, type BlockDefinition } from './blocks';
 import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint, isInputDriven } from './portUtils';
 import { InspectorContainer } from './components/InspectorContainer';
+import { ConnectionInspector } from './ConnectionInspector';
+import { BusInspector } from './BusInspector';
 import './Inspector.css';
 
 /**
@@ -166,13 +168,44 @@ const PortWiringPanel = observer(({
     return { suggestions, nearMisses };
   }, [block.id, portRef.direction, slot.type, store.patchStore.blocks.length, adapterDefinitions]);
 
-  // Get existing connections for this port
+  // Get existing wire connections for this port
   const existingConnections = getConnectionsForPort(
     portRef.blockId,
     portRef.slotId,
     portRef.direction,
     store.patchStore.connections
   );
+
+  // Get existing bus connections for this port
+  const busConnections = useMemo(() => {
+    if (portRef.direction === 'output') {
+      // Output ports have publishers (block → bus)
+      return store.busStore.publishers
+        .filter(p => p.from.blockId === portRef.blockId && p.from.slotId === portRef.slotId)
+        .map(p => ({
+          type: 'publisher' as const,
+          id: p.id,
+          busId: p.busId,
+          busName: store.busStore.buses.find(b => b.id === p.busId)?.name ?? p.busId,
+          enabled: p.enabled,
+        }));
+    } else {
+      // Input ports have listeners (bus → block)
+      return store.busStore.listeners
+        .filter(l => l.to.blockId === portRef.blockId && l.to.slotId === portRef.slotId)
+        .map(l => ({
+          type: 'listener' as const,
+          id: l.id,
+          busId: l.busId,
+          busName: store.busStore.buses.find(b => b.id === l.busId)?.name ?? l.busId,
+          enabled: l.enabled,
+          hasLenses: (l.lensStack?.length ?? 0) > 0,
+        }));
+    }
+  }, [portRef.blockId, portRef.slotId, portRef.direction, store.busStore.publishers, store.busStore.listeners, store.busStore.buses]);
+
+  const hasBusConnections = busConnections.length > 0;
+  const hasAnyConnections = existingConnections.length > 0 || hasBusConnections;
 
   const handleConnect = (target: { block: Block; slot: Slot; portRef: PortRef }) => {
     if (portRef.direction === 'output') {
@@ -215,6 +248,14 @@ const PortWiringPanel = observer(({
 
   const handleDisconnect = (connectionId: string) => {
     store.patchStore.disconnect(connectionId);
+  };
+
+  const handleDisconnectBus = (busConnectionType: 'publisher' | 'listener', connectionId: string) => {
+    if (busConnectionType === 'publisher') {
+      store.busStore.removePublisher(connectionId);
+    } else {
+      store.busStore.removeListener(connectionId);
+    }
   };
 
   const isInputOccupied = (blockId: string, slotId: string): boolean => {
@@ -316,11 +357,12 @@ const PortWiringPanel = observer(({
           </div>
         </div>
 
-        {/* Existing connections */}
-        {existingConnections.length > 0 && (
+        {/* Existing connections (wire + bus) */}
+        {hasAnyConnections && (
           <div className="wiring-section">
             <h4>Connected to</h4>
             <ul className="wiring-connection-list">
+              {/* Wire connections (green) */}
               {existingConnections.map((conn) => {
                 const otherBlockId = portRef.direction === 'output' ? conn.to.blockId : conn.from.blockId;
                 const otherSlotId = portRef.direction === 'output' ? conn.to.slotId : conn.from.slotId;
@@ -331,10 +373,11 @@ const PortWiringPanel = observer(({
                 return (
                   <li
                     key={conn.id}
-                    className="wiring-connection-item"
-                    onDoubleClick={() => store.uiStore.selectBlock(otherBlockId)}
-                    title="Double-click to inspect this block"
+                    className="wiring-connection-item wiring-connection-wire clickable"
+                    onClick={() => store.uiStore.selectConnection('wire', conn.id)}
+                    title="Click to inspect wire connection"
                   >
+                    <span className="wiring-connection-type-icon">⚡</span>
                     <span className="wiring-target-block">{otherBlock?.label ?? 'Unknown'}</span>
                     <span className="wiring-target-slot">
                       {otherSlot?.label ?? otherSlotId}
@@ -353,6 +396,34 @@ const PortWiringPanel = observer(({
                   </li>
                 );
               })}
+              {/* Bus connections (blue) */}
+              {busConnections.map((busConn) => (
+                <li
+                  key={busConn.id}
+                  className={`wiring-connection-item wiring-connection-bus clickable ${!busConn.enabled ? 'disabled' : ''}`}
+                  onClick={() => store.uiStore.selectConnection(busConn.type, busConn.id)}
+                  title={`Click to inspect ${busConn.type}`}
+                >
+                  <span className="wiring-connection-type-icon">📡</span>
+                  <span className="wiring-target-bus">{busConn.busName}</span>
+                  {'hasLenses' in busConn && busConn.hasLenses && (
+                    <span className="wiring-lens-indicator" title="Has lenses">🔧</span>
+                  )}
+                  {!busConn.enabled && (
+                    <span className="wiring-disabled-badge">disabled</span>
+                  )}
+                  <button
+                    className="wiring-disconnect-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDisconnectBus(busConn.type, busConn.id);
+                    }}
+                    title={`Remove ${busConn.type}`}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
             </ul>
           </div>
         )}
@@ -1370,12 +1441,24 @@ const BlockInspectorWiringPanel = observer(({
 export const Inspector = observer(() => {
   const store = useStore();
   const block = store.selectedBlock;
+  const selectedBus = store.selectedBus;
   const previewedDefinition = store.uiStore.previewedDefinition;
   const selectedPortInfo = store.selectedPortInfo;
+  const selectedConnection = store.uiStore.uiState.selectedConnection;
 
   const navigateToBlock = useCallback((blockId: string) => {
     store.uiStore.selectBlock(blockId);
   }, [store]);
+
+  // Show connection inspector if a connection is selected
+  if (selectedConnection) {
+    return <ConnectionInspector />;
+  }
+
+  // Show bus inspector if a bus is selected
+  if (selectedBus) {
+    return <BusInspector busId={selectedBus.id} />;
+  }
 
   // Show port wiring panel if a port is selected
   if (selectedPortInfo) {

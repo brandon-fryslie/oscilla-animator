@@ -270,6 +270,9 @@ describe("ScheduleExecutor", () => {
       const program = createMinimalProgram(timeModel, steps);
       const runtime = createRuntimeState(program);
 
+      // Write domain count to slot 3 (required by materialize step)
+      runtime.values.write(3, 100);
+
       // All step kinds should execute without error
       expect(() => {
         executor.executeFrame(program, runtime, 0);

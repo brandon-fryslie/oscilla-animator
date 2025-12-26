@@ -547,6 +547,7 @@ export interface Block {
 
 /**
  * A Connection links an output slot to an input slot.
+ * Supports optional lens transformations and adapter chains for type conversion.
  */
 export interface Connection {
   /** Unique ID for this connection */
@@ -557,6 +558,15 @@ export interface Connection {
 
   /** Destination block + slot */
   readonly to: PortRef;
+
+  /** Optional lens stack for value transformation (applied after adapters) */
+  readonly lensStack?: LensInstance[];
+
+  /** Optional adapter chain for type conversion (applied before lenses) */
+  readonly adapterChain?: AdapterStep[];
+
+  /** Whether this connection is enabled (default: true) */
+  readonly enabled?: boolean;
 }
 
 /**
