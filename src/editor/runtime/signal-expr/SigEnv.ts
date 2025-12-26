@@ -2,7 +2,7 @@
  * Signal Evaluation Environment
  *
  * Provides context for signal expression evaluation:
- * - Time values (tAbsMs)
+ * - Time values (tAbsMs, tModelMs, phase01)
  * - Const pool access
  * - Per-frame cache
  * - Slot values (external inputs)
@@ -15,9 +15,6 @@
  *
  * The environment is created once per frame and passed to all signal evaluations.
  *
- * Future sprints will add:
- * - tModelMs, phase01 (time model values)
- *
  * References:
  * - .agent_planning/signalexpr-runtime/PLAN-20251225-190000.md §P0 "Implement SigEnv"
  * - .agent_planning/signalexpr-runtime/HANDOFF.md §1 "The Evaluation Environment"
@@ -26,6 +23,7 @@
  * - .agent_planning/signalexpr-runtime/SPRINT-04-transform.md §P0 "Extend SigEnv with Transform Infrastructure"
  * - .agent_planning/signalexpr-runtime/SPRINT-05-stateful.md §P0 "Extend SigEnv with State and RuntimeCtx"
  * - .agent_planning/signalexpr-runtime/SPRINT-06-closureBridge.md §P0 "Extend SigEnv with Closure Registry"
+ * - .agent_planning/signalexpr-runtime/PLAN-2025-12-26-031245.md §Workstream A "Complete SigEvaluator"
  */
 
 import type { SigFrameCache } from "./SigFrameCache";
@@ -66,6 +64,36 @@ export interface ConstPool {
 export interface SigEnv {
   /** Absolute time in milliseconds (monotonic player time) */
   readonly tAbsMs: number;
+
+  /**
+   * Model time in milliseconds (after time model transformation).
+   *
+   * For InfiniteTimeRoot: tModelMs = tAbsMs
+   * For CycleTimeRoot: tModelMs = (tAbsMs % period)
+   * For FiniteTimeRoot: tModelMs = mapped time
+   *
+   * Optional - defaults to tAbsMs if not provided.
+   */
+  readonly tModelMs?: number;
+
+  /**
+   * Normalized phase [0..1) for cyclic time models.
+   *
+   * For CycleTimeRoot: phase01 = (tModelMs % period) / period
+   * For non-cyclic time roots: phase01 = 0
+   *
+   * Optional - defaults to 0 if not provided.
+   */
+  readonly phase01?: number;
+
+  /**
+   * Wrap event flag - true if phase wrapped this frame (0.999 -> 0.0).
+   *
+   * Used by wrapEvent node to emit trigger signals at cycle boundaries.
+   *
+   * Optional - defaults to false if not provided.
+   */
+  readonly wrapOccurred?: boolean;
 
   /** Const pool for compile-time constants */
   readonly constPool: ConstPool;
@@ -144,10 +172,6 @@ export interface SigEnv {
    * to ensure zero overhead when disabled.
    */
   readonly debug?: DebugSink;
-
-  // Future expansion:
-  // readonly tModelMs: number;
-  // readonly phase01: number;
 }
 
 /**
@@ -155,6 +179,9 @@ export interface SigEnv {
  */
 export interface CreateSigEnvParams {
   tAbsMs: number;
+  tModelMs?: number; // Optional - defaults to tAbsMs
+  phase01?: number; // Optional - defaults to 0
+  wrapOccurred?: boolean; // Optional - defaults to false
   constPool: ConstPool;
   cache: SigFrameCache;
   slotValues?: SlotValueReader; // Optional - defaults to empty reader
@@ -202,6 +229,9 @@ export interface CreateSigEnvParams {
 export function createSigEnv(params: CreateSigEnvParams): SigEnv {
   return {
     tAbsMs: params.tAbsMs,
+    tModelMs: params.tModelMs ?? params.tAbsMs,
+    phase01: params.phase01 ?? 0,
+    wrapOccurred: params.wrapOccurred ?? false,
     constPool: params.constPool,
     cache: params.cache,
     slotValues: params.slotValues ?? createEmptySlotReader(),

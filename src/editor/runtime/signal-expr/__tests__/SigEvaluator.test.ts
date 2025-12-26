@@ -41,6 +41,9 @@ const numberType: TypeDesc = { world: "signal", domain: "number" };
 const timeType: TypeDesc = { world: "signal", domain: "timeMs" };
 
 interface CreateTestEnvOptions {
+  tModelMs?: number;
+  phase01?: number;
+  wrapOccurred?: boolean;
   tAbsMs?: number;
   consts?: number[];
   constPool?: ConstPool;
@@ -53,6 +56,9 @@ function createTestEnv(params?: CreateTestEnvOptions): SigEnv {
   const constPool = params?.constPool ?? createConstPool(params?.consts ?? []);
   return createSigEnv({
     tAbsMs: params?.tAbsMs ?? 0,
+    tModelMs: params?.tModelMs,
+    phase01: params?.phase01,
+    wrapOccurred: params?.wrapOccurred,
     constPool,
     cache: params?.cache ?? createSigFrameCache(1024),
     transformTable: params?.transformTable,
@@ -2246,3 +2252,176 @@ describe("evalSig - transform nodes", () => {
     });
   });
 });
+
+// =============================================================================
+// Time Model Node Tests (Phase 4 - Workstream A)
+// =============================================================================
+
+describe("evalSig - timeModelMs node", () => {
+  it("returns tModelMs from environment when provided", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "timeModelMs", type: timeType }
+    ];
+    const env = createTestEnv({ tAbsMs: 1000, tModelMs: 500 });
+    
+    expect(evalSig(0, env, nodes)).toBe(500);
+  });
+
+  it("defaults to tAbsMs when tModelMs not provided", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "timeModelMs", type: timeType }
+    ];
+    const env = createTestEnv({ tAbsMs: 1000 });
+    
+    expect(evalSig(0, env, nodes)).toBe(1000);
+  });
+
+  it("handles zero tModelMs", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "timeModelMs", type: timeType }
+    ];
+    const env = createTestEnv({ tAbsMs: 1000, tModelMs: 0 });
+    
+    expect(evalSig(0, env, nodes)).toBe(0);
+  });
+
+  it("caches timeModelMs value", () => {
+    const cache = createSigFrameCache(10);
+    const nodes: SignalExprIR[] = [
+      { kind: "timeModelMs", type: timeType }
+    ];
+    const env = createTestEnv({ tAbsMs: 1000, tModelMs: 750, cache });
+    
+    evalSig(0, env, nodes);
+    expect(cache.stamp[0]).toBe(cache.frameId);
+    expect(cache.value[0]).toBe(750);
+  });
+});
+
+describe("evalSig - phase01 node", () => {
+  it("returns phase01 from environment when provided", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "phase01", type: numberType }
+    ];
+    const env = createTestEnv({ tAbsMs: 1000, phase01: 0.75 });
+    
+    expect(evalSig(0, env, nodes)).toBe(0.75);
+  });
+
+  it("defaults to 0 when phase01 not provided", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "phase01", type: numberType }
+    ];
+    const env = createTestEnv({ tAbsMs: 1000 });
+    
+    expect(evalSig(0, env, nodes)).toBe(0);
+  });
+
+  it("handles phase01 at cycle start (0.0)", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "phase01", type: numberType }
+    ];
+    const env = createTestEnv({ tAbsMs: 0, phase01: 0.0 });
+    
+    expect(evalSig(0, env, nodes)).toBe(0.0);
+  });
+
+  it("handles phase01 at cycle midpoint (0.5)", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "phase01", type: numberType }
+    ];
+    const env = createTestEnv({ tAbsMs: 500, phase01: 0.5 });
+    
+    expect(evalSig(0, env, nodes)).toBe(0.5);
+  });
+
+  it("handles phase01 near wrap (0.999)", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "phase01", type: numberType }
+    ];
+    const env = createTestEnv({ tAbsMs: 999, phase01: 0.999 });
+    
+    expect(evalSig(0, env, nodes)).toBe(0.999);
+  });
+
+  it("caches phase01 value", () => {
+    const cache = createSigFrameCache(10);
+    const nodes: SignalExprIR[] = [
+      { kind: "phase01", type: numberType }
+    ];
+    const env = createTestEnv({ tAbsMs: 500, phase01: 0.33, cache });
+    
+    evalSig(0, env, nodes);
+    expect(cache.stamp[0]).toBe(cache.frameId);
+    expect(cache.value[0]).toBe(0.33);
+  });
+});
+
+describe("evalSig - wrapEvent node", () => {
+  it("returns 1.0 when wrapOccurred is true", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "wrapEvent", type: numberType }
+    ];
+    const env = createTestEnv({ tAbsMs: 1000, wrapOccurred: true });
+    
+    expect(evalSig(0, env, nodes)).toBe(1.0);
+  });
+
+  it("returns 0.0 when wrapOccurred is false", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "wrapEvent", type: numberType }
+    ];
+    const env = createTestEnv({ tAbsMs: 1000, wrapOccurred: false });
+    
+    expect(evalSig(0, env, nodes)).toBe(0.0);
+  });
+
+  it("defaults to 0.0 when wrapOccurred not provided", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "wrapEvent", type: numberType }
+    ];
+    const env = createTestEnv({ tAbsMs: 1000 });
+    
+    expect(evalSig(0, env, nodes)).toBe(0.0);
+  });
+
+  it("caches wrapEvent value", () => {
+    const cache = createSigFrameCache(10);
+    const nodes: SignalExprIR[] = [
+      { kind: "wrapEvent", type: numberType }
+    ];
+    const env = createTestEnv({ tAbsMs: 1000, wrapOccurred: true, cache });
+    
+    evalSig(0, env, nodes);
+    expect(cache.stamp[0]).toBe(cache.frameId);
+    expect(cache.value[0]).toBe(1.0);
+  });
+
+  it("works in oscillator-like pattern (no wrap)", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "wrapEvent", type: numberType }
+    ];
+    const env = createTestEnv({ 
+      tAbsMs: 500, 
+      phase01: 0.5, 
+      wrapOccurred: false 
+    });
+    
+    expect(evalSig(0, env, nodes)).toBe(0.0);
+  });
+
+  it("works in oscillator-like pattern (with wrap)", () => {
+    const nodes: SignalExprIR[] = [
+      { kind: "wrapEvent", type: numberType }
+    ];
+    const env = createTestEnv({ 
+      tAbsMs: 1000, 
+      phase01: 0.01,  // Just wrapped
+      wrapOccurred: true 
+    });
+    
+    expect(evalSig(0, env, nodes)).toBe(1.0);
+  });
+});
+
+// Note: edgeDetectWrap tests are in SigStateful.test.ts since it's a stateful operation

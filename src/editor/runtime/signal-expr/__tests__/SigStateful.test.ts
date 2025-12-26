@@ -959,3 +959,304 @@ describe("stateful - delayFrames", () => {
     expect(() => evalSig(1, env, nodes)).not.toThrow();
   });
 });
+
+// =============================================================================
+// edgeDetectWrap Stateful Operation Tests (Phase 4 - Workstream A)
+// =============================================================================
+
+describe("evalSig - edgeDetectWrap stateful operation", () => {
+  it("detects wrap when phase drops from high to low", () => {
+    const state = createStateBuffer({ f64Count: 10, f32Count: 0, i32Count: 0 });
+    const cache = createSigFrameCache(10);
+    const runtimeCtx = createRuntimeCtx(0.016, 0);
+    
+    // Simulate phase at 0.95
+    const nodes1: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0.95
+      { 
+        kind: "stateful", 
+        type: numberType, 
+        op: "edgeDetectWrap",
+        stateId: "wrap0", 
+        input: 0,
+        params: { stateOffset: 0 }
+      }
+    ];
+    const constPool1 = createConstPool([0.95]);
+    const env1 = createSigEnv({ 
+      tAbsMs: 0, 
+      constPool: constPool1, 
+      cache, 
+      state,
+      runtimeCtx 
+    });
+    
+    // First frame: no wrap (no previous phase)
+    const result1 = evalSig(1, env1, nodes1);
+    expect(result1).toBe(0.0); // No wrap on first frame
+    expect(state.f64[0]).toBe(0.95); // Stored phase
+    
+    // Advance to next frame with wrapped phase
+    newFrame(cache, cache.frameId + 1);
+    const nodes2: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0.05 (wrapped!)
+      { 
+        kind: "stateful", 
+        type: numberType, 
+        op: "edgeDetectWrap",
+        stateId: "wrap0", 
+        input: 0,
+        params: { stateOffset: 0 }
+      }
+    ];
+    const constPool2 = createConstPool([0.05]);
+    const env2 = createSigEnv({ 
+      tAbsMs: 16.67, 
+      constPool: constPool2, 
+      cache, 
+      state,
+      runtimeCtx 
+    });
+    
+    // Second frame: wrap detected!
+    const result2 = evalSig(1, env2, nodes2);
+    expect(result2).toBe(1.0); // Wrap detected
+    expect(state.f64[0]).toBe(0.05); // Stored new phase
+  });
+
+  it("does not fire on continuous phase increase", () => {
+    const state = createStateBuffer({ f64Count: 10, f32Count: 0, i32Count: 0 });
+    const cache = createSigFrameCache(10);
+    const runtimeCtx = createRuntimeCtx(0.016, 0);
+    
+    // Simulate phase at 0.3
+    const nodes1: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0.3
+      { 
+        kind: "stateful", 
+        type: numberType, 
+        op: "edgeDetectWrap",
+        stateId: "wrap0", 
+        input: 0,
+        params: { stateOffset: 0 }
+      }
+    ];
+    const constPool1 = createConstPool([0.3]);
+    const env1 = createSigEnv({ 
+      tAbsMs: 0, 
+      constPool: constPool1, 
+      cache, 
+      state,
+      runtimeCtx 
+    });
+    
+    evalSig(1, env1, nodes1);
+    expect(state.f64[0]).toBe(0.3);
+    
+    // Advance to next frame with normal increase
+    newFrame(cache, cache.frameId + 1);
+    const nodes2: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0.35 (normal increase)
+      { 
+        kind: "stateful", 
+        type: numberType, 
+        op: "edgeDetectWrap",
+        stateId: "wrap0", 
+        input: 0,
+        params: { stateOffset: 0 }
+      }
+    ];
+    const constPool2 = createConstPool([0.35]);
+    const env2 = createSigEnv({ 
+      tAbsMs: 16.67, 
+      constPool: constPool2, 
+      cache, 
+      state,
+      runtimeCtx 
+    });
+    
+    // No wrap - continuous increase
+    const result2 = evalSig(1, env2, nodes2);
+    expect(result2).toBe(0.0);
+  });
+
+  it("uses threshold heuristic (prevPhase > 0.8 && phase < 0.2)", () => {
+    const state = createStateBuffer({ f64Count: 10, f32Count: 0, i32Count: 0 });
+    const cache = createSigFrameCache(10);
+    const runtimeCtx = createRuntimeCtx(0.016, 0);
+    
+    // Test boundary: prevPhase = 0.8, phase = 0.2 (should NOT wrap)
+    state.f64[0] = 0.8;
+    const nodes1: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0.2
+      { 
+        kind: "stateful", 
+        type: numberType, 
+        op: "edgeDetectWrap",
+        stateId: "wrap0", 
+        input: 0,
+        params: { stateOffset: 0 }
+      }
+    ];
+    const constPool1 = createConstPool([0.2]);
+    const env1 = createSigEnv({ 
+      tAbsMs: 0, 
+      constPool: constPool1, 
+      cache, 
+      state,
+      runtimeCtx 
+    });
+    
+    const result1 = evalSig(1, env1, nodes1);
+    expect(result1).toBe(0.0); // Boundary case - no wrap
+    
+    // Test wrap: prevPhase = 0.81, phase = 0.19 (should wrap)
+    newFrame(cache, cache.frameId + 1);
+    state.f64[0] = 0.81;
+    const nodes2: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0.19
+      { 
+        kind: "stateful", 
+        type: numberType, 
+        op: "edgeDetectWrap",
+        stateId: "wrap0", 
+        input: 0,
+        params: { stateOffset: 0 }
+      }
+    ];
+    const constPool2 = createConstPool([0.19]);
+    const env2 = createSigEnv({ 
+      tAbsMs: 16.67, 
+      constPool: constPool2, 
+      cache, 
+      state,
+      runtimeCtx 
+    });
+    
+    const result2 = evalSig(1, env2, nodes2);
+    expect(result2).toBe(1.0); // Wrap detected
+  });
+
+  it("persists state across frames", () => {
+    const state = createStateBuffer({ f64Count: 10, f32Count: 0, i32Count: 0 });
+    const cache = createSigFrameCache(10);
+    const runtimeCtx = createRuntimeCtx(0.016, 0);
+    
+    const phases = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.05]; // Wrap at end
+    const expectedWrap = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]; // Only last frame wraps
+    
+    for (let i = 0; i < phases.length; i++) {
+      if (i > 0) newFrame(cache, cache.frameId + 1);
+      
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 },
+        { 
+          kind: "stateful", 
+          type: numberType, 
+          op: "edgeDetectWrap",
+        stateId: "wrap0", 
+          input: 0,
+          params: { stateOffset: 0 }
+        }
+      ];
+      const constPool = createConstPool([phases[i]]);
+      const env = createSigEnv({ 
+        tAbsMs: i * 16.67, 
+        constPool, 
+        cache, 
+        state,
+        runtimeCtx 
+      });
+      
+      const result = evalSig(1, env, nodes);
+      expect(result).toBe(expectedWrap[i]);
+      expect(state.f64[0]).toBe(phases[i]); // State persists
+    }
+  });
+
+  it("handles first frame correctly (no previous phase)", () => {
+    const state = createStateBuffer({ f64Count: 10, f32Count: 0, i32Count: 0 });
+    const cache = createSigFrameCache(10);
+    const runtimeCtx = createRuntimeCtx(0.016, 0);
+    
+    // First frame with low phase (no wrap possible)
+    const nodes: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0.05
+      { 
+        kind: "stateful", 
+        type: numberType, 
+        op: "edgeDetectWrap",
+        stateId: "wrap0", 
+        input: 0,
+        params: { stateOffset: 0 }
+      }
+    ];
+    const constPool = createConstPool([0.05]);
+    const env = createSigEnv({ 
+      tAbsMs: 0, 
+      constPool, 
+      cache, 
+      state,
+      runtimeCtx 
+    });
+    
+    const result = evalSig(1, env, nodes);
+    expect(result).toBe(0.0); // No wrap on first frame (prevPhase = 0)
+    expect(state.f64[0]).toBe(0.05);
+  });
+
+  it("works with dynamic input (not constant)", () => {
+    const state = createStateBuffer({ f64Count: 10, f32Count: 0, i32Count: 0 });
+    const cache = createSigFrameCache(10);
+    const runtimeCtx = createRuntimeCtx(0.016, 0);
+    
+    // Frame 1: phase01 node returns 0.95
+    const nodes1: SignalExprIR[] = [
+      { kind: "phase01", type: numberType }, // Dynamic input
+      { 
+        kind: "stateful", 
+        type: numberType, 
+        op: "edgeDetectWrap",
+        stateId: "wrap0", 
+        input: 0,
+        params: { stateOffset: 0 }
+      }
+    ];
+    const env1 = createSigEnv({ 
+      tAbsMs: 0, 
+      constPool: createConstPool([]), 
+      cache, 
+      state,
+      runtimeCtx,
+      phase01: 0.95
+    });
+    
+    evalSig(1, env1, nodes1);
+    expect(state.f64[0]).toBe(0.95);
+    
+    // Frame 2: phase01 node returns 0.05 (wrapped!)
+    newFrame(cache, cache.frameId + 1);
+    const nodes2: SignalExprIR[] = [
+      { kind: "phase01", type: numberType },
+      { 
+        kind: "stateful", 
+        type: numberType, 
+        op: "edgeDetectWrap",
+        stateId: "wrap0", 
+        input: 0,
+        params: { stateOffset: 0 }
+      }
+    ];
+    const env2 = createSigEnv({ 
+      tAbsMs: 16.67, 
+      constPool: createConstPool([]), 
+      cache, 
+      state,
+      runtimeCtx,
+      phase01: 0.05
+    });
+    
+    const result2 = evalSig(1, env2, nodes2);
+    expect(result2).toBe(1.0); // Wrap detected from phase01 input
+  });
+});

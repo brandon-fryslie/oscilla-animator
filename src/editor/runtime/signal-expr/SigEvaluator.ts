@@ -7,7 +7,7 @@
  * Algorithm:
  * 1. Check cache: if stamp[sigId] === frameId, return cached value
  * 2. Get node from IR table
- * 3. Evaluate based on node kind (const, timeAbsMs, map, zip, select, inputSlot, busCombine, transform, stateful, closureBridge)
+ * 3. Evaluate based on node kind (const, timeAbsMs, timeModelMs, phase01, wrapEvent, map, zip, select, inputSlot, busCombine, transform, stateful, closureBridge)
  * 4. Write result to cache with current frameId stamp
  * 5. Return result
  *
@@ -24,6 +24,7 @@
  * - .agent_planning/signalexpr-runtime/SPRINT-04-transform.md §P0 "Implement Transform Node Evaluation"
  * - .agent_planning/signalexpr-runtime/SPRINT-05-stateful.md §P0-P1 "Implement Stateful Operations"
  * - .agent_planning/signalexpr-runtime/SPRINT-06-closureBridge.md §P0 "Implement ClosureBridge Evaluation"
+ * - .agent_planning/signalexpr-runtime/PLAN-2025-12-26-031245.md §Workstream A "Complete SigEvaluator"
  * - src/editor/compiler/ir/signalExpr.ts (SignalExprIR types)
  */
 
@@ -99,6 +100,18 @@ export function evalSig(
       result = env.tAbsMs;
       break;
 
+    case "timeModelMs":
+      result = env.tModelMs ?? env.tAbsMs;
+      break;
+
+    case "phase01":
+      result = env.phase01 ?? 0;
+      break;
+
+    case "wrapEvent":
+      result = env.wrapOccurred ? 1.0 : 0.0;
+      break;
+
     case "map":
       result = evalMap(node, env, nodes);
       break;
@@ -130,14 +143,6 @@ export function evalSig(
     case "closureBridge":
       result = evalClosureBridge(node, env, nodes);
       break;
-
-    // Future sprints:
-    case "timeModelMs":
-    case "phase01":
-    case "wrapEvent":
-      throw new Error(
-        `Signal node kind '${node.kind}' not yet implemented (future sprint)`
-      );
 
     default: {
       // Use type assertion to extract kind for error message
@@ -515,9 +520,7 @@ function evalStateful(
       return evalDelayFrames(node, stateOffset, env, nodes);
 
     case "edgeDetectWrap":
-      throw new Error(
-        "edgeDetectWrap not yet implemented (time model operations - future sprint)"
-      );
+      return evalEdgeDetectWrap(node, stateOffset, env, nodes);
 
     default: {
       // Exhaustiveness check
@@ -896,6 +899,48 @@ function evalDelayFrames(
   env.state.i32[i32Offset] = (writeIdx + 1) % bufferSize;
 
   return result;
+}
+
+/**
+ * Evaluate edgeDetectWrap operation: detect phase wrap discontinuity (0.999 -> 0.0).
+ *
+ * Algorithm:
+ * 1. Evaluate input signal (phase value)
+ * 2. Read previous phase from state
+ * 3. Detect wrap: phase dropped significantly (prevPhase > 0.8 && phase < 0.2)
+ * 4. Store current phase for next frame
+ * 5. Return 1.0 if wrapped, 0.0 otherwise
+ *
+ * State layout:
+ * - f64[stateOffset]: previous phase value
+ *
+ * Wrap detection heuristic:
+ * - prevPhase > 0.8 AND phase < 0.2
+ * - Handles typical phase wrap from 0.95+ to 0.0-0.1
+ * - Avoids false positives from normal phase increase
+ *
+ * @param node - Stateful node (op = "edgeDetectWrap")
+ * @param stateOffset - Offset into state.f64
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns 1.0 on wrap edge, 0.0 otherwise
+ */
+function evalEdgeDetectWrap(
+  node: Extract<SignalExprIR, { kind: "stateful" }>,
+  stateOffset: number,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  const phase = node.input !== undefined ? evalSig(node.input, env, nodes) : 0;
+  const prevPhase = env.state.f64[stateOffset];
+
+  // Detect wrap: phase dropped significantly (e.g., 0.95 -> 0.05)
+  const wrapped = prevPhase > 0.8 && phase < 0.2;
+
+  // Store current phase for next frame
+  env.state.f64[stateOffset] = phase;
+
+  return wrapped ? 1.0 : 0.0;
 }
 
 /**
