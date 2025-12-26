@@ -10,7 +10,10 @@ import { useCallback, useMemo } from 'react';
 import { useStore } from './stores';
 import { InspectorContainer } from './components/InspectorContainer';
 import { describeSlotType } from './portUtils';
-import type { Connection, Publisher, Listener, Block, Slot, SlotType } from './types';
+import type { Connection, Publisher, Listener, Block, Slot, SlotType, TypeDesc, AdapterStep } from './types';
+import { parseRowKey, type TableCell, type TableRow, type TableColumn } from './modulation-table/types';
+import { findAdapterPath } from './adapters/autoAdapter';
+import { isDirectlyCompatible } from './types';
 import './ConnectionInspector.css';
 
 /**
@@ -19,7 +22,25 @@ import './ConnectionInspector.css';
 type ResolvedConnection =
   | { kind: 'wire'; connection: Connection; sourceBlock: Block; sourceSlot: Slot; targetBlock: Block; targetSlot: Slot }
   | { kind: 'publisher'; publisher: Publisher; sourceBlock: Block; sourceSlot: Slot; busName: string }
-  | { kind: 'listener'; listener: Listener; busName: string; targetBlock: Block; targetSlot: Slot };
+  | { kind: 'listener'; listener: Listener; busName: string; targetBlock: Block; targetSlot: Slot }
+  | { kind: 'cell'; cell: TableCell; row: TableRow; column: TableColumn; block: Block; slot: Slot };
+
+/**
+ * Detailed cell info for inspector display
+ */
+type CellInspectorInfo = {
+  cell: TableCell;
+  row: TableRow;
+  column: TableColumn;
+  block: Block;
+  slot: Slot;
+  // Computed compatibility info
+  compatibility: {
+    status: 'compatible' | 'convertible' | 'incompatible';
+    adapterChain?: AdapterStep[];
+    incompatibilityReason?: string;
+  };
+};
 
 /**
  * Type badge component - shows S/F/C world and domain.
@@ -512,8 +533,9 @@ export const ConnectionInspector = observer(() => {
   const resolved = useMemo((): ResolvedConnection | null => {
     if (!selectedConnection) return null;
 
-    const { type, id } = selectedConnection;
+    const type = selectedConnection.type;
 
+    const id = type === "cell" ? null : selectedConnection.id;
     if (type === 'wire') {
       const connection = store.patchStore.connections.find(c => c.id === id);
       if (!connection) return null;
