@@ -1,21 +1,32 @@
 /**
- * Compilation Passes
+ * Compiler Passes - Public API
  *
- * The 11-pass compilation pipeline transforms a Patch into CompiledProgramIR.
- *
- * Pass Flow:
- * 1. Normalize    → NormalizedPatch
- * 2. Type Graph   → TypedPatch
- * 3. Time Topology→ TimeResolvedPatch
- * 4. Dep Graph    → DepGraph
- * 5. SCC/Cycles   → AcyclicOrLegalGraph
- * 6-11. Lowering  → CompiledProgramIR
- *
- * Currently implemented: Passes 1-5
+ * Canonical 11-pass compilation pipeline.
+ * Sprint 1: Passes 1-5 (normalization, types, time, deps, SCC)
+ * Sprint 2: Passes 6-8 (block lowering, bus lowering, link resolution)
+ * Sprint 3: Passes 9-11 (render lowering, constants, debug index)
  */
 
+// Pass 1: Normalize Patch
 export { pass1Normalize } from "./pass1-normalize";
-export { pass2TypeGraph, isBusEligible } from "./pass2-types";
+export type { NormalizedPatch } from "../ir/patches";
+
+// Pass 2: Type Graph
+export { pass2TypeGraph } from "./pass2-types";
+export type { TypedPatch } from "../ir/patches";
+
+// Pass 3: Time Topology
 export { pass3TimeTopology } from "./pass3-time";
+export type { TimeResolvedPatch } from "../ir/patches";
+
+// Pass 4: Dependency Graph
 export { pass4DepGraph } from "./pass4-depgraph";
+export type { DepGraph } from "../ir/patches";
+
+// Pass 5: SCC Validation
 export { pass5CycleValidation } from "./pass5-scc";
+export type { AcyclicOrLegalGraph } from "../ir/patches";
+
+// Pass 6: Block Lowering
+export { pass6BlockLowering } from "./pass6-block-lowering";
+export type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
