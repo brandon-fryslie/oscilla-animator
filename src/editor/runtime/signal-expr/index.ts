@@ -62,3 +62,19 @@ export {
   type TransformTraceInfo,
   type TransformStepTrace,
 } from "./DebugSink";
+
+// SignalExpr Builder (Sprint 7) - for block compiler migration
+export {
+  createSignalExprBuilder,
+  opcode,
+  type SignalExprBuilder,
+  type SignalExprBuildResult,
+} from "./SignalExprBuilder";
+
+// Migration tracking (Sprint 6+7)
+export {
+  isMigrated,
+  getMigrationStatus,
+  MIGRATED_BLOCKS,
+  type MigrationStatus,
+} from "./MigrationTracking";
