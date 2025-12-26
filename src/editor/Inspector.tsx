@@ -481,71 +481,74 @@ const PortWiringPanel = observer(({
 
 /**
  * Preview display for a block definition (not yet placed).
- * Uses compact styling consistent with placed block inspector.
+ * Uses InspectorContainer for consistent styling.
  */
 function DefinitionPreview({ definition }: { definition: BlockDefinition }) {
+  const store = useStore();
+
+  const handleClose = () => {
+    store.uiStore.setPreviewedDefinition(null);
+  };
+
   return (
-    <div className="inspector insp-compact">
-      <div className="insp-header" style={{ borderLeftColor: definition.color }}>
-        <div className="insp-title-row">
-          <span className="insp-title">{definition.label}</span>
-          <span className="insp-category" style={{ background: definition.color }}>{definition.subcategory ?? 'Other'}</span>
-        </div>
-        <code className="insp-type">{definition.type}</code>
-      </div>
+    <InspectorContainer
+      title={definition.label}
+      typeCode={definition.type}
+      category={definition.subcategory ?? 'Block'}
+      color={definition.color}
+      onBack={handleClose}
+      backLabel="Close Preview"
+    >
+      {/* Description */}
+      {definition.description && (
+        <p className="insp-description">{definition.description}</p>
+      )}
 
-      <div className="insp-body">
-        {/* Description */}
-        {definition.description && (
-          <p className="insp-description">{definition.description}</p>
-        )}
-
-        {/* Side-by-side Inputs/Outputs */}
-        <div className="ports-row">
-          <div className="ports-col">
-            <span className="ports-header">Inputs</span>
-            {definition.inputs.length === 0
-              ? <span className="ports-none">None</span>
-              : definition.inputs.map(slot => (
-                  <div key={slot.id} className="port-item">
-                    <span className="port-item-label">{slot.label}</span>
-                    <span className="port-disconnected-icon">○</span>
-                  </div>
-                ))
-            }
-          </div>
-          <div className="ports-col">
-            <span className="ports-header">Outputs</span>
-            {definition.outputs.length === 0
-              ? <span className="ports-none">None</span>
-              : definition.outputs.map(slot => (
-                  <div key={slot.id} className="port-item">
-                    <span className="port-item-label">{slot.label}</span>
-                    <span className="port-disconnected-icon">○</span>
-                  </div>
-                ))
-            }
-          </div>
-        </div>
-
-        {/* Parameters preview */}
-        {definition.paramSchema.length > 0 && (
-          <div className="insp-section">
-            <span className="insp-section-title">Parameters</span>
-            <div className="param-preview-list">
-              {definition.paramSchema.map(param => (
-                <div key={param.key} className="param-preview-item">
-                  <span className="param-preview-key">{param.label}</span>
-                  <span className="param-preview-type">{param.type}</span>
+      {/* Side-by-side Inputs/Outputs */}
+      <div className="ports-row">
+        <div className="ports-col">
+          <span className="ports-header">Inputs</span>
+          {definition.inputs.length === 0
+            ? <span className="ports-none">None</span>
+            : definition.inputs.map(slot => (
+                <div key={slot.id} className="port-item">
+                  <span className="port-item-label">{slot.label}</span>
+                  <span className="port-disconnected-icon">○</span>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <p className="insp-hint">Drag to patch bay to use</p>
+              ))
+          }
+        </div>
+        <div className="ports-col">
+          <span className="ports-header">Outputs</span>
+          {definition.outputs.length === 0
+            ? <span className="ports-none">None</span>
+            : definition.outputs.map(slot => (
+                <div key={slot.id} className="port-item">
+                  <span className="port-item-label">{slot.label}</span>
+                  <span className="port-disconnected-icon">○</span>
+                </div>
+              ))
+          }
+        </div>
       </div>
-    </div>
+
+      {/* Parameters preview */}
+      {definition.paramSchema.length > 0 && (
+        <div className="insp-section">
+          <span className="insp-section-title">Parameters</span>
+          <div className="param-preview-list">
+            {definition.paramSchema.map(param => (
+              <div key={param.key} className="param-preview-item">
+                <span className="param-preview-key">{param.label}</span>
+                <span className="param-preview-type">{param.type}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="insp-hint">Drag to patch bay to use</p>
+    </InspectorContainer>
   );
 }
 
@@ -1101,29 +1104,33 @@ export const Inspector = observer(() => {
 
   if (!block) {
     return (
-      <div className="inspector insp-compact">
+      <InspectorContainer
+        title="Inspector"
+        color="#666"
+      >
         <div className="inspector-empty">
           <p>No block selected</p>
         </div>
-      </div>
+      </InspectorContainer>
     );
   }
 
   const definition = getBlockDefinition(block.type);
   const blockColor = definition?.color ?? '#666';
 
-  return (
-    <div className="inspector insp-compact">
-      {/* Compact header */}
-      <div className="insp-header" style={{ borderLeftColor: blockColor }}>
-        <div className="insp-title-row">
-                    <span className="insp-title">{block.label}</span>
-                    <span className="insp-category" style={{ background: blockColor }}>{block.category}</span>
-                  </div>
-                  <code className="insp-type">{block.type}</code>
-                </div>
+  const handleDeselectBlock = () => {
+    store.uiStore.deselectBlock();
+  };
 
-                <div className="insp-body">
+  return (
+    <InspectorContainer
+      title={block.label}
+      typeCode={block.type}
+      category={block.category}
+      color={blockColor}
+      onBack={handleDeselectBlock}
+      backLabel="Deselect"
+    >
                   {/* Wiring Panel for selected port on current block */}
                   {store.uiStore.uiState.selectedPort &&
                    store.uiStore.uiState.selectedPort.blockId === block.id ? (
@@ -1243,6 +1250,6 @@ export const Inspector = observer(() => {
                       </button>
                     </>
                   )}
-                </div>
-              </div>
-            );});
+    </InspectorContainer>
+  );
+});

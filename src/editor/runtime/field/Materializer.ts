@@ -21,6 +21,7 @@ import type {
   SigExprId,
   CombineMode,
 } from './types';
+import type { SignalBridge } from '../integration/SignalBridge';
 
 // =============================================================================
 // Materializer Environment
@@ -32,10 +33,17 @@ import type {
 export type SignalExprIR = unknown;
 
 /**
- * Signal environment (stub for now)
+ * Signal environment - contains time and signal bridge
  */
 export interface SigEnv {
-  // Placeholder
+  /** Current frame time in milliseconds */
+  time: number;
+
+  /**
+   * TEMPORARY: Signal bridge for evaluating signal closures
+   * TODO: Replace with Phase 4 signal IR evaluator when available
+   */
+  signalBridge?: SignalBridge;
 }
 
 /**
@@ -88,18 +96,31 @@ export interface MaterializerEnv {
 }
 
 // =============================================================================
-// Signal Evaluation (Stub)
+// Signal Evaluation
 // =============================================================================
 
 /**
- * Evaluate a signal expression (stub implementation)
+ * Evaluate a signal expression.
+ *
+ * TEMPORARY: This uses SignalBridge for closure-based signal evaluation.
+ * TODO: Replace with Phase 4 signal IR evaluator when available.
+ *
+ * @param sigId - Signal expression ID
+ * @param env - Signal environment (contains time and bridge)
+ * @param _nodes - Signal IR nodes (unused until Phase 4)
+ * @returns Signal value at current time
  */
 function evalSig(
-  _sigId: SigExprId,
-  _env: SigEnv,
+  sigId: SigExprId,
+  env: SigEnv,
   _nodes: SignalExprIR[]
 ): number {
-  // TODO: Implement signal evaluation (Phase 4)
+  // TEMPORARY: Use SignalBridge if available
+  if (env.signalBridge !== undefined) {
+    return env.signalBridge.evalSig(sigId, env);
+  }
+
+  // Fallback to 0 if no bridge (for backward compatibility with existing tests)
   return 0;
 }
 
