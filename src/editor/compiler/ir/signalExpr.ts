@@ -97,7 +97,10 @@ export type SignalExprIR =
   | SignalExprBusCombine
 
   // Stateful operations (explicit state, NO closure memory)
-  | SignalExprStateful;
+  | SignalExprStateful
+
+  // TEMPORARY: Closure bridge for migration (Sprint 6)
+  | SignalExprClosureBridge;
 
 // -----------------------------------------------------------------------------
 // Individual Signal Expression Kinds
@@ -194,6 +197,33 @@ export interface SignalExprStateful {
   /** Explicit state reference - no closure memory */
   stateId: StateId;
   params?: Record<string, number>;
+}
+
+/**
+ * TEMPORARY: Closure bridge node for gradual migration.
+ *
+ * Allows calling legacy closure-based signals from within SignalExpr DAG.
+ * This is a temporary mechanism to support gradual block-by-block migration.
+ *
+ * Will be REMOVED once all blocks are migrated to IR (Sprint 7+).
+ *
+ * Philosophy:
+ * - Enables migration without breaking existing functionality
+ * - closureId is looked up in ClosureRegistry at evaluation time
+ * - inputSlots are optional evaluated signal inputs (reserved for future)
+ * - Result is cached like any other node
+ *
+ * References:
+ * - .agent_planning/signalexpr-runtime/SPRINT-06-closureBridge.md
+ * - design-docs/12-Compiler-Final/01.1-CompilerMigration-Roadmap.md
+ */
+export interface SignalExprClosureBridge {
+  kind: "closureBridge";
+  type: TypeDesc;
+  /** Unique ID for closure lookup in ClosureRegistry */
+  closureId: string;
+  /** Optional evaluated signal inputs to pass to closure (reserved for future) */
+  inputSlots: SigExprId[];
 }
 
 // =============================================================================

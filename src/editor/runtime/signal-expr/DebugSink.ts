@@ -14,6 +14,7 @@
  * References:
  * - .agent_planning/signalexpr-runtime/SPRINT-03-busCombine.md §P1 "Add Optional Debug Tracing"
  * - .agent_planning/signalexpr-runtime/SPRINT-04-transform.md §P2 "Add Debug Tracing for Transforms"
+ * - .agent_planning/signalexpr-runtime/SPRINT-06-closureBridge.md §P1 "Debug Tracing for Closure Bridge"
  */
 
 import type { SigExprId, TransformChainId } from "../../compiler/ir/types";
@@ -53,6 +54,18 @@ export interface DebugSink {
    * @param info - Transform trace information
    */
   traceTransform?(info: TransformTraceInfo): void;
+
+  /**
+   * TEMPORARY: Trace closure bridge call (Sprint 6).
+   *
+   * Called after successfully calling a legacy closure from closureBridge node.
+   * Includes closure ID, time, result, and optional execution time.
+   *
+   * Will be REMOVED once all blocks are migrated to IR (Sprint 7+).
+   *
+   * @param info - Closure bridge trace information
+   */
+  traceClosureBridge?(info: ClosureBridgeTraceInfo): void;
 
   // Future tracing methods:
   // traceMap?(info: MapTraceInfo): void;
@@ -121,4 +134,32 @@ export interface TransformStepTrace {
 
   /** Output value from this step */
   outputValue: number;
+}
+
+/**
+ * TEMPORARY: Closure bridge trace information (Sprint 6).
+ *
+ * Contains all information about a closure bridge call:
+ * - Closure ID (for identification)
+ * - Time passed to closure
+ * - Result returned from closure
+ * - Optional execution time (for performance tracking)
+ *
+ * Will be REMOVED once all blocks are migrated to IR (Sprint 7+).
+ *
+ * References:
+ * - .agent_planning/signalexpr-runtime/SPRINT-06-closureBridge.md §P1
+ */
+export interface ClosureBridgeTraceInfo {
+  /** Closure ID from registry */
+  closureId: string;
+
+  /** Absolute time passed to closure (milliseconds) */
+  tAbsMs: number;
+
+  /** Result returned from closure */
+  result: number;
+
+  /** Optional execution time in milliseconds (for performance tracking) */
+  executionTimeMs?: number;
 }

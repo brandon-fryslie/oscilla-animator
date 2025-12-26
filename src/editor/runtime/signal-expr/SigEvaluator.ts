@@ -7,7 +7,7 @@
  * Algorithm:
  * 1. Check cache: if stamp[sigId] === frameId, return cached value
  * 2. Get node from IR table
- * 3. Evaluate based on node kind (const, timeAbsMs, map, zip, select, inputSlot, busCombine, transform, stateful)
+ * 3. Evaluate based on node kind (const, timeAbsMs, map, zip, select, inputSlot, busCombine, transform, stateful, closureBridge)
  * 4. Write result to cache with current frameId stamp
  * 5. Return result
  *
@@ -23,6 +23,7 @@
  * - .agent_planning/signalexpr-runtime/SPRINT-03-busCombine.md §P0 "Implement BusCombine Evaluation"
  * - .agent_planning/signalexpr-runtime/SPRINT-04-transform.md §P0 "Implement Transform Node Evaluation"
  * - .agent_planning/signalexpr-runtime/SPRINT-05-stateful.md §P0-P1 "Implement Stateful Operations"
+ * - .agent_planning/signalexpr-runtime/SPRINT-06-closureBridge.md §P0 "Implement ClosureBridge Evaluation"
  * - src/editor/compiler/ir/signalExpr.ts (SignalExprIR types)
  */
 
@@ -34,6 +35,7 @@ import type { TransformStepTrace } from "./DebugSink";
 import { getConstNumber } from "./SigEnv";
 import { applyPureFn, applyBinaryFn } from "./OpCodeRegistry";
 import { applyEasing } from "./EasingCurves";
+import { createLegacyContext } from "./LegacyClosure";
 
 /**
  * Evaluate a signal expression node.
@@ -47,7 +49,7 @@ import { applyEasing } from "./EasingCurves";
  * - Shared subexpressions are cached (diamond dependencies evaluated once)
  *
  * @param sigId - Signal expression ID (index into nodes array)
- * @param env - Evaluation environment (time, const pool, cache, slot values, state, runtimeCtx, debug)
+ * @param env - Evaluation environment (time, const pool, cache, slot values, state, runtimeCtx, closureRegistry, debug)
  * @param nodes - IR node array
  * @returns Evaluated signal value
  * @throws Error if node kind is unknown or unsupported
@@ -123,6 +125,10 @@ export function evalSig(
 
     case "stateful":
       result = evalStateful(node, env, nodes);
+      break;
+
+    case "closureBridge":
+      result = evalClosureBridge(node, env, nodes);
       break;
 
     // Future sprints:
@@ -520,6 +526,104 @@ function evalStateful(
       throw new Error(`Unknown stateful op: ${node.op}`);
     }
   }
+}
+
+/**
+ * TEMPORARY: Evaluate a closureBridge node - call legacy closure (Sprint 6).
+ *
+ * Algorithm:
+ * 1. Get closure from registry by ID
+ * 2. Throw error if closure not found
+ * 3. Evaluate input slots (if any) - currently unused, reserved for future
+ * 4. Create legacy context from environment
+ * 5. Call closure with time and context
+ * 6. Optionally trace to debug sink
+ * 7. Return result (which is then cached by evalSig)
+ *
+ * CRITICAL:
+ * - This is TEMPORARY infrastructure for migration period
+ * - Will be REMOVED once all blocks are migrated to IR (Sprint 7+)
+ * - Closure must be registered before evaluation
+ * - Result is cached like any other node
+ *
+ * @param node - ClosureBridge node from IR
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns Result from legacy closure
+ * @throws Error if closure not found in registry
+ *
+ * @example
+ * ```typescript
+ * import { createClosureRegistry } from "./ClosureRegistry";
+ *
+ * const registry = createClosureRegistry();
+ * registry.register('testClosure', (t, ctx) => t * 2);
+ *
+ * const nodes: SignalExprIR[] = [
+ *   {
+ *     kind: "closureBridge",
+ *     type: { world: "signal", domain: "number" },
+ *     closureId: "testClosure",
+ *     inputSlots: []
+ *   }
+ * ];
+ *
+ * const env = createSigEnv({
+ *   tAbsMs: 100,
+ *   constPool: { numbers: [] },
+ *   cache: createSigFrameCache(10),
+ *   closureRegistry: registry
+ * });
+ *
+ * // evalSig(0, env, nodes) → 200
+ * ```
+ *
+ * References:
+ * - .agent_planning/signalexpr-runtime/SPRINT-06-closureBridge.md §P0 "Implement ClosureBridge Evaluation"
+ * - design-docs/12-Compiler-Final/01.1-CompilerMigration-Roadmap.md
+ */
+function evalClosureBridge(
+  node: Extract<SignalExprIR, { kind: "closureBridge" }>,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  // Track execution time if debug tracing enabled
+  const startTime = env.debug?.traceClosureBridge ? performance.now() : 0;
+
+  // Get closure from registry
+  const closure = env.closureRegistry.get(node.closureId);
+  if (!closure) {
+    throw new Error(
+      `Missing closure: ${node.closureId}. Closure must be registered before evaluation.`
+    );
+  }
+
+  // Evaluate input slots (reserved for future - currently unused)
+  // In future, these evaluated values could be passed to closure
+  // For now, legacy closures only use (t, ctx)
+  if (node.inputSlots.length > 0) {
+    // Pre-evaluate for cache correctness (even if unused)
+    node.inputSlots.forEach((slotId) => evalSig(slotId, env, nodes));
+  }
+
+  // Create legacy context from environment
+  const ctx = createLegacyContext(env);
+
+  // Call legacy closure
+  const result = closure(env.tAbsMs, ctx);
+
+  // Optional debug tracing (zero overhead when disabled)
+  if (env.debug?.traceClosureBridge) {
+    const endTime = performance.now();
+    env.debug.traceClosureBridge({
+      closureId: node.closureId,
+      tAbsMs: env.tAbsMs,
+      result,
+      executionTimeMs: endTime - startTime,
+    });
+  }
+
+  return result;
 }
 
 /**

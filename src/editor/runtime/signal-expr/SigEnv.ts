@@ -11,6 +11,7 @@
  * - Easing curves (Sprint 4)
  * - State buffer (Sprint 5)
  * - Runtime context (Sprint 5)
+ * - Closure registry (Sprint 6 - TEMPORARY for migration)
  *
  * The environment is created once per frame and passed to all signal evaluations.
  *
@@ -24,6 +25,7 @@
  * - .agent_planning/signalexpr-runtime/SPRINT-03-busCombine.md §P1 "Extend SigEnv with Debug Sink"
  * - .agent_planning/signalexpr-runtime/SPRINT-04-transform.md §P0 "Extend SigEnv with Transform Infrastructure"
  * - .agent_planning/signalexpr-runtime/SPRINT-05-stateful.md §P0 "Extend SigEnv with State and RuntimeCtx"
+ * - .agent_planning/signalexpr-runtime/SPRINT-06-closureBridge.md §P0 "Extend SigEnv with Closure Registry"
  */
 
 import type { SigFrameCache } from "./SigFrameCache";
@@ -33,10 +35,12 @@ import type { TransformTable } from "../../compiler/ir/transforms";
 import type { EasingCurveTable } from "./EasingCurves";
 import type { StateBuffer } from "./StateBuffer";
 import type { RuntimeCtx } from "./RuntimeCtx";
+import type { ClosureRegistry } from "./ClosureRegistry";
 import { createEmptySlotReader } from "./SlotValueReader";
 import { createBuiltinCurves } from "./EasingCurves";
 import { createEmptyStateBuffer } from "./StateBuffer";
 import { createDefaultRuntimeCtx } from "./RuntimeCtx";
+import { createClosureRegistry } from "./ClosureRegistry";
 
 /**
  * Const pool - storage for compile-time constant values.
@@ -114,6 +118,20 @@ export interface SigEnv {
   readonly runtimeCtx: RuntimeCtx;
 
   /**
+   * TEMPORARY: Closure registry for migration period.
+   *
+   * Registry of legacy closures by ID for closure bridge nodes.
+   * Populated by compiler before evaluation.
+   * Persists across frames (closures don't change).
+   *
+   * Will be REMOVED once all blocks are migrated to IR (Sprint 7+).
+   *
+   * References:
+   * - .agent_planning/signalexpr-runtime/SPRINT-06-closureBridge.md
+   */
+  readonly closureRegistry: ClosureRegistry;
+
+  /**
    * Optional debug sink for tracing signal evaluation.
    *
    * When defined, allows instrumentation of signal operations for:
@@ -144,6 +162,7 @@ export interface CreateSigEnvParams {
   easingCurves?: EasingCurveTable; // Optional - defaults to built-in curves
   state?: StateBuffer; // Optional - defaults to empty buffer
   runtimeCtx?: RuntimeCtx; // Optional - defaults to 60fps, frame 0
+  closureRegistry?: ClosureRegistry; // Optional - defaults to empty registry
   debug?: DebugSink; // Optional - defaults to undefined (no tracing)
 }
 
@@ -159,12 +178,14 @@ export interface CreateSigEnvParams {
  * import { createArraySlotReader } from "./SlotValueReader";
  * import { createStateBuffer } from "./StateBuffer";
  * import { createRuntimeCtx } from "./RuntimeCtx";
+ * import { createClosureRegistry } from "./ClosureRegistry";
  *
  * const cache = createSigFrameCache(1024);
  * const constPool = { numbers: [1, 2, 3.14] };
  * const slots = createArraySlotReader(new Map([[0, 42]]));
  * const state = createStateBuffer({ f64Count: 10, f32Count: 0, i32Count: 2 });
  * const runtimeCtx = createRuntimeCtx(0.016, 0);
+ * const closureRegistry = createClosureRegistry();
  *
  * const env = createSigEnv({
  *   tAbsMs: 1000,
@@ -172,7 +193,8 @@ export interface CreateSigEnvParams {
  *   cache,
  *   slotValues: slots,
  *   state,
- *   runtimeCtx
+ *   runtimeCtx,
+ *   closureRegistry
  * });
  * console.log(env.tAbsMs); // 1000
  * ```
@@ -187,6 +209,7 @@ export function createSigEnv(params: CreateSigEnvParams): SigEnv {
     easingCurves: params.easingCurves ?? createBuiltinCurves(),
     state: params.state ?? createEmptyStateBuffer(),
     runtimeCtx: params.runtimeCtx ?? createDefaultRuntimeCtx(),
+    closureRegistry: params.closureRegistry ?? createClosureRegistry(),
     debug: params.debug,
   };
 }
