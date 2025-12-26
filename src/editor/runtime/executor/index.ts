@@ -7,6 +7,9 @@
 // Main executor
 export { ScheduleExecutor } from "./ScheduleExecutor";
 
+// IR Runtime Adapter (bridge to Player)
+export { IRRuntimeAdapter } from "./IRRuntimeAdapter";
+
 // Runtime state
 export { type RuntimeState, type FrameCache, createRuntimeState } from "./RuntimeState";
 
