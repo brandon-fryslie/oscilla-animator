@@ -7,7 +7,7 @@
  * Algorithm:
  * 1. Check cache: if stamp[sigId] === frameId, return cached value
  * 2. Get node from IR table
- * 3. Evaluate based on node kind (const, timeAbsMs, map, zip, select, inputSlot, busCombine, transform, etc.)
+ * 3. Evaluate based on node kind (const, timeAbsMs, map, zip, select, inputSlot, busCombine, transform, stateful)
  * 4. Write result to cache with current frameId stamp
  * 5. Return result
  *
@@ -22,6 +22,7 @@
  * - .agent_planning/signalexpr-runtime/SPRINT-02-select-inputSlot.md §P0 "Implement Select and InputSlot"
  * - .agent_planning/signalexpr-runtime/SPRINT-03-busCombine.md §P0 "Implement BusCombine Evaluation"
  * - .agent_planning/signalexpr-runtime/SPRINT-04-transform.md §P0 "Implement Transform Node Evaluation"
+ * - .agent_planning/signalexpr-runtime/SPRINT-05-stateful.md §P0-P1 "Implement Stateful Operations"
  * - src/editor/compiler/ir/signalExpr.ts (SignalExprIR types)
  */
 
@@ -42,11 +43,11 @@ import { applyEasing } from "./EasingCurves";
  * - Otherwise, evaluate node based on kind and cache result
  *
  * Recursive evaluation:
- * - Map, zip, select, busCombine, and transform nodes recursively evaluate their inputs
+ * - Map, zip, select, busCombine, transform, and stateful nodes recursively evaluate their inputs
  * - Shared subexpressions are cached (diamond dependencies evaluated once)
  *
  * @param sigId - Signal expression ID (index into nodes array)
- * @param env - Evaluation environment (time, const pool, cache, slot values, debug)
+ * @param env - Evaluation environment (time, const pool, cache, slot values, state, runtimeCtx, debug)
  * @param nodes - IR node array
  * @returns Evaluated signal value
  * @throws Error if node kind is unknown or unsupported
@@ -120,11 +121,14 @@ export function evalSig(
       result = evalTransform(node, env, nodes);
       break;
 
+    case "stateful":
+      result = evalStateful(node, env, nodes);
+      break;
+
     // Future sprints:
     case "timeModelMs":
     case "phase01":
     case "wrapEvent":
-    case "stateful":
       throw new Error(
         `Signal node kind '${node.kind}' not yet implemented (future sprint)`
       );
@@ -461,6 +465,336 @@ function evalTransform(
 }
 
 /**
+ * Evaluate a stateful node: apply stateful operation with persistent state.
+ *
+ * Algorithm:
+ * 1. Dispatch to operation-specific handler based on op field
+ * 2. Handler reads/writes state via env.state (persistent across frames)
+ * 3. Handler uses env.runtimeCtx for timing information
+ * 4. Return computed value
+ *
+ * CRITICAL:
+ * - State persists across frames (not reset automatically)
+ * - stateId is used to look up numeric offset in params (compiler-provided mapping)
+ * - All stateful ops use deltaSec for frame-rate independence
+ *
+ * @param node - Stateful node from IR
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns Result of stateful operation
+ * @throws Error if operation is unknown
+ */
+function evalStateful(
+  node: Extract<SignalExprIR, { kind: "stateful" }>,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  // Get state offset from params (compiler maps stateId -> numeric offset)
+  const stateOffset = node.params?.stateOffset ?? 0;
+
+  switch (node.op) {
+    case "integrate":
+      return evalIntegrate(node, stateOffset, env, nodes);
+
+    case "sampleHold":
+      return evalSampleHold(node, stateOffset, env, nodes);
+
+    case "slew":
+      return evalSlew(node, stateOffset, env, nodes);
+
+    case "delayMs":
+      return evalDelayMs(node, stateOffset, env, nodes);
+
+    case "delayFrames":
+      return evalDelayFrames(node, stateOffset, env, nodes);
+
+    case "edgeDetectWrap":
+      throw new Error(
+        "edgeDetectWrap not yet implemented (time model operations - future sprint)"
+      );
+
+    default: {
+      // Exhaustiveness check
+      const _exhaustiveCheck: never = node.op;
+      void _exhaustiveCheck;
+      throw new Error(`Unknown stateful op: ${node.op}`);
+    }
+  }
+}
+
+/**
+ * Evaluate integrate operation: Euler integration (accumulation over time).
+ *
+ * Algorithm:
+ * 1. Evaluate input signal (defaults to 0 if not provided)
+ * 2. Read current accumulator from state[offset]
+ * 3. Add input * deltaSec to accumulator (Euler step)
+ * 4. Write new accumulator to state
+ * 5. Return new value
+ *
+ * State layout:
+ * - f64[stateOffset]: accumulator value
+ *
+ * @param node - Stateful node (op = "integrate")
+ * @param stateOffset - Offset into state.f64
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns New accumulated value
+ */
+function evalIntegrate(
+  node: Extract<SignalExprIR, { kind: "stateful" }>,
+  stateOffset: number,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  const input = node.input !== undefined ? evalSig(node.input, env, nodes) : 0;
+
+  const current = env.state.f64[stateOffset];
+  const dt = env.runtimeCtx.deltaSec;
+
+  // Euler integration: accumulator += input * dt
+  const next = current + input * dt;
+
+  // Update state
+  env.state.f64[stateOffset] = next;
+
+  return next;
+}
+
+/**
+ * Evaluate sampleHold operation: sample input on rising edge of trigger.
+ *
+ * Algorithm:
+ * 1. Evaluate input and trigger signals
+ * 2. Read held value and last trigger state
+ * 3. Detect rising edge (trigger crosses 0.5 threshold from below)
+ * 4. If rising edge, sample input and update held value
+ * 5. Update trigger state
+ * 6. Return held value
+ *
+ * State layout:
+ * - f64[stateOffset]: held value
+ * - f64[stateOffset + 1]: last trigger value
+ *
+ * Trigger threshold: 0.5 (consistent with select node)
+ * Rising edge: was <= 0.5, now > 0.5
+ *
+ * @param node - Stateful node (op = "sampleHold")
+ * @param stateOffset - Offset into state.f64
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns Held value (sampled on rising edge)
+ */
+function evalSampleHold(
+  node: Extract<SignalExprIR, { kind: "stateful" }>,
+  stateOffset: number,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  const input = node.input !== undefined ? evalSig(node.input, env, nodes) : 0;
+
+  // Trigger signal must be provided in params
+  const triggerSigId = node.params?.trigger;
+  if (triggerSigId === undefined) {
+    throw new Error("sampleHold requires trigger signal in params.trigger");
+  }
+  const trigger = evalSig(triggerSigId as SigExprId, env, nodes);
+
+  const heldValue = env.state.f64[stateOffset];
+  const lastTrigger = env.state.f64[stateOffset + 1];
+
+  // Detect rising edge (trigger crosses 0.5 threshold)
+  if (trigger > 0.5 && lastTrigger <= 0.5) {
+    // Sample the input
+    env.state.f64[stateOffset] = input;
+    env.state.f64[stateOffset + 1] = trigger;
+    return input;
+  }
+
+  // Update trigger state
+  env.state.f64[stateOffset + 1] = trigger;
+
+  // Return held value
+  return heldValue;
+}
+
+/**
+ * Evaluate slew operation: exponential smoothing towards target.
+ *
+ * Algorithm:
+ * 1. Evaluate target signal
+ * 2. Read current smoothed value from state
+ * 3. Apply exponential smoothing: alpha = 1 - e^(-rate * dt)
+ * 4. Update: current += (target - current) * alpha
+ * 5. Write new value to state
+ * 6. Return smoothed value
+ *
+ * State layout:
+ * - f64[stateOffset]: current smoothed value
+ *
+ * Rate parameter:
+ * - Higher rate = faster approach to target
+ * - rate=10 means ~99% approach in 0.5 seconds
+ * - Exponential approach never exactly reaches target
+ *
+ * @param node - Stateful node (op = "slew")
+ * @param stateOffset - Offset into state.f64
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns Smoothed value
+ */
+function evalSlew(
+  node: Extract<SignalExprIR, { kind: "stateful" }>,
+  stateOffset: number,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  const target = node.input !== undefined ? evalSig(node.input, env, nodes) : 0;
+  const rate = node.params?.rate ?? 1;
+
+  return applySlewCore(target, rate, stateOffset, env);
+}
+
+/**
+ * Core slew implementation (shared between stateful node and transform step).
+ *
+ * Applies exponential smoothing with configurable rate.
+ * Used by both evalSlew and applyTransformStep (slew step).
+ *
+ * @param target - Target value to approach
+ * @param rate - Slew rate (higher = faster)
+ * @param stateOffset - Offset into state.f64
+ * @param env - Evaluation environment
+ * @returns Smoothed value
+ */
+function applySlewCore(
+  target: number,
+  rate: number,
+  stateOffset: number,
+  env: SigEnv
+): number {
+  const current = env.state.f64[stateOffset];
+  const dt = env.runtimeCtx.deltaSec;
+
+  // Exponential approach: alpha = 1 - e^(-rate * dt)
+  const alpha = 1 - Math.exp(-rate * dt);
+  const next = current + (target - current) * alpha;
+
+  // Update state
+  env.state.f64[stateOffset] = next;
+
+  return next;
+}
+
+/**
+ * Evaluate delayMs operation: time-based delay using ring buffer.
+ *
+ * Algorithm:
+ * 1. Evaluate input signal
+ * 2. Calculate delay in samples based on delayMs and deltaMs
+ * 3. Read from ring buffer at delayed position
+ * 4. Write current input to ring buffer
+ * 5. Advance write index
+ * 6. Return delayed value
+ *
+ * State layout:
+ * - i32[stateOffset]: write index (ring buffer pointer)
+ * - f64[stateOffset + 1 ... stateOffset + bufferSize]: ring buffer
+ *
+ * CRITICAL:
+ * - Buffer size limits maximum delay
+ * - Delay clamped to buffer size - 1
+ * - Ring buffer wraps using modulo arithmetic
+ *
+ * @param node - Stateful node (op = "delayMs")
+ * @param stateOffset - Offset into state (i32 for index, f64 for buffer)
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns Delayed value
+ */
+function evalDelayMs(
+  node: Extract<SignalExprIR, { kind: "stateful" }>,
+  stateOffset: number,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  const input = node.input !== undefined ? evalSig(node.input, env, nodes) : 0;
+
+  const delayMs = node.params?.delayMs ?? 100;
+  const bufferSize = node.params?.bufferSize ?? 64;
+
+  // State layout:
+  // i32[stateOffset]: write index
+  // f64[stateOffset + 1 ... stateOffset + bufferSize]: ring buffer
+
+  const i32Offset = stateOffset;
+  const f64Offset = stateOffset;
+
+  // Calculate read offset based on delay
+  const samplesDelay = Math.floor(delayMs / env.runtimeCtx.deltaMs);
+  const readOffset = Math.min(samplesDelay, bufferSize - 1);
+
+  // Read from delay buffer
+  const writeIdx = env.state.i32[i32Offset];
+  const readIdx = (writeIdx + bufferSize - readOffset) % bufferSize;
+  const result = env.state.f64[f64Offset + 1 + readIdx];
+
+  // Write current value to buffer
+  env.state.f64[f64Offset + 1 + writeIdx] = input;
+  env.state.i32[i32Offset] = (writeIdx + 1) % bufferSize;
+
+  return result;
+}
+
+/**
+ * Evaluate delayFrames operation: frame-based delay using ring buffer.
+ *
+ * Algorithm:
+ * 1. Evaluate input signal
+ * 2. Read from ring buffer at oldest position (delayFrames ago)
+ * 3. Write current input to ring buffer
+ * 4. Advance write index
+ * 5. Return delayed value
+ *
+ * State layout:
+ * - i32[stateOffset]: write index (ring buffer pointer)
+ * - f64[stateOffset + 1 ... stateOffset + delayFrames]: ring buffer
+ *
+ * CRITICAL:
+ * - Buffer size is delayFrames + 1 (need extra slot for current frame)
+ * - Simpler than delayMs (fixed sample count, no dynamic calculation)
+ *
+ * @param node - Stateful node (op = "delayFrames")
+ * @param stateOffset - Offset into state (i32 for index, f64 for buffer)
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns Value from N frames ago
+ */
+function evalDelayFrames(
+  node: Extract<SignalExprIR, { kind: "stateful" }>,
+  stateOffset: number,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  const input = node.input !== undefined ? evalSig(node.input, env, nodes) : 0;
+
+  const delayFrames = node.params?.delayFrames ?? 1;
+  const bufferSize = delayFrames + 1;
+
+  const i32Offset = stateOffset;
+  const f64Offset = stateOffset;
+
+  const writeIdx = env.state.i32[i32Offset];
+  const readIdx = (writeIdx + 1) % bufferSize; // Oldest value
+  const result = env.state.f64[f64Offset + 1 + readIdx];
+
+  env.state.f64[f64Offset + 1 + writeIdx] = input;
+  env.state.i32[i32Offset] = (writeIdx + 1) % bufferSize;
+
+  return result;
+}
+
+/**
  * Apply a single transform step to a value.
  *
  * Implements all transform step kinds:
@@ -469,12 +803,12 @@ function evalTransform(
  * - quantize: round to nearest step size
  * - ease: apply easing curve
  * - map: apply pure function (reuse OpCode)
- * - slew: PLACEHOLDER - throws error (Sprint 5)
+ * - slew: exponential smoothing (stateful - Sprint 5)
  * - cast: PLACEHOLDER - throws error (future)
  *
  * @param step - Transform step from chain
  * @param value - Input value
- * @param env - Evaluation environment (for easing curves)
+ * @param env - Evaluation environment (for easing curves and state)
  * @returns Transformed value
  * @throws Error if step kind is unknown or not yet implemented
  *
@@ -523,10 +857,8 @@ function applyTransformStep(
       return applyPureFn(step.fn, value);
 
     case "slew":
-      // Placeholder - requires StateBuffer (Sprint 5)
-      throw new Error(
-        "Slew step requires StateBuffer (not implemented yet - Sprint 5)"
-      );
+      // Exponential smoothing (stateful - uses state buffer)
+      return applySlewCore(value, step.rate, step.stateOffset, env);
 
     case "cast":
       // Placeholder - type casts not yet implemented

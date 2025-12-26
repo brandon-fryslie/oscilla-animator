@@ -9,13 +9,13 @@
  * - Debug sink (optional tracing)
  * - Transform table (Sprint 4)
  * - Easing curves (Sprint 4)
+ * - State buffer (Sprint 5)
+ * - Runtime context (Sprint 5)
  *
  * The environment is created once per frame and passed to all signal evaluations.
  *
  * Future sprints will add:
  * - tModelMs, phase01 (time model values)
- * - state (stateful operations)
- * - runtimeCtx (player, debug, etc.)
  *
  * References:
  * - .agent_planning/signalexpr-runtime/PLAN-20251225-190000.md §P0 "Implement SigEnv"
@@ -23,6 +23,7 @@
  * - .agent_planning/signalexpr-runtime/SPRINT-02-select-inputSlot.md §P1 "Extend SigEnv with SlotValues"
  * - .agent_planning/signalexpr-runtime/SPRINT-03-busCombine.md §P1 "Extend SigEnv with Debug Sink"
  * - .agent_planning/signalexpr-runtime/SPRINT-04-transform.md §P0 "Extend SigEnv with Transform Infrastructure"
+ * - .agent_planning/signalexpr-runtime/SPRINT-05-stateful.md §P0 "Extend SigEnv with State and RuntimeCtx"
  */
 
 import type { SigFrameCache } from "./SigFrameCache";
@@ -30,8 +31,12 @@ import type { SlotValueReader } from "./SlotValueReader";
 import type { DebugSink } from "./DebugSink";
 import type { TransformTable } from "../../compiler/ir/transforms";
 import type { EasingCurveTable } from "./EasingCurves";
+import type { StateBuffer } from "./StateBuffer";
+import type { RuntimeCtx } from "./RuntimeCtx";
 import { createEmptySlotReader } from "./SlotValueReader";
 import { createBuiltinCurves } from "./EasingCurves";
+import { createEmptyStateBuffer } from "./StateBuffer";
+import { createDefaultRuntimeCtx } from "./RuntimeCtx";
 
 /**
  * Const pool - storage for compile-time constant values.
@@ -84,6 +89,31 @@ export interface SigEnv {
   readonly easingCurves?: EasingCurveTable;
 
   /**
+   * State buffer - persistent state for stateful operations.
+   *
+   * Pre-allocated typed arrays (f64, f32, i32) for:
+   * - integrate (accumulator)
+   * - delay (ring buffers)
+   * - sampleHold (held value, trigger state)
+   * - slew (current smoothed value)
+   *
+   * State persists across frames - reset on demand via resetStateBuffer().
+   */
+  readonly state: StateBuffer;
+
+  /**
+   * Runtime context - frame timing information.
+   *
+   * Provides deltaSec, deltaMs, frameIndex for:
+   * - Time-based operations (integrate, delayMs)
+   * - Frame-based operations (delayFrames)
+   * - Smooth interpolation (slew)
+   *
+   * Created fresh each frame with current timing.
+   */
+  readonly runtimeCtx: RuntimeCtx;
+
+  /**
    * Optional debug sink for tracing signal evaluation.
    *
    * When defined, allows instrumentation of signal operations for:
@@ -100,8 +130,6 @@ export interface SigEnv {
   // Future expansion:
   // readonly tModelMs: number;
   // readonly phase01: number;
-  // readonly state: StateBuffer;
-  // readonly runtimeCtx: RuntimeContext;
 }
 
 /**
@@ -114,6 +142,8 @@ export interface CreateSigEnvParams {
   slotValues?: SlotValueReader; // Optional - defaults to empty reader
   transformTable?: TransformTable; // Optional - defaults to empty table
   easingCurves?: EasingCurveTable; // Optional - defaults to built-in curves
+  state?: StateBuffer; // Optional - defaults to empty buffer
+  runtimeCtx?: RuntimeCtx; // Optional - defaults to 60fps, frame 0
   debug?: DebugSink; // Optional - defaults to undefined (no tracing)
 }
 
@@ -127,11 +157,23 @@ export interface CreateSigEnvParams {
  * ```typescript
  * import { createSigFrameCache } from "./SigFrameCache";
  * import { createArraySlotReader } from "./SlotValueReader";
+ * import { createStateBuffer } from "./StateBuffer";
+ * import { createRuntimeCtx } from "./RuntimeCtx";
  *
  * const cache = createSigFrameCache(1024);
  * const constPool = { numbers: [1, 2, 3.14] };
  * const slots = createArraySlotReader(new Map([[0, 42]]));
- * const env = createSigEnv({ tAbsMs: 1000, constPool, cache, slotValues: slots });
+ * const state = createStateBuffer({ f64Count: 10, f32Count: 0, i32Count: 2 });
+ * const runtimeCtx = createRuntimeCtx(0.016, 0);
+ *
+ * const env = createSigEnv({
+ *   tAbsMs: 1000,
+ *   constPool,
+ *   cache,
+ *   slotValues: slots,
+ *   state,
+ *   runtimeCtx
+ * });
  * console.log(env.tAbsMs); // 1000
  * ```
  */
@@ -143,6 +185,8 @@ export function createSigEnv(params: CreateSigEnvParams): SigEnv {
     slotValues: params.slotValues ?? createEmptySlotReader(),
     transformTable: params.transformTable ?? { chains: [] },
     easingCurves: params.easingCurves ?? createBuiltinCurves(),
+    state: params.state ?? createEmptyStateBuffer(),
+    runtimeCtx: params.runtimeCtx ?? createDefaultRuntimeCtx(),
     debug: params.debug,
   };
 }
