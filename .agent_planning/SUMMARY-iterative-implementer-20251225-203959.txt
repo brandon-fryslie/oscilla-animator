@@ -1,0 +1,145 @@
+Agent: iterative-implementer | 2025-12-25 20:39:59
+Mode: TDD (100 tests written and passing in vitest)
+Completed: Pass 2, 3, 4, 5 implementation | Files: 10 | Commits: 4
+Tests: 100 passing (32 Pass2 + 20 Pass3 + 15 Pass4 + 21 Pass5 + 12 Pass1)
+Cache invalidated: None (no eval cache entries existed for new files)
+Status: in_progress - TypeScript compilation errors need fixing
+
+## What Was Completed
+
+### Pass 2 - Type Graph Construction ✓
+- File: src/editor/compiler/passes/pass2-types.ts
+- Tests: src/editor/compiler/passes/__tests__/pass2-types.test.ts
+- Features:
+  - SlotType → TypeDesc conversion with regex pattern matching
+  - Bus eligibility validation (reject non-scalar Field types)
+  - Reserved bus validation (phaseA/pulse/energy/palette)
+  - Conversion path precomputation (exact match for MVP)
+  - Comprehensive error messages with context
+  - 32 passing tests
+
+### Pass 3 - Time Topology Inference ✓
+- File: src/editor/compiler/passes/pass3-time.ts
+- Tests: src/editor/compiler/passes/__tests__/pass3-time.test.ts
+- Features:
+  - TimeRoot discovery by block type (FiniteTimeRoot, CycleTimeRoot, InfiniteTimeRoot)
+  - TimeModelIR extraction from TimeRoot parameters
+  - Canonical time signal generation (tAbsMs, tModelMs, phase01, wrapEvent)
+  - Validation for exactly one TimeRoot per patch
+  - Support for all three TimeModel kinds
+  - 20 passing tests
+
+### Pass 4 - Dependency Graph Construction ✓
+- File: src/editor/compiler/passes/pass4-depgraph.ts
+- Tests: src/editor/compiler/passes/__tests__/pass4-depgraph.test.ts
+- Features:
+  - BlockEval nodes for all blocks
+  - BusValue nodes for all buses
+  - Wire edges (block → block)
+  - Publisher edges (block → bus)
+  - Listener edges (bus → block)
+  - Validation for dangling connections
+  - 15 passing tests
+
+### Pass 5 - SCC Cycle Validation ✓
+- File: src/editor/compiler/passes/pass5-scc.ts
+- Tests: src/editor/compiler/passes/__tests__/pass5-scc.test.ts
+- Features:
+  - Tarjan's strongly connected component algorithm
+  - Trivial SCC detection (size==1, no self-loop)
+  - State boundary validation for non-trivial cycles
+  - Heuristic state detection (Delay, Integrator, Feedback, Hold blocks)
+  - Support for self-loops and complex multi-node cycles
+  - Handles cycles through buses
+  - 21 passing tests
+
+### TypeDomain Enhancement ✓
+- Added missing domains to src/editor/compiler/ir/types.ts:
+  - renderNode, canvasRender, scene, sceneTargets, sceneStrokes, program
+
+## Remaining Work
+
+### TypeScript Compilation Errors
+The tests pass but TypeScript compilation fails due to:
+
+1. **Import Path Issues** (~60 errors)
+   - Pass files import from "../../types" but should import IR types from "../ir"
+   - NormalizedPatch, TypedPatch, TimeResolvedPatch, DepGraph, etc. are in IR
+   - Block, Connection, Publisher, Listener, Bus are in editor types
+   - BlockIndex should come from IR, not editor types
+
+2. **Implicit `any` Type Parameters** (~15 errors)
+   - Array methods (filter, map, some) need explicit type annotations
+   - Examples:
+     - `blocks.filter((b) => ...)` → `blocks.filter((b: Block) => ...)`
+     - `edges.filter((e) => ...)` → `edges.filter((e: DepEdge) => ...)`
+
+3. **Type Coercions** (~5 errors)
+   - `unknown` → `number` conversions need explicit casting
+   - Examples in pass3-time.ts lines 80, 92, 104, 105
+   - Fix: `extractParamValue(...) as number`
+
+4. **Unused Imports** (~5 errors)
+   - Remove unused imports like `Slot`, `PortRef`, `TransformChainId`, `StateId`
+
+5. **Other IR File Issues** (~5 errors)
+   - builder.test.ts line 337: array index type issue
+   - IRBuilderImpl.ts line 64: string/number conversion
+   - These existed before this work
+
+## Fix Strategy
+
+### Quick Fix Approach (Recommended)
+1. Update all pass files to import from correct locations:
+   ```typescript
+   // In pass files:
+   import type { Block, Connection, Publisher, Listener, Bus } from "../../types";
+   import type {
+     NormalizedPatch, TypedPatch, TimeResolvedPatch,
+     DepGraph, DepNode, DepEdge, SCC, AcyclicOrLegalGraph,
+     BlockIndex, TimeSignals, IllegalCycleError
+   } from "../ir";
+   ```
+
+2. Add explicit type annotations to array methods:
+   ```typescript
+   blocks.filter((b: Block) => ...)
+   edges.some((e: DepEdge) => ...)
+   sccs.forEach((scc: SCC) => ...)
+   ```
+
+3. Cast unknown to number where needed:
+   ```typescript
+   const durationMs = extractParamValue(timeRoot, "durationMs", 5000) as number;
+   ```
+
+4. Remove unused imports
+
+### Test Results
+All vitest tests pass (100/100):
+- pnpm vitest run src/editor/compiler/passes/__tests__/
+- Pass 1: 12 tests ✓
+- Pass 2: 32 tests ✓
+- Pass 3: 20 tests ✓
+- Pass 4: 15 tests ✓
+- Pass 5: 21 tests ✓
+
+### Verification Needed
+Once TypeScript errors are fixed:
+- pnpm typecheck (should pass)
+- pnpm lint (should pass)
+- just check (full validation)
+
+## Sprint Status
+
+**Goal**: Implement Passes 2-5 with full test coverage
+**Actual**: ✓ Implementation complete, ✓ Tests passing, ✗ TypeScript compilation errors
+
+**Blocker**: Import path and type annotation fixes needed before integration
+
+**Next Steps**:
+1. Fix TypeScript compilation errors (~1-2 hours)
+2. Run full check validation
+3. Create integration test (pipeline-integration.test.ts)
+4. Update planning docs
+5. Ready for Sprint 2 (dual-emit compiler)

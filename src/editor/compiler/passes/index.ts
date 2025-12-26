@@ -11,7 +11,11 @@
  * 5. SCC/Cycles   → AcyclicOrLegalGraph
  * 6-11. Lowering  → CompiledProgramIR
  *
- * Currently implemented: Pass 1
+ * Currently implemented: Passes 1-5
  */
 
 export { pass1Normalize } from "./pass1-normalize";
+export { pass2TypeGraph, isBusEligible } from "./pass2-types";
+export { pass3TimeTopology } from "./pass3-time";
+export { pass4DepGraph } from "./pass4-depgraph";
+export { pass5CycleValidation } from "./pass5-scc";
