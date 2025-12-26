@@ -7,6 +7,8 @@
 
 import type { BlockCompiler, Field, CompileCtx, RuntimeCtx } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import { OpCode } from '../../ir/opcodes';
 
 /**
  * Extended context interface for field evaluation at runtime.
@@ -36,6 +38,82 @@ function getZipOperation(fn: string): (a: number, b: number) => number {
       return (a, _b) => a; // default to first (field value)
   }
 }
+
+/**
+ * Map operation name to OpCode
+ */
+function getOpCode(fn: string): OpCode {
+  switch (fn) {
+    case 'add':
+      return OpCode.Add;
+    case 'sub':
+      return OpCode.Sub;
+    case 'mul':
+      return OpCode.Mul;
+    case 'min':
+      return OpCode.Min;
+    case 'max':
+      return OpCode.Max;
+    default:
+      return OpCode.Add;
+  }
+}
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+const lowerFieldZipSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
+  const [field, signal] = inputs;
+
+  if (field.k !== 'field') {
+    throw new Error('FieldZipSignal requires field input');
+  }
+
+  if (signal.k !== 'sig') {
+    throw new Error('FieldZipSignal requires signal input');
+  }
+
+  // Extract operation from config
+  const configObj = config as { fn?: string } | undefined;
+  const fn = configObj?.fn ?? 'add';
+  const opcode = getOpCode(fn);
+
+  // Strategy: broadcast signal to field, then zip the two fields
+  // This matches the semantic of "apply signal value to each field element"
+  const outType = { world: 'field' as const, domain: 'number' as const };
+
+  // Note: We need domain slot from the field input
+  // For now, we'll create a placeholder - this will need proper domain tracking
+  const domainSlot = ctx.b.allocValueSlot();
+  const broadcastField = ctx.b.broadcastSigToField(signal.id, domainSlot, outType);
+
+  const fieldId = ctx.b.fieldZip(field.id, broadcastField, {
+    fnId: fn,
+    opcode,
+    outputType: outType,
+  });
+
+  return { outputs: [{ k: 'field', id: fieldId }] };
+};
+
+// Register block type for IR lowering
+registerBlockType({
+  type: 'FieldZipSignal',
+  capability: 'pure',
+  inputs: [
+    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'number' } },
+    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'number' } },
+  ],
+  outputs: [
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'number' } },
+  ],
+  lower: lowerFieldZipSignal,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const FieldZipSignalBlock: BlockCompiler = {
   type: 'FieldZipSignal',

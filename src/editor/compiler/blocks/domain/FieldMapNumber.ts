@@ -7,6 +7,8 @@
 
 import type { BlockCompiler, Field } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import { OpCode } from '../../ir/opcodes';
 
 /**
  * Smoothstep interpolation
@@ -48,6 +50,81 @@ function getMapFunction(
       return (x) => x; // identity
   }
 }
+
+/**
+ * Map function name to OpCode (for simple cases)
+ */
+function getOpCode(fn: string): OpCode | undefined {
+  switch (fn) {
+    case 'neg':
+      return undefined; // Use kernel
+    case 'abs':
+      return OpCode.Abs;
+    case 'sin':
+      return OpCode.Sin;
+    case 'cos':
+      return OpCode.Cos;
+    default:
+      return undefined; // Use kernel for complex operations
+  }
+}
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+const lowerFieldMapNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
+  const [x] = inputs;
+
+  if (x.k !== 'field') {
+    throw new Error('FieldMapNumber requires field input');
+  }
+
+  // Extract params from config
+  const configObj = config as { fn?: string; k?: unknown; a?: unknown; b?: unknown } | undefined;
+  const fn = configObj?.fn ?? 'sin';
+  const k = Number(configObj?.k ?? 1);
+  const a = Number(configObj?.a ?? 0);
+  const b = Number(configObj?.b ?? 1);
+
+  const outType = { world: 'field' as const, domain: 'number' as const };
+  const opcode = getOpCode(fn);
+
+  // Build the function reference
+  const fnRef = opcode
+    ? {
+        fnId: fn,
+        opcode,
+        outputType: outType,
+        params: { k, a, b },
+      }
+    : {
+        fnId: `map_${fn}`,
+        outputType: outType,
+        params: { k, a, b },
+      };
+
+  const fieldId = ctx.b.fieldMap(x.id, fnRef);
+
+  return { outputs: [{ k: 'field', id: fieldId }] };
+};
+
+// Register block type for IR lowering
+registerBlockType({
+  type: 'FieldMapNumber',
+  capability: 'pure',
+  inputs: [
+    { portId: 'x', label: 'X', dir: 'in', type: { world: 'field', domain: 'number' } },
+  ],
+  outputs: [
+    { portId: 'y', label: 'Y', dir: 'out', type: { world: 'field', domain: 'number' } },
+  ],
+  lower: lowerFieldMapNumber,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const FieldMapNumberBlock: BlockCompiler = {
   type: 'FieldMapNumber',

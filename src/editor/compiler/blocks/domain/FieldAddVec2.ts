@@ -7,6 +7,47 @@
 
 import type { BlockCompiler, Vec2, Field } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import { OpCode } from '../../ir/opcodes';
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+const lowerFieldAddVec2: BlockLowerFn = ({ ctx, inputs }) => {
+  const [a, b] = inputs;
+
+  if (a.k !== 'field' || b.k !== 'field') {
+    throw new Error('FieldAddVec2 requires field inputs');
+  }
+
+  const outType = { world: 'field' as const, domain: 'vec2' as const };
+  const fieldId = ctx.b.fieldZip(a.id, b.id, {
+    fnId: 'vec2Add',
+    opcode: OpCode.Vec2Add,
+    outputType: outType,
+  });
+
+  return { outputs: [{ k: 'field', id: fieldId }] };
+};
+
+// Register block type for IR lowering
+registerBlockType({
+  type: 'FieldAddVec2',
+  capability: 'pure',
+  inputs: [
+    { portId: 'a', label: 'A', dir: 'in', type: { world: 'field', domain: 'vec2' } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: 'field', domain: 'vec2' } },
+  ],
+  outputs: [
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'vec2' } },
+  ],
+  lower: lowerFieldAddVec2,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const FieldAddVec2Block: BlockCompiler = {
   type: 'FieldAddVec2',

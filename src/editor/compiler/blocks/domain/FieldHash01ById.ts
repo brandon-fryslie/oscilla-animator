@@ -9,6 +9,8 @@
 
 import type { BlockCompiler, Field } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import { OpCode } from '../../ir/opcodes';
 
 /**
  * Simple hash function that produces a number in [0, 1)
@@ -26,6 +28,57 @@ function hash01(elementId: string, seed: number): number {
   const t = (h * 12.9898 + 78.233) * 43758.5453;
   return t - Math.floor(t);
 }
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+const lowerFieldHash01ById: BlockLowerFn = ({ ctx, inputs, config }) => {
+  const [domain] = inputs;
+
+  if (domain.k !== 'special' || domain.tag !== 'domain') {
+    throw new Error('FieldHash01ById requires domain input');
+  }
+
+  // Extract seed from config (params are now passed as config)
+  const configObj = config as { seed?: unknown } | undefined;
+  const blockSeed = Number(configObj?.seed ?? 0);
+
+  // For now, we emit a kernel-based field map node
+  // The kernel 'hash01ById' will be implemented in the runtime
+  const outType = { world: 'field' as const, domain: 'number' as const };
+
+  // Use Hash01ById opcode if available, otherwise use a kernel reference
+  const fieldId = ctx.b.fieldMap(
+    // Start with a placeholder constant field that will be overridden by the kernel
+    ctx.b.fieldConst(0, outType),
+    {
+      fnId: 'hash01ById',
+      opcode: OpCode.Hash01ById,
+      outputType: outType,
+      params: { seed: blockSeed },
+    }
+  );
+
+  return { outputs: [{ k: 'field', id: fieldId }] };
+};
+
+// Register block type for IR lowering
+registerBlockType({
+  type: 'FieldHash01ById',
+  capability: 'pure',
+  inputs: [
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
+  ],
+  outputs: [
+    { portId: 'u', label: 'U', dir: 'out', type: { world: 'field', domain: 'number' } },
+  ],
+  lower: lowerFieldHash01ById,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const FieldHash01ByIdBlock: BlockCompiler = {
   type: 'FieldHash01ById',

@@ -7,6 +7,8 @@
 
 import type { BlockCompiler, Field } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import { OpCode } from '../../ir/opcodes';
 
 /**
  * Get the binary operation by name
@@ -27,6 +29,70 @@ function getZipOperation(op: string): (a: number, b: number) => number {
       return (a, _b) => a; // default to first
   }
 }
+
+/**
+ * Map operation name to OpCode
+ */
+function getOpCode(op: string): OpCode {
+  switch (op) {
+    case 'add':
+      return OpCode.Add;
+    case 'sub':
+      return OpCode.Sub;
+    case 'mul':
+      return OpCode.Mul;
+    case 'min':
+      return OpCode.Min;
+    case 'max':
+      return OpCode.Max;
+    default:
+      return OpCode.Add;
+  }
+}
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+const lowerFieldZipNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
+  const [a, b] = inputs;
+
+  if (a.k !== 'field' || b.k !== 'field') {
+    throw new Error('FieldZipNumber requires field inputs');
+  }
+
+  // Extract operation from config
+  const configObj = config as { op?: string } | undefined;
+  const op = configObj?.op ?? 'add';
+  const opcode = getOpCode(op);
+
+  const outType = { world: 'field' as const, domain: 'number' as const };
+  const fieldId = ctx.b.fieldZip(a.id, b.id, {
+    fnId: op,
+    opcode,
+    outputType: outType,
+  });
+
+  return { outputs: [{ k: 'field', id: fieldId }] };
+};
+
+// Register block type for IR lowering
+registerBlockType({
+  type: 'FieldZipNumber',
+  capability: 'pure',
+  inputs: [
+    { portId: 'a', label: 'A', dir: 'in', type: { world: 'field', domain: 'number' } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: 'field', domain: 'number' } },
+  ],
+  outputs: [
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'number' } },
+  ],
+  lower: lowerFieldZipNumber,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const FieldZipNumberBlock: BlockCompiler = {
   type: 'FieldZipNumber',

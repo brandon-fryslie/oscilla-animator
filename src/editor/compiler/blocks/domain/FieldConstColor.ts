@@ -7,6 +7,45 @@
 
 import type { BlockCompiler, Field } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+const lowerFieldConstColor: BlockLowerFn = ({ ctx, inputs, config }) => {
+  const [domain] = inputs;
+
+  if (domain.k !== 'special' || domain.tag !== 'domain') {
+    throw new Error('FieldConstColor requires domain input');
+  }
+
+  // Extract color from config (params are now passed as config)
+  const configObj = config as { color?: unknown } | undefined;
+  const color = String(configObj?.color ?? '#000000');
+
+  const outType = { world: 'field' as const, domain: 'color' as const };
+  const fieldId = ctx.b.fieldConst(color, outType);
+
+  return { outputs: [{ k: 'field', id: fieldId }] };
+};
+
+// Register block type for IR lowering
+registerBlockType({
+  type: 'FieldConstColor',
+  capability: 'pure',
+  inputs: [
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
+  ],
+  outputs: [
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'color' } },
+  ],
+  lower: lowerFieldConstColor,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const FieldConstColorBlock: BlockCompiler = {
   type: 'FieldConstColor',

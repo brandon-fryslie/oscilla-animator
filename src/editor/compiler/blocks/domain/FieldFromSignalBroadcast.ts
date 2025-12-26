@@ -7,6 +7,7 @@
 
 import type { BlockCompiler, Field, CompileCtx, RuntimeCtx } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 /**
  * Extended context interface for field evaluation at runtime.
@@ -16,6 +17,45 @@ interface FieldEvalCtx extends CompileCtx {
   /** Current time in milliseconds (available at runtime) */
   t: number;
 }
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+const lowerFieldFromSignalBroadcast: BlockLowerFn = ({ ctx, inputs }) => {
+  const [domain, signal] = inputs;
+
+  if (domain.k !== 'special' || domain.tag !== 'domain') {
+    throw new Error('FieldFromSignalBroadcast requires domain input');
+  }
+
+  if (signal.k !== 'sig') {
+    throw new Error('FieldFromSignalBroadcast requires signal input');
+  }
+
+  const outType = { world: 'field' as const, domain: 'number' as const };
+  const fieldId = ctx.b.broadcastSigToField(signal.id, domain.id, outType);
+
+  return { outputs: [{ k: 'field', id: fieldId }] };
+};
+
+// Register block type for IR lowering
+registerBlockType({
+  type: 'FieldFromSignalBroadcast',
+  capability: 'pure',
+  inputs: [
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
+    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'number' } },
+  ],
+  outputs: [
+    { portId: 'field', label: 'Field', dir: 'out', type: { world: 'field', domain: 'number' } },
+  ],
+  lower: lowerFieldFromSignalBroadcast,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const FieldFromSignalBroadcastBlock: BlockCompiler = {
   type: 'FieldFromSignalBroadcast',
