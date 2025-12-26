@@ -499,7 +499,9 @@ export interface CompileError {
 
 // Import LinkedGraphIR for dual-emit support (Sprint 2, P0-4)
 import type { LinkedGraphIR } from './passes/pass8-link-resolution';
-export type { LinkedGraphIR };
+// Import CompiledProgramIR for Pass 9 (Codegen)
+import type { CompiledProgramIR } from './ir';
+export type { LinkedGraphIR, CompiledProgramIR };
 
 export interface CompileResult {
   ok: boolean;
@@ -515,6 +517,8 @@ export interface CompileResult {
   // Sprint 2, P0-4: Dual-Emit Integration
   /** Intermediate Representation (when emitIR flag is true) */
   ir?: LinkedGraphIR;
+  /** Final Compiled IR (Pass 9 output) */
+  compiledIR?: CompiledProgramIR;
   /** IR compilation warnings (non-fatal IR errors) */
   irWarnings?: readonly CompileError[];
 

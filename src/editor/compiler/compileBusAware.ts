@@ -55,6 +55,8 @@ import {
   pass7BusLowering,
   pass8LinkResolution,
 } from './passes';
+// IR Schedule Builder - converts BuilderProgramIR to CompiledProgramIR
+import { buildCompiledProgram } from './ir/buildSchedule';
 // Phase 4, Sprint 8: SignalExpr Runtime Integration
 import { extractSignalExprTable } from './ir/extractSignalExprTable';
 
@@ -268,7 +270,7 @@ function compileIR(
       if (!def) {
         throw new Error(`Block definition not found for type: ${inst.type}`);
       }
-      
+
       // Type assertion for IR compilation - structure is compatible enough for passes
       return {
         id: inst.id,
@@ -323,7 +325,7 @@ function compileIR(
 
     // Run Passes 6-8: Block Lowering → Bus Lowering → Link Resolution
     const unlinked = pass6BlockLowering(validated, patchForIR.blocks, compiledPortMap);
-    const withBuses = pass7BusLowering(unlinked, patchForIR.buses, patchForIR.publishers);
+    const withBuses = pass7BusLowering(unlinked, patchForIR.buses, patchForIR.publishers, patchForIR.blocks);
     const linked = pass8LinkResolution(
       withBuses,
       patchForIR.blocks,
@@ -364,7 +366,7 @@ function compileIR(
 export function compileBusAwarePatch(
   patch: CompilerPatch,
   registry: BlockRegistry,
-  _seed: Seed,
+  seed: Seed,
   ctx: CompileCtx,
   options?: { emitIR?: boolean }
 ): CompileResult {
@@ -760,7 +762,10 @@ function attachIR(
   result: CompileResult,
   patch: CompilerPatch,
   compiledPortMap: Map<string, Artifact>,
-  emitIR: boolean
+  emitIR: boolean,
+  patchId: string,
+  patchRevision: number,
+  seed: number
 ): CompileResult {
   if (!emitIR) {
     return result;
@@ -789,13 +794,24 @@ function attachIR(
     };
   }
 
+  // Build CompiledProgramIR from LinkedGraphIR
+  // Call builder.build() to get BuilderProgramIR, then convert to CompiledProgramIR
+  const builderIR = ir.builder.build();
+  const compiledIR = buildCompiledProgram(
+    builderIR,
+    patchId,
+    patchRevision,
+    seed
+  );
+
   // Phase 4, Sprint 8: Extract SignalExprTable from LinkedGraphIR
   // This enables SigEvaluator to execute IR-based signals at runtime
   const extracted = extractSignalExprTable(ir);
-  
+
   return {
     ...result,
     ir,
+    compiledIR,
     // Attach SignalExpr data if extraction succeeded
     ...(extracted && {
       signalTable: extracted.signalTable,
@@ -808,13 +824,20 @@ function attachIR(
   // Infer TimeModel from the patch
   const timeModel = inferTimeModel(patch);
 
+  // Get patch metadata for IR
+  const patchId = "patch-" + Array.from(patch.blocks.keys()).sort().join('-');
+  const patchRevision = 1; // TODO: Get from patch store
+
   // Accept RenderTreeProgram, RenderTree, or CanvasRender as output
   if (outArt.kind === 'RenderTreeProgram') {
     return attachIR(
       { ok: true, program: outArt.value, timeModel, errors: [], compiledPortMap },
       patch,
       compiledPortMap,
-      options?.emitIR === true
+      options?.emitIR === true,
+      patchId,
+      patchRevision,
+      seed
     );
   }
 
@@ -829,7 +852,10 @@ function attachIR(
       { ok: true, program, timeModel, errors: [], compiledPortMap },
       patch,
       compiledPortMap,
-      options?.emitIR === true
+      options?.emitIR === true,
+      patchId,
+      patchRevision,
+      seed
     );
   }
 
@@ -848,7 +874,10 @@ function attachIR(
       },
       patch,
       compiledPortMap,
-      options?.emitIR === true
+      options?.emitIR === true,
+      patchId,
+      patchRevision,
+      seed
     );
   }
 
@@ -1072,7 +1101,7 @@ function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx
       if (artifact.kind === 'Scalar:boolean') {
         return {
           kind: 'Field:boolean',
-          value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
+          value: (_seed, n) => Array.from({ length: n}, () => artifact.value),
         };
       }
       return { kind: 'Error', message: `BroadcastScalarToField unsupported for ${artifact.kind}` };
