@@ -13,6 +13,7 @@
  */
 
 import type { ValueSlot, StateId, TypeDesc } from "./types";
+import type { ConstPool } from "./program";
 
 // ============================================================================
 // ValueStore Interface (HANDOFF.md Topic 1)
@@ -197,43 +198,187 @@ export interface StateCellLayout {
 /**
  * Create a ValueStore from slot metadata.
  *
- * This is a contract - implementation will be in Phase 6 Sprint 2.
+ * Allocates typed arrays based on slot metadata and provides slot-based
+ * read/write operations with single-writer enforcement.
  *
- * @param _slotMeta - Array of slot metadata
+ * @param slotMeta - Array of slot metadata
  * @returns Initialized ValueStore
  */
-export function createValueStore(_slotMeta: SlotMeta[]): ValueStore {
-  // Implementation deferred to Phase 6 Sprint 2
-  throw new Error("createValueStore: not yet implemented");
+export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
+  // Calculate required array sizes by finding max offset for each storage type
+  const sizes = {
+    f64: 0,
+    f32: 0,
+    i32: 0,
+    u32: 0,
+    object: 0,
+  };
+
+  for (const meta of slotMeta) {
+    const requiredSize = meta.offset + 1;
+    sizes[meta.storage] = Math.max(sizes[meta.storage], requiredSize);
+  }
+
+  // Allocate typed arrays
+  const f64 = new Float64Array(sizes.f64);
+  const f32 = new Float32Array(sizes.f32);
+  const i32 = new Int32Array(sizes.i32);
+  const u32 = new Uint32Array(sizes.u32);
+  const objects = new Array(sizes.object).fill(undefined);
+
+  // Track which slots have been written in current frame
+  const writeLog = new Set<ValueSlot>();
+
+  // Build lookup map from slot to metadata for O(1) access
+  const slotLookup = new Map<ValueSlot, SlotMeta>();
+  for (const meta of slotMeta) {
+    slotLookup.set(meta.slot, meta);
+  }
+
+  return {
+    f64,
+    f32,
+    i32,
+    u32,
+    objects,
+    slotMeta,
+
+    read(slot: ValueSlot): unknown {
+      const meta = slotLookup.get(slot);
+      if (!meta) {
+        throw new Error(`ValueStore.read: slot ${slot} not found in slotMeta`);
+      }
+
+      // Read from appropriate storage based on metadata
+      switch (meta.storage) {
+        case "f64":
+          return f64[meta.offset];
+        case "f32":
+          return f32[meta.offset];
+        case "i32":
+          return i32[meta.offset];
+        case "u32":
+          return u32[meta.offset];
+        case "object":
+          return objects[meta.offset];
+        default:
+          throw new Error(`ValueStore.read: unknown storage type ${meta.storage}`);
+      }
+    },
+
+    write(slot: ValueSlot, value: unknown): void {
+      // Enforce single-writer invariant
+      if (writeLog.has(slot)) {
+        throw new Error(`ValueStore.write: slot ${slot} already written this frame`);
+      }
+      writeLog.add(slot);
+
+      const meta = slotLookup.get(slot);
+      if (!meta) {
+        throw new Error(`ValueStore.write: slot ${slot} not found in slotMeta`);
+      }
+
+      // Write to appropriate storage based on metadata
+      switch (meta.storage) {
+        case "f64":
+          f64[meta.offset] = value as number;
+          break;
+        case "f32":
+          f32[meta.offset] = value as number;
+          break;
+        case "i32":
+          i32[meta.offset] = value as number;
+          break;
+        case "u32":
+          u32[meta.offset] = value as number;
+          break;
+        case "object":
+          objects[meta.offset] = value;
+          break;
+        default:
+          throw new Error(`ValueStore.write: unknown storage type ${meta.storage}`);
+      }
+    },
+
+    clear(): void {
+      // Reset write tracking for new frame
+      // Note: We don't clear the actual values - they persist until overwritten
+      // This is an optimization: old values will be overwritten on next write
+      writeLog.clear();
+    },
+  };
 }
 
 /**
  * Create a StateBuffer from state layout.
  *
- * This is a contract - implementation will be in Phase 6 Sprint 2.
+ * Allocates typed arrays for persistent state storage based on layout sizes.
  *
- * @param _layout - State layout specification
+ * @param layout - State layout specification
  * @returns Initialized StateBuffer with allocated typed arrays
  */
-export function createStateBuffer(_layout: StateLayout): StateBuffer {
-  // Implementation deferred to Phase 6 Sprint 2
-  throw new Error("createStateBuffer: not yet implemented");
+export function createStateBuffer(layout: StateLayout): StateBuffer {
+  return {
+    f64: new Float64Array(layout.f64Size),
+    f32: new Float32Array(layout.f32Size),
+    i32: new Int32Array(layout.i32Size),
+  };
 }
 
 /**
  * Initialize state cells with default values.
  *
- * This is a contract - implementation will be in Phase 6 Sprint 2.
+ * Populates state cells with initial values from the constant pool.
+ * If no initialConstId is specified, cells default to zero.
  *
- * @param _buffer - StateBuffer to initialize
- * @param _layout - State layout
- * @param _constPool - Constant pool for initial values
+ * @param buffer - StateBuffer to initialize
+ * @param layout - State layout
+ * @param constPool - Constant pool for initial values
  */
 export function initializeState(
-  _buffer: StateBuffer,
-  _layout: StateLayout,
-  _constPool: unknown, // ConstPool type from program.ts
+  buffer: StateBuffer,
+  layout: StateLayout,
+  constPool: ConstPool,
 ): void {
-  // Implementation deferred to Phase 6 Sprint 2
-  throw new Error("initializeState: not yet implemented");
+  for (const cell of layout.cells) {
+    // Determine initial value
+    let initialValue = 0; // Default to zero
+
+    if (cell.initialConstId !== undefined) {
+      // Lookup value in const pool
+      const constEntry = constPool.constIndex[cell.initialConstId];
+      if (!constEntry) {
+        throw new Error(
+          `initializeState: constId ${cell.initialConstId} not found in constPool for state cell ${cell.stateId}`,
+        );
+      }
+
+      // Read value from appropriate const pool storage
+      switch (constEntry.k) {
+        case "f64":
+          initialValue = constPool.f64[constEntry.idx];
+          break;
+        case "f32":
+          initialValue = constPool.f32[constEntry.idx];
+          break;
+        case "i32":
+          initialValue = constPool.i32[constEntry.idx];
+          break;
+        default:
+          throw new Error(
+            `initializeState: invalid const type ${constEntry.k} for state cell ${cell.stateId}`,
+          );
+      }
+    }
+
+    // Write initial value to state buffer
+    const targetArray = buffer[cell.storage];
+    const startOffset = cell.offset;
+    const endOffset = startOffset + cell.size;
+
+    // Fill all elements (for ring buffers, size > 1)
+    for (let i = startOffset; i < endOffset; i++) {
+      targetArray[i] = initialValue;
+    }
+  }
 }

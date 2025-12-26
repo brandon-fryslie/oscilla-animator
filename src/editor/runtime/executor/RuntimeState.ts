@@ -15,6 +15,13 @@
  */
 
 import type { ValueStore, StateBuffer } from "../../compiler/ir";
+import {
+  createValueStore,
+  createStateBuffer,
+  initializeState,
+} from "../../compiler/ir/stores";
+import type { SlotMeta } from "../../compiler/ir/stores";
+import type { CompiledProgramIR } from "../../compiler/ir/program";
 
 // ============================================================================
 // RuntimeState Interface
@@ -76,64 +83,89 @@ export interface FrameCache {
 }
 
 // ============================================================================
-// Factory Function
+// Helper Functions
 // ============================================================================
 
 /**
- * Create RuntimeState from a compiled program.
+ * Extract slot metadata from program schedule.
  *
- * Stub implementation for Sprint 1 - creates placeholder stores.
- * Full implementation in Sprint 2 will allocate properly sized storage.
+ * This is a placeholder implementation for Sprint 1.
+ * In future sprints, the compiler will emit slotMeta directly in CompiledProgramIR.
  *
- * @param _program - Compiled program (not used in stub)
- * @returns Initialized RuntimeState
+ * Current strategy:
+ * - Scan all steps for inputSlots and outputSlots
+ * - Assign f64 storage to all slots by default (conservative)
+ * - Use dense offset allocation (offset = slot index)
+ *
+ * @param program - Compiled program
+ * @returns Slot metadata array
  */
-export function createRuntimeState(
-  _program: unknown, // CompiledProgramIR - avoid circular import
-): RuntimeState {
-  // Stub implementation - Sprint 2 will allocate based on program metadata
-  // For Sprint 1, we create a simple stub that allows basic testing
-  const stubWriteLog: Set<number> = new Set();
+function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
+  const slotSet = new Set<number>();
 
-  const stubValueStore: ValueStore = {
-    f64: new Float64Array(1024), // stub allocation
-    f32: new Float32Array(512),
-    i32: new Int32Array(256),
-    u32: new Uint32Array(256),
-    objects: new Array(256).fill(undefined),
-    slotMeta: [],
+  // Collect all slot indices from schedule steps
+  for (const step of program.schedule.steps) {
+    switch (step.kind) {
+      case "timeDerive":
+        slotSet.add(step.tAbsMsSlot);
+        slotSet.add(step.out.tModelMs);
+        if (step.out.phase01 !== undefined) slotSet.add(step.out.phase01);
+        if (step.out.wrapEvent !== undefined) slotSet.add(step.out.wrapEvent);
+        if (step.out.progress01 !== undefined) slotSet.add(step.out.progress01);
+        break;
 
-    read(slot: number): unknown {
-      // Stub: read from object array (everything stored there for simplicity)
-      return stubValueStore.objects[slot];
+      case "nodeEval":
+        for (const slot of step.inputSlots) slotSet.add(slot);
+        for (const slot of step.outputSlots) slotSet.add(slot);
+        break;
+
+      case "busEval":
+        slotSet.add(step.outSlot);
+        for (const pub of step.publishers) {
+          slotSet.add(pub.srcSlot);
+        }
+        break;
+
+      case "materialize":
+        slotSet.add(step.materialization.domainSlot);
+        slotSet.add(step.materialization.outBufferSlot);
+        break;
+
+      case "renderAssemble":
+        slotSet.add(step.outSlot);
+        break;
+
+      case "debugProbe":
+        for (const slot of step.probe.slots) slotSet.add(slot);
+        break;
+    }
+  }
+
+  // Convert to sorted array and build metadata
+  const slots = Array.from(slotSet).sort((a, b) => a - b);
+  const slotMeta: SlotMeta[] = slots.map((slot) => ({
+    slot,
+    storage: "f64", // Conservative default for Sprint 1
+    offset: slot, // Dense allocation: offset = slot index
+    type: {
+      // Default type - will be refined in future sprints
+      world: "signal",
+      domain: "number",
     },
+  }));
 
-    write(slot: number, value: unknown): void {
-      // Stub single-writer check (Sprint 1 level)
-      if (stubWriteLog.has(slot)) {
-        throw new Error(`ValueStore: slot ${slot} written twice in same frame`);
-      }
-      stubWriteLog.add(slot);
+  return slotMeta;
+}
 
-      // Stub: write to object array (simple for Sprint 1)
-      stubValueStore.objects[slot] = value;
-    },
-
-    clear(): void {
-      // Stub: reset write tracking for new frame
-      stubWriteLog.clear();
-      // Note: We don't clear the actual values - they persist until overwritten
-      // This is fine for Sprint 1 testing
-    },
-  };
-
-  const stubStateBuffer: StateBuffer = {
-    f64: new Float64Array(512), // stub allocation
-    f32: new Float32Array(256),
-    i32: new Int32Array(128),
-  };
-
-  const stubFrameCache: FrameCache = {
+/**
+ * Create a stub FrameCache for Sprint 1.
+ *
+ * Full implementation deferred to Sprint 2.
+ *
+ * @returns Stub FrameCache
+ */
+function createFrameCache(): FrameCache {
+  return {
     frameId: 0,
     newFrame(): void {
       this.frameId++;
@@ -142,11 +174,41 @@ export function createRuntimeState(
       // Stub: no-op
     },
   };
+}
+
+// ============================================================================
+// Factory Function
+// ============================================================================
+
+/**
+ * Create RuntimeState from a compiled program.
+ *
+ * Allocates ValueStore and StateBuffer based on program metadata,
+ * and initializes state cells from the constant pool.
+ *
+ * @param program - Compiled program
+ * @returns Initialized RuntimeState
+ */
+export function createRuntimeState(program: CompiledProgramIR): RuntimeState {
+  // Extract slot metadata (placeholder extraction for Sprint 1)
+  const slotMeta = extractSlotMeta(program);
+
+  // Create ValueStore with real implementation
+  const values = createValueStore(slotMeta);
+
+  // Create StateBuffer with real implementation
+  const state = createStateBuffer(program.stateLayout);
+
+  // Initialize state cells with values from const pool
+  initializeState(state, program.stateLayout, program.constants);
+
+  // Create stub FrameCache (Sprint 2 will implement full cache)
+  const frameCache = createFrameCache();
 
   return {
-    values: stubValueStore,
-    state: stubStateBuffer,
-    frameCache: stubFrameCache,
+    values,
+    state,
+    frameCache,
     frameId: 0,
   };
 }

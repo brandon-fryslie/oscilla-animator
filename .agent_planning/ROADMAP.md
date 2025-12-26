@@ -326,55 +326,88 @@ Reference: `design-docs/12-Compiler-Final/`
 
 ---
 
-## Phase 5: FieldExpr + Materialization [QUEUED]
+## Phase 5: FieldExpr + Materialization [COMPLETED]
 
 **Goal:** Replace field closures with FieldExpr DAG. Lazy evaluation with centralized materialization in render sinks.
 
 **Migration Safety:** FieldExpr handles can call legacy field closures. Materialization is centralized but can use old arrays.
 
+**Started:** 2025-12-25
+**Completed:** 2025-12-26
+
 ### Topics
 
-#### field-handle-system [PROPOSED]
+#### field-handle-system [COMPLETED]
 **Description:** Implement `FieldHandle` as expression recipe (not array). `evalFieldHandle` returns handles, memoized per frame.
 **Spec:** 17-Scheduler-Full (§5.1-5.2)
 **Dependencies:** fieldexpr-schema
 **Labels:** runtime, fields, lazy
 **Test Strategy:** Field handles compose correctly
+**Implementation:** `src/editor/runtime/field/FieldHandle.ts` - createFieldHandleCache, FieldHandleCache
 
-#### field-materializer [PROPOSED]
+#### field-materializer [COMPLETED]
 **Description:** Implement central `materialize(req: MaterializationRequest)` that walks FieldExpr DAG, produces typed arrays. Buffer pool for reuse.
 **Spec:** 17-Scheduler-Full (§5.3), 04-FieldExpr (§9.2)
 **Dependencies:** field-handle-system
 **Labels:** runtime, fields, materialization
 **Test Strategy:** Materialization produces correct typed arrays
+**Implementation:** `src/editor/runtime/field/Materializer.ts` - FieldMaterializer, MaterializerEnv (63+ tests)
 
-#### field-broadcast-reduce [PROPOSED]
+#### field-broadcast-reduce [COMPLETED]
 **Description:** Implement explicit bridge ops: `broadcastSigToField` (scalar→field), `reduceFieldToSig` (field→scalar). No implicit world switching.
 **Spec:** 16-Block-Lowering (§5), 04-FieldExpr
 **Dependencies:** field-handle-system, signal-evaluator-core
 **Labels:** runtime, fields, signals
 **Test Strategy:** Broadcast/reduce produce expected results
+**Implementation:** `src/editor/runtime/field/Materializer.ts` - evalBroadcast, evalReduce functions
 
-#### field-combine-nodes [PROPOSED]
+#### field-combine-nodes [COMPLETED]
 **Description:** Implement field bus combine as FieldExpr node. Combines produce new FieldExpr (cheap), not arrays.
 **Spec:** 04-FieldExpr (busCombine)
 **Dependencies:** field-handle-system, bus-ir-schema
 **Labels:** runtime, fields, buses
 **Test Strategy:** Field bus combine matches legacy behavior
+**Implementation:** `src/editor/runtime/field/Materializer.ts` - evalBusCombine with sum/average/min/max/last modes
 
-#### render-sink-materialization [PROPOSED]
+#### render-sink-materialization [COMPLETED]
 **Description:** Render sinks (RenderInstances2D) request field materialization via `MaterializationPlan`. Single point for all buffer production.
 **Spec:** 14-Compiled-IR-Program-Contract (§5), 17-Scheduler-Full
 **Dependencies:** field-materializer
 **Labels:** runtime, rendering, materialization
 **Test Strategy:** Render sinks get correct buffers
+**Implementation:** RenderInstances2D IR lowering with renderSink in compiler/blocks/domain/RenderInstances2D.ts
 
-#### block-compilers-field [PROPOSED]
+#### block-compilers-field [COMPLETED]
 **Description:** Migrate field-producing block compilers to emit FieldExpr nodes. GridDomain, field math blocks, etc.
 **Spec:** 16-Block-Lowering
 **Dependencies:** field-handle-system, block-compilers-signal
 **Labels:** compiler, blocks, migration
 **Test Strategy:** Field blocks produce same output as before
+**Implementation:** 23 domain blocks migrated (DomainN, GridDomain, PositionMap*, Field*, etc.)
+
+#### type-adapter-layer [COMPLETED]
+**Description:** Convert compiler TypeDesc ↔ runtime TypeDesc for field materialization integration.
+**Spec:** Integration requirement
+**Dependencies:** type-unification
+**Labels:** runtime, integration, types
+**Test Strategy:** All common field domains convert correctly
+**Implementation:** `src/editor/runtime/integration/typeAdapter.ts` (259 lines, 50+ tests)
+
+#### signal-bridge [COMPLETED]
+**Description:** Minimal signal evaluation bridge for broadcast nodes (temporary until Phase 4 SigEvaluator integration).
+**Spec:** Integration requirement
+**Dependencies:** signal-evaluator-core
+**Labels:** runtime, integration, signals
+**Test Strategy:** Broadcast field nodes materialize with real signal values
+**Implementation:** `src/editor/runtime/integration/SignalBridge.ts` (179 lines, 38+ tests)
+
+#### compiler-runtime-integration [COMPLETED]
+**Description:** Wire compiler LinkedGraphIR to runtime Materializer. API: loadProgram, materializeField, dispose.
+**Spec:** Integration requirement
+**Dependencies:** type-adapter-layer, signal-bridge, field-materializer
+**Labels:** runtime, integration, api
+**Test Strategy:** End-to-end compilation → materialization
+**Implementation:** `src/editor/runtime/integration/CompilerRuntime.ts` (336 lines, 13+ integration tests)
 
 ---
 

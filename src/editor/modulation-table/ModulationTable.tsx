@@ -210,12 +210,14 @@ const GroupHeaderRow = observer(
     cells,
     onToggleCollapse,
     onGroupClick,
+    onGroupRightClick,
   }: {
     group: RowGroup;
     columns: readonly TableColumn[];
     cells: readonly TableCell[];
     onToggleCollapse: (groupKey: string) => void;
     onGroupClick: (blockId: string) => void;
+    onGroupRightClick: (e: React.MouseEvent, blockId: string) => void;
   }) => {
     const isCollapsed = group.collapsed;
     const columnCounts = isCollapsed ? computeColumnCounts(group, columns, cells) : null;
@@ -225,6 +227,10 @@ const GroupHeaderRow = observer(
         <th
           className="group-header-cell"
           onClick={() => onToggleCollapse(group.key)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            onGroupRightClick(e, group.blockId);
+          }}
           colSpan={isCollapsed ? 1 : columns.length + 1}
         >
           <span className="collapse-icon">{isCollapsed ? '▸' : '▾'}</span>
@@ -349,6 +355,7 @@ const SectionTable = observer(
     onColumnRightClick,
     onGroupToggle,
     onGroupClick,
+    onGroupRightClick,
     onSectionCollapse,
   }: {
     title: string;
@@ -369,6 +376,7 @@ const SectionTable = observer(
     onColumnRightClick: (e: React.MouseEvent, busId: string) => void;
     onGroupToggle: (groupKey: string) => void;
     onGroupClick: (blockId: string) => void;
+    onGroupRightClick: (e: React.MouseEvent, blockId: string) => void;
     onSectionCollapse?: () => void;
   }) => {
     const tableRef = useRef<HTMLTableElement>(null);
@@ -385,6 +393,7 @@ const SectionTable = observer(
           cells={cells}
           onToggleCollapse={onGroupToggle}
           onGroupClick={onGroupClick}
+          onGroupRightClick={onGroupRightClick}
         />
       );
 
@@ -507,9 +516,10 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
-    type: 'cell' | 'column' | 'row';
+    type: 'cell' | 'column' | 'row' | 'block';
     rowKey?: RowKey;
     busId?: string;
+    blockId?: string;
   } | null>(null);
 
   // Lens editor state
@@ -613,6 +623,14 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
       store.setFocusedBlock(blockId);
     },
     [store]
+  );
+
+  const handleGroupRightClick = useCallback(
+    (e: React.MouseEvent, blockId: string) => {
+      e.preventDefault();
+      setContextMenu({ x: e.clientX, y: e.clientY, type: 'block', blockId });
+    },
+    []
   );
 
   const closeContextMenu = useCallback(() => {
@@ -741,6 +759,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
               onColumnRightClick={handleColumnRightClick}
               onGroupToggle={handleGroupToggle}
               onGroupClick={handleGroupClick}
+              onGroupRightClick={handleGroupRightClick}
               onSectionCollapse={() => store.toggleListenersSection()}
             />
           </div>
@@ -783,6 +802,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
               onColumnRightClick={handleColumnRightClick}
               onGroupToggle={handleGroupToggle}
               onGroupClick={handleGroupClick}
+              onGroupRightClick={handleGroupRightClick}
               onSectionCollapse={() => store.togglePublishersSection()}
             />
           </div>
@@ -820,30 +840,27 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
                     ? 'Unbind'
                     : 'Bind'}
                 </button>
-                {/* Only show Edit Lenses for listener (input) cells */}
-                {store.getCell(contextMenu.rowKey!, contextMenu.busId!)?.direction === 'input' && (
-                  <button
-                    onClick={() => {
-                      if (contextMenu.rowKey != null && contextMenu.busId != null) {
-                        // If not bound, bind first then open editor
-                        const cell = store.getCell(contextMenu.rowKey, contextMenu.busId);
-                        if (cell?.status !== 'bound') {
-                          store.bindCell(
-                            contextMenu.rowKey,
-                            contextMenu.busId,
-                            cell?.suggestedChain != null ? [...cell.suggestedChain] : undefined
-                          );
-                        }
-                        openLensEditor(contextMenu.rowKey, contextMenu.busId, {
-                          x: contextMenu.x,
-                          y: contextMenu.y,
-                        });
+                <button
+                  onClick={() => {
+                    if (contextMenu.rowKey != null && contextMenu.busId != null) {
+                      // If not bound, bind first then open editor
+                      const cell = store.getCell(contextMenu.rowKey, contextMenu.busId);
+                      if (cell?.status !== 'bound') {
+                        store.bindCell(
+                          contextMenu.rowKey,
+                          contextMenu.busId,
+                          cell?.suggestedChain != null ? [...cell.suggestedChain] : undefined
+                        );
                       }
-                    }}
-                  >
-                    Edit Lenses...
-                  </button>
-                )}
+                      openLensEditor(contextMenu.rowKey, contextMenu.busId, {
+                        x: contextMenu.x,
+                        y: contextMenu.y,
+                      });
+                    }
+                  }}
+                >
+                  Edit Lenses...
+                </button>
               </>
             )}
             {contextMenu.type === 'column' && (
@@ -867,6 +884,27 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
                   }}
                 >
                   Hide
+                </button>
+              </>
+            )}
+            {contextMenu.type === 'block' && contextMenu.blockId && (
+              <>
+                <button
+                  onClick={() => {
+                    store.setFocusedBlock(contextMenu.blockId!);
+                    closeContextMenu();
+                  }}
+                >
+                  Inspect Block
+                </button>
+                <button
+                  className="danger"
+                  onClick={() => {
+                    store.deleteBlock(contextMenu.blockId!);
+                    closeContextMenu();
+                  }}
+                >
+                  Delete Block
                 </button>
               </>
             )}
