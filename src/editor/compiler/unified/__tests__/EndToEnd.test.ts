@@ -44,7 +44,7 @@ describe('End-to-end integration', () => {
     // Field should be time-independent (same positions at all times)
     expect(positions0).toHaveLength(4);
     expect(positions1).toHaveLength(4);
-    expect(positions0[0]!.x).toBeCloseTo(positions1[0]!.x, 5);
+    expect(positions0[0].x).toBeCloseTo(positions1[0].x, 5);
 
     // Evaluate Signal
     const phase0 = phaseSignal(timeCtx0);
@@ -57,7 +57,7 @@ describe('End-to-end integration', () => {
     expect(phase2).toBeCloseTo(1.0, 5);
 
     // Verify positions are in radial pattern
-    const pos0 = positions0[0]!;
+    const pos0 = positions0[0];
     const dist0 = Math.sqrt((pos0.x - 100) ** 2 + (pos0.y - 50) ** 2);
     expect(dist0).toBeCloseTo(100, 5);
   });
@@ -91,7 +91,7 @@ describe('End-to-end integration', () => {
     const phase2 = phaseSignal(timeCtx2);
 
     // Should be identical (deterministic)
-    expect(positions1[0]!.x).toBeCloseTo(positions2[0]!.x, 10);
+    expect(positions1[0].x).toBeCloseTo(positions2[0].x, 10);
     expect(phase1).toBeCloseTo(phase2, 10);
   });
 });

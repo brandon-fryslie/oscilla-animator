@@ -66,7 +66,7 @@ describe('IntegrateBlock', () => {
 
       // Verify linear growth
       for (let i = 1; i < results.length; i++) {
-        const diff = results[i]! - results[i - 1]!;
+        const diff = results[i] - results[i - 1];
         expect(diff).toBeCloseTo(dt, 5);
       }
     });
@@ -228,7 +228,7 @@ describe('IntegrateBlock', () => {
 
       // Each snapshot should be larger than the previous
       for (let i = 1; i < snapshots.length; i++) {
-        expect(snapshots[i]).toBeGreaterThan(snapshots[i - 1]!);
+        expect(snapshots[i]).toBeGreaterThan(snapshots[i - 1]);
       }
 
       // State memory should contain accumulated value

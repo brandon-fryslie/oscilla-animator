@@ -12,8 +12,6 @@ import { MACRO_REGISTRY, getMacroKey, getMacroExpansion } from '../macros';
 import { getBlockDefinition } from '../blocks';
 
 describe('Macro Registry Validation', () => {
-  const macroKeys = Object.keys(MACRO_REGISTRY);
-
   describe('Quick Start Macros', () => {
     const quickStartMacros = [
       'macro:simpleGrid',

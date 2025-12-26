@@ -55,7 +55,7 @@ export class HistoryBlock implements StateBlock {
   readonly type = 'History';
   readonly scrubPolicy: ScrubPolicy = 'hold';
 
-  private params: Required<HistoryBlockParams>;
+  private readonly params: Required<HistoryBlockParams>;
 
   constructor(params: HistoryBlockParams = {}) {
     // Clamp depth to reasonable range
@@ -136,7 +136,7 @@ export class HistoryBlock implements StateBlock {
       historyState.frameCounter > 0
         ? historyState.buffer[
             (historyState.writeIndex - 1 + this.params.depth) % this.params.depth
-          ]!
+          ]
         : 0;
 
     return {

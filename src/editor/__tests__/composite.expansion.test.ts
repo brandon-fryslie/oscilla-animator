@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { createCompilerService } from '../compiler';
+import { createCompilerService, editorToPatch } from '../compiler';
 import { RootStore } from '../stores/RootStore';
 import { registerComposite } from '../composites';
 import { registerAllComposites } from '../composite-bridge';
@@ -39,13 +39,13 @@ function setupCompositeDemo(store: RootStore): void {
   // Connect grid outputs to renderer inputs
   store.patchStore.addConnection({
     id: store.patchStore.generateConnectionId(),
-    from: { blockId: gridId, slotId: 'domain' },
-    to: { blockId: renderId, slotId: 'domain' },
+    from: { blockId: gridId, slotId: 'domain', direction: 'output' },
+    to: { blockId: renderId, slotId: 'domain', direction: 'input' },
   });
   store.patchStore.addConnection({
     id: store.patchStore.generateConnectionId(),
-    from: { blockId: gridId, slotId: 'positions' },
-    to: { blockId: renderId, slotId: 'positions' },
+    from: { blockId: gridId, slotId: 'positions', direction: 'output' },
+    to: { blockId: renderId, slotId: 'positions', direction: 'input' },
   });
 
   // Find the phaseA bus

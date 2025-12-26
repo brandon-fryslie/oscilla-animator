@@ -78,6 +78,8 @@ const VALID_LENS_TYPES = [
   'offset',
   'deadzone',
   'mapRange',
+  'polarity',
+  'phaseOffset',
 ];
 
 export function isValidLensType(type: string): boolean {

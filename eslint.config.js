@@ -11,6 +11,8 @@ import { fileURLToPath } from 'node:url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+// Critical path patterns for stricter type safety rules
+// Note: stores/ excluded from immutable-data rule as MobX is mutation-based by design
 const criticalPathPatterns = [
   'src/editor/compiler/**',
   'src/editor/stores/**',
@@ -20,8 +22,24 @@ const criticalPathPatterns = [
   'src/editor/diagnostics/**',
 ]
 
+// Patterns where functional/immutable-data should NOT apply:
+// - MobX stores (mutation-based reactive state)
+// - Compiler internals (intentional mutations for performance/builder patterns)
+// - Runtime (stateful execution, buffer management)
+// - Kernel (transaction builders use mutation)
+// - Test files (often use mutations for test setup)
+const immutableDataExclusions = [
+  'src/editor/stores/**',
+  'src/editor/compiler/**',
+  'src/editor/runtime/**',
+  'src/editor/kernel/**',
+  '**/__tests__/**',
+  '**/test/**',
+  '**/*.test.ts',
+]
+
 export default defineConfig([
-  globalIgnores(['dist', '.worktrees', '.git', 'worktree']),
+  globalIgnores(['dist', '.worktrees', '.worktrees_*', '.git', 'worktree']),
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
@@ -95,7 +113,7 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-call': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       // Detect actual mutations instead of requiring readonly type annotations
-      // TODO: Enable after reviewing violations
+      // Disabled in stores/tests via separate config block (MobX is mutation-based)
       'functional/immutable-data': 'warn',
       '@typescript-eslint/consistent-type-imports': ['error', {
         prefer: 'type-imports',
@@ -106,6 +124,18 @@ export default defineConfig([
         varsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_',
       }],
+    },
+  },
+  // Disable functional/immutable-data for MobX stores and test files
+  // MobX is inherently mutation-based; test files need setup mutations
+  // See: .agent_planning/lint-cleanup/PLAN-2025-12-25-120000.md
+  {
+    files: immutableDataExclusions,
+    plugins: {
+      functional,
+    },
+    rules: {
+      'functional/immutable-data': 'off',
     },
   },
 ])

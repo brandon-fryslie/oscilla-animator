@@ -19,8 +19,9 @@ describe('BusStore - Event Emission', () => {
     // Subscribe to all events for testing
     root.events.subscribe((event) => events.push(event));
 
-    // Clear events emitted during initialization (default buses)
-    events.length = 0;
+    // Discard any events emitted during initialization (default buses)
+    // Reassign to fresh array - the closure captures the variable, not the value
+    events = [];
   });
 
   describe('Bus Lifecycle Events', () => {
@@ -60,12 +61,9 @@ describe('BusStore - Event Emission', () => {
       });
 
       it('emits BusCreated for each default bus at startup', () => {
+        // Default buses are created during RootStore initialization
+        // Events are emitted during construction, before we can subscribe
         const freshRoot = new RootStore();
-        const startupEvents: EditorEvent[] = [];
-        freshRoot.events.subscribe((e) => startupEvents.push(e));
-
-        // Default buses are created during initialization, so they've already emitted events
-        // We need to check the buses that were created
         expect(freshRoot.busStore.buses.length).toBe(6); // phaseA, phaseB, energy, pulse, palette, progress
       });
     });
@@ -77,7 +75,7 @@ describe('BusStore - Event Emission', () => {
           'tempBus',
           'last'
         );
-        events.length = 0; // Clear BusCreated event
+        events = []; // Clear BusCreated event
 
         root.busStore.deleteBus(busId);
 
@@ -132,7 +130,7 @@ describe('BusStore - Event Emission', () => {
       // Create a test block
       blockId = root.patchStore.addBlock('FieldConstNumber', { value: 0 });
 
-      events.length = 0; // Clear setup events
+      events = []; // Clear setup events
     });
 
     describe('BindingAdded event - Publishers', () => {
@@ -210,7 +208,7 @@ describe('BusStore - Event Emission', () => {
     describe('BindingRemoved event - Publishers', () => {
       it('emits BindingRemoved when publisher removed', () => {
         const publisherId = root.busStore.addPublisher(busId, blockId, 'value');
-        events.length = 0; // Clear BindingAdded event
+        events = []; // Clear BindingAdded event
 
         root.busStore.removePublisher(publisherId);
 
@@ -234,7 +232,7 @@ describe('BusStore - Event Emission', () => {
     describe('BindingRemoved event - Listeners', () => {
       it('emits BindingRemoved when listener removed', () => {
         const listenerId = root.busStore.addListener(busId, blockId, 'input');
-        events.length = 0; // Clear BindingAdded event
+        events = []; // Clear BindingAdded event
 
         root.busStore.removeListener(listenerId);
 
@@ -291,7 +289,7 @@ describe('BusStore - Event Emission', () => {
       const publisherId = root.busStore.addPublisher(busId, blockId, 'value');
       const listenerId = root.busStore.addListener(busId, blockId, 'value');
 
-      events.length = 0; // Clear setup events
+      events = []; // Clear setup events
 
       root.busStore.deleteBus(busId);
 

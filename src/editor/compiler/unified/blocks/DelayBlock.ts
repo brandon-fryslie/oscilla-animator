@@ -53,7 +53,7 @@ export class DelayBlock implements StateBlock {
   readonly type = 'Delay';
   readonly scrubPolicy: ScrubPolicy = 'hold';
 
-  private params: DelayBlockParams;
+  private readonly params: DelayBlockParams;
 
   constructor(params: DelayBlockParams) {
     this.params = {
@@ -90,7 +90,7 @@ export class DelayBlock implements StateBlock {
 
   initState(frame: number): StateMemory {
     const state: DelayState = {
-      buffer: new Array(this.params.bufferSize!).fill(null).map(() => ({ t: 0, value: 0 })),
+      buffer: new Array(this.params.bufferSize).fill(null).map(() => ({ t: 0, value: 0 })),
       writePos: 0,
       count: 0,
       lastOutput: 0,
@@ -131,18 +131,18 @@ export class DelayBlock implements StateBlock {
 
     // Find the sample closest to target time
     let bestSample = delayState.buffer[0];
-    let bestDiff = Math.abs(bestSample!.t - targetTime);
+    let bestDiff = Math.abs(bestSample.t - targetTime);
 
     for (let i = 1; i < delayState.count; i++) {
       const sample = delayState.buffer[i];
-      const diff = Math.abs(sample!.t - targetTime);
+      const diff = Math.abs(sample.t - targetTime);
       if (diff < bestDiff) {
         bestDiff = diff;
         bestSample = sample;
       }
     }
 
-    const output = bestSample!.value;
+    const output = bestSample.value;
     delayState.lastOutput = output;
 
     return { output };

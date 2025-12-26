@@ -56,7 +56,7 @@ describe('FlowFieldOriginBlock', () => {
 
       // Base grid would have positions at multiples of 50
       // Flow field should distort these
-      const firstPos = positions[0]!;
+      const firstPos = positions[0];
 
       // Should be near (0, 0) but not exactly at it due to flow
       expect(Math.abs(firstPos.x)).toBeGreaterThan(0);
@@ -90,8 +90,8 @@ describe('FlowFieldOriginBlock', () => {
 
       // Should be identical
       for (let i = 0; i < 20; i++) {
-        expect(positions1[i]!.x).toBeCloseTo(positions2[i]!.x, 10);
-        expect(positions1[i]!.y).toBeCloseTo(positions2[i]!.y, 10);
+        expect(positions1[i].x).toBeCloseTo(positions2[i].x, 10);
+        expect(positions1[i].y).toBeCloseTo(positions2[i].y, 10);
       }
     });
 
@@ -120,7 +120,7 @@ describe('FlowFieldOriginBlock', () => {
       // Should be different
       let differenceCount = 0;
       for (let i = 0; i < 10; i++) {
-        if (Math.abs(positions1[i]!.x - positions2[i]!.x) > 0.01) {
+        if (Math.abs(positions1[i].x - positions2[i].x) > 0.01) {
           differenceCount++;
         }
       }
@@ -158,10 +158,10 @@ describe('FlowFieldOriginBlock', () => {
 
       // Strong flow should create larger distortion
       const dist1 = Math.sqrt(
-        (positions1[0]!.x - baseX) ** 2 + (positions1[0]!.y - baseY) ** 2
+        (positions1[0].x - baseX) ** 2 + (positions1[0].y - baseY) ** 2
       );
       const dist2 = Math.sqrt(
-        (positions2[0]!.x - baseX) ** 2 + (positions2[0]!.y - baseY) ** 2
+        (positions2[0].x - baseX) ** 2 + (positions2[0].y - baseY) ** 2
       );
 
       expect(dist2).toBeGreaterThan(dist1);
@@ -196,7 +196,7 @@ describe('FlowFieldOriginBlock', () => {
       // Should produce different patterns
       let differenceCount = 0;
       for (let i = 0; i < 20; i++) {
-        if (Math.abs(positions1[i]!.x - positions2[i]!.x) > 1) {
+        if (Math.abs(positions1[i].x - positions2[i].x) > 1) {
           differenceCount++;
         }
       }
@@ -250,8 +250,8 @@ describe('FlowFieldOriginBlock', () => {
 
       // Should produce identical positions
       for (let i = 0; i < 10; i++) {
-        expect(positions1[i]!.x).toBeCloseTo(positions2[i]!.x, 10);
-        expect(positions1[i]!.y).toBeCloseTo(positions2[i]!.y, 10);
+        expect(positions1[i].x).toBeCloseTo(positions2[i].x, 10);
+        expect(positions1[i].y).toBeCloseTo(positions2[i].y, 10);
       }
     });
   });
@@ -271,8 +271,8 @@ describe('FlowFieldOriginBlock', () => {
       const positions = batchEvaluateFieldExpr(expr, domain, timeCtx, evalCtx);
 
       // With zero flowStrength, positions should be close to base grid
-      expect(positions[0]!.x).toBeCloseTo(0, 1);
-      expect(positions[0]!.y).toBeCloseTo(0, 1);
+      expect(positions[0].x).toBeCloseTo(0, 1);
+      expect(positions[0].y).toBeCloseTo(0, 1);
     });
 
     it('should handle single element domain', () => {
@@ -289,8 +289,8 @@ describe('FlowFieldOriginBlock', () => {
       const positions = batchEvaluateFieldExpr(expr, domain, timeCtx, evalCtx);
 
       expect(positions).toHaveLength(1);
-      expect(typeof positions[0]!.x).toBe('number');
-      expect(typeof positions[0]!.y).toBe('number');
+      expect(typeof positions[0].x).toBe('number');
+      expect(typeof positions[0].y).toBe('number');
     });
 
     it('should handle large element count', () => {

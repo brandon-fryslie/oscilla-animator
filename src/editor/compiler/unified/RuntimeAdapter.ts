@@ -33,10 +33,10 @@ import type { Program, RenderTree, RuntimeCtx } from '../types';
  * - Handle user interaction
  */
 export class RuntimeAdapter {
-  private compilation: CompilationResult;
+  private readonly compilation: CompilationResult;
   private stateMemory: Map<string, StateMemory>;
-  private blockOutputs: Map<string, Record<string, unknown>>;
-  private busOutputs: Map<string, unknown>;
+  private readonly blockOutputs: Map<string, Record<string, unknown>>;
+  private readonly busOutputs: Map<string, unknown>;
   private frameCounter: number = 0;
   private lastTime: number = 0;
 
@@ -62,7 +62,6 @@ export class RuntimeAdapter {
         return this.evaluate(tMs);
       },
       event: () => [],
-      timeline: () => ({ kind: 'infinite' as const }),
     };
   }
 
@@ -189,7 +188,7 @@ export class RuntimeAdapter {
   private extractRenderTree(): RenderTree {
     // Find the last block in evaluation order (likely the output)
     for (let i = this.compilation.evaluationOrder.length - 1; i >= 0; i--) {
-      const nodeId = this.compilation.evaluationOrder[i]!;
+      const nodeId = this.compilation.evaluationOrder[i];
       const outputs = this.blockOutputs.get(nodeId);
 
       if (outputs) {

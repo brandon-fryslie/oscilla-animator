@@ -77,7 +77,7 @@ export const FieldColorizeBlock: BlockCompiler = {
       };
     }
 
-    const valuesFn = valuesArtifact.value as Field<number>;
+    const valuesFn = valuesArtifact.value;
     const colorA = String(params.colorA);
     const colorB = String(params.colorB);
     const mode = String(params.mode );

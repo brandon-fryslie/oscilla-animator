@@ -4,11 +4,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export type SidebarMode = 'hidden' | '1x' | '2x';
 
 // Patch visualization modes
-export type PatchViewMode = 'lanes' | 'table';
+export type PatchViewMode = 'lanes' | 'table' | 'recipe';
 
 export const PATCH_VIEW_MODES: { id: PatchViewMode; label: string; description: string }[] = [
   { id: 'lanes', label: 'Lanes', description: 'Traditional lane-based patch bay' },
   { id: 'table', label: 'Table', description: 'Modulation table (buses × ports)' },
+  { id: 'recipe', label: 'Recipe', description: 'Quick recipe overview' },
 ];
 
 const LAYOUT_STORAGE_KEY = 'loom-editor-layout';

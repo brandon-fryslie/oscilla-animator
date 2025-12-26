@@ -37,7 +37,6 @@ function createMockDefinition(overrides: Partial<BlockDefinition>): BlockDefinit
   return {
     type: 'MockBlock',
     label: 'Mock Block',
-    form: 'primitive',
     subcategory: 'Math',
     description: 'A test block',
     inputs: [],
@@ -58,8 +57,8 @@ function createMockConnection(
 ): Connection {
   return {
     id: `conn-${fromBlockId}-${fromSlot}-${toBlockId}-${toSlot}`,
-    from: { blockId: fromBlockId, slotId: fromSlot },
-    to: { blockId: toBlockId, slotId: toSlot },
+    from: { blockId: fromBlockId, slotId: fromSlot, direction: 'output' as const },
+    to: { blockId: toBlockId, slotId: toSlot, direction: 'input' as const },
   };
 }
 
@@ -117,7 +116,15 @@ describe('findCompatibleReplacements', () => {
       createMockDefinition({
         type: 'composite:Composite',
         laneKind: 'Scalars',
-        compositeDefinition: {}, // Mark as composite
+        compositeDefinition: {
+          id: 'composite:Composite',
+          label: 'Test Composite',
+          subcategory: 'Math',
+          laneKind: 'Scalars',
+          graph: { nodes: {}, edges: [], inputMap: {}, outputMap: {} },
+          exposedInputs: [],
+          exposedOutputs: [],
+        },
       }),
       createMockDefinition({ type: 'macro:Macro', laneKind: 'Scalars' }),
     ];

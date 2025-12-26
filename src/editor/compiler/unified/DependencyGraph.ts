@@ -239,7 +239,7 @@ export class DependencyGraph {
     const cycles = this.detectCycles();
     const instantaneousCycles = cycles.filter((c) => c.isInstantaneous);
     if (instantaneousCycles.length > 0) {
-      const cycleDesc = instantaneousCycles[0]!.nodes.join(' -> ');
+      const cycleDesc = instantaneousCycles[0].nodes.join(' -> ');
       throw new Error(`Illegal instantaneous cycle detected: ${cycleDesc}`);
     }
 

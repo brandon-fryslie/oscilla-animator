@@ -354,7 +354,7 @@ describe('HistoryBlock', () => {
       // Each snapshot should contain all previous values plus current
       for (let i = 0; i < snapshots.length; i++) {
         expect(snapshots[i]).toHaveLength(i + 1);
-        expect(snapshots[i]![i]).toBe(i);
+        expect(snapshots[i][i]).toBe(i);
       }
     });
 

@@ -19,7 +19,7 @@ import type { SemanticGraph } from '../semantic';
 import type { Patch } from '../types';
 import { SemanticGraph as GraphImpl } from '../semantic/graph';
 import { Validator } from '../semantic/validator';
-import { TransactionBuilder } from './TransactionBuilder';
+import TransactionBuilder from './TransactionBuilder';
 import { applyOp } from './applyOp';
 
 export class Kernel implements PatchKernel {

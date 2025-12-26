@@ -15,7 +15,7 @@ import type {
   PatchKernel
 } from './types';
 import type { PatchDocument } from '../semantic/types';
-import type { Patch, Block, Connection, Bus, Publisher, Listener } from '../types';
+import type { Patch, Block, Connection, Bus, Publisher, Listener, PortRef, AdapterStep, LensInstance, TypeDesc, BusCombineMode } from '../types';
 import { Validator } from '../semantic/validator';
 import { applyOp } from './applyOp';
 import type { Op } from './ops';
@@ -23,17 +23,17 @@ import { generateDiff } from './diff';
 
 // Helper to deep clone patch
 function clonePatch(patch: Patch): Patch {
-  return JSON.parse(JSON.stringify(patch));
+  return JSON.parse(JSON.stringify(patch)) as Patch;
 }
 
-export class TransactionBuilder implements TxBuilder {
-  private stagedDoc: Patch; // Mutable working copy
+class TransactionBuilder implements TxBuilder {
+  private readonly stagedDoc: Patch; // Mutable working copy
   private stagedOps: Op[] = [];
   private inverseOps: Op[] = []; // Accumulated in REVERSE order of application
   private committed = false;
   private aborted = false;
-  private kernel: PatchKernel;
-  private meta: TxMeta;
+  private readonly kernel: PatchKernel;
+  private readonly meta: TxMeta;
 
   constructor(kernel: PatchKernel, baseDoc: Patch, meta: TxMeta) {
     this.kernel = kernel;
@@ -59,7 +59,7 @@ export class TransactionBuilder implements TxBuilder {
       throw new Error('Transaction already sealed');
     }
     this.stagedOps.push(op);
-    if (inverseOp) {
+    if (inverseOp != null) {
       this.inverseOps.unshift(inverseOp); // Prepend to maintain reverse order
     } else {
       // If no inverse provided, we can't undo this op easily.
@@ -97,7 +97,7 @@ export class TransactionBuilder implements TxBuilder {
   removeBlock(blockId: string): void {
     // 1. Capture state for inverse
     const block = this.stagedDoc.blocks.find(b => b.id === blockId);
-    if (!block) return; // Already gone
+    if (block == null) return; // Already gone
 
     // 2. Cascade: remove connections
     // Iterate ALL connections in stagedDoc
@@ -110,13 +110,13 @@ export class TransactionBuilder implements TxBuilder {
     }
 
     // 3. Cascade: bindings
-    if (this.stagedDoc.publishers) {
+    if (this.stagedDoc.publishers != null) {
       const pubsToRemove = this.stagedDoc.publishers.filter(p => p.from.blockId === blockId);
       for (const pub of pubsToRemove) {
         this.removePublisher(pub.id);
       }
     }
-    if (this.stagedDoc.listeners) {
+    if (this.stagedDoc.listeners != null) {
       const listenersToRemove = this.stagedDoc.listeners.filter(l => l.to.blockId === blockId);
       for (const list of listenersToRemove) {
         this.removeListener(list.id);
@@ -131,7 +131,7 @@ export class TransactionBuilder implements TxBuilder {
 
   retypeBlock(blockId: string, nextType: string, remap?: { kind: 'byKey' | 'schema'; schemaId?: string }): void {
     const block = this.stagedDoc.blocks.find(b => b.id === blockId);
-    if (!block) return;
+    if (block == null) return;
     
     const prevType = block.type;
     const op: Op = { op: 'BlockRetype', blockId, nextType, remap };
@@ -142,7 +142,7 @@ export class TransactionBuilder implements TxBuilder {
 
   setBlockLabel(blockId: string, label: string): void {
     const block = this.stagedDoc.blocks.find(b => b.id === blockId);
-    if (!block) return;
+    if (block == null) return;
 
     const prevLabel = block.label;
     const op: Op = { op: 'BlockSetLabel', blockId, label };
@@ -153,7 +153,7 @@ export class TransactionBuilder implements TxBuilder {
 
   patchBlockParams(blockId: string, patch: Record<string, unknown>): void {
     const block = this.stagedDoc.blocks.find(b => b.id === blockId);
-    if (!block) return;
+    if (block == null) return;
 
     // Capture old values for inverse
     const undoPatch: Record<string, unknown> = {};
@@ -171,7 +171,7 @@ export class TransactionBuilder implements TxBuilder {
   // Wire Ops
   // ---------------------------------------------------------------------------
 
-  addWire(from: { blockId: string; slotId: string }, to: { blockId: string; slotId: string }, id?: string): string {
+  addWire(from: PortRef, to: PortRef, id?: string): string {
     const connectionId = id ?? crypto.randomUUID();
     const connection: Connection = {
       id: connectionId,
@@ -188,7 +188,7 @@ export class TransactionBuilder implements TxBuilder {
 
   removeWire(connectionId: string): void {
     const conn = this.stagedDoc.connections.find(c => c.id === connectionId);
-    if (!conn) return;
+    if (conn == null) return;
 
     const op: Op = { op: 'WireRemove', connectionId };
     const inv: Op = { op: 'WireAdd', connection: { ...conn } };
@@ -196,13 +196,13 @@ export class TransactionBuilder implements TxBuilder {
     this.op(op, inv);
   }
 
-  retargetWire(connectionId: string, next: { from?: { blockId: string; slotId: string }; to?: { blockId: string; slotId: string } }): void {
+  retargetWire(connectionId: string, next: { from?: PortRef; to?: PortRef }): void {
     const conn = this.stagedDoc.connections.find(c => c.id === connectionId);
-    if (!conn) return;
+    if (conn == null) return;
 
-    const prev: typeof next = {};
-    if (next.from) prev.from = conn.from;
-    if (next.to) prev.to = conn.to;
+    const prev: { from?: PortRef; to?: PortRef } = {};
+    if (next.from != null) prev.from = conn.from;
+    if (next.to != null) prev.to = conn.to;
 
     const op: Op = { op: 'WireRetarget', connectionId, next };
     const inv: Op = { op: 'WireRetarget', connectionId, next: prev };
@@ -214,7 +214,7 @@ export class TransactionBuilder implements TxBuilder {
   // Bus Ops
   // ---------------------------------------------------------------------------
 
-  addBus(spec: { name: string; type: any; combineMode: any; defaultValue: unknown; sortKey?: number; id?: string }): string {
+  addBus(spec: { name: string; type: TypeDesc; combineMode: BusCombineMode; defaultValue: unknown; sortKey?: number; id?: string }): string {
     const id = spec.id ?? crypto.randomUUID();
     const bus: Bus = {
       id,
@@ -235,14 +235,14 @@ export class TransactionBuilder implements TxBuilder {
 
   removeBus(busId: string): void {
     const bus = this.stagedDoc.buses?.find(b => b.id === busId);
-    if (!bus) return;
+    if (bus == null) return;
 
     // Cascade: remove bindings
-    if (this.stagedDoc.publishers) {
+    if (this.stagedDoc.publishers != null) {
       const pubs = this.stagedDoc.publishers.filter(p => p.busId === busId);
       for (const p of pubs) this.removePublisher(p.id);
     }
-    if (this.stagedDoc.listeners) {
+    if (this.stagedDoc.listeners != null) {
       const listeners = this.stagedDoc.listeners.filter(l => l.busId === busId);
       for (const l of listeners) this.removeListener(l.id);
     }
@@ -253,14 +253,14 @@ export class TransactionBuilder implements TxBuilder {
     this.op(op, inv);
   }
 
-  updateBus(busId: string, patch: Partial<any>): void {
+  updateBus(busId: string, patch: Partial<Bus>): void {
     const bus = this.stagedDoc.buses?.find(b => b.id === busId);
-    if (!bus) return;
+    if (bus == null) return;
 
-    const undoPatch: Partial<Bus> = {};
-    for (const key of Object.keys(patch)) {
-      (undoPatch as any)[key] = (bus as any)[key];
-    }
+    // Build undo patch by copying current values for keys being patched
+    const undoPatch = Object.fromEntries(
+      Object.keys(patch).map(key => [key, bus[key as keyof Bus]])
+    ) as Partial<Bus>;
 
     const op: Op = { op: 'BusUpdate', busId, patch };
     const inv: Op = { op: 'BusUpdate', busId, patch: undoPatch };
@@ -272,7 +272,7 @@ export class TransactionBuilder implements TxBuilder {
   // Binding Ops
   // ---------------------------------------------------------------------------
 
-  addPublisher(spec: { busId: string; from: { blockId: string; slotId: string; dir: 'output' }; enabled?: boolean; sortKey?: number; adapterChain?: any[]; id?: string }): string {
+  addPublisher(spec: { busId: string; from: PortRef; enabled?: boolean; sortKey?: number; adapterChain?: AdapterStep[]; id?: string }): string {
     const id = spec.id ?? crypto.randomUUID();
     const publisher: Publisher = {
       id,
@@ -292,7 +292,7 @@ export class TransactionBuilder implements TxBuilder {
 
   removePublisher(publisherId: string): void {
     const pub = this.stagedDoc.publishers?.find(p => p.id === publisherId);
-    if (!pub) return;
+    if (pub == null) return;
 
     const op: Op = { op: 'PublisherRemove', publisherId };
     const inv: Op = { op: 'PublisherAdd', publisher: { ...pub } };
@@ -300,14 +300,14 @@ export class TransactionBuilder implements TxBuilder {
     this.op(op, inv);
   }
 
-  updatePublisher(publisherId: string, patch: Partial<any>): void {
+  updatePublisher(publisherId: string, patch: Partial<Publisher>): void {
     const pub = this.stagedDoc.publishers?.find(p => p.id === publisherId);
-    if (!pub) return;
+    if (pub == null) return;
 
-    const undoPatch: Partial<Publisher> = {};
-    for (const key of Object.keys(patch)) {
-      (undoPatch as any)[key] = (pub as any)[key];
-    }
+    // Build undo patch by copying current values for keys being patched
+    const undoPatch = Object.fromEntries(
+      Object.keys(patch).map(key => [key, pub[key as keyof Publisher]])
+    ) as Partial<Publisher>;
 
     const op: Op = { op: 'PublisherUpdate', publisherId, patch };
     const inv: Op = { op: 'PublisherUpdate', publisherId, patch: undoPatch };
@@ -315,7 +315,7 @@ export class TransactionBuilder implements TxBuilder {
     this.op(op, inv);
   }
 
-  addListener(spec: { busId: string; to: { blockId: string; slotId: string; dir: 'input' }; enabled?: boolean; adapterChain?: any[]; lensStack?: any[]; id?: string }): string {
+  addListener(spec: { busId: string; to: PortRef; enabled?: boolean; adapterChain?: AdapterStep[]; lensStack?: LensInstance[]; id?: string }): string {
     const id = spec.id ?? crypto.randomUUID();
     const listener: Listener = {
       id,
@@ -335,7 +335,7 @@ export class TransactionBuilder implements TxBuilder {
 
   removeListener(listenerId: string): void {
     const list = this.stagedDoc.listeners?.find(l => l.id === listenerId);
-    if (!list) return;
+    if (list == null) return;
 
     const op: Op = { op: 'ListenerRemove', listenerId };
     const inv: Op = { op: 'ListenerAdd', listener: { ...list } };
@@ -343,14 +343,14 @@ export class TransactionBuilder implements TxBuilder {
     this.op(op, inv);
   }
 
-  updateListener(listenerId: string, patch: Partial<any>): void {
+  updateListener(listenerId: string, patch: Partial<Listener>): void {
     const list = this.stagedDoc.listeners?.find(l => l.id === listenerId);
-    if (!list) return;
+    if (list == null) return;
 
-    const undoPatch: Partial<Listener> = {};
-    for (const key of Object.keys(patch)) {
-      (undoPatch as any)[key] = (list as any)[key];
-    }
+    // Build undo patch by copying current values for keys being patched
+    const undoPatch = Object.fromEntries(
+      Object.keys(patch).map(key => [key, list[key as keyof Listener]])
+    ) as Partial<Listener>;
 
     const op: Op = { op: 'ListenerUpdate', listenerId, patch };
     const inv: Op = { op: 'ListenerUpdate', listenerId, patch: undoPatch };
@@ -380,8 +380,9 @@ export class TransactionBuilder implements TxBuilder {
 
   updatePatchSettings(patch: Record<string, unknown>): void {
     const undoPatch: Record<string, unknown> = {};
+    const settings = this.stagedDoc.settings as Record<string, unknown> | undefined;
     for (const key of Object.keys(patch)) {
-      undoPatch[key] = (this.stagedDoc.settings as any)[key];
+      undoPatch[key] = settings?.[key];
     }
     
     const op: Op = { op: 'PatchSettingsUpdate', patch };
@@ -415,8 +416,8 @@ export class TransactionBuilder implements TxBuilder {
     }
 
     // Validate stagedDoc
-    const validator = new Validator(this.stagedDoc as any); // Cast patch to PatchDocument
-    const report = validator.validateAll(this.stagedDoc as any);
+    const validator = new Validator(this.stagedDoc as PatchDocument);
+    const report = validator.validateAll(this.stagedDoc as PatchDocument);
 
     if (this.committed && !report.ok) {
       return {
@@ -465,3 +466,5 @@ export class TransactionBuilder implements TxBuilder {
     }
   }
 }
+
+export default TransactionBuilder

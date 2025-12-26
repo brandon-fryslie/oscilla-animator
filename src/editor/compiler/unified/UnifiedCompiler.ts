@@ -163,7 +163,7 @@ export interface CompilationError {
  * - Handle playback control
  */
 export class UnifiedCompiler {
-  private graph: DependencyGraph;
+  private readonly graph: DependencyGraph;
   private errors: CompilationError[] = [];
 
   constructor() {
@@ -310,11 +310,11 @@ export class UnifiedCompiler {
       const isStateBlock = stateBlock !== undefined;
 
       // Initialize state memory if state block
-      const stateMemory = isStateBlock ? stateBlock!.initState(0) : null;
+      const stateMemory = isStateBlock ? stateBlock.initState(0) : null;
 
       // Create evaluator
       const evaluator: Evaluator = isStateBlock
-        ? this.createStateBlockEvaluator(stateBlock!)
+        ? this.createStateBlockEvaluator(stateBlock)
         : this.createPrimitiveBlockEvaluator();
 
       compiledBlocks.push({
@@ -411,7 +411,7 @@ export class UnifiedCompiler {
       // Combine publisher outputs
       // For now, just return the first publisher's value
       if (publishers.length > 0) {
-        const firstPub = publishers[0]!;
+        const firstPub = publishers[0];
         return { value: inputs[`${firstPub.blockId}.${firstPub.port}`] };
       }
       return { value: undefined };

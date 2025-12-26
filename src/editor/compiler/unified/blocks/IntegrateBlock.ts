@@ -47,7 +47,7 @@ export class IntegrateBlock implements StateBlock {
   readonly type = 'Integrate';
   readonly scrubPolicy: ScrubPolicy = 'hold';
 
-  private params: Required<IntegrateBlockParams>;
+  private readonly params: Required<IntegrateBlockParams>;
 
   constructor(params: IntegrateBlockParams = {}) {
     this.params = {

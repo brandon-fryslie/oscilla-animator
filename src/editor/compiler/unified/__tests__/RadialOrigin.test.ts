@@ -60,17 +60,17 @@ describe('RadialOriginBlock', () => {
       const positions = batchEvaluateFieldExpr(expr, domain, timeCtx, evalCtx);
 
       // 4 points should be at 0°, 90°, 180°, 270°
-      expect(positions[0]!.x).toBeCloseTo(100, 5);
-      expect(positions[0]!.y).toBeCloseTo(0, 5);
+      expect(positions[0].x).toBeCloseTo(100, 5);
+      expect(positions[0].y).toBeCloseTo(0, 5);
 
-      expect(positions[1]!.x).toBeCloseTo(0, 5);
-      expect(positions[1]!.y).toBeCloseTo(100, 5);
+      expect(positions[1].x).toBeCloseTo(0, 5);
+      expect(positions[1].y).toBeCloseTo(100, 5);
 
-      expect(positions[2]!.x).toBeCloseTo(-100, 5);
-      expect(positions[2]!.y).toBeCloseTo(0, 5);
+      expect(positions[2].x).toBeCloseTo(-100, 5);
+      expect(positions[2].y).toBeCloseTo(0, 5);
 
-      expect(positions[3]!.x).toBeCloseTo(0, 5);
-      expect(positions[3]!.y).toBeCloseTo(-100, 5);
+      expect(positions[3].x).toBeCloseTo(0, 5);
+      expect(positions[3].y).toBeCloseTo(-100, 5);
     });
   });
 
@@ -90,8 +90,8 @@ describe('RadialOriginBlock', () => {
       const positions = batchEvaluateFieldExpr(expr, domain, timeCtx, evalCtx);
 
       // First position should be at (100 + 50, 50)
-      expect(positions[0]!.x).toBeCloseTo(150, 5);
-      expect(positions[0]!.y).toBeCloseTo(50, 5);
+      expect(positions[0].x).toBeCloseTo(150, 5);
+      expect(positions[0].y).toBeCloseTo(50, 5);
     });
 
     it('should respect radius parameter', () => {
@@ -109,8 +109,8 @@ describe('RadialOriginBlock', () => {
       const positions = batchEvaluateFieldExpr(expr, domain, timeCtx, evalCtx);
 
       // Should be at radius 200
-      expect(positions[0]!.x).toBeCloseTo(200, 5);
-      expect(positions[0]!.y).toBeCloseTo(0, 5);
+      expect(positions[0].x).toBeCloseTo(200, 5);
+      expect(positions[0].y).toBeCloseTo(0, 5);
     });
 
     it('should respect angleOffset parameter', () => {
@@ -128,8 +128,8 @@ describe('RadialOriginBlock', () => {
       const positions = batchEvaluateFieldExpr(expr, domain, timeCtx, evalCtx);
 
       // Should be rotated 90 degrees (at top of circle)
-      expect(positions[0]!.x).toBeCloseTo(0, 5);
-      expect(positions[0]!.y).toBeCloseTo(100, 5);
+      expect(positions[0].x).toBeCloseTo(0, 5);
+      expect(positions[0].y).toBeCloseTo(100, 5);
     });
   });
 
@@ -180,8 +180,8 @@ describe('RadialOriginBlock', () => {
 
       // Should produce identical positions
       for (let i = 0; i < 5; i++) {
-        expect(positions1[i]!.x).toBeCloseTo(positions2[i]!.x, 10);
-        expect(positions1[i]!.y).toBeCloseTo(positions2[i]!.y, 10);
+        expect(positions1[i].x).toBeCloseTo(positions2[i].x, 10);
+        expect(positions1[i].y).toBeCloseTo(positions2[i].y, 10);
       }
     });
   });
@@ -223,8 +223,8 @@ describe('RadialOriginBlock', () => {
       const positions = batchEvaluateFieldExpr(expr, domain, timeCtx, evalCtx);
 
       expect(positions).toHaveLength(1);
-      expect(positions[0]!.x).toBeCloseTo(100, 5);
-      expect(positions[0]!.y).toBeCloseTo(0, 5);
+      expect(positions[0].x).toBeCloseTo(100, 5);
+      expect(positions[0].y).toBeCloseTo(0, 5);
     });
 
     it('should handle large element count', () => {
@@ -262,8 +262,8 @@ describe('RadialOriginBlock', () => {
       const positions = batchEvaluateFieldExpr(expr, domain, timeCtx, evalCtx);
 
       // Should use defaults: centerX=0, centerY=0, radius=100, angleOffset=0
-      expect(positions[0]!.x).toBeCloseTo(100, 5);
-      expect(positions[0]!.y).toBeCloseTo(0, 5);
+      expect(positions[0].x).toBeCloseTo(100, 5);
+      expect(positions[0].y).toBeCloseTo(0, 5);
     });
 
     it('should merge partial parameters with defaults', () => {
@@ -278,8 +278,8 @@ describe('RadialOriginBlock', () => {
 
       const positions = batchEvaluateFieldExpr(expr, domain, timeCtx, evalCtx);
 
-      expect(positions[0]!.x).toBeCloseTo(50, 5);
-      expect(positions[0]!.y).toBeCloseTo(0, 5);
+      expect(positions[0].x).toBeCloseTo(50, 5);
+      expect(positions[0].y).toBeCloseTo(0, 5);
     });
   });
 });

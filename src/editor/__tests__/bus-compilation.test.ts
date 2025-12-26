@@ -492,8 +492,8 @@ describe('Bus Compilation - Error Handling', () => {
     const result = compilePatch(patch, createTestRegistry(), 42 as Seed, createTestContext());
 
     expect(result.ok).toBe(false);
-    // Check for PortTypeMismatch error (unsupported combine mode)
-    const combineError = result.errors.find(e => e.code === 'PortTypeMismatch' && e.message.includes('average'));
+    // Check for UnsupportedCombineMode error
+    const combineError = result.errors.find(e => e.code === 'UnsupportedCombineMode' && e.message.includes('average'));
     expect(combineError).toBeDefined();
     expect(combineError?.message).toContain('average');
     expect(combineError?.message).toContain('last, sum');

@@ -1,0 +1,9 @@
+Agent: project-evaluator | 2025-12-25
+Scope: project/full (lint warnings)
+Total: 973 issues (252 errors, 721 warnings)
+Auto-fixable: 77 errors (30% of errors)
+Primary Issue: functional/immutable-data (695 warnings - intentional mutations)
+Cache updated: lint-infrastructure.md in eval-cache/
+Ambiguities: 1 (should functional/immutable-data be disabled?)
+Workflow: CONTINUE
+-> Run `eslint --fix` for 77 auto-fixes, then decide on immutable-data policy

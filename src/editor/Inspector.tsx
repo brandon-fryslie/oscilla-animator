@@ -631,7 +631,7 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
     const results: BlockDefinition[] = [];
     for (const def of getBlockDefinitions()) {
       if (def.type === block.type) continue;
-      if (def.form === 'macro') continue;
+      if (def.type.startsWith('macro:')) continue;
       if (getPortCompatibility(block, def)) {
         results.push(def);
       }

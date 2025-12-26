@@ -191,8 +191,8 @@ describe('UnifiedCompiler', () => {
     const bus = result.buses.find(b => b.id === 'bus1');
     expect(bus).toBeDefined();
     expect(bus!.publishers).toHaveLength(1);
-    expect(bus!.publishers[0]!.blockId).toBe('source1');
+    expect(bus!.publishers[0].blockId).toBe('source1');
     expect(bus!.listeners).toHaveLength(1);
-    expect(bus!.listeners[0]!.blockId).toBe('sink1');
+    expect(bus!.listeners[0].blockId).toBe('sink1');
   });
 });

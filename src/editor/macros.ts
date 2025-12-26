@@ -12,7 +12,7 @@
  * a user dragging blocks into the patch manually.
  */
 
-import type { LaneKind, LensType } from './types';
+import type { LaneKind } from './types';
 
 /**
  * A block placement in a macro expansion.
