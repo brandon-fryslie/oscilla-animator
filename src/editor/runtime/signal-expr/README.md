@@ -1,0 +1,229 @@
+# SignalExpr Runtime
+
+Core runtime evaluator for Oscilla's SignalExpr intermediate representation.
+
+## Overview
+
+The SignalExpr runtime evaluates signal expression DAGs (directed acyclic graphs) that represent time-varying values. Unlike the legacy closure-based signal system, this runtime provides:
+
+- **Inspectability**: All signal nodes are explicit data structures
+- **Cacheability**: Per-frame memoization for efficient re-evaluation
+- **Debuggability**: Every node can be traced and inspected
+- **Serializability**: No closures - pure data representation
+
+## Architecture
+
+### Core Components
+
+1. **SigEvaluator** - Core evaluation engine
+   - Cache-first algorithm for O(1) lookups
+   - Recursive DAG traversal
+   - Support for: `const`, `timeAbsMs`, `map`, `zip` nodes
+
+2. **SigFrameCache** - Per-frame memoization
+   - Stamp-based invalidation (no array clearing)
+   - O(1) cache hits
+   - Automatic handling of diamond dependencies
+
+3. **SigEnv** - Evaluation environment
+   - Time values (`tAbsMs`)
+   - Const pool access
+   - Cache reference
+
+4. **OpCodeRegistry** - Pure function execution
+   - Unary opcodes (sin, cos, abs, floor, etc.)
+   - Binary opcodes (add, sub, mul, div, min, max, etc.)
+   - Safe defaults (division by zero → 0)
+
+## Usage Example
+
+```typescript
+import {
+  evalSig,
+  createSigEnv,
+  createConstPool,
+  createSigFrameCache,
+  newFrame,
+} from "./runtime/signal-expr";
+import { OpCode } from "../compiler/ir/opcodes";
+import type { SignalExprIR } from "../compiler/ir/signalExpr";
+
+// 1. Create const pool
+const constPool = createConstPool([0.001, 2.0, Math.PI]);
+
+// 2. Create per-frame cache
+const cache = createSigFrameCache(1024);
+
+// 3. Build signal DAG: sin(t * 0.001) * 2
+const nodes: SignalExprIR[] = [
+  { kind: "timeAbsMs", type: { world: "signal", domain: "timeMs" } }, // 0: t
+  { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 1: 0.001
+  { kind: "zip", type: { world: "signal", domain: "number" }, a: 0, b: 1, fn: { kind: "opcode", opcode: OpCode.Mul } }, // 2: t * 0.001
+  { kind: "map", type: { world: "signal", domain: "number" }, src: 2, fn: { kind: "opcode", opcode: OpCode.Sin } }, // 3: sin(t * 0.001)
+  { kind: "const", type: { world: "signal", domain: "number" }, constId: 1 }, // 4: 2.0
+  { kind: "zip", type: { world: "signal", domain: "number" }, a: 3, b: 4, fn: { kind: "opcode", opcode: OpCode.Mul } }, // 5: sin(t * 0.001) * 2
+];
+
+// 4. Evaluate per frame
+function renderFrame(tAbsMs: number): number {
+  const env = createSigEnv({ tAbsMs, constPool, cache });
+  const result = evalSig(5, env, nodes); // Evaluate root node
+  newFrame(cache, cache.frameId + 1); // Advance to next frame
+  return result;
+}
+
+// 5. Render multiple frames
+console.log(renderFrame(0)); // ~0
+console.log(renderFrame(Math.PI / 2 * 1000)); // ~2
+console.log(renderFrame(Math.PI * 1000)); // ~0
+```
+
+## Cache Behavior
+
+The cache uses a stamp-based invalidation strategy:
+
+```typescript
+// Cache structure:
+interface SigFrameCache {
+  frameId: number; // Current frame ID (starts at 1)
+  value: Float64Array; // Cached values
+  stamp: Uint32Array; // Frame stamps (when each value was computed)
+  validMask: Uint8Array; // Future: for non-number types
+}
+
+// Cache hit detection:
+if (stamp[sigId] === frameId) {
+  return value[sigId]; // O(1) cache hit
+}
+
+// Cache miss: evaluate and write
+value[sigId] = evaluateNode(node);
+stamp[sigId] = frameId;
+```
+
+**Key properties:**
+- Cache hits are O(1) array lookups
+- No array clearing on new frame (just increment frameId)
+- Shared subexpressions automatically cached (diamond dependencies)
+- Frame IDs start at 1 to avoid collision with initial Uint32Array values (0)
+
+## Performance Characteristics
+
+- **Cache hit**: <10ns (single array lookup)
+- **Cache miss**: O(1) + recursive evaluation of dependencies
+- **DAG evaluation**: O(N) where N = number of nodes (each evaluated at most once per frame)
+- **Memory**: O(N) for node storage + O(N) for cache
+
+**No allocations in hot path** - all data structures are pre-allocated typed arrays.
+
+## Supported Node Kinds (Sprint 1)
+
+### Current Sprint
+
+- **const**: Read from const pool
+- **timeAbsMs**: Absolute player time (milliseconds)
+- **map**: Apply unary function (sin, cos, abs, floor, etc.)
+- **zip**: Apply binary function (add, sub, mul, div, min, max, etc.)
+
+### Future Sprints
+
+- **select**: Conditional branching (Sprint 2)
+- **inputSlot**: Reference external values (Sprint 2)
+- **busCombine**: Aggregate bus publishers (Sprint 3)
+- **transform**: Adapter/lens chains (Sprint 4)
+- **stateful**: integrate, delay, sampleHold (Sprint 5)
+- **closureBridge**: Gradual migration fallback (Sprint 6)
+
+## Adding New Node Kinds
+
+To add support for a new node kind:
+
+1. **Define IR type** in `src/editor/compiler/ir/signalExpr.ts`:
+   ```typescript
+   export interface SignalExprMyNode {
+     kind: "myNode";
+     type: TypeDesc;
+     // ... node-specific fields
+   }
+   ```
+
+2. **Add to union type**:
+   ```typescript
+   export type SignalExprIR =
+     | SignalExprConst
+     | ... existing kinds ...
+     | SignalExprMyNode; // Add here
+   ```
+
+3. **Implement evaluator** in `SigEvaluator.ts`:
+   ```typescript
+   case "myNode":
+     result = evalMyNode(node, env, nodes);
+     break;
+   ```
+
+4. **Add tests** in `__tests__/SigEvaluator.test.ts`:
+   ```typescript
+   describe("evalSig - myNode nodes", () => {
+     it("evaluates myNode correctly", () => {
+       // ... test implementation
+     });
+   });
+   ```
+
+## Error Handling
+
+The evaluator throws clear errors for:
+
+- **Invalid sigId**: `"Invalid sigId: 99 (nodes length: 10)"`
+- **Out-of-bounds constId**: `"Invalid constId: 5 (pool has 3 numbers)"`
+- **Unknown node kind**: `"Unknown signal node kind: foo"`
+- **Unsupported node kind**: `"Signal node kind 'select' not yet implemented (future sprint)"`
+
+All errors are synchronous and should be caught at the caller site.
+
+## Integration with Compiler
+
+The runtime consumes IR emitted by the compiler:
+
+```
+Block (user code)
+  ↓ (compile)
+SignalExpr IR (DAG of nodes)
+  ↓ (evaluate)
+Runtime values
+```
+
+**Current status**:
+- IR types: ✅ Defined in `src/editor/compiler/ir/signalExpr.ts`
+- Runtime: ✅ Sprint 1 complete (this implementation)
+- Compiler: ⏳ Sprint 6+ (block migration to IR emission)
+
+## References
+
+- **Planning**: `.agent_planning/signalexpr-runtime/PLAN-20251225-190000.md`
+- **Definition of Done**: `.agent_planning/signalexpr-runtime/DOD-20251225-190000.md`
+- **IR Schema**: `design-docs/12-Compiler-Final/02-IR-Schema.md`
+- **SignalExpr Spec**: `design-docs/12-Compiler-Final/12-SignalExpr.md`
+
+## Testing
+
+Run tests:
+```bash
+pnpm test src/editor/runtime/signal-expr
+```
+
+Coverage target: ≥80% for all evaluator, cache, and opcode files.
+
+## Next Steps
+
+- **Sprint 2**: Add `select` and `inputSlot` nodes
+- **Sprint 3**: Add `busCombine` nodes (bus evaluation)
+- **Sprint 4**: Add `transform` nodes (adapter/lens execution)
+- **Sprint 5**: Add `stateful` nodes (integrate, delay, sampleHold)
+- **Sprint 6+**: Migrate block compilers to emit IR
+
+---
+
+**Status**: Sprint 1 Complete (Core Evaluator)
+**Date**: 2025-12-25
