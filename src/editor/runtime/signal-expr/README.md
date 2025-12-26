@@ -19,7 +19,7 @@ The SignalExpr runtime evaluates signal expression DAGs (directed acyclic graphs
    - Cache-first algorithm for O(1) lookups
    - Recursive DAG traversal
    - Short-circuit semantics for conditional nodes
-   - Support for: `const`, `timeAbsMs`, `map`, `zip`, `select`, `inputSlot` nodes
+   - Support for: `const`, `timeAbsMs`, `map`, `zip`, `select`, `inputSlot`, `busCombine` nodes
 
 2. **SigFrameCache** - Per-frame memoization
    - Stamp-based invalidation (no array clearing)
@@ -31,6 +31,7 @@ The SignalExpr runtime evaluates signal expression DAGs (directed acyclic graphs
    - Const pool access
    - Cache reference
    - Slot value reader (external inputs)
+   - Optional debug sink (tracing)
 
 4. **SlotValueReader** - External input resolution
    - Read values from wired connections
@@ -41,6 +42,11 @@ The SignalExpr runtime evaluates signal expression DAGs (directed acyclic graphs
    - Unary opcodes (sin, cos, abs, floor, etc.)
    - Binary opcodes (add, sub, mul, div, min, max, etc.)
    - Safe defaults (division by zero → 0)
+
+6. **DebugSink** - Optional debug tracing
+   - Zero overhead when disabled
+   - Trace bus combine operations
+   - Future: trace all node evaluations
 
 ## Usage Examples
 
@@ -177,6 +183,72 @@ const nodes: SignalExprIR[] = [
 const result = evalSig(0, env, nodes); // NaN
 ```
 
+### Bus Combine (busCombine)
+
+```typescript
+// Sum of multiple publishers on a bus
+const nodes: SignalExprIR[] = [
+  { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 10
+  { kind: "const", type: { world: "signal", domain: "number" }, constId: 1 }, // 20
+  { kind: "const", type: { world: "signal", domain: "number" }, constId: 2 }, // 30
+  {
+    kind: "busCombine",
+    type: { world: "signal", domain: "number" },
+    busIndex: 0,
+    terms: [0, 1, 2], // Pre-sorted by compiler
+    combine: { mode: "sum" }, // Sum all terms
+  },
+];
+
+const env = createSigEnv({ tAbsMs: 0, constPool: createConstPool([10, 20, 30]), cache });
+const result = evalSig(3, env, nodes); // 60
+```
+
+**Combine modes**:
+- `sum`: Add all terms (Σ terms)
+- `average`: Mean of all terms ((Σ terms) / count)
+- `min`: Minimum value across all terms
+- `max`: Maximum value across all terms
+- `first`: First term in sorted order
+- `last`: Last term in sorted order
+
+**Key semantics**:
+- Empty bus (no terms) returns `default` value (or 0)
+- Single term returns that term directly (no combine needed)
+- All terms evaluated before combining (no short-circuit)
+- Terms array is pre-sorted by compiler (runtime never re-sorts)
+
+**Custom default value**:
+```typescript
+{
+  kind: "busCombine",
+  type: { world: "signal", domain: "number" },
+  busIndex: 0,
+  terms: [],
+  combine: { mode: "sum", default: 100 }, // Return 100 when empty
+}
+```
+
+### Debug Tracing
+
+```typescript
+import type { DebugSink } from "./DebugSink";
+
+// Create debug sink to trace bus combine operations
+const debug: DebugSink = {
+  traceBusCombine: (info) => {
+    console.log(`Bus ${info.busIndex}: ${info.mode}(${info.termValues}) = ${info.result}`);
+  },
+};
+
+const env = createSigEnv({ tAbsMs: 0, constPool, cache, debug });
+
+// Evaluating a busCombine node will now log:
+// "Bus 0: sum([10, 20, 30]) = 60"
+```
+
+**Zero overhead when disabled**: Debug tracing has no performance impact when `debug` is undefined or when specific trace methods are not provided.
+
 ## Cache Behavior
 
 The cache uses a stamp-based invalidation strategy:
@@ -218,7 +290,7 @@ stamp[sigId] = frameId;
 
 ## Supported Node Kinds
 
-### Implemented (Sprint 1 & 2)
+### Implemented (Sprint 1-3)
 
 - **const**: Read from const pool
 - **timeAbsMs**: Absolute player time (milliseconds)
@@ -226,16 +298,16 @@ stamp[sigId] = frameId;
 - **zip**: Apply binary function (add, sub, mul, div, min, max, etc.)
 - **select**: Conditional branching with short-circuit semantics (Sprint 2)
 - **inputSlot**: Reference external values from slots (Sprint 2)
+- **busCombine**: Aggregate bus publishers with combine modes (Sprint 3)
 
 ### Future Sprints
 
-- **timeModelMs**: Model time after transformation (Sprint 3)
-- **phase01**: Phase 0..1 for cyclic time models (Sprint 3)
-- **wrapEvent**: Wrap event trigger for cyclic time (Sprint 3)
-- **busCombine**: Aggregate bus publishers (Sprint 3)
-- **transform**: Adapter/lens chains (Sprint 4)
-- **stateful**: integrate, delay, sampleHold (Sprint 5)
-- **closureBridge**: Gradual migration fallback (Sprint 6)
+- **timeModelMs**: Model time after transformation (Sprint 4)
+- **phase01**: Phase 0..1 for cyclic time models (Sprint 4)
+- **wrapEvent**: Wrap event trigger for cyclic time (Sprint 4)
+- **transform**: Adapter/lens chains (Sprint 5)
+- **stateful**: integrate, delay, sampleHold (Sprint 6)
+- **closureBridge**: Gradual migration fallback (Sprint 7)
 
 ## Adding New Node Kinds
 
@@ -299,13 +371,14 @@ Runtime values
 
 **Current status**:
 - IR types: ✅ Defined in `src/editor/compiler/ir/signalExpr.ts`
-- Runtime: ✅ Sprint 1 & 2 complete (core evaluator + select/inputSlot)
+- Runtime: ✅ Sprint 1-3 complete (core evaluator + select/inputSlot/busCombine)
 - Compiler: ⏳ Sprint 6+ (block migration to IR emission)
 
 ## References
 
 - **Sprint 1 Plan**: `.agent_planning/signalexpr-runtime/PLAN-20251225-190000.md`
 - **Sprint 2 Plan**: `.agent_planning/signalexpr-runtime/SPRINT-02-select-inputSlot.md`
+- **Sprint 3 Plan**: `.agent_planning/signalexpr-runtime/SPRINT-03-busCombine.md`
 - **Definition of Done**: `.agent_planning/signalexpr-runtime/DOD-20251225-190000.md`
 - **IR Schema**: `design-docs/12-Compiler-Final/02-IR-Schema.md`
 - **SignalExpr Spec**: `design-docs/12-Compiler-Final/12-SignalExpr.md`
@@ -319,24 +392,26 @@ pnpm test src/editor/runtime/signal-expr
 
 Coverage target: ≥80% for all evaluator, cache, and opcode files.
 
-**Test coverage (Sprint 2)**:
-- 49 tests passing
+**Test coverage (Sprint 3)**:
+- 79 tests passing
 - Cache infrastructure (creation, hits, misses, frame advancement)
-- Node evaluation (const, timeAbsMs, map, zip, select, inputSlot)
+- Node evaluation (const, timeAbsMs, map, zip, select, inputSlot, busCombine)
 - Cache behavior (memoization, invalidation, shared subexpressions)
 - Short-circuit semantics (verify untaken branches not evaluated)
 - External input resolution (present/missing slots, NaN propagation)
+- Bus combine modes (sum, average, min, max, first, last)
+- Debug tracing (enabled/disabled, zero overhead)
 - DAG composition (nested nodes, diamond dependencies)
 - Error handling (invalid sigId, unknown node kinds)
 
 ## Next Steps
 
-- **Sprint 3**: Add `busCombine` nodes (bus evaluation with deterministic ordering)
-- **Sprint 4**: Add `transform` nodes (adapter/lens execution)
-- **Sprint 5**: Add `stateful` nodes (integrate, delay, sampleHold)
-- **Sprint 6+**: Migrate block compilers to emit IR
+- **Sprint 4**: Add `timeModelMs`, `phase01`, `wrapEvent` nodes (time model support)
+- **Sprint 5**: Add `transform` nodes (adapter/lens execution)
+- **Sprint 6**: Add `stateful` nodes (integrate, delay, sampleHold)
+- **Sprint 7+**: Migrate block compilers to emit IR
 
 ---
 
-**Status**: Sprint 2 Complete (Select & InputSlot Nodes)
-**Date**: 2025-12-25
+**Status**: Sprint 3 Complete (BusCombine Nodes)
+**Date**: 2025-12-26
