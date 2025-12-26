@@ -25,9 +25,13 @@
 - fieldexpr-systems.md (INVALIDATED 2025-12-26 - Materializer modified, CompilerRuntime added)
 - signal-expr-runtime.md (NEEDS EVAL - SignalExprBuilder + golden tests added 2025-12-26)
 - runtime-integration.md (INVALIDATED 2025-12-26 - CompilerRuntime added, select/transform nodes added)
+- block-compiler-migration.md (INVALIDATED 2025-12-26 - IR lowering types being added)
 
 ## Recent Changes Requiring Re-evaluation
 - 2025-12-26: FieldExpr Phase 5 remaining work completed
   - New file: CompilerRuntime.ts - Wires LinkedGraphIR to runtime Materializer
   - Modified: types.ts, FieldHandle.ts, Materializer.ts - Added select/transform node support
   - All integration infrastructure complete for compiler → runtime
+- 2025-12-26: IR lowering types infrastructure being added
+  - Creating lowerTypes.ts for block compiler migration Phase 3
+  - Adding BlockTypeDecl registry and ValueRefPacked extension

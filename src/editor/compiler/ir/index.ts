@@ -39,6 +39,39 @@ export type {
 } from "./types";
 
 // ============================================================================
+// Block Lowering Types (Phase 3)
+// ============================================================================
+
+export type {
+  // Block capability classification
+  BlockCapability,
+
+  // Port declarations
+  BlockPortDecl,
+
+  // Block type declaration
+  BlockTypeDecl,
+
+  // Lowering function signature
+  BlockLowerFn,
+
+  // Lowering context and result
+  LowerCtx,
+  LowerResult,
+  BlockDeclarations,
+
+  // Value references
+  ValueRefPacked,
+} from "./lowerTypes";
+
+export {
+  // Registry functions
+  registerBlockType,
+  getBlockType,
+  hasBlockType,
+} from "./lowerTypes";
+
+// ============================================================================
 // Schedule and Steps
 // ============================================================================
 

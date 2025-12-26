@@ -19,22 +19,16 @@ import type { AcyclicOrLegalGraph, BlockIndex } from "../ir/patches";
 import type { Block } from "../../types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import { IRBuilderImpl } from "../ir/IRBuilderImpl";
-import type { TypeDesc, SigExprId, FieldExprId } from "../ir/types";
+import type { TypeDesc } from "../ir/types";
 import type { CompileError } from "../types";
+import type { ValueRefPacked } from "../ir/lowerTypes";
+
+// Re-export ValueRefPacked for backwards compatibility
+export type { ValueRefPacked } from "../ir/lowerTypes";
 
 // =============================================================================
 // Types
 // =============================================================================
-
-/**
- * ValueRefPacked - A reference to a value in the IR
- *
- * This is the unified reference type that can point to either a signal
- * expression or a field expression.
- */
-export type ValueRefPacked =
-  | { k: "sig"; id: SigExprId }
-  | { k: "field"; id: FieldExprId };
 
 /**
  * UnlinkedIRFragments - Output of Pass 6
