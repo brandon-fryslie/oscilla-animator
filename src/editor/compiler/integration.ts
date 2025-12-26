@@ -756,6 +756,9 @@ export interface CompilerService {
    */
   getProgram(): CompiledProgram | null;
 
+  /** Get the latest full compile result */
+  getLatestResult(): CompileResult | null;
+
   /** Get the block registry */
   getRegistry(): BlockRegistry;
 
@@ -876,7 +879,7 @@ export function createCompilerService(store: RootStore): CompilerService {
         }
 
         const seed: Seed = store.uiStore.settings.seed;
-        const result = compilePatch(patch, registry, seed, ctx);
+        const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
 
         const durationMs = performance.now() - startTime;
 
@@ -998,6 +1001,10 @@ export function createCompilerService(store: RootStore): CompilerService {
         canvasProgram: lastResult.canvasProgram,
         timeModel: lastResult.timeModel,
       };
+    },
+
+    getLatestResult(): CompileResult | null {
+      return lastResult;
     },
 
     getRegistry(): BlockRegistry {
