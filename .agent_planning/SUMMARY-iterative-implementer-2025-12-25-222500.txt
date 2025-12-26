@@ -1,0 +1,58 @@
+Agent: iterative-implementer | 2025-12-25-222500
+Mode: TDD
+Completed: P0-1 (Pass 6) | Files: 3 | Commits: 1
+Tests: 1164 passing (13 new for Pass 6)
+Cache invalidated: none (new implementation)
+Status: in_progress
+
+=== Sprint 2 Progress ===
+
+Scope: Dual-Emit Compilation + IR Validation (Passes 6-8 + Validator)
+DOD: .agent_planning/phase3-ir-integration/DOD-2025-12-25-200731.md
+Plan: .agent_planning/phase3-ir-integration/PLAN-2025-12-25-200731.md
+
+Completed Work Items:
+- P0-1: Pass 6 - Block Lowering Infrastructure ✓
+  - Created pass6BlockLowering function
+  - Implemented Artifact-to-IR translation for all major artifact types
+  - Created ValueRefPacked type for unified signal/field references
+  - Comprehensive test suite with 13 tests
+  - All existing 1151 tests still passing
+
+Remaining Work Items (in order):
+- P0-2: Pass 7 - Bus Lowering to IR
+- P0-3: Pass 8 - Link Resolution
+- P0-4: Dual-Emit Compiler Integration
+- P0-5: IR Validator Core
+- P0-6: IR Validator Integration
+- P1-1: Golden Patch IR Test
+- P1-2: Documentation (21-Dual-Emit-Strategy.md)
+
+Files Modified:
+- src/editor/compiler/passes/pass6-block-lowering.ts (NEW)
+- src/editor/compiler/passes/__tests__/pass6-block-lowering.test.ts (NEW)
+- src/editor/compiler/passes/index.ts (UPDATED - exports)
+
+Commits:
+- c557df0: feat(compiler): implement Pass 6 - Block Lowering to IR
+
+Key Design Decisions:
+1. Pass 6 accepts blocks array separately from AcyclicOrLegalGraph (not embedded)
+2. Artifact translation creates "skeleton" IR nodes (placeholders for closures)
+3. IR is structural only - closures still execute, IR is for validation
+4. Special artifact types (RenderTree, etc.) have no IR representation
+
+Next Steps:
+1. Implement Pass 7 - Bus Lowering (P0-2)
+   - Create IRWithBusRoots type
+   - Implement bus combine node generation
+   - Handle publisher transform chains
+   - Test suite with 10+ tests
+
+Technical Notes:
+- TypeDesc domain "phase" → "phase01" for consistency with IR schema
+- Slot uses `id` field not `name` field
+- CompileErrorCode: Use "BlockMissing" not custom codes
+- All 1164 tests passing after Pass 6 implementation
+
+Ready for evaluation: false (more work remaining in Sprint 2)

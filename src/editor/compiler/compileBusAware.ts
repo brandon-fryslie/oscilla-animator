@@ -44,6 +44,7 @@ import { getBlockDefinition } from '../blocks/registry';
 import { getLens } from '../lenses/LensRegistry';
 import { resolveLensParam } from '../lenses/lensResolution';
 // Sprint 2, P0-4: Dual-Emit IR Compilation passes
+import { validateIR, irErrorToCompileError } from './ir/validator';
 import {
   pass1Normalize,
   pass2TypeGraph,
@@ -327,6 +328,20 @@ function compileIR(
       connectionsArray,
       patchForIR.listeners
     );
+
+    // P0-6: Run IR validator (always in dev builds, can be disabled via flag)
+    const shouldValidate = import.meta.env?.DISABLE_IR_VALIDATION !== 'true';
+    if (shouldValidate) {
+      const validation = validateIR(linked);
+      if (!validation.valid) {
+        // Convert validation errors to CompileErrors and attach to LinkedGraphIR
+        const validationCompileErrors = validation.errors.map(irErrorToCompileError);
+        return {
+          ...linked,
+          errors: [...linked.errors, ...validationCompileErrors],
+        };
+      }
+    }
 
     return linked;
   } catch (e) {
