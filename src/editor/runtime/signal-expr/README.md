@@ -18,7 +18,8 @@ The SignalExpr runtime evaluates signal expression DAGs (directed acyclic graphs
 1. **SigEvaluator** - Core evaluation engine
    - Cache-first algorithm for O(1) lookups
    - Recursive DAG traversal
-   - Support for: `const`, `timeAbsMs`, `map`, `zip` nodes
+   - Short-circuit semantics for conditional nodes
+   - Support for: `const`, `timeAbsMs`, `map`, `zip`, `select`, `inputSlot` nodes
 
 2. **SigFrameCache** - Per-frame memoization
    - Stamp-based invalidation (no array clearing)
@@ -29,13 +30,21 @@ The SignalExpr runtime evaluates signal expression DAGs (directed acyclic graphs
    - Time values (`tAbsMs`)
    - Const pool access
    - Cache reference
+   - Slot value reader (external inputs)
 
-4. **OpCodeRegistry** - Pure function execution
+4. **SlotValueReader** - External input resolution
+   - Read values from wired connections
+   - Read values from bus subscriptions
+   - NaN for missing slots (detectable unconnected inputs)
+
+5. **OpCodeRegistry** - Pure function execution
    - Unary opcodes (sin, cos, abs, floor, etc.)
    - Binary opcodes (add, sub, mul, div, min, max, etc.)
    - Safe defaults (division by zero → 0)
 
-## Usage Example
+## Usage Examples
+
+### Basic Evaluation
 
 ```typescript
 import {
@@ -78,6 +87,96 @@ console.log(renderFrame(Math.PI / 2 * 1000)); // ~2
 console.log(renderFrame(Math.PI * 1000)); // ~0
 ```
 
+### Conditional Evaluation (select)
+
+```typescript
+import { createArraySlotReader } from "./SlotValueReader";
+
+// select(x > 0, 1/x, 0) - safe division with short-circuit
+const nodes: SignalExprIR[] = [
+  { kind: "inputSlot", type: { world: "signal", domain: "number" }, slot: 0 }, // 0: x
+  { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 1: 0
+  {
+    kind: "zip",
+    type: { world: "signal", domain: "number" },
+    a: 0,
+    b: 1,
+    fn: { kind: "opcode", opcode: OpCode.Sub },
+  }, // 2: x - 0 (cond > 0.5 means x > 0)
+  { kind: "const", type: { world: "signal", domain: "number" }, constId: 1 }, // 3: 1
+  {
+    kind: "zip",
+    type: { world: "signal", domain: "number" },
+    a: 3,
+    b: 0,
+    fn: { kind: "opcode", opcode: OpCode.Div },
+  }, // 4: 1/x (only evaluated if x > 0)
+  {
+    kind: "select",
+    type: { world: "signal", domain: "number" },
+    cond: 2,
+    t: 4,
+    f: 1,
+  }, // 5: select(x>0, 1/x, 0)
+];
+
+// Create slot reader with x = 2.0
+const slots = createArraySlotReader(new Map([[0, 2.0]]));
+const env = createSigEnv({ tAbsMs: 0, constPool, cache, slotValues: slots });
+
+const result = evalSig(5, env, nodes); // 0.5 (1/2)
+```
+
+**Short-circuit semantics**: Only the taken branch is evaluated. In the example above, when `x <= 0`, the division `1/x` is never computed, avoiding a division-by-zero error.
+
+### External Inputs (inputSlot)
+
+```typescript
+import { createArraySlotReader } from "./SlotValueReader";
+
+// Read external values from slots
+const slots = createArraySlotReader(
+  new Map([
+    [0, 42],    // slot 0 = 42
+    [1, 3.14],  // slot 1 = 3.14
+  ])
+);
+
+const env = createSigEnv({
+  tAbsMs: 0,
+  constPool: createConstPool([]),
+  cache,
+  slotValues: slots,
+});
+
+const nodes: SignalExprIR[] = [
+  { kind: "inputSlot", type: { world: "signal", domain: "number" }, slot: 0 }, // 0: slot[0]
+  { kind: "inputSlot", type: { world: "signal", domain: "number" }, slot: 1 }, // 1: slot[1]
+  {
+    kind: "zip",
+    type: { world: "signal", domain: "number" },
+    a: 0,
+    b: 1,
+    fn: { kind: "opcode", opcode: OpCode.Add },
+  }, // 2: slot[0] + slot[1]
+];
+
+const result = evalSig(2, env, nodes); // 45.14
+```
+
+**Missing slots return NaN**: If a slot is not connected, `readNumber()` returns `NaN`. This allows detection of unconnected inputs and propagates through downstream calculations.
+
+```typescript
+const emptySlots = createArraySlotReader(new Map()); // No slots
+const env = createSigEnv({ tAbsMs: 0, constPool, cache, slotValues: emptySlots });
+
+const nodes: SignalExprIR[] = [
+  { kind: "inputSlot", type: { world: "signal", domain: "number" }, slot: 99 }, // Missing slot
+];
+
+const result = evalSig(0, env, nodes); // NaN
+```
+
 ## Cache Behavior
 
 The cache uses a stamp-based invalidation strategy:
@@ -113,22 +212,26 @@ stamp[sigId] = frameId;
 - **Cache miss**: O(1) + recursive evaluation of dependencies
 - **DAG evaluation**: O(N) where N = number of nodes (each evaluated at most once per frame)
 - **Memory**: O(N) for node storage + O(N) for cache
+- **Short-circuit**: Only taken branch evaluated (performance + safety)
 
 **No allocations in hot path** - all data structures are pre-allocated typed arrays.
 
-## Supported Node Kinds (Sprint 1)
+## Supported Node Kinds
 
-### Current Sprint
+### Implemented (Sprint 1 & 2)
 
 - **const**: Read from const pool
 - **timeAbsMs**: Absolute player time (milliseconds)
 - **map**: Apply unary function (sin, cos, abs, floor, etc.)
 - **zip**: Apply binary function (add, sub, mul, div, min, max, etc.)
+- **select**: Conditional branching with short-circuit semantics (Sprint 2)
+- **inputSlot**: Reference external values from slots (Sprint 2)
 
 ### Future Sprints
 
-- **select**: Conditional branching (Sprint 2)
-- **inputSlot**: Reference external values (Sprint 2)
+- **timeModelMs**: Model time after transformation (Sprint 3)
+- **phase01**: Phase 0..1 for cyclic time models (Sprint 3)
+- **wrapEvent**: Wrap event trigger for cyclic time (Sprint 3)
 - **busCombine**: Aggregate bus publishers (Sprint 3)
 - **transform**: Adapter/lens chains (Sprint 4)
 - **stateful**: integrate, delay, sampleHold (Sprint 5)
@@ -178,7 +281,7 @@ The evaluator throws clear errors for:
 - **Invalid sigId**: `"Invalid sigId: 99 (nodes length: 10)"`
 - **Out-of-bounds constId**: `"Invalid constId: 5 (pool has 3 numbers)"`
 - **Unknown node kind**: `"Unknown signal node kind: foo"`
-- **Unsupported node kind**: `"Signal node kind 'select' not yet implemented (future sprint)"`
+- **Unsupported node kind**: `"Signal node kind 'busCombine' not yet implemented (future sprint)"`
 
 All errors are synchronous and should be caught at the caller site.
 
@@ -196,12 +299,13 @@ Runtime values
 
 **Current status**:
 - IR types: ✅ Defined in `src/editor/compiler/ir/signalExpr.ts`
-- Runtime: ✅ Sprint 1 complete (this implementation)
+- Runtime: ✅ Sprint 1 & 2 complete (core evaluator + select/inputSlot)
 - Compiler: ⏳ Sprint 6+ (block migration to IR emission)
 
 ## References
 
-- **Planning**: `.agent_planning/signalexpr-runtime/PLAN-20251225-190000.md`
+- **Sprint 1 Plan**: `.agent_planning/signalexpr-runtime/PLAN-20251225-190000.md`
+- **Sprint 2 Plan**: `.agent_planning/signalexpr-runtime/SPRINT-02-select-inputSlot.md`
 - **Definition of Done**: `.agent_planning/signalexpr-runtime/DOD-20251225-190000.md`
 - **IR Schema**: `design-docs/12-Compiler-Final/02-IR-Schema.md`
 - **SignalExpr Spec**: `design-docs/12-Compiler-Final/12-SignalExpr.md`
@@ -215,15 +319,24 @@ pnpm test src/editor/runtime/signal-expr
 
 Coverage target: ≥80% for all evaluator, cache, and opcode files.
 
+**Test coverage (Sprint 2)**:
+- 49 tests passing
+- Cache infrastructure (creation, hits, misses, frame advancement)
+- Node evaluation (const, timeAbsMs, map, zip, select, inputSlot)
+- Cache behavior (memoization, invalidation, shared subexpressions)
+- Short-circuit semantics (verify untaken branches not evaluated)
+- External input resolution (present/missing slots, NaN propagation)
+- DAG composition (nested nodes, diamond dependencies)
+- Error handling (invalid sigId, unknown node kinds)
+
 ## Next Steps
 
-- **Sprint 2**: Add `select` and `inputSlot` nodes
-- **Sprint 3**: Add `busCombine` nodes (bus evaluation)
+- **Sprint 3**: Add `busCombine` nodes (bus evaluation with deterministic ordering)
 - **Sprint 4**: Add `transform` nodes (adapter/lens execution)
 - **Sprint 5**: Add `stateful` nodes (integrate, delay, sampleHold)
 - **Sprint 6+**: Migrate block compilers to emit IR
 
 ---
 
-**Status**: Sprint 1 Complete (Core Evaluator)
+**Status**: Sprint 2 Complete (Select & InputSlot Nodes)
 **Date**: 2025-12-25

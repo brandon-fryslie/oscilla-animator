@@ -5,21 +5,24 @@
  * - Time values (tAbsMs)
  * - Const pool access
  * - Per-frame cache
+ * - Slot values (external inputs)
  *
  * The environment is created once per frame and passed to all signal evaluations.
  *
  * Future sprints will add:
  * - tModelMs, phase01 (time model values)
- * - slotValues (input slot references)
  * - state (stateful operations)
  * - runtimeCtx (player, debug, etc.)
  *
  * References:
  * - .agent_planning/signalexpr-runtime/PLAN-20251225-190000.md §P0 "Implement SigEnv"
  * - .agent_planning/signalexpr-runtime/HANDOFF.md §1 "The Evaluation Environment"
+ * - .agent_planning/signalexpr-runtime/SPRINT-02-select-inputSlot.md §P1 "Extend SigEnv with SlotValues"
  */
 
 import type { SigFrameCache } from "./SigFrameCache";
+import type { SlotValueReader } from "./SlotValueReader";
+import { createEmptySlotReader } from "./SlotValueReader";
 
 /**
  * Const pool - storage for compile-time constant values.
@@ -52,10 +55,12 @@ export interface SigEnv {
   /** Per-frame cache for memoization */
   readonly cache: SigFrameCache;
 
+  /** Slot value reader for external inputs (wired connections, bus subscriptions) */
+  readonly slotValues: SlotValueReader;
+
   // Future expansion:
   // readonly tModelMs: number;
   // readonly phase01: number;
-  // readonly slotValues: ValueStore;
   // readonly state: StateBuffer;
   // readonly runtimeCtx: RuntimeContext;
 }
@@ -67,6 +72,7 @@ export interface CreateSigEnvParams {
   tAbsMs: number;
   constPool: ConstPool;
   cache: SigFrameCache;
+  slotValues?: SlotValueReader; // Optional - defaults to empty reader
 }
 
 /**
@@ -78,10 +84,12 @@ export interface CreateSigEnvParams {
  * @example
  * ```typescript
  * import { createSigFrameCache } from "./SigFrameCache";
+ * import { createArraySlotReader } from "./SlotValueReader";
  *
  * const cache = createSigFrameCache(1024);
  * const constPool = { numbers: [1, 2, 3.14] };
- * const env = createSigEnv({ tAbsMs: 1000, constPool, cache });
+ * const slots = createArraySlotReader(new Map([[0, 42]]));
+ * const env = createSigEnv({ tAbsMs: 1000, constPool, cache, slotValues: slots });
  * console.log(env.tAbsMs); // 1000
  * ```
  */
@@ -90,6 +98,7 @@ export function createSigEnv(params: CreateSigEnvParams): SigEnv {
     tAbsMs: params.tAbsMs,
     constPool: params.constPool,
     cache: params.cache,
+    slotValues: params.slotValues ?? createEmptySlotReader(),
   };
 }
 

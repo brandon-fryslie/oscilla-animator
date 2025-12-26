@@ -7,7 +7,7 @@
  * Algorithm:
  * 1. Check cache: if stamp[sigId] === frameId, return cached value
  * 2. Get node from IR table
- * 3. Evaluate based on node kind (const, timeAbsMs, map, zip, etc.)
+ * 3. Evaluate based on node kind (const, timeAbsMs, map, zip, select, inputSlot, etc.)
  * 4. Write result to cache with current frameId stamp
  * 5. Return result
  *
@@ -19,6 +19,7 @@
  * References:
  * - .agent_planning/signalexpr-runtime/PLAN-20251225-190000.md §P0 "Implement Core Evaluator"
  * - .agent_planning/signalexpr-runtime/HANDOFF.md §1 "Core Evaluation Algorithm"
+ * - .agent_planning/signalexpr-runtime/SPRINT-02-select-inputSlot.md §P0 "Implement Select and InputSlot"
  * - src/editor/compiler/ir/signalExpr.ts (SignalExprIR types)
  */
 
@@ -36,11 +37,11 @@ import { applyPureFn, applyBinaryFn } from "./OpCodeRegistry";
  * - Otherwise, evaluate node based on kind and cache result
  *
  * Recursive evaluation:
- * - Map and zip nodes recursively evaluate their inputs
+ * - Map, zip, and select nodes recursively evaluate their inputs
  * - Shared subexpressions are cached (diamond dependencies evaluated once)
  *
  * @param sigId - Signal expression ID (index into nodes array)
- * @param env - Evaluation environment (time, const pool, cache)
+ * @param env - Evaluation environment (time, const pool, cache, slot values)
  * @param nodes - IR node array
  * @returns Evaluated signal value
  * @throws Error if node kind is unknown or unsupported
@@ -98,12 +99,18 @@ export function evalSig(
       result = evalZip(node, env, nodes);
       break;
 
+    case "select":
+      result = evalSelect(node, env, nodes);
+      break;
+
+    case "inputSlot":
+      result = evalInputSlot(node, env);
+      break;
+
     // Future sprints:
     case "timeModelMs":
     case "phase01":
     case "wrapEvent":
-    case "inputSlot":
-    case "select":
     case "transform":
     case "busCombine":
     case "stateful":
@@ -190,4 +197,89 @@ function evalZip(
   const a = evalSig(node.a, env, nodes);
   const b = evalSig(node.b, env, nodes);
   return applyBinaryFn(node.fn, a, b);
+}
+
+/**
+ * Evaluate a select node: conditional branching with short-circuit semantics.
+ *
+ * Algorithm:
+ * 1. Evaluate condition signal
+ * 2. If cond > 0.5, evaluate and return 't' branch
+ * 3. Otherwise, evaluate and return 'f' branch
+ *
+ * CRITICAL: Short-circuit semantics - only the taken branch is evaluated.
+ * This is essential for:
+ * - Performance (avoid evaluating expensive untaken branches)
+ * - Safety (e.g., select(x > 0, 1/x, 0) avoids div-by-zero)
+ *
+ * Boolean threshold: cond > 0.5 = true, cond <= 0.5 = false
+ *
+ * @param node - Select node from IR
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns Result from taken branch (t or f)
+ *
+ * @example
+ * ```typescript
+ * // select(1.0, 100, 200) → 100 (true branch)
+ * const nodes: SignalExprIR[] = [
+ *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 0: cond = 1.0
+ *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 1 }, // 1: t = 100
+ *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 2 }, // 2: f = 200
+ *   { kind: "select", type: { world: "signal", domain: "number" }, cond: 0, t: 1, f: 2 }
+ * ];
+ * // evalSig(3, env, nodes) → 100
+ * ```
+ */
+function evalSelect(
+  node: Extract<SignalExprIR, { kind: "select" }>,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  const cond = evalSig(node.cond, env, nodes);
+
+  // Short-circuit: only evaluate taken branch
+  if (cond > 0.5) {
+    return evalSig(node.t, env, nodes);
+  } else {
+    return evalSig(node.f, env, nodes);
+  }
+}
+
+/**
+ * Evaluate an inputSlot node: read external input value.
+ *
+ * Algorithm:
+ * 1. Read value from slot using env.slotValues
+ * 2. Return value (or NaN if slot is empty)
+ *
+ * InputSlot nodes reference external values from:
+ * - Wired connections (another node's output)
+ * - Bus subscriptions (aggregated bus values)
+ *
+ * Missing slots return NaN, which:
+ * - Allows detection of unconnected inputs
+ * - Propagates through downstream calculations
+ * - Is distinguishable from 0 or other valid values
+ *
+ * @param node - InputSlot node from IR
+ * @param env - Evaluation environment
+ * @returns Slot value, or NaN if slot is empty
+ *
+ * @example
+ * ```typescript
+ * // Read slot 0 (which contains 42)
+ * const slots = createArraySlotReader(new Map([[0, 42]]));
+ * const env = createSigEnv({ tAbsMs: 0, constPool: { numbers: [] }, cache, slotValues: slots });
+ * const nodes: SignalExprIR[] = [
+ *   { kind: "inputSlot", type: { world: "signal", domain: "number" }, slot: 0 }
+ * ];
+ * // evalSig(0, env, nodes) → 42
+ * ```
+ */
+function evalInputSlot(
+  node: Extract<SignalExprIR, { kind: "inputSlot" }>,
+  env: SigEnv
+): number {
+  return env.slotValues.readNumber(node.slot);
 }

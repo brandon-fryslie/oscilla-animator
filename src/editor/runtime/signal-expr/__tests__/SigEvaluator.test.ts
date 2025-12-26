@@ -2,11 +2,13 @@
  * Signal Evaluator Test Suite
  *
  * Comprehensive tests for the SignalExpr evaluator.
- * Covers: cache behavior, node evaluation, DAG composition, shared subexpressions.
+ * Covers: cache behavior, node evaluation, DAG composition, shared subexpressions,
+ * conditional evaluation (select), external inputs (inputSlot).
  *
  * References:
  * - .agent_planning/signalexpr-runtime/PLAN-20251225-190000.md §P1 "Create Test Suite"
  * - .agent_planning/signalexpr-runtime/DOD-20251225-190000.md §P1 "Create Test Suite for Core Evaluator"
+ * - .agent_planning/signalexpr-runtime/SPRINT-02-select-inputSlot.md §P1 "Test Suite for Select and InputSlot"
  */
 
 import { describe, it, expect } from "vitest";
@@ -18,6 +20,10 @@ import {
   type SigEnv,
   type ConstPool,
 } from "../SigEnv";
+import {
+  createArraySlotReader,
+  createEmptySlotReader,
+} from "../SlotValueReader";
 import type { SignalExprIR } from "../../../compiler/ir/signalExpr";
 import type { SigFrameCache } from "../SigFrameCache";
 import { OpCode } from "../../../compiler/ir/opcodes";
@@ -93,11 +99,23 @@ describe("SigEnv", () => {
   it("creates environment with correct fields", () => {
     const cache = createSigFrameCache(10);
     const constPool = createConstPool([1, 2, 3]);
-    const env = createSigEnv({ tAbsMs: 1000, constPool, cache });
+    const slots = createEmptySlotReader();
+    const env = createSigEnv({ tAbsMs: 1000, constPool, cache, slotValues: slots });
 
     expect(env.tAbsMs).toBe(1000);
     expect(env.constPool).toBe(constPool);
     expect(env.cache).toBe(cache);
+    expect(env.slotValues).toBe(slots);
+  });
+
+  it("creates environment with default empty slot reader", () => {
+    const cache = createSigFrameCache(10);
+    const constPool = createConstPool([1, 2, 3]);
+    const env = createSigEnv({ tAbsMs: 1000, constPool, cache });
+
+    // Should have a slot reader (default empty one)
+    expect(env.slotValues).toBeDefined();
+    expect(env.slotValues.readNumber(0)).toBeNaN();
   });
 
   it("reads constants from pool", () => {
@@ -468,6 +486,322 @@ describe("evalSig - zip nodes", () => {
 });
 
 // =============================================================================
+// Select Node Tests
+// =============================================================================
+
+describe("evalSig - select nodes", () => {
+  it("evaluates true branch when cond > 0.5", () => {
+    const constPool = createConstPool([1.0, 100, 200]);
+    const env = createTestEnv({ constPool });
+    const nodes: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0: cond = 1.0
+      { kind: "const", type: numberType, constId: 1 }, // 1: t = 100
+      { kind: "const", type: numberType, constId: 2 }, // 2: f = 200
+      { kind: "select", type: numberType, cond: 0, t: 1, f: 2 }, // 3: select
+    ];
+
+    expect(evalSig(3, env, nodes)).toBe(100);
+  });
+
+  it("evaluates false branch when cond <= 0.5", () => {
+    const constPool = createConstPool([0.0, 100, 200]);
+    const env = createTestEnv({ constPool });
+    const nodes: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0: cond = 0.0
+      { kind: "const", type: numberType, constId: 1 }, // 1: t = 100
+      { kind: "const", type: numberType, constId: 2 }, // 2: f = 200
+      { kind: "select", type: numberType, cond: 0, t: 1, f: 2 },
+    ];
+
+    expect(evalSig(3, env, nodes)).toBe(200);
+  });
+
+  it("uses 0.5 as threshold (0.5 is false)", () => {
+    const constPool = createConstPool([0.5, 100, 200]);
+    const env = createTestEnv({ constPool });
+    const nodes: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0: cond = 0.5
+      { kind: "const", type: numberType, constId: 1 }, // 1: t = 100
+      { kind: "const", type: numberType, constId: 2 }, // 2: f = 200
+      { kind: "select", type: numberType, cond: 0, t: 1, f: 2 },
+    ];
+
+    expect(evalSig(3, env, nodes)).toBe(200); // 0.5 is false
+  });
+
+  it("uses 0.5 as threshold (0.50001 is true)", () => {
+    const constPool = createConstPool([0.50001, 100, 200]);
+    const env = createTestEnv({ constPool });
+    const nodes: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0: cond = 0.50001
+      { kind: "const", type: numberType, constId: 1 }, // 1: t = 100
+      { kind: "const", type: numberType, constId: 2 }, // 2: f = 200
+      { kind: "select", type: numberType, cond: 0, t: 1, f: 2 },
+    ];
+
+    expect(evalSig(3, env, nodes)).toBe(100); // 0.50001 is true
+  });
+
+  it("evaluates condition based on signal", () => {
+    const constPool = createConstPool([0.001, 100, 200]);
+    const env = createTestEnv({ tAbsMs: 1000, constPool });
+
+    // cond = t * 0.001 = 1000 * 0.001 = 1.0 (true)
+    const nodes: SignalExprIR[] = [
+      { kind: "timeAbsMs", type: timeType }, // 0: t = 1000
+      { kind: "const", type: numberType, constId: 0 }, // 1: 0.001
+      {
+        kind: "zip",
+        type: numberType,
+        a: 0,
+        b: 1,
+        fn: { kind: "opcode", opcode: OpCode.Mul },
+      }, // 2: cond = 1.0
+      { kind: "const", type: numberType, constId: 1 }, // 3: t = 100
+      { kind: "const", type: numberType, constId: 2 }, // 4: f = 200
+      { kind: "select", type: numberType, cond: 2, t: 3, f: 4 }, // 5: select
+    ];
+
+    expect(evalSig(5, env, nodes)).toBe(100);
+  });
+
+  it("short-circuits evaluation (true branch)", () => {
+    const cache = createSigFrameCache(10);
+    const constPool = createConstPool([1.0, 100, 200]);
+    const env = createTestEnv({ constPool, cache });
+
+    const nodes: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0: cond = 1.0 (true)
+      { kind: "const", type: numberType, constId: 1 }, // 1: t = 100
+      { kind: "const", type: numberType, constId: 2 }, // 2: f = 200
+      { kind: "select", type: numberType, cond: 0, t: 1, f: 2 }, // 3: select
+    ];
+
+    evalSig(3, env, nodes);
+
+    // Verify condition was evaluated
+    expect(cache.stamp[0]).toBe(cache.frameId);
+
+    // Verify true branch was evaluated
+    expect(cache.stamp[1]).toBe(cache.frameId);
+
+    // Verify false branch was NOT evaluated (short-circuit)
+    expect(cache.stamp[2]).not.toBe(cache.frameId);
+  });
+
+  it("short-circuits evaluation (false branch)", () => {
+    const cache = createSigFrameCache(10);
+    const constPool = createConstPool([0.0, 100, 200]);
+    const env = createTestEnv({ constPool, cache });
+
+    const nodes: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0: cond = 0.0 (false)
+      { kind: "const", type: numberType, constId: 1 }, // 1: t = 100
+      { kind: "const", type: numberType, constId: 2 }, // 2: f = 200
+      { kind: "select", type: numberType, cond: 0, t: 1, f: 2 }, // 3: select
+    ];
+
+    evalSig(3, env, nodes);
+
+    // Verify condition was evaluated
+    expect(cache.stamp[0]).toBe(cache.frameId);
+
+    // Verify true branch was NOT evaluated (short-circuit)
+    expect(cache.stamp[1]).not.toBe(cache.frameId);
+
+    // Verify false branch was evaluated
+    expect(cache.stamp[2]).toBe(cache.frameId);
+  });
+
+  it("caches select node results", () => {
+    const cache = createSigFrameCache(10);
+    const constPool = createConstPool([1.0, 100, 200]);
+    const env = createTestEnv({ constPool, cache });
+
+    const nodes: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 },
+      { kind: "const", type: numberType, constId: 1 },
+      { kind: "const", type: numberType, constId: 2 },
+      { kind: "select", type: numberType, cond: 0, t: 1, f: 2 },
+    ];
+
+    // First evaluation
+    const result1 = evalSig(3, env, nodes);
+    expect(result1).toBe(100);
+
+    // Verify cache
+    expect(cache.stamp[3]).toBe(cache.frameId);
+    expect(cache.value[3]).toBe(100);
+
+    // Second evaluation - should hit cache
+    const result2 = evalSig(3, env, nodes);
+    expect(result2).toBe(100);
+  });
+
+  it("supports nested select nodes", () => {
+    const constPool = createConstPool([1.0, 0.0, 100, 200, 300]);
+    const env = createTestEnv({ constPool });
+
+    // Outer select: cond=1.0 (true), so evaluate t branch
+    // Inner select (t branch): cond=0.0 (false), so evaluate f branch = 200
+    const nodes: SignalExprIR[] = [
+      { kind: "const", type: numberType, constId: 0 }, // 0: outer cond = 1.0
+      { kind: "const", type: numberType, constId: 1 }, // 1: inner cond = 0.0
+      { kind: "const", type: numberType, constId: 2 }, // 2: 100
+      { kind: "const", type: numberType, constId: 3 }, // 3: 200
+      { kind: "select", type: numberType, cond: 1, t: 2, f: 3 }, // 4: inner select = 200
+      { kind: "const", type: numberType, constId: 4 }, // 5: 300
+      { kind: "select", type: numberType, cond: 0, t: 4, f: 5 }, // 6: outer select = 200
+    ];
+
+    expect(evalSig(6, env, nodes)).toBe(200);
+  });
+});
+
+// =============================================================================
+// InputSlot Node Tests
+// =============================================================================
+
+describe("evalSig - inputSlot nodes", () => {
+  it("reads slot value", () => {
+    const slots = createArraySlotReader(new Map([[0, 42]]));
+    const cache = createSigFrameCache(10);
+    const env = createSigEnv({
+      tAbsMs: 0,
+      constPool: createConstPool([]),
+      cache,
+      slotValues: slots,
+    });
+
+    const nodes: SignalExprIR[] = [
+      { kind: "inputSlot", type: numberType, slot: 0 },
+    ];
+
+    expect(evalSig(0, env, nodes)).toBe(42);
+  });
+
+  it("returns NaN for missing slot", () => {
+    const slots = createArraySlotReader(new Map()); // Empty
+    const cache = createSigFrameCache(10);
+    const env = createSigEnv({
+      tAbsMs: 0,
+      constPool: createConstPool([]),
+      cache,
+      slotValues: slots,
+    });
+
+    const nodes: SignalExprIR[] = [
+      { kind: "inputSlot", type: numberType, slot: 99 },
+    ];
+
+    expect(evalSig(0, env, nodes)).toBeNaN();
+  });
+
+  it("reads multiple different slots", () => {
+    const slots = createArraySlotReader(
+      new Map([
+        [0, 10],
+        [1, 20],
+        [5, 50],
+      ])
+    );
+    const cache = createSigFrameCache(10);
+    const env = createSigEnv({
+      tAbsMs: 0,
+      constPool: createConstPool([]),
+      cache,
+      slotValues: slots,
+    });
+
+    const nodes: SignalExprIR[] = [
+      { kind: "inputSlot", type: numberType, slot: 0 },
+      { kind: "inputSlot", type: numberType, slot: 1 },
+      { kind: "inputSlot", type: numberType, slot: 5 },
+    ];
+
+    expect(evalSig(0, env, nodes)).toBe(10);
+    expect(evalSig(1, env, nodes)).toBe(20);
+    expect(evalSig(2, env, nodes)).toBe(50);
+  });
+
+  it("caches inputSlot results", () => {
+    const slots = createArraySlotReader(new Map([[0, 42]]));
+    const cache = createSigFrameCache(10);
+    const env = createSigEnv({
+      tAbsMs: 0,
+      constPool: createConstPool([]),
+      cache,
+      slotValues: slots,
+    });
+
+    const nodes: SignalExprIR[] = [
+      { kind: "inputSlot", type: numberType, slot: 0 },
+    ];
+
+    // First evaluation
+    const result1 = evalSig(0, env, nodes);
+    expect(result1).toBe(42);
+
+    // Verify cache
+    expect(cache.stamp[0]).toBe(cache.frameId);
+    expect(cache.value[0]).toBe(42);
+
+    // Second evaluation - should hit cache
+    const result2 = evalSig(0, env, nodes);
+    expect(result2).toBe(42);
+  });
+
+  it("integrates with zip nodes", () => {
+    const slots = createArraySlotReader(new Map([[0, 10]]));
+    const constPool = createConstPool([5]);
+    const cache = createSigFrameCache(10);
+    const env = createSigEnv({
+      tAbsMs: 0,
+      constPool,
+      cache,
+      slotValues: slots,
+    });
+
+    // slot[0] + 5 = 10 + 5 = 15
+    const nodes: SignalExprIR[] = [
+      { kind: "inputSlot", type: numberType, slot: 0 }, // 0: 10
+      { kind: "const", type: numberType, constId: 0 }, // 1: 5
+      {
+        kind: "zip",
+        type: numberType,
+        a: 0,
+        b: 1,
+        fn: { kind: "opcode", opcode: OpCode.Add },
+      }, // 2: 15
+    ];
+
+    expect(evalSig(2, env, nodes)).toBe(15);
+  });
+
+  it("integrates with select nodes", () => {
+    const slots = createArraySlotReader(new Map([[0, 1.0]]));
+    const constPool = createConstPool([100, 200]);
+    const cache = createSigFrameCache(10);
+    const env = createSigEnv({
+      tAbsMs: 0,
+      constPool,
+      cache,
+      slotValues: slots,
+    });
+
+    // select(slot[0], 100, 200) where slot[0] = 1.0 (true)
+    const nodes: SignalExprIR[] = [
+      { kind: "inputSlot", type: numberType, slot: 0 }, // 0: cond = 1.0
+      { kind: "const", type: numberType, constId: 0 }, // 1: t = 100
+      { kind: "const", type: numberType, constId: 1 }, // 2: f = 200
+      { kind: "select", type: numberType, cond: 0, t: 1, f: 2 }, // 3: select = 100
+    ];
+
+    expect(evalSig(3, env, nodes)).toBe(100);
+  });
+});
+
+// =============================================================================
 // DAG Evaluation Tests
 // =============================================================================
 
@@ -653,7 +987,7 @@ describe("evalSig - error handling", () => {
   it("throws error for unsupported node kind (future sprint)", () => {
     const env = createTestEnv();
     const nodes: SignalExprIR[] = [
-      { kind: "select", type: numberType, cond: 0, t: 0, f: 0 },
+      { kind: "stateful", type: numberType, op: "integrate", stateId: "s0" },
     ];
 
     expect(() => evalSig(0, env, nodes)).toThrow("not yet implemented");
