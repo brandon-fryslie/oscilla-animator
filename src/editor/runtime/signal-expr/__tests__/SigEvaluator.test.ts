@@ -28,6 +28,9 @@ import {
 import type { SignalExprIR } from "../../../compiler/ir/signalExpr";
 import type { SigFrameCache } from "../SigFrameCache";
 import type { DebugSink, BusCombineTraceInfo } from "../DebugSink";
+import type { TransformTraceInfo } from "../DebugSink";
+import type { TransformChainIR } from "../../../compiler/ir/transforms";
+import type { TransformTable } from "../../../compiler/ir/transforms";
 import type { SigCombineSpec } from "../../../compiler/ir/signalExpr";
 import { OpCode } from "../../../compiler/ir/opcodes";
 import type { TypeDesc } from "../../../compiler/ir/types";
@@ -42,6 +45,7 @@ interface CreateTestEnvOptions {
   consts?: number[];
   constPool?: ConstPool;
   cache?: SigFrameCache;
+  transformTable?: TransformTable;
   debug?: DebugSink;
 }
 
@@ -51,9 +55,11 @@ function createTestEnv(params?: CreateTestEnvOptions): SigEnv {
     tAbsMs: params?.tAbsMs ?? 0,
     constPool,
     cache: params?.cache ?? createSigFrameCache(1024),
+    transformTable: params?.transformTable,
     debug: params?.debug,
   });
 }
+
 
 // =============================================================================
 // Cache Infrastructure Tests
@@ -1646,5 +1652,625 @@ describe("evalSig - error handling", () => {
     ];
 
     expect(() => evalSig(0, env, nodes)).toThrow("not yet implemented");
+  });
+});
+
+// =============================================================================
+// Transform Node Tests (Sprint 4)
+// =============================================================================
+
+describe("evalSig - transform nodes", () => {
+  describe("empty chain", () => {
+    it("returns source unchanged", () => {
+      const chain: TransformChainIR = {
+        steps: [],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 42
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [42],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBe(42);
+    });
+  });
+
+  describe("scaleBias step", () => {
+    it("applies scale and bias", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "scaleBias", scale: 2, bias: 10 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [5],
+        transformTable: { chains: [chain] },
+      });
+
+      // 5 * 2 + 10 = 20
+      expect(evalSig(1, env, nodes)).toBe(20);
+    });
+
+    it("applies scale only (bias = 0)", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "scaleBias", scale: 3, bias: 0 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 10
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [10],
+        transformTable: { chains: [chain] },
+      });
+
+      // 10 * 3 + 0 = 30
+      expect(evalSig(1, env, nodes)).toBe(30);
+    });
+
+    it("applies bias only (scale = 1)", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "scaleBias", scale: 1, bias: 5 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 10
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [10],
+        transformTable: { chains: [chain] },
+      });
+
+      // 10 * 1 + 5 = 15
+      expect(evalSig(1, env, nodes)).toBe(15);
+    });
+
+    it("applies negative scale", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "scaleBias", scale: -1, bias: 0 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 10
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [10],
+        transformTable: { chains: [chain] },
+      });
+
+      // 10 * -1 + 0 = -10
+      expect(evalSig(1, env, nodes)).toBe(-10);
+    });
+  });
+
+  describe("normalize step", () => {
+    it("clamps to 0..1 (value above)", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "normalize", mode: "0..1" }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 1.5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [1.5],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBe(1);
+    });
+
+    it("clamps to 0..1 (value below)", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "normalize", mode: "0..1" }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // -0.5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [-0.5],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBe(0);
+    });
+
+    it("passes through value in 0..1 range", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "normalize", mode: "0..1" }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 0.5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [0.5],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBe(0.5);
+    });
+
+    it("clamps to -1..1 (value above)", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "normalize", mode: "-1..1" }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 2
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [2],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBe(1);
+    });
+
+    it("clamps to -1..1 (value below)", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "normalize", mode: "-1..1" }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // -2
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [-2],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBe(-1);
+    });
+
+    it("passes through value in -1..1 range", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "normalize", mode: "-1..1" }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 0.5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [0.5],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBe(0.5);
+    });
+  });
+
+  describe("quantize step", () => {
+    it("rounds to nearest step", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "quantize", step: 0.25 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 0.3
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [0.3],
+        transformTable: { chains: [chain] },
+      });
+
+      // 0.3 rounds to 0.25
+      expect(evalSig(1, env, nodes)).toBeCloseTo(0.25, 5);
+    });
+
+    it("rounds up to nearest step", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "quantize", step: 0.25 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 0.4
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [0.4],
+        transformTable: { chains: [chain] },
+      });
+
+      // 0.4 rounds to 0.5
+      expect(evalSig(1, env, nodes)).toBeCloseTo(0.5, 5);
+    });
+
+    it("quantizes to integer step", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "quantize", step: 5 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 7
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [7],
+        transformTable: { chains: [chain] },
+      });
+
+      // 7 rounds to 5
+      expect(evalSig(1, env, nodes)).toBe(5);
+    });
+  });
+
+  describe("ease step", () => {
+    it("applies linear curve (id 0)", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "ease", curveId: 0 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 0.5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [0.5],
+        transformTable: { chains: [chain] },
+      });
+
+      // linear(0.5) = 0.5
+      expect(evalSig(1, env, nodes)).toBe(0.5);
+    });
+
+    it("applies easeInQuad curve (id 1)", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "ease", curveId: 1 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 0.5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [0.5],
+        transformTable: { chains: [chain] },
+      });
+
+      // easeInQuad(0.5) = 0.5^2 = 0.25
+      expect(evalSig(1, env, nodes)).toBe(0.25);
+    });
+
+    it("applies smoothstep curve (id 6)", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "ease", curveId: 6 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 0.5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [0.5],
+        transformTable: { chains: [chain] },
+      });
+
+      // smoothstep(0.5) = 0.5^2 * (3 - 2*0.5) = 0.25 * 2 = 0.5
+      expect(evalSig(1, env, nodes)).toBe(0.5);
+    });
+
+    it("clamps input to [0,1] before applying curve", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "ease", curveId: 1 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 1.5 (out of range)
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [1.5],
+        transformTable: { chains: [chain] },
+      });
+
+      // easeInQuad(clamp(1.5, 0, 1)) = easeInQuad(1) = 1
+      expect(evalSig(1, env, nodes)).toBe(1);
+    });
+
+    it("throws error for invalid curve ID", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "ease", curveId: 999 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 },
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [0.5],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(() => evalSig(1, env, nodes)).toThrow("Invalid easing curve ID");
+    });
+  });
+
+  describe("map step", () => {
+    it("applies abs function", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "map", fn: { kind: "opcode", opcode: OpCode.Abs } }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // -5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [-5],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBe(5);
+    });
+
+    it("applies sin function", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "map", fn: { kind: "opcode", opcode: OpCode.Sin } }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // Math.PI / 2
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [Math.PI / 2],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBeCloseTo(1, 5);
+    });
+  });
+
+  describe("chained steps", () => {
+    it("applies steps in order (scaleBias + scaleBias)", () => {
+      const chain: TransformChainIR = {
+        steps: [
+          { kind: "scaleBias", scale: 2, bias: 0 },  // 5 * 2 = 10
+          { kind: "scaleBias", scale: 1, bias: 5 },  // 10 + 5 = 15
+        ],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [5],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBe(15);
+    });
+
+    it("applies steps in order (scaleBias + normalize)", () => {
+      const chain: TransformChainIR = {
+        steps: [
+          { kind: "scaleBias", scale: 2, bias: 0 },  // 1.5 * 2 = 3
+          { kind: "normalize", mode: "0..1" },       // clamp(3, 0, 1) = 1
+        ],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 1.5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [1.5],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBe(1);
+    });
+
+    it("applies complex chain (scaleBias + quantize + ease)", () => {
+      const chain: TransformChainIR = {
+        steps: [
+          { kind: "scaleBias", scale: 0.1, bias: 0 },  // 5 * 0.1 = 0.5
+          { kind: "quantize", step: 0.25 },            // round(0.5 / 0.25) * 0.25 = 0.5
+          { kind: "ease", curveId: 1 },                // easeInQuad(0.5) = 0.25
+        ],
+        fromType: numberType,
+        toType: numberType,
+        cost: "normal",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 }, // 5
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [5],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(evalSig(1, env, nodes)).toBeCloseTo(0.25, 5);
+    });
+  });
+
+  describe("slew step", () => {
+    it("throws not implemented error", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "slew", stateOffset: 0, rate: 1.0 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "normal",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 },
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [0],
+        transformTable: { chains: [chain] },
+      });
+
+      expect(() => evalSig(1, env, nodes)).toThrow("StateBuffer");
+    });
+  });
+
+  describe("caching", () => {
+    it("caches transform result", () => {
+      const cache = createSigFrameCache(10);
+      const chain: TransformChainIR = {
+        steps: [{ kind: "scaleBias", scale: 2, bias: 10 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 },
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [5],
+        cache,
+        transformTable: { chains: [chain] },
+      });
+
+      evalSig(1, env, nodes);
+      expect(cache.stamp[1]).toBe(cache.frameId);
+      expect(cache.value[1]).toBe(20);
+    });
+  });
+
+  describe("error handling", () => {
+    it("throws error for invalid chain ID", () => {
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 },
+        { kind: "transform", type: numberType, src: 0, chain: 999 },
+      ];
+      const env = createTestEnv({
+        consts: [5],
+        transformTable: { chains: [] },
+      });
+
+      expect(() => evalSig(1, env, nodes)).toThrow("Invalid transform chain ID");
+    });
+  });
+
+  describe("debug tracing", () => {
+    it("calls debug sink when enabled", () => {
+      const traceInfo: TransformTraceInfo[] = [];
+      const debug: DebugSink = {
+        traceTransform: (info) => traceInfo.push(info),
+      };
+
+      const chain: TransformChainIR = {
+        steps: [
+          { kind: "scaleBias", scale: 2, bias: 0 },
+          { kind: "scaleBias", scale: 1, bias: 5 },
+        ],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 },
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [5],
+        transformTable: { chains: [chain] },
+        debug,
+      });
+
+      evalSig(1, env, nodes);
+
+      expect(traceInfo).toHaveLength(1);
+      expect(traceInfo[0].srcValue).toBe(5);
+      expect(traceInfo[0].chainId).toBe(0);
+      expect(traceInfo[0].finalValue).toBe(15);
+      expect(traceInfo[0].steps).toHaveLength(2);
+      expect(traceInfo[0].steps[0].kind).toBe("scaleBias");
+      expect(traceInfo[0].steps[0].inputValue).toBe(5);
+      expect(traceInfo[0].steps[0].outputValue).toBe(10);
+      expect(traceInfo[0].steps[1].kind).toBe("scaleBias");
+      expect(traceInfo[0].steps[1].inputValue).toBe(10);
+      expect(traceInfo[0].steps[1].outputValue).toBe(15);
+    });
+
+    it("does not call debug sink when disabled", () => {
+      const chain: TransformChainIR = {
+        steps: [{ kind: "scaleBias", scale: 2, bias: 0 }],
+        fromType: numberType,
+        toType: numberType,
+        cost: "cheap",
+      };
+      const nodes: SignalExprIR[] = [
+        { kind: "const", type: numberType, constId: 0 },
+        { kind: "transform", type: numberType, src: 0, chain: 0 },
+      ];
+      const env = createTestEnv({
+        consts: [5],
+        transformTable: { chains: [chain] },
+      });
+
+      // Should not throw
+      expect(() => evalSig(1, env, nodes)).not.toThrow();
+    });
   });
 });

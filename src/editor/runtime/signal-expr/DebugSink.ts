@@ -13,9 +13,10 @@
  *
  * References:
  * - .agent_planning/signalexpr-runtime/SPRINT-03-busCombine.md §P1 "Add Optional Debug Tracing"
+ * - .agent_planning/signalexpr-runtime/SPRINT-04-transform.md §P2 "Add Debug Tracing for Transforms"
  */
 
-import type { SigExprId } from "../../compiler/ir/types";
+import type { SigExprId, TransformChainId } from "../../compiler/ir/types";
 import type { SigCombineMode } from "../../compiler/ir/signalExpr";
 
 /**
@@ -43,11 +44,20 @@ export interface DebugSink {
    */
   traceBusCombine?(info: BusCombineTraceInfo): void;
 
+  /**
+   * Trace transform chain application.
+   *
+   * Called after successfully applying a transform chain.
+   * Includes source value, each step's input/output, and final value.
+   *
+   * @param info - Transform trace information
+   */
+  traceTransform?(info: TransformTraceInfo): void;
+
   // Future tracing methods:
   // traceMap?(info: MapTraceInfo): void;
   // traceZip?(info: ZipTraceInfo): void;
   // traceSelect?(info: SelectTraceInfo): void;
-  // traceTransform?(info: TransformTraceInfo): void;
 }
 
 /**
@@ -74,4 +84,41 @@ export interface BusCombineTraceInfo {
 
   /** Final combined result */
   result: number;
+}
+
+/**
+ * Transform trace information.
+ *
+ * Contains all information about a transform chain evaluation:
+ * - Source value before transform
+ * - Transform chain ID
+ * - Each step's kind, input, and output
+ * - Final transformed value
+ */
+export interface TransformTraceInfo {
+  /** Source value before transform */
+  srcValue: number;
+
+  /** Transform chain ID */
+  chainId: TransformChainId;
+
+  /** Step-by-step trace (each step's input and output) */
+  steps: TransformStepTrace[];
+
+  /** Final transformed value */
+  finalValue: number;
+}
+
+/**
+ * Trace information for a single transform step.
+ */
+export interface TransformStepTrace {
+  /** Step kind (scaleBias, normalize, etc.) */
+  kind: string;
+
+  /** Input value to this step */
+  inputValue: number;
+
+  /** Output value from this step */
+  outputValue: number;
 }

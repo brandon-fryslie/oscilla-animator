@@ -7,6 +7,8 @@
  * - Per-frame cache
  * - Slot values (external inputs)
  * - Debug sink (optional tracing)
+ * - Transform table (Sprint 4)
+ * - Easing curves (Sprint 4)
  *
  * The environment is created once per frame and passed to all signal evaluations.
  *
@@ -20,12 +22,16 @@
  * - .agent_planning/signalexpr-runtime/HANDOFF.md §1 "The Evaluation Environment"
  * - .agent_planning/signalexpr-runtime/SPRINT-02-select-inputSlot.md §P1 "Extend SigEnv with SlotValues"
  * - .agent_planning/signalexpr-runtime/SPRINT-03-busCombine.md §P1 "Extend SigEnv with Debug Sink"
+ * - .agent_planning/signalexpr-runtime/SPRINT-04-transform.md §P0 "Extend SigEnv with Transform Infrastructure"
  */
 
 import type { SigFrameCache } from "./SigFrameCache";
 import type { SlotValueReader } from "./SlotValueReader";
 import type { DebugSink } from "./DebugSink";
+import type { TransformTable } from "../../compiler/ir/transforms";
+import type { EasingCurveTable } from "./EasingCurves";
 import { createEmptySlotReader } from "./SlotValueReader";
+import { createBuiltinCurves } from "./EasingCurves";
 
 /**
  * Const pool - storage for compile-time constant values.
@@ -62,6 +68,22 @@ export interface SigEnv {
   readonly slotValues: SlotValueReader;
 
   /**
+   * Transform table - pre-compiled transform chains.
+   *
+   * Transform nodes reference chains by index for O(1) lookup.
+   * Populated by compiler, immutable at runtime.
+   */
+  readonly transformTable: TransformTable;
+
+  /**
+   * Optional easing curve table.
+   *
+   * If not provided, defaults to built-in curves (linear, easeIn/Out/InOut quad/cubic, smoothstep).
+   * Custom curves can be provided for specialized easing.
+   */
+  readonly easingCurves?: EasingCurveTable;
+
+  /**
    * Optional debug sink for tracing signal evaluation.
    *
    * When defined, allows instrumentation of signal operations for:
@@ -90,6 +112,8 @@ export interface CreateSigEnvParams {
   constPool: ConstPool;
   cache: SigFrameCache;
   slotValues?: SlotValueReader; // Optional - defaults to empty reader
+  transformTable?: TransformTable; // Optional - defaults to empty table
+  easingCurves?: EasingCurveTable; // Optional - defaults to built-in curves
   debug?: DebugSink; // Optional - defaults to undefined (no tracing)
 }
 
@@ -117,6 +141,8 @@ export function createSigEnv(params: CreateSigEnvParams): SigEnv {
     constPool: params.constPool,
     cache: params.cache,
     slotValues: params.slotValues ?? createEmptySlotReader(),
+    transformTable: params.transformTable ?? { chains: [] },
+    easingCurves: params.easingCurves ?? createBuiltinCurves(),
     debug: params.debug,
   };
 }

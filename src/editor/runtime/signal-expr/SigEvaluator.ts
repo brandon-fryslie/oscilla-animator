@@ -7,7 +7,7 @@
  * Algorithm:
  * 1. Check cache: if stamp[sigId] === frameId, return cached value
  * 2. Get node from IR table
- * 3. Evaluate based on node kind (const, timeAbsMs, map, zip, select, inputSlot, busCombine, etc.)
+ * 3. Evaluate based on node kind (const, timeAbsMs, map, zip, select, inputSlot, busCombine, transform, etc.)
  * 4. Write result to cache with current frameId stamp
  * 5. Return result
  *
@@ -21,14 +21,18 @@
  * - .agent_planning/signalexpr-runtime/HANDOFF.md §1 "Core Evaluation Algorithm"
  * - .agent_planning/signalexpr-runtime/SPRINT-02-select-inputSlot.md §P0 "Implement Select and InputSlot"
  * - .agent_planning/signalexpr-runtime/SPRINT-03-busCombine.md §P0 "Implement BusCombine Evaluation"
+ * - .agent_planning/signalexpr-runtime/SPRINT-04-transform.md §P0 "Implement Transform Node Evaluation"
  * - src/editor/compiler/ir/signalExpr.ts (SignalExprIR types)
  */
 
 import type { SignalExprIR, SigCombineMode } from "../../compiler/ir/signalExpr";
 import type { SigExprId } from "../../compiler/ir/types";
+import type { TransformStepIR } from "../../compiler/ir/transforms";
 import type { SigEnv } from "./SigEnv";
+import type { TransformStepTrace } from "./DebugSink";
 import { getConstNumber } from "./SigEnv";
 import { applyPureFn, applyBinaryFn } from "./OpCodeRegistry";
+import { applyEasing } from "./EasingCurves";
 
 /**
  * Evaluate a signal expression node.
@@ -38,7 +42,7 @@ import { applyPureFn, applyBinaryFn } from "./OpCodeRegistry";
  * - Otherwise, evaluate node based on kind and cache result
  *
  * Recursive evaluation:
- * - Map, zip, select, and busCombine nodes recursively evaluate their inputs
+ * - Map, zip, select, busCombine, and transform nodes recursively evaluate their inputs
  * - Shared subexpressions are cached (diamond dependencies evaluated once)
  *
  * @param sigId - Signal expression ID (index into nodes array)
@@ -112,11 +116,14 @@ export function evalSig(
       result = evalBusCombine(node, env, nodes);
       break;
 
+    case "transform":
+      result = evalTransform(node, env, nodes);
+      break;
+
     // Future sprints:
     case "timeModelMs":
     case "phase01":
     case "wrapEvent":
-    case "transform":
     case "stateful":
       throw new Error(
         `Signal node kind '${node.kind}' not yet implemented (future sprint)`
@@ -361,6 +368,178 @@ function evalBusCombine(
   }
 
   return result;
+}
+
+/**
+ * Evaluate a transform node: apply transform chain to source signal.
+ *
+ * Algorithm:
+ * 1. Evaluate source signal
+ * 2. Get transform chain from table
+ * 3. Apply steps in order (pipeline)
+ * 4. Return final transformed value
+ * 5. Optionally trace to debug sink
+ *
+ * CRITICAL:
+ * - Steps apply in pipeline order (each step's output is next step's input)
+ * - Empty chain is valid (returns source unchanged)
+ * - Debug tracing has zero overhead when disabled
+ *
+ * @param node - Transform node from IR
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns Transformed value
+ * @throws Error if chain index is out of bounds
+ *
+ * @example
+ * ```typescript
+ * // scaleBias: 5 * 2 + 10 = 20
+ * const chain: TransformChainIR = {
+ *   steps: [{ kind: "scaleBias", scale: 2, bias: 10 }],
+ *   fromType: { world: "signal", domain: "number" },
+ *   toType: { world: "signal", domain: "number" },
+ *   cost: "cheap"
+ * };
+ * const nodes: SignalExprIR[] = [
+ *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 5
+ *   { kind: "transform", type: { world: "signal", domain: "number" }, src: 0, chain: 0 }
+ * ];
+ * const env = createSigEnv({
+ *   tAbsMs: 0,
+ *   constPool: { numbers: [5] },
+ *   cache: createSigFrameCache(10),
+ *   transformTable: { chains: [chain] }
+ * });
+ * // evalSig(1, env, nodes) → 20
+ * ```
+ */
+function evalTransform(
+  node: Extract<SignalExprIR, { kind: "transform" }>,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  // Evaluate source signal
+  const srcValue = evalSig(node.src, env, nodes);
+
+  // Get transform chain
+  const chain = env.transformTable.chains[node.chain];
+  if (chain === undefined) {
+    throw new Error(
+      `Invalid transform chain ID: ${node.chain} (table has ${env.transformTable.chains.length} chains)`
+    );
+  }
+
+  // Apply steps in order (pipeline)
+  let value = srcValue;
+  const stepTraces: TransformStepTrace[] = [];
+
+  for (const step of chain.steps) {
+    const inputValue = value;
+    value = applyTransformStep(step, value, env);
+
+    // Collect trace if debugging
+    if (env.debug?.traceTransform) {
+      stepTraces.push({
+        kind: step.kind,
+        inputValue,
+        outputValue: value,
+      });
+    }
+  }
+
+  // Optional debug tracing (zero overhead when disabled)
+  if (env.debug?.traceTransform) {
+    env.debug.traceTransform({
+      srcValue,
+      chainId: node.chain,
+      steps: stepTraces,
+      finalValue: value,
+    });
+  }
+
+  return value;
+}
+
+/**
+ * Apply a single transform step to a value.
+ *
+ * Implements all transform step kinds:
+ * - scaleBias: value * scale + bias (linear transform)
+ * - normalize: clamp to 0..1 or -1..1
+ * - quantize: round to nearest step size
+ * - ease: apply easing curve
+ * - map: apply pure function (reuse OpCode)
+ * - slew: PLACEHOLDER - throws error (Sprint 5)
+ * - cast: PLACEHOLDER - throws error (future)
+ *
+ * @param step - Transform step from chain
+ * @param value - Input value
+ * @param env - Evaluation environment (for easing curves)
+ * @returns Transformed value
+ * @throws Error if step kind is unknown or not yet implemented
+ *
+ * @example
+ * ```typescript
+ * const env = createSigEnv({ ... });
+ * console.log(applyTransformStep({ kind: "scaleBias", scale: 2, bias: 10 }, 5, env)); // 20
+ * console.log(applyTransformStep({ kind: "normalize", mode: "0..1" }, 1.5, env)); // 1.0
+ * console.log(applyTransformStep({ kind: "quantize", step: 0.25 }, 0.3, env)); // 0.25
+ * ```
+ */
+function applyTransformStep(
+  step: TransformStepIR,
+  value: number,
+  env: SigEnv
+): number {
+  switch (step.kind) {
+    case "scaleBias":
+      // Linear transform: y = mx + b
+      return value * step.scale + step.bias;
+
+    case "normalize":
+      // Clamp to range
+      if (step.mode === "0..1") {
+        return Math.max(0, Math.min(1, value));
+      } else {
+        // "-1..1"
+        return Math.max(-1, Math.min(1, value));
+      }
+
+    case "quantize":
+      // Round to nearest step
+      return Math.round(value / step.step) * step.step;
+
+    case "ease": {
+      // Apply easing curve (input clamped to [0,1] by applyEasing)
+      const curves = env.easingCurves;
+      if (!curves) {
+        throw new Error("Easing curves not available in environment");
+      }
+      return applyEasing(step.curveId, value, curves);
+    }
+
+    case "map":
+      // Apply pure function (reuse OpCode registry)
+      return applyPureFn(step.fn, value);
+
+    case "slew":
+      // Placeholder - requires StateBuffer (Sprint 5)
+      throw new Error(
+        "Slew step requires StateBuffer (not implemented yet - Sprint 5)"
+      );
+
+    case "cast":
+      // Placeholder - type casts not yet implemented
+      throw new Error(
+        `Cast operation '${step.op}' not yet implemented (future sprint)`
+      );
+
+    default: {
+      // Exhaustiveness check
+      const unknownStep = step as { kind: string };
+      throw new Error(`Unknown transform step kind: ${unknownStep.kind}`);
+    }
+  }
 }
 
 /**
