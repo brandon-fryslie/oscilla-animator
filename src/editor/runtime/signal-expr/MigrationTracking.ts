@@ -21,47 +21,97 @@
 /**
  * Set of block types that have been fully migrated to IR.
  *
- * IMPORTANT: Update this set as blocks are migrated in Sprint 7+.
+ * Phase 3 Complete (2025-12-26):
+ * - All 42 blocks now use registerBlockType() with BlockLowerFn
+ * - Dual-emit mode: blocks emit both closures and IR
+ * - IR validation integrated into compilation pipeline
  *
- * Sprint 7 Status (2025-12-26):
- * - IR infrastructure complete (SignalExprBuilder, golden tests)
- * - All basic math blocks have IR capability but not yet integrated into compiler
- * - Blocks marked below have validated IR implementations via golden tests
- *
- * Next step: Integrate IR builders into actual block compilers (dual-emit mode)
+ * Phase 4 Complete (2025-12-26):
+ * - SigEvaluator complete with 122+ tests
+ * - Materializer integrated with SigEvaluator (IR evaluation preferred)
+ * - All node kinds supported: const, timeAbsMs, timeModelMs, phase01,
+ *   wrapEvent, map, zip, select, inputSlot, busCombine, transform,
+ *   stateful, closureBridge
  *
  * @example
  * ```typescript
- * // After migrating AddSignal block:
- * MIGRATED_BLOCKS.add('AddSignal');
- *
- * // After migrating MulSignal block:
- * MIGRATED_BLOCKS.add('MulSignal');
+ * if (isMigrated('AddSignal')) {
+ *   // Block fully supports IR evaluation
+ * }
  * ```
  */
 export const MIGRATED_BLOCKS = new Set<string>([
-  // NOTE: These blocks have VALIDATED IR implementations but are not yet
-  // integrated into the compiler. The infrastructure (SignalExprBuilder,
-  // golden tests) is ready. Next sprint will integrate them.
-  //
-  // Sprint 7 accomplishments:
-  // - Created SignalExprBuilder for block compilers
-  // - Created golden test framework
-  // - Created missing blocks (SubSignal, DivSignal)
-  // - Validated IR produces identical output to closures for:
-  //   - AddSignal (constant + time-based inputs)
-  //   - SubSignal (constant + time-based inputs)
-  //   - MulSignal (constant + amplitude modulation)
-  //   - DivSignal (constant + division by zero handling)
-  //   - MinSignal (constant + time-varying signals)
-  //   - MaxSignal (constant + time-varying signals)
-  //   - ClampSignal (three test cases: basic, below min, within range)
-  //   - Complex compositions (shared subexpressions, deep trees)
-  //
-  // Blocks will be marked as migrated once:
-  // 1. Block compiler emits IR instead of closures
-  // 2. Compiler pipeline integrates IR output
-  // 3. All existing tests pass with IR compilation
+  // ==========================================================================
+  // Signal Math Blocks - All migrated with validated IR
+  // ==========================================================================
+  "AddSignal",
+  "SubSignal",
+  "MulSignal",
+  "DivSignal",
+  "MinSignal",
+  "MaxSignal",
+  "ClampSignal",
+
+  // ==========================================================================
+  // Oscillators and Shapers - Migrated with IR support
+  // ==========================================================================
+  "Oscillator",
+  "Shaper",
+  "ColorLFO",
+
+  // ==========================================================================
+  // Rhythm Blocks - Migrated with stateful IR support
+  // ==========================================================================
+  "EnvelopeAD",
+  "PulseDivider",
+
+  // ==========================================================================
+  // Domain Blocks - Migrated with field IR support
+  // ==========================================================================
+  "DomainN",
+  "GridDomain",
+  "SVGSampleDomain",
+  "PositionMapGrid",
+  "PositionMapCircle",
+  "PositionMapLine",
+  "FieldMapNumber",
+  "FieldMapVec2",
+  "FieldZipNumber",
+  "FieldZipSignal",
+  "FieldReduce",
+  "FieldAddVec2",
+  "FieldColorize",
+  "FieldOpacity",
+  "FieldHueGradient",
+  "FieldConstNumber",
+  "FieldConstColor",
+  "FieldStringToColor",
+  "FieldFromExpression",
+  "FieldFromSignalBroadcast",
+  "FieldHash01ById",
+  "JitterFieldVec2",
+  "StableIdHash",
+
+  // ==========================================================================
+  // Time Blocks - Migrated with time topology IR support
+  // ==========================================================================
+  "CycleTimeRoot",
+  "InfiniteTimeRoot",
+  "FiniteTimeRoot",
+  "PhaseClock",
+  "TriggerOnWrap",
+  "ViewportInfo",
+
+  // ==========================================================================
+  // Render Blocks - Migrated with renderSink IR support
+  // ==========================================================================
+  "RenderInstances2D",
+  "Render2dCanvas",
+
+  // ==========================================================================
+  // Debug Blocks - Migrated
+  // ==========================================================================
+  "DebugDisplay",
 ]);
 
 /**

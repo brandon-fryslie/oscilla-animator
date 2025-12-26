@@ -24,6 +24,11 @@ import type {
 } from './types';
 import type { SignalBridge } from '../integration/SignalBridge';
 
+// Phase 4 SignalExpr Runtime integration
+import { evalSig as evalSigIR } from '../signal-expr/SigEvaluator';
+import type { SigEnv as IRSigEnv } from '../signal-expr/SigEnv';
+import type { SignalExprIR as IRSignalExprIR } from '../../compiler/ir/signalExpr';
+
 // =============================================================================
 // Materializer Environment
 // =============================================================================
@@ -51,15 +56,35 @@ export interface TransformChains {
 }
 
 /**
- * Signal environment - contains time and signal bridge
+ * Signal environment - contains time and signal evaluation context.
+ *
+ * Supports two evaluation modes:
+ * 1. IR Evaluation (Phase 4): Uses irEnv + irNodes for SignalExpr DAG evaluation
+ * 2. Closure Bridge (legacy): Uses signalBridge for closure-based evaluation
+ *
+ * IR evaluation is preferred when available. signalBridge is for backwards
+ * compatibility during migration.
  */
 export interface SigEnv {
   /** Current frame time in milliseconds */
   time: number;
 
   /**
-   * TEMPORARY: Signal bridge for evaluating signal closures
-   * TODO: Replace with Phase 4 signal IR evaluator when available
+   * Phase 4 SignalExpr IR evaluation environment.
+   * When provided, IR evaluation is used (preferred path).
+   */
+  irEnv?: IRSigEnv;
+
+  /**
+   * Phase 4 SignalExpr IR nodes.
+   * Required when irEnv is provided.
+   */
+  irNodes?: IRSignalExprIR[];
+
+  /**
+   * LEGACY: Signal bridge for evaluating signal closures.
+   * Used when irEnv is not available (backwards compatibility).
+   * Will be deprecated once all blocks are migrated to IR.
    */
   signalBridge?: SignalBridge;
 }
@@ -123,12 +148,15 @@ export interface MaterializerEnv {
 /**
  * Evaluate a signal expression.
  *
- * TEMPORARY: This uses SignalBridge for closure-based signal evaluation.
- * TODO: Replace with Phase 4 signal IR evaluator when available.
+ * Supports two evaluation modes:
+ * 1. Phase 4 IR Evaluation: When env.irEnv and env.irNodes are provided,
+ *    uses the SignalExpr DAG evaluator (preferred path)
+ * 2. Legacy Closure Bridge: When env.signalBridge is provided,
+ *    uses closure-based evaluation (backwards compatibility)
  *
  * @param sigId - Signal expression ID
- * @param env - Signal environment (contains time and bridge)
- * @param _nodes - Signal IR nodes (unused until Phase 4)
+ * @param env - Signal environment (contains IR env or signal bridge)
+ * @param _nodes - Signal IR nodes (legacy parameter, use env.irNodes instead)
  * @returns Signal value at current time
  */
 function evalSig(
@@ -136,12 +164,17 @@ function evalSig(
   env: SigEnv,
   _nodes: SignalExprIR[]
 ): number {
-  // TEMPORARY: Use SignalBridge if available
+  // Phase 4: Prefer IR evaluation when available
+  if (env.irEnv !== undefined && env.irNodes !== undefined) {
+    return evalSigIR(sigId, env.irEnv, env.irNodes);
+  }
+
+  // Legacy: Use SignalBridge if available
   if (env.signalBridge !== undefined) {
     return env.signalBridge.evalSig(sigId, env);
   }
 
-  // Fallback to 0 if no bridge (for backward compatibility with existing tests)
+  // Fallback to 0 if no evaluator available (for backward compatibility)
   return 0;
 }
 

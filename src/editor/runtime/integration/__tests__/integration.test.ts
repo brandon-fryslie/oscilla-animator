@@ -471,3 +471,272 @@ describe("Integration: Type Adapter + SignalBridge", () => {
     });
   });
 });
+
+// =============================================================================
+// Phase 4: SignalExpr IR Evaluator Integration Tests
+// =============================================================================
+
+import { createSigEnv, createSigFrameCache, createConstPool } from "../../signal-expr";
+import type { SignalExprIR } from "../../../compiler/ir/signalExpr";
+import { OpCode } from "../../../compiler/ir/opcodes";
+
+describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
+  let pool: FieldBufferPool;
+
+  beforeEach(() => {
+    pool = new FieldBufferPool();
+  });
+
+  describe("IR-based signal evaluation", () => {
+    it("should evaluate constant signal via SigEvaluator", () => {
+      // Create SignalExprIR nodes
+      const sigNodes: SignalExprIR[] = [
+        { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 },
+      ];
+
+      // Create proper SigEnv for IR evaluation
+      const constPool = createConstPool([42]);
+      const cache = createSigFrameCache(10);
+      const irEnv = createSigEnv({
+        tAbsMs: 1000,
+        constPool,
+        cache,
+      });
+
+      const handle: FieldHandle = {
+        kind: "Broadcast",
+        sigId: 0,
+        domainId: 0,
+        type: numberType,
+      };
+
+      const fieldNodes: FieldExprIR[] = [
+        {
+          kind: "sampleSignal",
+          signalSlot: 0,
+          domainId: 0,
+          type: numberType,
+        },
+      ];
+
+      const fieldCache = createFieldHandleCache();
+
+      const env: MaterializerEnv = {
+        pool,
+        cache: new Map(),
+        fieldEnv: {
+          cache: fieldCache,
+          domainId: 0,
+          slotHandles: {
+            read: () => handle,
+          } as any,
+        } as FieldEnv,
+        fieldNodes,
+        sigEnv: {
+          time: 1000,
+          // Phase 4: Provide IR evaluation context
+          irEnv,
+          irNodes: sigNodes,
+        },
+        sigNodes: [],
+        constants: {
+          get: (id: number) => constPool.numbers[id],
+        },
+        sources: {
+          get: () => undefined,
+        },
+        getDomainCount: () => 3,
+      };
+
+      // Materialize using IR evaluation
+      const buffer = materialize(
+        {
+          fieldId: 0,
+          domainId: 0,
+          format: "f32",
+          layout: "scalar",
+          usageTag: "ir-const-test",
+        },
+        env
+      ) as Float32Array;
+
+      // All elements should have the constant value
+      expect(buffer.length).toBe(3);
+      expect(buffer[0]).toBe(42);
+      expect(buffer[1]).toBe(42);
+      expect(buffer[2]).toBe(42);
+    });
+
+    it("should evaluate sin(t) signal via SigEvaluator", () => {
+      // Create SignalExprIR nodes: sin(t / 1000)
+      const sigNodes: SignalExprIR[] = [
+        { kind: "timeAbsMs", type: { world: "signal", domain: "number" } },
+        { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 },
+        {
+          kind: "zip",
+          type: { world: "signal", domain: "number" },
+          a: 0,
+          b: 1,
+          fn: { kind: "opcode", opcode: OpCode.Div },
+        },
+        {
+          kind: "map",
+          type: { world: "signal", domain: "number" },
+          src: 2,
+          fn: { kind: "opcode", opcode: OpCode.Sin },
+        },
+      ];
+
+      // Create proper SigEnv for IR evaluation
+      const constPool = createConstPool([1000]); // divisor
+      const cache = createSigFrameCache(10);
+      const time = Math.PI / 2 * 1000; // sin(π/2) = 1
+      const irEnv = createSigEnv({
+        tAbsMs: time,
+        constPool,
+        cache,
+      });
+
+      const handle: FieldHandle = {
+        kind: "Broadcast",
+        sigId: 3, // The sin node
+        domainId: 0,
+        type: numberType,
+      };
+
+      const fieldNodes: FieldExprIR[] = [
+        {
+          kind: "sampleSignal",
+          signalSlot: 3,
+          domainId: 0,
+          type: numberType,
+        },
+      ];
+
+      const fieldCache = createFieldHandleCache();
+
+      const env: MaterializerEnv = {
+        pool,
+        cache: new Map(),
+        fieldEnv: {
+          cache: fieldCache,
+          domainId: 0,
+          slotHandles: {
+            read: () => handle,
+          } as any,
+        } as FieldEnv,
+        fieldNodes,
+        sigEnv: {
+          time,
+          irEnv,
+          irNodes: sigNodes,
+        },
+        sigNodes: [],
+        constants: {
+          get: (id: number) => constPool.numbers[id],
+        },
+        sources: {
+          get: () => undefined,
+        },
+        getDomainCount: () => 2,
+      };
+
+      // Materialize using IR evaluation
+      const buffer = materialize(
+        {
+          fieldId: 0,
+          domainId: 0,
+          format: "f32",
+          layout: "scalar",
+          usageTag: "ir-sin-test",
+        },
+        env
+      ) as Float32Array;
+
+      // All elements should have sin(π/2) ≈ 1
+      expect(buffer.length).toBe(2);
+      expect(buffer[0]).toBeCloseTo(1, 5);
+      expect(buffer[1]).toBeCloseTo(1, 5);
+    });
+
+    it("should prefer IR evaluation over SignalBridge when both available", () => {
+      // Create a simple constant node
+      const sigNodes: SignalExprIR[] = [
+        { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 },
+      ];
+
+      // IR says value is 100
+      const constPool = createConstPool([100]);
+      const cache = createSigFrameCache(10);
+      const irEnv = createSigEnv({
+        tAbsMs: 0,
+        constPool,
+        cache,
+      });
+
+      // SignalBridge says value is 999 (should NOT be used)
+      const bridge = new SignalBridge();
+      bridge.registerSignal(0, () => 999);
+
+      const handle: FieldHandle = {
+        kind: "Broadcast",
+        sigId: 0,
+        domainId: 0,
+        type: numberType,
+      };
+
+      const fieldNodes: FieldExprIR[] = [
+        {
+          kind: "sampleSignal",
+          signalSlot: 0,
+          domainId: 0,
+          type: numberType,
+        },
+      ];
+
+      const fieldCache = createFieldHandleCache();
+
+      const env: MaterializerEnv = {
+        pool,
+        cache: new Map(),
+        fieldEnv: {
+          cache: fieldCache,
+          domainId: 0,
+          slotHandles: {
+            read: () => handle,
+          } as any,
+        } as FieldEnv,
+        fieldNodes,
+        sigEnv: {
+          time: 0,
+          // Both available - IR should be preferred
+          irEnv,
+          irNodes: sigNodes,
+          signalBridge: bridge,
+        },
+        sigNodes: [],
+        constants: {
+          get: (id: number) => constPool.numbers[id],
+        },
+        sources: {
+          get: () => undefined,
+        },
+        getDomainCount: () => 1,
+      };
+
+      const buffer = materialize(
+        {
+          fieldId: 0,
+          domainId: 0,
+          format: "f32",
+          layout: "scalar",
+          usageTag: "ir-preferred-test",
+        },
+        env
+      ) as Float32Array;
+
+      // IR value (100) should be used, not SignalBridge value (999)
+      expect(buffer[0]).toBe(100);
+    });
+  });
+});

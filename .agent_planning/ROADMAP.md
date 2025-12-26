@@ -257,55 +257,72 @@ Reference: `design-docs/12-Compiler-Final/`
 
 ---
 
-## Phase 4: SignalExpr Runtime [QUEUED]
+## Phase 4: SignalExpr Runtime [COMPLETED]
 
 **Goal:** Replace signal closures with SignalExpr DAG. Evaluator samples expressions, falling back to closures for unimplemented ops.
 
 **Migration Safety:** SignalExpr evaluator can call legacy closures as leaf ops. Gradual migration per block type.
 
+**Started:** 2025-12-25
+**Completed:** 2025-12-26
+
 ### Topics
 
-#### signal-evaluator-core [PROPOSED]
+#### signal-evaluator-core [COMPLETED]
 **Description:** Implement `SigEvaluator.sample(id, env)`. Per-frame cache (`sigValue`, `sigStamp`). Handle basic ops: const, timeAbsMs, add, mul, sin, etc.
 **Spec:** 13-SignalExpr-Evaluator (§2-4)
 **Dependencies:** signalexpr-schema, ir-validator
 **Labels:** runtime, signals, evaluator
 **Test Strategy:** Simple signal graphs evaluate correctly
+**Implementation:** `src/editor/runtime/signal-expr/SigEvaluator.ts` (1200+ lines, 122+ tests)
 
-#### signal-evaluator-combine [PROPOSED]
+#### signal-evaluator-combine [COMPLETED]
 **Description:** Implement `busCombine` in signal evaluator: sum, average, min, max, last. Deterministic publisher ordering from IR.
 **Spec:** 13-SignalExpr-Evaluator (§4.B)
 **Dependencies:** signal-evaluator-core, bus-ir-schema
 **Labels:** runtime, signals, buses
 **Test Strategy:** Bus combine produces same results as closure version
+**Implementation:** evalBusCombine() in SigEvaluator.ts with all combine modes
 
-#### signal-evaluator-transforms [PROPOSED]
+#### signal-evaluator-transforms [COMPLETED]
 **Description:** Implement transform chain execution in signal evaluator. Execute adapter/lens steps from `TransformChain[]`.
 **Spec:** 13-SignalExpr-Evaluator (§5)
 **Dependencies:** signal-evaluator-core, transform-chain-ir
 **Labels:** runtime, signals, transforms
 **Test Strategy:** Transform chains match legacy behavior
+**Implementation:** evalTransform() with scaleBias, normalize, quantize, ease, map, slew, cast
 
-#### signal-evaluator-stateful [PROPOSED]
+#### signal-evaluator-stateful [COMPLETED]
 **Description:** Implement stateful signal ops: integrate, delayMs, delayFrames, sampleHold, slew. Explicit `StateBuffer` allocation and update.
 **Spec:** 13-SignalExpr-Evaluator (§6), 12-SignalExpr (stateful ops)
 **Dependencies:** signal-evaluator-core
 **Labels:** runtime, signals, state
 **Test Strategy:** Stateful ops maintain state correctly across frames
+**Implementation:** SigStateful.ts with integrate, delayMs, delayFrames, sampleHold, slew, edgeDetectWrap, pulseDivider, envelopeAD (33+ tests)
 
-#### signal-closure-bridge [PROPOSED]
+#### signal-closure-bridge [COMPLETED]
 **Description:** For SignalExpr nodes that reference unimplemented ops, fall back to calling legacy closure. Allows gradual migration per block type.
 **Spec:** 01.1-CompilerMigration-Roadmap (Phase 5)
 **Dependencies:** signal-evaluator-core
 **Labels:** runtime, migration, bridge
 **Test Strategy:** Mixed IR/closure execution produces correct results
+**Implementation:** evalClosureBridge() in SigEvaluator.ts, ClosureRegistry.ts, SignalBridge.ts (23+ tests)
 
-#### block-compilers-signal [PROPOSED]
+#### block-compilers-signal [COMPLETED]
 **Description:** Migrate signal-producing block compilers to emit SignalExpr nodes via IRBuilder. Start with pure blocks (Add, Mul, Sin), then time blocks, then stateful.
 **Spec:** 16-Block-Lowering
 **Dependencies:** signal-closure-bridge, ir-builder-api
 **Labels:** compiler, blocks, migration
 **Test Strategy:** Each migrated block produces same output as before
+**Implementation:** All 42 blocks migrated via registerBlockType() pattern, MIGRATED_BLOCKS set updated
+
+#### materializer-integration [COMPLETED]
+**Description:** Integrate SigEvaluator into Materializer for field broadcast evaluation. IR evaluation preferred, SignalBridge fallback.
+**Spec:** 13-SignalExpr-Evaluator (§7)
+**Dependencies:** signal-evaluator-core, field-materializer
+**Labels:** runtime, integration
+**Test Strategy:** IR evaluation produces same results as closure evaluation
+**Implementation:** Updated Materializer.ts SigEnv with irEnv/irNodes, evalSig prefers IR (3 integration tests)
 
 ---
 

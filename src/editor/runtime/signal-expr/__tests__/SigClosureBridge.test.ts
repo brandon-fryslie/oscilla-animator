@@ -437,13 +437,21 @@ describe("migration tracking", () => {
     expect(status.migrated.length + status.pending.length).toBe(status.total);
   });
 
-  it("isMigrated returns false for unmigrated blocks", () => {
-    // Initially, no blocks are migrated
-    expect(isMigrated("AddSignal")).toBe(false);
-    expect(isMigrated("Oscillator")).toBe(false);
+  it("isMigrated returns true for migrated blocks (Phase 4 complete)", () => {
+    // Phase 4 complete: all major blocks are now migrated
+    expect(isMigrated("AddSignal")).toBe(true);
+    expect(isMigrated("Oscillator")).toBe(true);
+    expect(isMigrated("CycleTimeRoot")).toBe(true);
+    expect(isMigrated("RenderInstances2D")).toBe(true);
   });
 
-  it("isMigrated returns true after adding to set", () => {
+  it("isMigrated returns false for unknown blocks", () => {
+    // Unknown blocks are not in the migrated set
+    expect(isMigrated("UnknownBlock")).toBe(false);
+    expect(isMigrated("FakeBlock")).toBe(false);
+  });
+
+  it("isMigrated can be dynamically updated", () => {
     // Add a test block temporarily
     MIGRATED_BLOCKS.add("TestBlock");
 
@@ -451,6 +459,8 @@ describe("migration tracking", () => {
 
     // Clean up
     MIGRATED_BLOCKS.delete("TestBlock");
+
+    expect(isMigrated("TestBlock")).toBe(false);
   });
 
   it("calculates correct percentage", () => {
