@@ -290,3 +290,31 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+/* Compiler Toggle Styles */
+.compiler-toggle {
+  gap: 4px;
+}
+
+.compiler-toggle.active {
+  background: #1a3a1a;
+  border-color: #2a5a2a;
+}
+
+.compiler-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.compiler-status.on {
+  background: #2a5a2a;
+  color: #8f8;
+}
+
+.compiler-status.off {
+  background: #3a3a3a;
+  color: #888;
+}

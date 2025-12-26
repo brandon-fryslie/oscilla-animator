@@ -28,6 +28,7 @@ import type { CompilerService, Viewport } from './compiler';
 import type { Program, CanvasProgram } from './compiler/types';
 import { useStore } from './stores';
 import { TimeConsole } from './components/TimeConsole';
+import { IRRuntimeAdapter } from './runtime/executor/IRRuntimeAdapter';
 import './PreviewPanel.css';
 
 /**
@@ -78,6 +79,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const canvasRendererRef = useRef<Canvas2DRenderer | null>(null);
   const lastGoodProgramRef = useRef<Program<SvgRenderTree> | null>(null);
   const lastGoodCanvasProgramRef = useRef<CanvasProgram | null>(null);
+  const lastGoodIRProgramRef = useRef<Program<SvgRenderTree> | null>(null);
 
   // Which renderer is active: 'svg' or 'canvas'
   const [activeRenderer, setActiveRenderer] = useState<'svg' | 'canvas'>('svg');
@@ -146,46 +148,9 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     // Set initial scene
     player.setScene(DEFAULT_SCENE);
 
-    // Set initial program from compiler service
-    if (compilerService) {
-      const compiledProgram = compilerService.getProgram();
-      if (compiledProgram) {
-        if (compiledProgram.canvasProgram) {
-          // Canvas program - use canvas renderer
-          const canvasProgram = compiledProgram.canvasProgram;
-          lastGoodCanvasProgramRef.current = canvasProgram;
-          setActiveRenderer('canvas');
-          setHasCompiledProgram(true);
-
-          // For canvas, we use a custom render loop instead of the player
-          // The player still runs for time management, but we render via canvas
-          player.setFactory(() => EMPTY_PROGRAM); // Placeholder for time tracking
-          player.applyTimeModel(compiledProgram.timeModel);
-          player.setActivePatchRevision(store.patchStore.patchRevision);
-          setTimeModel(compiledProgram.timeModel);
-          logStore.info('renderer', `Loaded Canvas program (timeModel: ${compiledProgram.timeModel.kind})`);
-        } else if (compiledProgram.program) {
-          // SVG program
-          const program = compiledProgram.program as unknown as Program<SvgRenderTree>;
-          player.setFactory(() => program);
-          player.applyTimeModel(compiledProgram.timeModel);
-          player.setActivePatchRevision(store.patchStore.patchRevision);
-          setTimeModel(compiledProgram.timeModel);
-          lastGoodProgramRef.current = program;
-          setActiveRenderer('svg');
-          setHasCompiledProgram(true);
-          logStore.info('renderer', `Loaded SVG program (timeModel: ${compiledProgram.timeModel.kind})`);
-        }
-      } else {
-        // No compiled program yet - show empty canvas
-        player.setFactory(() => EMPTY_PROGRAM);
-        logStore.info('renderer', 'No compiled program yet, showing empty canvas');
-      }
-    } else {
-      // No compiler service - show empty canvas
-      player.setFactory(() => EMPTY_PROGRAM);
-      logStore.info('renderer', 'No compiler service, showing empty canvas');
-    }
+    // Initial program is set via the polling useEffect, so we just show empty initially.
+    player.setFactory(() => EMPTY_PROGRAM);
+    logStore.info('renderer', 'Player initialized. Waiting for program...');
 
     // Start playing immediately
     player.play();
@@ -217,45 +182,79 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     // Poll for changes (in future, use MobX reaction)
     const interval = setInterval(() => {
       // Check for program changes
-      const compiledProgram = compilerService.getProgram();
-      if (compiledProgram) {
+      const result = compilerService.getLatestResult();
+      const useIR = store.uiStore.settings.useNewCompiler;
+
+      if (result && result.ok) {
         const player = playerRef.current;
+        if (!player) return;
 
-        if (compiledProgram.canvasProgram && compiledProgram.canvasProgram !== lastGoodCanvasProgramRef.current) {
-          // New canvas program
-          if (player) {
-            const isFirstProgram = lastGoodCanvasProgramRef.current === null && lastGoodProgramRef.current === null;
+        // === IR PATH (NEW COMPILER) ===
+        if (useIR && result.compiledIR) {
+          const adapter = new IRRuntimeAdapter(result.compiledIR);
+          const irProgram = adapter.createProgram();
 
-            lastGoodCanvasProgramRef.current = compiledProgram.canvasProgram;
+          const isFirstProgram = lastGoodIRProgramRef.current === null && lastGoodProgramRef.current === null;
+
+          // Set the IR program as the new source of truth for canvas rendering
+          lastGoodIRProgramRef.current = irProgram;
+          lastGoodCanvasProgramRef.current = null;
+          lastGoodProgramRef.current = null;
+
+          setActiveRenderer('canvas');
+          player.setFactory(() => EMPTY_PROGRAM); // Time tracking only
+          player.applyTimeModel(result.compiledIR.timeModel);
+          setTimeModel(result.compiledIR.timeModel);
+          setHasCompiledProgram(true);
+          logStore.debug('renderer', `Hot swapped to IR program (timeModel: ${result.compiledIR.timeModel.kind})`);
+
+          if (isFirstProgram) {
+            player.play();
+            store.uiStore.setPlaying(true);
+          }
+        }
+        // === IR PATH FALLBACK - IR selected but not available ===
+        else if (useIR && !result.compiledIR) {
+          logStore.warn('renderer', 'IR compiler selected but CompiledProgramIR not available, using legacy');
+          // Fall through to legacy path below
+        }
+
+        // === LEGACY PATH (OLD CLOSURE-BASED COMPILER) ===
+        if (!useIR || !result.compiledIR) {
+          if (result.canvasProgram && result.canvasProgram !== lastGoodCanvasProgramRef.current) {
+            // New canvas program
+            const isFirstProgram = lastGoodCanvasProgramRef.current === null && lastGoodProgramRef.current === null && lastGoodIRProgramRef.current === null;
+
+            lastGoodCanvasProgramRef.current = result.canvasProgram;
             lastGoodProgramRef.current = null; // Clear SVG program
+            lastGoodIRProgramRef.current = null; // Clear IR program
             setActiveRenderer('canvas');
             player.setFactory(() => EMPTY_PROGRAM); // Time tracking only
-            player.applyTimeModel(compiledProgram.timeModel);
+            player.applyTimeModel(result.timeModel!);
             player.setActivePatchRevision(store.patchStore.patchRevision);
-            setTimeModel(compiledProgram.timeModel);
+            setTimeModel(result.timeModel!);
             setHasCompiledProgram(true);
-            logStore.debug('renderer', `Hot swapped to Canvas program (timeModel: ${compiledProgram.timeModel.kind})`);
+            logStore.debug('renderer', `Hot swapped to Canvas program (timeModel: ${result.timeModel!.kind})`);
 
             if (isFirstProgram) {
               player.play();
               store.uiStore.setPlaying(true);
             }
-          }
-        } else if (compiledProgram.program && compiledProgram.program !== (lastGoodProgramRef.current as unknown)) {
-          // New SVG program
-          if (player) {
-            const isFirstProgram = lastGoodProgramRef.current === null && lastGoodCanvasProgramRef.current === null;
+          } else if (result.program && result.program !== (lastGoodProgramRef.current as unknown)) {
+            // New SVG program
+            const isFirstProgram = lastGoodProgramRef.current === null && lastGoodCanvasProgramRef.current === null && lastGoodIRProgramRef.current === null;
 
-            const program = compiledProgram.program as unknown as Program<SvgRenderTree>;
+            const program = result.program as unknown as Program<SvgRenderTree>;
             player.setFactory(() => program);
-            player.applyTimeModel(compiledProgram.timeModel);
+            player.applyTimeModel(result.timeModel!);
             player.setActivePatchRevision(store.patchStore.patchRevision);
-            setTimeModel(compiledProgram.timeModel);
+            setTimeModel(result.timeModel!);
             lastGoodProgramRef.current = program;
             lastGoodCanvasProgramRef.current = null; // Clear canvas program
+            lastGoodIRProgramRef.current = null; // Clear IR program
             setActiveRenderer('svg');
             setHasCompiledProgram(true);
-            logStore.debug('renderer', `Hot swapped to SVG program (timeModel: ${compiledProgram.timeModel.kind})`);
+            logStore.debug('renderer', `Hot swapped to SVG program (timeModel: ${result.timeModel!.kind})`);
 
             // DO NOT REMOVE: Auto-play when FIRST program loads.
             if (isFirstProgram) {
@@ -275,16 +274,14 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     }, 500);
 
     return () => clearInterval(interval);
-  }, [compilerService, logStore, store.patchStore.patchRevision, viewport]);
+  }, [compilerService, logStore, store.patchStore.patchRevision, store.uiStore, store.uiStore.settings.useNewCompiler, viewport]);
 
   // Canvas render loop - renders when canvas mode is active
   useEffect(() => {
     if (activeRenderer !== 'canvas') return;
-    if (!lastGoodCanvasProgramRef.current) return;
     if (!canvasRendererRef.current) return;
 
     const canvasRenderer = canvasRendererRef.current;
-    const canvasProgram = lastGoodCanvasProgramRef.current;
     let animationFrameId: number;
 
     // Update canvas size
@@ -297,11 +294,20 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
           viewport: { w: width, h: height, dpr: window.devicePixelRatio },
         };
 
-        // Get render tree from the canvas program
-        const renderTree = canvasProgram.signal(tMs, ctx);
+        let renderTree = null;
 
-        // Execute the render tree
-        canvasRenderer.render(renderTree);
+        // Prioritize IR program if available
+        if (lastGoodIRProgramRef.current) {
+          renderTree = lastGoodIRProgramRef.current.signal(tMs, ctx);
+        }
+        // Fallback to legacy canvas program
+        else if (lastGoodCanvasProgramRef.current) {
+          renderTree = lastGoodCanvasProgramRef.current.signal(tMs, ctx);
+        }
+
+        if (renderTree) {
+          canvasRenderer.render(renderTree);
+        }
       }
 
       animationFrameId = requestAnimationFrame(renderFrame);
