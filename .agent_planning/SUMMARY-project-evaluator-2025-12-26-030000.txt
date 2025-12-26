@@ -1,0 +1,33 @@
+Agent: project-evaluator | 2025-12-26-030000
+Scope: project/block-compiler-migration
+Completion: 0% | Gaps: 36 blocks to migrate | Test Quality: 1/5 (minimal coverage)
+Reused: 1 STALE finding (compiler-architecture.md) | Fresh: All findings in this eval
+Cache updated: None (eval-cache adequate)
+Ambiguities: 2 found (Dual-emit strategy, Domain IR representation)
+Workflow: CONTINUE
+
+Key Findings:
+- 36 block compilers emit closures, target is IR via BlockLowerFn
+- MISSING TYPES: BlockLowerFn, LowerCtx, LowerResult, BlockDeclarations NOT implemented
+- Pass 6 creates placeholder IR from closure artifacts, not real block lowering
+- SignalExprBuilder exists as lightweight migration helper (Sprint 7)
+- Full IRBuilder interface exists but unused by block compilers
+
+Complexity Tiers:
+- Tier 1 (Pure Math): 7 blocks, LOW effort, no dependencies
+- Tier 2 (Parameterized): 5 blocks, MEDIUM effort
+- Tier 3-4 (Field): 15 blocks, MEDIUM-HIGH effort, Domain dependency
+- Tier 5-6 (Domain/Position): 6 blocks, HIGH effort
+- Tier 7-8 (Time/Stateful): 5 blocks, HIGH effort
+- Tier 9-10 (Render/Special): 4 blocks, VERY HIGH effort
+
+Parallel Workstreams:
+- A: Signal blocks (13 blocks) - can start immediately
+- B: Field infrastructure - blocked on LowerCtx types
+- C: Domain chain - blocked on Domain IR representation
+- D: Time blocks - blocked on TimeModelIR
+- E: Stateful + Render - blocked on all above
+
+-> Priority 1: Create missing types (lowerTypes.ts)
+-> Priority 2: Migrate AddSignal as proof of concept
+-> Priority 3: Clarify Domain IR representation before field migration

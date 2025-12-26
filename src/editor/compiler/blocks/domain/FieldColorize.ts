@@ -7,6 +7,7 @@
 
 import type { BlockCompiler, Field } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 /**
  * Parse hex color to RGB
@@ -54,6 +55,59 @@ function hueRotateColor(colorA: string, colorB: string, t: number): string {
   // A full implementation would convert to HSL and rotate hue
   return lerpColor(colorA, colorB, t);
 }
+
+// =============================================================================
+// IR Lowering
+// =============================================================================
+
+const lowerFieldColorize: BlockLowerFn = ({ inputs, config }) => {
+  const values = inputs[0];
+
+  if (values.k !== 'field') {
+    throw new Error('FieldColorize requires field input');
+  }
+
+  // This block requires field-level color interpolation operations.
+  // Options:
+  // 1. Use OpCode.ColorLerp with fieldMap to interpolate between two color constants
+  // 2. Implement custom color gradient kernel
+  //
+  // The current IR doesn't support:
+  // - Field-level color operations (ColorLerp is signal-level)
+  // - Color constants in the const pool
+  // - Hex color string handling
+  //
+  // We'd need:
+  // - fieldMap with ColorLerp opcode
+  // - Color constant support
+  // - Color string encoding/decoding
+
+  const mode = (config as any)?.mode || 'lerp';
+
+  throw new Error(
+    `FieldColorize IR lowering requires field-level color operations (mode: ${mode}). ` +
+    'This needs: (1) fieldMap with ColorLerp opcode support, ' +
+    '(2) color constant pool support, and ' +
+    '(3) color string encoding in IR. ' +
+    'Block remains in closure mode until field color operations are implemented in IR.'
+  );
+};
+
+registerBlockType({
+  type: 'FieldColorize',
+  capability: 'pure',
+  inputs: [
+    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'number' } },
+  ],
+  outputs: [
+    { portId: 'colors', label: 'Colors', dir: 'out', type: { world: 'field', domain: 'color' } },
+  ],
+  lower: lowerFieldColorize,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const FieldColorizeBlock: BlockCompiler = {
   type: 'FieldColorize',

@@ -1,0 +1,73 @@
+Agent: iterative-implementer | 2025-12-26-073547
+Mode: manual
+Completed: 8 domain blocks migrated to IR lowering | Files: 8 | Commits: 1
+Tests: N/A (manual mode)
+Cache invalidated: 0 (cache already invalidated for compiler work)
+Status: complete
+
+=== MIGRATION SUMMARY ===
+
+Successfully migrated 8 domain blocks from closure-based compilation to IR lowering:
+
+1. FieldFromSignalBroadcast - broadcasts signal to field using ctx.b.broadcastSigToField()
+2. FieldConstNumber - constant number field using ctx.b.fieldConst()
+3. FieldConstColor - constant color field using ctx.b.fieldConst()
+4. FieldHash01ById - hash by element ID using ctx.b.fieldMap() with Hash01ById opcode
+5. FieldAddVec2 - vec2 addition using ctx.b.fieldZip() with Vec2Add opcode
+6. FieldZipNumber - configurable zip operation using ctx.b.fieldZip() with opcodes
+7. FieldZipSignal - field+signal zip using broadcastSigToField + fieldZip
+8. FieldMapNumber - field mapping using ctx.b.fieldMap() with opcodes/kernels
+
+=== PATTERN ESTABLISHED ===
+
+Each block now follows the dual-emit pattern:
+- IR lowering section with registerBlockType() and lower function
+- Legacy closure compiler section retained for backward compatibility
+- Uses IRBuilder API (ctx.b.fieldConst, fieldMap, fieldZip, broadcastSigToField)
+- Parameters passed via config argument instead of params
+- OpCodes used where available (Add, Sub, Mul, Min, Max, Vec2Add, Hash01ById, etc.)
+
+=== IR BUILDER API USAGE ===
+
+Field operations:
+- fieldConst(value, type) - create constant field
+- fieldMap(src, fn) - map unary function over field
+- fieldZip(a, b, fn) - zip two fields with binary function
+- broadcastSigToField(sig, domainSlot, type) - broadcast signal to all elements
+
+Function references:
+- PureFnRef with fnId, outputType, optional opcode, optional params
+- OpCode enum provides built-in operations (Add, Sub, Mul, Sin, Cos, etc.)
+
+=== BUILD STATUS ===
+
+TypeScript typecheck passes for all migrated blocks.
+Existing errors in other files (TimeRoot, PhaseClock, RenderInstances2D, etc.) remain.
+
+=== FILES MODIFIED ===
+
+src/editor/compiler/blocks/domain/FieldFromSignalBroadcast.ts
+src/editor/compiler/blocks/domain/FieldConstNumber.ts
+src/editor/compiler/blocks/domain/FieldConstColor.ts
+src/editor/compiler/blocks/domain/FieldHash01ById.ts
+src/editor/compiler/blocks/domain/FieldAddVec2.ts
+src/editor/compiler/blocks/domain/FieldZipNumber.ts
+src/editor/compiler/blocks/domain/FieldZipSignal.ts
+src/editor/compiler/blocks/domain/FieldMapNumber.ts
+
+=== COMMIT ===
+
+c1c9eb8 feat(compiler): Migrate domain blocks batch 1 to IR lowering
+
+=== NEXT STEPS ===
+
+Domain block migration continues with batch 2. Remaining domain blocks to migrate include:
+- DomainN, GridDomain - domain creation blocks
+- FieldOpacity, FieldColorize - field transformation blocks
+- FieldFromExpression, FieldStringToColor - parsing/conversion blocks
+- FieldHueGradient - color generation blocks
+- FieldReduce - field-to-signal reduction
+- TimeRoot, PhaseClock - time model blocks
+- RenderInstances2D, Render2dCanvas - render blocks
+
+The pattern established in batch 1 provides a clear template for migrating the remaining blocks.

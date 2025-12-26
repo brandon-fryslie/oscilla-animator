@@ -24,7 +24,7 @@ import type { ValueSlot } from '../../compiler/ir/types';
 import { FieldMaterializer, type MaterializerEnv, type ConstantsTable, type SourceFields } from '../field/Materializer';
 import { FieldBufferPool } from '../field/BufferPool';
 import { createFieldHandleCache } from '../field/FieldHandle';
-import type { FieldEnv, FieldExprIR, SlotHandles, FieldHandle } from '../field/types';
+import type { FieldEnv, FieldExprIR, SlotHandles } from '../field/types';
 import { compilerToRuntimeType } from './typeAdapter';
 import type { SignalBridge } from './SignalBridge';
 
@@ -36,11 +36,14 @@ import type { SignalBridge } from './SignalBridge';
  * Thrown when trying to get count for an invalid domain slot
  */
 export class InvalidDomainSlotError extends Error {
-  constructor(public readonly domainSlot: ValueSlot) {
+  readonly domainSlot: ValueSlot;
+
+  constructor(domainSlot: ValueSlot) {
     super(
       `Domain slot ${domainSlot} is invalid. ` +
         `Make sure the domain was properly created by the compiler.`
     );
+    this.domainSlot = domainSlot;
     this.name = 'InvalidDomainSlotError';
   }
 }
@@ -118,11 +121,9 @@ export class CompilerRuntime {
   private readonly materializer: FieldMaterializer;
   private readonly env: MaterializerEnv;
   private readonly builder: IRBuilder;
-  private readonly config: CompilerRuntimeConfig;
 
   constructor(linkedIR: LinkedGraphIR, config: CompilerRuntimeConfig) {
     this.builder = linkedIR.builder;
-    this.config = config;
 
     // Extract field expression table from builder
     const fieldExprTable = this.extractFieldExprTable(linkedIR.builder);

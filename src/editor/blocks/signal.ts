@@ -22,7 +22,14 @@ export const Oscillator = createBlock({
   label: 'Oscillator',
   description: 'Generate waveforms (sine, cosine, triangle, saw) from phase',
   inputs: [
-    input('phase', 'Phase', 'Signal<phase>'),
+    input('phase', 'Phase', 'Signal<phase>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
+      },
+    }),
     // Former params - now inputs with default sources
     input('shape', 'Waveform', 'Signal<string>', {
       tier: 'primary',
@@ -113,7 +120,14 @@ export const Shaper = createBlock({
   label: 'Shaper',
   description: 'Shape signals with tanh, sigmoid, smoothstep, etc.',
   inputs: [
-    input('in', 'Input', 'Signal<number>'),
+    input('in', 'Input', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -1, max: 1, step: 0.01 },
+      },
+    }),
     input('kind', 'Shape', 'Signal<string>', {
       tier: 'primary',
       defaultSource: {
@@ -186,7 +200,14 @@ export const ColorLFO = createBlock({
   label: 'Color LFO',
   description: 'Generate color from phase (hue rotation)',
   inputs: [
-    input('phase', 'Phase', 'Signal<phase>'),
+    input('phase', 'Phase', 'Signal<phase>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
+      },
+    }),
     input('base', 'Base Color', 'Signal<color>', {
       tier: 'primary',
       defaultSource: {
@@ -274,8 +295,22 @@ export const AddSignal = createBlock({
   label: 'Add',
   description: 'Add two signals element-wise',
   inputs: [
-    input('a', 'A', 'Signal<number>'),
-    input('b', 'B', 'Signal<number>'),
+    input('a', 'A', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      },
+    }),
+    input('b', 'B', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      },
+    }),
   ],
   outputs: [
     output('out', 'Sum', 'Signal<number>'),
@@ -296,8 +331,22 @@ export const MulSignal = createBlock({
   label: 'Multiply',
   description: 'Multiply two signals element-wise',
   inputs: [
-    input('a', 'A', 'Signal<number>'),
-    input('b', 'B', 'Signal<number>'),
+    input('a', 'A', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 1,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 10, step: 0.1 },
+      },
+    }),
+    input('b', 'B', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 1,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 10, step: 0.1 },
+      },
+    }),
   ],
   outputs: [
     output('out', 'Product', 'Signal<number>'),
@@ -316,8 +365,22 @@ export const MinSignal = createBlock({
   label: 'Min',
   description: 'Component-wise minimum of two signals',
   inputs: [
-    input('a', 'A', 'Signal<number>'),
-    input('b', 'B', 'Signal<number>'),
+    input('a', 'A', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: Infinity, // Identity: min(x, ∞) = x
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      },
+    }),
+    input('b', 'B', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: Infinity, // Identity: min(x, ∞) = x
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      },
+    }),
   ],
   outputs: [
     output('out', 'Min', 'Signal<number>'),
@@ -336,8 +399,22 @@ export const MaxSignal = createBlock({
   label: 'Max',
   description: 'Component-wise maximum of two signals',
   inputs: [
-    input('a', 'A', 'Signal<number>'),
-    input('b', 'B', 'Signal<number>'),
+    input('a', 'A', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: -Infinity, // Identity: max(x, -∞) = x
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      },
+    }),
+    input('b', 'B', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: -Infinity, // Identity: max(x, -∞) = x
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      },
+    }),
   ],
   outputs: [
     output('out', 'Max', 'Signal<number>'),
@@ -358,7 +435,14 @@ export const ClampSignal = createBlock({
   label: 'Clamp',
   description: 'Clamp signal values to a range',
   inputs: [
-    input('in', 'Input', 'Signal<number>'),
+    input('in', 'Input', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: -1, max: 1, step: 0.01 },
+      },
+    }),
     input('min', 'Min', 'Signal<number>', {
       tier: 'primary',
       defaultSource: {

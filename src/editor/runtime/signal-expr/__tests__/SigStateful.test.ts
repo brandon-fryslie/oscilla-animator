@@ -26,7 +26,6 @@ import {
   createStateBuffer,
   resetStateBuffer,
   createEmptyStateBuffer,
-  type StateBuffer,
 } from "../StateBuffer";
 import { createRuntimeCtx, createDefaultRuntimeCtx } from "../RuntimeCtx";
 
@@ -333,7 +332,7 @@ describe("stateful - sampleHold", () => {
     // Frame 2: trigger high (1.0), sample!
     newFrame(cache, 2);
     const constPool2 = createConstPool([42, 1.0]);
-    const nodes2 = [
+    const nodes2: SignalExprIR[] = [
       { kind: "const", type: numberType, constId: 0 },
       { kind: "const", type: numberType, constId: 1 }, // trigger: 1.0
       {
@@ -572,7 +571,6 @@ describe("stateful - slew", () => {
   });
 
   it("rate controls approach speed", () => {
-    const cache = createSigFrameCache(10);
     const statefast = createStateBuffer({ f64Count: 1, f32Count: 0, i32Count: 0 });
     const stateSlow = createStateBuffer({ f64Count: 1, f32Count: 0, i32Count: 0 });
     const constPool = createConstPool([100]);

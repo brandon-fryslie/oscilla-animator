@@ -65,7 +65,7 @@ function createTestMaterializerEnv(opts?: {
     cache: new Map(),
     fieldEnv,
     fieldNodes: [],
-    sigEnv: {},
+    sigEnv: { time: 0 },
     sigNodes: [],
     constants,
     sources,

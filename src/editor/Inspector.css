@@ -848,19 +848,222 @@ code.wiring-info-value {
   color: #999;
 }
 
+/* Wire connection - green */
+.port-wire-icon {
+  color: #4ade80;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.port-wire-icon:hover {
+  color: #86efac;
+}
+
+/* Bus connection - blue */
+.port-bus-icon {
+  color: #60a5fa;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.port-bus-icon:hover {
+  color: #93c5fd;
+}
+
+/* Disconnected - hollow grey */
+.port-disconnected-icon {
+  color: #666;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.port-disconnected-icon:hover {
+  color: #888;
+}
+
+/* Legacy classes for backwards compat */
 .port-connected-icon {
   color: #4ade80;
   cursor: pointer;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .port-connected-icon:hover {
   color: #86efac;
 }
 
-.port-disconnected-icon {
-  color: #444;
-  font-size: 8px;
+/* Port context menu */
+.port-context-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+}
+
+.port-context-menu {
+  position: fixed;
+  z-index: 1000;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 4px;
+  min-width: 160px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.port-context-header {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  border-bottom: 1px solid #333;
+  margin-bottom: 4px;
+}
+
+.port-context-item {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  color: #ddd;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.port-context-item:hover {
+  background: #333;
+  color: #fff;
+}
+
+.port-context-item.danger {
+  color: #f87171;
+}
+
+.port-context-item.danger:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: #fca5a5;
+}
+
+.port-context-empty {
+  padding: 6px 8px;
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Port error/warning states */
+.port-item.has-error {
+  background: rgba(239, 68, 68, 0.15);
+  border-radius: 3px;
+  padding: 1px 2px;
+  margin: -1px -2px;
+}
+
+.port-item.has-warning {
+  background: rgba(245, 158, 11, 0.15);
+  border-radius: 3px;
+  padding: 1px 2px;
+  margin: -1px -2px;
+}
+
+.port-error-icon {
+  color: #ef4444;
+  font-size: 10px;
+  margin-right: 2px;
+  animation: error-pulse 1s ease-in-out infinite;
+}
+
+.port-warning-icon {
+  color: #f59e0b;
+  font-size: 10px;
+  margin-right: 2px;
+}
+
+@keyframes error-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Diagnostics section */
+.diagnostics-section {
+  background: rgba(239, 68, 68, 0.05);
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 4px 0 8px 0;
+}
+
+.diag-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-left: 6px;
+}
+
+.diag-badge.error {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.diag-badge.warning {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+.diagnostics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.diagnostic-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.diagnostic-item.error {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.diagnostic-item.warning {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.diagnostic-icon {
+  flex-shrink: 0;
+}
+
+.diagnostic-item.error .diagnostic-icon {
+  color: #ef4444;
+}
+
+.diagnostic-item.warning .diagnostic-icon {
+  color: #f59e0b;
+}
+
+.diagnostic-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diagnostic-title {
+  font-weight: 500;
+  color: #ddd;
+}
+
+.diagnostic-message {
+  color: #888;
+  font-size: 10px;
 }
 
 /* Sections */

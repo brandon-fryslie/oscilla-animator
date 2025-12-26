@@ -279,8 +279,8 @@
   /* Ensure all interactive elements are at least 44x44px (Apple HIG) */
   .panel-icon-btn,
   .panel-collapse-icon {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 30px;
+    min-height: 30px;
   }
 
   /* Larger port targets for touch */

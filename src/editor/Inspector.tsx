@@ -554,6 +554,10 @@ function DefinitionPreview({ definition }: { definition: BlockDefinition }) {
 
 /**
  * Port item with connection indicator and navigation
+ * - Green dot (●) = wire connection
+ * - Blue dot (●) = bus connection
+ * - Hollow dot (○) = not connected
+ * - Red/orange indicator for errors/warnings
  */
 const PortItem = observer(({
   slot,
@@ -561,7 +565,7 @@ const PortItem = observer(({
   direction,
   connections,
   blocks,
-  onNavigate // Not used for click to select, but for double-click to navigate
+  onNavigate
 }: {
   slot: Slot;
   blockId: string;
@@ -571,17 +575,47 @@ const PortItem = observer(({
   onNavigate: (blockId: string) => void;
 }) => {
   const store = useStore();
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const portRef: PortRef = { blockId, slotId: slot.id, direction };
 
-  // Find connection for this port
-  const connection = connections.find(c =>
+  // Check for diagnostics on this port
+  const portDiagnostics = useMemo(() => {
+    return store.diagnosticStore.activeDiagnostics.filter(d => {
+      if (d.primaryTarget.kind === 'port') {
+        const ref = d.primaryTarget.portRef;
+        return ref.blockId === blockId && ref.slotId === slot.id && ref.direction === direction;
+      }
+      // Also check affected targets
+      return d.affectedTargets?.some(t =>
+        t.kind === 'port' &&
+        t.portRef.blockId === blockId &&
+        t.portRef.slotId === slot.id &&
+        t.portRef.direction === direction
+      );
+    });
+  }, [store.diagnosticStore.activeDiagnostics, blockId, slot.id, direction]);
+
+  const hasError = portDiagnostics.some(d => d.severity === 'error' || d.severity === 'fatal');
+  const hasWarning = portDiagnostics.some(d => d.severity === 'warn');
+
+  // Find wire connection for this port
+  const wireConnection = connections.find(c =>
     direction === 'input'
       ? (c.to.blockId === blockId && c.to.slotId === slot.id)
       : (c.from.blockId === blockId && c.from.slotId === slot.id)
   );
 
-  const connectedBlockId = connection
-    ? (direction === 'input' ? connection.from.blockId : connection.to.blockId)
+  // Find bus connection for this port
+  const busConnection = direction === 'input'
+    ? store.busStore.listeners.find(l => l.to.blockId === blockId && l.to.slotId === slot.id)
+    : store.busStore.publishers.find(p => p.from.blockId === blockId && p.from.slotId === slot.id);
+
+  const connectedBus = busConnection
+    ? store.busStore.buses.find(b => b.id === busConnection.busId)
+    : null;
+
+  const connectedBlockId = wireConnection
+    ? (direction === 'input' ? wireConnection.from.blockId : wireConnection.to.blockId)
     : null;
   const connectedBlock = connectedBlockId
     ? blocks.find(b => b.id === connectedBlockId)
@@ -591,34 +625,139 @@ const PortItem = observer(({
     store.uiStore.setSelectedPort(portRef);
   }, [store, portRef]);
 
-  const handleDoubleClickConnected = useCallback(() => {
+  const handleDoubleClick = useCallback(() => {
+    if (connectedBlockId) {
+      onNavigate(connectedBlockId);
+    } else if (connectedBus) {
+      store.uiStore.selectBus(connectedBus.id);
+    }
+  }, [onNavigate, connectedBlockId, connectedBus, store]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleDisconnect = useCallback(() => {
+    if (wireConnection) {
+      store.patchStore.disconnect(wireConnection.id);
+    }
+    if (busConnection) {
+      if (direction === 'input') {
+        store.busStore.removeListener(busConnection.id);
+      } else {
+        store.busStore.removePublisher(busConnection.id);
+      }
+    }
+    closeContextMenu();
+  }, [wireConnection, busConnection, store, direction, closeContextMenu]);
+
+  const handleGoToBlock = useCallback(() => {
     if (connectedBlockId) onNavigate(connectedBlockId);
-  }, [onNavigate, connectedBlockId]);
+    closeContextMenu();
+  }, [connectedBlockId, onNavigate, closeContextMenu]);
+
+  const handleGoToBus = useCallback(() => {
+    if (connectedBus) store.uiStore.selectBus(connectedBus.id);
+    closeContextMenu();
+  }, [connectedBus, store, closeContextMenu]);
 
   const isSelected = store.uiStore.uiState.selectedPort?.blockId === blockId &&
                      store.uiStore.uiState.selectedPort?.slotId === slot.id &&
                      store.uiStore.uiState.selectedPort?.direction === direction;
 
+  // Determine icon and color
+  let iconClass = 'port-disconnected-icon';
+  let icon = '○';
+  let title = 'Not connected (click to wire, right-click for options)';
+
+  if (wireConnection) {
+    iconClass = 'port-wire-icon';
+    icon = '●';
+    title = `Wire: ${connectedBlock?.label ?? 'Unknown'}`;
+  } else if (busConnection) {
+    iconClass = 'port-bus-icon';
+    icon = '●';
+    title = `Bus: ${connectedBus?.name ?? busConnection.busId}`;
+  }
+
+  if (wireConnection && busConnection) {
+    title = `Wire: ${connectedBlock?.label ?? 'Unknown'} + Bus: ${connectedBus?.name ?? busConnection.busId}`;
+  }
+
+  // Build class name for port item
+  const portItemClass = [
+    'port-item',
+    isSelected ? 'selected' : '',
+    hasError ? 'has-error' : '',
+    hasWarning ? 'has-warning' : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className={`port-item ${isSelected ? 'selected' : ''}`}>
+    <div className={portItemClass}>
       <span className="port-item-label">{slot.label}</span>
-      {connection ? (
-        <span
-          className="port-connected-icon"
-          title={`Connected to: ${connectedBlock?.label ?? 'Unknown'} (click to wire, double-click to inspect)`}
-          onClick={handleClick}
-          onDoubleClick={handleDoubleClickConnected}
-        >
-          ●
+      {/* Error/warning indicator */}
+      {hasError && (
+        <span className="port-error-icon" title={portDiagnostics.find(d => d.severity === 'error' || d.severity === 'fatal')?.title}>
+          ⚠
         </span>
-      ) : (
-        <span
-          className="port-disconnected-icon"
-          title="Not connected (click to wire)"
-          onClick={handleClick}
-        >
-          ○
+      )}
+      {!hasError && hasWarning && (
+        <span className="port-warning-icon" title={portDiagnostics.find(d => d.severity === 'warn')?.title}>
+          ⚠
         </span>
+      )}
+      <span
+        className={iconClass}
+        title={title}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+      >
+        {icon}
+      </span>
+
+      {/* Context menu */}
+      {contextMenu && (
+        <>
+          <div className="port-context-backdrop" onClick={closeContextMenu} />
+          <div
+            className="port-context-menu"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <div className="port-context-header">{slot.label}</div>
+            {wireConnection && (
+              <>
+                <button className="port-context-item" onClick={handleGoToBlock}>
+                  Go to: {connectedBlock?.label ?? 'Block'}
+                </button>
+                <button className="port-context-item danger" onClick={handleDisconnect}>
+                  Disconnect wire
+                </button>
+              </>
+            )}
+            {busConnection && (
+              <>
+                <button className="port-context-item" onClick={handleGoToBus}>
+                  Go to bus: {connectedBus?.name ?? busConnection.busId}
+                </button>
+                <button className="port-context-item danger" onClick={handleDisconnect}>
+                  Remove bus {direction === 'input' ? 'listener' : 'publisher'}
+                </button>
+              </>
+            )}
+            {!wireConnection && !busConnection && (
+              <div className="port-context-empty">No connections</div>
+            )}
+            <button className="port-context-item" onClick={() => { handleClick(); closeContextMenu(); }}>
+              Open wiring panel
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
@@ -699,7 +838,86 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
 });
 
 /**
- * Bus connections section
+ * Bus tag component with click/right-click actions
+ */
+const BusTag = observer(({
+  busId,
+  connectionId,
+  direction,
+  className,
+}: {
+  busId: string;
+  connectionId: string;
+  direction: 'publish' | 'listen';
+  className: string;
+}) => {
+  const store = useStore();
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const bus = store.busStore.buses.find(b => b.id === busId);
+  const busName = bus?.name ?? busId;
+
+  const handleClick = useCallback(() => {
+    store.uiStore.selectBus(busId);
+  }, [store, busId]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleRemove = useCallback(() => {
+    if (direction === 'publish') {
+      store.busStore.removePublisher(connectionId);
+    } else {
+      store.busStore.removeListener(connectionId);
+    }
+    closeContextMenu();
+  }, [store, connectionId, direction, closeContextMenu]);
+
+  const handleGoToBus = useCallback(() => {
+    store.uiStore.selectBus(busId);
+    closeContextMenu();
+  }, [store, busId, closeContextMenu]);
+
+  return (
+    <>
+      <span
+        className={className}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        title={`Click to inspect "${busName}" bus, right-click for options`}
+      >
+        {busName}
+      </span>
+      {contextMenu && (
+        <>
+          <div className="port-context-backdrop" onClick={closeContextMenu} />
+          <div
+            className="port-context-menu"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <div className="port-context-header">Bus: {busName}</div>
+            <button className="port-context-item" onClick={handleGoToBus}>
+              Inspect bus
+            </button>
+            <button className="port-context-item danger" onClick={handleRemove}>
+              Remove {direction === 'publish' ? 'publisher' : 'listener'}
+            </button>
+          </div>
+        </>
+      )}
+    </>
+  );
+});
+
+/**
+ * Bus connections section - shows bus publishers and listeners for a block
+ * Click to inspect bus, right-click for options
  */
 const BusConnectionsSection = observer(({ block }: { block: Block }) => {
   const store = useStore();
@@ -716,17 +934,29 @@ const BusConnectionsSection = observer(({ block }: { block: Block }) => {
       <span className="insp-section-title">Buses</span>
       {publications.length > 0 && (
         <div className="bus-group">
-          <span className="bus-direction">Publishes:</span>
+          <span className="bus-direction">Publishes to:</span>
           {publications.map(p => (
-            <span key={p.id} className="bus-tag publish">{p.busId}</span>
+            <BusTag
+              key={p.id}
+              busId={p.busId}
+              connectionId={p.id}
+              direction="publish"
+              className="bus-tag publish"
+            />
           ))}
         </div>
       )}
       {subscriptions.length > 0 && (
         <div className="bus-group">
-          <span className="bus-direction">Listens:</span>
+          <span className="bus-direction">Listens to:</span>
           {subscriptions.map(l => (
-            <span key={l.id} className="bus-tag listen">{l.busId}</span>
+            <BusTag
+              key={l.id}
+              busId={l.busId}
+              connectionId={l.id}
+              direction="listen"
+              className="bus-tag listen"
+            />
           ))}
         </div>
       )}
@@ -864,6 +1094,67 @@ function DefaultSourceControl({
     />
   );
 }
+
+/**
+ * Diagnostics section - shows errors and warnings for a block
+ */
+const DiagnosticsSection = observer(({ block }: { block: Block }) => {
+  const store = useStore();
+
+  // Get diagnostics for this block (including port-level)
+  const blockDiagnostics = useMemo(() => {
+    return store.diagnosticStore.activeDiagnostics.filter(d => {
+      // Block-level diagnostics
+      if (d.primaryTarget.kind === 'block' && d.primaryTarget.blockId === block.id) {
+        return true;
+      }
+      // Port-level diagnostics on this block
+      if (d.primaryTarget.kind === 'port' && d.primaryTarget.portRef.blockId === block.id) {
+        return true;
+      }
+      // Check affected targets
+      return d.affectedTargets?.some(t =>
+        (t.kind === 'block' && t.blockId === block.id) ||
+        (t.kind === 'port' && t.portRef.blockId === block.id)
+      );
+    });
+  }, [store.diagnosticStore.activeDiagnostics, block.id]);
+
+  const errors = blockDiagnostics.filter(d => d.severity === 'error' || d.severity === 'fatal');
+  const warnings = blockDiagnostics.filter(d => d.severity === 'warn');
+
+  if (errors.length === 0 && warnings.length === 0) return null;
+
+  return (
+    <div className="insp-section diagnostics-section">
+      <span className="insp-section-title">
+        Diagnostics
+        {errors.length > 0 && <span className="diag-badge error">{errors.length} error{errors.length !== 1 ? 's' : ''}</span>}
+        {warnings.length > 0 && <span className="diag-badge warning">{warnings.length} warning{warnings.length !== 1 ? 's' : ''}</span>}
+      </span>
+      <div className="diagnostics-list">
+        {errors.map(d => (
+          <div key={d.id} className="diagnostic-item error">
+            <span className="diagnostic-icon">⚠</span>
+            <div className="diagnostic-content">
+              <span className="diagnostic-title">{d.title}</span>
+              <span className="diagnostic-message">{d.message}</span>
+            </div>
+          </div>
+        ))}
+        {warnings.map(d => (
+          <div key={d.id} className="diagnostic-item warning">
+            <span className="diagnostic-icon">⚠</span>
+            <div className="diagnostic-content">
+              <span className="diagnostic-title">{d.title}</span>
+              <span className="diagnostic-message">{d.message}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
 
 /**
  * Default Sources section - shows editable controls for undriven inputs
@@ -1180,63 +1471,14 @@ export const Inspector = observer(() => {
                         </div>
                       </div>
 
-                      {/* Parameters */}
-                      {Object.keys(block.params).length > 0 && (
-                        <div className="insp-section">
-                          <span className="insp-section-title">Parameters</span>
-                          <div className="param-grid">
-                            {Object.entries(block.params).map(([key, value]) => {
-                              const schema = definition?.paramSchema.find(s => s.key === key);
-                              const label = schema?.label ?? key;
-                              return (
-                                <div key={key} className="param-row">
-                                  <label className="param-key">{label}</label>
-                                  {schema?.type === 'select' && schema.options ? (
-                                    <select
-                                      className="param-input"
-                                      value={String(value)}
-                                      onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.value })}
-                                    >
-                                      {schema.options.map(opt => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                      ))}
-                                    </select>
-                                  ) : typeof value === 'boolean' ? (
-                                    <input
-                                      type="checkbox"
-                                      checked={value}
-                                      onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.checked })}
-                                    />
-                                  ) : typeof value === 'number' ? (
-                                    <input
-                                      type="number"
-                                      className="param-input"
-                                      value={value}
-                                      step={schema?.step ?? (value < 1 ? 0.1 : 1)}
-                                      min={schema?.min}
-                                      max={schema?.max}
-                                      onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: parseFloat(e.target.value) || 0 })}
-                                    />
-                                  ) : (
-                                    <input
-                                      type="text"
-                                      className="param-input"
-                                      value={String(value)}
-                                      onChange={e => store.patchStore.updateBlockParams(block.id, { [key]: e.target.value })}
-                                    />
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
+                      {/* Diagnostics - show errors/warnings first */}
+                      <DiagnosticsSection block={block} />
+
+                      {/* Bus connections - show first for visibility */}
+                      <BusConnectionsSection block={block} />
 
                       {/* Default Sources - editable when not driven */}
                       <DefaultSourcesSection block={block} />
-
-                      {/* Bus connections */}
-                      <BusConnectionsSection block={block} />
 
                       {/* Compatible replacement blocks */}
                       <CompatibleBlocksSection block={block} />

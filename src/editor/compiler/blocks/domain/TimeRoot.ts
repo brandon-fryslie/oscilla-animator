@@ -9,8 +9,10 @@ import type {
   BlockCompiler,
   RuntimeCtx,
   CompiledOutputs,
-  AutoPublication
+  AutoPublication,
+  TimeModel,
 } from '../../types';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 type SignalNumber = (tMs: number, ctx: RuntimeCtx) => number;
 type Event = (tMs: number, lastTMs: number, ctx: RuntimeCtx) => boolean;
@@ -51,6 +53,191 @@ export function extractTimeRootAutoPublications(
       return [];
   }
 }
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+/**
+ * Lower FiniteTimeRoot block to IR.
+ *
+ * Uses canonical time signals from IRBuilder:
+ * - sigTimeAbsMs() for systemTime
+ * - sigTimeModelMs() for progress calculation
+ * - sigPhase01() for phase (same as progress for finite)
+ * - sigWrapEvent() for end event
+ */
+const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
+  const params = (config as any) || {};
+  const durationMs = Number(params.durationMs ?? 5000);
+
+  // Canonical time signals from TimeModel
+  const systemTimeId = ctx.b.sigTimeAbsMs();
+  const progressId = ctx.b.sigTimeModelMs(); // Will be scaled by TimeModel
+  const phaseId = ctx.b.sigPhase01();
+  const endId = ctx.b.sigWrapEvent();
+
+  // Energy: constant 1.0 (simplified - runtime handles completion)
+  const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'number' });
+
+  // Declare TimeModel
+  const timeModel: TimeModel = {
+    kind: 'finite',
+    durationMs,
+  };
+
+  return {
+    outputs: [
+      { k: 'sig', id: systemTimeId },  // systemTime
+      { k: 'sig', id: progressId },     // progress
+      { k: 'sig', id: phaseId },        // phase
+      { k: 'sig', id: endId },          // end
+      { k: 'sig', id: energyId },       // energy
+    ],
+    declares: { timeModel },
+  };
+};
+
+/**
+ * Lower CycleTimeRoot block to IR.
+ *
+ * Uses canonical time signals:
+ * - sigTimeAbsMs() for systemTime
+ * - sigTimeModelMs() for cycleT
+ * - sigPhase01() for phase
+ * - sigWrapEvent() for wrap
+ */
+const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
+  const params = (config as any) || {};
+  const periodMs = Number(params.periodMs ?? 3000);
+  const mode = typeof params.mode === 'string' ? params.mode : 'loop';
+
+  // Canonical time signals from TimeModel
+  const systemTimeId = ctx.b.sigTimeAbsMs();
+  const cycleTId = ctx.b.sigTimeModelMs(); // Modulo by period
+  const phaseId = ctx.b.sigPhase01();
+  const wrapId = ctx.b.sigWrapEvent();
+
+  // Cycle index: floor(systemTime / period)
+  const periodConst = ctx.b.sigConst(periodMs, { world: 'signal', domain: 'number' });
+  const cyclesId = ctx.b.sigZip(systemTimeId, periodConst, {
+    kind: 'opcode',
+    fnId: 'div',
+    opcode: 102, // OpCode.Div
+    outputType: { world: 'signal', domain: 'number' },
+  });
+  const cycleIndexId = ctx.b.sigMap(cyclesId, {
+    kind: 'opcode',
+    opcode: 121, // OpCode.Floor
+    outputType: { world: 'signal', domain: 'number' },
+  });
+
+  // Energy: constant 1.0
+  const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'number' });
+
+  // Declare TimeModel
+  const timeModel: TimeModel = {
+    kind: 'cyclic',
+    periodMs,
+    mode: mode === 'pingpong' ? 'pingpong' : 'loop',
+  };
+
+  return {
+    outputs: [
+      { k: 'sig', id: systemTimeId },  // systemTime
+      { k: 'sig', id: cycleTId },      // cycleT
+      { k: 'sig', id: phaseId },       // phase
+      { k: 'sig', id: wrapId },        // wrap
+      { k: 'sig', id: cycleIndexId },  // cycleIndex
+      { k: 'sig', id: energyId },      // energy
+    ],
+    declares: { timeModel },
+  };
+};
+
+/**
+ * Lower InfiniteTimeRoot block to IR.
+ *
+ * Uses canonical time signals:
+ * - sigTimeAbsMs() for systemTime
+ * - sigPhase01() for ambient phase
+ * - sigWrapEvent() for pulse
+ */
+const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
+  const params = (config as any) || {};
+  const periodMs = Number(params.periodMs ?? 10000);
+
+  // Canonical time signals from TimeModel
+  const systemTimeId = ctx.b.sigTimeAbsMs();
+  const phaseId = ctx.b.sigPhase01();
+  const pulseId = ctx.b.sigWrapEvent();
+
+  // Energy: constant 1.0
+  const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'number' });
+
+  // Declare TimeModel
+  const timeModel: TimeModel = {
+    kind: 'infinite',
+    ambientPeriodMs: periodMs,
+  };
+
+  return {
+    outputs: [
+      { k: 'sig', id: systemTimeId },  // systemTime
+      { k: 'sig', id: phaseId },       // phase
+      { k: 'sig', id: pulseId },       // pulse
+      { k: 'sig', id: energyId },      // energy
+    ],
+    declares: { timeModel },
+  };
+};
+
+// Register block types
+registerBlockType({
+  type: 'FiniteTimeRoot',
+  capability: 'time',
+  inputs: [],
+  outputs: [
+    { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
+    { portId: 'progress', label: 'Progress', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'phase01' } },
+    { portId: 'end', label: 'End', dir: 'out', type: { world: 'signal', domain: 'trigger' } },
+    { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'number' } },
+  ],
+  lower: lowerFiniteTimeRoot,
+});
+
+registerBlockType({
+  type: 'CycleTimeRoot',
+  capability: 'time',
+  inputs: [],
+  outputs: [
+    { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
+    { portId: 'cycleT', label: 'Cycle T', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
+    { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'phase01' } },
+    { portId: 'wrap', label: 'Wrap', dir: 'out', type: { world: 'signal', domain: 'trigger' } },
+    { portId: 'cycleIndex', label: 'Cycle Index', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'number' } },
+  ],
+  lower: lowerCycleTimeRoot,
+});
+
+registerBlockType({
+  type: 'InfiniteTimeRoot',
+  capability: 'time',
+  inputs: [],
+  outputs: [
+    { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
+    { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'phase01' } },
+    { portId: 'pulse', label: 'Pulse', dir: 'out', type: { world: 'signal', domain: 'trigger' } },
+    { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'number' } },
+  ],
+  lower: lowerInfiniteTimeRoot,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 /**
  * FiniteTimeRoot - Finite performance with known duration.

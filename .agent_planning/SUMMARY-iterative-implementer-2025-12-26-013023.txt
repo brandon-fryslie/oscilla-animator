@@ -1,0 +1,69 @@
+Agent: iterative-implementer | 2025-12-26-013023
+Mode: manual
+Completed: P2-1 Domain IR Design Doc | Files: 1 | Commits: 1
+Tests: N/A (design doc only)
+Cache invalidated: 0 entries (no implementation changes)
+Status: complete
+
+WORKSTREAM D: P2-1 Domain IR Representation Design
+
+DELIVERABLE:
+- design-docs/12-Compiler-Final/17-Domain-IR-Representation.md (715 lines)
+
+KEY DECISIONS DOCUMENTED:
+
+1. Domain Representation in ValueRefPacked
+   - Uses special variant: { k: "special", tag: "domain", id: DomainId }
+   - Provides extensibility for other special values (RenderTree, TimeModel)
+   - Maintains type safety through tag discrimination
+
+2. DomainId Type
+   - Branded type: number & { __brand: "DomainId" }
+   - Dense sequential allocation (0, 1, 2, ...)
+   - Prevents accidental mixing with ValueSlot, SigExprId
+
+3. DomainTable Storage
+   - Dedicated table indexed by DomainId
+   - Stores: n (element count), positions (FieldExprId), source, elementIdGen, topology
+   - Element ID generation strategies: sequential, grid, sample, custom
+
+4. IRBuilder Methods
+   - domainFromN(nSig: SigExprId): DomainId
+   - domainFromGrid(rows, cols, spacing, originX, originY): { domainId, positions }
+   - domainFromSVG(svgPath, sampleCount, distribution, seed): { domainId, positions }
+   - domainPositions(domainId): FieldExprId | undefined
+
+5. Field Block Domain Reference
+   - LowerCtx includes optional domainRef field
+   - Field blocks extract domain from inputs[0]
+   - Broadcast/reduce operations use domainId parameter
+
+6. Runtime Materialization
+   - DomainTable lookup by DomainId
+   - Lazy position evaluation (FieldExpr, not arrays)
+   - Element ID generation on-demand
+
+7. Domain Compatibility Validation
+   - Compile-time: enforced in field zip/combine operations
+   - Runtime: fail-fast on critical mismatches
+
+INTEGRATION POINTS:
+- Compatible with existing Domain producer blocks:
+  * DomainN.ts (40 lines, params: n, seed)
+  * GridDomain.ts (70 lines, params: rows, cols, spacing, origin)
+  * SVGSampleDomain.ts (331 lines, params: asset, sampleCount, distribution)
+
+- Aligns with IRBuilder interface patterns
+- Uses ValueRefPacked structure from lowerTypes.ts
+- Supports future extensions: topology, scene domains, particle systems
+
+RESOLVES:
+- STATUS § line 352 NEEDS_CLARIFICATION: Domain IR representation
+- DOD P2-1 all acceptance criteria (9/9 checkboxes)
+
+NEXT STEPS:
+- Implementation of DomainId type and DomainTable structures
+- IRBuilder method implementations
+- Migration of domain producer blocks (Workstream C)
+
+COMMIT: e761402 "docs(compiler): Add Domain IR representation design doc"

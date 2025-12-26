@@ -802,8 +802,38 @@
   font-size: 14px;
 }
 
-.lens-chain-item-params {
+.lens-chain-item-body {
+  display: flex;
+  gap: 8px;
   padding: 8px;
+}
+
+.lens-chain-item-curve {
+  flex-shrink: 0;
+}
+
+.lens-chain-item-curve .lens-curve-svg {
+  display: block;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.lens-chain-item-curve .lens-curve-no-preview {
+  width: 72px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  font-size: 9px;
+  color: var(--text-tertiary, #666);
+  text-align: center;
+}
+
+.lens-chain-item-params {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Lens parameter rows */
@@ -1052,52 +1082,71 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Lens preview indicator */
-.lens-preview-indicator {
+/* Lens preview tooltip (Tippy.js version - no reflow) */
+.lens-preview-tooltip {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 6px;
+  min-width: 100px;
+}
+
+.lens-preview-tooltip .lens-curve-svg {
+  display: block;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Animated sparkline effect */
+@keyframes lens-sparkline {
+  0% {
+    stroke-dashoffset: 150;
+  }
+  100% {
+    stroke-dashoffset: -150;
+  }
+}
+
+.lens-curve-dot,
+.lens-curve-dot-glow {
+  filter: drop-shadow(0 0 2px rgba(74, 158, 255, 0.8));
+}
+
+.lens-preview-tooltip .lens-curve-no-preview {
   padding: 8px 12px;
-  background: var(--accent-dim, rgba(74, 158, 255, 0.15));
-  border: 1px solid var(--accent-color, #4a9eff);
-  border-radius: 6px;
-  margin-bottom: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+  text-align: center;
+  font-style: italic;
+}
+
+.lens-preview-tooltip .lens-preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lens-preview-tooltip .lens-preview-name {
+  font-weight: 600;
   font-size: 11px;
-  animation: preview-fade-in 0.15s ease-out;
-}
-
-@keyframes preview-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.lens-preview-label {
-  flex-shrink: 0;
-  font-weight: 600;
-  color: var(--accent-color, #4a9eff);
-  text-transform: uppercase;
-  font-size: 10px;
-}
-
-.lens-preview-chain {
   color: var(--text-primary, #e5e5e5);
-  font-family: monospace;
-  font-size: 10px;
-  word-break: break-word;
 }
 
-.lens-preview-chain .preview-lens {
+.lens-preview-tooltip .lens-preview-params {
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+  font-family: monospace;
+}
+
+.lens-preview-tooltip .lens-preview-chain-hint {
+  font-size: 9px;
+  color: var(--text-tertiary, #666);
+  margin-top: 2px;
+}
+
+.lens-preview-tooltip .lens-preview-chain-hint strong {
   color: var(--accent-color, #4a9eff);
-  font-weight: 600;
-  background: var(--accent-dim, rgba(74, 158, 255, 0.2));
-  padding: 1px 4px;
-  border-radius: 3px;
 }
 
 /* Cell hover preview */

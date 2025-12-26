@@ -45,11 +45,14 @@ export interface SigEnv {
  * Thrown when trying to evaluate an unregistered signal
  */
 export class UnregisteredSignalError extends Error {
-  constructor(public readonly sigId: SigExprId) {
+  readonly sigId: SigExprId;
+
+  constructor(sigId: SigExprId) {
     super(
       `Signal ${sigId} is not registered in SignalBridge. ` +
         `Make sure to call registerSignal() before materializing fields that use this signal.`
     );
+    this.sigId = sigId;
     this.name = "UnregisteredSignalError";
   }
 }

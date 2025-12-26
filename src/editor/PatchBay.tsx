@@ -115,6 +115,8 @@ function Port({
   isSelected,
   isCompatible,
   connectionInfo,
+  hasPortError,
+  hasPortWarning,
   onHover,
   onClick,
   onContextMenu,
@@ -127,6 +129,8 @@ function Port({
   isSelected: boolean;
   isCompatible: boolean;
   connectionInfo: ConnectionInfo;
+  hasPortError?: boolean;
+  hasPortWarning?: boolean;
   onHover: (port: PortRef | null) => void;
   onClick: (port: PortRef) => void;
   onContextMenu: (e: React.MouseEvent, port: PortRef) => void;
@@ -184,6 +188,8 @@ function Port({
     isHovered ? 'hovered' : '',
     isSelected ? 'selected' : '',
     isCompatible ? 'compatible' : '',
+    hasPortError ? 'has-error' : '',
+    hasPortWarning ? 'has-warning' : '',
   ].filter(Boolean).join(' ');
 
   // Build connection status text for tooltip
@@ -352,6 +358,22 @@ const DraggablePatchBlock = observer(({
   const busListeners = store.busStore.listeners;
   const publishers = store.busStore.publishers;
 
+  // Helper to get port-level diagnostics
+  const getPortDiagnostics = (slotId: string, direction: 'input' | 'output') => {
+    return store.diagnosticStore.activeDiagnostics.filter(d => {
+      if (d.primaryTarget.kind === 'port') {
+        const ref = d.primaryTarget.portRef;
+        return ref.blockId === block.id && ref.slotId === slotId && ref.direction === direction;
+      }
+      return d.affectedTargets?.some(t =>
+        t.kind === 'port' &&
+        t.portRef.blockId === block.id &&
+        t.portRef.slotId === slotId &&
+        t.portRef.direction === direction
+      );
+    });
+  };
+
   // Helper to get connection info for a specific port
   const getConnectionInfo = (slotId: string, direction: 'input' | 'output'): ConnectionInfo => {
     // Check for block-to-block connections
@@ -471,6 +493,9 @@ const DraggablePatchBlock = observer(({
             }
 
             const connInfo = getConnectionInfo(slot.id, 'input');
+            const portDiags = getPortDiagnostics(slot.id, 'input');
+            const portHasError = portDiags.some(d => d.severity === 'error' || d.severity === 'fatal');
+            const portHasWarning = !portHasError && portDiags.some(d => d.severity === 'warn');
 
             return (
               <Port
@@ -483,6 +508,8 @@ const DraggablePatchBlock = observer(({
                 isSelected={isThisSelected}
                 isCompatible={compatible}
                 connectionInfo={connInfo}
+                hasPortError={portHasError}
+                hasPortWarning={portHasWarning}
                 onHover={(p) => store.uiStore.setHoveredPort(p)}
                 onClick={(p) => store.uiStore.setSelectedPort(p)}
                 onContextMenu={(e, p) => store.uiStore.openContextMenu(e.clientX, e.clientY, p)}
@@ -521,6 +548,9 @@ const DraggablePatchBlock = observer(({
             }
 
             const connInfo = getConnectionInfo(slot.id, 'output');
+            const portDiags = getPortDiagnostics(slot.id, 'output');
+            const portHasError = portDiags.some(d => d.severity === 'error' || d.severity === 'fatal');
+            const portHasWarning = !portHasError && portDiags.some(d => d.severity === 'warn');
 
             return (
               <Port
@@ -533,6 +563,8 @@ const DraggablePatchBlock = observer(({
                 isSelected={isThisSelected}
                 isCompatible={compatible}
                 connectionInfo={connInfo}
+                hasPortError={portHasError}
+                hasPortWarning={portHasWarning}
                 onHover={(p) => store.uiStore.setHoveredPort(p)}
                 onClick={(p) => store.uiStore.setSelectedPort(p)}
                 onContextMenu={(e, p) => store.uiStore.openContextMenu(e.clientX, e.clientY, p)}

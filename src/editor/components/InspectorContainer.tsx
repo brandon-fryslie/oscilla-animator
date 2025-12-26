@@ -43,15 +43,26 @@ export function InspectorContainer({
   return (
     <div className={`inspector-container ${className}`}>
       <div className="inspector-container-header" style={{ borderLeftColor: color }}>
-        {onBack && (
-          <button
-            className="inspector-back-btn"
-            onClick={onBack}
-            title={backLabel}
-          >
-            ← {backLabel}
-          </button>
-        )}
+        <div className="inspector-header-top">
+          {onBack && (
+            <button
+              className="inspector-back-btn"
+              onClick={onBack}
+              title={backLabel}
+            >
+              ← {backLabel}
+            </button>
+          )}
+          {onBack && (
+            <button
+              className="inspector-close-btn"
+              onClick={onBack}
+              title="Close"
+            >
+              ×
+            </button>
+          )}
+        </div>
         <div className="inspector-title-row">
           <span className="inspector-title">{title}</span>
           {category && (

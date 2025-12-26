@@ -2,7 +2,6 @@
 
 | Topic | File | Cached | Source | Confidence |
 |-------|------|--------|--------|------------|
-| Architecture | architecture.md | 2025-12-23 05:13 | project-evaluator + design docs | HIGH |
 | Rendering Architecture | rendering-architecture.md | 2025-12-24 16:52 | project-evaluator (canvas-renderer eval v2) | HIGH |
 | Lint Infrastructure | lint-infrastructure.md | 2025-12-25 17:48 | project-evaluator (lint-cleanup) | HIGH |
 
@@ -13,25 +12,20 @@
 - **ANCIENT**: > 7 days - ignore
 
 ## What's Cached
-- **architecture.md**: Core patterns, TimeRoot spec violations, type system, stores, compiler pipeline
 - **rendering-architecture.md**: RenderTree IR, Player loop, SvgRenderer, RenderInstances2D, Canvas extension points
 - **lint-infrastructure.md**: ESLint config, two-tier rules (critical vs non-critical), auto-fixable rules
 
 ## Not Yet Cached
 - project-structure.md (directory layout, entry points)
 - runtime-*.md (runtime behavior findings)
-- compiler-patterns.md (INVALIDATED 2025-12-25 - compiler passes modified)
 - test-infrastructure.md (INVALIDATED 2025-12-26 - signal-expr tests modified)
 - fieldexpr-systems.md (INVALIDATED 2025-12-26 - Materializer modified, CompilerRuntime added)
 - signal-expr-runtime.md (NEEDS EVAL - SignalExprBuilder + golden tests added 2025-12-26)
 - runtime-integration.md (INVALIDATED 2025-12-26 - CompilerRuntime added, select/transform nodes added)
-- block-compiler-migration.md (INVALIDATED 2025-12-26 - IR lowering types being added)
+- compiler-integration.md (INVALIDATED 2025-12-26 - CompiledProgram type extended with SignalExpr IR)
 
-## Recent Changes Requiring Re-evaluation
-- 2025-12-26: FieldExpr Phase 5 remaining work completed
-  - New file: CompilerRuntime.ts - Wires LinkedGraphIR to runtime Materializer
-  - Modified: types.ts, FieldHandle.ts, Materializer.ts - Added select/transform node support
-  - All integration infrastructure complete for compiler → runtime
-- 2025-12-26: IR lowering types infrastructure being added
-  - Creating lowerTypes.ts for block compiler migration Phase 3
-  - Adding BlockTypeDecl registry and ValueRefPacked extension
+## Removed in This Session
+- architecture.md (INVALIDATED 2025-12-26 04:14 - Compiler pipeline modified: SignalExprTable extraction added to compileBusAware)
+- compiler-architecture.md (INVALIDATED 2025-12-26 - Signal blocks migrated to IR lowering, P1-8 through P1-13 completed)
+- bus-compiler-architecture.md (INVALIDATED 2025-12-26 - removed as stale)
+- block-compiler-migration.md (INVALIDATED 2025-12-26 05:55 - Signal blocks 8-13 migrated to IR lowering)

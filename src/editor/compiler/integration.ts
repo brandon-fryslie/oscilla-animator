@@ -226,6 +226,9 @@ function generateBusDiagnostics(
   }
 
   // Check each block's outputs
+  // Render output types are terminal sinks - they don't need downstream connections
+  const terminalOutputTypes = ['Render', 'RenderTree', 'RenderTreeProgram'];
+
   for (const [blockId, block] of patch.blocks) {
     // Skip TimeRoot blocks - they auto-publish to buses
     if (block.type === 'FiniteTimeRoot' || block.type === 'CycleTimeRoot' || block.type === 'InfiniteTimeRoot') {
@@ -236,6 +239,13 @@ function generateBusDiagnostics(
     if (!def?.outputs) continue;
 
     for (const output of def.outputs) {
+      // Skip terminal outputs (render sinks) - they don't need connections
+      const slotType = typeof output.type === 'string' ? output.type : output.type;
+      const typeStr = typeof slotType === 'string' ? slotType : '';
+      if (terminalOutputTypes.some(t => typeStr.includes(t))) {
+        continue;
+      }
+
       const outputKey = `${blockId}.${output.id}`;
       const isConnected = connectedOutputs.has(outputKey);
       const isPublished = publishedOutputs.has(outputKey);
@@ -392,6 +402,18 @@ function convertConnections(connections: Connection[]): CompilerConnection[] {
  * Convert EditorStore to CompilerPatch.
  */
 export function editorToPatch(store: RootStore): CompilerPatch {
+  // Build a lookup map for default sources: blockId:slotId -> value
+  // This allows the compiler to look up runtime-edited values
+  const defaultSourceValues: Record<string, unknown> = {};
+  for (const block of store.patchStore.blocks) {
+    for (const input of block.inputs) {
+      const ds = store.defaultSourceStore.getDefaultSourceForInput(block.id, input.id);
+      if (ds) {
+        defaultSourceValues[`${block.id}:${input.id}`] = ds.value;
+      }
+    }
+  }
+
   return {
     blocks: convertBlocks(store.patchStore.blocks),
     connections: convertConnections(store.patchStore.connections),
@@ -400,6 +422,7 @@ export function editorToPatch(store: RootStore): CompilerPatch {
     publishers: store.busStore.publishers,
     listeners: store.busStore.listeners,
     defaultSources: Object.fromEntries(store.defaultSourceStore.sources.entries()),
+    defaultSourceValues, // NEW: lookup-friendly map for runtime values
     // output is auto-inferred
   };
 }
@@ -1068,6 +1091,13 @@ export function setupAutoCompile(
       connectionCount: store.patchStore.connections.length,
       connections: store.patchStore.connections.map((c: Connection) => `${c.from.blockId}:${c.from.slotId}->${c.to.blockId}:${c.to.slotId}`),
       seed: store.uiStore.settings.seed,
+      // Bus system - track publishers and listeners
+      busCount: store.busStore.buses.length,
+      buses: store.busStore.buses.map(b => `${b.id}:${b.name}`),
+      publisherCount: store.busStore.publishers.length,
+      publishers: store.busStore.publishers.map(p => `${p.id}:${p.from.blockId}.${p.from.slotId}->${p.busId}:${p.enabled}`),
+      listenerCount: store.busStore.listeners.length,
+      listeners: store.busStore.listeners.map(l => `${l.id}:${l.busId}->${l.to.blockId}.${l.to.slotId}:${l.enabled}`),
     }),
     // React to changes
     () => {

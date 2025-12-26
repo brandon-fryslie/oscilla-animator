@@ -1237,9 +1237,9 @@ export const RenderInstances2D = createBlock({
       defaultSource: { value: 2.0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 5, step: 0.5 } },
     }),
   ],
-  outputs: [
-    output('render', 'Render', 'RenderTree'),
-  ],
+  // No outputs shown in UI - this is a terminal sink block
+  // The compiler still defines the 'render' output for patch output inference
+  outputs: [],
   // TODO: Remove paramSchema after compiler updated (Phase 4)
   paramSchema: [
     {

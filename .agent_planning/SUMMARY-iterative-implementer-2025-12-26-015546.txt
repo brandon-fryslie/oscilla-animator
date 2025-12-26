@@ -1,0 +1,84 @@
+Agent: iterative-implementer | 2025-12-26-015546
+Mode: manual
+Completed: CompilerRuntime integration, select/transform nodes | Files: 4 | Commits: 1
+Tests: 1631 passing, 3 skipped
+Cache invalidated: fieldexpr-systems.md, runtime-integration.md
+Status: in_progress
+
+## Work Completed
+
+### 1. CompilerRuntime Integration Module
+- Created `src/editor/runtime/integration/CompilerRuntime.ts` (368 lines)
+- Wires LinkedGraphIR (Pass 8 output) to runtime Materializer
+- Key features:
+  - Extracts FieldExprTable from IRBuilder
+  - Converts compiler TypeDesc → runtime TypeDesc for all field nodes
+  - Provides ConstantsTable adapter for const pool access
+  - Manages MaterializerEnv lifecycle (setTime, setDomain, advanceFrame)
+  - Exposes materializeField() API for runtime use
+
+### 2. Select Node Support
+- Added to runtime types (FieldExprIR, FieldHandle)
+- Implemented evalFieldHandle case for 'select' kind
+- Implemented fillBufferSelect in Materializer:
+  - Materializes condition, true, and false fields
+  - Selects element-wise (nonzero condition = true branch)
+
+### 3. Transform Node Support
+- Added to runtime types (FieldExprIR, FieldHandle)
+- Exported TransformChainId type
+- Implemented evalFieldHandle case for 'transform' kind
+- Implemented fillBufferTransform in Materializer:
+  - Placeholder implementation (identity transform)
+  - Full transform chain semantics deferred to Phase 6
+  - Gracefully handles missing transform chain table
+
+## Remaining Work
+
+### 1. Bus Combine Integration
+- **Status**: Already complete!
+- Pass 7 bus output is already wired to runtime
+- FieldHandle.ts handles 'busCombine' nodes (line 145-153)
+- Materializer.ts implements fillBufferCombine (line 457-493)
+- VERIFIED: Uses pre-sorted terms from compiler, never re-sorts
+
+### 2. Block Compilers for Fields
+- **Status**: Not started
+- Need to find field-producing blocks and migrate to emit FieldExpr
+- Key blocks to migrate (from HANDOFF.md):
+  - GridDomain - creates domain + position field
+  - Field math blocks (FieldAdd, FieldMul, etc.)
+  - Hash blocks (FieldHash01ById, StableIdHash)
+- Blocks should use IRBuilder API to emit FieldExpr nodes
+- Must produce same output as closure version
+
+## Verification
+
+All tests passing:
+- Test Files: 85 passed, 1 skipped (86)
+- Tests: 1631 passed, 3 skipped, 3 todo (1637)
+- Duration: 16.72s
+
+Modified files:
+- src/editor/runtime/field/types.ts (added select/transform to FieldExprIR and FieldHandle)
+- src/editor/runtime/field/FieldHandle.ts (added select/transform cases)
+- src/editor/runtime/field/Materializer.ts (added fillBufferSelect, fillBufferTransform)
+- src/editor/runtime/integration/CompilerRuntime.ts (new file)
+
+## Next Steps
+
+Sprint 2: Block Compiler Migration
+1. Find all field-producing blocks in codebase
+2. Create IRBuilder-based compilers for each
+3. Verify output matches closure version using golden tests
+4. Migrate at least 3 blocks as proof-of-concept
+
+## Notes
+
+- CompilerRuntime temporarily accesses IRBuilder internals via `any` cast
+  - TODO: Add proper getFieldExprTable() method to IRBuilder interface
+  - This is acceptable for Phase 5 as IRBuilder is evolving
+- Transform node uses identity transform placeholder
+  - Full transform chain application requires Phase 6 transform table
+  - Current implementation allows system to work without breaking
+- Bus combine already complete - no additional work needed!

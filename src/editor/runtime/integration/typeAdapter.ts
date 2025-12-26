@@ -24,15 +24,17 @@ import type { TypeDesc as RuntimeTypeDesc } from "../field/types";
  * Thrown when a compiler type cannot be converted to runtime type
  */
 export class UnsupportedTypeError extends Error {
-  constructor(
-    public readonly compilerType: CompilerTypeDesc,
-    public readonly reason: string
-  ) {
+  readonly compilerType: CompilerTypeDesc;
+  readonly reason: string;
+
+  constructor(compilerType: CompilerTypeDesc, reason: string) {
     super(
       `Cannot convert compiler type to runtime type: ${reason}\n` +
         `Compiler type: world=${compilerType.world}, domain=${compilerType.domain}\n` +
         `Supported domains: number, vec2, vec3, vec4, color, boolean`
     );
+    this.compilerType = compilerType;
+    this.reason = reason;
     this.name = "UnsupportedTypeError";
   }
 }
@@ -41,14 +43,16 @@ export class UnsupportedTypeError extends Error {
  * Thrown when a runtime type cannot be converted to compiler type
  */
 export class RuntimeTypeConversionError extends Error {
-  constructor(
-    public readonly runtimeType: RuntimeTypeDesc,
-    public readonly reason: string
-  ) {
+  readonly runtimeType: RuntimeTypeDesc;
+  readonly reason: string;
+
+  constructor(runtimeType: RuntimeTypeDesc, reason: string) {
     super(
       `Cannot convert runtime type to compiler type: ${reason}\n` +
         `Runtime type: kind=${runtimeType.kind}`
     );
+    this.runtimeType = runtimeType;
+    this.reason = reason;
     this.name = "RuntimeTypeConversionError";
   }
 }

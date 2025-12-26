@@ -454,6 +454,28 @@
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
 }
 
+/* Port error state - red outline */
+.port.has-error {
+  outline: 2px solid #ef4444 !important;
+  outline-offset: 1px;
+  animation: port-error-pulse 1s ease-in-out infinite;
+}
+
+@keyframes port-error-pulse {
+  0%, 100% {
+    outline-color: rgba(239, 68, 68, 1);
+  }
+  50% {
+    outline-color: rgba(239, 68, 68, 0.5);
+  }
+}
+
+/* Port warning state - orange outline */
+.port.has-warning {
+  outline: 2px solid #f59e0b;
+  outline-offset: 1px;
+}
+
 /* Port glyph styling */
 .port-glyph {
   font-size: 10px;

@@ -52,14 +52,12 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // Map phase to waveform using appropriate opcode
   let waveformId: number;
-  const phaseType = ctx.inTypes[0];
   const numberType: any = { world: 'signal', domain: 'number' };
 
   switch (shape) {
     case 'sine':
       // sine(phase * 2π)
       {
-        const twoPI = ctx.b.allocConstId(2 * Math.PI);
         const twoPI_id = ctx.b.sigConst(2 * Math.PI, numberType);
         const radians = ctx.b.sigZip(phase.id, twoPI_id, {
           fnId: 'mul',

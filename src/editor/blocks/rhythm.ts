@@ -20,7 +20,14 @@ export const PulseDivider = createBlock({
   label: 'Pulse Divider',
   description: 'Generate tick events at phase subdivisions (e.g., quarter notes)',
   inputs: [
-    input('phase', 'Phase', 'Signal<phase>'),
+    input('phase', 'Phase', 'Signal<phase>', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
+      },
+    }),
     input('divisions', 'Divisions', 'Scalar:number', {
       tier: 'primary',
       defaultSource: {

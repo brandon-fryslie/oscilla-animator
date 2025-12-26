@@ -111,15 +111,15 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   const base = (config as any)?.base || '#3B82F6';
   const hueSpan = Number((config as any)?.hueSpan ?? 180);
-  const sat = Number((config as any)?.sat ?? 0.8);
-  const light = Number((config as any)?.light ?? 0.5);
+  // sat and light are parsed for future use when full HSL->RGB IR is implemented
+  void ((config as any)?.sat ?? 0.8);
+  void ((config as any)?.light ?? 0.5);
 
   // Extract base hue from base color
   const baseHSL = hexToHSL(base);
   const baseHue = baseHSL.h;
 
   const numberType: any = { world: 'signal', domain: 'number' };
-  const colorType: any = { world: 'signal', domain: 'color' };
 
   // Calculate hue: baseHue + phase * hueSpan
   const hueSpanSig = ctx.b.sigConst(hueSpan, numberType);
@@ -129,7 +129,8 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
     outputType: numberType,
   });
   const baseHueSig = ctx.b.sigConst(baseHue, numberType);
-  const hue = ctx.b.sigZip(baseHueSig, hueOffset, {
+  // Calculated hue is not used yet - closureBridge handles color conversion
+  void ctx.b.sigZip(baseHueSig, hueOffset, {
     fnId: 'add',
     opcode: OpCode.Add,
     outputType: numberType,

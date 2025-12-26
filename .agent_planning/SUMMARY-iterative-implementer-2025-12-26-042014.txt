@@ -1,0 +1,39 @@
+Agent: iterative-implementer | 2025-12-26-041433
+Mode: manual
+Completed: Phase 4 Workstream B - Wire SignalExprTable into Pipeline | Files: 5 | Commits: 1
+Cache invalidated: architecture.md (compiler architecture modified)
+Status: complete
+
+Summary:
+Successfully implemented Phase 4 Workstream B (B5): Wire SignalExprTable into compilation pipeline.
+
+Work completed:
+1. Extended CompileResult type with signalTable, constPool, stateLayout fields
+2. Created extractSignalExprTable.ts to extract SignalExpr data from LinkedGraphIR
+3. Modified attachIR() in compileBusAware.ts to extract and attach SignalExprTable
+4. Added v2adapter.ts stub (DOD B2 - interface definition only)
+5. Added stateLayout.ts (DOD B3 - already mostly complete)
+
+Key findings:
+- The compiler_rewrite branch already has a sophisticated IR architecture via registerBlockType
+- 13 blocks already have IR lowering (AddSignal, SubSignal, MulSignal, etc.)
+- The DOD was written before this architecture existed, so B2 (V2Adapter) and B4 (AddSignal migration) were already done differently
+- B1 (Program type) was already complete in types.ts
+- B3 (StateLayout) file already existed
+- B5 (Pipeline wiring) was the main new work needed
+
+The compilation pipeline now:
+1. Compiles closures (legacy path)  
+2. Runs IR compilation passes 1-8 producing LinkedGraphIR
+3. Extracts SignalExprTable from LinkedGraphIR
+4. Attaches signalTable/constPool/stateLayout to CompileResult
+
+This enables the runtime to access IR for evaluation via SigEvaluator when emitIR=true.
+
+TypeScript compilation: PASSING
+All changes committed: 3f92847
+
+Next steps (Workstream C - Runtime Integration):
+- Player needs to create SigEnv when signalTable present
+- Player.renderOnce() needs to call evalSig() for IR-based programs  
+- Materializer needs to use real SigEvaluator instead of SignalBridge

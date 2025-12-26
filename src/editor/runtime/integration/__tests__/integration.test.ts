@@ -250,7 +250,7 @@ describe("Integration: Type Adapter + SignalBridge", () => {
 
       const fieldCache = createFieldHandleCache();
 
-      const createEnv = (fieldId: number, sigId: number): MaterializerEnv => ({
+      const createEnv = (fieldId: number, _sigId: number): MaterializerEnv => ({
         pool,
         cache: new Map(),
         fieldEnv: {

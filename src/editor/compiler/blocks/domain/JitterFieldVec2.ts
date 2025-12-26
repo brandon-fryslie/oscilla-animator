@@ -10,6 +10,7 @@
 
 import type { BlockCompiler, Vec2, Field, CompileCtx, RuntimeCtx } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 /**
  * Extended context interface for field evaluation at runtime.
@@ -19,6 +20,72 @@ interface FieldEvalCtx extends CompileCtx {
   /** Current time in milliseconds (available at runtime) */
   t: number;
 }
+
+// =============================================================================
+// IR Lowering
+// =============================================================================
+
+const lowerJitterFieldVec2: BlockLowerFn = ({ inputs, config }) => {
+  const idRand = inputs[0];
+  const phase = inputs[1];
+
+  if (idRand.k !== 'field') {
+    throw new Error('JitterFieldVec2 requires field input for idRand');
+  }
+  if (phase.k !== 'sig') {
+    throw new Error('JitterFieldVec2 requires signal input for phase');
+  }
+
+  // This block requires combining a field (per-element random values) with a signal (time-varying phase)
+  // to produce a field of vec2 drift values.
+  //
+  // The computation per element is:
+  // 1. angle = idRand[i] * 2π (unique direction per element)
+  // 2. mag = sin((phase * frequency + idRand[i]) * 2π) * amount
+  // 3. drift[i] = { x: cos(angle) * mag, y: sin(angle) * mag }
+  //
+  // Challenges:
+  // - Requires evaluating a signal (phase) in field context
+  // - Needs per-element computation combining field values with signal value
+  // - Uses trigonometry and scalar math on vec2 components
+  // - Requires fieldZip-like operation but with signal evaluation
+  //
+  // IR would need:
+  // - fieldZipSignal or similar to combine field with signal
+  // - Per-element vec2 construction from scalar computations
+  // - Trigonometric operations in field context
+  //
+  // This is similar to how FieldHueGradient and FieldFromExpression work -
+  // they all need to evaluate signals while iterating over field elements.
+
+  const amount = Number((config as any)?.amount ?? 10);
+  const frequency = Number((config as any)?.frequency ?? 1);
+
+  throw new Error(
+    `JitterFieldVec2 IR lowering requires field-signal combination operations (amount: ${amount}, frequency: ${frequency}). ` +
+    'This needs: (1) fieldZipSignal to combine field with runtime signal evaluation, ' +
+    '(2) per-element vec2 construction from trigonometric operations, and ' +
+    '(3) field-level vec2 math. ' +
+    'Block remains in closure mode until field-signal combination operations are implemented in IR.'
+  );
+};
+
+registerBlockType({
+  type: 'JitterFieldVec2',
+  capability: 'pure',
+  inputs: [
+    { portId: 'idRand', label: 'ID Random', dir: 'in', type: { world: 'field', domain: 'number' } },
+    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: 'signal', domain: 'phase01' } },
+  ],
+  outputs: [
+    { portId: 'drift', label: 'Drift', dir: 'out', type: { world: 'field', domain: 'vec2' } },
+  ],
+  lower: lowerJitterFieldVec2,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const JitterFieldVec2Block: BlockCompiler = {
   type: 'JitterFieldVec2',

@@ -12,6 +12,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import Tippy from '@tippyjs/react';
 import type { LensDefinition, TypeDesc } from '../types';
 import { LENS_PRESETS, createLensFromPreset, type LensPreset } from '../lens-presets';
 import { getEasingNames } from '../lenses';
@@ -79,6 +80,326 @@ interface LensChainEditorProps {
 /**
  * Default params for each lens type
  */
+// =============================================================================
+// Easing functions for curve preview (duplicated from lenses/index.ts for isolation)
+// =============================================================================
+const easingFunctions: Record<string, (t: number) => number> = {
+  linear: (t) => t,
+  easeInQuad: (t) => t * t,
+  easeOutQuad: (t) => t * (2 - t),
+  easeInOutQuad: (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+  easeInSine: (t) => 1 - Math.cos((t * Math.PI) / 2),
+  easeOutSine: (t) => Math.sin((t * Math.PI) / 2),
+  easeInOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
+  easeInExpo: (t) => t === 0 ? 0 : Math.pow(2, 10 * t - 10),
+  easeOutExpo: (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t),
+  easeInOutExpo: (t) => {
+    if (t === 0) return 0;
+    if (t === 1) return 1;
+    if (t < 0.5) return Math.pow(2, 20 * t - 10) / 2;
+    return (2 - Math.pow(2, -20 * t + 10)) / 2;
+  },
+  easeInElastic: (t) => {
+    if (t === 0) return 0;
+    if (t === 1) return 1;
+    return -Math.pow(2, 10 * t - 10) * Math.sin((t * 10 - 10.75) * ((2 * Math.PI) / 3));
+  },
+  easeOutElastic: (t) => {
+    if (t === 0) return 0;
+    if (t === 1) return 1;
+    return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1;
+  },
+  easeInOutElastic: (t) => {
+    if (t === 0) return 0;
+    if (t === 1) return 1;
+    if (t < 0.5) {
+      return -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * ((2 * Math.PI) / 4.5))) / 2;
+    }
+    return (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * ((2 * Math.PI) / 4.5))) / 2 + 1;
+  },
+  easeInBounce: (t) => 1 - easingFunctions.easeOutBounce(1 - t),
+  easeOutBounce: (t) => {
+    const n1 = 7.5625;
+    const d1 = 2.75;
+    if (t < 1 / d1) return n1 * t * t;
+    if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
+    if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
+    return n1 * (t -= 2.625 / d1) * t + 0.984375;
+  },
+  easeInOutBounce: (t) => {
+    return t < 0.5
+      ? (1 - easingFunctions.easeOutBounce(1 - 2 * t)) / 2
+      : (1 + easingFunctions.easeOutBounce(2 * t - 1)) / 2;
+  },
+};
+
+/**
+ * Get a pure transform function for a lens (input 0-1, output typically 0-1)
+ * Returns null for lenses that can't be visualized as a simple curve
+ */
+function getLensTransformFn(lens: LensDefinition): ((t: number) => number) | null {
+  const params = lens.params || {};
+
+  switch (lens.type) {
+    case 'ease':
+    case 'Ease': {
+      const easingName = (params.easing as string) || 'easeInOutSine';
+      const easingFn = easingFunctions[easingName] || easingFunctions.easeInOutSine;
+      return (t) => easingFn(Math.max(0, Math.min(1, t)));
+    }
+
+    case 'quantize': {
+      const steps = (params.steps as number) ?? 4;
+      return (t) => Math.round(t * steps) / steps;
+    }
+
+    case 'scale':
+    case 'Gain': {
+      const scale = (params.scale as number) ?? (params.gain as number) ?? 1;
+      const offset = (params.offset as number) ?? (params.bias as number) ?? 0;
+      return (t) => t * scale + offset;
+    }
+
+    case 'warp': {
+      const power = (params.power as number) ?? 1;
+      return (t) => Math.pow(Math.max(0, Math.min(1, t)), power);
+    }
+
+    case 'clamp':
+    case 'Clamp': {
+      const min = (params.min as number) ?? 0;
+      const max = (params.max as number) ?? 1;
+      return (t) => Math.max(min, Math.min(max, t));
+    }
+
+    case 'offset': {
+      const amount = (params.amount as number) ?? 0;
+      return (t) => t + amount;
+    }
+
+    case 'deadzone': {
+      const threshold = (params.threshold as number) ?? 0.05;
+      return (t) => Math.abs(t) < threshold ? 0 : t;
+    }
+
+    case 'mapRange': {
+      const inMin = (params.inMin as number) ?? 0;
+      const inMax = (params.inMax as number) ?? 1;
+      const outMin = (params.outMin as number) ?? 0;
+      const outMax = (params.outMax as number) ?? 1;
+      return (t) => {
+        const normalized = (t - inMin) / (inMax - inMin);
+        return outMin + normalized * (outMax - outMin);
+      };
+    }
+
+    case 'PhaseOffset': {
+      const off = (params.offset as number) ?? 0;
+      return (t) => (t + off) % 1;
+    }
+
+    case 'PingPong': {
+      return (t) => t < 0.5 ? t * 2 : 2 - t * 2;
+    }
+
+    case 'slew':
+    case 'Slew': {
+      // Show a smoothed step response (approximation)
+      const riseMs = (params.riseMs as number) ?? (params.rate != null ? 500 / (params.rate as number) : 100);
+      const k = 1000 / riseMs; // steepness
+      return (t) => {
+        // Simulate slew on a step from 0 to 1 at t=0.3
+        if (t < 0.3) return 0;
+        const elapsed = (t - 0.3) * 2; // scale time
+        return Math.min(1, 1 - Math.exp(-k * elapsed));
+      };
+    }
+
+    case 'HueShift':
+    case 'Rotate2D': {
+      const turns = (params.turns as number) ?? 0;
+      return (t) => (t + turns) % 1;
+    }
+
+    // These lenses convert to fields or have no meaningful curve
+    case 'broadcast':
+    case 'perElementOffset':
+      return null;
+
+    default:
+      // For unknown types, show identity
+      return (t) => t;
+  }
+}
+
+/**
+ * SVG curve preview for a lens transformation with animated sparkline
+ */
+function LensCurvePreview({
+  lens,
+  width = 100,
+  height = 60,
+}: {
+  lens: LensDefinition;
+  width?: number;
+  height?: number;
+}): React.ReactElement | null {
+  const transformFn = getLensTransformFn(lens);
+
+  if (!transformFn) {
+    return (
+      <div className="lens-curve-no-preview">
+        <span>Field transform</span>
+      </div>
+    );
+  }
+
+  // Sample the curve
+  const numSamples = 50;
+  const points: { x: number; y: number }[] = [];
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  for (let i = 0; i <= numSamples; i++) {
+    const t = i / numSamples;
+    const v = transformFn(t);
+    points.push({ x: t, y: v });
+    minY = Math.min(minY, v);
+    maxY = Math.max(maxY, v);
+  }
+
+  // Add padding to Y range
+  const yRange = maxY - minY || 1;
+  const yPadding = yRange * 0.1;
+  minY -= yPadding;
+  maxY += yPadding;
+
+  // Build SVG path
+  const padding = 4;
+  const plotWidth = width - padding * 2;
+  const plotHeight = height - padding * 2;
+
+  const svgPoints = points.map((p) => ({
+    x: padding + p.x * plotWidth,
+    y: padding + (1 - (p.y - minY) / (maxY - minY)) * plotHeight,
+  }));
+
+  const pathData = svgPoints
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(' ');
+
+  // Reference line (identity: y = x)
+  const refPath = `M ${padding} ${height - padding} L ${width - padding} ${padding}`;
+
+  // Animation path for the dot (same as curve path)
+  const animationDuration = 1.5; // seconds
+
+  return (
+    <svg
+      className="lens-curve-svg"
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+    >
+      {/* Background */}
+      <rect
+        x={padding}
+        y={padding}
+        width={plotWidth}
+        height={plotHeight}
+        fill="rgba(0,0,0,0.3)"
+        rx={2}
+      />
+      {/* Reference line (identity) */}
+      <path
+        d={refPath}
+        stroke="rgba(255,255,255,0.15)"
+        strokeWidth={1}
+        fill="none"
+        strokeDasharray="2,2"
+      />
+      {/* Faded curve (trail) */}
+      <path
+        d={pathData}
+        stroke="rgba(74, 158, 255, 0.3)"
+        strokeWidth={2}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Animated glowing segment */}
+      <path
+        d={pathData}
+        stroke="#4a9eff"
+        strokeWidth={2.5}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray={plotWidth * 0.15}
+        strokeDashoffset={plotWidth * 1.5}
+        className="lens-curve-animated-path"
+        style={{
+          animation: `lens-sparkline ${animationDuration}s ease-in-out infinite`,
+        }}
+      />
+      {/* Animated dot */}
+      <circle r={4} fill="#4a9eff" className="lens-curve-dot">
+        <animateMotion
+          dur={`${animationDuration}s`}
+          repeatCount="indefinite"
+          path={pathData}
+          calcMode="spline"
+          keySplines="0.4 0 0.6 1"
+          keyTimes="0;1"
+        />
+      </circle>
+      {/* Glow effect on dot */}
+      <circle r={6} fill="rgba(74, 158, 255, 0.4)" className="lens-curve-dot-glow">
+        <animateMotion
+          dur={`${animationDuration}s`}
+          repeatCount="indefinite"
+          path={pathData}
+          calcMode="spline"
+          keySplines="0.4 0 0.6 1"
+          keyTimes="0;1"
+        />
+      </circle>
+    </svg>
+  );
+}
+
+/**
+ * Preview tooltip content for lens hover
+ */
+function LensPreviewTooltip({
+  existingChain,
+  previewLens,
+}: {
+  existingChain: readonly LensDefinition[];
+  previewLens: LensDefinition;
+}): React.ReactElement {
+  return (
+    <div className="lens-preview-tooltip">
+      <LensCurvePreview lens={previewLens} />
+      <div className="lens-preview-info">
+        <span className="lens-preview-name">{previewLens.type}</span>
+        {Object.keys(previewLens.params).length > 0 && (
+          <span className="lens-preview-params">
+            {Object.entries(previewLens.params)
+              .map(([k, v]) => `${k}: ${String(v)}`)
+              .join(', ')}
+          </span>
+        )}
+        {existingChain.length > 0 && (
+          <span className="lens-preview-chain-hint">
+            Chain: {existingChain.map(l => l.type).join(' → ')} → <strong>{previewLens.type}</strong>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const DEFAULT_LENS_PARAMS: Record<string, Record<string, unknown>> = {
   ease: { easing: 'easeInOutSine' },
   slew: { rate: 2.0 },
@@ -194,8 +515,13 @@ function LensChainItem({
       </div>
 
       {expanded && (
-        <div className="lens-chain-item-params">
-          <LensParamsEditor lens={lens} onChange={handleParamChange} />
+        <div className="lens-chain-item-body">
+          <div className="lens-chain-item-curve">
+            <LensCurvePreview lens={lens} width={72} height={48} />
+          </div>
+          <div className="lens-chain-item-params">
+            <LensParamsEditor lens={lens} onChange={handleParamChange} />
+          </div>
         </div>
       )}
     </div>
@@ -498,19 +824,9 @@ export function LensChainEditor({
   // Recently used lenses
   const [recentLenses, setRecentLenses] = useState<RecentLens[]>([]);
 
-  // Preview lens (shown when hovering over add options)
-  const [previewLens, setPreviewLens] = useState<LensDefinition | null>(null);
-
   // Load recent lenses on mount
   useEffect(() => {
     setRecentLenses(getRecentLenses());
-  }, [showAddLens]);
-
-  // Clear preview when add panel closes
-  useEffect(() => {
-    if (!showAddLens) {
-      setPreviewLens(null);
-    }
   }, [showAddLens]);
 
   const handleUpdateLens = useCallback(
@@ -608,34 +924,21 @@ export function LensChainEditor({
     [lensChain, onChange]
   );
 
-  // Preview handlers for hover
-  const handlePreviewLens = useCallback((type: string) => {
+  // Create preview lens for a given type
+  const getPreviewLensForType = useCallback((type: string): LensDefinition => {
     const params = DEFAULT_LENS_PARAMS[type] ?? {};
-    setPreviewLens({ type, params });
+    return { type, params };
   }, []);
 
-  const handlePreviewPreset = useCallback((presetId: string) => {
-    const lens = createLensFromPreset(presetId);
-    if (lens != null) {
-      setPreviewLens(lens);
-    }
+  // Create preview lens for a preset
+  const getPreviewLensForPreset = useCallback((presetId: string): LensDefinition | null => {
+    return createLensFromPreset(presetId);
   }, []);
 
-  const handlePreviewRecent = useCallback((recent: RecentLens) => {
-    setPreviewLens({ type: recent.type, params: { ...recent.params } });
+  // Create preview lens for a recent entry
+  const getPreviewLensForRecent = useCallback((recent: RecentLens): LensDefinition => {
+    return { type: recent.type, params: { ...recent.params } };
   }, []);
-
-  const clearPreview = useCallback(() => {
-    setPreviewLens(null);
-  }, []);
-
-  // Build display chain with preview
-  const displayChain = useMemo(() => {
-    if (previewLens) {
-      return [...lensChain, previewLens];
-    }
-    return lensChain;
-  }, [lensChain, previewLens]);
 
   return (
     <div className="lens-chain-editor">
@@ -687,27 +990,6 @@ export function LensChainEditor({
       {/* Add lens */}
       {showAddLens ? (
         <div className="lens-chain-add-panel">
-          {/* Preview indicator */}
-          {previewLens && (
-            <div className="lens-preview-indicator">
-              <span className="lens-preview-label">Preview:</span>
-              <span className="lens-preview-chain">
-                {displayChain.map((lens, i) => {
-                  const isPreview = i === displayChain.length - 1;
-                  const params = Object.entries(lens.params)
-                    .map(([k, v]) => `${k}:${String(v)}`)
-                    .join(', ');
-                  return (
-                    <span key={i} className={isPreview ? 'preview-lens' : ''}>
-                      {i > 0 && ' → '}
-                      {params !== '' ? `${lens.type}(${params})` : lens.type}
-                    </span>
-                  );
-                })}
-              </span>
-            </div>
-          )}
-
           {/* Recently Used */}
           {recentLenses.length > 0 && (
             <div className="lens-add-section lens-recent-section">
@@ -721,18 +1003,29 @@ export function LensChainEditor({
                   const paramsStr = Object.entries(recent.params)
                     .map(([k, v]) => `${k}:${String(v)}`)
                     .join(', ');
+                  const previewLens = getPreviewLensForRecent(recent);
                   return (
-                    <button
+                    <Tippy
                       key={`recent-${idx}`}
-                      className="lens-recent-btn"
-                      onClick={() => handleAddRecent(recent)}
-                      onMouseEnter={() => handlePreviewRecent(recent)}
-                      onMouseLeave={clearPreview}
-                      title={paramsStr || 'No params'}
+                      content={
+                        <LensPreviewTooltip
+                          existingChain={lensChain}
+                          previewLens={previewLens}
+                        />
+                      }
+                      placement="top"
+                      delay={[150, 0]}
+                      theme="dark-custom"
+                      arrow={true}
                     >
-                      {label}
-                      {paramsStr && <span className="lens-recent-params">({paramsStr})</span>}
-                    </button>
+                      <button
+                        className="lens-recent-btn"
+                        onClick={() => handleAddRecent(recent)}
+                      >
+                        {label}
+                        {paramsStr && <span className="lens-recent-params">({paramsStr})</span>}
+                      </button>
+                    </Tippy>
                   );
                 })}
               </div>
@@ -745,18 +1038,35 @@ export function LensChainEditor({
               {Object.entries(presetsByCategory).map(([category, presets]) => (
                 <div key={category} className="lens-preset-category">
                   <div className="lens-preset-category-label">{category}</div>
-                  {presets.map((preset) => (
-                    <button
-                      key={preset.id}
-                      className="lens-preset-btn"
-                      onClick={() => handleAddPreset(preset.id)}
-                      onMouseEnter={() => handlePreviewPreset(preset.id)}
-                      onMouseLeave={clearPreview}
-                      title={preset.description}
-                    >
-                      {preset.name}
-                    </button>
-                  ))}
+                  {presets.map((preset) => {
+                    const previewLens = getPreviewLensForPreset(preset.id);
+                    return (
+                      <Tippy
+                        key={preset.id}
+                        content={
+                          previewLens ? (
+                            <LensPreviewTooltip
+                              existingChain={lensChain}
+                              previewLens={previewLens}
+                            />
+                          ) : (
+                            preset.description
+                          )
+                        }
+                        placement="top"
+                        delay={[150, 0]}
+                        theme="dark-custom"
+                        arrow={true}
+                      >
+                        <button
+                          className="lens-preset-btn"
+                          onClick={() => handleAddPreset(preset.id)}
+                        >
+                          {preset.name}
+                        </button>
+                      </Tippy>
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -765,18 +1075,31 @@ export function LensChainEditor({
           <div className="lens-add-section">
             <div className="lens-add-section-title">Custom</div>
             <div className="lens-type-list">
-              {LENS_TYPES.map((t) => (
-                <button
-                  key={t.value}
-                  className="lens-type-btn"
-                  onClick={() => handleAddLens(t.value)}
-                  onMouseEnter={() => handlePreviewLens(t.value)}
-                  onMouseLeave={clearPreview}
-                  title={t.description}
-                >
-                  {t.label}
-                </button>
-              ))}
+              {LENS_TYPES.map((t) => {
+                const previewLens = getPreviewLensForType(t.value);
+                return (
+                  <Tippy
+                    key={t.value}
+                    content={
+                      <LensPreviewTooltip
+                        existingChain={lensChain}
+                        previewLens={previewLens}
+                      />
+                    }
+                    placement="top"
+                    delay={[150, 0]}
+                    theme="dark-custom"
+                    arrow={true}
+                  >
+                    <button
+                      className="lens-type-btn"
+                      onClick={() => handleAddLens(t.value)}
+                    >
+                      {t.label}
+                    </button>
+                  </Tippy>
+                );
+              })}
             </div>
           </div>
 

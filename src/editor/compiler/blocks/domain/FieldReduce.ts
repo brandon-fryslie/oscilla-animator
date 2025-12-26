@@ -10,6 +10,8 @@
 
 import type { BlockCompiler, CompileCtx, RuntimeCtx, GeometryCache } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import type { ReduceFn } from '../../ir/builderTypes';
 
 type ReduceOp = 'avg' | 'max' | 'min' | 'sum' | 'first';
 
@@ -31,6 +33,47 @@ function reduceArray(values: readonly number[], op: ReduceOp): number {
       return values[0];
   }
 }
+
+// =============================================================================
+// IR Lowering
+// =============================================================================
+
+const lowerFieldReduce: BlockLowerFn = ({ ctx, inputs, config }) => {
+  const field = inputs[0];
+
+  if (field.k !== 'field') {
+    throw new Error('FieldReduce requires field input');
+  }
+
+  const op = String((config as any)?.op ?? 'avg') as ReduceOp;
+
+  // Map reduce operations to ReduceFn interface
+  const reduceFn: ReduceFn = {
+    reducerId: op,
+    outputType: { world: 'signal', domain: 'number' },
+  };
+
+  // Use IRBuilder's reduceFieldToSig method
+  const sigId = ctx.b.reduceFieldToSig(field.id, reduceFn);
+
+  return { outputs: [{ k: 'sig', id: sigId }] };
+};
+
+registerBlockType({
+  type: 'FieldReduce',
+  capability: 'pure',
+  inputs: [
+    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'number' } },
+  ],
+  outputs: [
+    { portId: 'signal', label: 'Signal', dir: 'out', type: { world: 'signal', domain: 'number' } },
+  ],
+  lower: lowerFieldReduce,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const FieldReduceBlock: BlockCompiler = {
   type: 'FieldReduce',

@@ -16,6 +16,7 @@
 
 import type { BlockCompiler, Field, RuntimeCtx, DrawNode } from '../../types';
 import { isDefined } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // Default compile context for field evaluation
 const DEFAULT_CTX = {
@@ -27,6 +28,112 @@ const DEFAULT_CTX = {
     invalidate() {},
   },
 };
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+/**
+ * Lower RenderInstances2D block to IR.
+ *
+ * This is a RENDER block that materializes domain + fields into visual output.
+ * It takes:
+ * - Domain (special handle)
+ * - positions: Field<vec2>
+ * - radius: Field<number> OR Signal<number>
+ * - color: Field<color>
+ *
+ * And registers a render sink with these inputs.
+ */
+const lowerRenderInstances2D: BlockLowerFn = ({ ctx, inputs, config }) => {
+  const [domain, positions, radius, color] = inputs;
+
+  // Validate inputs
+  if (domain.k !== 'special' || domain.tag !== 'domain') {
+    throw new Error('RenderInstances2D requires a Domain input');
+  }
+
+  if (positions.k !== 'field') {
+    throw new Error(`RenderInstances2D requires Field<vec2> positions, got ${positions.k}`);
+  }
+
+  if (radius.k !== 'field' && radius.k !== 'sig') {
+    throw new Error(`RenderInstances2D requires Field<number> or Signal<number> radius, got ${radius.k}`);
+  }
+
+  if (color.k !== 'field') {
+    throw new Error(`RenderInstances2D requires Field<color> color, got ${color.k}`);
+  }
+
+  // Extract params
+  const params = (config as any) || {};
+  const opacity = Number(params.opacity ?? 1.0);
+  const glow = Boolean(params.glow ?? false);
+  const glowIntensity = Number(params.glowIntensity ?? 2.0);
+
+  // Register render sink
+  // The runtime will handle materializing these fields at render time
+  const sinkInputs = {
+    domain: domain.id,
+    positions: positions.id,
+    radius: radius.id,
+    color: color.id,
+    // Params are serialized into the IR
+    opacity,
+    glow,
+    glowIntensity,
+  };
+
+  ctx.b.renderSink('instances2d', sinkInputs);
+
+  return {
+    outputs: [],
+    declares: {
+      renderSink: { sinkId: 0 }, // Placeholder - runtime assigns real IDs
+    },
+  };
+};
+
+// Register block type
+registerBlockType({
+  type: 'RenderInstances2D',
+  capability: 'render',
+  inputs: [
+    {
+      portId: 'domain',
+      label: 'Domain',
+      dir: 'in',
+      type: { world: 'special', domain: 'domain' },
+    },
+    {
+      portId: 'positions',
+      label: 'Positions',
+      dir: 'in',
+      type: { world: 'field', domain: 'vec2' },
+    },
+    {
+      portId: 'radius',
+      label: 'Radius',
+      dir: 'in',
+      type: { world: 'field', domain: 'number' }, // Can also accept signal
+    },
+    {
+      portId: 'color',
+      label: 'Color',
+      dir: 'in',
+      type: { world: 'field', domain: 'color' },
+    },
+  ],
+  outputs: [
+    // In IR mode, render sinks don't produce signal outputs
+    // In legacy mode, this has a 'render' output
+  ],
+  lower: lowerRenderInstances2D,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const RenderInstances2DBlock: BlockCompiler = {
   type: 'RenderInstances2D',

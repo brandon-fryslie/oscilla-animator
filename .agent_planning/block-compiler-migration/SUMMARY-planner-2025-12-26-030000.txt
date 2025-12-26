@@ -1,0 +1,4 @@
+Agent: status-planner | 2025-12-26-030000
+Topic: block-compiler-migration
+Files: PLAN-2025-12-26-030000.md, DOD-2025-12-26-030000.md
+Items: 18 (P0: 3, P1: 13, P2: 2)

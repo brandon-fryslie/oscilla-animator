@@ -1,0 +1,101 @@
+Agent: iterative-implementer | 2025-12-26-072400
+Mode: manual
+Completed: B1-B4 (Partial Workstream B) | Files: 3 | Commits: 0
+Cache invalidated: compiler-integration.md (new invalidation entry)
+Status: in_progress
+
+## Work Completed
+
+### B1: SignalExprTable in CompiledProgram Type ✓
+- Modified: src/editor/compiler/types.ts
+- Extended CompiledProgram interface with:
+  - signalTable?: SignalExprTable
+  - constPool?: unknown[]
+  - stateLayout?: StateLayoutEntry[]
+- Added imports for IR types
+- Added documentation explaining Phase 4 additions
+- TypeScript compilation succeeds (backward compatible)
+
+### B2: V2 Adapter for Block Compilers ✓ (STUB)
+- Created: src/editor/compiler/v2adapter.ts
+- Defined BlockCompilerV2 interface (IR-based block compiler signature)
+- Implemented adaptV2Compiler() stub function
+- Returns Error artifacts with "not yet fully implemented" message
+- Full implementation deferred - requires:
+  - SignalExprBuilder creation
+  - Input Artifact -> SigExprId conversion
+  - Output IR wrapping as evalSig closure
+
+### B3: StateLayout Computation ✓
+- Created: src/editor/compiler/ir/stateLayout.ts
+- Implemented computeStateLayout(nodes: SignalExprIR[]): StateLayoutEntry[]
+- Scans stateful nodes and allocates state cells
+- Implemented computeStateBufferSizes() helper
+- Determines initial values based on operation type
+
+### B4: AddSignal Block Migration ✓ (ALREADY DONE)
+- AddSignal.ts already has IR lowering registered
+- Uses registerBlockType() from Phase 3 migration
+- Emits zip node with OpCode.Add
+- Dual-emit mode: both closure and IR paths exist
+
+## Work Not Completed
+
+### B5: Pipeline Wiring (DEFERRED)
+Reason: Complex integration requiring careful understanding of:
+- Where to create IRBuilderImpl in compilation pipeline
+- How to collect SignalExprTable from V2 blocks
+- How to attach to CompiledProgram result
+- Integration with existing Pass 1-8 IR system (LinkedGraphIR vs SignalExprTable)
+
+Risk: Two parallel IR systems exist (LinkedGraphIR from passes, SignalExprTable for runtime).
+Need clarification on how these integrate or if SignalExprTable replaces LinkedGraphIR.
+
+### B6: End-to-End Test (DEFERRED)
+Reason: Depends on B5 pipeline wiring.
+Cannot test end-to-end until compiler actually produces SignalExprTable.
+
+## Files Modified
+- src/editor/compiler/types.ts (extended CompiledProgram)
+- src/editor/compiler/v2adapter.ts (new, stub)
+- src/editor/compiler/ir/stateLayout.ts (new)
+- .agent_planning/eval-cache/INDEX.md (cache invalidation)
+
+## TypeScript Status
+All new code typechecks successfully.
+Pre-existing errors remain (unrelated to this work):
+- ColorLFO.ts: unused variables
+- Oscillator.ts: unused variables
+- PulseDivider.ts, EnvelopeAD.ts: StatefulSignalOp type issues
+
+## Next Steps
+
+Before continuing B5-B6, need clarification on:
+
+1. **IR System Integration**: How does SignalExprTable relate to LinkedGraphIR?
+   - LinkedGraphIR is produced by Pass 1-8 compilation
+   - SignalExprTable is for runtime SigEvaluator
+   - Are these separate or should they be unified?
+
+2. **Pipeline Wiring Point**: Where in compileBusAware.ts should we:
+   - Create IRBuilderImpl?
+   - Collect SignalExpr nodes from V2 blocks?
+   - Attach SignalExprTable to result?
+
+3. **V2Adapter Complete Implementation**: Should we:
+   - Convert closure inputs to IR nodes via closureBridge?
+   - Wrap output IR as closures that call evalSig?
+   - Or wait for full runtime integration (Workstream C)?
+
+## Recommendation
+
+Pause Workstream B implementation and:
+1. Review architecture: SignalExprTable vs LinkedGraphIR relationship
+2. Design pipeline integration point (minimal stub vs full wiring)
+3. Decide if B5-B6 should be minimal stubs or full implementation
+
+Current work provides:
+- Type infrastructure (CompiledProgram extended)
+- Adapter interface (BlockCompilerV2)
+- State layout computation
+- Foundation for next phase
