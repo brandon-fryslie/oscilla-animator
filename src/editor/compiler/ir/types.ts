@@ -148,6 +148,23 @@ export type BusIndex = number;
  */
 export type ValueSlot = number;
 
+/**
+ * Signal expression ID - dense array index for runtime performance.
+ * Changes on recompile.
+ */
+export type SigExprId = number;
+
+/**
+ * Field expression ID - dense array index for runtime performance.
+ * Changes on recompile.
+ */
+export type FieldExprId = number;
+
+/**
+ * Transform chain ID - dense array index.
+ */
+export type TransformChainId = number;
+
 // ============================================================================
 // Type Table (02-IR-Schema.md §5)
 // ============================================================================

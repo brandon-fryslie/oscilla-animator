@@ -1,0 +1,7 @@
+Agent: status-planner | 2025-12-25-200731
+Topic: Phase 3 Bridge Compiler - Sprint 2
+Files: PLAN-2025-12-25-200731.md, DOD-2025-12-25-200731.md
+Items: 8 (P0: 6, P1: 2)
+Sprint Scope: Dual-emit compilation (Passes 6-8) + IR validator
+Dependencies: Sprint 1 complete (Passes 1-5)
+Next Sprint: Passes 9-11 (Render lowering, Constants, DebugIndex)

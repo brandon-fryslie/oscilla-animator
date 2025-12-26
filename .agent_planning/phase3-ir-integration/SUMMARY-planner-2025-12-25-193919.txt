@@ -1,0 +1,5 @@
+Agent: status-planner | 2025-12-25-193919
+Topic: phase3-ir-integration
+Files: PLAN-2025-12-25-193919.md, DOD-2025-12-25-193919.md
+Items: 10 (P0: 9, P1: 1)
+Sprint: 1 of 2 (Core Passes 2-5)

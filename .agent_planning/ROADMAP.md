@@ -1,6 +1,6 @@
 # Project Roadmap: IR Compiler Migration
 
-Last updated: 2025-12-24-120000
+Last updated: 2025-12-25-160000
 
 > **Migration Strategy:** "Strangle Pattern" - New IR wraps existing closures, gradually replacing them while keeping the app running at every step.
 
@@ -36,131 +36,151 @@ Reference: `design-docs/12-Compiler-Final/`
 
 ---
 
-## Phase 1: Contracts & Type Unification [ACTIVE]
+## Phase 1: Contracts & Type Unification [COMPLETED]
 
 **Goal:** Lock foundational types and numeric ID system. No runtime changes yet.
 
 **Migration Safety:** Pure type definitions - existing code unaffected.
 
+**Completion Date:** 2025-12-25
+
 ### Topics
 
-#### type-unification [PROPOSED]
+#### type-unification [COMPLETED]
 **Description:** Unify editor `TypeDesc` and compiler `ValueKind` into one canonical `TypeDesc`. Create single `TypeWorld` ('signal' | 'field' | 'scalar' | 'special') and `TypeDomain` enum.
 **Spec:** 02-IR-Schema (§1), 19-Debugger-ValueKind (§1)
 **Dependencies:** None
 **Labels:** architecture, types, foundation
 **Test Strategy:** Unit tests for type equality, conversion, serialization
+**Implementation:** `src/editor/compiler/ir/types.ts` - TypeDesc, TypeWorld, TypeDomain
 
-#### dense-id-system [PROPOSED]
+#### dense-id-system [COMPLETED]
 **Description:** Introduce dense numeric indices for all runtime lookups: `BlockIndex`, `PortIndex`, `SlotKey`, `BusIndex`. String keys become debug-only. Build `DebugIndex` for reverse mapping.
 **Spec:** 02-IR-Schema (§2), 20-TraceStorage (§1)
 **Dependencies:** type-unification
 **Labels:** architecture, performance, foundation
 **Test Strategy:** Property tests: id↔string roundtrip, no collisions
+**Implementation:** `src/editor/compiler/ir/types.ts` - NodeIndex, PortIndex, BusIndex, ValueSlot, SigExprId, FieldExprId
 
-#### ir-core-types [PROPOSED]
+#### ir-core-types [COMPLETED]
 **Description:** Define core IR TypeScript interfaces: `CompiledProgramIR`, `NodeIR`, `BusIR`, `StepIR`, `ValueSlot`. These are pure types - no implementation yet.
 **Spec:** 02-IR-Schema (§3-5), 03-Nodes, 10-Schedule-Semantics
 **Dependencies:** type-unification, dense-id-system
 **Labels:** architecture, ir, types
 **Test Strategy:** Type-level tests (tsc), schema validation
+**Implementation:** `src/editor/compiler/ir/program.ts`, `src/editor/compiler/ir/schedule.ts`
 
-#### timemodel-ir [PROPOSED]
+#### timemodel-ir [COMPLETED]
 **Description:** Define `TimeModelIR` (finite/cyclic/infinite), canonical time signals (`tAbsMs`, `tModelMs`, `phase01`, `wrapEvent`). Lock time topology contract.
 **Spec:** 02-IR-Schema (§4)
 **Dependencies:** ir-core-types
 **Labels:** architecture, time, foundation
 **Test Strategy:** Unit tests for time model derivation
+**Implementation:** `src/editor/compiler/ir/schedule.ts` - TimeModelIR, TimeModelFinite, TimeModelCyclic, TimeModelInfinite
 
 ---
 
-## Phase 2: IR Data Structures [QUEUED]
+## Phase 2: IR Data Structures [COMPLETED]
 
 **Goal:** Define all IR table schemas. Compiler doesn't emit IR yet - these are the target structures.
 
 **Migration Safety:** Pure type definitions - existing code unaffected.
 
+**Completion Date:** 2025-12-25
+
 ### Topics
 
-#### signalexpr-schema [PROPOSED]
+#### signalexpr-schema [COMPLETED]
 **Description:** Define `SignalExprIR` node types: const, timeAbsMs, inputSlot, map, zip, select, transform, busCombine, stateful. Create `SignalExprTable`.
 **Spec:** 12-SignalExpr
 **Dependencies:** ir-core-types
 **Labels:** ir, signals, schema
 **Test Strategy:** Schema validation, example IR construction
+**Implementation:** `src/editor/compiler/ir/signalExpr.ts` - 12 SignalExprIR variants
 
-#### fieldexpr-schema [PROPOSED]
+#### fieldexpr-schema [COMPLETED]
 **Description:** Define `FieldExprIR` node types: const, inputSlot, map, zip, select, busCombine, transform, sampleSignal. Create `FieldExprTable` and `MaterializationIR`.
 **Spec:** 04-FieldExpr
 **Dependencies:** ir-core-types
 **Labels:** ir, fields, schema
 **Test Strategy:** Schema validation, example IR construction
+**Implementation:** `src/editor/compiler/ir/fieldExpr.ts` - 7 FieldExprIR variants
 
-#### transform-chain-ir [PROPOSED]
+#### transform-chain-ir [COMPLETED]
 **Description:** Define `TransformChainIR`, `TransformStepIR` (adapter/lens steps), `AdapterTable`, `LensTable`. Unify adapter/lens under single transform representation.
 **Spec:** 05-Lenses-Adapters
 **Dependencies:** ir-core-types
 **Labels:** ir, transforms, schema
 **Test Strategy:** Chain composition tests, type validation
+**Implementation:** `src/editor/compiler/ir/transforms.ts` - TransformChainIR, 7 TransformStepIR variants
 
-#### bus-ir-schema [PROPOSED]
+#### bus-ir-schema [COMPLETED]
 **Description:** Define `BusTable`, `BusIR`, `PublisherIR`, `ListenerIR`, `CombineSpec`, `SilentValueSpec`. Publishers sorted by sortKey with tie-breaks.
 **Spec:** 07-Buses
 **Dependencies:** ir-core-types, dense-id-system
 **Labels:** ir, buses, schema
 **Test Strategy:** Publisher ordering tests, combine mode validation
+**Implementation:** `src/editor/compiler/ir/program.ts`, `src/editor/compiler/ir/schedule.ts`
 
-#### schedule-ir [PROPOSED]
+#### schedule-ir [COMPLETED]
 **Description:** Define `ScheduleIR`, all `StepIR` variants (timeDerive, nodeEval, busEval, materialize, renderAssemble, debugProbe), `DependencyIndexIR`, `DeterminismIR`.
 **Spec:** 10-Schedule-Semantics
 **Dependencies:** signalexpr-schema, fieldexpr-schema, bus-ir-schema
 **Labels:** ir, schedule, schema
 **Test Strategy:** Step ordering validation, dependency graph tests
+**Implementation:** `src/editor/compiler/ir/schedule.ts` - 6 StepIR variants
 
-#### opcode-registry [PROPOSED]
+#### opcode-registry [COMPLETED]
 **Description:** Define `OpCode` union type covering: time, identity/domain, pure math, state, render, IO, transform ops. Create registry with metadata for each.
 **Spec:** 11-Opcode-Taxonomy
 **Dependencies:** ir-core-types
 **Labels:** ir, opcodes, registry
 **Test Strategy:** Exhaustive opcode coverage, dispatch tests
+**Implementation:** `src/editor/compiler/ir/opcodes.ts` - 50+ OpCodes with OPCODE_REGISTRY
 
-#### const-pool-default-sources [PROPOSED]
+#### const-pool-default-sources [COMPLETED]
 **Description:** Define `ConstPool`, `TypedConst`, `DefaultSourceTable`, `DefaultSourceIR`. Constants are interned; default sources replace params.
 **Spec:** 06-Default-Sources
 **Dependencies:** ir-core-types
 **Labels:** ir, constants, params
 **Test Strategy:** Constant interning tests, default source resolution
+**Implementation:** `src/editor/compiler/ir/defaultSources.ts`, `src/editor/compiler/ir/program.ts`
 
-#### cache-policy-ir [PROPOSED]
+#### cache-policy-ir [COMPLETED]
 **Description:** Define `CachingIR`, `CacheKeySpec` (none/perFrame/untilInvalidated), `CacheDep` variants. Attach cache specs to steps and materializations.
 **Spec:** 09-Caching
 **Dependencies:** schedule-ir
 **Labels:** ir, caching, schema
 **Test Strategy:** Cache key computation tests
+**Implementation:** `src/editor/compiler/ir/schedule.ts` - CachingIR, CacheKeySpec, CacheDep
 
 ---
 
-## Phase 3: Bridge Compiler [QUEUED]
+## Phase 3: Bridge Compiler [ACTIVE]
 
 **Goal:** Compiler emits IR alongside existing closures. IR is validated but not executed. Old runtime continues to work.
 
 **Migration Safety:** Dual-emit mode - closures still execute, IR is for validation/debugging.
 
+**Started:** 2025-12-25
+
 ### Topics
 
-#### ir-builder-api [PROPOSED]
+#### ir-builder-api [COMPLETED]
 **Description:** Implement `IRBuilder` interface: constF64, constJSON, sigConst, sigOp, sigCombine, sigStateful, fieldConst, fieldOp, fieldZip, broadcastSigToField, reduceFieldToSig, domainFromN, renderSink, transformChain, allocState.
 **Spec:** 16-Block-Lowering (§4)
 **Dependencies:** All Phase 2 topics
 **Labels:** compiler, ir-builder, implementation
 **Test Strategy:** Builder emits valid IR for simple cases
+**Implementation:** `src/editor/compiler/ir/IRBuilder.ts`, `src/editor/compiler/ir/IRBuilderImpl.ts` (24 tests)
 
-#### lowering-pass-normalize [PROPOSED]
+#### lowering-pass-normalize [COMPLETED]
 **Description:** Implement Pass 1 (Normalize Patch): freeze ID maps, ensure default sources, canonicalize publishers/listeners. Output: `NormalizedPatch`.
 **Spec:** 15-Canonical-Lowering-Pipeline (Pass 1)
 **Dependencies:** ir-builder-api, dense-id-system
 **Labels:** compiler, lowering, normalization
 **Test Strategy:** Golden patch normalizes correctly
+**Implementation:** `src/editor/compiler/passes/pass1-normalize.ts` (14 tests)
 
 #### lowering-pass-types [PROPOSED]
 **Description:** Implement Pass 2 (Type Graph): convert SlotType→TypeDesc, validate bus eligibility, precompute adapter/lens conversion paths. Output: `TypedPatch`.
