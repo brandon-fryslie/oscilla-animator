@@ -430,10 +430,28 @@
   }
 }
 
-/* Bus-connected port - subtle outline to indicate bus routing */
+/* Bus-connected port - dashed outline to indicate bus routing */
 .port.bus-connected {
-  outline: 1.5px dashed rgba(255, 255, 255, 0.5);
-  outline-offset: 1px;
+  outline: 2px dashed currentColor;
+  outline-offset: 2px;
+  /* Animation for emphasis */
+  animation: bus-pulse 2s ease-in-out infinite;
+}
+
+@keyframes bus-pulse {
+  0%, 100% {
+    outline-offset: 2px;
+    outline-width: 2px;
+  }
+  50% {
+    outline-offset: 3px;
+    outline-width: 2.5px;
+  }
+}
+
+/* Port with both block AND bus connection - extra visible */
+.port.connected.bus-connected {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
 }
 
 /* Port glyph styling */
