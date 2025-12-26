@@ -5,10 +5,9 @@
  * that controls whether IR-based rendering is used.
  *
  * Validates:
- * - Default flag values
+ * - Default flag values (new IR compiler is default)
  * - Flag mutation (set/reset)
- * - Legacy path still works with flag disabled
- * - IR path works with flag enabled
+ * - Toggling between paths
  *
  * Reference: .agent_planning/compiler-rendering-integration/DOD-2025-12-26-110434.md §P1-2
  */
@@ -28,24 +27,24 @@ describe("Feature Flags", () => {
   });
 
   describe("Default Values", () => {
-    it("should have useUnifiedCompiler defaulting to false", () => {
+    it("should have useUnifiedCompiler defaulting to true (new compiler is default)", () => {
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.useUnifiedCompiler).toBe(true);
     });
 
-    it("should have strictStateValidation defaulting to false", () => {
+    it("should have strictStateValidation defaulting to true", () => {
       const flags = getFeatureFlags();
-      expect(flags.strictStateValidation).toBe(false);
+      expect(flags.strictStateValidation).toBe(true);
     });
 
-    it("should have busCompilation defaulting to false", () => {
+    it("should have busCompilation defaulting to true", () => {
       const flags = getFeatureFlags();
-      expect(flags.busCompilation).toBe(false);
+      expect(flags.busCompilation).toBe(true);
     });
 
-    it("should have timeCtxPropagation defaulting to false", () => {
+    it("should have timeCtxPropagation defaulting to true", () => {
       const flags = getFeatureFlags();
-      expect(flags.timeCtxPropagation).toBe(false);
+      expect(flags.timeCtxPropagation).toBe(true);
     });
 
     it("should have requireTimeRoot defaulting to true", () => {
@@ -55,63 +54,66 @@ describe("Feature Flags", () => {
   });
 
   describe("Flag Mutation", () => {
-    it("should allow setting useUnifiedCompiler to true", () => {
-      setFeatureFlags({ useUnifiedCompiler: true });
-
-      const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(true);
-    });
-
-    it("should allow setting useUnifiedCompiler to false", () => {
-      setFeatureFlags({ useUnifiedCompiler: true });
+    it("should allow setting useUnifiedCompiler to false (legacy mode)", () => {
       setFeatureFlags({ useUnifiedCompiler: false });
 
       const flags = getFeatureFlags();
       expect(flags.useUnifiedCompiler).toBe(false);
     });
 
-    it("should preserve other flags when setting one flag", () => {
+    it("should allow setting useUnifiedCompiler back to true", () => {
+      setFeatureFlags({ useUnifiedCompiler: false });
       setFeatureFlags({ useUnifiedCompiler: true });
 
       const flags = getFeatureFlags();
       expect(flags.useUnifiedCompiler).toBe(true);
-      expect(flags.strictStateValidation).toBe(false);
-      expect(flags.busCompilation).toBe(false);
-      expect(flags.timeCtxPropagation).toBe(false);
+    });
+
+    it("should preserve other flags when setting one flag", () => {
+      setFeatureFlags({ useUnifiedCompiler: false });
+
+      const flags = getFeatureFlags();
+      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.strictStateValidation).toBe(true);
+      expect(flags.busCompilation).toBe(true);
+      expect(flags.timeCtxPropagation).toBe(true);
       expect(flags.requireTimeRoot).toBe(true);
     });
 
     it("should allow setting multiple flags at once", () => {
       setFeatureFlags({
-        useUnifiedCompiler: true,
-        strictStateValidation: true,
+        useUnifiedCompiler: false,
+        strictStateValidation: false,
       });
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(true);
-      expect(flags.strictStateValidation).toBe(true);
-      expect(flags.busCompilation).toBe(false);
+      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.strictStateValidation).toBe(false);
+      expect(flags.busCompilation).toBe(true);
     });
 
     it("should reset all flags to defaults", () => {
       setFeatureFlags({
-        useUnifiedCompiler: true,
-        strictStateValidation: true,
-        busCompilation: true,
+        useUnifiedCompiler: false,
+        strictStateValidation: false,
+        busCompilation: false,
       });
 
       resetFeatureFlags();
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false);
-      expect(flags.strictStateValidation).toBe(false);
-      expect(flags.busCompilation).toBe(false);
+      expect(flags.useUnifiedCompiler).toBe(true);
+      expect(flags.strictStateValidation).toBe(true);
+      expect(flags.busCompilation).toBe(true);
       expect(flags.requireTimeRoot).toBe(true);
     });
   });
 
   describe("enableUnifiedArchitecture()", () => {
     it("should enable all unified architecture flags", () => {
+      // First disable some flags
+      setFeatureFlags({ useUnifiedCompiler: false, busCompilation: false });
+
       enableUnifiedArchitecture();
 
       const flags = getFeatureFlags();
@@ -122,39 +124,28 @@ describe("Feature Flags", () => {
       expect(flags.requireTimeRoot).toBe(true);
     });
 
-    it("should be reversible with resetFeatureFlags()", () => {
+    it("should be idempotent (calling twice has same effect)", () => {
       enableUnifiedArchitecture();
-      expect(getFeatureFlags().useUnifiedCompiler).toBe(true);
+      enableUnifiedArchitecture();
 
-      resetFeatureFlags();
-      expect(getFeatureFlags().useUnifiedCompiler).toBe(false);
+      const flags = getFeatureFlags();
+      expect(flags.useUnifiedCompiler).toBe(true);
     });
   });
 
   describe("Flag Behavior - Legacy Path", () => {
-    it("should use legacy path with useUnifiedCompiler: false", () => {
-      // Ensure flag is false (default)
-      resetFeatureFlags();
+    it("should allow legacy path with useUnifiedCompiler: false", () => {
+      setFeatureFlags({ useUnifiedCompiler: false });
       const flags = getFeatureFlags();
       expect(flags.useUnifiedCompiler).toBe(false);
 
       // This test just verifies the flag state
       // Actual legacy compiler behavior is tested in integration.test.ts
-      // and other compiler tests
-    });
-
-    it("should not affect legacy compiler when flag is false", () => {
-      setFeatureFlags({ useUnifiedCompiler: false });
-
-      // Legacy compiler tests continue to work
-      // This is a smoke test - actual legacy tests are elsewhere
-      expect(getFeatureFlags().useUnifiedCompiler).toBe(false);
     });
   });
 
   describe("Flag Behavior - IR Path", () => {
-    it("should enable IR path with useUnifiedCompiler: true", () => {
-      setFeatureFlags({ useUnifiedCompiler: true });
+    it("should have IR path enabled by default", () => {
       const flags = getFeatureFlags();
       expect(flags.useUnifiedCompiler).toBe(true);
 
@@ -163,61 +154,59 @@ describe("Feature Flags", () => {
     });
 
     it("should allow toggling between legacy and IR paths", () => {
-      // Start with legacy
-      resetFeatureFlags();
-      expect(getFeatureFlags().useUnifiedCompiler).toBe(false);
-
-      // Switch to IR
-      setFeatureFlags({ useUnifiedCompiler: true });
+      // Start with IR (default)
       expect(getFeatureFlags().useUnifiedCompiler).toBe(true);
 
-      // Switch back to legacy
+      // Switch to legacy
       setFeatureFlags({ useUnifiedCompiler: false });
       expect(getFeatureFlags().useUnifiedCompiler).toBe(false);
 
-      // Switch to IR again
+      // Switch back to IR
       setFeatureFlags({ useUnifiedCompiler: true });
       expect(getFeatureFlags().useUnifiedCompiler).toBe(true);
+
+      // Switch to legacy again
+      setFeatureFlags({ useUnifiedCompiler: false });
+      expect(getFeatureFlags().useUnifiedCompiler).toBe(false);
     });
   });
 
   describe("Flag Read", () => {
     it("should return current flags (TypeScript readonly)", () => {
-      // The returned object is typed as readonly but not deeply frozen
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.useUnifiedCompiler).toBe(true);
 
       // This verifies that getFeatureFlags() returns the current state
-      setFeatureFlags({ useUnifiedCompiler: true });
+      setFeatureFlags({ useUnifiedCompiler: false });
       const updatedFlags = getFeatureFlags();
-      expect(updatedFlags.useUnifiedCompiler).toBe(true);
+      expect(updatedFlags.useUnifiedCompiler).toBe(false);
     });
   });
 
   describe("Partial Flag Updates", () => {
     it("should allow partial updates without affecting other flags", () => {
-      // Set initial state
+      // Set some flags to false
       setFeatureFlags({
-        useUnifiedCompiler: true,
-        strictStateValidation: true,
+        useUnifiedCompiler: false,
+        strictStateValidation: false,
       });
 
-      // Partial update
-      setFeatureFlags({ busCompilation: true });
+      // Partial update - only change busCompilation
+      setFeatureFlags({ busCompilation: false });
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(true);
-      expect(flags.strictStateValidation).toBe(true);
-      expect(flags.busCompilation).toBe(true);
-      expect(flags.timeCtxPropagation).toBe(false);
+      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.strictStateValidation).toBe(false);
+      expect(flags.busCompilation).toBe(false);
+      expect(flags.timeCtxPropagation).toBe(true); // Unchanged from default
     });
 
     it("should handle empty partial updates", () => {
-      setFeatureFlags({ useUnifiedCompiler: true });
+      setFeatureFlags({ useUnifiedCompiler: false });
       setFeatureFlags({});
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(true);
+      expect(flags.useUnifiedCompiler).toBe(false);
     });
   });
 });

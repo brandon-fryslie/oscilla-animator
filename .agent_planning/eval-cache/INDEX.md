@@ -2,7 +2,6 @@
 
 | Topic | File | Cached | Source | Confidence |
 |-------|------|--------|--------|------------|
-| Rendering Architecture | rendering-architecture.md | 2025-12-24 16:52 | project-evaluator (canvas-renderer eval v2) | HIGH |
 | Lint Infrastructure | lint-infrastructure.md | 2025-12-25 17:48 | project-evaluator (lint-cleanup) | HIGH |
 
 ## Cache Freshness Guidelines
@@ -12,7 +11,6 @@
 - **ANCIENT**: > 7 days - ignore
 
 ## What's Cached
-- **rendering-architecture.md**: RenderTree IR, Player loop, SvgRenderer, RenderInstances2D, Canvas extension points
 - **lint-infrastructure.md**: ESLint config, two-tier rules (critical vs non-critical), auto-fixable rules
 
 ## Not Yet Cached
@@ -29,3 +27,4 @@
 - compiler-architecture.md (INVALIDATED 2025-12-26 - Signal blocks migrated to IR lowering, P1-8 through P1-13 completed)
 - bus-compiler-architecture.md (INVALIDATED 2025-12-26 - removed as stale)
 - block-compiler-migration.md (INVALIDATED 2025-12-26 05:55 - Signal blocks 8-13 migrated to IR lowering)
+- rendering-architecture.md (INVALIDATED 2025-12-26 11:25 - Player.setIRProgram added, IRRuntimeAdapter created, ScheduleExecutor rendering integration)

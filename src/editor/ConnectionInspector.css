@@ -303,3 +303,168 @@
   color: #666;
   font-size: 11px;
 }
+
+/* Type description for compatibility display */
+.conn-type-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  min-width: 80px;
+}
+
+.conn-type-desc-label {
+  font-size: 9px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.conn-type-desc-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.conn-type-world {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: #1a1a2e;
+  color: #888;
+}
+
+.conn-type-world.signal {
+  background: #1a2e1a;
+  color: #4ade80;
+}
+
+.conn-type-world.field {
+  background: #2e1a2e;
+  color: #c084fc;
+}
+
+.conn-type-world.scalar {
+  background: #2e2e1a;
+  color: #facc15;
+}
+
+.conn-type-domain {
+  font-size: 10px;
+  color: #888;
+}
+
+/* Type comparison layout */
+.conn-type-comparison {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.conn-type-compat-arrow {
+  font-size: 14px;
+  color: #555;
+}
+
+/* Adapter chain display */
+.conn-adapter-chain {
+  margin-top: 8px;
+  padding: 8px;
+  background: #1e1b2e;
+  border: 1px solid #3f3a5a;
+  border-radius: 4px;
+}
+
+.conn-adapter-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.conn-adapter-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #252040;
+  border-radius: 3px;
+}
+
+.conn-adapter-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #a5b4fc;
+}
+
+.conn-adapter-arrow {
+  font-size: 12px;
+  color: #666;
+}
+
+.conn-adapter-target {
+  font-size: 10px;
+  color: #888;
+}
+
+/* Compatibility status messages */
+.conn-status {
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+.conn-status-compatible {
+  background: #1a2e1a;
+  color: #4ade80;
+  border: 1px solid #22543d;
+}
+
+.conn-status-convertible {
+  background: #2e2a1a;
+  color: #fbbf24;
+  border: 1px solid #78350f;
+}
+
+.conn-status-incompatible {
+  background: #2a1515;
+  border: 1px solid #5c2424;
+  padding: 8px;
+}
+
+.conn-incompatible-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: #f87171;
+  margin: 0 0 4px 0;
+}
+
+.conn-incompatible-reason {
+  font-size: 10px;
+  color: #f87171;
+  opacity: 0.8;
+  margin: 0;
+}
+
+/* Primary action button */
+.conn-action-btn.conn-action-primary {
+  background: #312e81;
+  border-color: #4f46e5;
+  color: #a5b4fc;
+}
+
+.conn-action-btn.conn-action-primary:hover:not(:disabled) {
+  background: #3730a3;
+  border-color: #6366f1;
+}
+
+.conn-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

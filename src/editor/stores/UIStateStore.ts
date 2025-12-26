@@ -8,11 +8,16 @@ import type { RootStore } from './RootStore';
 import type { BlockDefinition } from '../blocks';
 
 /**
- * Selected connection - can be wire, publisher, or listener
+ * Selected connection - can be wire, publisher, listener, or a cell (potential connection)
  */
 export type SelectedConnection = {
   type: 'wire' | 'publisher' | 'listener';
   id: string;
+} | {
+  type: 'cell';
+  rowKey: string;  // RowKey from ModulationTable (blockId:slotId)
+  busId: string;
+  direction: 'input' | 'output';
 } | null;
 
 /**
@@ -90,6 +95,7 @@ export class UIStateStore {
       selectBus: action,
       deselectBus: action,
       selectConnection: action,
+      selectCell: action,
       deselectConnection: action,
       pushInspectorHistory: action,
       popInspectorHistory: action,
@@ -160,6 +166,19 @@ export class UIStateStore {
     this.pushInspectorHistory();
 
     this.uiState.selectedConnection = { type, id };
+    this.uiState.selectedBlockId = null;
+    this.uiState.selectedBusId = null;
+    this.uiState.selectedPort = null;
+  }
+
+  /**
+   * Select a modulation table cell (potential or existing connection).
+   */
+  selectCell(rowKey: string, busId: string, direction: 'input' | 'output'): void {
+    // Push current state to history before navigating
+    this.pushInspectorHistory();
+
+    this.uiState.selectedConnection = { type: 'cell', rowKey, busId, direction };
     this.uiState.selectedBlockId = null;
     this.uiState.selectedBusId = null;
     this.uiState.selectedPort = null;

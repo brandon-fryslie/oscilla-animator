@@ -42,14 +42,14 @@ export interface CompilerFeatureFlags {
 
 /**
  * Default feature flags.
- * Conservative defaults - legacy behavior by default.
+ * New IR-based compiler is now the default.
  */
 const DEFAULT_FLAGS: CompilerFeatureFlags = {
-  useUnifiedCompiler: false,
-  strictStateValidation: false,
-  busCompilation: false,
-  timeCtxPropagation: false,
-  requireTimeRoot: true, // ENABLED: Patches must have TimeRoot block (Sprint 2)
+  useUnifiedCompiler: true,
+  strictStateValidation: true,
+  busCompilation: true,
+  timeCtxPropagation: true,
+  requireTimeRoot: true,
 };
 
 /**

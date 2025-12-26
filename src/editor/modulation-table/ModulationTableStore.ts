@@ -544,6 +544,16 @@ export class ModulationTableStore {
   }
 
   /**
+   * Select a modulation table cell and open the Connection Inspector.
+   * Works for any cell - bound, unbound, or incompatible.
+   */
+  selectCell(rowKey: string, busId: string): void {
+    const row = this.visibleRows.find(r => r.key === rowKey);
+    if (!row) return;
+    this.root.uiStore.selectCell(rowKey, busId, row.direction);
+  }
+
+  /**
    * Toggle group collapse state.
    */
   toggleGroupCollapse(groupKey: GroupKey): void {

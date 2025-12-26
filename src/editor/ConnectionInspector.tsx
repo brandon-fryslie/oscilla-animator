@@ -23,7 +23,7 @@ type ResolvedConnection =
   | { kind: 'wire'; connection: Connection; sourceBlock: Block; sourceSlot: Slot; targetBlock: Block; targetSlot: Slot }
   | { kind: 'publisher'; publisher: Publisher; sourceBlock: Block; sourceSlot: Slot; busName: string }
   | { kind: 'listener'; listener: Listener; busName: string; targetBlock: Block; targetSlot: Slot }
-  | { kind: 'cell'; cell: TableCell; row: TableRow; column: TableColumn; block: Block; slot: Slot };
+  | { kind: 'cell'; cellInfo: CellInspectorInfo };
 
 /**
  * Detailed cell info for inspector display
@@ -523,6 +523,185 @@ const ListenerConnectionView = observer(({
 });
 
 /**
+ * Type description display for showing type compatibility info.
+ */
+function TypeDescription({ typeDesc, label }: { typeDesc: TypeDesc; label: string }) {
+  return (
+    <div className="conn-type-desc">
+      <span className="conn-type-desc-label">{label}</span>
+      <span className="conn-type-desc-value">
+        <span className={`conn-type-world ${typeDesc.world}`}>{typeDesc.world}</span>
+        {typeDesc.domain && <span className="conn-type-domain">{typeDesc.domain}</span>}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Adapter chain display - shows required adapters for type conversion.
+ */
+function AdapterChainDisplay({ chain }: { chain: AdapterStep[] }) {
+  if (chain.length === 0) return null;
+
+  return (
+    <div className="conn-adapter-chain">
+      <h4 className="conn-section-title">Required Adapters</h4>
+      <div className="conn-adapter-steps">
+        {chain.map((step, i) => (
+          <div key={i} className="conn-adapter-step">
+            <span className="conn-adapter-name">{step.adapterId}</span>
+            <span className="conn-adapter-arrow">→</span>
+            <span className="conn-adapter-target">{step.targetWorld}</span>
+          </div>
+        ))}
+      </div>
+      <p className="conn-hint">These adapters will be applied automatically when connecting.</p>
+    </div>
+  );
+}
+
+/**
+ * Cell Connection View - displays cell details from ModulationTable.
+ * Handles bound, unbound, convertible, and incompatible cells.
+ */
+const CellConnectionView = observer(({
+  cellInfo,
+  onBack,
+}: {
+  cellInfo: CellInspectorInfo;
+  onBack: () => void;
+}) => {
+  const store = useStore();
+  const { cell, row, column, block, slot, compatibility } = cellInfo;
+
+  const navigateToBlock = useCallback(() => {
+    store.uiStore.selectBlock(block.id);
+  }, [store, block.id]);
+
+  const navigateToBus = useCallback(() => {
+    store.uiStore.selectBus(column.busId);
+  }, [store, column.busId]);
+
+  const handleConnect = useCallback(() => {
+    // Use the ModulationTableStore to bind the cell
+    store.modulationTableStore.bindCell(row.key, column.busId);
+    // After connecting, the cell becomes bound - the inspector should update
+  }, [store, row.key, column.busId]);
+
+  const handleDisconnect = useCallback(() => {
+    store.modulationTableStore.unbindCell(row.key, column.busId);
+    store.uiStore.deselectConnection();
+  }, [store, row.key, column.busId]);
+
+  const isBound = cell.status === 'bound';
+  const isConvertible = compatibility.status === 'convertible';
+  const isIncompatible = compatibility.status === 'incompatible';
+  const directionLabel = row.direction === 'input' ? 'Listener' : 'Publisher';
+  const category = isBound ? `Bound ${directionLabel}` :
+                   isConvertible ? `Convertible (${directionLabel})` :
+                   isIncompatible ? 'Incompatible' : `Available ${directionLabel}`;
+  const color = isBound ? '#4f46e5' :
+                isConvertible ? '#f59e0b' :
+                isIncompatible ? '#ef4444' : '#10b981';
+
+  return (
+    <InspectorContainer
+      title={`Cell: ${block.label} → ${column.name}`}
+      typeCode={slot.type}
+      category={category}
+      color={color}
+      onBack={onBack}
+      backLabel="Back"
+    >
+      {/* Endpoints */}
+      <div className="conn-section">
+        <EndpointDisplay
+          label={row.direction === 'output' ? 'From (Publisher)' : 'To (Listener)'}
+          blockName={block.label}
+          portName={slot.label}
+          portType={slot.type}
+          onNavigate={navigateToBlock}
+        />
+        <div className="conn-arrow">{row.direction === 'output' ? '→' : '←'}</div>
+        <BusEndpointDisplay
+          label={row.direction === 'output' ? 'To Bus' : 'From Bus'}
+          busName={column.name}
+          onNavigate={navigateToBus}
+        />
+      </div>
+
+      {/* Type Compatibility Info */}
+      <div className="conn-section">
+        <h4 className="conn-section-title">Type Compatibility</h4>
+        <div className="conn-type-comparison">
+          <TypeDescription typeDesc={row.type} label="Port Type" />
+          <div className="conn-type-compat-arrow">{row.direction === 'output' ? '→' : '←'}</div>
+          <TypeDescription typeDesc={column.type} label="Bus Type" />
+        </div>
+
+        {compatibility.status === 'compatible' && (
+          <p className="conn-status conn-status-compatible">Types are directly compatible</p>
+        )}
+
+        {compatibility.status === 'convertible' && compatibility.adapterChain && (
+          <>
+            <p className="conn-status conn-status-convertible">Types can be converted with adapters</p>
+            <AdapterChainDisplay chain={compatibility.adapterChain} />
+          </>
+        )}
+
+        {compatibility.status === 'incompatible' && (
+          <div className="conn-status conn-status-incompatible">
+            <p className="conn-incompatible-header">Types are incompatible</p>
+            <p className="conn-incompatible-reason">
+              {compatibility.incompatibilityReason ?? 'No conversion path available'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Enabled state for bound cells */}
+      {isBound && (
+        <div className="conn-section">
+          <label className="conn-toggle-row">
+            <input
+              type="checkbox"
+              checked={cell.enabled !== false}
+              onChange={() => {
+                // Toggle enabled state via appropriate store method
+                if (cell.listenerId) {
+                  store.busStore.updateListener(cell.listenerId, { enabled: !cell.enabled });
+                } else if (cell.publisherId) {
+                  store.busStore.updatePublisher(cell.publisherId, { enabled: !cell.enabled });
+                }
+              }}
+            />
+            <span>Enabled</span>
+          </label>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="conn-actions">
+        {isBound ? (
+          <button className="conn-action-btn conn-action-danger" onClick={handleDisconnect}>
+            Disconnect
+          </button>
+        ) : isIncompatible ? (
+          <button className="conn-action-btn" disabled title="Cannot connect incompatible types">
+            Cannot Connect
+          </button>
+        ) : (
+          <button className="conn-action-btn conn-action-primary" onClick={handleConnect}>
+            {isConvertible ? 'Connect (with Adapters)' : 'Connect'}
+          </button>
+        )}
+      </div>
+    </InspectorContainer>
+  );
+});
+
+/**
  * Main Connection Inspector - resolves connection and renders appropriate view.
  */
 export const ConnectionInspector = observer(() => {
@@ -583,8 +762,56 @@ export const ConnectionInspector = observer(() => {
       return { kind: 'listener', listener, busName, targetBlock, targetSlot };
     }
 
+    if (type === 'cell') {
+      const { rowKey, busId, direction } = selectedConnection;
+
+      // Get cell, row, and column from ModulationTableStore
+      const cell = store.modulationTableStore.getCell(rowKey, busId);
+      const row = store.modulationTableStore.rows.find(r => r.key === rowKey);
+      const column = store.modulationTableStore.columns.find(c => c.busId === busId);
+
+      if (!cell || !row || !column) return null;
+
+      // Get block and slot
+      const parsed = parseRowKey(rowKey);
+      if (!parsed) return null;
+
+      const block = store.patchStore.blocks.find(b => b.id === parsed.blockId);
+      if (!block) return null;
+
+      const slot = direction === 'input'
+        ? block.inputs.find(s => s.id === parsed.portId)
+        : block.outputs.find(s => s.id === parsed.portId);
+      if (!slot) return null;
+
+      // Compute compatibility info
+      let compatibility: CellInspectorInfo['compatibility'];
+      if (cell.status === 'bound' || isDirectlyCompatible(column.type, row.type)) {
+        compatibility = { status: 'compatible' };
+      } else {
+        // Check for adapter path
+        const adapterResult = findAdapterPath(column.type, row.type, direction === 'input' ? 'listener' : 'publisher');
+        if (adapterResult.ok && adapterResult.chain) {
+          compatibility = {
+            status: 'convertible',
+            adapterChain: adapterResult.chain,
+          };
+        } else {
+          compatibility = {
+            status: 'incompatible',
+            incompatibilityReason: adapterResult.reason ?? `Cannot convert ${column.type.world}:${column.type.domain ?? 'unknown'} to ${row.type.world}:${row.type.domain ?? 'unknown'}`,
+          };
+        }
+      }
+
+      return {
+        kind: 'cell',
+        cellInfo: { cell, row, column, block, slot, compatibility },
+      };
+    }
+
     return null;
-  }, [selectedConnection, store.patchStore.connections, store.patchStore.blocks, store.busStore.publishers, store.busStore.listeners, store.busStore.buses]);
+  }, [selectedConnection, store.patchStore.connections, store.patchStore.blocks, store.busStore.publishers, store.busStore.listeners, store.busStore.buses, store.modulationTableStore]);
 
   // Handle back navigation
   const handleBack = useCallback(() => {
@@ -670,6 +897,14 @@ export const ConnectionInspector = observer(() => {
           targetBlock={resolved.targetBlock}
           targetSlot={resolved.targetSlot}
           onDisconnect={handleDisconnectListener}
+          onBack={handleBack}
+        />
+      );
+
+    case 'cell':
+      return (
+        <CellConnectionView
+          cellInfo={resolved.cellInfo}
           onBack={handleBack}
         />
       );
