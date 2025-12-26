@@ -38,3 +38,27 @@ export {
   applyBinaryFn,
   applyTernaryFn,
 } from "./OpCodeRegistry";
+
+// Easing curves (Sprint 4)
+export {
+  createBuiltinCurves,
+  applyEasing,
+  BUILTIN_CURVES,
+  type EasingCurve,
+  type EasingCurveTable,
+} from "./EasingCurves";
+
+// Slot value readers (Sprint 2)
+export {
+  createArraySlotReader,
+  createEmptySlotReader,
+  type SlotValueReader,
+} from "./SlotValueReader";
+
+// Debug sink (Sprint 3)
+export {
+  type DebugSink,
+  type BusCombineTraceInfo,
+  type TransformTraceInfo,
+  type TransformStepTrace,
+} from "./DebugSink";
