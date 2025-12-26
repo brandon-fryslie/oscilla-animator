@@ -240,4 +240,6 @@ export type StatefulSignalOp =
   | "delayFrames" // any -> any (frame-based delay)
   | "sampleHold" // any + trigger -> any (hold on trigger)
   | "slew" // any -> any (smoothing)
-  | "edgeDetectWrap"; // phase01 -> trigger (wrap detection)
+  | "edgeDetectWrap" // phase01 -> trigger (wrap detection)
+  | "pulseDivider" // phase01 -> trigger (pulse division)
+  | "envelopeAD"; // trigger -> number (envelope generator)

@@ -6,6 +6,9 @@
  */
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
+import type { BlockLowerFn } from '../../ir/lowerTypes';
+import { registerBlockType } from '../../ir/lowerTypes';
+import { OpCode } from '../../ir/opcodes';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
@@ -38,6 +41,242 @@ function getShaper(kind: string, amount: number): (x: number) => number {
       return (x: number): number => x; // identity
   }
 }
+
+// =============================================================================
+// IR Lowering
+// =============================================================================
+
+/**
+ * Lower Shaper block to IR.
+ *
+ * Applies various waveshaping functions to the input signal.
+ * Kind parameter determines the shaping function, amount controls intensity.
+ */
+const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
+  const input = inputs[0]; // Signal:number
+
+  if (input.k !== 'sig') {
+    throw new Error(`Shaper: expected sig input, got ${input.k}`);
+  }
+
+  const kind = (config as any)?.kind || 'smoothstep';
+  const amount = Number((config as any)?.amount ?? 1);
+
+  const numberType: any = { world: 'signal', domain: 'number' };
+
+  let outputId: number;
+
+  switch (kind) {
+    case 'tanh':
+      // tanh(x * amount)
+      {
+        const amountSig = ctx.b.sigConst(amount, numberType);
+        const scaled = ctx.b.sigZip(input.id, amountSig, {
+          fnId: 'mul',
+          opcode: OpCode.Mul,
+          outputType: numberType,
+        });
+        // Note: tanh not in OpCode registry, would need to be added
+        // For now, use a series expansion or fallback
+        // tanh(x) ≈ x for small x, saturates to ±1 for large x
+        // Simple approximation: x / (1 + |x|)
+        const one = ctx.b.sigConst(1, numberType);
+        const abs_val = ctx.b.sigMap(scaled, {
+          fnId: 'abs',
+          opcode: OpCode.Abs,
+          outputType: numberType,
+        });
+        const denom = ctx.b.sigZip(one, abs_val, {
+          fnId: 'add',
+          opcode: OpCode.Add,
+          outputType: numberType,
+        });
+        outputId = ctx.b.sigZip(scaled, denom, {
+          fnId: 'div',
+          opcode: OpCode.Div,
+          outputType: numberType,
+        });
+      }
+      break;
+
+    case 'softclip':
+      // x / (1 + |x * amount|)
+      {
+        const amountSig = ctx.b.sigConst(amount, numberType);
+        const scaled = ctx.b.sigZip(input.id, amountSig, {
+          fnId: 'mul',
+          opcode: OpCode.Mul,
+          outputType: numberType,
+        });
+        const one = ctx.b.sigConst(1, numberType);
+        const abs_val = ctx.b.sigMap(scaled, {
+          fnId: 'abs',
+          opcode: OpCode.Abs,
+          outputType: numberType,
+        });
+        const denom = ctx.b.sigZip(one, abs_val, {
+          fnId: 'add',
+          opcode: OpCode.Add,
+          outputType: numberType,
+        });
+        outputId = ctx.b.sigZip(input.id, denom, {
+          fnId: 'div',
+          opcode: OpCode.Div,
+          outputType: numberType,
+        });
+      }
+      break;
+
+    case 'sigmoid':
+      // 1 / (1 + exp(-x * amount))
+      {
+        const amountSig = ctx.b.sigConst(amount, numberType);
+        const scaled = ctx.b.sigZip(input.id, amountSig, {
+          fnId: 'mul',
+          opcode: OpCode.Mul,
+          outputType: numberType,
+        });
+        const neg_one = ctx.b.sigConst(-1, numberType);
+        const negated = ctx.b.sigZip(scaled, neg_one, {
+          fnId: 'mul',
+          opcode: OpCode.Mul,
+          outputType: numberType,
+        });
+        // exp not in OpCode registry - would need to add
+        // For now, approximate with tanh-like behavior
+        const one = ctx.b.sigConst(1, numberType);
+        const abs_val = ctx.b.sigMap(negated, {
+          fnId: 'abs',
+          opcode: OpCode.Abs,
+          outputType: numberType,
+        });
+        const denom = ctx.b.sigZip(one, abs_val, {
+          fnId: 'add',
+          opcode: OpCode.Add,
+          outputType: numberType,
+        });
+        const inv_denom = ctx.b.sigZip(one, denom, {
+          fnId: 'div',
+          opcode: OpCode.Div,
+          outputType: numberType,
+        });
+        outputId = inv_denom;
+      }
+      break;
+
+    case 'smoothstep':
+      // smoothstep: t * t * (3 - 2 * t) where t = clamp(x, 0, 1)
+      {
+        const zero = ctx.b.sigConst(0, numberType);
+        const one = ctx.b.sigConst(1, numberType);
+        const two = ctx.b.sigConst(2, numberType);
+        const three = ctx.b.sigConst(3, numberType);
+
+        // clamp(x, 0, 1)
+        const max_zero = ctx.b.sigZip(input.id, zero, {
+          fnId: 'max',
+          opcode: OpCode.Max,
+          outputType: numberType,
+        });
+        const t = ctx.b.sigZip(max_zero, one, {
+          fnId: 'min',
+          opcode: OpCode.Min,
+          outputType: numberType,
+        });
+
+        // t * t
+        const t_squared = ctx.b.sigZip(t, t, {
+          fnId: 'mul',
+          opcode: OpCode.Mul,
+          outputType: numberType,
+        });
+
+        // 2 * t
+        const two_t = ctx.b.sigZip(two, t, {
+          fnId: 'mul',
+          opcode: OpCode.Mul,
+          outputType: numberType,
+        });
+
+        // 3 - 2 * t
+        const three_minus_two_t = ctx.b.sigZip(three, two_t, {
+          fnId: 'sub',
+          opcode: OpCode.Sub,
+          outputType: numberType,
+        });
+
+        // t * t * (3 - 2 * t)
+        outputId = ctx.b.sigZip(t_squared, three_minus_two_t, {
+          fnId: 'mul',
+          opcode: OpCode.Mul,
+          outputType: numberType,
+        });
+      }
+      break;
+
+    case 'pow':
+      // sign(x) * pow(abs(x), amount)
+      {
+        const amountSig = ctx.b.sigConst(amount, numberType);
+        const sign_x = ctx.b.sigMap(input.id, {
+          fnId: 'sign',
+          opcode: OpCode.Sign,
+          outputType: numberType,
+        });
+        const abs_x = ctx.b.sigMap(input.id, {
+          fnId: 'abs',
+          opcode: OpCode.Abs,
+          outputType: numberType,
+        });
+        const pow_val = ctx.b.sigZip(abs_x, amountSig, {
+          fnId: 'pow',
+          opcode: OpCode.Pow,
+          outputType: numberType,
+        });
+        outputId = ctx.b.sigZip(sign_x, pow_val, {
+          fnId: 'mul',
+          opcode: OpCode.Mul,
+          outputType: numberType,
+        });
+      }
+      break;
+
+    default:
+      // identity
+      outputId = input.id;
+  }
+
+  return {
+    outputs: [{ k: 'sig', id: outputId }],
+  };
+};
+
+// Register block type
+registerBlockType({
+  type: 'Shaper',
+  capability: 'pure',
+  inputs: [
+    {
+      portId: 'in',
+      label: 'Input',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
+    },
+  ],
+  outputs: [
+    {
+      portId: 'out',
+      label: 'Output',
+      dir: 'out',
+      type: { world: 'signal', domain: 'number' },
+    },
+  ],
+  lower: lowerShaper,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const ShaperBlock: BlockCompiler = {
   type: 'Shaper',

@@ -6,6 +6,9 @@
  */
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
+import type { BlockLowerFn } from '../../ir/lowerTypes';
+import { registerBlockType } from '../../ir/lowerTypes';
+import { OpCode } from '../../ir/opcodes';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
@@ -85,6 +88,114 @@ function hslToHex(h: number, s: number, l: number): string {
 
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
+
+// =============================================================================
+// IR Lowering
+// =============================================================================
+
+/**
+ * Lower ColorLFO block to IR.
+ *
+ * Performs HSL color cycling based on phase input.
+ * Base color hue, hueSpan, saturation, and lightness are configuration params.
+ *
+ * Note: Full HSL->RGB conversion requires complex piecewise functions.
+ * For IR, we use OpCode.ColorShiftHue if available, or build the conversion manually.
+ */
+const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
+  const phase = inputs[0]; // Signal:phase
+
+  if (phase.k !== 'sig') {
+    throw new Error(`ColorLFO: expected sig input for phase, got ${phase.k}`);
+  }
+
+  const base = (config as any)?.base || '#3B82F6';
+  const hueSpan = Number((config as any)?.hueSpan ?? 180);
+  const sat = Number((config as any)?.sat ?? 0.8);
+  const light = Number((config as any)?.light ?? 0.5);
+
+  // Extract base hue from base color
+  const baseHSL = hexToHSL(base);
+  const baseHue = baseHSL.h;
+
+  const numberType: any = { world: 'signal', domain: 'number' };
+  const colorType: any = { world: 'signal', domain: 'color' };
+
+  // Calculate hue: baseHue + phase * hueSpan
+  const hueSpanSig = ctx.b.sigConst(hueSpan, numberType);
+  const hueOffset = ctx.b.sigZip(phase.id, hueSpanSig, {
+    fnId: 'mul',
+    opcode: OpCode.Mul,
+    outputType: numberType,
+  });
+  const baseHueSig = ctx.b.sigConst(baseHue, numberType);
+  const hue = ctx.b.sigZip(baseHueSig, hueOffset, {
+    fnId: 'add',
+    opcode: OpCode.Add,
+    outputType: numberType,
+  });
+
+  // For now, we'll create a closure bridge to handle the color conversion
+  // A full IR implementation would require HSL->RGB conversion as IR nodes
+  // which would be quite complex (piecewise functions, modulo, etc.)
+
+  // Using OpCode.ColorShiftHue would be ideal, but it requires a base color signal
+  // We'll construct the RGB from HSL using a series of operations
+
+  // Simplified approach: create color from hue with fixed sat/light
+  // This would require implementing the full HSL->RGB algorithm in IR opcodes
+  // For now, we'll use a placeholder that needs the actual conversion logic
+
+  // HSL to RGB conversion (simplified):
+  // We need to implement the piecewise function h -> (r, g, b)
+  // This is complex and would benefit from a dedicated OpCode
+
+  // For the IR lowering, we'll document that this needs ColorHSLToRGB opcode
+  // or a custom kernel function
+
+  // Placeholder: Use the hue as the output (this is NOT correct, just a placeholder)
+  // In reality, we'd need to construct RGB components and pack them
+
+  throw new Error('ColorLFO IR lowering requires ColorHSLToRGB opcode which is not yet implemented in the evaluator. This block needs to remain in closure mode until the color conversion IR infrastructure is complete.');
+
+  // When ColorHSLToRGB is available:
+  // const satSig = ctx.b.sigConst(sat, numberType);
+  // const lightSig = ctx.b.sigConst(light, numberType);
+  // ... build HSL color signal ...
+  // const rgb = ctx.b.sigMap(hslColor, {
+  //   fnId: 'colorHSLToRGB',
+  //   opcode: OpCode.ColorHSLToRGB,
+  //   outputType: colorType,
+  // });
+  // return { outputs: [{ k: 'sig', id: rgb }] };
+};
+
+// Register block type (but note it will throw until color conversion is implemented)
+registerBlockType({
+  type: 'ColorLFO',
+  capability: 'pure',
+  inputs: [
+    {
+      portId: 'phase',
+      label: 'Phase',
+      dir: 'in',
+      type: { world: 'signal', domain: 'phase01' },
+    },
+  ],
+  outputs: [
+    {
+      portId: 'color',
+      label: 'Color',
+      dir: 'out',
+      type: { world: 'signal', domain: 'color' },
+    },
+  ],
+  lower: lowerColorLFO,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const ColorLFOBlock: BlockCompiler = {
   type: 'ColorLFO',
