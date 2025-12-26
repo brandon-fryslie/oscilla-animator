@@ -8,15 +8,13 @@
 import { describe, it, expect } from "vitest";
 import { pass3TimeTopology } from "../pass3-time";
 import type {
-  TypedPatch,
   Block,
   Connection,
   Publisher,
   Listener,
   Bus,
-  Slot,
-  BlockIndex,
 } from "../../../types";
+import type { TypedPatch, BlockIndex } from "../../ir";
 import type { TypeDesc } from "../../ir/types";
 
 // Helper to create a minimal typed patch
@@ -297,7 +295,7 @@ describe("pass3TimeTopology", () => {
       busTypes.set("bus1", { world: "signal", domain: "number" });
 
       const patch = createPatchWithTimeRoot("FiniteTimeRoot");
-      patch.busTypes = busTypes;
+      (patch as any).busTypes = busTypes;
 
       const timeResolved = pass3TimeTopology(patch);
 

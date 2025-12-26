@@ -8,7 +8,7 @@
  * - HANDOFF.md Topic 1: IRBuilder API
  */
 
-import type { TypeDesc, StateId, ValueSlot, TransformChainId, SigExprId, FieldExprId } from "./types";
+import type { TypeDesc, StateId, ValueSlot, SigExprId, FieldExprId } from "./types";
 import type { SignalExprIR } from "./signalExpr";
 import type { FieldExprIR } from "./fieldExpr";
 import type { TransformStepIR } from "./transforms";

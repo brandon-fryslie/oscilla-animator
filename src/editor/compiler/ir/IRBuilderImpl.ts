@@ -61,7 +61,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   allocStateId(type: TypeDesc, initial?: unknown, debugName?: string): StateId {
-    const stateId = this.stateLayout.length as StateId;
+    const stateId = this.stateLayout.length as unknown as StateId;
     this.stateLayout.push({
       stateId,
       type,

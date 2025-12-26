@@ -15,16 +15,18 @@
  */
 
 import type {
-  TypedPatch,
-  TimeResolvedPatch,
-  TimeSignals,
   Block,
   Connection,
   Publisher,
   Listener,
   Bus,
-  BlockIndex,
 } from "../../types";
+import type {
+  TypedPatch,
+  TimeResolvedPatch,
+  TimeSignals,
+  BlockIndex,
+} from "../ir";
 import type { TimeModelIR } from "../ir/schedule";
 import { IRBuilderImpl } from "../ir/IRBuilderImpl";
 
@@ -74,7 +76,7 @@ function isTimeRootBlock(block: Block): boolean {
 function extractTimeModel(timeRoot: Block): TimeModelIR {
   if (timeRoot.type === "FiniteTimeRoot") {
     // Extract durationMs from params or default source
-    const durationMs = extractParamValue(timeRoot, "durationMs", 5000);
+    const durationMs = extractParamValue(timeRoot, "durationMs", 5000) as number;
     return {
       kind: "finite",
       durationMs,
@@ -83,7 +85,7 @@ function extractTimeModel(timeRoot: Block): TimeModelIR {
 
   if (timeRoot.type === "CycleTimeRoot") {
     // Extract periodMs and mode from params
-    const periodMs = extractParamValue(timeRoot, "periodMs", 3000);
+    const periodMs = extractParamValue(timeRoot, "periodMs", 3000) as number;
     const mode = extractParamValue(timeRoot, "mode", "loop") as
       | "loop"
       | "pingpong";
@@ -97,8 +99,8 @@ function extractTimeModel(timeRoot: Block): TimeModelIR {
 
   if (timeRoot.type === "InfiniteTimeRoot") {
     // Extract windowMs from params
-    const windowMs = extractParamValue(timeRoot, "windowMs", 10000);
-    const periodMs = extractParamValue(timeRoot, "periodMs", 10000);
+    const windowMs = extractParamValue(timeRoot, "windowMs", 10000) as number;
+    const periodMs = extractParamValue(timeRoot, "periodMs", 10000) as number | undefined;
     return {
       kind: "infinite",
       windowMs,
@@ -171,7 +173,7 @@ export function pass3TimeTopology(
   const errors: Pass3Error[] = [];
 
   // Step 1: Find all TimeRoot blocks
-  const timeRoots = typed.blocks.filter((b) => isTimeRootBlock(b));
+  const timeRoots = typed.blocks.filter((b: Block) => isTimeRootBlock(b));
 
   // Step 2: Validate exactly one TimeRoot exists
   if (timeRoots.length === 0) {
@@ -183,8 +185,8 @@ export function pass3TimeTopology(
   } else if (timeRoots.length > 1) {
     errors.push({
       kind: "MultipleTimeRoots",
-      timeRootIds: timeRoots.map((r) => r.id),
-      message: `Patch must have exactly one TimeRoot block, found ${timeRoots.length}: ${timeRoots.map((r) => r.id).join(", ")}`,
+      timeRootIds: timeRoots.map((r: Block) => r.id),
+      message: `Patch must have exactly one TimeRoot block, found ${timeRoots.length}: ${timeRoots.map((r: Block) => r.id).join(", ")}`,
     });
   }
 

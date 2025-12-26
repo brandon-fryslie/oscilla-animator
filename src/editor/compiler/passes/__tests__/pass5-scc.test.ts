@@ -7,13 +7,8 @@
 
 import { describe, it, expect } from "vitest";
 import { pass5CycleValidation } from "../pass5-scc";
-import type {
-  DepGraph,
-  DepNode,
-  DepEdge,
-  Block,
-  BlockIndex,
-} from "../../../types";
+import type { Block } from "../../../types";
+import type { DepGraph, DepNode, DepEdge, BlockIndex } from "../../ir";
 import type { BusIndex } from "../../ir/types";
 
 // Helper to create a block

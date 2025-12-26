@@ -8,20 +8,16 @@
 import { describe, it, expect } from "vitest";
 import { pass4DepGraph } from "../pass4-depgraph";
 import type {
-  TimeResolvedPatch,
-  TimeSignals,
   Block,
   Connection,
   Publisher,
   Listener,
   Bus,
-  BlockIndex,
-  PortRef,
 } from "../../../types";
-import type { TypeDesc, BusIndex, SigExprId } from "../../ir/types";
-import type { TimeModelIR } from "../../ir/schedule";
-
+import type { TimeResolvedPatch, TimeSignals, BlockIndex } from "../../ir";
 // Helper to create a minimal time-resolved patch
+import type { TimeModelIR } from "../../ir/schedule";
+import type { TypeDesc, SigExprId } from "../../ir/types";
 function createTimeResolvedPatch(
   overrides?: Partial<
     TimeResolvedPatch<Block, Connection, Publisher, Listener, Bus>

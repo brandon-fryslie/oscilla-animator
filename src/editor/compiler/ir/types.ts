@@ -44,13 +44,19 @@ export type TypeDomain =
   | "trigger" // discrete event-ish signal
   | "domain" // element identity handle
   | "renderTree"
+  | "renderNode"
   | "renderCmds"
+  | "canvasRender"
   | "mesh"
   | "camera"
   | "mat4"
   | "path"
   | "strokeStyle"
   | "filterDef"
+  | "scene"
+  | "sceneTargets"
+  | "sceneStrokes"
+  | "program"
   | "unknown";
 
 /**

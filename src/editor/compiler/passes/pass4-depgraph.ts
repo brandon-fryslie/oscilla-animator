@@ -16,17 +16,18 @@
  */
 
 import type {
-  TimeResolvedPatch,
-  DepGraph,
-  DepNode,
-  DepEdge,
   Block,
   Connection,
   Publisher,
   Listener,
   Bus,
-  BlockIndex,
 } from "../../types";
+import type {
+  TimeResolvedPatch,
+  DepGraph,
+  DepNode,
+  DepEdge,
+} from "../ir";
 import type { BusIndex } from "../ir/types";
 
 /**
@@ -51,25 +52,6 @@ export interface DanglingBindingEndpointError {
 export type Pass4Error =
   | DanglingConnectionError
   | DanglingBindingEndpointError;
-
-/**
- * Helper to check if two DepNodes are equal.
- */
-function nodesEqual(a: DepNode, b: DepNode): boolean {
-  if (a.kind !== b.kind) {
-    return false;
-  }
-
-  if (a.kind === "BlockEval" && b.kind === "BlockEval") {
-    return a.blockIndex === b.blockIndex;
-  }
-
-  if (a.kind === "BusValue" && b.kind === "BusValue") {
-    return a.busIndex === b.busIndex;
-  }
-
-  return false;
-}
 
 /**
  * Pass 4: Dependency Graph Construction
@@ -149,7 +131,7 @@ export function pass4DepGraph(
       publisher.from.blockId
     );
     const busIdx = timeResolved.buses.findIndex(
-      (b) => b.id === publisher.busId
+      (b: Bus) => b.id === publisher.busId
     );
 
     // Validate block exists
@@ -184,7 +166,7 @@ export function pass4DepGraph(
   // Step 5: Add Listener edges (bus → block)
   for (const listener of timeResolved.listeners) {
     const toBlockIndex = timeResolved.blockIndexMap.get(listener.to.blockId);
-    const busIdx = timeResolved.buses.findIndex((b) => b.id === listener.busId);
+    const busIdx = timeResolved.buses.findIndex((b: Bus) => b.id === listener.busId);
 
     // Validate block exists
     if (toBlockIndex === undefined) {

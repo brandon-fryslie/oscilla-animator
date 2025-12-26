@@ -13,15 +13,15 @@
  * - https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
  */
 
+import type { Block } from "../../types";
 import type {
   DepGraph,
   DepNode,
   SCC,
   AcyclicOrLegalGraph,
   IllegalCycleError,
-  Block,
   BlockIndex,
-} from "../../types";
+} from "../ir";
 
 /**
  * Tarjan's SCC algorithm state.
@@ -254,7 +254,7 @@ export function pass5CycleValidation(
         .filter((n): n is { kind: "BlockEval"; blockIndex: BlockIndex } =>
           n.kind === "BlockEval"
         )
-        .map((n) => n.blockIndex);
+        .map((n: { kind: "BlockEval"; blockIndex: BlockIndex }) => n.blockIndex);
 
       errors.push({
         kind: "IllegalCycle",

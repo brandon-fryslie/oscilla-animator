@@ -15,15 +15,14 @@
  */
 
 import type {
-  NormalizedPatch,
-  TypedPatch,
   Block,
   Connection,
   Publisher,
   Listener,
   Bus,
 } from "../../types";
-import type { TypeDesc } from "../ir/types";
+import type { TypeDesc, TypeDomain } from "../ir/types";
+import type { NormalizedPatch, TypedPatch } from "../ir";
 
 /**
  * Error types emitted by Pass 2.
@@ -87,7 +86,7 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
 
     return {
       world: world as "signal" | "field" | "event",
-      domain: normalizedDomain,
+      domain: normalizedDomain as TypeDomain,
     };
   }
 
@@ -97,7 +96,7 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
     const domain = scalarMatch[1];
     return {
       world: "scalar",
-      domain: normalizeDomain(domain),
+      domain: normalizeDomain(domain) as TypeDomain,
     };
   }
 
@@ -316,9 +315,9 @@ export function pass2TypeGraph(
   for (const wire of normalized.wires) {
     // Find source and target blocks
     const fromBlock = normalized.blocks.find(
-      (b) => b.id === wire.from.blockId
+      (b: Block) => b.id === wire.from.blockId
     );
-    const toBlock = normalized.blocks.find((b) => b.id === wire.to.blockId);
+    const toBlock = normalized.blocks.find((b: Block) => b.id === wire.to.blockId);
 
     if (!fromBlock || !toBlock) {
       // Dangling connection - will be caught by Pass 4

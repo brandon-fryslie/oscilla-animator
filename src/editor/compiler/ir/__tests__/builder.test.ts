@@ -334,7 +334,7 @@ describe("IRBuilder", () => {
       const stateId = builder.allocStateId(type, 0, "counter");
 
       const ir = builder.build();
-      const entry = ir.stateLayout[stateId];
+      const entry = ir.stateLayout[stateId as unknown as number];
 
       expect(entry.stateId).toBe(stateId);
       expect(entry.type).toEqual(type);

@@ -11,7 +11,7 @@
  * - HANDOFF.md Topic 1: SignalExpr Schema (field variant)
  */
 
-import type { TypeDesc, ValueSlot, BusIndex, StateId, TransformChainId, FieldExprId, SigExprId } from "./types";
+import type { TypeDesc, ValueSlot, BusIndex, TransformChainId, FieldExprId, SigExprId } from "./types";
 import type { CombineSpec } from "./schedule";
 import type { PureFnRef } from "./transforms";
 

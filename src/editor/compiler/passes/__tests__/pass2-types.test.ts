@@ -9,15 +9,14 @@
 import { describe, it, expect } from "vitest";
 import { pass2TypeGraph, isBusEligible } from "../pass2-types";
 import type {
-  NormalizedPatch,
   Block,
   Connection,
   Publisher,
   Listener,
   Bus,
   Slot,
-  BlockIndex,
 } from "../../../types";
+import type { NormalizedPatch, BlockIndex } from "../../ir";
 import type { TypeDesc } from "../../ir/types";
 
 // Helper to create a minimal normalized patch
