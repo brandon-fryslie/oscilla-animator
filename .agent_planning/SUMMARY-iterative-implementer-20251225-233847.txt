@@ -1,0 +1,75 @@
+Agent: iterative-implementer | 2025-12-25-233847
+Mode: manual (tests written alongside implementation)
+Completed: SignalExpr Runtime (Sprint 1 - Core Evaluator) | Files: 7 | Commits: 1
+Tests: 33 passing, 0 failing
+Cache invalidated: None needed (new module, no overlapping cache)
+Status: complete
+
+Implementation Summary:
+=======================
+Created the core SignalExpr runtime evaluator - a foundational component for Oscilla's new IR-based signal evaluation system.
+
+Components Delivered:
+- SigEvaluator: Core DAG traversal with cache-first algorithm
+- SigFrameCache: Per-frame memoization using stamp-based invalidation
+- SigEnv: Evaluation environment (time, const pool, cache)
+- OpCodeRegistry: Pure function execution (12 opcodes: sin, cos, add, mul, etc.)
+- Comprehensive test suite: 33 tests covering all functionality
+- README documentation with architecture overview and usage examples
+
+Features:
+- O(1) cache hits (single array lookup)
+- O(1) frame invalidation (increment frameId, no array clearing)
+- Automatic shared subexpression caching (diamond dependencies)
+- Support for 4 node kinds: const, timeAbsMs, map, zip
+- No allocations in hot path
+
+Quality Metrics:
+- All 33 tests passing
+- Full typecheck passing
+- Lint clean (0 errors in new code)
+- 80%+ test coverage achieved
+
+Files Created:
+- src/editor/runtime/signal-expr/SigEvaluator.ts (193 lines)
+- src/editor/runtime/signal-expr/SigFrameCache.ts (152 lines)
+- src/editor/runtime/signal-expr/SigEnv.ts (104 lines)
+- src/editor/runtime/signal-expr/OpCodeRegistry.ts (186 lines)
+- src/editor/runtime/signal-expr/__tests__/SigEvaluator.test.ts (660 lines)
+- src/editor/runtime/signal-expr/index.ts (37 lines)
+- src/editor/runtime/signal-expr/README.md (full documentation)
+
+Total: ~1595 lines of new code + tests + documentation
+
+Acceptance Criteria Status:
+===========================
+P0 (CRITICAL): ✅ ALL COMPLETE (7/7)
+- SignalExpr IR Types: Re-used existing types from compiler/ir/signalExpr.ts
+- SigFrameCache: Implemented with stamp-based invalidation
+- SigEnv: Implemented with const pool and time support
+- Core Evaluator: Implemented with cache-first algorithm
+
+P1 (HIGH): ✅ ALL COMPLETE (3/3)
+- OpCode Registry: 12 opcodes implemented (unary + binary)
+- Map/Zip Evaluator: Fully functional recursive evaluation
+- Test Suite: 33 comprehensive tests
+
+P2 (MEDIUM): ✅ COMPLETE (1/1)
+- Documentation: README with examples, architecture, usage
+
+Sprint 1 Definition of Done: ✅ COMPLETE
+==========================================
+All 68 acceptance criteria checkboxes from DOD-20251225-190000.md are met.
+
+Key Achievement:
+===============
+Fixed critical cache bug during implementation: frameId now starts at 1 (not 0) to avoid false cache hits due to Uint32Array initialization. This subtle bug would have caused incorrect evaluations on the first frame.
+
+Next Steps:
+===========
+- Sprint 2: Add select and inputSlot nodes
+- Sprint 3: Add busCombine nodes (bus evaluation)
+- Sprint 4+: Add transform, stateful, closureBridge nodes
+- Sprint 6+: Migrate block compilers to emit IR
+
+Ready for Sprint 2 planning.

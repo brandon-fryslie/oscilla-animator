@@ -97,7 +97,7 @@ export class Canvas2DRenderer {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
+    if (ctx == null) {
       throw new Error('Canvas 2D context not available');
     }
     this.ctx = ctx;
@@ -254,7 +254,7 @@ export class Canvas2DRenderer {
         for (let i = 2; i < points.length; i += 2) {
           ctx.lineTo(points[i], points[i + 1]);
         }
-        if (closed) ctx.closePath();
+        if (closed ?? false) ctx.closePath();
       }
 
       const opacity = style.opacity ?? 1;
@@ -280,10 +280,10 @@ export class Canvas2DRenderer {
     const ctx = this.ctx;
     const N = Math.floor(cmd.transforms.length / 6);
 
-    const hasFill = cmd.styleFill && cmd.styleFill.length === N;
-    const hasStroke = cmd.styleStroke && cmd.styleStroke.length === N;
-    const hasStrokeWidth = cmd.strokeWidth && cmd.strokeWidth.length === N;
-    const hasOpacity = cmd.opacity && cmd.opacity.length === N;
+    const hasFill = (cmd.styleFill != null) && cmd.styleFill.length === N;
+    const hasStroke = (cmd.styleStroke != null) && cmd.styleStroke.length === N;
+    const hasStrokeWidth = (cmd.strokeWidth != null) && cmd.strokeWidth.length === N;
+    const hasOpacity = (cmd.opacity != null) && cmd.opacity.length === N;
 
     this.stats.instanceCount += N;
 
@@ -354,8 +354,8 @@ export class Canvas2DRenderer {
             }
             ctx.closePath();
 
-            if (fillCss) ctx.fill();
-            if (strokeCss) ctx.stroke();
+            if (fillCss != null) ctx.fill();
+            if (strokeCss != null) ctx.stroke();
             this.stats.drawCallCount++;
             break;
           }

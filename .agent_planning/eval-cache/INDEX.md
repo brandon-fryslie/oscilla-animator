@@ -6,6 +6,7 @@
 | Architecture | architecture.md | 2025-12-23 05:13 | project-evaluator + design docs | HIGH |
 | Rendering Architecture | rendering-architecture.md | 2025-12-24 16:52 | project-evaluator (canvas-renderer eval v2) | HIGH |
 | Lint Infrastructure | lint-infrastructure.md | 2025-12-25 17:48 | project-evaluator (lint-cleanup) | HIGH |
+| FieldExpr Systems | fieldexpr-systems.md | 2025-12-25 22:55 | project-evaluator (fieldexpr-integration) | HIGH |
 
 ## Cache Freshness Guidelines
 - **FRESH**: < 1 hour - trust fully

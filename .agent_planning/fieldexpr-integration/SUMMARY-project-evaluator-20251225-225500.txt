@@ -1,0 +1,26 @@
+Agent: project-evaluator | 2025-12-25-225500
+Scope: module/fieldexpr-integration
+Completion: 60% | Gaps: 4 major | Tests: 207 passing (field 63 + passes 144)
+Reused: 0 findings | Fresh: all findings
+Cache updated: fieldexpr-systems.md in eval-cache/
+Ambiguities: 3 critical (type authority, signal eval, fieldexpr ownership)
+Workflow: PAUSE (integration requires architectural decisions)
+
+Key Findings:
+- Two complete but disconnected implementations exist
+- Runtime field system: 6 files, 1,542 lines, 63 tests - WORKS standalone
+- Compiler passes 1-8: COMPLETE, 144 tests passing
+- NO integration between compiler IR and runtime materializer
+- evalSig stub returns 0, blocking broadcast functionality
+- Three competing FieldExpr type systems need unification
+
+Blockers:
+1. Type system divergence (runtime TypeDesc != compiler TypeDesc)
+2. Signal evaluation stub (requires Phase 4 or bridge)
+3. No integration tests exist
+4. Unclear which FieldExpr system is authoritative
+
+Next Actions:
+1. Clarify type authority (compiler vs runtime)
+2. Decide signal evaluation strategy (wait Phase 4 or create bridge)
+3. Create integration test once decisions made

@@ -6,6 +6,7 @@
  * - Const pool access
  * - Per-frame cache
  * - Slot values (external inputs)
+ * - Debug sink (optional tracing)
  *
  * The environment is created once per frame and passed to all signal evaluations.
  *
@@ -18,10 +19,12 @@
  * - .agent_planning/signalexpr-runtime/PLAN-20251225-190000.md §P0 "Implement SigEnv"
  * - .agent_planning/signalexpr-runtime/HANDOFF.md §1 "The Evaluation Environment"
  * - .agent_planning/signalexpr-runtime/SPRINT-02-select-inputSlot.md §P1 "Extend SigEnv with SlotValues"
+ * - .agent_planning/signalexpr-runtime/SPRINT-03-busCombine.md §P1 "Extend SigEnv with Debug Sink"
  */
 
 import type { SigFrameCache } from "./SigFrameCache";
 import type { SlotValueReader } from "./SlotValueReader";
+import type { DebugSink } from "./DebugSink";
 import { createEmptySlotReader } from "./SlotValueReader";
 
 /**
@@ -58,6 +61,20 @@ export interface SigEnv {
   /** Slot value reader for external inputs (wired connections, bus subscriptions) */
   readonly slotValues: SlotValueReader;
 
+  /**
+   * Optional debug sink for tracing signal evaluation.
+   *
+   * When defined, allows instrumentation of signal operations for:
+   * - Debug visualization
+   * - Time-travel debugging
+   * - Performance profiling
+   * - Value tracing
+   *
+   * CRITICAL: Always check `if (env.debug?.traceFoo)` before creating trace objects
+   * to ensure zero overhead when disabled.
+   */
+  readonly debug?: DebugSink;
+
   // Future expansion:
   // readonly tModelMs: number;
   // readonly phase01: number;
@@ -73,6 +90,7 @@ export interface CreateSigEnvParams {
   constPool: ConstPool;
   cache: SigFrameCache;
   slotValues?: SlotValueReader; // Optional - defaults to empty reader
+  debug?: DebugSink; // Optional - defaults to undefined (no tracing)
 }
 
 /**
@@ -99,6 +117,7 @@ export function createSigEnv(params: CreateSigEnvParams): SigEnv {
     constPool: params.constPool,
     cache: params.cache,
     slotValues: params.slotValues ?? createEmptySlotReader(),
+    debug: params.debug,
   };
 }
 

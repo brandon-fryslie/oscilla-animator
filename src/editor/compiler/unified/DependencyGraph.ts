@@ -115,7 +115,7 @@ export class DependencyGraph {
 
     // Update dependencies
     const toNode = this.nodes.get(toBlockId);
-    if (toNode) {
+    if (toNode != null) {
       toNode.deps.add(fromBlockId);
     }
   }
@@ -158,7 +158,7 @@ export class DependencyGraph {
 
     // Block depends on bus
     const blockNode = this.nodes.get(blockId);
-    if (blockNode) {
+    if (blockNode != null) {
       blockNode.deps.add(busId);
     }
   }
@@ -180,7 +180,7 @@ export class DependencyGraph {
       path.push(nodeId);
 
       const node = this.nodes.get(nodeId);
-      if (!node) {
+      if (node == null) {
         path.pop();
         recStack.delete(nodeId);
         return false;

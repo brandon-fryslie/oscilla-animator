@@ -1,0 +1,32 @@
+Agent: iterative-implementer | 2025-12-25-235217
+Mode: manual
+Completed: Select + InputSlot nodes, SlotValueReader interface, SigEnv extension, comprehensive tests, README docs | Files: 5 | Commits: 1
+Tests: 49 passing (100% pass rate)
+Cache invalidated: None (new runtime component, no existing cache entries)
+Status: complete
+
+Sprint 2 Implementation Summary:
+- Created SlotValueReader.ts with interface and test factories (createArraySlotReader, createEmptySlotReader)
+- Extended SigEnv with slotValues field (optional, defaults to empty reader)
+- Implemented evalSelect() with short-circuit semantics (only taken branch evaluated)
+- Implemented evalInputSlot() for external input resolution (NaN for missing slots)
+- Updated all 29 existing tests to work with new SigEnv signature
+- Added 20 new tests for select and inputSlot nodes (total: 49 tests)
+- Updated README with usage examples and documentation
+
+Key Implementation Details:
+- Short-circuit semantics verified via cache stamps (untaken branch has no stamp)
+- Boolean threshold: cond > 0.5 = true, cond <= 0.5 = false
+- Missing slots return NaN (allows detection of unconnected inputs)
+- All tests passing, no TypeScript errors
+
+Files Modified:
+- src/editor/runtime/signal-expr/SigEvaluator.ts
+- src/editor/runtime/signal-expr/SigEnv.ts
+- src/editor/runtime/signal-expr/__tests__/SigEvaluator.test.ts
+- src/editor/runtime/signal-expr/README.md
+
+Files Created:
+- src/editor/runtime/signal-expr/SlotValueReader.ts
+
+Ready for Sprint 3: busCombine nodes (bus aggregation with deterministic ordering)

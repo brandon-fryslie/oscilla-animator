@@ -1,0 +1,4 @@
+Agent: status-planner | 2025-12-25-232750
+Topic: debug-integration
+Files: PLAN-2025-12-25-232750.md, DOD-2025-12-25-232750.md
+Items: 9 (P0: 6, P1: 3)

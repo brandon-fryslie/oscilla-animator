@@ -1,0 +1,6 @@
+Agent: status-planner | 2025-12-25-230109
+Topic: fieldexpr-integration
+Files: PLAN-2025-12-25-230109.md, DOD-2025-12-25-230109.md
+Items: 6 (P0: 2, P1: 1, P2: 2, P3: 1)
+Sprint Scope: 3 deliverables (Type Adapter, Signal Bridge, Integration Module)
+Sprint Deferred: 3 items (Missing nodes, Bus combine, Performance)
