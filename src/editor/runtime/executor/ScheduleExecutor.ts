@@ -63,6 +63,7 @@ export interface RenderOutput {
  * 2. Time resolution (compute effective time from tAbsMs + TimeModel)
  * 3. Step dispatch (execute each StepIR in schedule order)
  * 4. Output extraction (produce RenderOutput)
+ * 5. Hot-swap (jank-free program replacement)
  *
  * Key invariants:
  * - Steps execute in exact schedule order (no reordering)
@@ -105,6 +106,52 @@ export class ScheduleExecutor {
 
     // 4. Extract render output (stub for Sprint 1)
     return this.extractRenderOutput(runtime);
+  }
+
+  /**
+   * Hot-swap program while preserving state and time continuity.
+   *
+   * This is the core jank-free live editing primitive. It swaps to a new
+   * compiled program while preserving state cells and frame continuity.
+   *
+   * State Preservation:
+   * - Matching state cells (by nodeId:role) are copied
+   * - New state cells initialized with defaults
+   * - Removed state cells dropped
+   *
+   * Time Continuity:
+   * - frameId preserved (not reset)
+   * - FrameCache.frameId preserved
+   *
+   * Cache Policy:
+   * - Per-frame caches invalidated
+   * - New caches allocated
+   *
+   * @param newProgram - New compiled program to swap to
+   * @param oldRuntime - Current runtime state
+   * @returns New RuntimeState with preserved state/time
+   *
+   * @example
+   * ```typescript
+   * // Execute with old program
+   * executor.executeFrame(oldProgram, runtime, tMs);
+   *
+   * // User edits patch - recompile
+   * const newProgram = compile(editedPatch);
+   *
+   * // Hot-swap (no visual jank)
+   * runtime = executor.swapProgram(newProgram, runtime);
+   *
+   * // Continue with new program
+   * executor.executeFrame(newProgram, runtime, tMs);
+   * ```
+   */
+  public swapProgram(
+    newProgram: CompiledProgramIR,
+    oldRuntime: RuntimeState,
+  ): RuntimeState {
+    // Hot-swap via RuntimeState.hotSwap()
+    return oldRuntime.hotSwap(newProgram);
   }
 
   /**

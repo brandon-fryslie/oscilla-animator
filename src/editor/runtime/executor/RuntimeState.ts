@@ -24,6 +24,7 @@ import {
 import type { SlotMeta } from "../../compiler/ir/stores";
 import type { CompiledProgramIR } from "../../compiler/ir/program";
 import type { FieldHandle } from "../field/types";
+import { preserveState } from "./StateSwap";
 
 // ============================================================================
 // RuntimeState Interface
@@ -51,6 +52,47 @@ export interface RuntimeState {
 
   /** Monotonic frame counter */
   frameId: number;
+
+  /**
+   * Hot-swap to a new program while preserving state and time continuity.
+   *
+   * This is the core jank-free live editing primitive. It creates a new
+   * RuntimeState from the new program and preserves matching state cells
+   * from the old runtime.
+   *
+   * State Preservation Contract:
+   * - Matching state cells (by nodeId:role) are copied
+   * - New state cells are initialized with defaults
+   * - Removed state cells are dropped
+   * - Layout changes (size/storage type) trigger re-initialization
+   *
+   * Time Continuity:
+   * - frameId preserved (not reset to 0)
+   * - FrameCache.frameId preserved
+   *
+   * Cache Policy:
+   * - Per-frame caches invalidated (stamps zeroed, buffer pool cleared)
+   * - New caches allocated for new runtime
+   *
+   * @param newProgram - New compiled program to swap to
+   * @returns New RuntimeState with preserved state/time
+   *
+   * @example
+   * ```typescript
+   * // Execute frame with old program
+   * executor.executeFrame(oldProgram, runtime, tMs);
+   *
+   * // Compile new program (user edited patch)
+   * const newProgram = compile(editedPatch);
+   *
+   * // Hot-swap (preserves state)
+   * runtime = runtime.hotSwap(newProgram);
+   *
+   * // Continue execution with new program (no visual jank)
+   * executor.executeFrame(newProgram, runtime, tMs);
+   * ```
+   */
+  hotSwap(newProgram: CompiledProgramIR): RuntimeState;
 }
 
 // ============================================================================
@@ -331,10 +373,30 @@ export function createRuntimeState(program: CompiledProgramIR): RuntimeState {
   const fieldCapacity = 512; // Default field cache capacity
   const frameCache = createFrameCache(sigCapacity, fieldCapacity);
 
-  return {
+  const runtimeState: RuntimeState = {
     values,
     state,
     frameCache,
     frameId: 0,
+
+    // Hot-swap implementation
+    hotSwap(newProgram: CompiledProgramIR): RuntimeState {
+      // Create new runtime from new program
+      const newRuntime = createRuntimeState(newProgram);
+
+      // Preserve state cells from old to new
+      preserveState(this, newRuntime, program, newProgram);
+
+      // Preserve time continuity
+      newRuntime.frameId = this.frameId;
+      newRuntime.frameCache.frameId = this.frameCache.frameId;
+
+      // Invalidate caches (preserving frameId)
+      newRuntime.frameCache.invalidate();
+
+      return newRuntime;
+    },
   };
+
+  return runtimeState;
 }
