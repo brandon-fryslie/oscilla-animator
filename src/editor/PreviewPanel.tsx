@@ -25,7 +25,7 @@ import {
   type Player,
 } from './runtime';
 import type { CompilerService, Viewport } from './compiler';
-import type { Program, CanvasProgram } from './compiler/types';
+import type { Program } from './compiler/types';
 import { useStore } from './stores';
 import { TimeConsole } from './components/TimeConsole';
 import { IRRuntimeAdapter } from './runtime/executor/IRRuntimeAdapter';
@@ -77,8 +77,6 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const playerRef = useRef<Player | null>(null);
   const rendererRef = useRef<SvgRenderer | null>(null);
   const canvasRendererRef = useRef<Canvas2DRenderer | null>(null);
-  const lastGoodProgramRef = useRef<Program<SvgRenderTree> | null>(null);
-  const lastGoodCanvasProgramRef = useRef<CanvasProgram | null>(null);
   const lastGoodIRProgramRef = useRef<Program<SvgRenderTree> | null>(null);
 
   // Which renderer is active: 'svg' or 'canvas'
@@ -183,89 +181,39 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     const interval = setInterval(() => {
       // Check for program changes
       const result = compilerService.getLatestResult();
-      const useIR = store.uiStore.settings.useNewCompiler;
 
       if (result && result.ok) {
         const player = playerRef.current;
         if (!player) return;
 
-        // === IR PATH (NEW COMPILER) ===
-        if (useIR) {
-          if (result.compiledIR) {
-            // IR compilation succeeded - use IR path
-            const adapter = new IRRuntimeAdapter(result.compiledIR);
-            const irProgram = adapter.createProgram();
+        // === IR PATH ONLY (NEW COMPILER) ===
+        // Legacy compiler has been disabled
+        if (result.compiledIR) {
+          // IR compilation succeeded - use IR path
+          const adapter = new IRRuntimeAdapter(result.compiledIR);
+          const irProgram = adapter.createProgram();
 
-            const isFirstProgram = lastGoodIRProgramRef.current === null && lastGoodProgramRef.current === null;
+          const isFirstProgram = lastGoodIRProgramRef.current === null;
 
-            // Set the IR program as the new source of truth for canvas rendering
-            lastGoodIRProgramRef.current = irProgram;
-            lastGoodCanvasProgramRef.current = null;
-            lastGoodProgramRef.current = null;
+          // Set the IR program as the new source of truth for canvas rendering
+          lastGoodIRProgramRef.current = irProgram;
 
-            setActiveRenderer('canvas');
-            player.setFactory(() => EMPTY_PROGRAM); // Time tracking only
-            player.applyTimeModel(result.compiledIR.timeModel);
-            setTimeModel(result.compiledIR.timeModel);
-            setHasCompiledProgram(true);
-            logStore.debug('renderer', `Hot swapped to IR program (timeModel: ${result.compiledIR.timeModel.kind})`);
+          setActiveRenderer('canvas');
+          player.setFactory(() => EMPTY_PROGRAM); // Time tracking only
+          player.applyTimeModel(result.compiledIR.timeModel);
+          setTimeModel(result.compiledIR.timeModel);
+          setHasCompiledProgram(true);
+          logStore.debug('renderer', `Hot swapped to IR program (timeModel: ${result.compiledIR.timeModel.kind})`);
 
-            if (isFirstProgram) {
-              player.play();
-              store.uiStore.setPlaying(true);
-            }
-          } else {
-            // IR mode is ON but CompiledProgramIR is NOT available
-            // This is an error condition - log it prominently
-            logStore.error('renderer', 'IR compiler mode enabled but CompiledProgramIR not available. Check IR compilation.');
-            // Keep last good IR program if it exists, otherwise show error
-            if (!lastGoodIRProgramRef.current) {
-              setHasCompiledProgram(false);
-            }
+          if (isFirstProgram) {
+            player.play();
+            store.uiStore.setPlaying(true);
           }
-        }
-        // === LEGACY PATH (OLD CLOSURE-BASED COMPILER) ===
-        else {
-          if (result.canvasProgram && result.canvasProgram !== lastGoodCanvasProgramRef.current) {
-            // New canvas program
-            const isFirstProgram = lastGoodCanvasProgramRef.current === null && lastGoodProgramRef.current === null && lastGoodIRProgramRef.current === null;
-
-            lastGoodCanvasProgramRef.current = result.canvasProgram;
-            lastGoodProgramRef.current = null; // Clear SVG program
-            lastGoodIRProgramRef.current = null; // Clear IR program
-            setActiveRenderer('canvas');
-            player.setFactory(() => EMPTY_PROGRAM); // Time tracking only
-            player.applyTimeModel(result.timeModel!);
-            player.setActivePatchRevision(store.patchStore.patchRevision);
-            setTimeModel(result.timeModel!);
-            setHasCompiledProgram(true);
-            logStore.debug('renderer', `Hot swapped to Canvas program (timeModel: ${result.timeModel!.kind})`);
-
-            if (isFirstProgram) {
-              player.play();
-              store.uiStore.setPlaying(true);
-            }
-          } else if (result.program && result.program !== (lastGoodProgramRef.current as unknown)) {
-            // New SVG program
-            const isFirstProgram = lastGoodProgramRef.current === null && lastGoodCanvasProgramRef.current === null && lastGoodIRProgramRef.current === null;
-
-            const program = result.program as unknown as Program<SvgRenderTree>;
-            player.setFactory(() => program);
-            player.applyTimeModel(result.timeModel!);
-            player.setActivePatchRevision(store.patchStore.patchRevision);
-            setTimeModel(result.timeModel!);
-            lastGoodProgramRef.current = program;
-            lastGoodCanvasProgramRef.current = null; // Clear canvas program
-            lastGoodIRProgramRef.current = null; // Clear IR program
-            setActiveRenderer('svg');
-            setHasCompiledProgram(true);
-            logStore.debug('renderer', `Hot swapped to SVG program (timeModel: ${result.timeModel!.kind})`);
-
-            // DO NOT REMOVE: Auto-play when FIRST program loads.
-            if (isFirstProgram) {
-              player.play();
-              store.uiStore.setPlaying(true);
-            }
+        } else {
+          // CompiledProgramIR is NOT available - this is an error
+          logStore.error('renderer', 'CompiledProgramIR not available. Check IR compilation.');
+          if (!lastGoodIRProgramRef.current) {
+            setHasCompiledProgram(false);
           }
         }
       }
@@ -279,7 +227,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     }, 500);
 
     return () => clearInterval(interval);
-  }, [compilerService, logStore, store.patchStore.patchRevision, store.uiStore, store.uiStore.settings.useNewCompiler, viewport]);
+  }, [compilerService, logStore, store.patchStore.patchRevision, store.uiStore, viewport]);
 
   // Canvas render loop - renders when canvas mode is active
   useEffect(() => {
@@ -299,29 +247,12 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
           viewport: { w: width, h: height, dpr: window.devicePixelRatio },
         };
 
-        let renderTree = null;
-
-        // NO FALLBACK - Use only the appropriate program based on mode
-        // IR mode: use lastGoodIRProgramRef ONLY
-        // Legacy mode: use lastGoodCanvasProgramRef ONLY
-        const useIR = store.uiStore.settings.useNewCompiler;
-
-        if (useIR) {
-          // IR mode: ONLY use IR program
-          if (lastGoodIRProgramRef.current) {
-            renderTree = lastGoodIRProgramRef.current.signal(tMs, ctx);
+        // IR path only - legacy compiler disabled
+        if (lastGoodIRProgramRef.current) {
+          const renderTree = lastGoodIRProgramRef.current.signal(tMs, ctx);
+          if (renderTree) {
+            canvasRenderer.render(renderTree);
           }
-          // If no IR program, renderTree stays null - shows blank/error
-        } else {
-          // Legacy mode: ONLY use legacy canvas program
-          if (lastGoodCanvasProgramRef.current) {
-            renderTree = lastGoodCanvasProgramRef.current.signal(tMs, ctx);
-          }
-          // If no legacy program, renderTree stays null - shows blank/error
-        }
-
-        if (renderTree) {
-          canvasRenderer.render(renderTree);
         }
       }
 
@@ -333,7 +264,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [activeRenderer, width, height, playState, currentTime, store.uiStore.settings.useNewCompiler]);
+  }, [activeRenderer, width, height, playState, currentTime]);
 
   // TimeConsole callbacks
   const handlePlay = useCallback(() => {
