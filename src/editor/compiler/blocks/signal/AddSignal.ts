@@ -6,8 +6,49 @@
  */
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import { OpCode } from '../../ir/opcodes';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+const lowerAddSignal: BlockLowerFn = ({ ctx, inputs }) => {
+  const [a, b] = inputs;
+
+  if (a.k !== 'sig' || b.k !== 'sig') {
+    throw new Error('AddSignal requires signal inputs');
+  }
+
+  const outType = { world: 'signal' as const, domain: 'number' as const };
+  const sigId = ctx.b.sigZip(a.id, b.id, {
+    fnId: 'add',
+    opcode: OpCode.Add,
+    outputType: outType,
+  });
+
+  return { outputs: [{ k: 'sig', id: sigId }] };
+};
+
+// Register block type for IR lowering
+registerBlockType({
+  type: 'AddSignal',
+  capability: 'pure',
+  inputs: [
+    { portId: 'a', label: 'A', dir: 'in', type: { world: 'signal', domain: 'number' } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: 'signal', domain: 'number' } },
+  ],
+  outputs: [
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'signal', domain: 'number' } },
+  ],
+  lower: lowerAddSignal,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const AddSignalBlock: BlockCompiler = {
   type: 'AddSignal',
