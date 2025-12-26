@@ -16,7 +16,7 @@
  */
 
 import type { SigExprId } from "../../compiler/ir/types";
-import type { CombineMode } from "./types";
+import type { SigCombineMode } from "../../compiler/ir/signalExpr";
 
 /**
  * Debug sink interface - optional tracing for signal evaluation.
@@ -70,7 +70,7 @@ export interface BusCombineTraceInfo {
   termValues: number[];
 
   /** Combine mode used */
-  mode: CombineMode;
+  mode: SigCombineMode;
 
   /** Final combined result */
   result: number;

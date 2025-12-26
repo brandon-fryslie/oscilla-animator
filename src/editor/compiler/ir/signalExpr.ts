@@ -12,11 +12,39 @@
  */
 
 import type { TypeDesc, ValueSlot, BusIndex, StateId, TransformChainId, SigExprId } from "./types";
-import type { CombineSpec } from "./schedule";
 import type { PureFnRef } from "./transforms";
 
 // Re-export SigExprId for convenience
 export type { SigExprId } from "./types";
+
+// =============================================================================
+// Signal Expression Combine Types
+// =============================================================================
+
+/**
+ * Combine mode for signal bus aggregation.
+ *
+ * Defines how multiple signal terms are combined:
+ * - `sum`: Add all terms
+ * - `average`: Mean of all terms
+ * - `min`: Minimum value
+ * - `max`: Maximum value
+ * - `first`: First term in sorted order (compiler-sorted)
+ * - `last`: Last term in sorted order (compiler-sorted)
+ */
+export type SigCombineMode = "sum" | "average" | "min" | "max" | "first" | "last";
+
+/**
+ * Combine specification for signal bus combine nodes.
+ *
+ * Specifies how to aggregate multiple signal publishers into a single bus value.
+ */
+export interface SigCombineSpec {
+  /** Combine mode */
+  mode: SigCombineMode;
+  /** Default value when no publishers (default: 0) */
+  default?: number;
+}
 
 // =============================================================================
 // Signal Expression Table
@@ -154,7 +182,7 @@ export interface SignalExprBusCombine {
   busIndex: BusIndex;
   /** Pre-sorted by compiler - runtime never re-sorts */
   terms: SigExprId[];
-  combine: CombineSpec;
+  combine: SigCombineSpec;
 }
 
 /** Stateful operation with explicit state reference */
