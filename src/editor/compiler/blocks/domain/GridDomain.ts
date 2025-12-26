@@ -10,8 +10,75 @@
 
 import type { BlockCompiler, Vec2, Domain } from '../../types';
 import { createDomain } from '../../unified/Domain';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 type PositionField = (seed: number, n: number) => readonly Vec2[];
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+const lowerGridDomain: BlockLowerFn = ({ ctx, config }) => {
+  // GridDomain uses config for grid parameters (compile-time constants)
+  const configData = config as {
+    rows?: number;
+    cols?: number;
+    spacing?: number;
+    originX?: number;
+    originY?: number;
+  } | undefined;
+
+  const rows = Math.max(1, Math.floor(Number(configData?.rows ?? 10)));
+  const cols = Math.max(1, Math.floor(Number(configData?.cols ?? 10)));
+  const spacing = Number(configData?.spacing ?? 20);
+  const originX = Number(configData?.originX ?? 100);
+  const originY = Number(configData?.originY ?? 100);
+
+  const elementCount = rows * cols;
+
+  // Create domain value slot
+  const domainSlot = ctx.b.domainFromN(elementCount);
+
+  // Compute grid positions at compile time
+  const positions: Vec2[] = [];
+  for (let i = 0; i < elementCount; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    positions.push({
+      x: originX + col * spacing,
+      y: originY + row * spacing,
+    });
+  }
+
+  // Create position field as const
+  const posField = ctx.b.fieldConst(positions, { world: 'field', domain: 'vec2' });
+
+  return {
+    outputs: [
+      { k: 'special', tag: 'domain', id: domainSlot },
+      { k: 'field', id: posField },
+    ],
+    declares: {
+      domainOut: { outPortIndex: 0, domainKind: 'domain' },
+    },
+  };
+};
+
+// Register block type for IR lowering
+registerBlockType({
+  type: 'GridDomain',
+  capability: 'identity',
+  inputs: [],
+  outputs: [
+    { portId: 'domain', label: 'Domain', dir: 'out', type: { world: 'special', domain: 'domain' } },
+    { portId: 'pos0', label: 'Pos0', dir: 'out', type: { world: 'field', domain: 'vec2' } },
+  ],
+  lower: lowerGridDomain,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const GridDomainBlock: BlockCompiler = {
   type: 'GridDomain',

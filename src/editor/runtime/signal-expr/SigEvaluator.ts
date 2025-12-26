@@ -522,6 +522,12 @@ function evalStateful(
     case "edgeDetectWrap":
       return evalEdgeDetectWrap(node, stateOffset, env, nodes);
 
+    case "pulseDivider":
+      return evalPulseDivider(node, stateOffset, env, nodes);
+
+    case "envelopeAD":
+      return evalEnvelopeAD(node, stateOffset, env, nodes);
+
     default: {
       // Exhaustiveness check
       const _exhaustiveCheck: never = node.op;
@@ -941,6 +947,134 @@ function evalEdgeDetectWrap(
   env.state.f64[stateOffset] = phase;
 
   return wrapped ? 1.0 : 0.0;
+}
+
+/**
+ * Evaluate pulseDivider operation: subdivide phase into discrete tick events.
+ *
+ * Algorithm:
+ * 1. Evaluate input signal (phase value)
+ * 2. Calculate subPhase = floor(phase * divisions)
+ * 3. Read previous subPhase from state
+ * 4. Detect crossing: subPhase !== prevSubPhase
+ * 5. Store current subPhase for next frame
+ * 6. Return 1.0 if crossing occurred, 0.0 otherwise
+ *
+ * State layout:
+ * - f64[stateOffset]: previous subPhase value (initialized to -1)
+ *
+ * Logic:
+ * - When phase=0.0, subPhase=0 (first tick)
+ * - When phase=0.25, subPhase=1 (second tick for divisions=4)
+ * - When phase=0.5, subPhase=2 (third tick)
+ * - When phase=0.75, subPhase=3 (fourth tick)
+ * - Initialization with -1 ensures first evaluation triggers
+ *
+ * @param node - Stateful node (op = "pulseDivider")
+ * @param stateOffset - Offset into state.f64
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns 1.0 on tick event, 0.0 otherwise
+ */
+function evalPulseDivider(
+  node: Extract<SignalExprIR, { kind: "stateful" }>,
+  stateOffset: number,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  const phase = node.input !== undefined ? evalSig(node.input, env, nodes) : 0;
+  const divisions = node.params?.divisions ?? 4;
+
+  // Calculate current subPhase
+  const subPhase = Math.floor(phase * divisions);
+
+  // Read previous subPhase
+  const prevSubPhase = env.state.f64[stateOffset];
+
+  // Detect crossing (different subPhase)
+  const crossed = subPhase !== prevSubPhase;
+
+  // Store current subPhase for next frame
+  env.state.f64[stateOffset] = subPhase;
+
+  return crossed ? 1.0 : 0.0;
+}
+
+/**
+ * Evaluate envelopeAD operation: Attack/Decay envelope generator.
+ *
+ * Algorithm:
+ * 1. Evaluate trigger signal
+ * 2. Read trigger time and wasTriggered state
+ * 3. Detect rising edge (trigger > 0.5 && !wasTriggered)
+ * 4. If triggered, store current time as trigger time
+ * 5. Update wasTriggered flag
+ * 6. Calculate envelope value based on elapsed time:
+ *    - elapsed < 0: return 0 (before first trigger)
+ *    - elapsed < attack: return (elapsed / attack) * peak (attack phase)
+ *    - elapsed < attack + decay: return peak * (1 - (elapsed - attack) / decay) (decay phase)
+ *    - else: return 0 (envelope complete)
+ *
+ * State layout:
+ * - f64[stateOffset]: triggerTime (timestamp of last trigger, initialized to -Infinity)
+ * - f64[stateOffset + 1]: wasTriggered (boolean flag, 0 or 1, initialized to 0)
+ *
+ * Parameters (from node.params):
+ * - attack: attack time in milliseconds
+ * - decay: decay time in milliseconds
+ * - peak: peak amplitude (default 1.0)
+ *
+ * @param node - Stateful node (op = "envelopeAD")
+ * @param stateOffset - Offset into state.f64
+ * @param env - Evaluation environment
+ * @param nodes - IR node array
+ * @returns Envelope value (0..peak)
+ */
+function evalEnvelopeAD(
+  node: Extract<SignalExprIR, { kind: "stateful" }>,
+  stateOffset: number,
+  env: SigEnv,
+  nodes: SignalExprIR[]
+): number {
+  const trigger = node.input !== undefined ? evalSig(node.input, env, nodes) : 0;
+
+  // Read parameters (times are in milliseconds)
+  const attack = node.params?.attack ?? 50; // Default 50ms
+  const decay = node.params?.decay ?? 500; // Default 500ms
+  const peak = node.params?.peak ?? 1.0;
+
+  // Read state
+  const triggerTime = env.state.f64[stateOffset];
+  const wasTriggered = env.state.f64[stateOffset + 1] > 0.5;
+
+  // Detect rising edge (trigger fires)
+  if (trigger > 0.5 && !wasTriggered) {
+    // Store trigger time
+    env.state.f64[stateOffset] = env.tAbsMs;
+    env.state.f64[stateOffset + 1] = 1.0;
+  } else if (trigger <= 0.5) {
+    // Clear trigger flag when trigger goes low
+    env.state.f64[stateOffset + 1] = 0.0;
+  }
+
+  // Calculate elapsed time since trigger
+  const elapsed = env.tAbsMs - triggerTime;
+
+  // Calculate envelope value
+  if (elapsed < 0) {
+    // Before first trigger
+    return 0;
+  } else if (elapsed < attack) {
+    // Attack phase: linear ramp up
+    return (elapsed / attack) * peak;
+  } else if (elapsed < attack + decay) {
+    // Decay phase: linear ramp down
+    const decayProgress = (elapsed - attack) / decay;
+    return peak * (1 - decayProgress);
+  } else {
+    // Envelope complete
+    return 0;
+  }
 }
 
 /**

@@ -9,7 +9,84 @@
  */
 
 import type { BlockCompiler, RuntimeCtx, DrawNode } from '../../types';
+import type { BlockLowerFn } from '../../ir/lowerTypes';
+import { registerBlockType } from '../../ir/lowerTypes';
 import { debugStore } from '../../../stores/DebugStore';
+
+// =============================================================================
+// IR Lowering
+// =============================================================================
+
+/**
+ * Lower DebugDisplay block to IR.
+ *
+ * DebugDisplay is a side-effect block that updates MobX stores (DebugStore).
+ * This does NOT fit the pure IR model where all effects are explicit.
+ *
+ * Options for future IR support:
+ * 1. Create a special "debug sink" IR node (like render sinks)
+ * 2. Use a closureBridge for the debug side-effect
+ * 3. Implement debug tracing at the IR evaluator level
+ *
+ * For now, we throw an error and rely on the legacy closure compiler.
+ */
+const lowerDebugDisplay: BlockLowerFn = ({ ctx }) => {
+  throw new Error(
+    `DebugDisplay block (${ctx.instanceId}) cannot be lowered to IR yet.\n` +
+    `Reason: DebugDisplay has side-effects (updates DebugStore) that don't fit the pure IR model.\n` +
+    `Workaround: DebugDisplay continues to use the legacy closure compiler.\n` +
+    `Future: Will be implemented as a debug sink or closure bridge.`
+  );
+};
+
+// Register block type (marks as not yet fully supported in IR mode)
+registerBlockType({
+  type: 'DebugDisplay',
+  capability: 'io', // I/O operation (side-effects on debug store)
+  inputs: [
+    {
+      portId: 'signal',
+      label: 'Signal',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
+      optional: true,
+    },
+    {
+      portId: 'phase',
+      label: 'Phase',
+      dir: 'in',
+      type: { world: 'signal', domain: 'phase01' },
+      optional: true,
+    },
+    {
+      portId: 'domain',
+      label: 'Domain',
+      dir: 'in',
+      type: { world: 'special', domain: 'domain' },
+      optional: true,
+    },
+    {
+      portId: 'field',
+      label: 'Field',
+      dir: 'in',
+      type: { world: 'field', domain: 'number' },
+      optional: true,
+    },
+  ],
+  outputs: [
+    {
+      portId: 'debug',
+      label: 'Debug',
+      dir: 'out',
+      type: { world: 'special', domain: 'renderTree' },
+    },
+  ],
+  lower: lowerDebugDisplay,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 // Throttle updates to ~3x per second (every 333ms)
 const UPDATE_INTERVAL_MS = 333;

@@ -11,6 +11,7 @@
 import type { BlockCompiler, Vec2, Domain } from '../../types';
 import { createDomain } from '../../unified/Domain';
 import { isDefined, isNonEmptyString } from '../../../types/helpers';
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 type PositionField = (seed: number, n: number) => readonly Vec2[];
 
@@ -287,6 +288,58 @@ function sampleBezier(seg: PathSegment, t: number): Vec2 {
   const firstPoint = points[0];
   return isDefined(firstPoint) ? firstPoint : { x: 0, y: 0 };
 }
+
+// =============================================================================
+// IR Lowering (Phase 3 Migration)
+// =============================================================================
+
+const lowerSVGSampleDomain: BlockLowerFn = ({ ctx, config }) => {
+  const configData = config as {
+    asset?: string;
+    sampleCount?: number;
+    seed?: number;
+    distribution?: 'even' | 'parametric';
+  } | undefined;
+
+  const asset = typeof configData?.asset === 'string' ? configData.asset : '';
+  const sampleCount = Math.max(1, Math.floor(Number(configData?.sampleCount ?? 100)));
+  const distribution = (configData?.distribution ?? 'even') as 'even' | 'parametric';
+
+  // Create domain value slot
+  const domainSlot = ctx.b.domainFromSVG(asset, sampleCount);
+
+  // Sample the SVG path to get positions at compile time
+  const sampledPoints = sampleSVGPath(asset, sampleCount, distribution);
+
+  // Create position field as const
+  const posField = ctx.b.fieldConst(sampledPoints, { world: 'field', domain: 'vec2' });
+
+  return {
+    outputs: [
+      { k: 'special', tag: 'domain', id: domainSlot },
+      { k: 'field', id: posField },
+    ],
+    declares: {
+      domainOut: { outPortIndex: 0, domainKind: 'domain' },
+    },
+  };
+};
+
+// Register block type for IR lowering
+registerBlockType({
+  type: 'SVGSampleDomain',
+  capability: 'identity',
+  inputs: [],
+  outputs: [
+    { portId: 'domain', label: 'Domain', dir: 'out', type: { world: 'special', domain: 'domain' } },
+    { portId: 'pos0', label: 'Pos0', dir: 'out', type: { world: 'field', domain: 'vec2' } },
+  ],
+  lower: lowerSVGSampleDomain,
+});
+
+// =============================================================================
+// Legacy Closure Compiler (Dual-Emit Mode)
+// =============================================================================
 
 export const SVGSampleDomainBlock: BlockCompiler = {
   type: 'SVGSampleDomain',
