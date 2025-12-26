@@ -281,6 +281,7 @@ export interface PortRef {
 }
 
 export interface CompilerConnection {
+  id?: string;
   from: PortRef; // output port
   to: PortRef; // input port
 }
@@ -321,7 +322,7 @@ export interface CompilerPatch {
   buses: Bus[];
   publishers: Publisher[];
   listeners: Listener[];
-  
+
   // Default sources for lens parameters (Phase 3)
   defaultSources: Record<string, DefaultSourceState>;
 }
@@ -382,7 +383,7 @@ export type Artifact =
 
   // Phase 3: Domain for per-element identity
   | { kind: 'Domain'; value: Domain }
-  
+
   // Event artifacts for TimeRoot wrap/end events
   | { kind: 'Event'; value: (tMs: number, lastTMs: number, ctx: RuntimeCtx) => boolean }
 
@@ -451,7 +452,12 @@ export type CompileErrorCode =
   // Phase 3: TimeRoot additions
   | 'MissingTimeRoot'
   | 'MultipleTimeRoots'
-  | 'ConflictingTimeTopology';
+  | 'ConflictingTimeTopology'
+  // Phase 3: IR/Pass additions (Sprint 2)
+  | 'BusLoweringFailed'
+  | 'DanglingConnection'
+  | 'DanglingBindingEndpoint'
+  | 'UnresolvedPort';
 
 export interface CompileError {
   code: CompileErrorCode;
