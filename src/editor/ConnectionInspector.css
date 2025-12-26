@@ -468,3 +468,34 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Section header with title and button */
+.conn-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.conn-section-header .conn-section-title {
+  margin: 0;
+}
+
+/* Small action button for inline use */
+.conn-action-btn.conn-action-small {
+  flex: none;
+  padding: 3px 8px;
+  font-size: 10px;
+  min-width: auto;
+}
+
+/* Lens editor container */
+.conn-lens-editor-container {
+  margin-top: 8px;
+  padding: 8px;
+  background: #1a1a2e;
+  border: 1px solid #3f3a5a;
+  border-radius: 6px;
+  max-height: 400px;
+  overflow-y: auto;
+}

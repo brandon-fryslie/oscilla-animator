@@ -6,14 +6,16 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useStore } from './stores';
 import { InspectorContainer } from './components/InspectorContainer';
 import { describeSlotType } from './portUtils';
-import type { Connection, Publisher, Listener, Block, Slot, SlotType, TypeDesc, AdapterStep } from './types';
+import type { Connection, Publisher, Listener, Block, Slot, SlotType, TypeDesc, AdapterStep, LensDefinition, LensInstance } from './types';
 import { parseRowKey, type TableCell, type TableRow, type TableColumn } from './modulation-table/types';
 import { findAdapterPath } from './adapters/autoAdapter';
-import { isDirectlyCompatible } from './types';
+import { isDirectlyCompatible, SLOT_TYPE_TO_TYPE_DESC } from './types';
+import { LensChainEditor } from './modulation-table/LensChainEditor';
+import { lensInstanceToDefinition, createLensInstanceFromDefinition } from './lenses/lensInstances';
 import './ConnectionInspector.css';
 
 /**
@@ -137,7 +139,7 @@ function BusEndpointDisplay({
 }
 
 /**
- * Wire Connection Inspector - displays wire details with lens support.
+ * Wire Connection Inspector - displays wire details with full lens editing.
  */
 const WireConnectionView = observer(({
   connection,
@@ -157,6 +159,7 @@ const WireConnectionView = observer(({
   onBack: () => void;
 }) => {
   const store = useStore();
+  const [isLensEditorOpen, setIsLensEditorOpen] = useState(false);
 
   const navigateToSource = useCallback(() => {
     store.uiStore.selectBlock(sourceBlock.id);
@@ -170,18 +173,38 @@ const WireConnectionView = observer(({
     store.patchStore.setConnectionEnabled(connection.id, connection.enabled === false);
   }, [store, connection.id, connection.enabled]);
 
-  const handleRemoveLens = useCallback((index: number) => {
-    store.patchStore.removeLensFromConnection(connection.id, index);
+  // Convert LensInstance[] to LensDefinition[] for the editor
+  const lensChain = useMemo((): LensDefinition[] => {
+    if (!connection.lensStack || connection.lensStack.length === 0) return [];
+    return connection.lensStack.map(lens =>
+      lensInstanceToDefinition(lens, store.defaultSourceStore)
+    );
+  }, [connection.lensStack, store.defaultSourceStore]);
+
+  // Handle lens chain changes from the editor
+  const handleLensChainChange = useCallback((chain: LensDefinition[]) => {
+    const bindingId = `wire:${connection.id}`;
+    const instances: LensInstance[] = chain.map((def, index) =>
+      createLensInstanceFromDefinition(def, bindingId, index, store.defaultSourceStore)
+    );
+    store.patchStore.updateConnection(connection.id, {
+      lensStack: instances.length > 0 ? instances : undefined,
+    });
   }, [store, connection.id]);
 
-  const handleToggleLensEnabled = useCallback((index: number) => {
-    const lens = connection.lensStack?.[index];
-    if (lens) {
-      store.patchStore.updateConnectionLens(connection.id, index, { enabled: !lens.enabled });
-    }
-  }, [store, connection.id, connection.lensStack]);
+  const handleOpenLensEditor = useCallback(() => {
+    setIsLensEditorOpen(true);
+  }, []);
 
-  const hasLenses = connection.lensStack && connection.lensStack.length > 0;
+  const handleCloseLensEditor = useCallback(() => {
+    setIsLensEditorOpen(false);
+  }, []);
+
+  // Get type descriptors for lens editor
+  const sourceType = useMemo(() => SLOT_TYPE_TO_TYPE_DESC[sourceSlot.type], [sourceSlot.type]);
+  const targetType = useMemo(() => SLOT_TYPE_TO_TYPE_DESC[targetSlot.type], [targetSlot.type]);
+
+  const hasLenses = lensChain.length > 0;
   const isEnabled = connection.enabled !== false;
 
   return (
@@ -222,36 +245,41 @@ const WireConnectionView = observer(({
         </label>
       </div>
 
-      {/* Lens section */}
+      {/* Lens section with full editor */}
       <div className="conn-section">
-        <h4 className="conn-section-title">Lenses</h4>
+        <div className="conn-section-header">
+          <h4 className="conn-section-title">Lenses</h4>
+          <button
+            className="conn-action-btn conn-action-small"
+            onClick={handleOpenLensEditor}
+            title="Edit lens chain"
+          >
+            {hasLenses ? 'Edit' : 'Add'}
+          </button>
+        </div>
         {hasLenses ? (
-          <div className="conn-lens-list">
-            {connection.lensStack!.map((lens, i) => (
-              <div key={i} className={`conn-lens-item ${lens.enabled === false ? 'disabled' : ''}`}>
-                <label className="conn-lens-toggle">
-                  <input
-                    type="checkbox"
-                    checked={lens.enabled !== false}
-                    onChange={() => handleToggleLensEnabled(i)}
-                  />
-                </label>
-                <span className="conn-lens-name">{lens.lensId}</span>
-                <button
-                  className="conn-lens-remove"
-                  onClick={() => handleRemoveLens(i)}
-                  title="Remove lens"
-                >
-                  ×
-                </button>
-              </div>
+          <div className="conn-lens-preview">
+            {lensChain.map((lens, i) => (
+              <span key={i} className="conn-lens-badge">{lens.type}</span>
             ))}
           </div>
         ) : (
-          <p className="conn-hint">No lenses applied</p>
+          <p className="conn-hint">No lenses applied. Click Add to add transforms.</p>
         )}
-        {/* TODO: Add lens picker button for adding new lenses */}
       </div>
+
+      {/* Full lens chain editor */}
+      {isLensEditorOpen && (
+        <div className="conn-lens-editor-container">
+          <LensChainEditor
+            lensChain={lensChain}
+            onChange={handleLensChainChange}
+            sourceType={sourceType}
+            targetType={targetType}
+            onClose={handleCloseLensEditor}
+          />
+        </div>
+      )}
 
       <div className="conn-actions">
         <button className="conn-action-btn conn-action-danger" onClick={onDisconnect}>
@@ -263,7 +291,7 @@ const WireConnectionView = observer(({
 });
 
 /**
- * Publisher Connection Inspector - displays publisher details with lens editing.
+ * Publisher Connection Inspector - displays publisher details with full lens editing.
  */
 const PublisherConnectionView = observer(({
   publisher,
@@ -283,6 +311,7 @@ const PublisherConnectionView = observer(({
   onBack: () => void;
 }) => {
   const store = useStore();
+  const [isLensEditorOpen, setIsLensEditorOpen] = useState(false);
 
   const navigateToSource = useCallback(() => {
     store.uiStore.selectBlock(sourceBlock.id);
@@ -296,26 +325,39 @@ const PublisherConnectionView = observer(({
     store.busStore.updatePublisher(publisher.id, { enabled: !publisher.enabled });
   }, [store, publisher.id, publisher.enabled]);
 
-  const handleRemoveLens = useCallback((index: number) => {
-    const currentStack = publisher.lensStack ?? [];
-    const newStack = currentStack.filter((_, i) => i !== index);
+  // Convert LensInstance[] to LensDefinition[] for the editor
+  const lensChain = useMemo((): LensDefinition[] => {
+    if (!publisher.lensStack || publisher.lensStack.length === 0) return [];
+    return publisher.lensStack.map(lens =>
+      lensInstanceToDefinition(lens, store.defaultSourceStore)
+    );
+  }, [publisher.lensStack, store.defaultSourceStore]);
+
+  // Handle lens chain changes from the editor
+  const handleLensChainChange = useCallback((chain: LensDefinition[]) => {
+    const bindingId = `pub:${publisher.id}`;
+    const instances: LensInstance[] = chain.map((def, index) =>
+      createLensInstanceFromDefinition(def, bindingId, index, store.defaultSourceStore)
+    );
     store.busStore.updatePublisher(publisher.id, {
-      lensStack: newStack.length > 0 ? newStack : undefined,
+      lensStack: instances.length > 0 ? instances : undefined,
     });
-  }, [store, publisher.id, publisher.lensStack]);
+  }, [store, publisher.id]);
 
-  const handleToggleLensEnabled = useCallback((index: number) => {
-    const currentStack = publisher.lensStack ?? [];
-    const lens = currentStack[index];
-    if (lens) {
-      const newStack = currentStack.map((l, i) =>
-        i === index ? { ...l, enabled: !l.enabled } : l
-      );
-      store.busStore.updatePublisher(publisher.id, { lensStack: newStack });
-    }
-  }, [store, publisher.id, publisher.lensStack]);
+  const handleOpenLensEditor = useCallback(() => {
+    setIsLensEditorOpen(true);
+  }, []);
 
-  const hasLenses = publisher.lensStack && publisher.lensStack.length > 0;
+  const handleCloseLensEditor = useCallback(() => {
+    setIsLensEditorOpen(false);
+  }, []);
+
+  // Get type descriptors for lens editor
+  const sourceType = useMemo(() => SLOT_TYPE_TO_TYPE_DESC[sourceSlot.type], [sourceSlot.type]);
+  const bus = store.busStore.buses.find(b => b.id === busId);
+  const targetType = bus?.type;
+
+  const hasLenses = lensChain.length > 0;
 
   return (
     <InspectorContainer
@@ -353,35 +395,41 @@ const PublisherConnectionView = observer(({
         </label>
       </div>
 
-      {/* Lens section with editable list */}
+      {/* Lens section with full editor */}
       <div className="conn-section">
-        <h4 className="conn-section-title">Lenses</h4>
+        <div className="conn-section-header">
+          <h4 className="conn-section-title">Lenses</h4>
+          <button
+            className="conn-action-btn conn-action-small"
+            onClick={handleOpenLensEditor}
+            title="Edit lens chain"
+          >
+            {hasLenses ? 'Edit' : 'Add'}
+          </button>
+        </div>
         {hasLenses ? (
-          <div className="conn-lens-list">
-            {publisher.lensStack!.map((lens, i) => (
-              <div key={i} className={`conn-lens-item ${lens.enabled === false ? 'disabled' : ''}`}>
-                <label className="conn-lens-toggle">
-                  <input
-                    type="checkbox"
-                    checked={lens.enabled !== false}
-                    onChange={() => handleToggleLensEnabled(i)}
-                  />
-                </label>
-                <span className="conn-lens-name">{lens.lensId}</span>
-                <button
-                  className="conn-lens-remove"
-                  onClick={() => handleRemoveLens(i)}
-                  title="Remove lens"
-                >
-                  ×
-                </button>
-              </div>
+          <div className="conn-lens-preview">
+            {lensChain.map((lens, i) => (
+              <span key={i} className="conn-lens-badge">{lens.type}</span>
             ))}
           </div>
         ) : (
-          <p className="conn-hint">No lenses applied</p>
+          <p className="conn-hint">No lenses applied. Click Add to add transforms.</p>
         )}
       </div>
+
+      {/* Full lens chain editor */}
+      {isLensEditorOpen && (
+        <div className="conn-lens-editor-container">
+          <LensChainEditor
+            lensChain={lensChain}
+            onChange={handleLensChainChange}
+            sourceType={sourceType}
+            targetType={targetType}
+            onClose={handleCloseLensEditor}
+          />
+        </div>
+      )}
 
       <div className="conn-actions">
         <button className="conn-action-btn conn-action-danger" onClick={onDisconnect}>
@@ -393,7 +441,7 @@ const PublisherConnectionView = observer(({
 });
 
 /**
- * Listener Connection Inspector - displays listener details with lens editing.
+ * Listener Connection Inspector - displays listener details with full lens editing.
  */
 const ListenerConnectionView = observer(({
   listener,
@@ -413,6 +461,7 @@ const ListenerConnectionView = observer(({
   onBack: () => void;
 }) => {
   const store = useStore();
+  const [isLensEditorOpen, setIsLensEditorOpen] = useState(false);
 
   const navigateToBus = useCallback(() => {
     store.uiStore.selectBus(busId);
@@ -426,26 +475,39 @@ const ListenerConnectionView = observer(({
     store.busStore.updateListener(listener.id, { enabled: !listener.enabled });
   }, [store, listener.id, listener.enabled]);
 
-  const handleRemoveLens = useCallback((index: number) => {
-    const currentStack = listener.lensStack ?? [];
-    const newStack = currentStack.filter((_, i) => i !== index);
+  // Convert LensInstance[] to LensDefinition[] for the editor
+  const lensChain = useMemo((): LensDefinition[] => {
+    if (!listener.lensStack || listener.lensStack.length === 0) return [];
+    return listener.lensStack.map(lens =>
+      lensInstanceToDefinition(lens, store.defaultSourceStore)
+    );
+  }, [listener.lensStack, store.defaultSourceStore]);
+
+  // Handle lens chain changes from the editor
+  const handleLensChainChange = useCallback((chain: LensDefinition[]) => {
+    const bindingId = `lis:${listener.id}`;
+    const instances: LensInstance[] = chain.map((def, index) =>
+      createLensInstanceFromDefinition(def, bindingId, index, store.defaultSourceStore)
+    );
     store.busStore.updateListener(listener.id, {
-      lensStack: newStack.length > 0 ? newStack : undefined,
+      lensStack: instances.length > 0 ? instances : undefined,
     });
-  }, [store, listener.id, listener.lensStack]);
+  }, [store, listener.id]);
 
-  const handleToggleLensEnabled = useCallback((index: number) => {
-    const currentStack = listener.lensStack ?? [];
-    const lens = currentStack[index];
-    if (lens) {
-      const newStack = currentStack.map((l, i) =>
-        i === index ? { ...l, enabled: !l.enabled } : l
-      );
-      store.busStore.updateListener(listener.id, { lensStack: newStack });
-    }
-  }, [store, listener.id, listener.lensStack]);
+  const handleOpenLensEditor = useCallback(() => {
+    setIsLensEditorOpen(true);
+  }, []);
 
-  const hasLenses = listener.lensStack && listener.lensStack.length > 0;
+  const handleCloseLensEditor = useCallback(() => {
+    setIsLensEditorOpen(false);
+  }, []);
+
+  // Get type descriptors for lens editor
+  const bus = store.busStore.buses.find(b => b.id === busId);
+  const sourceType = bus?.type;
+  const targetType = useMemo(() => SLOT_TYPE_TO_TYPE_DESC[targetSlot.type], [targetSlot.type]);
+
+  const hasLenses = lensChain.length > 0;
 
   return (
     <InspectorContainer
@@ -483,35 +545,41 @@ const ListenerConnectionView = observer(({
         </label>
       </div>
 
-      {/* Lens section with editable list */}
+      {/* Lens section with full editor */}
       <div className="conn-section">
-        <h4 className="conn-section-title">Lenses</h4>
+        <div className="conn-section-header">
+          <h4 className="conn-section-title">Lenses</h4>
+          <button
+            className="conn-action-btn conn-action-small"
+            onClick={handleOpenLensEditor}
+            title="Edit lens chain"
+          >
+            {hasLenses ? 'Edit' : 'Add'}
+          </button>
+        </div>
         {hasLenses ? (
-          <div className="conn-lens-list">
-            {listener.lensStack!.map((lens, i) => (
-              <div key={i} className={`conn-lens-item ${lens.enabled === false ? 'disabled' : ''}`}>
-                <label className="conn-lens-toggle">
-                  <input
-                    type="checkbox"
-                    checked={lens.enabled !== false}
-                    onChange={() => handleToggleLensEnabled(i)}
-                  />
-                </label>
-                <span className="conn-lens-name">{lens.lensId}</span>
-                <button
-                  className="conn-lens-remove"
-                  onClick={() => handleRemoveLens(i)}
-                  title="Remove lens"
-                >
-                  ×
-                </button>
-              </div>
+          <div className="conn-lens-preview">
+            {lensChain.map((lens, i) => (
+              <span key={i} className="conn-lens-badge">{lens.type}</span>
             ))}
           </div>
         ) : (
-          <p className="conn-hint">No lenses applied</p>
+          <p className="conn-hint">No lenses applied. Click Add to add transforms.</p>
         )}
       </div>
+
+      {/* Full lens chain editor */}
+      {isLensEditorOpen && (
+        <div className="conn-lens-editor-container">
+          <LensChainEditor
+            lensChain={lensChain}
+            onChange={handleLensChainChange}
+            sourceType={sourceType}
+            targetType={targetType}
+            onClose={handleCloseLensEditor}
+          />
+        </div>
+      )}
 
       <div className="conn-actions">
         <button className="conn-action-btn conn-action-danger" onClick={onDisconnect}>
@@ -550,8 +618,6 @@ function AdapterChainDisplay({ chain }: { chain: AdapterStep[] }) {
         {chain.map((step, i) => (
           <div key={i} className="conn-adapter-step">
             <span className="conn-adapter-name">{step.adapterId}</span>
-            <span className="conn-adapter-arrow">→</span>
-            <span className="conn-adapter-target">{step.targetWorld}</span>
           </div>
         ))}
       </div>
@@ -563,6 +629,7 @@ function AdapterChainDisplay({ chain }: { chain: AdapterStep[] }) {
 /**
  * Cell Connection View - displays cell details from ModulationTable.
  * Handles bound, unbound, convertible, and incompatible cells.
+ * For bound cells, provides full lens editing.
  */
 const CellConnectionView = observer(({
   cellInfo,
@@ -573,6 +640,7 @@ const CellConnectionView = observer(({
 }) => {
   const store = useStore();
   const { cell, row, column, block, slot, compatibility } = cellInfo;
+  const [isLensEditorOpen, setIsLensEditorOpen] = useState(false);
 
   const navigateToBlock = useCallback(() => {
     store.uiStore.selectBlock(block.id);
@@ -583,15 +651,109 @@ const CellConnectionView = observer(({
   }, [store, column.busId]);
 
   const handleConnect = useCallback(() => {
-    // Use the ModulationTableStore to bind the cell
-    store.modulationTableStore.bindCell(row.key, column.busId);
-    // After connecting, the cell becomes bound - the inspector should update
-  }, [store, row.key, column.busId]);
+    // Parse rowKey to get block/port info
+    const parsed = parseRowKey(row.key);
+    if (!parsed) return;
+
+    const { blockId, portId, direction } = parsed;
+
+    if (direction === 'input') {
+      // For inputs: create listener (bus → port)
+      // Check for existing listener on this port and remove it (one listener per port)
+      const existingListener = store.busStore.listeners.find(
+        l => l.to.blockId === blockId && l.to.slotId === portId
+      );
+      if (existingListener) {
+        store.busStore.removeListener(existingListener.id);
+      }
+
+      // Find adapter chain if needed
+      let adapterChain: AdapterStep[] | undefined;
+      if (compatibility.status === 'convertible' && compatibility.adapterChain) {
+        adapterChain = compatibility.adapterChain;
+      }
+
+      store.busStore.addListener(column.busId, blockId, portId, adapterChain);
+    } else {
+      // For outputs: create publisher (port → bus)
+      store.busStore.addPublisher(column.busId, blockId, portId);
+    }
+  }, [store, row.key, column.busId, compatibility]);
 
   const handleDisconnect = useCallback(() => {
-    store.modulationTableStore.unbindCell(row.key, column.busId);
+    // Parse rowKey to get block/port info
+    const parsed = parseRowKey(row.key);
+    if (!parsed) return;
+
+    const { blockId, portId, direction } = parsed;
+
+    if (direction === 'input') {
+      // Find and remove the listener for this port
+      const listener = store.busStore.listeners.find(
+        l => l.to.blockId === blockId && l.to.slotId === portId && l.busId === column.busId
+      );
+      if (listener) {
+        store.busStore.removeListener(listener.id);
+      }
+    } else {
+      // Find and remove the publisher for this port + bus
+      const publisher = store.busStore.publishers.find(
+        p => p.from.blockId === blockId && p.from.slotId === portId && p.busId === column.busId
+      );
+      if (publisher) {
+        store.busStore.removePublisher(publisher.id);
+      }
+    }
     store.uiStore.deselectConnection();
   }, [store, row.key, column.busId]);
+
+  // Get the binding (listener or publisher) for lens editing
+  const binding = useMemo(() => {
+    if (cell.listenerId) {
+      return store.busStore.listeners.find(l => l.id === cell.listenerId);
+    }
+    if (cell.publisherId) {
+      return store.busStore.publishers.find(p => p.id === cell.publisherId);
+    }
+    return null;
+  }, [store.busStore.listeners, store.busStore.publishers, cell.listenerId, cell.publisherId]);
+
+  // Convert LensInstance[] to LensDefinition[] for the editor
+  const lensChain = useMemo((): LensDefinition[] => {
+    if (!binding?.lensStack || binding.lensStack.length === 0) return [];
+    return binding.lensStack.map(lens =>
+      lensInstanceToDefinition(lens, store.defaultSourceStore)
+    );
+  }, [binding?.lensStack, store.defaultSourceStore]);
+
+  // Handle lens chain changes from the editor
+  const handleLensChainChange = useCallback((chain: LensDefinition[]) => {
+    if (!binding) return;
+
+    const bindingType = cell.listenerId ? 'lis' : 'pub';
+    const bindingId = `${bindingType}:${binding.id}`;
+    const instances: LensInstance[] = chain.map((def, index) =>
+      createLensInstanceFromDefinition(def, bindingId, index, store.defaultSourceStore)
+    );
+
+    if (cell.listenerId) {
+      store.busStore.updateListener(cell.listenerId, {
+        lensStack: instances.length > 0 ? instances : undefined,
+      });
+    } else if (cell.publisherId) {
+      store.busStore.updatePublisher(cell.publisherId, {
+        lensStack: instances.length > 0 ? instances : undefined,
+      });
+    }
+  }, [store, binding, cell.listenerId, cell.publisherId]);
+
+  const handleOpenLensEditor = useCallback(() => {
+    setIsLensEditorOpen(true);
+  }, []);
+
+  const handleCloseLensEditor = useCallback(() => {
+    setIsLensEditorOpen(false);
+  }, []);
 
   const isBound = cell.status === 'bound';
   const isConvertible = compatibility.status === 'convertible';
@@ -603,6 +765,8 @@ const CellConnectionView = observer(({
   const color = isBound ? '#4f46e5' :
                 isConvertible ? '#f59e0b' :
                 isIncompatible ? '#ef4444' : '#10b981';
+
+  const hasLenses = lensChain.length > 0;
 
   return (
     <InspectorContainer
@@ -678,6 +842,44 @@ const CellConnectionView = observer(({
             />
             <span>Enabled</span>
           </label>
+        </div>
+      )}
+
+      {/* Lens section with full editor (only for bound cells) */}
+      {isBound && (
+        <div className="conn-section">
+          <div className="conn-section-header">
+            <h4 className="conn-section-title">Lenses</h4>
+            <button
+              className="conn-action-btn conn-action-small"
+              onClick={handleOpenLensEditor}
+              title="Edit lens chain"
+            >
+              {hasLenses ? 'Edit' : 'Add'}
+            </button>
+          </div>
+          {hasLenses ? (
+            <div className="conn-lens-preview">
+              {lensChain.map((lens, i) => (
+                <span key={i} className="conn-lens-badge">{lens.type}</span>
+              ))}
+            </div>
+          ) : (
+            <p className="conn-hint">No lenses applied. Click Add to add transforms.</p>
+          )}
+        </div>
+      )}
+
+      {/* Full lens chain editor */}
+      {isBound && isLensEditorOpen && (
+        <div className="conn-lens-editor-container">
+          <LensChainEditor
+            lensChain={lensChain}
+            onChange={handleLensChainChange}
+            sourceType={row.direction === 'output' ? row.type : column.type}
+            targetType={row.direction === 'output' ? column.type : row.type}
+            onClose={handleCloseLensEditor}
+          />
         </div>
       )}
 
@@ -765,17 +967,11 @@ export const ConnectionInspector = observer(() => {
     if (type === 'cell') {
       const { rowKey, busId, direction } = selectedConnection;
 
-      // Get cell, row, and column from ModulationTableStore
-      const cell = store.modulationTableStore.getCell(rowKey, busId);
-      const row = store.modulationTableStore.rows.find(r => r.key === rowKey);
-      const column = store.modulationTableStore.columns.find(c => c.busId === busId);
-
-      if (!cell || !row || !column) return null;
-
-      // Get block and slot
+      // Parse rowKey to get block/port info
       const parsed = parseRowKey(rowKey);
       if (!parsed) return null;
 
+      // Get block and slot
       const block = store.patchStore.blocks.find(b => b.id === parsed.blockId);
       if (!block) return null;
 
@@ -784,9 +980,77 @@ export const ConnectionInspector = observer(() => {
         : block.outputs.find(s => s.id === parsed.portId);
       if (!slot) return null;
 
+      // Get bus for column info
+      const bus = store.busStore.buses.find(b => b.id === busId);
+      if (!bus) return null;
+
+      // Build column info using slot type descriptor
+      const slotTypeDesc = SLOT_TYPE_TO_TYPE_DESC[slot.type];
+      if (!slotTypeDesc) return null;
+
+      const column: TableColumn = {
+        busId: bus.id,
+        name: bus.name,
+        type: bus.type,
+        combineMode: bus.combineMode,
+        enabled: true,
+        publisherCount: store.busStore.publishers.filter(p => p.busId === bus.id).length,
+        listenerCount: store.busStore.listeners.filter(l => l.busId === bus.id).length,
+        activity: 0,
+      };
+
+      // Build row info
+      const row: TableRow = {
+        key: rowKey,
+        label: slot.label,
+        groupKey: `${direction === 'input' ? 'listeners' : 'publishers'}:${block.id}`,
+        blockId: block.id,
+        portId: slot.id,
+        direction: direction,
+        type: slotTypeDesc,
+        semantics: slotTypeDesc.semantics,
+      };
+
+      // Check if bound
+      let isBound = false;
+      let listenerId: string | undefined;
+      let publisherId: string | undefined;
+      let enabled: boolean | undefined;
+
+      if (direction === 'input') {
+        const listener = store.busStore.listeners.find(
+          l => l.to.blockId === block.id && l.to.slotId === slot.id && l.busId === busId
+        );
+        if (listener) {
+          isBound = true;
+          listenerId = listener.id;
+          enabled = listener.enabled;
+        }
+      } else {
+        const publisher = store.busStore.publishers.find(
+          p => p.from.blockId === block.id && p.from.slotId === slot.id && p.busId === busId
+        );
+        if (publisher) {
+          isBound = true;
+          publisherId = publisher.id;
+          enabled = publisher.enabled;
+        }
+      }
+
+      // Build cell info
+      const cell: TableCell = {
+        rowKey,
+        busId,
+        direction,
+        listenerId,
+        publisherId,
+        enabled,
+        status: isBound ? 'bound' : 'empty',
+      };
+
       // Compute compatibility info
       let compatibility: CellInspectorInfo['compatibility'];
-      if (cell.status === 'bound' || isDirectlyCompatible(column.type, row.type)) {
+      if (isBound || isDirectlyCompatible(column.type, row.type)) {
         compatibility = { status: 'compatible' };
       } else {
         // Check for adapter path
@@ -811,7 +1075,7 @@ export const ConnectionInspector = observer(() => {
     }
 
     return null;
-  }, [selectedConnection, store.patchStore.connections, store.patchStore.blocks, store.busStore.publishers, store.busStore.listeners, store.busStore.buses, store.modulationTableStore]);
+  }, [selectedConnection, store.patchStore.connections, store.patchStore.blocks, store.busStore.publishers, store.busStore.listeners, store.busStore.buses]);
 
   // Handle back navigation
   const handleBack = useCallback(() => {
