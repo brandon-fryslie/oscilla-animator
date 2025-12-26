@@ -125,7 +125,7 @@ describe("RuntimeState", () => {
       const program = createMinimalProgram();
       const runtime = createRuntimeState(program);
 
-      expect(runtime.frameCache.frameId).toBe(0);
+      expect(runtime.frameCache.frameId).toBe(1);
       expect(typeof runtime.frameCache.newFrame).toBe("function");
       expect(typeof runtime.frameCache.invalidate).toBe("function");
     });

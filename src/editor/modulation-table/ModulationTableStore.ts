@@ -61,6 +61,7 @@ export class ModulationTableStore {
       visibleColumns: computed,
       setFocusedCell: action,
       setFocusedBlock: action,
+      deleteBlock: action,
       setFocusedBus: action,
       toggleGroupCollapse: action,
       toggleBusPin: action,
@@ -519,10 +520,20 @@ export class ModulationTableStore {
   }
 
   /**
-   * Set focused bus.
+   * Delete a block by ID.
+   */
+  deleteBlock(blockId: string): void {
+    this.root.patchStore.removeBlock(blockId);
+  }
+
+  /**
+   * Set focused bus and open the Bus Inspector.
    */
   setFocusedBus(busId: string | undefined): void {
     this.viewState.focusedBusId = busId;
+    if (busId != null) {
+      this.root.uiStore.selectBus(busId);
+    }
   }
 
   /**

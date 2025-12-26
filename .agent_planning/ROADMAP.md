@@ -411,34 +411,48 @@ Reference: `design-docs/12-Compiler-Final/`
 
 ---
 
-## Phase 6: Full Scheduled Runtime [QUEUED]
+## Phase 6: Full Scheduled Runtime [IN PROGRESS]
 
 **Goal:** Complete IR-driven runtime with explicit schedule, ValueStore, state management, and hot-swap.
 
 **Migration Safety:** Parallel execution - run both old and new runtime, compare results.
 
+**Started:** 2025-12-26
+**Sprint 1 Complete:** 2025-12-26
+
 ### Topics
 
-#### value-store [PROPOSED]
+#### value-store [COMPLETED]
 **Description:** Implement `ValueStore` with typed arrays for slots. Single-writer per slot per frame. Replace ad-hoc value passing.
 **Spec:** 02-IR-Schema (§18.1), 17-Scheduler-Full (§1.2)
 **Dependencies:** Phase 5 complete
 **Labels:** runtime, storage, performance
 **Test Strategy:** ValueStore respects single-writer invariant
+**Implementation:** `src/editor/compiler/ir/stores.ts` - createValueStore() with typed array allocation, single-writer enforcement (31 tests)
 
-#### state-buffer-system [PROPOSED]
+#### state-buffer-system [COMPLETED]
 **Description:** Implement `StateBuffer` (typed arrays for state cells), `StateLayout` allocation. Explicit state for all stateful ops.
 **Spec:** 13-SignalExpr-Evaluator (§6), 16-Block-Lowering (§6)
 **Dependencies:** value-store
 **Labels:** runtime, state, determinism
 **Test Strategy:** State persists correctly across frames
+**Implementation:** `src/editor/compiler/ir/stores.ts` - createStateBuffer(), initializeState() (16 tests)
 
-#### schedule-executor [PROPOSED]
+#### runtime-state-integration [COMPLETED]
+**Description:** Wire real ValueStore and StateBuffer into createRuntimeState(). Placeholder slot metadata extraction from schedule.
+**Spec:** Integration requirement
+**Dependencies:** value-store, state-buffer-system
+**Labels:** runtime, integration
+**Test Strategy:** RuntimeState uses real stores, not stubs
+**Implementation:** `src/editor/runtime/executor/RuntimeState.ts` - extractSlotMeta(), real store integration (17 tests)
+
+#### schedule-executor [PARTIAL]
 **Description:** Implement schedule execution: iterate `StepIR[]` in order, execute each step kind. Replace closure-tree traversal.
 **Spec:** 17-Scheduler-Full (§3)
 **Dependencies:** value-store, state-buffer-system
 **Labels:** runtime, schedule, execution
 **Test Strategy:** Scheduled execution matches closure execution
+**Status:** Frame loop works, executeTimeDerive implemented, other step executors are stubs (Sprint 2)
 
 #### frame-cache-system [PROPOSED]
 **Description:** Implement `FrameCache` with per-frame memo for signals/fields. Cache key validation from `CacheKeySpec`.

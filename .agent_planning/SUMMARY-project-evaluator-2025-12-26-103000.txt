@@ -1,0 +1,7 @@
+Agent: project-evaluator | 2025-12-26-103000
+Scope: feature/connection-inspector
+Completion: 0% | Gaps: 4 major components missing | Test Quality: N/A
+Reused: 0 findings | Fresh: all findings
+Cache updated: None (feature evaluation, no stable patterns to cache)
+Ambiguities: 5 found | Workflow: PAUSE
+-> Clarification needed on: connection types, swap behavior, entry points, lens layout, navigation flow

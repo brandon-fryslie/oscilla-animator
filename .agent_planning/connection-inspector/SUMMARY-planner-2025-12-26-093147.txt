@@ -1,0 +1,6 @@
+Agent: status-planner | 2025-12-26-093147
+Topic: connection-inspector
+Files: PLAN-2025-12-26-093147.md, DOD-2025-12-26-093147.md
+Items: 8 (P0: 3, P1: 3, P2: 2)
+Deliverables: 3 (Core Inspector, Entry Points, Navigation)
+Deferred: P2 polish, PatchBay wire click

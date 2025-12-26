@@ -1,0 +1,8 @@
+Agent: status-planner | 2025-12-26-092613
+Topic: Phase 6 Sprint 2 - FrameCache + Step Executors
+Files: PLAN-2025-12-26-092613.md, DOD-2025-12-26-092613.md, STATUS-2025-12-26-092613.md
+Items: 3 (P0: 2, P1: 1)
+Deliverables:
+  - P0: FrameCache implementation (per-frame signal/field cache + buffer pool)
+  - P0: executeBusEval integration (all combine modes + transform chains)
+  - P1: executeMaterialize integration (FieldMaterializer wiring)

@@ -868,6 +868,16 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
                 <button
                   onClick={() => {
                     if (contextMenu.busId != null) {
+                      store.setFocusedBus(contextMenu.busId);
+                    }
+                    closeContextMenu();
+                  }}
+                >
+                  Inspect Bus
+                </button>
+                <button
+                  onClick={() => {
+                    if (contextMenu.busId != null) {
                       store.toggleBusPin(contextMenu.busId);
                     }
                     closeContextMenu();

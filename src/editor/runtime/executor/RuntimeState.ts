@@ -6,12 +6,13 @@
  * Contains:
  * - ValueStore: per-frame slot-based value storage
  * - StateBuffer: cross-frame persistent state
- * - FrameCache: memoization cache (placeholder for Sprint 2)
+ * - FrameCache: memoization cache with signal/field caches
  * - frameId: monotonic frame counter
  *
  * References:
  * - HANDOFF.md Topic 3 (ScheduleExecutor)
  * - design-docs/12-Compiler-Final/17-Scheduler-Full.md §8
+ * - .agent_planning/scheduled-runtime/PLAN-2025-12-26-092613.md (Phase 6 Sprint 2)
  */
 
 import type { ValueStore, StateBuffer } from "../../compiler/ir";
@@ -22,6 +23,7 @@ import {
 } from "../../compiler/ir/stores";
 import type { SlotMeta } from "../../compiler/ir/stores";
 import type { CompiledProgramIR } from "../../compiler/ir/program";
+import type { FieldHandle } from "../field/types";
 
 // ============================================================================
 // RuntimeState Interface
@@ -44,7 +46,7 @@ export interface RuntimeState {
   /** Persistent state storage (cross-frame) */
   state: StateBuffer;
 
-  /** Frame cache (per-frame memoization) - placeholder for Sprint 2 */
+  /** Frame cache (per-frame memoization) */
   frameCache: FrameCache;
 
   /** Monotonic frame counter */
@@ -52,34 +54,130 @@ export interface RuntimeState {
 }
 
 // ============================================================================
-// FrameCache Interface (Placeholder for Sprint 2)
+// FrameCache Interface
 // ============================================================================
 
 /**
  * FrameCache - Per-Frame Memoization
  *
  * Caches signal values, field handles, and materialized buffers per frame.
- * Full implementation deferred to Phase 6 Sprint 2.
+ * Implements stamp-based cache invalidation (no array clearing on newFrame).
+ *
+ * Cache Strategy:
+ * - Stamp-based invalidation: stamp[id] === frameId → cache hit
+ * - newFrame() increments frameId (stamps < frameId are stale)
+ * - invalidate() zeros stamps (forces recomputation)
+ * - Buffer pool is cleared on newFrame() (new frame = new materializations)
  *
  * References:
  * - HANDOFF.md Topic 4 (FrameCache System)
  * - design-docs/12-Compiler-Final/17-Scheduler-Full.md §8
+ * - .agent_planning/scheduled-runtime/DOD-2025-12-26-092613.md §Deliverable 1
  */
 export interface FrameCache {
-  /** Current frame ID */
+  /** Current frame ID (monotonic, starts at 1) */
   frameId: number;
+
+  /** Cached signal values (indexed by SigExprId) */
+  sigValue: Float64Array;
+
+  /** Frame stamps for signal cache validation */
+  sigStamp: Uint32Array;
+
+  /** Cached field handles - lazy recipes (indexed by FieldExprId) */
+  fieldHandle: FieldHandle[];
+
+  /** Frame stamps for field cache validation */
+  fieldStamp: Uint32Array;
+
+  /** Materialized buffer pool (per-frame cache) */
+  fieldBuffers: Map<string, ArrayBufferView>;
 
   /**
    * Start a new frame.
-   * Increments frameId and invalidates per-frame caches.
+   * Increments frameId and clears buffer pool.
+   * Does NOT clear stamp arrays (stamp comparison handles invalidation).
    */
   newFrame(): void;
 
   /**
    * Invalidate all caches.
+   * Zeros stamp arrays and clears buffer pool.
    * Used during hot-swap or debug reset.
    */
   invalidate(): void;
+}
+
+// ============================================================================
+// FrameCache Factory
+// ============================================================================
+
+/**
+ * Create a FrameCache with specified capacities.
+ *
+ * Allocates typed arrays for signal/field caches.
+ * FrameId starts at 1 to avoid collision with initial Uint32Array values (0).
+ *
+ * @param sigCapacity - Number of signal expressions (max SigExprId + 1)
+ * @param fieldCapacity - Number of field expressions (max FieldExprId + 1)
+ * @returns Initialized FrameCache
+ *
+ * @example
+ * ```typescript
+ * const cache = createFrameCache(1024, 512);
+ * console.log(cache.frameId); // 1 (NOT 0)
+ * console.log(cache.sigValue.length); // 1024
+ * console.log(cache.fieldHandle.length); // 512
+ * ```
+ */
+export function createFrameCache(
+  sigCapacity: number,
+  fieldCapacity: number
+): FrameCache {
+  // Allocate signal cache arrays
+  const sigValue = new Float64Array(sigCapacity);
+  const sigStamp = new Uint32Array(sigCapacity);
+
+  // Allocate field cache arrays
+  // FieldHandle[] cannot be pre-allocated with type safety, so use empty array with reserved length
+  const fieldHandle: FieldHandle[] = [];
+  fieldHandle.length = fieldCapacity;
+  const fieldStamp = new Uint32Array(fieldCapacity);
+
+  // Initialize buffer pool
+  const fieldBuffers = new Map<string, ArrayBufferView>();
+
+  return {
+    frameId: 1, // Start at 1 to avoid collision with initial stamp values (0)
+    sigValue,
+    sigStamp,
+    fieldHandle,
+    fieldStamp,
+    fieldBuffers,
+
+    newFrame(): void {
+      // Increment frameId - this invalidates all cached values
+      // (stamps < new frameId are now stale)
+      this.frameId++;
+
+      // Clear buffer pool - new frame requires fresh materializations
+      this.fieldBuffers.clear();
+
+      // Do NOT zero stamp arrays - stamp comparison is sufficient
+      // Do NOT clear sigValue/fieldHandle arrays - stamps invalidate stale entries
+    },
+
+    invalidate(): void {
+      // Zero all stamp arrays - forces full recomputation
+      this.sigStamp.fill(0);
+      this.fieldStamp.fill(0);
+
+      // Clear buffer pool
+      this.fieldBuffers.clear();
+
+      // Do NOT reset frameId - it's monotonic
+    },
+  };
 }
 
 // ============================================================================
@@ -101,7 +199,8 @@ export interface FrameCache {
  * @returns Slot metadata array
  */
 function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
-  const slotSet = new Set<number>();
+  const numericSlots = new Set<number>();
+  const objectSlots = new Set<number>(); // Slots that hold objects (buffers, handles)
 
   // Guard against incomplete program objects (used in some tests)
   if (!program.schedule || !program.schedule.steps) {
@@ -112,73 +211,78 @@ function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
   for (const step of program.schedule.steps) {
     switch (step.kind) {
       case "timeDerive":
-        slotSet.add(step.tAbsMsSlot);
-        slotSet.add(step.out.tModelMs);
-        if (step.out.phase01 !== undefined) slotSet.add(step.out.phase01);
-        if (step.out.wrapEvent !== undefined) slotSet.add(step.out.wrapEvent);
-        if (step.out.progress01 !== undefined) slotSet.add(step.out.progress01);
+        numericSlots.add(step.tAbsMsSlot);
+        numericSlots.add(step.out.tModelMs);
+        if (step.out.phase01 !== undefined) numericSlots.add(step.out.phase01);
+        if (step.out.wrapEvent !== undefined)
+          numericSlots.add(step.out.wrapEvent);
+        if (step.out.progress01 !== undefined)
+          numericSlots.add(step.out.progress01);
         break;
 
       case "nodeEval":
-        for (const slot of step.inputSlots) slotSet.add(slot);
-        for (const slot of step.outputSlots) slotSet.add(slot);
+        for (const slot of step.inputSlots) numericSlots.add(slot);
+        for (const slot of step.outputSlots) numericSlots.add(slot);
         break;
 
       case "busEval":
-        slotSet.add(step.outSlot);
+        numericSlots.add(step.outSlot);
         for (const pub of step.publishers) {
-          slotSet.add(pub.srcSlot);
+          numericSlots.add(pub.srcSlot);
         }
         break;
 
       case "materialize":
-        slotSet.add(step.materialization.domainSlot);
-        slotSet.add(step.materialization.outBufferSlot);
+        numericSlots.add(step.materialization.domainSlot);
+        // Buffer slots hold objects, not numbers
+        objectSlots.add(step.materialization.outBufferSlot);
         break;
 
       case "renderAssemble":
-        slotSet.add(step.outSlot);
+        // RenderAssemble outputs are also objects (RenderTree)
+        objectSlots.add(step.outSlot);
         break;
 
       case "debugProbe":
-        for (const slot of step.probe.slots) slotSet.add(slot);
+        for (const slot of step.probe.slots) numericSlots.add(slot);
         break;
     }
   }
 
-  // Convert to sorted array and build metadata
-  const slots = Array.from(slotSet).sort((a, b) => a - b);
-  const slotMeta: SlotMeta[] = slots.map((slot) => ({
-    slot,
-    storage: "f64", // Conservative default for Sprint 1
-    offset: slot, // Dense allocation: offset = slot index
-    type: {
-      // Default type - will be refined in future sprints
-      world: "signal",
-      domain: "number",
-    },
-  }));
+  // Build metadata for all slots
+  const slotMeta: SlotMeta[] = [];
+
+  // Numeric slots get f64 storage
+  for (const slot of numericSlots) {
+    slotMeta.push({
+      slot,
+      storage: "f64",
+      offset: slot, // Dense allocation: offset = slot index
+      type: {
+        world: "signal",
+        domain: "number",
+      },
+    });
+  }
+
+  // Object slots get object storage
+  for (const slot of objectSlots) {
+    slotMeta.push({
+      slot,
+      storage: "object",
+      offset: slot, // Dense allocation: offset = slot index
+      type: {
+        // Field buffers and render trees are "special" world objects
+        world: "special",
+        domain: "renderTree", // Generic object domain for buffers/trees
+      },
+    });
+  }
+
+  // Sort by slot index for consistent ordering
+  slotMeta.sort((a, b) => a.slot - b.slot);
 
   return slotMeta;
-}
-
-/**
- * Create a stub FrameCache for Sprint 1.
- *
- * Full implementation deferred to Sprint 2.
- *
- * @returns Stub FrameCache
- */
-function createFrameCache(): FrameCache {
-  return {
-    frameId: 0,
-    newFrame(): void {
-      this.frameId++;
-    },
-    invalidate(): void {
-      // Stub: no-op
-    },
-  };
 }
 
 // ============================================================================
@@ -221,8 +325,11 @@ export function createRuntimeState(program: CompiledProgramIR): RuntimeState {
   };
   initializeState(state, stateLayout, constPool);
 
-  // Create stub FrameCache (Sprint 2 will implement full cache)
-  const frameCache = createFrameCache();
+  // Create real FrameCache with default capacities
+  // TODO: Derive capacities from SignalExprTable and FieldExprTable when available
+  const sigCapacity = 1024; // Default signal cache capacity
+  const fieldCapacity = 512; // Default field cache capacity
+  const frameCache = createFrameCache(sigCapacity, fieldCapacity);
 
   return {
     values,

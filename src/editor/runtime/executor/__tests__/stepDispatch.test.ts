@@ -44,7 +44,11 @@ describe("Step Dispatch", () => {
         },
       };
 
-      const runtime = createRuntimeState({} as CompiledProgramIR);
+      // Provide schedule with the step so slotMeta is extracted
+      const program = {
+        schedule: { steps: [step] },
+      } as CompiledProgramIR;
+      const runtime = createRuntimeState(program);
       const time: EffectiveTime = {
         tAbsMs: 1000,
         tModelMs: 1000,
@@ -91,7 +95,10 @@ describe("Step Dispatch", () => {
         busType: { world: "signal", domain: "number" },
       };
 
-      const program = {} as CompiledProgramIR;
+      // Provide schedule with the step so slotMeta is extracted
+      const program = {
+        schedule: { steps: [step] },
+      } as CompiledProgramIR;
       const runtime = createRuntimeState(program);
 
       // Should not throw - writes silent value
@@ -119,7 +126,10 @@ describe("Step Dispatch", () => {
         },
       };
 
-      const program = {} as CompiledProgramIR;
+      // Provide schedule with the step so slotMeta is extracted
+      const program = {
+        schedule: { steps: [step] },
+      } as CompiledProgramIR;
       const runtime = createRuntimeState(program);
 
       // Should not throw (stub writes empty buffer)
@@ -143,7 +153,10 @@ describe("Step Dispatch", () => {
         outSlot: 1,
       };
 
-      const program = {} as CompiledProgramIR;
+      // Provide schedule with the step so slotMeta is extracted
+      const program = {
+        schedule: { steps: [step] },
+      } as CompiledProgramIR;
       const runtime = createRuntimeState(program);
 
       // Should not throw (stub is no-op)
