@@ -1,0 +1,63 @@
+Agent: iterative-implementer | 2025-12-26-005743
+Mode: tdd
+Completed: Fixed 8 failing tests in Sprint 5 (Stateful Signal Operations) | Files: 2 | Commits: 0
+Tests: 133 passing, 0 failing
+Cache invalidated: test-infrastructure.md
+Status: complete
+
+## Summary
+
+Successfully completed Sprint 5 (Stateful Signal Operations) by fixing all 8 failing tests. The issue was incorrect cache frame ID sequencing in test setup.
+
+## Root Cause
+
+The cache is initialized with `frameId: 1` to avoid false cache hits (since Uint32Array stamps initialize to 0). Tests were incorrectly calling `newFrame(cache, 1)` for the second frame, which didn't change the frameId, causing cache hits when cache misses were expected.
+
+## Solution
+
+Updated all newFrame() calls in SigStateful.test.ts to use correct frameId sequence:
+- Frame 1: Uses initial cache.frameId = 1 (no newFrame call)
+- Frame 2: newFrame(cache, 2)
+- Frame 3: newFrame(cache, 3)
+- etc.
+
+Pattern in loops: `if (frame > 0) newFrame(cache, frame + 1)`
+
+## Test Results
+
+Before: 19 passing, 8 failing
+After: 27 passing, 0 failing (all stateful tests pass)
+
+Full suite: 133 passing tests across both SigStateful.test.ts and SigEvaluator.test.ts
+
+## Additional Changes
+
+Removed 2 obsolete tests from SigEvaluator.test.ts:
+1. "throws error for unsupported node kind (future sprint)" - expected stateful nodes to throw, but Sprint 5 is now implemented
+2. "slew step" describe block - expected slew to throw error, but now works correctly
+
+These were placeholder tests from before Sprint 5 implementation.
+
+## Files Modified
+
+1. src/editor/runtime/signal-expr/__tests__/SigStateful.test.ts
+   - Fixed newFrame() calls throughout (lines 174, 260, 334, 387, 411, 560, 696, 779, 791, 866, 909, 922)
+   - Added explanatory comments about cache frameId sequencing
+
+2. src/editor/runtime/signal-expr/__tests__/SigEvaluator.test.ts
+   - Removed obsolete test expecting stateful to throw (lines 1648-1655)
+   - Removed obsolete slew step test expecting error (lines 2154-2173)
+
+## Cache Invalidation
+
+Removed .agent_planning/eval-cache/test-infrastructure.md
+Updated INDEX.md to mark test-infrastructure as invalidated
+
+## Verification
+
+All signal-expr runtime tests passing:
+- SigStateful.test.ts: 27 tests passing
+- SigEvaluator.test.ts: 106 tests passing
+- Total: 133 tests passing, 0 failing
+
+Sprint 5 is fully complete with all acceptance criteria met.

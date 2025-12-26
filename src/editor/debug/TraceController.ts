@@ -82,7 +82,7 @@ export class TraceController {
   // ===========================================================================
 
   private loadModeFromStorage(): TraceMode {
-    if (typeof window === 'undefined' || !window.localStorage) {
+    if (window == null) {
       return 'off'; // Default for SSR/non-browser
     }
 
@@ -99,7 +99,7 @@ export class TraceController {
   }
 
   private saveModeToStorage(mode: TraceMode): void {
-    if (typeof window === 'undefined' || !window.localStorage) {
+    if (window == null) {
       return; // No-op for SSR/non-browser
     }
 

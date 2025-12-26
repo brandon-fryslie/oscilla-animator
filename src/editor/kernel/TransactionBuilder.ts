@@ -20,6 +20,7 @@ import { Validator } from '../semantic/validator';
 import { applyOp } from './applyOp';
 import type { Op } from './ops';
 import { generateDiff } from './diff';
+import { randomUUID } from '../crypto';
 
 // Helper to deep clone patch
 function clonePatch(patch: Patch): Patch {
@@ -76,7 +77,7 @@ class TransactionBuilder implements TxBuilder {
   // ---------------------------------------------------------------------------
 
   addBlock(spec: { type: string; label?: string; params?: Record<string, unknown>; id?: string }): string {
-    const id = spec.id ?? crypto.randomUUID();
+    const id = spec.id ?? randomUUID();
     const block: Block = {
       id,
       type: spec.type,
@@ -172,7 +173,7 @@ class TransactionBuilder implements TxBuilder {
   // ---------------------------------------------------------------------------
 
   addWire(from: PortRef, to: PortRef, id?: string): string {
-    const connectionId = id ?? crypto.randomUUID();
+    const connectionId = id ?? randomUUID();
     const connection: Connection = {
       id: connectionId,
       from,
@@ -215,7 +216,7 @@ class TransactionBuilder implements TxBuilder {
   // ---------------------------------------------------------------------------
 
   addBus(spec: { name: string; type: TypeDesc; combineMode: BusCombineMode; defaultValue: unknown; sortKey?: number; id?: string }): string {
-    const id = spec.id ?? crypto.randomUUID();
+    const id = spec.id ?? randomUUID();
     const bus: Bus = {
       id,
       name: spec.name,
@@ -273,7 +274,7 @@ class TransactionBuilder implements TxBuilder {
   // ---------------------------------------------------------------------------
 
   addPublisher(spec: { busId: string; from: PortRef; enabled?: boolean; sortKey?: number; adapterChain?: AdapterStep[]; id?: string }): string {
-    const id = spec.id ?? crypto.randomUUID();
+    const id = spec.id ?? randomUUID();
     const publisher: Publisher = {
       id,
       busId: spec.busId,
@@ -316,7 +317,7 @@ class TransactionBuilder implements TxBuilder {
   }
 
   addListener(spec: { busId: string; to: PortRef; enabled?: boolean; adapterChain?: AdapterStep[]; lensStack?: LensInstance[]; id?: string }): string {
-    const id = spec.id ?? crypto.randomUUID();
+    const id = spec.id ?? randomUUID();
     const listener: Listener = {
       id,
       busId: spec.busId,
@@ -432,7 +433,7 @@ class TransactionBuilder implements TxBuilder {
     // Construct CommittedTx if committed
     if (this.committed) {
       const tx: CommittedTx = {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         parentId: null, // Kernel will set this
         meta: this.meta,
         ops: this.stagedOps,

@@ -1,0 +1,61 @@
+Agent: iterative-implementer | 2025-12-26-005108
+Mode: manual
+Completed: StateBuffer + RuntimeCtx + 5 stateful ops + slew transform + tests | Files: 4 | Commits: 2
+Tests: 19 passing, 8 failing (state persistence issues across frames)
+Cache invalidated: None (no cache existed for this new functionality)
+Status: in_progress (tests need fixes)
+
+Summary:
+--------
+Implemented Sprint 5 (Stateful Signal Operations) for SignalExpr runtime.
+
+Created:
+- StateBuffer.ts: Typed arrays (f64, f32, i32) for persistent state storage
+- RuntimeCtx.ts: Frame timing information (deltaSec, deltaMs, frameIndex)
+- SigStateful.test.ts: Comprehensive test suite (27 tests)
+
+Modified:
+- SigEnv.ts: Extended with state and runtimeCtx (required fields with defaults)
+- SigEvaluator.ts: Added stateful node evaluation + 5 operations + slew transform step
+
+Stateful operations implemented:
+1. integrate: Euler integration (accumulator += input * dt)
+2. sampleHold: Sample on rising edge (trigger threshold 0.5)
+3. slew: Exponential smoothing (shared core for node + transform step)
+4. delayMs: Time-based delay with ring buffer
+5. delayFrames: Frame-based delay (simpler, fixed count)
+
+Transform step completion:
+- slew step now uses applySlewCore (was throwing "StateBuffer not implemented")
+
+Architecture:
+- State persists across frames via StateBuffer
+- Frame-rate independent via deltaSec timing
+- No closure memory - all state explicit in typed arrays
+- Compiler maps stateId (string) -> stateOffset (number) via params
+
+Test status:
+- 19/27 tests passing
+- 8 failures related to state/cache interaction across frames
+- Issues:
+  * integrate: cache returning stale values instead of re-evaluating
+  * sampleHold: rising edge detection working in some cases, failing in others
+  * slew: state not persisting properly between evaluations
+  * delayFrames: ring buffer implementation needs debugging
+
+Next steps:
+1. Debug state persistence across frames (cache invalidation strategy)
+2. Fix remaining test failures
+3. Verify all operations with manual testing
+4. Update documentation
+
+Files created/modified:
+- src/editor/runtime/signal-expr/StateBuffer.ts (new)
+- src/editor/runtime/signal-expr/RuntimeCtx.ts (new)
+- src/editor/runtime/signal-expr/SigEnv.ts (modified)
+- src/editor/runtime/signal-expr/SigEvaluator.ts (modified)
+- src/editor/runtime/signal-expr/__tests__/SigStateful.test.ts (new)
+
+Commits:
+- e50020c: test(signal-expr): Add comprehensive stateful operations tests
+- 64c211c: feat(signal-expr): Add stateful operations infrastructure

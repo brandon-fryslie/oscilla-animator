@@ -762,7 +762,7 @@ export function createCompilerService(store: RootStore): CompilerService {
       const startTime = performance.now();
 
       // Generate compileId
-      const compileId = crypto.randomUUID();
+      const compileId = randomUUID();
       const patchId = store.patchStore.patchId;
       const patchRevision = store.patchStore.patchRevision;
 
@@ -1038,6 +1038,7 @@ function buildBusUsageSummary(patch: CompilerPatch): Record<string, { publishers
 // =============================================================================
 
 import { reaction } from 'mobx';
+import {randomUUID} from "../crypto.ts";
 
 export interface AutoCompileOptions {
   /** Debounce delay in ms (default: 300) */

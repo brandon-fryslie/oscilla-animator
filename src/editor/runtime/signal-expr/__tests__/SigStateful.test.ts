@@ -171,7 +171,7 @@ describe("stateful - integrate", () => {
     expect(state.f64[0]).toBeCloseTo(0.1, 5);
 
     // Frame 2: 0.1 + 1.0 * 0.1 = 0.2
-    newFrame(cache, 1);
+    newFrame(cache, 2);
     const env2 = createSigEnv({
       tAbsMs: 100,
       constPool,
@@ -202,9 +202,14 @@ describe("stateful - integrate", () => {
     ];
 
     // Integrate 10.0 over 10 frames of 0.1 sec each
+    // CRITICAL: Cache starts at frameId=1, so we evaluate first frame with frameId=1,
+    // then call newFrame with 2, 3, 4, ..., 10 for subsequent frames
     let result = 0;
     for (let frame = 0; frame < 10; frame++) {
-      newFrame(cache, frame);
+      // Set cache frameId: first iteration uses frameId=1 (initial), then 2, 3, ...
+      if (frame > 0) {
+        newFrame(cache, frame + 1);
+      }
       const env = createSigEnv({
         tAbsMs: frame * 100,
         constPool,
@@ -252,7 +257,7 @@ describe("stateful - integrate", () => {
     resetStateBuffer(state);
 
     // 60fps (0.0166 sec per frame)
-    newFrame(cache, 1);
+    newFrame(cache, 2);
     const env2 = createSigEnv({
       tAbsMs: 0,
       constPool,
@@ -326,7 +331,7 @@ describe("stateful - sampleHold", () => {
     expect(evalSig(2, env1, nodes)).toBe(0); // Initial held value
 
     // Frame 2: trigger high (1.0), sample!
-    newFrame(cache, 1);
+    newFrame(cache, 2);
     const constPool2 = createConstPool([42, 1.0]);
     const nodes2 = [
       { kind: "const", type: numberType, constId: 0 },
@@ -379,7 +384,7 @@ describe("stateful - sampleHold", () => {
     evalSig(2, env, nodes1);
 
     // Frame 2: trigger high, input 100 (sample)
-    newFrame(cache, 1);
+    newFrame(cache, 2);
     constPool = createConstPool([100, 1.0]);
     const nodes2: SignalExprIR[] = [
       { kind: "const", type: numberType, constId: 0 },
@@ -403,7 +408,7 @@ describe("stateful - sampleHold", () => {
     expect(evalSig(2, env, nodes2)).toBe(100);
 
     // Frame 3: trigger still high, input changes to 999 (hold, no new sample)
-    newFrame(cache, 2);
+    newFrame(cache, 3);
     constPool = createConstPool([999, 1.0]);
     const nodes3: SignalExprIR[] = [
       { kind: "const", type: numberType, constId: 0 },
@@ -552,7 +557,7 @@ describe("stateful - slew", () => {
     expect(v1).toBeLessThan(100);
 
     // Frame 2: closer to 100
-    newFrame(cache, 1);
+    newFrame(cache, 2);
     const env2 = createSigEnv({
       tAbsMs: 100,
       constPool,
@@ -688,7 +693,7 @@ describe("transform - slew step", () => {
     expect(v1).toBeLessThan(100);
 
     // Frame 2: closer to 100
-    newFrame(cache, 1);
+    newFrame(cache, 2);
     const env2 = createSigEnv({
       tAbsMs: 100,
       constPool: createConstPool([100]),
@@ -771,7 +776,7 @@ describe("stateful - delayMs", () => {
 
     // Run ~7 more frames (100ms / 16ms ≈ 6.25 frames)
     for (let i = 1; i < 8; i++) {
-      newFrame(cache, i);
+      newFrame(cache, i + 1);
       const env = createSigEnv({
         tAbsMs: i * 16,
         constPool,
@@ -783,7 +788,7 @@ describe("stateful - delayMs", () => {
     }
 
     // After ~100ms, delayed output should now be 100
-    newFrame(cache, 8);
+    newFrame(cache, 9);
     const env2 = createSigEnv({
       tAbsMs: 128,
       constPool,
@@ -858,7 +863,7 @@ describe("stateful - delayFrames", () => {
     expect(evalSig(1, env1, nodes1)).toBe(0);
 
     // Frame 2: input=200, output=100 (delayed by 1 frame)
-    newFrame(cache, 1);
+    newFrame(cache, 2);
     const nodes2: SignalExprIR[] = [
       { kind: "const", type: numberType, constId: 0 }, // 200
       {
@@ -900,7 +905,9 @@ describe("stateful - delayFrames", () => {
     // Feed values: frame0=100, frame1=200, ..., frame5=600
     const values = [100, 200, 300, 400, 500, 600];
     for (let i = 0; i < values.length; i++) {
-      newFrame(cache, i);
+      if (i > 0) {
+        newFrame(cache, i + 1);
+      }
       const env = createSigEnv({
         tAbsMs: i * 16,
         constPool: createConstPool([values[i]]),
@@ -912,7 +919,7 @@ describe("stateful - delayFrames", () => {
     }
 
     // Frame 6: should output value from frame 1 (200)
-    newFrame(cache, 6);
+    newFrame(cache, 7);
     const env6 = createSigEnv({
       tAbsMs: 96,
       constPool: createConstPool([700]),

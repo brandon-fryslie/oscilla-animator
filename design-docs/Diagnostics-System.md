@@ -542,7 +542,7 @@ function compileErrorToDiagnostic(
 
 ```typescript
 compile(): CompileResult {
-  const compileId = crypto.randomUUID();
+  const compileId = randomUUID();
 
   // Emit CompileStarted
   store.events.emit({

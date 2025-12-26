@@ -21,6 +21,7 @@ import { mapConnections, copyCompatibleParams, type ReplacementResult } from '..
 import type { GraphCommitReason, GraphDiffSummary } from '../events/types';
 import { Validator } from '../semantic';
 import { storeToPatchDocument } from '../semantic/patchAdapter';
+import { randomUUID } from "../crypto";
 
 // =============================================================================
 // Migration Helpers
@@ -51,7 +52,7 @@ export class PatchStore {
    * Unique identifier for this patch.
    * Generated once when the patch is created, persisted across saves.
    */
-  patchId: string = crypto.randomUUID();
+  patchId: string = randomUUID();
 
   /**
    * Monotonic revision number that increments on every committed graph edit.
@@ -95,7 +96,7 @@ export class PatchStore {
    * Reset the patch ID (called when loading a new patch or clearing).
    */
   resetPatchId(newId?: string): void {
-    this.patchId = newId ?? crypto.randomUUID();
+    this.patchId = newId ?? randomUUID();
     this.patchRevision = 0;
   }
 
@@ -539,10 +540,10 @@ export class PatchStore {
     );
 
     // Return the first block ID (for selection purposes)
-    const firstRef = expansion.blocks[0]?.ref;
-    if (firstRef !== undefined && firstRef !== null && firstRef !== '') {
-      const mappedId = refToId.get(firstRef);
-      return mappedId !== undefined && mappedId !== null ? mappedId : '';
+    const firstBlock = expansion.blocks[0];
+    if (firstBlock != null) {
+      const mappedId = refToId.get(firstBlock.ref);
+      return mappedId ?? '';
     }
     return '';
   }

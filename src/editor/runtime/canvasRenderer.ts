@@ -231,7 +231,7 @@ export class Canvas2DRenderer {
         ctx.globalAlpha *= cmd.opacity;
         this.stats.stateChangeCount++;
       }
-      if (cmd.transform) {
+      if (cmd.transform != null) {
         applyTransform(ctx, cmd.transform);
         this.stats.stateChangeCount++;
       }

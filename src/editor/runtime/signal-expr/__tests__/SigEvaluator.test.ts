@@ -1645,14 +1645,6 @@ describe("evalSig - error handling", () => {
     expect(() => evalSig(0, env, nodes)).toThrow("Unknown signal node kind");
   });
 
-  it("throws error for unsupported node kind (future sprint)", () => {
-    const env = createTestEnv();
-    const nodes: SignalExprIR[] = [
-      { kind: "stateful", type: numberType, op: "integrate", stateId: "s0" },
-    ];
-
-    expect(() => evalSig(0, env, nodes)).toThrow("not yet implemented");
-  });
 });
 
 // =============================================================================
@@ -2151,26 +2143,6 @@ describe("evalSig - transform nodes", () => {
     });
   });
 
-  describe("slew step", () => {
-    it("throws not implemented error", () => {
-      const chain: TransformChainIR = {
-        steps: [{ kind: "slew", stateOffset: 0, rate: 1.0 }],
-        fromType: numberType,
-        toType: numberType,
-        cost: "normal",
-      };
-      const nodes: SignalExprIR[] = [
-        { kind: "const", type: numberType, constId: 0 },
-        { kind: "transform", type: numberType, src: 0, chain: 0 },
-      ];
-      const env = createTestEnv({
-        consts: [0],
-        transformTable: { chains: [chain] },
-      });
-
-      expect(() => evalSig(1, env, nodes)).toThrow("StateBuffer");
-    });
-  });
 
   describe("caching", () => {
     it("caches transform result", () => {

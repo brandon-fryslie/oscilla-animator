@@ -493,7 +493,7 @@ setActivePatchRevision(revision: number): void {
       type: 'ProgramSwapped',
       patchId: 'default',
       patchRevision: revision,
-      compileId: crypto.randomUUID(),
+      compileId: randomUUID(),
       swapMode: previousRevision === 0 ? 'hard' : 'soft',
       swapLatencyMs: 0,
       stateBridgeUsed: false,

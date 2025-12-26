@@ -347,7 +347,7 @@ export function typeDescToString(type: TypeDesc): string {
 
   const domainStr = type.domain.charAt(0).toUpperCase() + type.domain.slice(1);
 
-  if (type.semantics) {
+  if (type.semantics != null) {
     return `${worldPrefix}<${domainStr}:${type.semantics}>`;
   }
 

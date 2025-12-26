@@ -4,13 +4,14 @@
  */
 import { describe, it, expect } from 'vitest';
 import type { CompileStartedEvent, CompileFinishedEvent, CompileTrigger, CompileStatus } from '../types';
+import {randomUUID} from "../../crypto.ts";
 
 describe('CompileStarted Event Payload', () => {
   it('should have required compileId field', () => {
     const event: CompileStartedEvent = {
       type: 'CompileStarted',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       trigger: 'graphCommitted',
     };
@@ -23,8 +24,8 @@ describe('CompileStarted Event Payload', () => {
   it('should have required patchId field', () => {
     const event: CompileStartedEvent = {
       type: 'CompileStarted',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       trigger: 'graphCommitted',
     };
@@ -36,8 +37,8 @@ describe('CompileStarted Event Payload', () => {
   it('should have required patchRevision field', () => {
     const event: CompileStartedEvent = {
       type: 'CompileStarted',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 42,
       trigger: 'graphCommitted',
     };
@@ -50,8 +51,8 @@ describe('CompileStarted Event Payload', () => {
   it('should have required trigger field', () => {
     const event: CompileStartedEvent = {
       type: 'CompileStarted',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       trigger: 'manual',
     };
@@ -66,8 +67,8 @@ describe('CompileStarted Event Payload', () => {
     triggers.forEach((trigger) => {
       const event: CompileStartedEvent = {
         type: 'CompileStarted',
-        compileId: crypto.randomUUID(),
-        patchId: crypto.randomUUID(),
+        compileId: randomUUID(),
+        patchId: randomUUID(),
         patchRevision: 1,
         trigger,
       };
@@ -79,8 +80,8 @@ describe('CompileStarted Event Payload', () => {
   it('should have type field equal to "CompileStarted"', () => {
     const event: CompileStartedEvent = {
       type: 'CompileStarted',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       trigger: 'graphCommitted',
     };
@@ -91,11 +92,11 @@ describe('CompileStarted Event Payload', () => {
 
 describe('CompileFinished Event Payload', () => {
   it('should have required compileId field matching CompileStarted', () => {
-    const compileId = crypto.randomUUID();
+    const compileId = randomUUID();
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
       compileId,
-      patchId: crypto.randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       status: 'ok',
       durationMs: 42,
@@ -109,8 +110,8 @@ describe('CompileFinished Event Payload', () => {
   it('should have required patchId field', () => {
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       status: 'ok',
       durationMs: 42,
@@ -124,8 +125,8 @@ describe('CompileFinished Event Payload', () => {
   it('should have required patchRevision field', () => {
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 5,
       status: 'ok',
       durationMs: 42,
@@ -139,8 +140,8 @@ describe('CompileFinished Event Payload', () => {
   it('should have required status field', () => {
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       status: 'failed',
       durationMs: 42,
@@ -157,8 +158,8 @@ describe('CompileFinished Event Payload', () => {
     statuses.forEach((status) => {
       const event: CompileFinishedEvent = {
         type: 'CompileFinished',
-        compileId: crypto.randomUUID(),
-        patchId: crypto.randomUUID(),
+        compileId: randomUUID(),
+        patchId: randomUUID(),
         patchRevision: 1,
         status,
         durationMs: 42,
@@ -172,8 +173,8 @@ describe('CompileFinished Event Payload', () => {
   it('should have required durationMs field', () => {
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       status: 'ok',
       durationMs: 123.456,
@@ -188,8 +189,8 @@ describe('CompileFinished Event Payload', () => {
   it('should have required diagnostics array', () => {
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       status: 'ok',
       durationMs: 42,
@@ -203,8 +204,8 @@ describe('CompileFinished Event Payload', () => {
   it('should have diagnostics array on success', () => {
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       status: 'ok',
       durationMs: 42,
@@ -217,8 +218,8 @@ describe('CompileFinished Event Payload', () => {
   it('should have diagnostics array on failure', () => {
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       status: 'failed',
       durationMs: 42,
@@ -231,8 +232,8 @@ describe('CompileFinished Event Payload', () => {
   it('should have optional programMeta field on success', () => {
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       status: 'ok',
       durationMs: 42,
@@ -254,8 +255,8 @@ describe('CompileFinished Event Payload', () => {
     timeModelKinds.forEach((kind) => {
       const event: CompileFinishedEvent = {
         type: 'CompileFinished',
-        compileId: crypto.randomUUID(),
-        patchId: crypto.randomUUID(),
+        compileId: randomUUID(),
+        patchId: randomUUID(),
         patchRevision: 1,
         status: 'ok',
         durationMs: 42,
@@ -281,8 +282,8 @@ describe('CompileFinished Event Payload', () => {
     timeRootKinds.forEach((kind) => {
       const event: CompileFinishedEvent = {
         type: 'CompileFinished',
-        compileId: crypto.randomUUID(),
-        patchId: crypto.randomUUID(),
+        compileId: randomUUID(),
+        patchId: randomUUID(),
         patchRevision: 1,
         status: 'ok',
         durationMs: 42,
@@ -300,8 +301,8 @@ describe('CompileFinished Event Payload', () => {
   it('should support optional busUsageSummary in programMeta', () => {
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       status: 'ok',
       durationMs: 42,
@@ -323,8 +324,8 @@ describe('CompileFinished Event Payload', () => {
   it('should have type field equal to "CompileFinished"', () => {
     const event: CompileFinishedEvent = {
       type: 'CompileFinished',
-      compileId: crypto.randomUUID(),
-      patchId: crypto.randomUUID(),
+      compileId: randomUUID(),
+      patchId: randomUUID(),
       patchRevision: 1,
       status: 'ok',
       durationMs: 42,
@@ -337,8 +338,8 @@ describe('CompileFinished Event Payload', () => {
 
 describe('CompileStarted and CompileFinished correlation', () => {
   it('should use same compileId for paired events', () => {
-    const compileId = crypto.randomUUID();
-    const patchId = crypto.randomUUID();
+    const compileId = randomUUID();
+    const patchId = randomUUID();
     const patchRevision = 1;
 
     const startedEvent: CompileStartedEvent = {

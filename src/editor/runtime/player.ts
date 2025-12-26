@@ -15,6 +15,7 @@
 import type { RenderTree } from './renderTree';
 import type { CompileCtx, RuntimeCtx, Program, Seed, CuePoint, TimeModel } from '../compiler/types';
 import type { EventDispatcher } from '../events/EventDispatcher';
+import {randomUUID} from "../crypto.ts";
 
 // =============================================================================
 // Types
@@ -203,7 +204,7 @@ export class Player {
         type: 'ProgramSwapped',
         patchId: 'default',
         patchRevision: revision,
-        compileId: crypto.randomUUID(),
+        compileId: randomUUID(),
         swapMode: previousRevision === 0 ? 'hard' : 'soft',
         swapLatencyMs: 0,
         stateBridgeUsed: false,

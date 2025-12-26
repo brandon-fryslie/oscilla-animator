@@ -7,10 +7,6 @@ default:
 
 # Development server
 dev:
-    pnpm dev
-
-# Development server with host binding (for network access)
-dev-host:
     pnpm dev --host 0.0.0.0
 
 # Production build

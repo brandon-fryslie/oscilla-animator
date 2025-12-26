@@ -8,9 +8,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
-import type { PortRef, Block, Slot, Connection } from './types';
+import type { PortRef, Block, Slot, Connection, DefaultSourceState } from './types';
 import { getBlockDefinition, getBlockDefinitions, type BlockDefinition } from './blocks';
-import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint } from './portUtils';
+import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint, isInputDriven } from './portUtils';
+import { InspectorContainer } from './components/InspectorContainer';
 import './Inspector.css';
 
 /**
@@ -287,18 +288,19 @@ const PortWiringPanel = observer(({
     );
   };
 
-  return (
-    <div className="port-wiring-panel">
-      <div className="wiring-panel-header" style={{ borderLeftColor: blockColor }}>
-        <div className="wiring-panel-title">
-          <span className="wiring-port-direction">
-            {portRef.direction === 'input' ? '← Input' : 'Output →'}
-          </span>
-          <h3>{slot.label}</h3>
-        </div>
-      </div>
+  const handleBack = () => {
+    store.uiStore.setSelectedPort(null);
+  };
 
-      <div className="wiring-panel-body">
+  return (
+    <InspectorContainer
+      title={slot.label}
+      typeCode={slot.type}
+      category={portRef.direction === 'input' ? 'Input' : 'Output'}
+      color={blockColor}
+      onBack={handleBack}
+      backLabel="Back to Block"
+    >
         <div className="wiring-section">
           <div className="wiring-info">
             <div className="wiring-info-row">
@@ -473,8 +475,7 @@ const PortWiringPanel = observer(({
             </ul>
           </div>
         )}
-      </div>
-    </div>
+    </InspectorContainer>
   );
 });
 
@@ -723,6 +724,231 @@ const BusConnectionsSection = observer(({ block }: { block: Block }) => {
           <span className="bus-direction">Listens:</span>
           {subscriptions.map(l => (
             <span key={l.id} className="bus-tag listen">{l.busId}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+/**
+ * Render a control for editing a DefaultSource value based on its uiHint.
+ */
+function DefaultSourceControl({
+  ds,
+  isDriven,
+  onChange,
+}: {
+  ds: DefaultSourceState;
+  isDriven: boolean;
+  onChange: (value: unknown) => void;
+}) {
+  const uiHint = ds.uiHint;
+
+  // Slider control
+  if (uiHint?.kind === 'slider') {
+    return (
+      <input
+        type="range"
+        className="param-input"
+        min={uiHint.min}
+        max={uiHint.max}
+        step={uiHint.step}
+        value={typeof ds.value === 'number' ? ds.value : 0}
+        disabled={isDriven}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+      />
+    );
+  }
+
+  // Number control
+  if (uiHint?.kind === 'number' || typeof ds.value === 'number') {
+    const min = uiHint?.kind === 'number' ? uiHint.min : undefined;
+    const max = uiHint?.kind === 'number' ? uiHint.max : undefined;
+    const step = uiHint?.kind === 'number' ? uiHint.step : 0.1;
+    return (
+      <input
+        type="number"
+        className="param-input"
+        min={min}
+        max={max}
+        step={step}
+        value={typeof ds.value === 'number' ? ds.value : 0}
+        disabled={isDriven}
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+      />
+    );
+  }
+
+  // Select control
+  if (uiHint?.kind === 'select') {
+    return (
+      <select
+        className="param-input"
+        value={String(ds.value)}
+        disabled={isDriven}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {uiHint.options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  // Color control
+  if (uiHint?.kind === 'color') {
+    return (
+      <input
+        type="color"
+        className="param-input"
+        value={String(ds.value || '#000000')}
+        disabled={isDriven}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  }
+
+  // Boolean control
+  if (uiHint?.kind === 'boolean' || typeof ds.value === 'boolean') {
+    return (
+      <input
+        type="checkbox"
+        checked={Boolean(ds.value)}
+        disabled={isDriven}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+    );
+  }
+
+  // XY control (vec2)
+  if (uiHint?.kind === 'xy') {
+    const value = ds.value as { x?: number; y?: number } | undefined;
+    const x = value?.x ?? 0;
+    const y = value?.y ?? 0;
+    return (
+      <div className="param-xy">
+        <input
+          type="number"
+          className="param-input"
+          placeholder="x"
+          value={x}
+          disabled={isDriven}
+          onChange={(e) => onChange({ x: parseFloat(e.target.value) || 0, y })}
+        />
+        <input
+          type="number"
+          className="param-input"
+          placeholder="y"
+          value={y}
+          disabled={isDriven}
+          onChange={(e) => onChange({ x, y: parseFloat(e.target.value) || 0 })}
+        />
+      </div>
+    );
+  }
+
+  // Text fallback
+  return (
+    <input
+      type="text"
+      className="param-input"
+      value={String(ds.value ?? '')}
+      disabled={isDriven}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}
+
+/**
+ * Default Sources section - shows editable controls for undriven inputs
+ * Priority: Wire > Bus Listener > DefaultSource
+ * Only show controls when input is NOT driven (no wire, no bus)
+ */
+const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
+  const store = useStore();
+  const connections = store.patchStore.connections;
+  const listeners = store.busStore.listeners;
+
+  // Find inputs that have default sources
+  const inputsWithDefaults = useMemo(() => {
+    const results: Array<{
+      slot: Slot;
+      ds: DefaultSourceState;
+      isDriven: boolean;
+    }> = [];
+
+    for (const slot of block.inputs) {
+      const ds = store.defaultSourceStore.getDefaultSourceForInput(block.id, slot.id);
+      if (!ds) continue;
+
+      const driven = isInputDriven(block.id, slot.id, connections, listeners);
+      results.push({ slot, ds, isDriven: driven });
+    }
+
+    return results;
+  }, [block.id, block.inputs, connections, listeners, store.defaultSourceStore.sources]);
+
+  // Only show if there are any default sources
+  if (inputsWithDefaults.length === 0) return null;
+
+  const handleChange = (blockId: string, slotId: string, value: unknown) => {
+    store.defaultSourceStore.setDefaultValueForInput(blockId, slotId, value);
+  };
+
+  // Separate into primary (undriven) and secondary (driven) sections
+  const undrivenInputs = inputsWithDefaults.filter((i) => !i.isDriven);
+  const drivenInputs = inputsWithDefaults.filter((i) => i.isDriven);
+
+  return (
+    <div className="insp-section">
+      <span className="insp-section-title">
+        Default Values
+        {undrivenInputs.length > 0 && (
+          <span className="insp-count">{undrivenInputs.length} active</span>
+        )}
+      </span>
+
+      {/* Active (undriven) inputs - editable */}
+      {undrivenInputs.length > 0 && (
+        <div className="param-grid">
+          {undrivenInputs.map(({ slot, ds }) => (
+            <div key={slot.id} className="param-row">
+              <label className="param-key">{slot.label}</label>
+              <DefaultSourceControl
+                ds={ds}
+                isDriven={false}
+                onChange={(val) => handleChange(block.id, slot.id, val)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Driven inputs - show what's overriding them */}
+      {drivenInputs.length > 0 && undrivenInputs.length > 0 && (
+        <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid #252525' }}>
+          <span className="insp-section-title" style={{ fontSize: 8, color: '#444' }}>
+            Overridden by wire/bus
+          </span>
+        </div>
+      )}
+      {drivenInputs.length > 0 && (
+        <div className="param-grid" style={{ marginTop: 4 }}>
+          {drivenInputs.map(({ slot, ds }) => (
+            <div key={slot.id} className="param-row param-row-driven">
+              <label className="param-key">
+                {slot.label}
+                <span className="driven-badge">driven</span>
+              </label>
+              <DefaultSourceControl
+                ds={ds}
+                isDriven={true}
+                onChange={() => {}}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -998,6 +1224,9 @@ export const Inspector = observer(() => {
                           </div>
                         </div>
                       )}
+
+                      {/* Default Sources - editable when not driven */}
+                      <DefaultSourcesSection block={block} />
 
                       {/* Bus connections */}
                       <BusConnectionsSection block={block} />

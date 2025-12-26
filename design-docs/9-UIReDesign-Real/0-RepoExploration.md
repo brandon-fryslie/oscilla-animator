@@ -161,7 +161,7 @@ That’s the prompt.
 
   - Version: Integer version number for migration
   - Serialization: JSON-serializable, no custom serializers found
-  - IDs: Generated via crypto.randomUUID() or prefix-based (block-1, conn-1) - see RootStore.generateId()
+  - IDs: Generated via randomUUID() or prefix-based (block-1, conn-1) - see RootStore.generateId()
 
   Block / BlockInstance / Slot
 
@@ -305,7 +305,7 @@ That’s the prompt.
   connections: Connection[] = [];
   lanes: Lane[] = [];
   currentLayoutId: string;
-  patchId: string = crypto.randomUUID();
+  patchId: string = randomUUID();
   patchRevision: number = 0;
 
   Computed:

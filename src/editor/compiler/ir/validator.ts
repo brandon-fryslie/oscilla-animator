@@ -63,7 +63,7 @@ export function validateIR(ir: LinkedGraphIR): ValidationResult {
             errors.push({
               code: 'InvalidSigExprRef',
               message: `Signal expression ${i} references invalid signal ${depId} (max: ${program.signalIR.nodes.length - 1})`,
-              where: { sigExprId: i as SigExprId },
+              where: { sigExprId: i },
             });
           }
         }
@@ -83,7 +83,7 @@ export function validateIR(ir: LinkedGraphIR): ValidationResult {
             errors.push({
               code: 'InvalidFieldExprRef',
               message: `Field expression ${i} references invalid field ${depId} (max: ${program.fieldIR.nodes.length - 1})`,
-              where: { fieldExprId: i as FieldExprId },
+              where: { fieldExprId: i },
             });
           }
         }
@@ -103,7 +103,7 @@ export function validateIR(ir: LinkedGraphIR): ValidationResult {
         errors.push({
           code: 'InvalidConstRef',
           message: `Signal expression ${i} references invalid const ${expr.constId} (max: ${constPoolSize - 1})`,
-          where: { sigExprId: i as SigExprId, constId: expr.constId },
+          where: { sigExprId: i, constId: expr.constId },
         });
       }
     }
@@ -118,7 +118,7 @@ export function validateIR(ir: LinkedGraphIR): ValidationResult {
         errors.push({
           code: 'InvalidConstRef',
           message: `Field expression ${i} references invalid const ${expr.constId} (max: ${constPoolSize - 1})`,
-          where: { fieldExprId: i as FieldExprId, constId: expr.constId },
+          where: { fieldExprId: i, constId: expr.constId },
         });
       }
     }
@@ -147,7 +147,7 @@ export function validateIR(ir: LinkedGraphIR): ValidationResult {
             errors.push({
               code: 'CircularReference',
               message: `Circular reference detected in signal expression chain involving ${id}`,
-              where: { sigExprId: id as SigExprId },
+              where: { sigExprId: id },
             });
             signalRecStack.delete(id);
             return true;
@@ -189,7 +189,7 @@ export function validateIR(ir: LinkedGraphIR): ValidationResult {
             errors.push({
               code: 'CircularReference',
               message: `Circular reference detected in field expression chain involving ${id}`,
-              where: { fieldExprId: id as FieldExprId },
+              where: { fieldExprId: id },
             });
             fieldRecStack.delete(id);
             return true;

@@ -233,7 +233,7 @@ export class UnifiedCompiler {
     // Collect state memory
     const stateMemory = new Map<string, StateMemory>();
     for (const block of compiledBlocks) {
-      if (block.stateMemory) {
+      if (block.stateMemory != null) {
         stateMemory.set(block.id, block.stateMemory);
       }
     }
@@ -259,7 +259,7 @@ export class UnifiedCompiler {
     }
 
     // Add bus nodes
-    const buses = patch.buses
+    const buses = (patch.buses != null)
       ? Array.isArray(patch.buses)
         ? patch.buses
         : Array.from(patch.buses.values())
@@ -274,7 +274,7 @@ export class UnifiedCompiler {
     }
 
     // Add publish edges (block to bus)
-    if (patch.publishers) {
+    if (patch.publishers != null) {
       for (const pub of patch.publishers) {
         if (pub.disabled !== true) {
           this.graph.addPublishEdge(pub.blockId, pub.busId);
@@ -283,7 +283,7 @@ export class UnifiedCompiler {
     }
 
     // Add listen edges (bus to block)
-    if (patch.listeners) {
+    if (patch.listeners != null) {
       for (const listener of patch.listeners) {
         if (listener.disabled !== true) {
           this.graph.addListenEdge(listener.busId, listener.blockId);
@@ -304,7 +304,7 @@ export class UnifiedCompiler {
 
     for (const nodeId of evaluationOrder) {
       const block = patch.blocks.get(nodeId);
-      if (!block) continue; // Skip buses
+      if (block == null) continue; // Skip buses
 
       const stateBlock = stateBlockRegistry.get(block.type);
       const isStateBlock = stateBlock !== undefined;
@@ -338,7 +338,7 @@ export class UnifiedCompiler {
   ): CompiledBus[] {
     const compiledBuses: CompiledBus[] = [];
 
-    const buses = patch.buses
+    const buses = patch.buses != null
       ? Array.isArray(patch.buses)
         ? patch.buses
         : Array.from(patch.buses.values())
@@ -346,16 +346,16 @@ export class UnifiedCompiler {
 
     for (const nodeId of evaluationOrder) {
       const bus = buses.find((b) => b.id === nodeId);
-      if (!bus) continue; // Skip blocks
+      if (bus == null) continue; // Skip blocks
 
       // Find publishers for this bus
-      const publishers = (patch.publishers || [])
+      const publishers = (patch.publishers ?? [])
         .filter((p) => p.busId === bus.id && p.disabled !== true)
         .sort((a, b) => a.sortKey - b.sortKey)
         .map((p) => ({ blockId: p.blockId, port: p.port }));
 
       // Find listeners for this bus
-      const listeners = (patch.listeners || [])
+      const listeners = (patch.listeners ?? [])
         .filter((l) => l.busId === bus.id && l.disabled !== true)
         .map((l) => ({ blockId: l.blockId, port: l.port }));
 
@@ -381,7 +381,7 @@ export class UnifiedCompiler {
    */
   private createStateBlockEvaluator(stateBlock: any): Evaluator {
     return (inputs: Record<string, unknown>, state: StateMemory | null, ctx: TimeCtx) => {
-      if (!state) {
+      if (state == null) {
         throw new Error(`State block ${stateBlock.type} requires state memory`);
       }
 
