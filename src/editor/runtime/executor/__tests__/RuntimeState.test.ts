@@ -280,7 +280,7 @@ describe("RuntimeState", () => {
       expect(runtime.state.i32.length).toBe(1);
 
       expect(runtime.state.f64[0]).toBe(1.1);
-      expect(runtime.state.f32[0]).toBe(2.2);
+      expect(runtime.state.f32[0]).toBeCloseTo(2.2);
       expect(runtime.state.i32[0]).toBe(33);
     });
   });

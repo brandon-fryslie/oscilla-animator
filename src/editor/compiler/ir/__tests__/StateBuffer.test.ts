@@ -362,7 +362,7 @@ describe("StateBuffer", () => {
       initializeState(buffer, layout, constPool);
 
       expect(buffer.f64[0]).toBe(1.1);
-      expect(buffer.f32[0]).toBe(2.2);
+      expect(buffer.f32[0]).toBeCloseTo(2.2);
       expect(buffer.i32[0]).toBe(33);
     });
 

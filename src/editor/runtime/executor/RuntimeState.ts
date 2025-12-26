@@ -103,6 +103,11 @@ export interface FrameCache {
 function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
   const slotSet = new Set<number>();
 
+  // Guard against incomplete program objects (used in some tests)
+  if (!program.schedule || !program.schedule.steps) {
+    return [];
+  }
+
   // Collect all slot indices from schedule steps
   for (const step of program.schedule.steps) {
     switch (step.kind) {
@@ -197,10 +202,24 @@ export function createRuntimeState(program: CompiledProgramIR): RuntimeState {
   const values = createValueStore(slotMeta);
 
   // Create StateBuffer with real implementation
-  const state = createStateBuffer(program.stateLayout);
+  // Guard against incomplete program objects (used in some tests)
+  const stateLayout = program.stateLayout || {
+    cells: [],
+    f64Size: 0,
+    f32Size: 0,
+    i32Size: 0,
+  };
+  const state = createStateBuffer(stateLayout);
 
   // Initialize state cells with values from const pool
-  initializeState(state, program.stateLayout, program.constants);
+  const constPool = program.constants || {
+    json: [],
+    f64: new Float64Array([]),
+    f32: new Float32Array([]),
+    i32: new Int32Array([]),
+    constIndex: [],
+  };
+  initializeState(state, stateLayout, constPool);
 
   // Create stub FrameCache (Sprint 2 will implement full cache)
   const frameCache = createFrameCache();
