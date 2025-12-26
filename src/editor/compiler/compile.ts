@@ -32,9 +32,10 @@ export function compilePatch(
   patch: CompilerPatch,
   registry: BlockRegistry,
   seed: Seed,
-  ctx: CompileCtx
+  ctx: CompileCtx,
+  options?: { emitIR?: boolean }
 ): CompileResult {
- return compileBusAwarePatch(patch, registry, seed, ctx);
+ return compileBusAwarePatch(patch, registry, seed, ctx, options);
 }
 
 
@@ -114,7 +115,15 @@ export function topoSortBlocks(
   for (const c of patch.connections) {
     const a = c.from.blockId;
     const b = c.to.blockId;
-    if (!adj.has(a) || !adj.has(b)) continue;
+    if (!adj.has(a) || !adj.has(b)) {
+      // Connection references non-existent block
+      errors.push({
+        code: 'BlockMissing',
+        message: `Connection references missing block: ${a} or ${b}`,
+        where: { connection: c },
+      });
+      continue;
+    }
     if (!adj.get(a)!.has(b)) {
       adj.get(a)!.add(b);
       indeg.set(b, (indeg.get(b) ?? 0) + 1);
@@ -142,7 +151,10 @@ export function topoSortBlocks(
   }
 
   if (out.length !== ids.length) {
-    errors.push({ code: 'CycleDetected', message: 'Cycle detected in patch graph.' });
+    errors.push({
+      code: 'CycleDetected',
+      message: 'Cycle detected in patch graph',
+    });
     return [];
   }
 
