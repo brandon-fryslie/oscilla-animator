@@ -60,6 +60,7 @@ export const FieldStatMask = {
   HasMinMax: 1,
   HasMean: 2,
   HasStdDev: 4,
+  HasNaN: 8,
 } as const;
 
 export type FieldStatMask = typeof FieldStatMask[keyof typeof FieldStatMask];

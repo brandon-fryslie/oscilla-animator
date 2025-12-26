@@ -4,10 +4,10 @@
  * Right-click context menu for ports, showing disconnect options.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
-import { getConnectionsForPort } from './portUtils';
+import { getConnectionsForPort, findCompatiblePorts } from './portUtils';
 import './ContextMenu.css';
 
 /**
@@ -67,6 +67,33 @@ export const ContextMenu = observer(() => {
   const block = store.patchStore.blocks.find((b) => b.id === portRef.blockId);
   const slots = portRef.direction === 'input' ? block?.inputs : block?.outputs;
   const slot = slots?.find((s) => s.id === portRef.slotId);
+
+  // Find compatible ports that can be connected
+  const compatiblePorts = useMemo(() => {
+    if (!slot) return [];
+    return findCompatiblePorts(
+      portRef,
+      slot,
+      store.patchStore.blocks,
+      store.patchStore.connections
+    ).slice(0, 8); // Limit to 8 to keep menu compact
+  }, [portRef, slot, store.patchStore.blocks, store.patchStore.connections]);
+
+  const handleConnect = (targetBlockId: string, targetSlotId: string) => {
+    if (portRef.direction === 'output') {
+      // This port is an output, target is an input
+      store.patchStore.connect(portRef.blockId, portRef.slotId, targetBlockId, targetSlotId);
+    } else {
+      // This port is an input, target is an output
+      // Remove existing connection first (input can only have one source)
+      const existingConn = connections.find(c => c.to.blockId === portRef.blockId && c.to.slotId === portRef.slotId);
+      if (existingConn) {
+        store.patchStore.disconnect(existingConn.id);
+      }
+      store.patchStore.connect(targetBlockId, targetSlotId, portRef.blockId, portRef.slotId);
+    }
+    store.uiStore.closeContextMenu();
+  };
 
   const handleDisconnect = (connectionId: string) => {
     if (store.uiStore.settings.warnBeforeDisconnect && showConfirm !== connectionId) {
@@ -128,8 +155,29 @@ export const ContextMenu = observer(() => {
           </button>
         </div>
 
+        {/* Compatible ports section - for quick connecting */}
+        {compatiblePorts.length > 0 && (
+          <div className="context-menu-section">
+            <div className="context-menu-section-title">
+              {portRef.direction === 'output' ? 'Connect to Input' : 'Connect from Output'}
+            </div>
+            {compatiblePorts.map((target) => (
+              <div key={`${target.block.id}:${target.slot.id}`} className="context-menu-item">
+                <button
+                  className="context-menu-action connect"
+                  onClick={() => handleConnect(target.block.id, target.slot.id)}
+                >
+                  <span className="context-menu-icon">+</span>
+                  <span className="context-menu-target-block">{target.block.label}</span>
+                  <span className="context-menu-target-slot">{target.slot.label}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {connections.length === 0 ? (
-          <div className="context-menu-empty">No connections</div>
+          compatiblePorts.length === 0 && <div className="context-menu-empty">No connections available</div>
         ) : (
           <>
             <div className="context-menu-section">

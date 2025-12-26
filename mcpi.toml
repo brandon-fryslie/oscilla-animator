@@ -1,3 +1,6 @@
-[servers."chrome-devtools"]
+[servers.chrome-devtools]
 command = "npx"
 args = [ "-y", "chrome-devtools-mcp@latest", "--chromeArg=--disable-blink-features=AutomationControlled", "--chromeArg=--disable-infobars", "--chromeArg=--no-first-run",]
+
+[servers."chromedevtools/chrome-devtools-mcp"]
+args = [ "-y", "chrome-devtools-mcp@latest",]

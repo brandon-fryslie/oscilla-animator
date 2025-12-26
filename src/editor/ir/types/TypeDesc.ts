@@ -14,11 +14,12 @@
 /**
  * Type world categories.
  * - signal: Continuous time-indexed values (evaluated once per frame)
+ * - event: Discrete impulses/triggers (sparse, edge-triggered)
  * - field: Per-element values (lazy, evaluated at render sinks)
  * - scalar: Compile-time constants
  * - config: Configuration values (not runtime)
  */
-export type TypeWorld = 'signal' | 'field' | 'scalar' | 'config';
+export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
 
 // =============================================================================
 // Type Domains

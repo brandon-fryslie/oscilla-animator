@@ -24,54 +24,27 @@ interface BusGroup {
 }
 
 /**
- * Group buses by type (Signal vs Field), with built-in buses pinned first.
- * Phase 3: All are Signal types.
+ * Group buses by origin: built-in first, then user-created.
+ * No world-based filtering - all buses are shown.
  */
 function groupBuses(buses: Bus[]): BusGroup[] {
-  // Separate built-in and user buses
   const builtInBuses = buses.filter(b => b.origin === 'built-in');
   const userBuses = buses.filter(b => b.origin !== 'built-in');
 
   const groups: BusGroup[] = [];
 
-  // Built-in buses group (pinned at top)
   if (builtInBuses.length > 0) {
-    const signalBuiltIns = builtInBuses.filter(b => b.type.world === 'signal');
-    const fieldBuiltIns = builtInBuses.filter(b => b.type.world === 'field');
-
-    if (signalBuiltIns.length > 0) {
-      groups.push({
-        category: 'Default Signals',
-        buses: signalBuiltIns,
-      });
-    }
-
-    if (fieldBuiltIns.length > 0) {
-      groups.push({
-        category: 'Default Fields',
-        buses: fieldBuiltIns,
-      });
-    }
+    groups.push({
+      category: 'Default Buses',
+      buses: builtInBuses,
+    });
   }
 
-  // User-created buses
   if (userBuses.length > 0) {
-    const signalUser = userBuses.filter(b => b.type.world === 'signal');
-    const fieldUser = userBuses.filter(b => b.type.world === 'field');
-
-    if (signalUser.length > 0) {
-      groups.push({
-        category: 'Custom Signals',
-        buses: signalUser,
-      });
-    }
-
-    if (fieldUser.length > 0) {
-      groups.push({
-        category: 'Custom Fields',
-        buses: fieldUser,
-      });
-    }
+    groups.push({
+      category: 'Custom Buses',
+      buses: userBuses,
+    });
   }
 
   return groups;

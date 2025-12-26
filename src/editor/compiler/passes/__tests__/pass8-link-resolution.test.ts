@@ -6,8 +6,9 @@ import { describe, it, expect } from "vitest";
 import { pass8LinkResolution } from "../pass8-link-resolution";
 import { IRBuilderImpl } from "../../ir/IRBuilderImpl";
 import type { Block } from "../../../types";
-import type { IRWithBusRoots } from "../pass7-bus-lowering";
+import type { IRWithBusRoots, ValueRefPacked } from "../pass7-bus-lowering";
 import type { CompilerConnection } from "../../types";
+import type { BlockIndex } from "../../ir/patches";
 
 describe("Pass 8: Link Resolution", () => {
   // Helper to create a basic IRWithBusRoots
@@ -18,6 +19,11 @@ describe("Pass 8: Link Resolution", () => {
       blockOutputs: new Map(),
       errors: [],
     };
+  }
+
+  // Helper to create output map for a block
+  function createOutputMap(entries: [string, ValueRefPacked][]): Map<string, ValueRefPacked> {
+    return new Map(entries);
   }
 
   // Helper to create a basic block
@@ -49,7 +55,7 @@ describe("Pass 8: Link Resolution", () => {
 
       // Add some block outputs
       const sigId = ir.builder.sigConst(42, { world: "signal", domain: "number" });
-      ir.blockOutputs.set(0, [{ k: "sig", id: sigId }]);
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sigId }]]));
 
       const blocks: Block[] = [createBlock("b1", 0, 1)];
 
@@ -66,8 +72,8 @@ describe("Pass 8: Link Resolution", () => {
       const sig1 = ir.builder.sigConst(1, { world: "signal", domain: "number" });
       const sig2 = ir.builder.sigConst(2, { world: "signal", domain: "number" });
 
-      ir.blockOutputs.set(0, [{ k: "sig", id: sig1 }]);
-      ir.blockOutputs.set(1, [{ k: "sig", id: sig2 }]);
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sig1 }]]));
+      ir.blockOutputs.set(1 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sig2 }]]));
 
       const blocks: Block[] = [
         createBlock("b1", 0, 1),
@@ -85,10 +91,10 @@ describe("Pass 8: Link Resolution", () => {
       const sig1 = ir.builder.sigConst(1, { world: "signal", domain: "number" });
       const sig2 = ir.builder.sigConst(2, { world: "signal", domain: "number" });
 
-      ir.blockOutputs.set(0, [
-        { k: "sig", id: sig1 },
-        { k: "sig", id: sig2 },
-      ]);
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([
+        ["out0", { k: "sig", id: sig1 }],
+        ["out1", { k: "sig", id: sig2 }],
+      ]));
 
       const blocks: Block[] = [createBlock("b1", 0, 2)];
 
@@ -103,7 +109,7 @@ describe("Pass 8: Link Resolution", () => {
       const ir = createIRWithBusRoots();
 
       const sigId = ir.builder.sigConst(42, { world: "signal", domain: "number" });
-      ir.blockOutputs.set(0, [{ k: "sig", id: sigId }]);
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sigId }]]));
 
       const blocks: Block[] = [
         createBlock("b1", 0, 1),

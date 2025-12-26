@@ -42,10 +42,10 @@ export interface CompilerFeatureFlags {
 
 /**
  * Default feature flags.
- * New IR-based compiler is now the default.
+ * Legacy compiler is the default until IR rendering is fully implemented.
  */
 const DEFAULT_FLAGS: CompilerFeatureFlags = {
-  useUnifiedCompiler: true,
+  useUnifiedCompiler: false,
   strictStateValidation: true,
   busCompilation: true,
   timeCtxPropagation: true,
@@ -119,7 +119,7 @@ export function initializeFeatureFlags(): void {
     const env = import.meta.env;
 
     if (env.VITE_USE_UNIFIED_COMPILER !== undefined) {
-      currentFlags.useUnifiedCompiler = env.VITE_USE_UNIFIED_COMPILER === 'true';
+      currentFlags.useUnifiedCompiler = true;
     }
     if (env.VITE_STRICT_STATE_VALIDATION !== undefined) {
       currentFlags.strictStateValidation = env.VITE_STRICT_STATE_VALIDATION === 'true';

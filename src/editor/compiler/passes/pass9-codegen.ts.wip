@@ -1,0 +1,461 @@
+/**
+ * Pass 9: Code Generation & Scheduling
+ *
+ * The final compilation pass. It transforms the semantic graph (LinkedGraphIR)
+ * into the executable runtime format (CompiledProgramIR).
+ *
+ * Responsibilities:
+ * 1. Node Unification: Flattens Signal/Field expression graphs into a unified NodeTable.
+ * 2. Bus Table Construction: Maps semantic buses to runtime structures.
+ * 3. Scheduling: Generates the explicit execution sequence (ScheduleIR).
+ *    - Time Derive
+ *    - Signal Eval (Topologically sorted Push)
+ *    - Bus Eval
+ *    - Materialize (Pull prep)
+ *    - Render Assemble
+ *
+ * References:
+ * - design-docs/12-Compiler-Final/10-Schedule-Semantics.md
+ * - design-docs/12-Compiler-Final/17-Scheduler-Full.md
+ */
+
+import type { LinkedGraphIR } from "./pass8-link-resolution";
+import type {
+  CompiledProgramIR,
+  NodeIR,
+  BusTable,
+  BusIR,
+  ScheduleIR,
+  StepIR,
+  OpCode,
+  InputPortIR,
+  OutputPortIR,
+  NodeIndex,
+  BusIndex,
+  ValueSlot,
+  TypeDesc,
+  TimeModelIR,
+  StepId,
+  StepNodeEval,
+} from "../ir/schema/CompiledProgramIR";
+import type { SignalExprIR } from "../ir/signalExpr";
+import type { FieldExprIR } from "../ir/fieldExpr";
+import type { RenderSinkIR } from "../ir/builderTypes";
+import { randomUUID } from "../../crypto";
+
+// =============================================================================
+// Codegen Context
+// =============================================================================
+
+class CodegenContext {
+  // Output Tables
+  readonly nodes: NodeIR[] = [];
+  readonly nodeIdToIndex = new Map<string, NodeIndex>();
+  
+  // Mappings from Builder IDs to Runtime Indices
+  readonly sigExprToNode = new Map<number, NodeIndex>();
+  readonly fieldExprToNode = new Map<number, NodeIndex>();
+  
+  // Dependency Graph for Scheduling (NodeIndex -> NodeIndex[])
+  readonly signalDeps = new Map<NodeIndex, Set<NodeIndex>>();
+  
+  // Constants
+  readonly constMap = new Map<string, unknown>();
+
+  constructor(public readonly input: LinkedGraphIR) {}
+
+  /**
+   * Register a node and get its index.
+   */
+  addNode(node: NodeIR): NodeIndex {
+    const index = this.nodes.length as NodeIndex;
+    this.nodes.push({ ...node, index });
+    this.nodeIdToIndex.set(node.id, index);
+    return index;
+  }
+
+  /**
+   * Add dependency: 'from' depends on 'to'
+   */
+  addDep(from: NodeIndex, to: NodeIndex) {
+    if (!this.signalDeps.has(from)) {
+      this.signalDeps.set(from, new Set());
+    }
+    this.signalDeps.get(from)!.add(to);
+  }
+}
+
+// =============================================================================
+// Main Pass Implementation
+// =============================================================================
+
+export function pass9Codegen(input: LinkedGraphIR): CompiledProgramIR {
+  const ctx = new CodegenContext(input);
+
+  // 1. Lower Signals (and build dependency graph)
+  lowerSignals(ctx);
+
+  // 2. Lower Fields
+  lowerFields(ctx);
+
+  // 3. Build Bus Table
+  const buses = buildBusTable(ctx);
+
+  // 4. Generate Schedule
+  const schedule = generateSchedule(ctx, buses);
+
+  // 5. Assemble Output
+  return {
+    irVersion: 1,
+    patchId: "patch-" + randomUUID(), // TODO: Get from patch metadata
+    patchRevision: 1,
+    compileId: randomUUID(),
+    seed: 12345, // TODO: Get from patch
+    
+    // Time Model is technically in builderTypes but mostly implicit in logic so far.
+    // We default to infinite if not present, but Pass 3 should have handled this.
+    // For now, we assume a default or extract from Builder if available.
+    timeModel: input.builder.program.timeModel || { kind: "infinite", windowMs: 10000 },
+
+    types: { types: [] }, // TODO: Populate types table
+    nodes: {
+      nodes: ctx.nodes,
+      nodeIdToIndex: ctx.nodeIdToIndex,
+    },
+    buses,
+    constPool: { entries: new Map() }, // TODO: Populate const pool
+    defaultSources: { sources: new Map() },
+    transforms: { chains: new Map() },
+    schedule,
+    outputs: generateOutputSpecs(ctx),
+    debugIndex: {
+      sourceBlock: new Map(),
+      sourcePort: new Map(),
+    },
+    meta: {
+      names: {
+        nodes: new Map(ctx.nodes.map(n => [n.id, n.meta?.label || n.id])),
+        buses: new Map(buses.buses.map(b => [b.id, `Bus ${b.index}`])),
+        steps: new Map(schedule.steps.map(s => [s.id, s.kind])),
+      },
+    }
+  };
+}
+
+// =============================================================================
+// 1. Lower Signals
+// =============================================================================
+
+function lowerSignals(ctx: CodegenContext) {
+  const { input } = ctx;
+  const signalGraph = input.builder.program.signalIR;
+
+  // We iterate all signals. 
+  // In a real implementation, we might prune dead code here or during scheduling.
+  // For now, we map everything 1:1.
+  
+  for (let i = 0; i < signalGraph.nodes.length; i++) {
+    const sigExpr = signalGraph.nodes[i];
+    if (!sigExpr) continue; // Sparse array check
+
+    const nodeIndex = lowerSignalNode(sigExpr, i, ctx);
+    ctx.sigExprToNode.set(i, nodeIndex);
+  }
+
+  // After creating all nodes, wiring dependencies is implicit 
+  // because inputs refer to previously created nodes/slots.
+  // BUT we need explicit dependencies for sorting.
+  
+  for (let i = 0; i < signalGraph.nodes.length; i++) {
+    const sigExpr = signalGraph.nodes[i];
+    if (!sigExpr) continue;
+    
+    const currentNodeIdx = ctx.sigExprToNode.get(i)!;
+
+    // Analyze inputs to find dependencies
+    // SignalExpr inputs are ValueSlots. 
+    // We need to know which NODE produced that slot.
+    // This requires a reverse lookup map: Slot -> ProducerNodeIndex
+    // For this design, we'll assume SignalExprIR inputs are direct SigExprIds 
+    // or ValueSlots that map directly.
+    
+    // Simplification for prototype: 
+    // SignalExprIR usually has 'args' which are SigExprIds.
+    // Let's check SignalExprIR definition.
+  }
+}
+
+function lowerSignalNode(expr: SignalExprIR, id: number, ctx: CodegenContext): NodeIndex {
+  // Map OpCode
+  const op: OpCode = mapSignalOp(expr);
+
+  // Map Inputs
+  const inputs: InputPortIR[] = expr.args.map((argId, idx) => {
+    // Determine source. argId is SigExprId (number).
+    // The source node is the one corresponding to argId.
+    // But we might not have processed it yet if order is arbitrary.
+    // Wait, lowerSignals iterates 0..N.
+    // If graph is not topological, we can't resolve NodeIndex yet if we need it for *InputSource*.
+    // BUT InputSourceIR uses 'slot' or 'bus'.
+    
+    // Assumption: SignalExprIR args are ValueSlots or SigExprIds?
+    // Checking signalExpr.ts... it says 'args: SigExprId[]'.
+    // And SigExprId is just a number (index into table).
+    
+    // In compiled runtime, we read from Slots. 
+    // Each Node output writes to a Slot.
+    // We assign a stable Slot ID = NodeIndex * 100 + PortIndex (simplistic).
+    
+    return {
+      name: `in${idx}`,
+      type: { world: 'signal', domain: 'scalar' } as TypeDesc, // Placeholder type
+      source: { 
+        kind: 'slot', 
+        slot: `val_${argId}` // Direct mapping for now
+      }
+    };
+  });
+
+  // Define Outputs
+  const outputs: OutputPortIR[] = [{
+    name: 'out',
+    type: { world: 'signal', domain: 'scalar' } as TypeDesc,
+    slot: `val_${id}` // The slot this node writes to
+  }];
+
+  const node: NodeIR = {
+    id: `sig_${id}`,
+    index: -1 as NodeIndex, // Set by addNode
+    capability: 'pure', // Most signals are pure
+    op,
+    inputs,
+    outputs,
+  };
+  
+  const nodeIdx = ctx.addNode(node);
+  
+  // Record dependencies for topological sort
+  for (const argId of expr.args) {
+    // We don't have the NodeIndex of argId yet if it's > id.
+    // So we store dependencies as 'SigExprId -> SigExprId' first?
+    // Or just defer dependency graph building until after all nodes are created.
+  }
+  
+  return nodeIdx;
+}
+
+function mapSignalOp(expr: SignalExprIR): OpCode {
+  // Simple mapping
+  if (expr.kind === 'const') return { op: 'passthrough' }; // Or const handling
+  if (expr.kind === 'op') {
+    switch (expr.op) {
+      case 'add': return { op: 'math.add' };
+      case 'mul': return { op: 'math.mul' };
+      // ... expand as needed
+      default: return { op: 'noop' };
+    }
+  }
+  return { op: 'noop' };
+}
+
+// =============================================================================
+// 2. Lower Fields
+// =============================================================================
+
+function lowerFields(ctx: CodegenContext) {
+  const fieldGraph = ctx.input.builder.program.fieldIR;
+  
+  for (let i = 0; i < fieldGraph.nodes.length; i++) {
+    const fieldExpr = fieldGraph.nodes[i];
+    if (!fieldExpr) continue;
+
+    const node: NodeIR = {
+      id: `field_${i}`,
+      index: -1 as NodeIndex,
+      capability: 'pure', // Fields are effectively pure generators
+      op: { op: 'field.map' }, // Placeholder
+      inputs: [],
+      outputs: [{
+        name: 'out',
+        type: { world: 'field', domain: 'grid' } as TypeDesc,
+        slot: `field_${i}`
+      }]
+    };
+    
+    const idx = ctx.addNode(node);
+    ctx.fieldExprToNode.set(i, idx);
+  }
+}
+
+// =============================================================================
+// 3. Build Bus Table
+// =============================================================================
+
+function buildBusTable(ctx: CodegenContext): BusTable {
+  const { input } = ctx;
+  const buses: BusIR[] = [];
+  const busIdToIndex = new Map<string, BusIndex>();
+
+  input.busRoots.forEach((valueRef, busIdx) => {
+    // ValueRef points to the node that produces the bus value (the combine tree root)
+    // We need to resolve this ValueRef to a Slot.
+    
+    let outputSlot: ValueSlot = "empty";
+    if (valueRef.k === 'sig') {
+      outputSlot = `val_${valueRef.id}`;
+    } else if (valueRef.k === 'field') {
+      outputSlot = `field_${valueRef.id}`;
+    }
+
+    const bus: BusIR = {
+      id: `bus_${busIdx}`,
+      index: busIdx,
+      type: { world: 'signal', domain: 'scalar' } as TypeDesc, // TODO: Get real type
+      combineMode: 'sum',
+      publishers: [], // Logic is in the signal graph
+      listeners: [],  // Logic is in the signal graph
+      outputSlot
+    };
+    
+    buses.push(bus);
+    busIdToIndex.set(bus.id, busIdx);
+  });
+
+  return { buses, busIdToIndex };
+}
+
+// =============================================================================
+// 4. Generate Schedule
+// =============================================================================
+
+function generateSchedule(ctx: CodegenContext, buses: BusTable): ScheduleIR {
+  const steps: StepIR[] = [];
+  
+  // 4.1 Time Derive
+  steps.push({
+    kind: 'timeDerive',
+    id: 'step_time',
+    outputSlots: ['t', 'phase', 'pulse']
+  });
+
+  // 4.2 Signal Eval (Topological Sort)
+  // Build proper dependency graph first
+  const signalGraph = ctx.input.builder.program.signalIR;
+  const visited = new Set<number>();
+  const sorted: number[] = [];
+  const visiting = new Set<number>();
+
+  function visit(id: number) {
+    if (visited.has(id)) return;
+    if (visiting.has(id)) throw new Error("Cycle detected in signal graph");
+    
+    visiting.add(id);
+    const expr = signalGraph.nodes[id];
+    if (expr) {
+      for (const argId of expr.args) {
+        visit(argId);
+      }
+    }
+    visiting.delete(id);
+    visited.add(id);
+    sorted.push(id);
+  }
+
+  // Visit all Bus Roots and Render Sink inputs to determine reachability
+  // For now, naive: visit ALL signals
+  for (let i = 0; i < signalGraph.nodes.length; i++) {
+    if (signalGraph.nodes[i]) visit(i);
+  }
+
+  // Generate steps for sorted signals
+  for (const sigId of sorted) {
+    const nodeIdx = ctx.sigExprToNode.get(sigId);
+    if (nodeIdx !== undefined) {
+      const node = ctx.nodes[nodeIdx];
+      if (!node) continue;
+      
+      // Extract input and output slots from the NodeIR
+      const inputSlots = node.inputs.map(input => {
+        if(input.source.kind === 'slot') {
+          return input.source.slot;
+        }
+        // Handle other kinds if necessary, for now we assume 'slot'
+        return "empty_slot"; // Placeholder for non-slot sources
+      });
+
+      const outputSlots = node.outputs.map(output => output.slot);
+
+      steps.push({
+        kind: 'nodeEval',
+        id: `eval_sig_${sigId}`,
+        nodeIndex: nodeIdx,
+        inputSlots,
+        outputSlots,
+        phase: "preBus", // Default phase
+      });
+    }
+  }
+
+  // 4.3 Bus Eval
+  buses.buses.forEach(bus => {
+    steps.push({
+      kind: 'busEval',
+      id: `eval_bus_${bus.index}`,
+      busIndex: bus.index
+    });
+  });
+
+  // 4.4 Materialize & Render
+  // Iterate Render Sinks
+  const renderSinks = ctx.input.builder.program.renderSinks;
+  renderSinks.forEach((sink, idx) => {
+    // For each input to the sink, if it's a field, materialize it
+    Object.entries(sink.inputs).forEach(([name, slot]) => {
+      // Check if slot corresponds to a field
+      // Simple heuristic: if slot name starts with 'field_'
+      if (slot.toString().startsWith('field_')) {
+        steps.push({
+          kind: 'materialize',
+          id: `mat_sink${idx}_${name}`,
+          exprId: slot.toString().replace('field_', ''),
+          targetBuffer: `buf_${idx}_${name}`,
+          domainSize: 100 // Stub
+        });
+      }
+    });
+
+    steps.push({
+      kind: 'renderAssemble',
+      id: `render_${idx}`,
+      rootNodeIndices: [] // Populate with actual root nodes
+    });
+  });
+
+  return {
+    steps,
+    phasePartition: {
+      timeDerive: [], // TODO: Fill IDs
+      preBus: [],
+      bus: [],
+      postBus: [],
+      materializeRender: [],
+      renderAssemble: []
+    }
+  };
+}
+
+// =============================================================================
+// 5. Output Specs
+// =============================================================================
+
+function generateOutputSpecs(ctx: CodegenContext): any[] {
+  // Assume first render sink is main output
+  const sinks = ctx.input.builder.program.renderSinks;
+  if (sinks.length > 0) {
+    return [{
+      kind: 'renderTree',
+      sourceSlot: 'render_out_0' // Placeholder
+    }];
+  }
+  return [];
+}

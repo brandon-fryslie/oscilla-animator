@@ -7,14 +7,13 @@ import {
   wrapSignalForDebug,
   wrapFieldForDebug,
   wrapBusCombineForDebug,
-  FieldStatMask,
 } from '../instrumentClosure';
 import { DebugIndex } from '../DebugIndex';
 import { SpanRing } from '../SpanRing';
 import { ValueRing } from '../ValueRing';
 import { TraceController } from '../TraceController';
 import { SpanKind, SpanFlags } from '../SpanTypes';
-import { ValueTag, unpackF32 } from '../ValueRecord';
+import { ValueTag, unpackF32, FieldStatMask } from '../ValueRecord';
 import type { RuntimeCtx } from '../../compiler/types';
 
 describe('instrumentClosure', () => {

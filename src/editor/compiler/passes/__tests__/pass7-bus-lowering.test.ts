@@ -47,7 +47,7 @@ describe("Pass 7: Bus Lowering", () => {
       const buses: Bus[] = [createBus("bus1", "signal", "number", "last", 42)];
       const publishers: Publisher[] = [];
 
-      const result = pass7BusLowering(unlinked, buses, publishers);
+      const result = pass7BusLowering(unlinked, buses, publishers, []);
 
       expect(result.busRoots.size).toBe(1);
       expect(result.busRoots.get(0)).toBeDefined();
@@ -60,7 +60,7 @@ describe("Pass 7: Bus Lowering", () => {
       const buses: Bus[] = [createBus("bus1", "field", "number", "sum", 10)];
       const publishers: Publisher[] = [];
 
-      const result = pass7BusLowering(unlinked, buses, publishers);
+      const result = pass7BusLowering(unlinked, buses, publishers, []);
 
       expect(result.busRoots.size).toBe(1);
       expect(result.busRoots.get(0)).toBeDefined();
@@ -74,7 +74,7 @@ describe("Pass 7: Bus Lowering", () => {
       const unlinked = createUnlinkedFragments();
       const buses: Bus[] = [createBus("bus1", "signal", "number", "sum", 0)];
 
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.busRoots.size).toBe(1);
       expect(result.errors.length).toBe(0);
@@ -84,7 +84,7 @@ describe("Pass 7: Bus Lowering", () => {
       const unlinked = createUnlinkedFragments();
       const buses: Bus[] = [createBus("bus1", "signal", "number", "last", 0)];
 
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.busRoots.size).toBe(1);
       expect(result.errors.length).toBe(0);
@@ -94,7 +94,7 @@ describe("Pass 7: Bus Lowering", () => {
       const unlinked = createUnlinkedFragments();
       const buses: Bus[] = [createBus("bus1", "field", "number", "average", 0)];
 
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.busRoots.size).toBe(1);
       expect(result.errors.length).toBe(0);
@@ -104,7 +104,7 @@ describe("Pass 7: Bus Lowering", () => {
       const unlinked = createUnlinkedFragments();
       const buses: Bus[] = [createBus("bus1", "field", "number", "max", 0)];
 
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.busRoots.size).toBe(1);
       expect(result.errors.length).toBe(0);
@@ -114,7 +114,7 @@ describe("Pass 7: Bus Lowering", () => {
       const unlinked = createUnlinkedFragments();
       const buses: Bus[] = [createBus("bus1", "field", "number", "min", 0)];
 
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.busRoots.size).toBe(1);
       expect(result.errors.length).toBe(0);
@@ -124,7 +124,7 @@ describe("Pass 7: Bus Lowering", () => {
       const unlinked = createUnlinkedFragments();
       const buses: Bus[] = [createBus("bus1", "field", "color", "layer", { r: 0, g: 0, b: 0, a: 1 })];
 
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.busRoots.size).toBe(1);
       expect(result.errors.length).toBe(0);
@@ -140,7 +140,7 @@ describe("Pass 7: Bus Lowering", () => {
         createBus("bus2", "signal", "number", "last", 2),
       ];
 
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.busRoots.size).toBe(2);
       expect(result.busRoots.get(0)).toBeDefined();
@@ -156,7 +156,7 @@ describe("Pass 7: Bus Lowering", () => {
         createBus("field_bus", "field", "vec2", "average", { x: 0, y: 0 }),
       ];
 
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.busRoots.size).toBe(2);
       expect(result.busRoots.get(0)?.k).toBe("sig");
@@ -179,7 +179,7 @@ describe("Pass 7: Bus Lowering", () => {
       };
 
       const buses: Bus[] = [];
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.errors.length).toBe(1);
       expect(result.errors[0].code).toBe("BlockMissing");
@@ -191,7 +191,7 @@ describe("Pass 7: Bus Lowering", () => {
       const unlinked = createUnlinkedFragments();
       const buses: Bus[] = [createBus("vec_bus", "signal", "vec2", "last", { x: 1, y: 2 })];
 
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.busRoots.size).toBe(1);
       expect(result.busRoots.get(0)?.k).toBe("sig");
@@ -202,7 +202,7 @@ describe("Pass 7: Bus Lowering", () => {
       const unlinked = createUnlinkedFragments();
       const buses: Bus[] = [createBus("color_bus", "field", "color", "layer", { r: 1, g: 0.5, b: 0, a: 1 })];
 
-      const result = pass7BusLowering(unlinked, buses, []);
+      const result = pass7BusLowering(unlinked, buses, [], []);
 
       expect(result.busRoots.size).toBe(1);
       expect(result.busRoots.get(0)?.k).toBe("field");

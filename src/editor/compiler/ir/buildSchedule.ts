@@ -128,9 +128,21 @@ export function buildCompiledProgram(
  * 2. Bus evaluation (if any)
  * 3. Field materialization (if any)
  * 4. Render assembly
+ *
+ * Slot allocation (dense numeric indices):
+ * - 0: tAbsMs (input)
+ * - 1: tModelMs (derived)
+ * - 2: progress01 (derived)
+ * - 3: render output (object)
  */
 function buildSchedule(timeModel: TimeModelIR): ScheduleIR {
   const steps: StepIR[] = [];
+
+  // Numeric slot allocation
+  const SLOT_T_ABS_MS = 0;
+  const SLOT_T_MODEL_MS = 1;
+  const SLOT_PROGRESS_01 = 2;
+  const SLOT_RENDER_OUT = 3;
 
   // Step 1: Time Derive
   // This step derives time-related signals from the absolute time (tAbsMs)
@@ -138,11 +150,11 @@ function buildSchedule(timeModel: TimeModelIR): ScheduleIR {
     kind: "timeDerive",
     id: "step-time-derive",
     label: "Derive time signals",
-    tAbsMsSlot: "slot_tAbsMs" as any, // Input slot for absolute time
+    tAbsMsSlot: SLOT_T_ABS_MS,
     timeModel,
     out: {
-      tModelMs: "slot_tModelMs" as any,
-      progress01: "slot_progress01" as any,
+      tModelMs: SLOT_T_MODEL_MS,
+      progress01: SLOT_PROGRESS_01,
     },
   });
 
@@ -157,8 +169,8 @@ function buildSchedule(timeModel: TimeModelIR): ScheduleIR {
     kind: "renderAssemble",
     id: "step-render-assemble",
     label: "Assemble render tree",
-    rootNodeIndex: 0 as any, // Placeholder - no nodes yet
-    outSlot: "slot_render_out" as any,
+    rootNodeIndex: 0, // Placeholder - no nodes yet
+    outSlot: SLOT_RENDER_OUT,
   });
 
   // Build step index map

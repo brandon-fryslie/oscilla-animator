@@ -41,8 +41,8 @@ export interface UnlinkedIRFragments {
   /** IRBuilder instance containing all emitted nodes */
   builder: IRBuilder;
 
-  /** Map from block index to its output port ValueRefs */
-  blockOutputs: Map<BlockIndex, ValueRefPacked[]>;
+  /** Map from block index to map of port ID to ValueRef */
+  blockOutputs: Map<BlockIndex, Map<string, ValueRefPacked>>;
 
   /** Compilation errors encountered during lowering */
   errors: CompileError[];
@@ -184,7 +184,7 @@ function artifactToValueRef(
     return { k: "field", id: fieldId };
   }
 
-  // Special types that don't map to IR (render trees, etc.)
+  // Special types that don't map to IR (render trees, events, etc.)
   // These are consumed by the runtime, not represented in signal/field graphs
   if (
     kind === "RenderTreeProgram" ||
@@ -193,7 +193,9 @@ function artifactToValueRef(
     kind === "TargetScene" ||
     kind === "PhaseMachine" ||
     kind === "StrokeStyle" ||
-    kind === "ElementCount"
+    kind === "ElementCount" ||
+    kind === "Event" ||     // Discrete events - handled by event system, not signal graph
+    kind === "Domain"       // Domain configuration - not a signal/field value
   ) {
     return null; // No IR representation
   }
@@ -226,7 +228,7 @@ export function pass6BlockLowering(
   compiledPortMap: Map<string, Artifact>
 ): UnlinkedIRFragments {
   const builder = new IRBuilderImpl();
-  const blockOutputs = new Map<BlockIndex, ValueRefPacked[]>();
+  const blockOutputs = new Map<BlockIndex, Map<string, ValueRefPacked>>();
   const errors: CompileError[] = [];
 
   // Process blocks in dependency order (already sorted by Pass 4)
@@ -248,8 +250,8 @@ export function pass6BlockLowering(
         continue;
       }
 
-      // Collect output port artifacts for this block
-      const outputRefs: ValueRefPacked[] = [];
+      // Collect output port artifacts for this block (keyed by port ID)
+      const outputRefs = new Map<string, ValueRefPacked>();
 
       for (const output of block.outputs) {
         const portKey = `${block.id}:${output.id}`;
@@ -270,12 +272,12 @@ export function pass6BlockLowering(
         );
 
         if (valueRef) {
-          outputRefs.push(valueRef);
+          outputRefs.set(output.id, valueRef);
         }
       }
 
       // Store output refs for this block
-      if (outputRefs.length > 0) {
+      if (outputRefs.size > 0) {
         blockOutputs.set(blockIndex, outputRefs);
       }
     }

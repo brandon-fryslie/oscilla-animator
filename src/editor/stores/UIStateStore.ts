@@ -74,7 +74,7 @@ export class UIStateStore {
     warnBeforeDisconnect: false, // Confirmation before removing connections
     filterByLane: false, // Filter library by lane compatibility
     filterByConnection: false, // Filter library by connection context
-    useNewCompiler: true, // Use IR-based compiler instead of legacy closure-based compiler
+    useNewCompiler: false, // Use IR-based compiler instead of legacy closure-based compiler
   };
 
   // Compiled program for preview (cached)

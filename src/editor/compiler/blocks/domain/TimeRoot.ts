@@ -201,7 +201,8 @@ registerBlockType({
     { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
     { portId: 'progress', label: 'Progress', dir: 'out', type: { world: 'signal', domain: 'number' } },
     { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'phase01' } },
-    { portId: 'end', label: 'End', dir: 'out', type: { world: 'signal', domain: 'trigger' } },
+    // end is event<trigger>, NOT signal - discrete event when animation completes
+    { portId: 'end', label: 'End', dir: 'out', type: { world: 'event', domain: 'trigger' } },
     { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'number' } },
   ],
   lower: lowerFiniteTimeRoot,
@@ -215,7 +216,8 @@ registerBlockType({
     { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
     { portId: 'cycleT', label: 'Cycle T', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
     { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'phase01' } },
-    { portId: 'wrap', label: 'Wrap', dir: 'out', type: { world: 'signal', domain: 'trigger' } },
+    // wrap is event<trigger>, NOT signal - discrete event on cycle boundary
+    { portId: 'wrap', label: 'Wrap', dir: 'out', type: { world: 'event', domain: 'trigger' } },
     { portId: 'cycleIndex', label: 'Cycle Index', dir: 'out', type: { world: 'signal', domain: 'number' } },
     { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'number' } },
   ],
@@ -229,7 +231,8 @@ registerBlockType({
   outputs: [
     { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
     { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'phase01' } },
-    { portId: 'pulse', label: 'Pulse', dir: 'out', type: { world: 'signal', domain: 'trigger' } },
+    // pulse is event<trigger>, NOT signal - discrete event on cycle boundary
+    { portId: 'pulse', label: 'Pulse', dir: 'out', type: { world: 'event', domain: 'trigger' } },
     { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'number' } },
   ],
   lower: lowerInfiniteTimeRoot,

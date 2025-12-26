@@ -12,8 +12,16 @@
     },
     "yagwt": {
       "command": "/usr/local/bin/yagwt-mcp",
+      "args": []
+    },
+    "chromedevtools/chrome-devtools-mcp": {
+      "command": "npx",
       "args": [
-      ]
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
+      "env": {},
+      "type": "stdio"
     }
   }
 }

@@ -12,6 +12,7 @@
  * - Manage RuntimeState lifecycle across frames
  * - Support hot-swap via swapProgram()
  * - Stub Program.event() (events not implemented yet)
+ * - BRIDGE MODE: Use legacy render closure while IR schedule manages time
  *
  * References:
  * - .agent_planning/compiler-rendering-integration/PLAN-2025-12-26-110434.md §P0-2
@@ -21,8 +22,15 @@
 import type { CompiledProgramIR } from "../../compiler/ir";
 import type { RuntimeCtx, Program, KernelEvent } from "../../compiler/types";
 import type { RenderTree } from "../renderTree";
+import type { RenderTree as RenderCmdTree } from "../renderCmd";
 import { ScheduleExecutor } from "./ScheduleExecutor";
 import { createRuntimeState, type RuntimeState } from "./RuntimeState";
+
+/**
+ * Legacy render function type.
+ * This is the closure-based render that produces cmds-based RenderTree.
+ */
+export type LegacyRenderFn = (tMs: number, ctx: RuntimeCtx) => RenderCmdTree;
 
 /**
  * IRRuntimeAdapter - Bridge ScheduleExecutor to Player
@@ -42,6 +50,7 @@ export class IRRuntimeAdapter {
   private executor: ScheduleExecutor;
   private program: CompiledProgramIR;
   private runtime: RuntimeState;
+  private legacyRenderFn: LegacyRenderFn | null = null;
 
   /**
    * Create adapter from compiled program.
@@ -49,11 +58,13 @@ export class IRRuntimeAdapter {
    * Initializes ScheduleExecutor and RuntimeState for frame execution.
    *
    * @param program - Compiled program IR
+   * @param legacyRenderFn - Optional legacy render function for bridge mode
    */
-  constructor(program: CompiledProgramIR) {
+  constructor(program: CompiledProgramIR, legacyRenderFn?: LegacyRenderFn) {
     this.executor = new ScheduleExecutor();
     this.program = program;
     this.runtime = createRuntimeState(program);
+    this.legacyRenderFn = legacyRenderFn ?? null;
   }
 
   /**
@@ -62,16 +73,42 @@ export class IRRuntimeAdapter {
    * Returns a Program object that calls ScheduleExecutor under the hood.
    * The Program's signal() method executes a frame and returns a RenderTree.
    *
+   * BRIDGE MODE: If a legacy render function is provided, it's used for rendering
+   * while the IR schedule still manages frame lifecycle (time, caches, etc.).
+   * This enables incremental migration from closures to IR.
+   *
    * RuntimeState is preserved across signal() calls (not recreated each frame).
    *
    * @returns Program<RenderTree> compatible with Player
    */
   createProgram(): Program<RenderTree> {
     return {
-      signal: (tMs: number, _runtimeCtx: RuntimeCtx): RenderTree => {
-        // Execute frame using ScheduleExecutor
-        // Note: RuntimeCtx is currently ignored (P3-1 will add viewport support)
-        return this.executor.executeFrame(this.program, this.runtime, tMs);
+      signal: (tMs: number, runtimeCtx: RuntimeCtx): RenderTree => {
+        // Execute frame lifecycle using ScheduleExecutor
+        // This manages time derivation, caches, and frame state
+        // but may not produce the final render tree if IR isn't fully implemented
+        this.executor.executeFrame(this.program, this.runtime, tMs);
+
+        // BRIDGE MODE: If legacy render function is provided, use it for actual rendering
+        // This allows IR to manage time/state while closures still produce the render tree
+        if (this.legacyRenderFn !== null) {
+          // Use legacy closure for rendering - cast needed because different RenderTree types
+          return this.legacyRenderFn(tMs, runtimeCtx) as unknown as RenderTree;
+        }
+
+        // Pure IR mode: try to extract render output from schedule execution
+        // Currently returns empty tree since IR render lowering isn't implemented
+        try {
+          if (this.program.outputs && this.program.outputs.length > 0) {
+            const outputSpec = this.program.outputs[0];
+            return this.runtime.values.read(outputSpec.slot) as RenderTree;
+          }
+        } catch {
+          // Slot read failed - fall through to empty tree
+        }
+
+        // Fallback: return empty cmds-based tree for Canvas2DRenderer compatibility
+        return { cmds: [] } as unknown as RenderTree;
       },
 
       event: (_ev: KernelEvent): KernelEvent[] => {
@@ -93,6 +130,7 @@ export class IRRuntimeAdapter {
    * The Player will continue rendering without visual jank.
    *
    * @param newProgram - New compiled program to swap to
+   * @param newLegacyRenderFn - Optional new legacy render function (for bridge mode)
    *
    * @example
    * ```typescript
@@ -108,9 +146,13 @@ export class IRRuntimeAdapter {
    * // Player continues using the same Program object, but now with new behavior
    * ```
    */
-  swapProgram(newProgram: CompiledProgramIR): void {
+  swapProgram(newProgram: CompiledProgramIR, newLegacyRenderFn?: LegacyRenderFn): void {
     // Use ScheduleExecutor.swapProgram() to get new runtime with preserved state
     this.runtime = this.executor.swapProgram(newProgram, this.runtime);
     this.program = newProgram;
+    // Update legacy render function if provided
+    if (newLegacyRenderFn !== undefined) {
+      this.legacyRenderFn = newLegacyRenderFn;
+    }
   }
 }

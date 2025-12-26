@@ -30,6 +30,10 @@ export interface CompileCtx {
 export interface RuntimeCtx {
   viewport: { w: number; h: number; dpr: number };
   reducedMotion?: boolean;
+  /** Frame counter for debug span attribution */
+  frameId?: number;
+  /** Animation time for span recording (mirrors signal param) */
+  tMs?: number;
 }
 
 export type KernelEvent = { type: string; payload?: unknown };
@@ -501,6 +505,8 @@ export interface CompileError {
 import type { LinkedGraphIR } from './passes/pass8-link-resolution';
 // Import CompiledProgramIR for Pass 9 (Codegen)
 import type { CompiledProgramIR } from './ir';
+// Import DebugIndex for debug infrastructure
+import type { DebugIndex } from '../debug';
 export type { LinkedGraphIR, CompiledProgramIR };
 
 export interface CompileResult {
@@ -529,6 +535,10 @@ export interface CompileResult {
   constPool?: unknown[];
   /** State layout for stateful operations */
   stateLayout?: StateLayoutEntry[];
+
+  // Debug Infrastructure
+  /** Debug index for string interning (when debug tracing enabled) */
+  debugIndex?: DebugIndex;
 }
 
 // =============================================================================

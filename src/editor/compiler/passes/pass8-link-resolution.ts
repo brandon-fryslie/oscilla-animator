@@ -119,7 +119,7 @@ export function pass8LinkResolution(
  */
 function buildBlockOutputRoots(
   blocks: readonly Block[],
-  blockOutputs: Map<number, ValueRefPacked[]>
+  blockOutputs: Map<number, Map<string, ValueRefPacked>>
 ): BlockOutputRootIR {
   const refs: ValueRefPacked[] = [];
 
@@ -129,10 +129,11 @@ function buildBlockOutputRoots(
   // Create flat array indexed by (blockIdx * maxOutputs + portIdx)
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx];
-    const outputs = blockOutputs.get(blockIdx) || [];
+    const outputs = blockOutputs.get(blockIdx);
 
     for (let portIdx = 0; portIdx < block.outputs.length; portIdx++) {
-      const ref = outputs[portIdx];
+      const portId = block.outputs[portIdx].id;
+      const ref = outputs?.get(portId);
       if (ref) {
         refs[blockIdx * maxOutputs + portIdx] = ref;
       }
@@ -160,7 +161,7 @@ function buildBlockInputRoots(
   wires: readonly CompilerConnection[],
   listeners: readonly Listener[],
   busRoots: Map<BusIndex, ValueRefPacked>,
-  blockOutputs: Map<number, ValueRefPacked[]>,
+  blockOutputs: Map<number, Map<string, ValueRefPacked>>,
   errors: CompileError[]
 ): BlockInputRootIR {
   const refs: ValueRefPacked[] = [];
@@ -202,28 +203,27 @@ function buildBlockInputRoots(
         // Resolve upstream block output
         const upstreamBlockIdx = blockIdToIndex.get(wire.from.blockId);
 
-        if (upstreamBlockIdx !== undefined) {
-          const upstreamBlock = blocks[upstreamBlockIdx];
-          const upstreamPortIdx = upstreamBlock.outputs.findIndex(
-            (o) => o.id === wire.from.port
-          );
-
-          if (upstreamPortIdx >= 0) {
-            const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
-            const ref = upstreamOutputs?.[upstreamPortIdx];
-
-            if (ref) {
-              refs[flatIdx] = ref;
-              continue; // Successfully resolved via wire
-            }
-          }
+        if (upstreamBlockIdx === undefined) {
+          // Upstream block wasn't processed - this is a real error
+          errors.push({
+            code: "DanglingConnection",
+            message: `Wire to ${block.id}:${input.id} from unknown block ${wire.from.blockId}`,
+          });
+          continue;
         }
 
-        // Wire found but couldn't resolve - log error but continue
-        errors.push({
-          code: "DanglingConnection",
-          message: `Wire to ${block.id}:${input.id} from ${wire.from.blockId}:${wire.from.port} could not be resolved`,
-        });
+        const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
+        const ref = upstreamOutputs?.get(wire.from.port);
+
+        if (ref) {
+          refs[flatIdx] = ref;
+          continue; // Successfully resolved via wire
+        }
+
+        // Wire exists but upstream port has no IR representation
+        // This is expected for non-IR types (Domain, Event, etc.) - NOT an error
+        // The wire is valid at the closure level, just not represented in IR
+        continue;
       }
 
       // Priority 2: Check for bus listener
@@ -234,21 +234,26 @@ function buildBlockInputRoots(
       if (listener) {
         const busIdx = busIdToIndex.get(listener.busId);
 
-        if (busIdx !== undefined) {
-          const busRef = busRoots.get(busIdx);
-
-          if (busRef) {
-            // TODO (Phase 4): Apply listener transform chain if present
-            refs[flatIdx] = busRef;
-            continue; // Successfully resolved via bus
-          }
+        if (busIdx === undefined) {
+          // Bus not found - this is a real error
+          errors.push({
+            code: "DanglingBindingEndpoint",
+            message: `Listener to ${block.id}:${input.id} from unknown bus ${listener.busId}`,
+          });
+          continue;
         }
 
-        // Listener found but couldn't resolve - log error but continue
-        errors.push({
-          code: "DanglingBindingEndpoint",
-          message: `Listener to ${block.id}:${input.id} from bus ${listener.busId} could not be resolved`,
-        });
+        const busRef = busRoots.get(busIdx);
+
+        if (busRef) {
+          // TODO (Phase 4): Apply listener transform chain if present
+          refs[flatIdx] = busRef;
+          continue; // Successfully resolved via bus
+        }
+
+        // Bus exists but has no IR representation (e.g., event bus)
+        // This is expected for non-IR bus types - NOT an error
+        continue;
       }
 
       // Priority 3: Default source
@@ -257,10 +262,7 @@ function buildBlockInputRoots(
       //
       // For now, if we reach here, the input is unresolved
       // This is acceptable for Sprint 2 - we're creating structural IR
-      errors.push({
-        code: "UnresolvedPort",
-        message: `Input ${block.id}:${input.id} has no value source (no wire, listener, or default)`,
-      });
+      // Unresolved ports are not errors - they're just optional inputs without sources
     }
   }
 

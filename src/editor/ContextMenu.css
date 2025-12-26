@@ -117,6 +117,19 @@
   color: #f87171;
 }
 
+.context-menu-action.connect {
+  color: #4ade80;
+}
+
+.context-menu-action.connect:hover {
+  background: #1a3020;
+  color: #86efac;
+}
+
+.context-menu-action.connect .context-menu-icon {
+  color: #4ade80;
+}
+
 .context-menu-icon {
   font-size: 14px;
   color: #888;

@@ -74,8 +74,8 @@ describe("pass6BlockLowering", () => {
 
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs).toHaveLength(1);
-      expect(outputs![0].k).toBe("sig");
+      expect(outputs!.size).toBe(1);
+      expect(outputs!.get("out")?.k).toBe("sig");
     });
 
     it("translates Scalar:vec2 to constant signal", () => {
@@ -91,7 +91,7 @@ describe("pass6BlockLowering", () => {
       expect(result.errors).toHaveLength(0);
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs![0].k).toBe("sig");
+      expect(outputs!.get("out")?.k).toBe("sig");
     });
 
     it("translates Scalar:color to constant signal", () => {
@@ -107,7 +107,7 @@ describe("pass6BlockLowering", () => {
       expect(result.errors).toHaveLength(0);
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs![0].k).toBe("sig");
+      expect(outputs!.get("out")?.k).toBe("sig");
     });
   });
 
@@ -131,7 +131,7 @@ describe("pass6BlockLowering", () => {
       expect(result.errors).toHaveLength(0);
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs![0].k).toBe("sig");
+      expect(outputs!.get("out")?.k).toBe("sig");
     });
 
     it("translates Signal:phase to placeholder signal", () => {
@@ -153,7 +153,7 @@ describe("pass6BlockLowering", () => {
       expect(result.errors).toHaveLength(0);
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs![0].k).toBe("sig");
+      expect(outputs!.get("out")?.k).toBe("sig");
     });
 
     it("translates Signal:vec2 to placeholder signal", () => {
@@ -176,7 +176,7 @@ describe("pass6BlockLowering", () => {
       expect(result.errors).toHaveLength(0);
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs![0].k).toBe("sig");
+      expect(outputs!.get("out")?.k).toBe("sig");
     });
   });
 
@@ -197,7 +197,7 @@ describe("pass6BlockLowering", () => {
       expect(result.errors).toHaveLength(0);
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs![0].k).toBe("field");
+      expect(outputs!.get("out")?.k).toBe("field");
     });
 
     it("translates Field:vec2 to placeholder field", () => {
@@ -215,7 +215,7 @@ describe("pass6BlockLowering", () => {
       expect(result.errors).toHaveLength(0);
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs![0].k).toBe("field");
+      expect(outputs!.get("out")?.k).toBe("field");
     });
   });
 
@@ -266,8 +266,8 @@ describe("pass6BlockLowering", () => {
       expect(result.errors).toHaveLength(0);
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs).toHaveLength(3);
-      expect(outputs!.every((ref) => ref.k === "sig")).toBe(true);
+      expect(outputs!.size).toBe(3);
+      expect(Array.from(outputs!.values()).every((ref) => ref.k === "sig")).toBe(true);
     });
   });
 

@@ -338,12 +338,14 @@ function getSemantics(typeName: string): string | undefined {
  * @returns A string representation
  */
 export function typeDescToString(type: TypeDesc): string {
-  const worldPrefix = {
+  const worldPrefixMap: Record<string, string> = {
     'signal': 'Signal',
     'field': 'Field',
     'scalar': 'Scalar',
     'config': 'Config',
-  }[type.world];
+    'event': 'Event',
+  };
+  const worldPrefix = worldPrefixMap[type.world] ?? type.world;
 
   const domainStr = type.domain.charAt(0).toUpperCase() + type.domain.slice(1);
 

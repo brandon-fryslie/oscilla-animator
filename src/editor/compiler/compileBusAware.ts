@@ -59,6 +59,9 @@ import {
 import { buildCompiledProgram } from './ir/buildSchedule';
 // Phase 4, Sprint 8: SignalExpr Runtime Integration
 import { extractSignalExprTable } from './ir/extractSignalExprTable';
+// Debug Infrastructure
+import { createDebugIndex } from '../debug';
+import { randomUUID } from '../crypto';
 
 
 // =============================================================================
@@ -768,12 +771,15 @@ function attachIR(
   seed: number
 ): CompileResult {
   if (!emitIR) {
+    console.log('[IR Debug] emitIR is false, skipping IR compilation');
     return result;
   }
 
+  console.log('[IR Debug] Running IR compilation...');
   const ir = compileIR(patch, compiledPortMap);
   if (ir === undefined) {
     // IR compilation failed - add warning but keep closure success
+    console.warn('[IR Debug] compileIR returned undefined');
     return {
       ...result,
       irWarnings: [
@@ -787,6 +793,7 @@ function attachIR(
 
   // Check for IR errors
   if (ir.errors && ir.errors.length > 0) {
+    console.warn('[IR Debug] IR has errors, not building CompiledProgramIR:', ir.errors);
     return {
       ...result,
       ir,
@@ -796,6 +803,7 @@ function attachIR(
 
   // Build CompiledProgramIR from LinkedGraphIR
   // Call builder.build() to get BuilderProgramIR, then convert to CompiledProgramIR
+  console.log('[IR Debug] Building CompiledProgramIR...');
   const builderIR = ir.builder.build();
   const compiledIR = buildCompiledProgram(
     builderIR,
@@ -803,15 +811,39 @@ function attachIR(
     patchRevision,
     seed
   );
+  console.log('[IR Debug] CompiledProgramIR built successfully');
 
   // Phase 4, Sprint 8: Extract SignalExprTable from LinkedGraphIR
   // This enables SigEvaluator to execute IR-based signals at runtime
+  console.log('[IR Debug] Extracting SignalExprTable...');
   const extracted = extractSignalExprTable(ir);
+  console.log('[IR Debug] SignalExprTable extraction complete:', extracted ? 'success' : 'null');
+
+  // Create and populate DebugIndex for debug infrastructure
+  const debugIndex = createDebugIndex(randomUUID(), patchRevision);
+
+  // Intern all blocks
+  for (const blockId of patch.blocks.keys()) {
+    debugIndex.internBlock(blockId);
+  }
+
+  // Intern all buses
+  for (const bus of patch.buses) {
+    debugIndex.internBus(bus.id);
+  }
+
+  // Intern all port keys from compiled port map
+  for (const portKey of compiledPortMap.keys()) {
+    debugIndex.internPort(portKey);
+  }
+
+  console.log(`[DebugIndex] Interned ${debugIndex.blockCount()} blocks, ${debugIndex.busCount()} buses, ${debugIndex.portCount()} ports`);
 
   return {
     ...result,
     ir,
     compiledIR,
+    debugIndex,
     // Attach SignalExpr data if extraction succeeded
     ...(extracted && {
       signalTable: extracted.signalTable,

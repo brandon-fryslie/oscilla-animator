@@ -97,6 +97,9 @@ export class Player {
   private static readonly FRAME_TIME_WINDOW = 60; // Keep last 60 frames
   private static readonly HEALTH_EMIT_INTERVAL_MS = 250; // 4 Hz
 
+  // Debug infrastructure: frame counter for span attribution
+  private frameId = 0;
+
   constructor(opts: PlayerOptions) {
     this.compileCtx = opts.compileCtx;
     this.runtimeCtx = opts.runtimeCtx;
@@ -375,6 +378,10 @@ export class Player {
 
   private renderOnce(): void {
     if (this.program === null || this.program === undefined) return;
+
+    // Populate debug attribution fields before signal call
+    this.runtimeCtx.frameId = this.frameId++;
+    this.runtimeCtx.tMs = this.tMs;
 
     const tree = this.program.signal(this.tMs, this.runtimeCtx);
 

@@ -16,9 +16,13 @@ export * from './types/dnd';
 
 /**
  * World categories for type system.
- * Only signal and field - scalar is semantics, special is category.
+ * - signal: Continuous time-indexed values
+ * - event: Discrete impulses/triggers (sparse, edge-triggered)
+ * - field: Per-element values
+ * - scalar: Compile-time constants
+ * - config: Configuration values
  */
-export type TypeWorld = 'signal' | 'field' | 'scalar' | 'config';
+export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
 
 /**
  * Core domains - what users see in the bus system.

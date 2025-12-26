@@ -170,8 +170,14 @@ export function isBusEligible(type: TypeDesc): boolean {
 }
 
 /**
- * Reserved bus constraints.
+ * Reserved bus constraints - canonical type definitions.
  * These buses have strict type requirements enforced by the compiler.
+ *
+ * Canonical types:
+ * - phaseA: signal<phase> - Phase has special invariants (wrap semantics, cycle-derived provenance)
+ * - pulse: event<trigger> - Discrete events, not continuous signals (cleaner scheduling)
+ * - energy: signal<number> - Continuous energy/amplitude
+ * - palette: signal<color> - Color palette
  */
 const RESERVED_BUS_CONSTRAINTS: Record<
   string,
@@ -179,13 +185,13 @@ const RESERVED_BUS_CONSTRAINTS: Record<
 > = {
   phaseA: {
     world: "signal",
-    domain: "number",
-    description: "Primary phase signal (0..1)",
+    domain: "phase",
+    description: "Primary phase signal (0..1) with wrap semantics",
   },
   pulse: {
     world: "event",
     domain: "trigger",
-    description: "Primary pulse/event trigger",
+    description: "Primary pulse/event trigger (discrete, not continuous)",
   },
   energy: {
     world: "signal",

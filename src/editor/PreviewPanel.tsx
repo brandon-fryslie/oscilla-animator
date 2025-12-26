@@ -29,6 +29,7 @@ import type { Program, CanvasProgram } from './compiler/types';
 import { useStore } from './stores';
 import { TimeConsole } from './components/TimeConsole';
 import { IRRuntimeAdapter } from './runtime/executor/IRRuntimeAdapter';
+import { TraceContext } from './debug';
 import './PreviewPanel.css';
 
 /**
@@ -192,8 +193,11 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         // === IR PATH (NEW COMPILER) ===
         if (useIR) {
           if (result.compiledIR) {
-            // IR compilation succeeded - use IR path
-            const adapter = new IRRuntimeAdapter(result.compiledIR);
+            // IR compilation succeeded - use IR path with legacy render bridge
+            // Pass canvasProgram.signal as the legacy render function for bridge mode
+            // This allows IR to manage time/state while closures still produce render output
+            const legacyRenderFn = result.canvasProgram?.signal;
+            const adapter = new IRRuntimeAdapter(result.compiledIR, legacyRenderFn);
             const irProgram = adapter.createProgram();
 
             const isFirstProgram = lastGoodIRProgramRef.current === null && lastGoodProgramRef.current === null;
@@ -208,7 +212,13 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
             player.applyTimeModel(result.compiledIR.timeModel);
             setTimeModel(result.compiledIR.timeModel);
             setHasCompiledProgram(true);
-            logStore.debug('renderer', `Hot swapped to IR program (timeModel: ${result.compiledIR.timeModel.kind})`);
+            const bridgeMode = legacyRenderFn ? ' (bridge mode)' : '';
+            logStore.debug('renderer', `Hot swapped to IR program${bridgeMode} (timeModel: ${result.compiledIR.timeModel.kind})`);
+
+            // Set debug index for trace infrastructure
+            if (result.debugIndex) {
+              TraceContext.instance.setDebugIndex(result.debugIndex);
+            }
 
             if (isFirstProgram) {
               player.play();
@@ -240,6 +250,11 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
             setTimeModel(result.timeModel!);
             setHasCompiledProgram(true);
             logStore.debug('renderer', `Hot swapped to Canvas program (timeModel: ${result.timeModel!.kind})`);
+
+            // Set debug index for trace infrastructure
+            if (result.debugIndex) {
+              TraceContext.instance.setDebugIndex(result.debugIndex);
+            }
 
             if (isFirstProgram) {
               player.play();
@@ -321,7 +336,9 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         }
 
         if (renderTree) {
-          canvasRenderer.render(renderTree);
+          // Cast needed: IR path may return DrawNode, legacy returns RenderTree with cmds
+          // Both are handled by Canvas2DRenderer at runtime
+          canvasRenderer.render(renderTree as Parameters<typeof canvasRenderer.render>[0]);
         }
       }
 

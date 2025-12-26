@@ -38,3 +38,9 @@ export type { IRWithBusRoots } from "./pass7-bus-lowering";
 // Pass 8: Link Resolution
 export { pass8LinkResolution } from "./pass8-link-resolution";
 export type { LinkedGraphIR, BlockInputRootIR, BlockOutputRootIR } from "./pass8-link-resolution";
+
+// Pass 9: Codegen
+// TODO: Re-enable when pass9-codegen type issues are fixed
+// Currently using buildSchedule.ts directly in the IR pipeline
+// export { pass9Codegen } from "./pass9-codegen";
+

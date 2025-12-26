@@ -219,6 +219,14 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
     sizes[meta.storage] = Math.max(sizes[meta.storage], requiredSize);
   }
 
+  // Validate sizes before allocation
+  for (const [key, size] of Object.entries(sizes)) {
+    if (!Number.isFinite(size) || size < 0) {
+      console.error(`[ValueStore] Invalid size for ${key}:`, size, 'slotMeta:', slotMeta);
+      throw new Error(`Invalid ValueStore size for ${key}: ${size}`);
+    }
+  }
+
   // Allocate typed arrays
   const f64 = new Float64Array(sizes.f64);
   const f32 = new Float32Array(sizes.f32);

@@ -15,7 +15,7 @@
  * - PLAN-2025-12-25-200731.md P0-2: Pass 7 - Bus Lowering to IR
  */
 
-import type { Bus, Publisher } from "../../types";
+import type { Bus, Publisher, Block } from "../../types";
 import type { BusIndex, TypeDesc } from "../ir/types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
@@ -42,8 +42,8 @@ export interface IRWithBusRoots {
   /** Map from bus index to its ValueRef */
   busRoots: Map<BusIndex, ValueRefPacked>;
 
-  /** Map from block index to its output port ValueRefs (from Pass 6) */
-  blockOutputs: Map<number, ValueRefPacked[]>;
+  /** Map from block index to map of port ID to ValueRef (from Pass 6) */
+  blockOutputs: Map<number, Map<string, ValueRefPacked>>;
 
   /** Compilation errors encountered during lowering */
   errors: CompileError[];
@@ -73,7 +73,7 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
  *
  * Translates each bus into an explicit combine node.
  *
- * Input: UnlinkedIRFragments (from Pass 6) + buses + publishers
+ * Input: UnlinkedIRFragments (from Pass 6) + buses + publishers + blocks
  * Output: IRWithBusRoots with bus combine nodes
  *
  * For each bus:
@@ -86,11 +86,18 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
 export function pass7BusLowering(
   unlinked: UnlinkedIRFragments,
   buses: readonly Bus[],
-  publishers: readonly Publisher[]
+  publishers: readonly Publisher[],
+  blocks: readonly Block[]
 ): IRWithBusRoots {
   const { builder, blockOutputs, errors: inheritedErrors } = unlinked;
   const busRoots = new Map<BusIndex, ValueRefPacked>();
   const errors: CompileError[] = [...inheritedErrors];
+
+  // Create lookup map for block index by ID
+  const blockIdToIndex = new Map<string, number>();
+  blocks.forEach((block, idx) => {
+    blockIdToIndex.set(block.id, idx);
+  });
 
   // Process each bus
   for (let busIdx = 0; busIdx < buses.length; busIdx++) {
@@ -105,7 +112,10 @@ export function pass7BusLowering(
         bus,
         busPublishers,
         busIdx as BusIndex,
-        builder
+        builder,
+        blockOutputs,
+        blockIdToIndex,
+        blocks
       );
 
       if (busRef) {
@@ -137,16 +147,80 @@ export function pass7BusLowering(
  */
 function lowerBusToCombineNode(
   bus: Bus,
-  _publishers: readonly Publisher[],
-  _busIndex: BusIndex,
-  builder: IRBuilder
+  publishers: readonly Publisher[],
+  busIndex: BusIndex,
+  builder: IRBuilder,
+  blockOutputs: Map<number, Map<string, ValueRefPacked>>,
+  blockIdToIndex: Map<string, number>,
+  _blocks: readonly Block[]
 ): ValueRefPacked | null {
-  // For Sprint 2, we skip publisher resolution (Phase 4 work)
-  // Just create default bus values
-  // TODO (Phase 4): Resolve publishers and create combine nodes
+  const irType = toIRTypeDesc(bus.type);
 
-  // Case 1: No publishers - use default value
-  return createDefaultBusValue(bus, builder);
+  // Collect terms (publisher outputs)
+  const sigTerms: number[] = [];
+  const fieldTerms: number[] = [];
+
+  for (const pub of publishers) {
+    const blockIdx = blockIdToIndex.get(pub.from.blockId);
+    if (blockIdx === undefined) continue;
+
+    // Look up output by port ID directly
+    const outputs = blockOutputs.get(blockIdx);
+    const ref = outputs?.get(pub.from.slotId);
+
+    if (!ref) {
+      // This is expected for Event ports which don't have IR representation
+      // Only warn if the port exists but has no ref (might be a real issue)
+      continue;
+    }
+
+    // TODO: Apply publisher transform chain (adapter/lens) here
+    // For now, assume 1:1 mapping
+
+    if (ref.k === "sig") {
+      sigTerms.push(ref.id);
+    } else if (ref.k === "field") {
+      fieldTerms.push(ref.id);
+    }
+  }
+
+  // Handle Signal Bus
+  if (irType.world === "signal") {
+    // If no valid terms found, create default
+    if (sigTerms.length === 0) {
+      return createDefaultBusValue(bus, builder);
+    }
+
+    // Create combine node
+    // Note: If only 1 term, we could optimize, but maintaining 'combine' semantics (like 'last') is safer explicitly unless strict identity is guaranteed.
+    // However, builder.sigCombine usually handles single-term optimization or runtime handles it.
+    // Wait, sigCombine interface requires mode.
+    // Supported modes for signals: 'sum', 'last' (and potentially 'average', 'max', 'min' if supported)
+    const mode = bus.combineMode as "sum" | "average" | "max" | "min" | "last";
+    
+    // Safety check for mode
+    const validModes = ["sum", "average", "max", "min", "last"];
+    const safeMode = validModes.includes(mode) ? mode : "last";
+
+    const sigId = builder.sigCombine(busIndex, sigTerms, safeMode, irType);
+    return { k: "sig", id: sigId };
+  }
+
+  // Handle Field Bus
+  if (irType.world === "field") {
+    if (fieldTerms.length === 0) {
+      return createDefaultBusValue(bus, builder);
+    }
+
+    const mode = bus.combineMode as "sum" | "average" | "max" | "min" | "last" | "layer";
+    const validModes = ["sum", "average", "max", "min", "last", "layer"];
+    const safeMode = validModes.includes(mode) ? mode : "layer";
+
+    const fieldId = builder.fieldCombine(busIndex, fieldTerms, safeMode, irType);
+    return { k: "field", id: fieldId };
+  }
+
+  return null;
 }
 
 /**

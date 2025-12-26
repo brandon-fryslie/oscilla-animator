@@ -220,12 +220,13 @@ export class ScheduleExecutor {
   ): RenderTree {
     // Handle case where program has no outputs
     if (!program.outputs || program.outputs.length === 0) {
-      // Return empty group as graceful degradation
+      // Return empty render tree compatible with canvas renderer
+      // Note: This uses the cmds-based RenderTree format from renderCmd.ts
+      // rather than the DrawNode format from renderTree.ts
+      // TODO: Unify these types in a future refactor
       return {
-        kind: 'group',
-        id: 'empty',
-        children: [],
-      };
+        cmds: [],
+      } as unknown as RenderTree;
     }
 
     // Get first output specification (render root)

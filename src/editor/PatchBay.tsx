@@ -59,6 +59,15 @@ interface ConnectionInfo {
 }
 
 /**
+ * Default source info for tooltip display
+ */
+interface DefaultSourceInfo {
+  hasDefaultSource: boolean;
+  value?: unknown;
+  uiHint?: { kind: string };
+}
+
+/**
  * Lane colors by kind for visual identification.
  */
 const LANE_KIND_COLORS: Record<LaneKind, string> = {
@@ -102,6 +111,40 @@ const PORT_GLYPHS: Record<string, string> = {
 };
 
 /**
+ * Collapsed port indicator - shows when there are >4 ports
+ * Clicking navigates to the block inspector to see all ports
+ */
+function CollapsedPortIndicator({
+  count,
+  direction,
+  onClick,
+}: {
+  count: number;
+  direction: 'input' | 'output';
+  onClick: () => void;
+}) {
+  const arrow = direction === 'input' ? '→' : '←';
+  return (
+    <Tippy
+      content={`${count} ${direction}s - click to view in Inspector`}
+      placement="top"
+      delay={[200, 0]}
+    >
+      <div
+        className={`port-collapsed-indicator ${direction}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+      >
+        <span className="port-collapsed-count">{count}</span>
+        <span className="port-collapsed-arrow">{arrow}</span>
+      </div>
+    </Tippy>
+  );
+}
+
+/**
  * Port component - renders a compact input or output connection point.
  * Shows grey dash when unconnected, colored glyph when connected.
  * Tooltip appears above/below to avoid covering other blocks.
@@ -115,6 +158,7 @@ function Port({
   isSelected,
   isCompatible,
   connectionInfo,
+  defaultSourceInfo,
   hasPortError,
   hasPortWarning,
   onHover,
@@ -129,6 +173,7 @@ function Port({
   isSelected: boolean;
   isCompatible: boolean;
   connectionInfo: ConnectionInfo;
+  defaultSourceInfo?: DefaultSourceInfo;
   hasPortError?: boolean;
   hasPortWarning?: boolean;
   onHover: (port: PortRef | null) => void;
@@ -233,9 +278,36 @@ function Port({
             ● {connectionStatusText}
           </div>
         )}
+        {/* Default source info - shown when no connections but has default */}
+        {!connectionStatusText && defaultSourceInfo?.hasDefaultSource && (
+          <div className="port-tooltip-status default-source">
+            ◆ Default: {formatDefaultValue(defaultSourceInfo.value)}
+          </div>
+        )}
+        {/* Value source summary - always show where value comes from */}
+        {!connectionStatusText && !defaultSourceInfo?.hasDefaultSource && direction === 'input' && (
+          <div className="port-tooltip-status unconnected">
+            ○ No value source
+          </div>
+        )}
       </div>
     </div>
   );
+
+  // Helper to format default values for display
+  function formatDefaultValue(value: unknown): string {
+    if (value === undefined || value === null) return 'null';
+    if (typeof value === 'number') return value.toFixed(2);
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    if (typeof value === 'string') return `"${value.slice(0, 20)}${value.length > 20 ? '...' : ''}"`;
+    if (typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+      if ('x' in obj && 'y' in obj) return `(${(obj.x as number)?.toFixed(1)}, ${(obj.y as number)?.toFixed(1)})`;
+      if ('r' in obj && 'g' in obj && 'b' in obj) return `rgb(${obj.r}, ${obj.g}, ${obj.b})`;
+      return JSON.stringify(value).slice(0, 30);
+    }
+    return String(value);
+  }
 
   return (
     <Tippy
@@ -374,6 +446,17 @@ const DraggablePatchBlock = observer(({
     });
   };
 
+  // Helper to get default source info for an input port
+  const getDefaultSourceInfo = (slotId: string): DefaultSourceInfo => {
+    const ds = store.defaultSourceStore.getDefaultSourceForInput(block.id, slotId);
+    if (!ds) return { hasDefaultSource: false };
+    return {
+      hasDefaultSource: true,
+      value: ds.value,
+      uiHint: ds.uiHint,
+    };
+  };
+
   // Helper to get connection info for a specific port
   const getConnectionInfo = (slotId: string, direction: 'input' | 'output'): ConnectionInfo => {
     // Check for block-to-block connections
@@ -472,50 +555,60 @@ const DraggablePatchBlock = observer(({
       {/* Input ports (left side) */}
       {hasInputs && (
         <div className="block-ports inputs">
-          {block.inputs.map((slot) => {
-            const portConnColor = getPortColor(block.id, slot.id, portColorMap);
-            const isThisHovered =
-              hoveredPort?.blockId === block.id &&
-              hoveredPort?.slotId === slot.id &&
-              hoveredPort?.direction === 'input';
-            const isThisSelected =
-              selectedPort?.blockId === block.id &&
-              selectedPort?.slotId === slot.id &&
-              selectedPort?.direction === 'input';
+          {block.inputs.length > 4 ? (
+            <CollapsedPortIndicator
+              count={block.inputs.length}
+              direction="input"
+              onClick={() => store.uiStore.selectBlock(block.id)}
+            />
+          ) : (
+            block.inputs.map((slot) => {
+              const portConnColor = getPortColor(block.id, slot.id, portColorMap);
+              const isThisHovered =
+                hoveredPort?.blockId === block.id &&
+                hoveredPort?.slotId === slot.id &&
+                hoveredPort?.direction === 'input';
+              const isThisSelected =
+                selectedPort?.blockId === block.id &&
+                selectedPort?.slotId === slot.id &&
+                selectedPort?.direction === 'input';
 
-            // Check if compatible with source port (and source is on different block)
-            let compatible = false;
-            if (sourcePort && sourceSlot && sourcePort.blockId !== block.id) {
-              // Source is output, we're checking this input
-              if (sourcePort.direction === 'output') {
-                compatible = areTypesCompatible(sourceSlot.type, slot.type);
+              // Check if compatible with source port (and source is on different block)
+              let compatible = false;
+              if (sourcePort && sourceSlot && sourcePort.blockId !== block.id) {
+                // Source is output, we're checking this input
+                if (sourcePort.direction === 'output') {
+                  compatible = areTypesCompatible(sourceSlot.type, slot.type);
+                }
               }
-            }
 
-            const connInfo = getConnectionInfo(slot.id, 'input');
-            const portDiags = getPortDiagnostics(slot.id, 'input');
-            const portHasError = portDiags.some(d => d.severity === 'error' || d.severity === 'fatal');
-            const portHasWarning = !portHasError && portDiags.some(d => d.severity === 'warn');
+              const connInfo = getConnectionInfo(slot.id, 'input');
+              const defaultInfo = getDefaultSourceInfo(slot.id);
+              const portDiags = getPortDiagnostics(slot.id, 'input');
+              const portHasError = portDiags.some(d => d.severity === 'error' || d.severity === 'fatal');
+              const portHasWarning = !portHasError && portDiags.some(d => d.severity === 'warn');
 
-            return (
-              <Port
-                key={slot.id}
-                slot={slot}
-                blockId={block.id}
-                direction="input"
-                connectionColor={portConnColor}
-                isHovered={isThisHovered}
-                isSelected={isThisSelected}
-                isCompatible={compatible}
-                connectionInfo={connInfo}
-                hasPortError={portHasError}
-                hasPortWarning={portHasWarning}
-                onHover={(p) => store.uiStore.setHoveredPort(p)}
-                onClick={(p) => store.uiStore.setSelectedPort(p)}
-                onContextMenu={(e, p) => store.uiStore.openContextMenu(e.clientX, e.clientY, p)}
-              />
-            );
-          })}
+              return (
+                <Port
+                  key={slot.id}
+                  slot={slot}
+                  blockId={block.id}
+                  direction="input"
+                  connectionColor={portConnColor}
+                  isHovered={isThisHovered}
+                  isSelected={isThisSelected}
+                  isCompatible={compatible}
+                  connectionInfo={connInfo}
+                  defaultSourceInfo={defaultInfo}
+                  hasPortError={portHasError}
+                  hasPortWarning={portHasWarning}
+                  onHover={(p) => store.uiStore.setHoveredPort(p)}
+                  onClick={(p) => store.uiStore.setSelectedPort(p)}
+                  onContextMenu={(e, p) => store.uiStore.openContextMenu(e.clientX, e.clientY, p)}
+                />
+              );
+            })
+          )}
         </div>
       )}
 
@@ -527,50 +620,58 @@ const DraggablePatchBlock = observer(({
       {/* Output ports (right side) */}
       {hasOutputs && (
         <div className="block-ports outputs">
-          {block.outputs.map((slot) => {
-            const portConnColor = getPortColor(block.id, slot.id, portColorMap);
-            const isThisHovered =
-              hoveredPort?.blockId === block.id &&
-              hoveredPort?.slotId === slot.id &&
-              hoveredPort?.direction === 'output';
-            const isThisSelected =
-              selectedPort?.blockId === block.id &&
-              selectedPort?.slotId === slot.id &&
-              selectedPort?.direction === 'output';
+          {block.outputs.length > 4 ? (
+            <CollapsedPortIndicator
+              count={block.outputs.length}
+              direction="output"
+              onClick={() => store.uiStore.selectBlock(block.id)}
+            />
+          ) : (
+            block.outputs.map((slot) => {
+              const portConnColor = getPortColor(block.id, slot.id, portColorMap);
+              const isThisHovered =
+                hoveredPort?.blockId === block.id &&
+                hoveredPort?.slotId === slot.id &&
+                hoveredPort?.direction === 'output';
+              const isThisSelected =
+                selectedPort?.blockId === block.id &&
+                selectedPort?.slotId === slot.id &&
+                selectedPort?.direction === 'output';
 
-            // Check if compatible with source port (and source is on different block)
-            let compatible = false;
-            if (sourcePort && sourceSlot && sourcePort.blockId !== block.id) {
-              // Source is input, we're checking this output
-              if (sourcePort.direction === 'input') {
-                compatible = areTypesCompatible(slot.type, sourceSlot.type);
+              // Check if compatible with source port (and source is on different block)
+              let compatible = false;
+              if (sourcePort && sourceSlot && sourcePort.blockId !== block.id) {
+                // Source is input, we're checking this output
+                if (sourcePort.direction === 'input') {
+                  compatible = areTypesCompatible(slot.type, sourceSlot.type);
+                }
               }
-            }
 
-            const connInfo = getConnectionInfo(slot.id, 'output');
-            const portDiags = getPortDiagnostics(slot.id, 'output');
-            const portHasError = portDiags.some(d => d.severity === 'error' || d.severity === 'fatal');
-            const portHasWarning = !portHasError && portDiags.some(d => d.severity === 'warn');
+              const connInfo = getConnectionInfo(slot.id, 'output');
+              const portDiags = getPortDiagnostics(slot.id, 'output');
+              const portHasError = portDiags.some(d => d.severity === 'error' || d.severity === 'fatal');
+              const portHasWarning = !portHasError && portDiags.some(d => d.severity === 'warn');
 
-            return (
-              <Port
-                key={slot.id}
-                slot={slot}
-                blockId={block.id}
-                direction="output"
-                connectionColor={portConnColor}
-                isHovered={isThisHovered}
-                isSelected={isThisSelected}
-                isCompatible={compatible}
-                connectionInfo={connInfo}
-                hasPortError={portHasError}
-                hasPortWarning={portHasWarning}
-                onHover={(p) => store.uiStore.setHoveredPort(p)}
-                onClick={(p) => store.uiStore.setSelectedPort(p)}
-                onContextMenu={(e, p) => store.uiStore.openContextMenu(e.clientX, e.clientY, p)}
-              />
-            );
-          })}
+              return (
+                <Port
+                  key={slot.id}
+                  slot={slot}
+                  blockId={block.id}
+                  direction="output"
+                  connectionColor={portConnColor}
+                  isHovered={isThisHovered}
+                  isSelected={isThisSelected}
+                  isCompatible={compatible}
+                  connectionInfo={connInfo}
+                  hasPortError={portHasError}
+                  hasPortWarning={portHasWarning}
+                  onHover={(p) => store.uiStore.setHoveredPort(p)}
+                  onClick={(p) => store.uiStore.setSelectedPort(p)}
+                  onContextMenu={(e, p) => store.uiStore.openContextMenu(e.clientX, e.clientY, p)}
+                />
+              );
+            })
+          )}
         </div>
       )}
     </div>

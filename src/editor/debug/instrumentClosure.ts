@@ -17,7 +17,7 @@ import type { SpanRing } from './SpanRing';
 import type { ValueRing } from './ValueRing';
 import { SpanKind, SpanFlags } from './SpanTypes';
 import { TraceController } from './TraceController';
-import { ValueTag, packF32 } from './ValueRecord';
+import { ValueTag, packF32, FieldStatMask } from './ValueRecord';
 
 // =============================================================================
 // P1-1: Block Timing Wrapper
@@ -79,15 +79,6 @@ export function wrapSignalForDebug(
 // =============================================================================
 // P1-2: Field Materialization Wrapper
 // =============================================================================
-
-/**
- * Field stat computation flags.
- */
-export const FieldStatMask = {
-  None: 0,
-  HasMinMax: 1,
-  HasNaN: 2,
-} as const;
 
 /**
  * Wrap a field closure for debug instrumentation.

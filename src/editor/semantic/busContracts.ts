@@ -56,14 +56,14 @@ export const RESERVED_BUS_CONTRACTS: Record<string, ReservedBusContract> = {
 
   pulse: {
     type: {
-      world: 'signal',
+      world: 'event',  // CRITICAL: event<trigger>, NOT signal<trigger>
       domain: 'trigger',
       semantics: 'pulse',
       category: 'core',
       busEligible: true,
     },
     combineMode: 'last',
-    description: 'Pulse events (wrap events, beat triggers)',
+    description: 'Discrete pulse events (wrap events, beat triggers)',
   },
 
   energy: {

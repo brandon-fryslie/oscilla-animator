@@ -1,10 +1,8 @@
 /**
- * Execute Node Eval Step (STUB)
+ * Execute Node Eval Step
  *
  * Evaluates a node by reading inputs, executing opcode, and writing outputs.
- *
- * STUB IMPLEMENTATION: This is a placeholder for Sprint 1.
- * Full implementation requires Phase 4 (SignalExpr evaluator).
+ * Uses the OpCodeEvaluator to perform the actual computation.
  *
  * References:
  * - HANDOFF.md Topic 3 (ScheduleExecutor - Node Eval)
@@ -13,58 +11,46 @@
 
 import type { StepNodeEval, CompiledProgramIR } from "../../../compiler/ir";
 import type { RuntimeState } from "../RuntimeState";
+import { evaluateOp } from "../evaluators/OpCodeEvaluator";
+import { OpCode } from "../../../compiler/ir/opcodes";
 
 /**
- * Execute NodeEval step (STUB).
+ * Execute NodeEval step.
  *
- * Stub implementation:
- * - Reads input slots
- * - Calls placeholder opcode executor (returns zeros)
- * - Writes output slots
- *
- * TODO: Phase 4 - Implement actual opcode execution
- * - Dispatch to opcode handlers based on node type
- * - Execute SignalExpr/FieldExpr evaluation
- * - Handle state reads/writes
+ * 1. Resolves NodeIR from program using step.nodeIndex
+ * 2. Reads input values from runtime.values using step.inputSlots
+ * 3. Dispatches to OpCodeEvaluator
+ * 4. Writes output values to runtime.values using step.outputSlots
  *
  * @param step - NodeEval step specification
- * @param _program - Compiled program (not used in stub)
+ * @param program - Compiled program
  * @param runtime - Runtime state
  */
 export function executeNodeEval(
   step: StepNodeEval,
-  _program: CompiledProgramIR,
+  program: CompiledProgramIR,
   runtime: RuntimeState,
 ): void {
-  // Read inputs (stub - just read the slots)
+  // 1. Get NodeIR
+  const node = program.nodes.nodes[step.nodeIndex];
+  if (!node) {
+    throw new Error(`executeNodeEval: Invalid nodeIndex ${step.nodeIndex}`);
+  }
+
+  // 2. Read inputs
   const inputs = step.inputSlots.map((slot) => runtime.values.read(slot));
 
-  // Execute opcode (stub - placeholder returns zeros)
-  // TODO: Full opcode execution requires Phase 4 evaluators
-  const outputs = executeOpcodeStub(step, inputs);
+  // 3. Execute OpCode
+  // If opcodeId is missing, it might be a no-op or pass-through
+  // Default to OpCode.Const (0) which is safe-ish, or OpCode.Passthrough if available
+  const opcode = (node.opcodeId as OpCode) ?? OpCode.Const;
+  
+  const outputs = evaluateOp(opcode, inputs, runtime, node);
 
-  // Write outputs
-  step.outputSlots.forEach((slot, i) => {
-    runtime.values.write(slot, outputs[i]);
-  });
-}
-
-/**
- * Placeholder opcode executor (STUB).
- *
- * Returns zero/default values for all outputs.
- * This is sufficient for testing the execution loop structure.
- *
- * TODO: Phase 4 - Replace with actual opcode dispatch:
- * - switch (node.opcodeId) { ... }
- * - Call evaluator functions (evalAdd, evalSin, evalIntegrate, etc.)
- * - Handle state updates for stateful nodes
- *
- * @param step - NodeEval step
- * @param _inputs - Input values (not used in stub)
- * @returns Array of output values (all zeros in stub)
- */
-function executeOpcodeStub(step: StepNodeEval, _inputs: unknown[]): unknown[] {
-  // Stub: return zeros for all outputs
-  return step.outputSlots.map(() => 0);
+  // 4. Write outputs
+  // Ensure we don't write more outputs than we have slots for
+  const count = Math.min(step.outputSlots.length, outputs.length);
+  for (let i = 0; i < count; i++) {
+    runtime.values.write(step.outputSlots[i], outputs[i]);
+  }
 }
