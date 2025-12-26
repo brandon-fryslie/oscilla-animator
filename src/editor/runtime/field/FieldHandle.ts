@@ -132,6 +132,27 @@ export function evalFieldHandle(
       };
       break;
 
+    case 'select':
+      // Conditional per-element selection
+      handle = {
+        kind: 'Select',
+        cond: node.cond,
+        t: node.t,
+        f: node.f,
+        type: node.type,
+      };
+      break;
+
+    case 'transform':
+      // Transform chain application
+      handle = {
+        kind: 'Transform',
+        src: node.src,
+        chain: node.chain,
+        type: node.type,
+      };
+      break;
+
     case 'sampleSignal':
       // Broadcast signal to all elements
       handle = {

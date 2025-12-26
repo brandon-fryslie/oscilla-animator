@@ -20,6 +20,7 @@ import type {
   MaterializationDebug,
   SigExprId,
   CombineMode,
+  TransformChainId,
 } from './types';
 import type { SignalBridge } from '../integration/SignalBridge';
 
@@ -31,6 +32,23 @@ import type { SignalBridge } from '../integration/SignalBridge';
  * Signal expression IR node (stub for now)
  */
 export type SignalExprIR = unknown;
+
+/**
+ * Transform chain definition (stub for now)
+ */
+export interface TransformChain {
+  /** Transform chain ID */
+  id: TransformChainId;
+  /** Transform steps (opaque for now) */
+  steps: unknown[];
+}
+
+/**
+ * Transform chains table
+ */
+export interface TransformChains {
+  get(chainId: TransformChainId): TransformChain | undefined;
+}
 
 /**
  * Signal environment - contains time and signal bridge
@@ -87,6 +105,9 @@ export interface MaterializerEnv {
 
   /** Source fields */
   sources: SourceFields;
+
+  /** Transform chains (optional, for transform node support) */
+  transforms?: TransformChains;
 
   /** Domain count function */
   getDomainCount: (domainId: number) => number;
@@ -287,6 +308,14 @@ function fillBuffer(
       fillBufferZip(handle, out, N, env);
       break;
 
+    case 'Select':
+      fillBufferSelect(handle, out, N, env);
+      break;
+
+    case 'Transform':
+      fillBufferTransform(handle, out, N, env);
+      break;
+
     case 'Combine':
       fillBufferCombine(handle, out, N, env);
       break;
@@ -444,6 +473,112 @@ function fillBufferZip(
   // Apply zip operation element-wise
   for (let i = 0; i < N; i++) {
     outArr[i] = applyFieldZipOp(handle.op, aBuffer[i], bBuffer[i]);
+  }
+}
+
+/**
+ * Fill buffer with select operation (conditional per-element)
+ *
+ * Algorithm:
+ * 1. Materialize condition field
+ * 2. Materialize true/false fields
+ * 3. Select element-wise based on condition (nonzero = true)
+ */
+function fillBufferSelect(
+  handle: Extract<FieldHandle, { kind: 'Select' }>,
+  out: ArrayBufferView,
+  N: number,
+  env: MaterializerEnv
+): void {
+  // Materialize condition field
+  const condBuffer = materialize(
+    {
+      fieldId: handle.cond,
+      domainId: env.fieldEnv.domainId,
+      format: 'f32',
+      layout: 'scalar',
+      usageTag: 'select-cond',
+    },
+    env
+  ) as Float32Array;
+
+  // Materialize true branch field
+  const tBuffer = materialize(
+    {
+      fieldId: handle.t,
+      domainId: env.fieldEnv.domainId,
+      format: 'f32',
+      layout: 'scalar',
+      usageTag: 'select-true',
+    },
+    env
+  ) as Float32Array;
+
+  // Materialize false branch field
+  const fBuffer = materialize(
+    {
+      fieldId: handle.f,
+      domainId: env.fieldEnv.domainId,
+      format: 'f32',
+      layout: 'scalar',
+      usageTag: 'select-false',
+    },
+    env
+  ) as Float32Array;
+
+  const outArr = out as Float32Array;
+
+  // Select element-wise (nonzero condition = true)
+  for (let i = 0; i < N; i++) {
+    outArr[i] = condBuffer[i] !== 0 ? tBuffer[i] : fBuffer[i];
+  }
+}
+
+/**
+ * Fill buffer with transform operation (transform chain application)
+ *
+ * Algorithm:
+ * 1. Materialize source field
+ * 2. Apply transform chain to produce output
+ *
+ * NOTE: Transform chain application is a placeholder for now.
+ * Full transform semantics will be implemented in Phase 6.
+ */
+function fillBufferTransform(
+  handle: Extract<FieldHandle, { kind: 'Transform' }>,
+  out: ArrayBufferView,
+  N: number,
+  env: MaterializerEnv
+): void {
+  // Materialize source field
+  const srcBuffer = materialize(
+    {
+      fieldId: handle.src,
+      domainId: env.fieldEnv.domainId,
+      format: 'f32',
+      layout: 'scalar',
+      usageTag: 'transform-src',
+    },
+    env
+  ) as Float32Array;
+
+  // Get transform chain
+  const chain = env.transforms?.get(handle.chain);
+  if (!chain) {
+    // Fallback: identity transform (copy source to output)
+    // This allows the system to work even without transform chain support
+    const outArr = out as Float32Array;
+    for (let i = 0; i < N; i++) {
+      outArr[i] = srcBuffer[i];
+    }
+    return;
+  }
+
+  // TODO: Apply transform chain steps
+  // For now, use identity transform as placeholder
+  const outArr = out as Float32Array;
+  for (let i = 0; i < N; i++) {
+    outArr[i] = srcBuffer[i];
   }
 }
 

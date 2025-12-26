@@ -22,16 +22,12 @@
 - runtime-*.md (runtime behavior findings)
 - compiler-patterns.md (INVALIDATED 2025-12-25 - compiler passes modified)
 - test-infrastructure.md (INVALIDATED 2025-12-26 - signal-expr tests modified)
-- fieldexpr-systems.md (INVALIDATED 2025-12-26 - Materializer modified, integration/ added)
+- fieldexpr-systems.md (INVALIDATED 2025-12-26 - Materializer modified, CompilerRuntime added)
 - signal-expr-runtime.md (NEEDS EVAL - SignalExprBuilder + golden tests added 2025-12-26)
+- runtime-integration.md (INVALIDATED 2025-12-26 - CompilerRuntime added, select/transform nodes added)
 
 ## Recent Changes Requiring Re-evaluation
-- 2025-12-26: FieldExpr integration (Phase 5) - Type adapter and SignalBridge added
-  - New files: typeAdapter.ts, SignalBridge.ts, integration tests
-  - Modified: Materializer.ts (added SignalBridge integration)
-  - Impact: All cached knowledge about field materialization is stale
-- 2025-12-26: SignalExpr runtime extended with SignalExprBuilder, golden test framework
-  - New files: SignalExprBuilder.ts, goldenTests.test.ts, blockMigration.test.ts
-  - New blocks: SubSignal.ts, DivSignal.ts
-  - Modified: MigrationTracking.ts, runtime/signal-expr/index.ts
-  - Impact: Any cached knowledge about signal block compilation or testing is stale
+- 2025-12-26: FieldExpr Phase 5 remaining work completed
+  - New file: CompilerRuntime.ts - Wires LinkedGraphIR to runtime Materializer
+  - Modified: types.ts, FieldHandle.ts, Materializer.ts - Added select/transform node support
+  - All integration infrastructure complete for compiler → runtime

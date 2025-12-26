@@ -98,6 +98,11 @@ export type FieldExprId = number;
  */
 export type SigExprId = number;
 
+/**
+ * TransformChainId: Unique identifier for a transform chain
+ */
+export type TransformChainId = number;
+
 // =============================================================================
 // FieldHandle: Evaluated Recipe
 // =============================================================================
@@ -118,6 +123,12 @@ export type FieldHandle =
 
   // Zip two fields element-wise
   | { kind: 'Zip'; op: FieldZipOp; a: FieldExprId; b: FieldExprId; type: TypeDesc }
+
+  // Conditional per-element selection
+  | { kind: 'Select'; cond: FieldExprId; t: FieldExprId; f: FieldExprId; type: TypeDesc }
+
+  // Transform chain application
+  | { kind: 'Transform'; src: FieldExprId; chain: TransformChainId; type: TypeDesc }
 
   // Broadcast a signal to all elements
   | { kind: 'Broadcast'; sigId: SigExprId; domainId: number; type: TypeDesc }
@@ -160,6 +171,8 @@ export type FieldExprIR =
   | { kind: 'const'; constId: number; type: TypeDesc }
   | { kind: 'map'; fn: FnRef; src: FieldExprId; type: TypeDesc }
   | { kind: 'zip'; fn: FnRef; a: FieldExprId; b: FieldExprId; type: TypeDesc }
+  | { kind: 'select'; cond: FieldExprId; t: FieldExprId; f: FieldExprId; type: TypeDesc }
+  | { kind: 'transform'; src: FieldExprId; chain: TransformChainId; type: TypeDesc }
   | { kind: 'sampleSignal'; signalSlot: SigExprId; domainId: number; type: TypeDesc }
   | { kind: 'busCombine'; combine: BusCombine; terms: readonly FieldExprId[]; type: TypeDesc }
   | { kind: 'inputSlot'; slot: InputSlot; type: TypeDesc }
