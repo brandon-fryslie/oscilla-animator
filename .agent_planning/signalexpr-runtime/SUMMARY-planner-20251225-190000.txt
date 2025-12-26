@@ -1,0 +1,6 @@
+Agent: status-planner | 2025-12-25-190000
+Topic: signalexpr-runtime
+Files: PLAN-20251225-190000.md, DOD-20251225-190000.md
+Items: 7 (P0: 4, P1: 3, P2: 1)
+Acceptance Criteria: 68 total
+Sprint Focus: Core evaluator infrastructure + pure evaluation (const, timeAbsMs, map, zip, opcodes)

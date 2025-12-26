@@ -6,6 +6,7 @@
 | Architecture | architecture.md | 2025-12-23 05:13 | project-evaluator + design docs | HIGH |
 | Rendering Architecture | rendering-architecture.md | 2025-12-24 16:52 | project-evaluator (canvas-renderer eval v2) | HIGH |
 | Lint Infrastructure | lint-infrastructure.md | 2025-12-25 17:48 | project-evaluator (lint-cleanup) | HIGH |
+| Compiler Patterns | compiler-patterns.md | 2025-12-25 19:00 | project-evaluator (Phase 4 worktree) | HIGH |
 
 ## Cache Freshness Guidelines
 - **FRESH**: < 1 hour - trust fully
@@ -18,6 +19,7 @@
 - **architecture.md**: Core patterns, TimeRoot spec violations, type system, stores, compiler pipeline
 - **rendering-architecture.md**: RenderTree IR, Player loop, SvgRenderer, RenderInstances2D, Canvas extension points
 - **lint-infrastructure.md**: ESLint config, two-tier rules (critical vs non-critical), auto-fixable rules
+- **compiler-patterns.md**: IR structure, SignalExpr nodes, compilation patterns, bus resolution, transform opcodes
 
 ## Not Yet Cached
 - project-structure.md (directory layout, entry points)
