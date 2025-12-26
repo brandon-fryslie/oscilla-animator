@@ -43,6 +43,18 @@ import {
 import { getBlockDefinition } from '../blocks/registry';
 import { getLens } from '../lenses/LensRegistry';
 import { resolveLensParam } from '../lenses/lensResolution';
+// Sprint 2, P0-4: Dual-Emit IR Compilation passes
+import {
+  pass1Normalize,
+  pass2TypeGraph,
+  pass3TimeTopology,
+  pass4DepGraph,
+  pass5CycleValidation,
+  pass6BlockLowering,
+  pass7BusLowering,
+  pass8LinkResolution,
+} from './passes';
+
 
 // =============================================================================
 // Type Guards
@@ -229,6 +241,101 @@ function validateReservedBuses(
   return errors;
 }
 
+
+// =============================================================================
+// Sprint 2, P0-4: Dual-Emit IR Compilation Helper
+// =============================================================================
+
+/**
+ * Run IR compilation passes (Passes 1-8) after closure compilation succeeds.
+ * This is Sprint 2's dual-emit strategy: closures work, IR is generated alongside.
+ *
+ * @param patch - The CompilerPatch that was successfully compiled
+ * @param compiledPortMap - The closure artifacts from successful compilation
+ * @returns LinkedGraphIR or undefined if IR compilation fails
+ */
+function compileIR(
+  patch: CompilerPatch,
+  compiledPortMap: Map<string, Artifact>
+): CompileResult['ir'] {
+  try {
+    // Convert CompilerPatch to Patch format for Pass 1
+    const blocksArray: import('../types').Block[] = Array.from(patch.blocks.values()).map((inst) => {
+      const def = getBlockDefinition(inst.type);
+      if (!def) {
+        throw new Error(`Block definition not found for type: ${inst.type}`);
+      }
+      
+      // Type assertion for IR compilation - structure is compatible enough for passes
+      return {
+        id: inst.id,
+        type: inst.type,
+        label: def.label,
+        inputs: (def.inputs || []) as any,
+        outputs: (def.outputs || []) as any,
+        params: inst.params,
+        category: 'internal' as any,
+        description: def.description,
+      } as import('../types').Block;
+    });
+
+    // Convert to CompilerConnection format (uses 'port' not 'slotId')
+    const connectionsArray: import('./types').CompilerConnection[] = patch.connections.map((conn) => ({
+      id: conn.id || `${conn.from.blockId}:${conn.from.port}->${conn.to.blockId}:${conn.to.port}`,
+      from: { blockId: conn.from.blockId, port: conn.from.port },
+      to: { blockId: conn.to.blockId, port: conn.to.port },
+    }));
+
+    // Create Connection[] for Patch (passes 1-5)
+    const patchConnections: import('../types').Connection[] = patch.connections.map((conn) => ({
+      id: conn.id || `${conn.from.blockId}:${conn.from.port}->${conn.to.blockId}:${conn.to.port}`,
+      from: { blockId: conn.from.blockId, slotId: conn.from.port, direction: 'output' as const },
+      to: { blockId: conn.to.blockId, slotId: conn.to.port, direction: 'input' as const },
+    }));
+
+    const patchForIR: import('../types').Patch = {
+      version: 1,
+      blocks: blocksArray,
+      connections: patchConnections,
+      lanes: [], // Not needed for IR passes
+      buses: patch.buses,
+      publishers: patch.publishers,
+      listeners: patch.listeners,
+      defaultSources: Object.entries(patch.defaultSources).map(([slotId, state]) => ({
+        id: slotId,
+        type: state.type,
+        value: state.value,
+        uiHint: state.uiHint,
+        rangeHint: state.rangeHint,
+      })),
+      settings: { seed: 0, speed: 1 },
+    };
+
+    // Run Passes 1-5: Normalization → Validation
+    const normalized = pass1Normalize(patchForIR);
+    const typed = pass2TypeGraph(normalized);
+    const timeResolved = pass3TimeTopology(typed);
+    const depGraph = pass4DepGraph(timeResolved);
+    const validated = pass5CycleValidation(depGraph, patchForIR.blocks);
+
+    // Run Passes 6-8: Block Lowering → Bus Lowering → Link Resolution
+    const unlinked = pass6BlockLowering(validated, patchForIR.blocks, compiledPortMap);
+    const withBuses = pass7BusLowering(unlinked, patchForIR.buses, patchForIR.publishers);
+    const linked = pass8LinkResolution(
+      withBuses,
+      patchForIR.blocks,
+      connectionsArray,
+      patchForIR.listeners
+    );
+
+    return linked;
+  } catch (e) {
+    // IR compilation failed - this is non-fatal, we still have closure
+    console.warn('IR compilation failed:', e);
+    return undefined;
+  }
+}
+
 // =============================================================================
 // Main Bus-Aware Compiler
 // =============================================================================
@@ -241,7 +348,8 @@ export function compileBusAwarePatch(
   patch: CompilerPatch,
   registry: BlockRegistry,
   _seed: Seed,
-  ctx: CompileCtx
+  ctx: CompileCtx,
+  options?: { emitIR?: boolean }
 ): CompileResult {
   const errors: CompileError[] = [];
   const buses = patch.buses;
@@ -598,12 +706,60 @@ export function compileBusAwarePatch(
     return { ok: false, errors };
   }
 
+
+/**
+ * Helper to attach IR to a successful compile result if emitIR is enabled.
+ */
+function attachIR(
+  result: CompileResult,
+  patch: CompilerPatch,
+  compiledPortMap: Map<string, Artifact>,
+  emitIR: boolean
+): CompileResult {
+  if (!emitIR) {
+    return result;
+  }
+
+  const ir = compileIR(patch, compiledPortMap);
+  if (ir === undefined) {
+    // IR compilation failed - add warning but keep closure success
+    return {
+      ...result,
+      irWarnings: [
+        {
+          code: 'IRValidationFailed',
+          message: 'IR compilation failed (see console for details)',
+        },
+      ],
+    };
+  }
+
+  // Check for IR errors
+  if (ir.errors && ir.errors.length > 0) {
+    return {
+      ...result,
+      ir,
+      irWarnings: ir.errors,
+    };
+  }
+
+  return {
+    ...result,
+    ir,
+  };
+}
+
   // Infer TimeModel from the patch
   const timeModel = inferTimeModel(patch);
 
   // Accept RenderTreeProgram, RenderTree, or CanvasRender as output
   if (outArt.kind === 'RenderTreeProgram') {
-    return { ok: true, program: outArt.value, timeModel, errors: [], compiledPortMap };
+    return attachIR(
+      { ok: true, program: outArt.value, timeModel, errors: [], compiledPortMap },
+      patch,
+      compiledPortMap,
+      options?.emitIR === true
+    );
   }
 
   if (outArt.kind === 'RenderTree') {
@@ -613,21 +769,31 @@ export function compileBusAwarePatch(
       signal: renderFn,
       event: () => [],
     };
-    return { ok: true, program, timeModel, errors: [], compiledPortMap };
+    return attachIR(
+      { ok: true, program, timeModel, errors: [], compiledPortMap },
+      patch,
+      compiledPortMap,
+      options?.emitIR === true
+    );
   }
 
   // Handle Canvas render output
   if (outArt.kind === 'CanvasRender') {
     // Canvas output is a function that returns RenderTree (for Canvas2DRenderer)
     const canvasRenderFn = outArt.value;
-    return {
-      ok: true,
-      program: undefined, // No SVG program for canvas path
-      canvasProgram: { signal: canvasRenderFn, event: () => [] },
-      timeModel,
-      errors: [],
+    return attachIR(
+      {
+        ok: true,
+        program: undefined, // No SVG program for canvas path
+        canvasProgram: { signal: canvasRenderFn, event: () => [] },
+        timeModel,
+        errors: [],
+        compiledPortMap,
+      },
+      patch,
       compiledPortMap,
-    };
+      options?.emitIR === true
+    );
   }
 
   errors.push({

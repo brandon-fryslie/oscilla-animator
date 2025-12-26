@@ -457,13 +457,19 @@ export type CompileErrorCode =
   | 'BusLoweringFailed'
   | 'DanglingConnection'
   | 'DanglingBindingEndpoint'
-  | 'UnresolvedPort';
+  | 'UnresolvedPort'
+  // Sprint 2: IR validation
+  | 'IRValidationFailed';
 
 export interface CompileError {
   code: CompileErrorCode;
   message: string;
   where?: { blockId?: string; port?: string; connection?: CompilerConnection; busId?: string };
 }
+
+// Import LinkedGraphIR for dual-emit support (Sprint 2, P0-4)
+import type { LinkedGraphIR } from './passes/pass8-link-resolution';
+export type { LinkedGraphIR };
 
 export interface CompileResult {
   ok: boolean;
@@ -475,6 +481,12 @@ export interface CompileResult {
   timeModel?: TimeModel;
   errors: readonly CompileError[];
   compiledPortMap?: Map<string, Artifact>;
+
+  // Sprint 2, P0-4: Dual-Emit Integration
+  /** Intermediate Representation (when emitIR flag is true) */
+  ir?: LinkedGraphIR;
+  /** IR compilation warnings (non-fatal IR errors) */
+  irWarnings?: readonly CompileError[];
 }
 
 // =============================================================================

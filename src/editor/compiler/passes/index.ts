@@ -30,3 +30,11 @@ export type { AcyclicOrLegalGraph } from "../ir/patches";
 // Pass 6: Block Lowering
 export { pass6BlockLowering } from "./pass6-block-lowering";
 export type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
+
+// Pass 7: Bus Lowering
+export { pass7BusLowering } from "./pass7-bus-lowering";
+export type { IRWithBusRoots } from "./pass7-bus-lowering";
+
+// Pass 8: Link Resolution
+export { pass8LinkResolution } from "./pass8-link-resolution";
+export type { LinkedGraphIR, BlockInputRootIR, BlockOutputRootIR } from "./pass8-link-resolution";
