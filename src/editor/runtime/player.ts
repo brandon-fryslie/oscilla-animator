@@ -121,6 +121,32 @@ export class Player {
   }
 
   /**
+   * Set an IR-compiled program directly (bypasses factory system).
+   *
+   * This is the new IR-based path that uses ScheduleExecutor under the hood.
+   * Preserves current time and renders once to show the new program.
+   *
+   * @param program - Program<RenderTree> from IRRuntimeAdapter.createProgram()
+   *
+   * @example
+   * ```typescript
+   * const compiledIR = compileIR(patch);
+   * const adapter = new IRRuntimeAdapter(compiledIR);
+   * const program = adapter.createProgram();
+   * player.setIRProgram(program);
+   * ```
+   */
+  setIRProgram(program: Program<RenderTree>): void {
+    this.program = program;
+
+    // NOTE: We intentionally do NOT reset tMs
+    // This preserves scrubbing + temporal continuity during hot swap
+
+    // Render once to show new program at current time
+    this.renderOnce();
+  }
+
+  /**
    * Set the random seed.
    * Reinstantiates the program with new seed.
    */
