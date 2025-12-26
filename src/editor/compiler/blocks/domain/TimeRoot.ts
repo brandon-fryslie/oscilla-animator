@@ -121,13 +121,12 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   // Cycle index: floor(systemTime / period)
   const periodConst = ctx.b.sigConst(periodMs, { world: 'signal', domain: 'number' });
   const cyclesId = ctx.b.sigZip(systemTimeId, periodConst, {
-    kind: 'opcode',
     fnId: 'div',
     opcode: 102, // OpCode.Div
     outputType: { world: 'signal', domain: 'number' },
   });
   const cycleIndexId = ctx.b.sigMap(cyclesId, {
-    kind: 'opcode',
+    fnId: 'floor',
     opcode: 121, // OpCode.Floor
     outputType: { world: 'signal', domain: 'number' },
   });
@@ -139,6 +138,7 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const timeModel: TimeModel = {
     kind: 'cyclic',
     periodMs,
+    phaseDomain: '0..1',
     mode: mode === 'pingpong' ? 'pingpong' : 'loop',
   };
 
@@ -178,7 +178,7 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   // Declare TimeModel
   const timeModel: TimeModel = {
     kind: 'infinite',
-    ambientPeriodMs: periodMs,
+    windowMs: periodMs,
   };
 
   return {

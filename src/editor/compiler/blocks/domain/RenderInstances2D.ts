@@ -73,14 +73,16 @@ const lowerRenderInstances2D: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // Register render sink
   // The runtime will handle materializing these fields at render time
+  // Note: renderSink expects Record<string, ValueSlot> (numbers only)
+  // Convert all params to numeric values
   const sinkInputs = {
     domain: domain.id,
     positions: positions.id,
     radius: radius.id,
     color: color.id,
-    // Params are serialized into the IR
+    // Params are serialized as numbers into the IR
     opacity,
-    glow,
+    glow: glow ? 1 : 0,  // Convert boolean to number
     glowIntensity,
   };
 

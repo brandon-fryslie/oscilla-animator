@@ -100,7 +100,7 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
     });
 
     phaseId = ctx.b.sigMap(minus1Id, {
-      kind: 'opcode',
+      fnId: 'abs',
       opcode: OpCode.Abs,
       outputType: phaseType,
     });
@@ -111,7 +111,7 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
     // Loop mode: sawtooth wave
     // phase = fract(raw) = raw - floor(raw)
     const floorId = ctx.b.sigMap(rawPhaseId, {
-      kind: 'opcode',
+      fnId: 'floor',
       opcode: OpCode.Floor,
       outputType: numberType,
     });

@@ -156,13 +156,14 @@ Reference: `design-docs/12-Compiler-Final/`
 
 ---
 
-## Phase 3: Bridge Compiler [ACTIVE]
+## Phase 3: Bridge Compiler [COMPLETED]
 
 **Goal:** Compiler emits IR alongside existing closures. IR is validated but not executed. Old runtime continues to work.
 
 **Migration Safety:** Dual-emit mode - closures still execute, IR is for validation/debugging.
 
 **Started:** 2025-12-25
+**Completed:** 2025-12-26
 
 ### Topics
 
@@ -180,42 +181,79 @@ Reference: `design-docs/12-Compiler-Final/`
 **Dependencies:** ir-builder-api, dense-id-system
 **Labels:** compiler, lowering, normalization
 **Test Strategy:** Golden patch normalizes correctly
-**Implementation:** `src/editor/compiler/passes/pass1-normalize.ts` (14 tests)
+**Implementation:** `src/editor/compiler/passes/pass1-normalize.ts` (12 tests)
 
-#### lowering-pass-types [PROPOSED]
+#### lowering-pass-types [COMPLETED]
 **Description:** Implement Pass 2 (Type Graph): convert SlotType→TypeDesc, validate bus eligibility, precompute adapter/lens conversion paths. Output: `TypedPatch`.
 **Spec:** 15-Canonical-Lowering-Pipeline (Pass 2)
 **Dependencies:** lowering-pass-normalize, type-unification
 **Labels:** compiler, lowering, types
 **Test Strategy:** Type validation catches mismatches
+**Implementation:** `src/editor/compiler/passes/pass2-types.ts` (32 tests)
 
-#### lowering-pass-time [PROPOSED]
+#### lowering-pass-time [COMPLETED]
 **Description:** Implement Pass 3 (Time Topology): find single TimeRoot, validate constraints, generate canonical time signal nodes, produce `TimeModel`. Output: `TimeResolvedPatch`.
 **Spec:** 15-Canonical-Lowering-Pipeline (Pass 3)
 **Dependencies:** lowering-pass-types, timemodel-ir
 **Labels:** compiler, lowering, time
 **Test Strategy:** TimeRoot enforcement tests
+**Implementation:** `src/editor/compiler/passes/pass3-time.ts` (20 tests)
 
-#### lowering-pass-depgraph [PROPOSED]
+#### lowering-pass-depgraph [COMPLETED]
 **Description:** Implement Pass 4-5 (Dependency Graph + SCC): build unified dep graph over blocks/buses, validate cycles with state boundary rules. Output: `AcyclicOrLegalGraph`.
 **Spec:** 15-Canonical-Lowering-Pipeline (Pass 4-5)
 **Dependencies:** lowering-pass-time
 **Labels:** compiler, lowering, cycles
 **Test Strategy:** Cycle detection with/without state boundaries
+**Implementation:** `src/editor/compiler/passes/pass4-depgraph.ts` (15 tests), `src/editor/compiler/passes/pass5-scc.ts` (21 tests)
 
-#### dual-emit-compiler [PROPOSED]
+#### block-lowering-pass [COMPLETED]
+**Description:** Implement Pass 6 (Block Lowering): Lower block compilers to IR using IRBuilder. Creates IR representations from closure artifacts.
+**Spec:** 15-Canonical-Lowering-Pipeline (Pass 6), 16-Block-Lowering
+**Dependencies:** All previous passes
+**Labels:** compiler, lowering, blocks
+**Test Strategy:** Blocks produce valid IR alongside closures
+**Implementation:** `src/editor/compiler/passes/pass6-block-lowering.ts` (13 tests)
+
+#### bus-lowering-pass [COMPLETED]
+**Description:** Implement Pass 7 (Bus Lowering): Lower buses to sigCombine/fieldCombine nodes with transform chains.
+**Spec:** 15-Canonical-Lowering-Pipeline (Pass 7)
+**Dependencies:** block-lowering-pass
+**Labels:** compiler, lowering, buses
+**Test Strategy:** Bus combines produce valid IR
+**Implementation:** `src/editor/compiler/passes/pass7-bus-lowering.ts` (13 tests)
+
+#### link-resolution-pass [COMPLETED]
+**Description:** Implement Pass 8 (Link Resolution): Resolve all ValueRefs into concrete BlockInputRootIR and BlockOutputRootIR tables.
+**Spec:** 15-Canonical-Lowering-Pipeline (Pass 8)
+**Dependencies:** bus-lowering-pass
+**Labels:** compiler, lowering, linking
+**Test Strategy:** All ports have resolved value sources
+**Implementation:** `src/editor/compiler/passes/pass8-link-resolution.ts` (6 tests)
+
+#### dual-emit-compiler [COMPLETED]
 **Description:** Modify `compileBusAware` to emit both closures (existing) AND IR fragments. IR is attached to `CompileResult` for validation. Closures still execute at runtime.
 **Spec:** 01.1-CompilerMigration-Roadmap (Phase 2)
 **Dependencies:** All lowering passes
 **Labels:** compiler, migration, dual-emit
 **Test Strategy:** Golden patch produces valid IR + working closures
+**Implementation:** `src/editor/compiler/compileBusAware.ts` attachIR() function, `emitIR` option
 
-#### ir-validator [PROPOSED]
+#### ir-validator [COMPLETED]
 **Description:** Validate emitted IR: no missing refs, types match, schedule is topologically valid, determinism rules satisfied. Runs after every compile in dev mode.
 **Spec:** 14-Compiled-IR-Program-Contract
 **Dependencies:** dual-emit-compiler
 **Labels:** compiler, validation, testing
 **Test Strategy:** Validator catches intentionally broken IR
+**Implementation:** Integrated into dual-emit pipeline
+
+#### block-compiler-migration [COMPLETED]
+**Description:** Migrate block compilers to emit IR using registerBlockType() and BlockLowerFn pattern while maintaining legacy closure exports for dual-emit mode.
+**Spec:** 16-Block-Lowering
+**Dependencies:** ir-builder-api
+**Labels:** compiler, blocks, migration
+**Test Strategy:** Migrated blocks work in both closure and IR modes
+**Implementation:** All domain, signal, rhythm, render blocks migrated in `src/editor/compiler/blocks/`
 
 ---
 
