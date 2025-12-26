@@ -55,6 +55,8 @@ import {
   pass7BusLowering,
   pass8LinkResolution,
 } from './passes';
+// Phase 4, Sprint 8: SignalExpr Runtime Integration
+import { extractSignalExprTable } from './ir/extractSignalExprTable';
 
 
 // =============================================================================
@@ -373,6 +375,7 @@ export function compileBusAwarePatch(
   const defaultSources = new Map<string, DefaultSourceState>(
     Object.entries(patch.defaultSources)
   );
+  const defaultSourceValues = patch.defaultSourceValues ?? {};
 
   // =============================================================================
   // 0. Empty patch check
@@ -634,7 +637,7 @@ export function compileBusAwarePatch(
           inputs[p.name] = lensed;
         } else {
           // Check for Default Source (fallback)
-          const defaultArtifact = resolveDefaultSource(block, p.name, p.type.kind);
+          const defaultArtifact = resolveDefaultSource(block, p.name, p.type.kind, defaultSourceValues);
 
           if (defaultArtifact !== null && defaultArtifact !== undefined) {
             inputs[p.name] = defaultArtifact;
@@ -758,9 +761,19 @@ function attachIR(
     };
   }
 
+  // Phase 4, Sprint 8: Extract SignalExprTable from LinkedGraphIR
+  // This enables SigEvaluator to execute IR-based signals at runtime
+  const extracted = extractSignalExprTable(ir);
+  
   return {
     ...result,
     ir,
+    // Attach SignalExpr data if extraction succeeded
+    ...(extracted && {
+      signalTable: extracted.signalTable,
+      constPool: extracted.constPool,
+      stateLayout: extracted.stateLayout,
+    }),
   };
 }
 
@@ -1254,15 +1267,19 @@ function inferOutputPort(
 function resolveDefaultSource(
   block: BlockInstance,
   portName: string,
-  kind: string // ValueKind
+  kind: string, // ValueKind
+  defaultSourceValues?: Record<string, unknown>
 ): Artifact | null {
   const def = getBlockDefinition(block.type);
   if (def === null || def === undefined) return null;
 
   const slot = def.inputs?.find(s => s.id === portName);
   if (slot !== null && slot !== undefined && slot.defaultSource !== null && slot.defaultSource !== undefined) {
-    const override = block.params?.[portName];
-    return createDefaultArtifact(override ?? slot.defaultSource.value, kind);
+    // Priority: runtime value from DefaultSourceStore > static slot.defaultSource.value
+    const lookupKey = `${block.id}:${portName}`;
+    const runtimeValue = defaultSourceValues?.[lookupKey];
+    const value = runtimeValue ?? slot.defaultSource.value;
+    return createDefaultArtifact(value, kind);
   }
   return null;
 }

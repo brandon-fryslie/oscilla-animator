@@ -102,6 +102,13 @@ export interface InfiniteTimeModel {
   windowMs: number;
 }
 
+// =============================================================================
+// Phase 4: SignalExpr IR Integration (Sprint 8)
+// =============================================================================
+
+import type { SignalExprTable } from './ir/signalExpr';
+import type { StateLayoutEntry } from './ir/builderTypes';
+
 /**
  * CompiledProgram is the output of successful compilation.
  * Contains both the runnable program and its time topology.
@@ -111,6 +118,11 @@ export interface InfiniteTimeModel {
  *
  * Either `program` (SVG/RenderTree) or `canvasProgram` will be set,
  * depending on which render sink the patch uses.
+ *
+ * Phase 4 additions:
+ * - signalTable: SignalExpr IR for blocks migrated to V2
+ * - constPool: Shared constant pool for IR evaluation
+ * - stateLayout: State allocation for stateful operations
  */
 export interface CompiledProgram {
   /** The runnable animation program (SVG path) */
@@ -119,6 +131,14 @@ export interface CompiledProgram {
   canvasProgram?: CanvasProgram;
   /** The time topology of the patch */
   timeModel: TimeModel;
+
+  // NEW: IR additions (Phase 4, Sprint 8)
+  /** SignalExpr IR table (when V2 blocks present) */
+  signalTable?: SignalExprTable;
+  /** Constant pool for IR evaluation */
+  constPool?: unknown[];
+  /** State layout for stateful operations */
+  stateLayout?: StateLayoutEntry[];
 }
 
 // Canvas program returns a RenderTree for the Canvas2DRenderer to execute
@@ -325,6 +345,10 @@ export interface CompilerPatch {
 
   // Default sources for lens parameters (Phase 3)
   defaultSources: Record<string, DefaultSourceState>;
+
+  // Lookup-friendly map: "blockId:slotId" -> runtime value
+  // Used by resolveDefaultSource to get user-edited values
+  defaultSourceValues?: Record<string, unknown>;
 }
 
 // =============================================================================
@@ -487,6 +511,14 @@ export interface CompileResult {
   ir?: LinkedGraphIR;
   /** IR compilation warnings (non-fatal IR errors) */
   irWarnings?: readonly CompileError[];
+
+  // Phase 4, Sprint 8: SignalExpr Runtime Integration
+  /** SignalExpr IR table (extracted from LinkedGraphIR for runtime evaluation) */
+  signalTable?: SignalExprTable;
+  /** Constant pool for IR evaluation */
+  constPool?: unknown[];
+  /** State layout for stateful operations */
+  stateLayout?: StateLayoutEntry[];
 }
 
 // =============================================================================
