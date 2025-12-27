@@ -1253,6 +1253,46 @@ export const BroadcastSignalColor = createBlock({
 });
 
 /**
+ * PathConst - Constant path field across all elements.
+ *
+ * Creates a Field<path> where all elements share the same path expression.
+ * Useful for rendering identical shapes at different positions.
+ */
+export const PathConst = createBlock({
+  type: 'PathConst',
+  label: 'Constant Path',
+  description: 'Uniform path for all elements',
+  inputs: [
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 1, world: 'field' },
+    }),
+    input('path', 'Path', 'Signal<path>', {
+      tier: 'primary',
+      defaultSource: {
+        value: {
+          commands: [
+            { kind: 'M', x: 0, y: 0 },
+            { kind: 'L', x: 100, y: 0 },
+            { kind: 'L', x: 100, y: 100 },
+            { kind: 'L', x: 0, y: 100 },
+            { kind: 'Z' },
+          ],
+        },
+        world: 'field',
+      },
+    }),
+  ],
+  outputs: [
+    output('out', 'Path', 'Field<path>'),
+  ],
+  paramSchema: [],
+  color: '#F59E0B',
+  laneKind: 'Fields',
+  priority: 8,
+});
+
+/**
  * RenderInstances2D - Render domain elements as 2D circles.
  *
  * This is the render sink that materializes Domain + Fields into visual output.
@@ -1333,6 +1373,59 @@ export const RenderInstances2D = createBlock({
   color: '#EF4444',
   laneKind: 'Program',
   priority: 100,
+});
+
+const DEFAULT_PATH_EXPR = {
+  commands: [
+    { kind: 'M', x: 100, y: 100 },
+    { kind: 'L', x: 200, y: 100 },
+    { kind: 'L', x: 200, y: 200 },
+    { kind: 'L', x: 100, y: 200 },
+    { kind: 'Z' },
+  ],
+};
+
+/**
+ * RenderPaths2D - Render domain elements as vector paths.
+ *
+ * Consumes per-element Path expressions and style fields and emits a Paths2D pass.
+ */
+export const RenderPaths2D = createBlock({
+  type: 'RenderPaths2D',
+  label: 'Render Paths 2D',
+  description: 'Render domain elements as vector paths',
+  subcategory: 'Render',
+  inputs: [
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 1, world: 'field' },
+    }),
+    input('paths', 'Paths', 'Field<path>', {
+      tier: 'primary',
+      defaultSource: { value: DEFAULT_PATH_EXPR, world: 'field' },
+    }),
+    input('fillColor', 'Fill Color', 'Field<color>', {
+      tier: 'primary',
+      defaultSource: { value: '#ffffff', world: 'field', uiHint: { kind: 'color' } },
+    }),
+    input('strokeColor', 'Stroke Color', 'Field<color>', {
+      tier: 'secondary',
+      defaultSource: { value: '#000000', world: 'field', uiHint: { kind: 'color' } },
+    }),
+    input('strokeWidth', 'Stroke Width', 'Field<number>', {
+      tier: 'secondary',
+      defaultSource: { value: 1, world: 'field', uiHint: { kind: 'slider', min: 0, max: 20, step: 0.5 } },
+    }),
+    input('opacity', 'Opacity', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 1.0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 } },
+    }),
+  ],
+  outputs: [],
+  paramSchema: [],
+  color: '#EF4444',
+  laneKind: 'Program',
+  priority: 101,
 });
 
 /**

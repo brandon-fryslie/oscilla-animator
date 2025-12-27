@@ -21,7 +21,9 @@ export { FieldZipNumberBlock } from './FieldZipNumber';
 export { PhaseClockBlock } from './PhaseClock';
 export { TriggerOnWrapBlock } from './TriggerOnWrap';
 export { RenderInstances2DBlock } from './RenderInstances2D';
+export { RenderPaths2DBlock } from './RenderPaths2D';
 export { Render2dCanvasBlock } from './Render2dCanvas';
+export { PathConstBlock } from './PathConst';
 
 // TimeRoot blocks (Phase 3: TimeRoot)
 export {

@@ -28,7 +28,9 @@ import {
   PhaseClockBlock,
   TriggerOnWrapBlock,
   RenderInstances2DBlock,
+  RenderPaths2DBlock,
   Render2dCanvasBlock,
+  PathConstBlock,
   // TimeRoot blocks (Phase 3: TimeRoot)
   FiniteTimeRootBlock,
   CycleTimeRootBlock,
@@ -91,7 +93,9 @@ export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   PhaseClock: PhaseClockBlock,
   TriggerOnWrap: TriggerOnWrapBlock,
   RenderInstances2D: RenderInstances2DBlock,
+  RenderPaths2D: RenderPaths2DBlock,
   Render2dCanvas: Render2dCanvasBlock,
+  PathConst: PathConstBlock,
 
   // TimeRoot blocks (Phase 3: TimeRoot)
   FiniteTimeRoot: FiniteTimeRootBlock,
