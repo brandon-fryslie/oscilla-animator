@@ -1,0 +1,223 @@
+/**
+ * SaveCompositeDialog Styles
+ */
+
+.save-composite-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+}
+
+.save-composite-dialog {
+  background: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  width: 600px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.save-composite-dialog__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #333;
+}
+
+.save-composite-dialog__header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.save-composite-dialog__close {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.save-composite-dialog__close:hover {
+  background: #333;
+  color: #fff;
+}
+
+.save-composite-dialog__body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.save-composite-dialog__field {
+  margin-bottom: 20px;
+}
+
+.save-composite-dialog__field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ccc;
+}
+
+.save-composite-dialog__field input[type="text"],
+.save-composite-dialog__field textarea,
+.save-composite-dialog__field select {
+  width: 100%;
+  padding: 8px 12px;
+  background: #0a0a0a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.save-composite-dialog__field input[type="text"]:focus,
+.save-composite-dialog__field textarea:focus,
+.save-composite-dialog__field select:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.save-composite-dialog__field textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.save-composite-dialog__error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #ff6b6b;
+}
+
+.save-composite-dialog__hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #666;
+  font-family: monospace;
+}
+
+.save-composite-dialog__port-list {
+  background: #0a0a0a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.save-composite-dialog__port-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s;
+  gap: 8px;
+}
+
+.save-composite-dialog__port-item:hover {
+  background: #222;
+}
+
+.save-composite-dialog__port-item input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
+.save-composite-dialog__port-item > span:nth-child(2) {
+  flex: 1;
+  color: #ddd;
+  font-size: 13px;
+}
+
+.save-composite-dialog__port-type {
+  font-size: 11px;
+  color: #888;
+  font-family: monospace;
+}
+
+.save-composite-dialog__info {
+  margin-top: 16px;
+  padding: 12px;
+  background: #0a0a0a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+}
+
+.save-composite-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #333;
+}
+
+.save-composite-dialog__button {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-composite-dialog__button--secondary {
+  background: transparent;
+  color: #ccc;
+  border: 1px solid #444;
+}
+
+.save-composite-dialog__button--secondary:hover:not(:disabled) {
+  background: #222;
+  border-color: #666;
+}
+
+.save-composite-dialog__button--primary {
+  background: #4a9eff;
+  color: #fff;
+}
+
+.save-composite-dialog__button--primary:hover:not(:disabled) {
+  background: #3a8eef;
+}
+
+.save-composite-dialog__button--primary:disabled {
+  background: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.required {
+  color: #ff6b6b;
+}

@@ -2,7 +2,7 @@
  * @file UI State Store
  * @description Manages UI-related state like selection, playback, and editor settings.
  */
-import { makeObservable, observable, action } from 'mobx';
+import { makeObservable, observable, action, computed } from 'mobx';
 import type { BlockId, LaneId, LaneKind, PortRef } from '../types';
 import type { RootStore } from './RootStore';
 import type { BlockDefinition } from '../blocks';
@@ -30,9 +30,20 @@ export type InspectorHistoryEntry = {
   portRef?: PortRef | null;
 };
 
+/**
+ * Selection rectangle for drag-select
+ */
+export interface SelectionRectangle {
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+}
+
 export class UIStateStore {
   uiState = {
     selectedBlockId: null as BlockId | null,
+    selectedBlockIds: new Set<BlockId>(), // Multi-select support
     selectedBusId: null as string | null,
     draggingBlockType: null as string | null,
     draggingLaneKind: null as LaneKind | null,
@@ -51,6 +62,8 @@ export class UIStateStore {
       y: 0,
       blockId: null as BlockId | null,
     },
+    // Selection rectangle for drag-select
+    selectionRectangle: null as SelectionRectangle | null,
     // DO NOT CHANGE THIS DEFAULT VALUE. The app MUST auto-play on load.
     // If you change this, you will break the user experience and the demo.
     // Seriously, don't fucking touch it.
@@ -90,9 +103,15 @@ export class UIStateStore {
       previewedDefinition: observable,
       inspectorHistory: observable,
 
+      // Computed
+      hasMultiSelection: computed,
+
       // Actions
       selectBlock: action,
       deselectBlock: action,
+      toggleBlockSelection: action,
+      setBlockSelection: action,
+      clearBlockSelection: action,
       selectBus: action,
       deselectBus: action,
       selectConnection: action,
@@ -126,16 +145,35 @@ export class UIStateStore {
       openBlockContextMenu: action,
       closeBlockContextMenu: action,
       setDraggingLaneKind: action,
+      startSelectionRectangle: action,
+      updateSelectionRectangle: action,
+      endSelectionRectangle: action,
     });
+  }
+
+  // =============================================================================
+  // Computed
+  // =============================================================================
+
+  /**
+   * Returns true if more than one block is selected
+   */
+  get hasMultiSelection(): boolean {
+    return this.uiState.selectedBlockIds.size > 1;
   }
 
   // =============================================================================
   // Actions - Selection
   // =============================================================================
 
+  /**
+   * Select a single block (clears multi-selection)
+   */
   selectBlock(id: BlockId | null): void {
     this.uiState.selectedBlockId = id;
+    this.uiState.selectedBlockIds.clear();
     if (id !== null) {
+      this.uiState.selectedBlockIds.add(id);
       this.uiState.selectedBusId = null; // Deselect bus when block selected
       this.uiState.selectedConnection = null; // Deselect connection when block selected
       this.clearInspectorHistory(); // Clear history on direct selection
@@ -144,12 +182,56 @@ export class UIStateStore {
 
   deselectBlock(): void {
     this.uiState.selectedBlockId = null;
+    this.uiState.selectedBlockIds.clear();
+  }
+
+  /**
+   * Toggle a block in the multi-selection (for Shift+Click)
+   */
+  toggleBlockSelection(id: BlockId): void {
+    if (this.uiState.selectedBlockIds.has(id)) {
+      this.uiState.selectedBlockIds.delete(id);
+    } else {
+      this.uiState.selectedBlockIds.add(id);
+    }
+
+    // Update selectedBlockId to the last selected block (for inspector)
+    if (this.uiState.selectedBlockIds.size > 0) {
+      // Use the most recently added block as the "primary" selection
+      this.uiState.selectedBlockId = id;
+    } else {
+      this.uiState.selectedBlockId = null;
+    }
+  }
+
+  /**
+   * Set the entire block selection (for drag-select)
+   */
+  setBlockSelection(ids: Set<BlockId>): void {
+    this.uiState.selectedBlockIds = new Set(ids);
+    if (ids.size > 0) {
+      // Set the first ID as the primary selection for inspector
+      this.uiState.selectedBlockId = Array.from(ids)[0];
+      this.uiState.selectedBusId = null;
+      this.uiState.selectedConnection = null;
+    } else {
+      this.uiState.selectedBlockId = null;
+    }
+  }
+
+  /**
+   * Clear all block selections
+   */
+  clearBlockSelection(): void {
+    this.uiState.selectedBlockId = null;
+    this.uiState.selectedBlockIds.clear();
   }
 
   selectBus(id: string | null): void {
     this.uiState.selectedBusId = id;
     if (id !== null) {
       this.uiState.selectedBlockId = null; // Deselect block when bus selected
+      this.uiState.selectedBlockIds.clear();
       this.uiState.selectedConnection = null; // Deselect connection when bus selected
       this.clearInspectorHistory(); // Clear history on direct selection
     }
@@ -169,6 +251,7 @@ export class UIStateStore {
 
     this.uiState.selectedConnection = { type, id };
     this.uiState.selectedBlockId = null;
+    this.uiState.selectedBlockIds.clear();
     this.uiState.selectedBusId = null;
     this.uiState.selectedPort = null;
   }
@@ -182,6 +265,7 @@ export class UIStateStore {
 
     this.uiState.selectedConnection = { type: 'cell', rowKey, busId, direction };
     this.uiState.selectedBlockId = null;
+    this.uiState.selectedBlockIds.clear();
     this.uiState.selectedBusId = null;
     this.uiState.selectedPort = null;
   }
@@ -238,6 +322,39 @@ export class UIStateStore {
    */
   clearInspectorHistory(): void {
     this.inspectorHistory = [];
+  }
+
+  // =============================================================================
+  // Actions - Selection Rectangle (Drag-Select)
+  // =============================================================================
+
+  /**
+   * Start a selection rectangle drag
+   */
+  startSelectionRectangle(x: number, y: number): void {
+    this.uiState.selectionRectangle = {
+      startX: x,
+      startY: y,
+      currentX: x,
+      currentY: y,
+    };
+  }
+
+  /**
+   * Update the selection rectangle during drag
+   */
+  updateSelectionRectangle(x: number, y: number): void {
+    if (this.uiState.selectionRectangle !== null) {
+      this.uiState.selectionRectangle.currentX = x;
+      this.uiState.selectionRectangle.currentY = y;
+    }
+  }
+
+  /**
+   * End the selection rectangle drag
+   */
+  endSelectionRectangle(): void {
+    this.uiState.selectionRectangle = null;
   }
 
   // =============================================================================
@@ -327,6 +444,7 @@ export class UIStateStore {
     // Clear selected block when previewing
     if (definition !== null && definition !== undefined) {
       this.uiState.selectedBlockId = null;
+      this.uiState.selectedBlockIds.clear();
     }
   }
 
