@@ -55,6 +55,7 @@ import { HistoryPanel } from "./components/HistoryPanel";
 import { DiagnosticsConsole } from './components/DiagnosticsConsole';
 import { TutorialOverlay } from './TutorialOverlay';
 import { DebugHUD, DebugDrawer, ProbeToggle, ProbeCard } from './debug-ui';
+import { GraphWorkspace } from './board/GraphWorkspace';
 
 type HelpTopic = 'intro' | 'library' | 'inspector' | 'preview' | 'patch' | 'controlSurface';
 const TOUR_COMPLETE_KEY = 'loom-editor-tour-complete';
@@ -905,13 +906,13 @@ export const Editor = observer(() => {
                 {bayCollective ? '▸' : '▾'}
               </button>
 
-              {/* PatchBay Panel - takes full width in table view mode */}
+              {/* PatchBay Panel - takes full width in table and board view modes */}
               <div
                 className={`bay-panel patch-panel ${patchBayCollapsed ? 'collapsed' : ''}`}
                 style={{
                   flex: patchBayCollapsed
                     ? '0 0 auto'
-                    : (busBoardCollapsed || patchViewMode === 'table')
+                    : (busBoardCollapsed || patchViewMode === 'table' || patchViewMode === 'board')
                       ? '1 1 0'
                       : `${baySplit} 1 0`,
                 }}
@@ -961,12 +962,13 @@ export const Editor = observer(() => {
                         }}
                       />
                     )}
+                    {patchViewMode === 'board' && <GraphWorkspace graphId="main-patch" />}
                   </div>
                 )}
               </div>
 
-              {/* Bay Resizer - hidden in table view mode */}
-              {!patchBayCollapsed && !busBoardCollapsed && patchViewMode !== 'table' && (
+              {/* Bay Resizer - hidden in table and board view modes */}
+              {!patchBayCollapsed && !busBoardCollapsed && patchViewMode !== 'table' && patchViewMode !== 'board' && (
                 <div
                   className="bay-resizer"
                   onMouseDown={() => setDragging('bay-split')}
@@ -974,8 +976,8 @@ export const Editor = observer(() => {
                 />
               )}
 
-              {/* BusBoard Panel - hidden in table view mode (table has integrated bus columns) */}
-              {patchViewMode !== 'table' && (
+              {/* BusBoard Panel - hidden in table and board view modes */}
+              {patchViewMode !== 'table' && patchViewMode !== 'board' && (
                 busBoardCollapsed ? (
                   /* Collapsed state: thin vertical tab with rotated text */
                   <div
