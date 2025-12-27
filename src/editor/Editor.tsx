@@ -557,6 +557,39 @@ export const Editor = observer(() => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Keyboard shortcuts for Undo/Redo
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if we're in a text input field - if so, don't intercept
+      const target = event.target as HTMLElement;
+      const isTextInput =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable;
+
+      // Cmd/Ctrl + Z (without Shift) = Undo
+      if ((event.metaKey || event.ctrlKey) && event.key === 'z' && !event.shiftKey && !isTextInput) {
+        event.preventDefault();
+        const success = store.historyStore.undo();
+        if (success) {
+          console.log('[History] Undo');
+        }
+      }
+
+      // Cmd/Ctrl + Shift + Z = Redo
+      if ((event.metaKey || event.ctrlKey) && event.key === 'z' && event.shiftKey && !isTextInput) {
+        event.preventDefault();
+        const success = store.historyStore.redo();
+        if (success) {
+          console.log('[History] Redo');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [store]);
+
   // Load the selected startup macro and generate its control surface
   useEffect(() => {
     const startupMacro = getStartupMacro();
