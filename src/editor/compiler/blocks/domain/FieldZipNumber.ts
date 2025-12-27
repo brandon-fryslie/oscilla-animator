@@ -73,7 +73,8 @@ const lowerFieldZipNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
     outputType: outType,
   });
 
-  return { outputs: [{ k: 'field', id: fieldId }] };
+  const slot = ctx.b.allocValueSlot();
+  return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 
 // Register block type for IR lowering

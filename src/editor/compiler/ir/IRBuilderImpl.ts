@@ -27,6 +27,7 @@ import type {
   StateLayoutEntry,
   BuilderTransformChain,
   RenderSinkIR,
+  DomainDefIR,
   BuilderProgramIR,
 } from "./builderTypes";
 
@@ -40,6 +41,7 @@ export class IRBuilderImpl implements IRBuilder {
   private stateLayout: StateLayoutEntry[] = [];
   private transformChains: BuilderTransformChain[] = [];
   private renderSinks: RenderSinkIR[] = [];
+  private domains: DomainDefIR[] = [];
 
   // Constant pool with deduplication
   private constPool: unknown[] = [];
@@ -356,10 +358,14 @@ export class IRBuilderImpl implements IRBuilder {
   // Domain
   // =============================================================================
 
-  domainFromN(_n: number): ValueSlot {
+  domainFromN(n: number): ValueSlot {
     // Allocate a value slot for the domain
-    // The actual domain creation will be handled by the runtime
-    return this.allocValueSlot();
+    const slot = this.allocValueSlot();
+
+    // Track the domain definition for runtime initialization
+    this.domains.push({ slot, count: n });
+
+    return slot;
   }
 
   domainFromSVG(_svgRef: string, _sampleCount: number): ValueSlot {
@@ -408,6 +414,7 @@ export class IRBuilderImpl implements IRBuilder {
       stateLayout: this.stateLayout,
       transformChains: this.transformChains,
       renderSinks: this.renderSinks,
+      domains: this.domains,
       debugIndex: {
         sigExprSource: new Map(),
         fieldExprSource: new Map(),

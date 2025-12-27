@@ -203,7 +203,8 @@ function lowerBusToCombineNode(
     const safeMode = validModes.includes(mode) ? mode : "last";
 
     const sigId = builder.sigCombine(busIndex, sigTerms, safeMode, irType);
-    return { k: "sig", id: sigId };
+    const slot = builder.allocValueSlot();
+    return { k: "sig", id: sigId, slot };
   }
 
   // Handle Field Bus
@@ -217,7 +218,8 @@ function lowerBusToCombineNode(
     const safeMode = validModes.includes(mode) ? mode : "layer";
 
     const fieldId = builder.fieldCombine(busIndex, fieldTerms, safeMode, irType);
-    return { k: "field", id: fieldId };
+    const slot = builder.allocValueSlot();
+    return { k: "field", id: fieldId, slot };
   }
 
   return null;
@@ -234,14 +236,16 @@ function createDefaultBusValue(bus: Bus, builder: IRBuilder): ValueRefPacked | n
     // Create constant signal
     const value = typeof bus.defaultValue === "number" ? bus.defaultValue : 0;
     const sigId = builder.sigConst(value, type);
-    return { k: "sig", id: sigId };
+    const slot = builder.allocValueSlot();
+    return { k: "sig", id: sigId, slot };
   }
 
   if (type.world === "field") {
     // Create constant field
     const value = bus.defaultValue ?? 0;
     const fieldId = builder.fieldConst(value, type);
-    return { k: "field", id: fieldId };
+    const slot = builder.allocValueSlot();
+    return { k: "field", id: fieldId, slot };
   }
 
   // Unknown world - skip

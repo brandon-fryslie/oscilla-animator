@@ -55,7 +55,8 @@ describe("Pass 8: Link Resolution", () => {
 
       // Add some block outputs
       const sigId = ir.builder.sigConst(42, { world: "signal", domain: "number" });
-      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sigId }]]));
+      const slot = ir.builder.allocValueSlot();
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sigId, slot }]]));
 
       const blocks: Block[] = [createBlock("b1", 0, 1)];
 
@@ -71,9 +72,11 @@ describe("Pass 8: Link Resolution", () => {
 
       const sig1 = ir.builder.sigConst(1, { world: "signal", domain: "number" });
       const sig2 = ir.builder.sigConst(2, { world: "signal", domain: "number" });
+      const slot1 = ir.builder.allocValueSlot();
+      const slot2 = ir.builder.allocValueSlot();
 
-      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sig1 }]]));
-      ir.blockOutputs.set(1 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sig2 }]]));
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sig1, slot: slot1 }]]));
+      ir.blockOutputs.set(1 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sig2, slot: slot2 }]]));
 
       const blocks: Block[] = [
         createBlock("b1", 0, 1),
@@ -90,10 +93,12 @@ describe("Pass 8: Link Resolution", () => {
 
       const sig1 = ir.builder.sigConst(1, { world: "signal", domain: "number" });
       const sig2 = ir.builder.sigConst(2, { world: "signal", domain: "number" });
+      const slot1 = ir.builder.allocValueSlot();
+      const slot2 = ir.builder.allocValueSlot();
 
       ir.blockOutputs.set(0 as BlockIndex, createOutputMap([
-        ["out0", { k: "sig", id: sig1 }],
-        ["out1", { k: "sig", id: sig2 }],
+        ["out0", { k: "sig", id: sig1, slot: slot1 }],
+        ["out1", { k: "sig", id: sig2, slot: slot2 }],
       ]));
 
       const blocks: Block[] = [createBlock("b1", 0, 2)];
@@ -109,7 +114,8 @@ describe("Pass 8: Link Resolution", () => {
       const ir = createIRWithBusRoots();
 
       const sigId = ir.builder.sigConst(42, { world: "signal", domain: "number" });
-      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sigId }]]));
+      const slot = ir.builder.allocValueSlot();
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sigId, slot }]]));
 
       const blocks: Block[] = [
         createBlock("b1", 0, 1),

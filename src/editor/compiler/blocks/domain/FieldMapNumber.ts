@@ -106,7 +106,8 @@ const lowerFieldMapNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   const fieldId = ctx.b.fieldMap(x.id, fnRef);
 
-  return { outputs: [{ k: 'field', id: fieldId }] };
+  const slot = ctx.b.allocValueSlot();
+  return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 
 // Register block type for IR lowering
@@ -131,13 +132,17 @@ export const FieldMapNumberBlock: BlockCompiler = {
 
   inputs: [
     { name: 'x', type: { kind: 'Field:number' }, required: true },
+    { name: 'fn', type: { kind: 'Scalar:string' }, required: false },
+    { name: 'k', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'a', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'b', type: { kind: 'Scalar:number' }, required: false },
   ],
 
   outputs: [
     { name: 'y', type: { kind: 'Field:number' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const inputField = inputs.x;
     if (!isDefined(inputField) || inputField.kind !== 'Field:number') {
       return {
@@ -148,10 +153,11 @@ export const FieldMapNumberBlock: BlockCompiler = {
       };
     }
 
-    const fn = typeof params.fn === 'string' ? params.fn : 'sin';
-    const k = Number(params.k ?? 1);
-    const a = Number(params.a ?? 0);
-    const b = Number(params.b ?? 1);
+    // Read from inputs - values come from defaultSource or explicit connections
+    const fn = String((inputs.fn as any)?.value);
+    const k = Number((inputs.k as any)?.value);
+    const a = Number((inputs.a as any)?.value);
+    const b = Number((inputs.b as any)?.value);
 
     const inputFieldFn = inputField.value;
     const mapFn = getMapFunction(fn, k, a, b);

@@ -85,8 +85,9 @@ const lowerEnvelopeAD: BlockLowerFn = ({ ctx, inputs, config }) => {
     }
   );
 
+  const slot = ctx.b.allocValueSlot();
   return {
-    outputs: [{ k: 'sig', id: outputId }],
+    outputs: [{ k: 'sig', id: outputId, slot }],
   };
 };
 
@@ -123,13 +124,16 @@ export const EnvelopeADBlock: BlockCompiler = {
 
   inputs: [
     { name: 'trigger', type: { kind: 'Signal:Unit' }, required: true },
+    { name: 'attack', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'decay', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'peak', type: { kind: 'Scalar:number' }, required: false },
   ],
 
   outputs: [
     { name: 'env', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const triggerArtifact = inputs.trigger;
     if (!isDefined(triggerArtifact) || triggerArtifact.kind !== 'Signal:Unit') {
       return {
@@ -141,9 +145,10 @@ export const EnvelopeADBlock: BlockCompiler = {
     }
 
     const triggerSignal = triggerArtifact.value as Signal<number>;
-    const attack = Number(params.attack ?? 0.05) * 1000; // Convert to ms
-    const decay = Number(params.decay ?? 0.5) * 1000;
-    const peak = Number(params.peak ?? 1.0);
+    // Read from inputs - values come from defaultSource or explicit connections
+    const attack = Number((inputs.attack as any)?.value) * 1000; // Convert to ms
+    const decay = Number((inputs.decay as any)?.value) * 1000;
+    const peak = Number((inputs.peak as any)?.value);
 
     // State for trigger detection and envelope timing
     let triggerTime = -Infinity;

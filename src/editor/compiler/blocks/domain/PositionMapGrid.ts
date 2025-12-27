@@ -67,8 +67,9 @@ const lowerPositionMapGrid: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Create position field as const
   const posField = ctx.b.fieldConst(positions, { world: 'field', domain: 'vec2' });
 
+  const slot = ctx.b.allocValueSlot();
   return {
-    outputs: [{ k: 'field', id: posField }],
+    outputs: [{ k: 'field', id: posField, slot }],
   };
 };
 
@@ -94,13 +95,18 @@ export const PositionMapGridBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
+    { name: 'cols', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'spacing', type: { kind: 'Signal:number' }, required: false },
+    { name: 'originX', type: { kind: 'Signal:number' }, required: false },
+    { name: 'originY', type: { kind: 'Signal:number' }, required: false },
+    { name: 'order', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
     { name: 'pos', type: { kind: 'Field:vec2' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -112,11 +118,13 @@ export const PositionMapGridBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value;
-    const cols = Number(params.cols ?? 10);
-    const spacing = Number(params.spacing ?? 20);
-    const originX = Number(params.originX ?? 100);
-    const originY = Number(params.originY ?? 100);
-    const order = typeof params.order === 'string' ? params.order : 'rowMajor';
+
+    // Read from inputs - values come from defaultSource or explicit connections
+    const cols = Number((inputs.cols as any)?.value);
+    const spacing = Number((inputs.spacing as any)?.value);
+    const originX = Number((inputs.originX as any)?.value);
+    const originY = Number((inputs.originY as any)?.value);
+    const order = String((inputs.order as any)?.value);
 
     // Create the position field based on domain element count
     const positionField: PositionField = (_seed, n) => {

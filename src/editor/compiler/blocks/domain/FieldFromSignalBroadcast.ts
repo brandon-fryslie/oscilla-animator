@@ -36,7 +36,8 @@ const lowerFieldFromSignalBroadcast: BlockLowerFn = ({ ctx, inputs }) => {
   const outType = { world: 'field' as const, domain: 'number' as const };
   const fieldId = ctx.b.broadcastSigToField(signal.id, domain.id, outType);
 
-  return { outputs: [{ k: 'field', id: fieldId }] };
+  const slot = ctx.b.allocValueSlot();
+  return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 
 // Register block type for IR lowering

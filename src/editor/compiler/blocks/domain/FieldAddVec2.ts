@@ -28,7 +28,8 @@ const lowerFieldAddVec2: BlockLowerFn = ({ ctx, inputs }) => {
     outputType: outType,
   });
 
-  return { outputs: [{ k: 'field', id: fieldId }] };
+  const slot = ctx.b.allocValueSlot();
+  return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 
 // Register block type for IR lowering

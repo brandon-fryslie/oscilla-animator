@@ -68,8 +68,9 @@ const lowerPositionMapCircle: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Create position field as const
   const posField = ctx.b.fieldConst(positions, { world: 'field', domain: 'vec2' });
 
+  const slot = ctx.b.allocValueSlot();
   return {
-    outputs: [{ k: 'field', id: posField }],
+    outputs: [{ k: 'field', id: posField, slot }],
   };
 };
 
@@ -95,13 +96,19 @@ export const PositionMapCircleBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
+    { name: 'centerX', type: { kind: 'Signal:number' }, required: false },
+    { name: 'centerY', type: { kind: 'Signal:number' }, required: false },
+    { name: 'radius', type: { kind: 'Signal:number' }, required: false },
+    { name: 'startAngle', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'winding', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'distribution', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
     { name: 'pos', type: { kind: 'Field:vec2' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -113,12 +120,14 @@ export const PositionMapCircleBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value;
-    const centerX = Number(params.centerX ?? 400);
-    const centerY = Number(params.centerY ?? 300);
-    const radius = Number(params.radius ?? 150);
-    const startAngle = Number(params.startAngle ?? 0);
-    const winding = Number(params.winding ?? 1); // 1 = CW, -1 = CCW
-    const distribution = typeof params.distribution === 'string' ? params.distribution : 'even';
+
+    // Read from inputs - values come from defaultSource or explicit connections
+    const centerX = Number((inputs.centerX as any)?.value);
+    const centerY = Number((inputs.centerY as any)?.value);
+    const radius = Number((inputs.radius as any)?.value);
+    const startAngle = Number((inputs.startAngle as any)?.value);
+    const winding = Number((inputs.winding as any)?.value);
+    const distribution = String((inputs.distribution as any)?.value);
 
     // Convert degrees to radians
     const startAngleRad = (startAngle * Math.PI) / 180;

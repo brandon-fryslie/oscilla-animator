@@ -121,13 +121,14 @@ export const FieldFromExpressionBlock: BlockCompiler = {
     { name: 'domain', type: { kind: 'Domain' }, required: true },
     // Accept Signal:phase (from phaseA bus) or Signal:number
     { name: 'signal', type: { kind: 'Signal:phase' }, required: false },
+    { name: 'expression', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
     { name: 'field', type: { kind: 'Field:string' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const domainArtifact = inputs.domain;
     const signalArtifact = inputs.signal;
 
@@ -141,7 +142,8 @@ export const FieldFromExpressionBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value;
-    const expression = String(params.expression ?? 'hsl(i / n * 360 + signal * 360, 80, 60)');
+    // Read from inputs - values come from defaultSource or explicit connections
+    const expression = String((inputs.expression as any)?.value);
     const evaluator = createExpressionEvaluator(expression);
 
     // Accept Signal:phase or Signal:number (both are numeric)

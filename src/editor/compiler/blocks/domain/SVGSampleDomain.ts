@@ -314,10 +314,11 @@ const lowerSVGSampleDomain: BlockLowerFn = ({ ctx, config }) => {
   // Create position field as const
   const posField = ctx.b.fieldConst(sampledPoints, { world: 'field', domain: 'vec2' });
 
+  const slot = ctx.b.allocValueSlot();
   return {
     outputs: [
       { k: 'special', tag: 'domain', id: domainSlot },
-      { k: 'field', id: posField },
+      { k: 'field', id: posField, slot },
     ],
     declares: {
       domainOut: { outPortIndex: 0, domainKind: 'domain' },
@@ -344,18 +345,24 @@ registerBlockType({
 export const SVGSampleDomainBlock: BlockCompiler = {
   type: 'SVGSampleDomain',
 
-  inputs: [],
+  inputs: [
+    { name: 'asset', type: { kind: 'Scalar:string' }, required: false },
+    { name: 'sampleCount', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'seed', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'distribution', type: { kind: 'Scalar:string' }, required: false },
+  ],
 
   outputs: [
     { name: 'domain', type: { kind: 'Domain' } },
     { name: 'pos0', type: { kind: 'Field:vec2' } },
   ],
 
-  compile({ id, params }) {
-    const asset = typeof params.asset === 'string' ? params.asset : '';
-    const sampleCount = Math.max(1, Math.floor(Number(params.sampleCount ?? 100)));
-    const seed = Number(params.seed ?? 0);
-    const distribution = (typeof params.distribution === 'string' ? params.distribution as 'even' | 'parametric' : undefined) ?? 'even';
+  compile({ id, inputs }) {
+    // Read from inputs - values come from defaultSource or explicit connections
+    const asset = String((inputs.asset as any)?.value);
+    const sampleCount = Math.max(1, Math.floor(Number((inputs.sampleCount as any)?.value)));
+    const seed = Number((inputs.seed as any)?.value);
+    const distribution = String((inputs.distribution as any)?.value) as 'even' | 'parametric';
 
     // Create stable element IDs: "sample-N"
     const elementIds: string[] = [];

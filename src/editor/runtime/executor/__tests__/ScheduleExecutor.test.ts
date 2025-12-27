@@ -141,30 +141,30 @@ describe("ScheduleExecutor", () => {
       const runtime = createRuntimeState(program);
 
       // Execute frame at t=500ms
-      const tree = executor.executeFrame(program, runtime, 500);
+      const frame = executor.executeFrame(program, runtime, 500);
 
-      // Verify output is a RenderTree (empty group when no outputs defined)
-      expect(tree).toBeDefined();
-      expect(tree.kind).toBe('group');
-      expect(tree.id).toBe('empty');
+      // Verify output is a RenderFrameIR (empty frame when no outputs defined)
+      expect(frame).toBeDefined();
+      expect(frame.version).toBe(1);
+      expect(frame.passes).toEqual([]);
     });
 
-    it("returns empty group when program has no outputs", () => {
+    it("returns empty frame when program has no outputs", () => {
       const timeModel: TimeModelIR = { kind: "infinite", windowMs: 10000 };
       const program = createMinimalProgram(timeModel, []);
       const runtime = createRuntimeState(program);
 
-      const tree1 = executor.executeFrame(program, runtime, 0);
-      expect(tree1.kind).toBe('group');
-      expect(tree1.id).toBe('empty');
+      const frame1 = executor.executeFrame(program, runtime, 0);
+      expect(frame1.version).toBe(1);
+      expect(frame1.passes).toEqual([]);
 
-      const tree2 = executor.executeFrame(program, runtime, 16.67);
-      expect(tree2.kind).toBe('group');
-      expect(tree2.id).toBe('empty');
+      const frame2 = executor.executeFrame(program, runtime, 16.67);
+      expect(frame2.version).toBe(1);
+      expect(frame2.passes).toEqual([]);
 
-      const tree3 = executor.executeFrame(program, runtime, 33.33);
-      expect(tree3.kind).toBe('group');
-      expect(tree3.id).toBe('empty');
+      const frame3 = executor.executeFrame(program, runtime, 33.33);
+      expect(frame3.version).toBe(1);
+      expect(frame3.passes).toEqual([]);
     });
 
     it("executes steps in schedule order", () => {

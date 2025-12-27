@@ -120,11 +120,13 @@ export class DefaultSourceStore {
    * @param blockId - The block's unique ID
    * @param inputs - The block's input slots
    * @param slotTypeToTypeDesc - Mapping from SlotType to TypeDesc
+   * @param params - Optional params to override default values (e.g., from macros)
    */
   createDefaultSourcesForBlock(
     blockId: BlockId,
     inputs: readonly Slot[],
-    slotTypeToTypeDesc: typeof SLOT_TYPE_TO_TYPE_DESC
+    slotTypeToTypeDesc: typeof SLOT_TYPE_TO_TYPE_DESC,
+    params?: Record<string, unknown>
   ): void {
     const slotMap = new Map<string, string>();
 
@@ -143,10 +145,13 @@ export class DefaultSourceStore {
         busEligible: false,
       };
 
+      // Use param value if provided (e.g., from macro), otherwise use slot default
+      const value = params?.[slot.id] !== undefined ? params[slot.id] : slot.defaultSource.value;
+
       const ds: DefaultSourceState = {
         id: dsId,
         type: typeDesc,
-        value: slot.defaultSource.value,
+        value,
         uiHint: slot.defaultSource.uiHint,
       };
 

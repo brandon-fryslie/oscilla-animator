@@ -33,6 +33,19 @@ function createMacro(config: {
 }
 
 // =============================================================================
+// Test Macros - For testing new features
+// =============================================================================
+
+export const MacroTestIR = createMacro({
+  type: 'macro:testIR',
+  label: '🧪 Test IR',
+  description: 'Macro: Minimal setup for testing IR rendering pipeline. Drops a grid of circles.',
+  priority: -150, // Show near top for easy access during development
+  color: '#EF4444',
+  subcategory: 'Quick Start',
+});
+
+// =============================================================================
 // Quick Start Macros - Simple, reliable patterns using ONLY primitives
 // =============================================================================
 

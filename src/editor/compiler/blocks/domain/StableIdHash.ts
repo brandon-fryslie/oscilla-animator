@@ -58,8 +58,9 @@ const lowerStableIdHash: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Create field as const
   const hashField = ctx.b.fieldConst(hashValues, { world: 'field', domain: 'number' });
 
+  const slot = ctx.b.allocValueSlot();
   return {
-    outputs: [{ k: 'field', id: hashField }],
+    outputs: [{ k: 'field', id: hashField, slot }],
   };
 };
 
@@ -85,13 +86,14 @@ export const StableIdHashBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
+    { name: 'salt', type: { kind: 'Scalar:number' }, required: false },
   ],
 
   outputs: [
     { name: 'u01', type: { kind: 'Field:number' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -103,7 +105,8 @@ export const StableIdHashBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value;
-    const salt = Number(params.salt ?? 0);
+    // Read from inputs - values come from defaultSource or explicit connections
+    const salt = Number((inputs.salt as any)?.value);
 
     // Create field that produces stable hash per element
     const field: Field<number> = (_seed, n) => {

@@ -9,7 +9,7 @@
  * - PLAN-2025-12-26-030000.md § P0-1, P0-2, P0-3
  */
 
-import type { TypeDesc, SigExprId, FieldExprId } from "./types";
+import type { TypeDesc, SigExprId, FieldExprId, ValueSlot } from "./types";
 import type { IRBuilder } from "./IRBuilder";
 import type { TimeModel } from "../types";
 import type { BlockIndex } from "./patches";
@@ -68,10 +68,17 @@ export interface BlockPortDecl {
  * - Field expressions (domain-varying values)
  * - Scalar constants (compile-time constants)
  * - Special values (Domain, RenderTree, etc.)
+ *
+ * For signals and fields, includes the ValueSlot where the handle is stored.
+ * At runtime, StepNodeEval writes to slot:
+ * - signals: SignalPlan handle
+ * - fields: { kind: "fieldExpr", exprId }
+ *
+ * Ref: design-docs/13-Renderer/12-ValueSlotPerNodeOutput.md
  */
 export type ValueRefPacked =
-  | { k: "sig"; id: SigExprId }
-  | { k: "field"; id: FieldExprId }
+  | { k: "sig"; id: SigExprId; slot: ValueSlot }
+  | { k: "field"; id: FieldExprId; slot: ValueSlot }
   | { k: "scalarConst"; constId: number }
   | { k: "special"; tag: string; id: number };
 

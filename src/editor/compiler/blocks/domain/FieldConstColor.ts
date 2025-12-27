@@ -27,7 +27,8 @@ const lowerFieldConstColor: BlockLowerFn = ({ ctx, inputs, config }) => {
   const outType = { world: 'field' as const, domain: 'color' as const };
   const fieldId = ctx.b.fieldConst(color, outType);
 
-  return { outputs: [{ k: 'field', id: fieldId }] };
+  const slot = ctx.b.allocValueSlot();
+  return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 
 // Register block type for IR lowering
@@ -52,13 +53,14 @@ export const FieldConstColorBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
+    { name: 'color', type: { kind: 'Signal:color' }, required: false },
   ],
 
   outputs: [
     { name: 'out', type: { kind: 'Field:color' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -70,7 +72,9 @@ export const FieldConstColorBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value;
-    const color = String(params.color);
+
+    // Read from inputs - values come from defaultSource or explicit connections
+    const color = String((inputs.color as any)?.value);
 
     // Create constant field that returns the same color for all elements
     const field: Field<unknown> = (_seed, n) => {

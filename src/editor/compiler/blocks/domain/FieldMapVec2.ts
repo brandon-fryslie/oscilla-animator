@@ -64,13 +64,21 @@ export const FieldMapVec2Block: BlockCompiler = {
 
   inputs: [
     { name: 'vec', type: { kind: 'Field:vec2' }, required: true },
+    { name: 'fn', type: { kind: 'Scalar:string' }, required: false },
+    { name: 'angle', type: { kind: 'Signal:number' }, required: false },
+    { name: 'scaleX', type: { kind: 'Signal:number' }, required: false },
+    { name: 'scaleY', type: { kind: 'Signal:number' }, required: false },
+    { name: 'offsetX', type: { kind: 'Signal:number' }, required: false },
+    { name: 'offsetY', type: { kind: 'Signal:number' }, required: false },
+    { name: 'centerX', type: { kind: 'Signal:number' }, required: false },
+    { name: 'centerY', type: { kind: 'Signal:number' }, required: false },
   ],
 
   outputs: [
     { name: 'out', type: { kind: 'Field:vec2' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const vecArtifact = inputs.vec;
     if (!isDefined(vecArtifact) || vecArtifact.kind !== 'Field:vec2') {
       return {
@@ -82,14 +90,15 @@ export const FieldMapVec2Block: BlockCompiler = {
     }
 
     const vecField = vecArtifact.value as Vec2Field;
-    const fn = typeof params.fn === 'string' ? params.fn : 'rotate';
-    const angle = Number(params.angle ?? 0);
-    const scaleX = Number(params.scaleX ?? 1);
-    const scaleY = Number(params.scaleY ?? 1);
-    const offsetX = Number(params.offsetX ?? 0);
-    const offsetY = Number(params.offsetY ?? 0);
-    const centerX = Number(params.centerX ?? 400);
-    const centerY = Number(params.centerY ?? 300);
+    // Read from inputs - values come from defaultSource or explicit connections
+    const fn = String((inputs.fn as any)?.value);
+    const angle = Number((inputs.angle as any)?.value);
+    const scaleX = Number((inputs.scaleX as any)?.value);
+    const scaleY = Number((inputs.scaleY as any)?.value);
+    const offsetX = Number((inputs.offsetX as any)?.value);
+    const offsetY = Number((inputs.offsetY as any)?.value);
+    const centerX = Number((inputs.centerX as any)?.value);
+    const centerY = Number((inputs.centerY as any)?.value);
 
     // Convert angle from degrees to radians
     const angleRad = (angle * Math.PI) / 180;

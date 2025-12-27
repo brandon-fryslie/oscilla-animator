@@ -111,16 +111,20 @@ export const DebugDisplayBlock: BlockCompiler = {
     { name: 'phase', type: { kind: 'Signal:phase' }, required: false },
     { name: 'domain', type: { kind: 'Domain' }, required: false },
     { name: 'field', type: { kind: 'Field:number' }, required: false },
+    { name: 'label', type: { kind: 'Scalar:string' }, required: false },
+    { name: 'posX', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'posY', type: { kind: 'Scalar:number' }, required: false },
   ],
 
   outputs: [
     { name: 'debug', type: { kind: 'RenderTree' } },
   ],
 
-  compile({ id, params, inputs }) {
-    const label = typeof params.label === 'string' ? params.label : 'Debug';
-    const posX = Number(params.posX ?? 20);
-    const posY = Number(params.posY ?? 20);
+  compile({ id, inputs }) {
+    // Read from inputs - values come from defaultSource or explicit connections
+    const label = String((inputs.label as any)?.value);
+    const posX = Number((inputs.posX as any)?.value);
+    const posY = Number((inputs.posY as any)?.value);
 
     // Extract input artifacts
     const signalArtifact = inputs.signal;

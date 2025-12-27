@@ -130,7 +130,7 @@ export const FieldHueGradientBlock: BlockCompiler = {
     { name: 'colors', type: { kind: 'Field:color' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -141,23 +141,23 @@ export const FieldHueGradientBlock: BlockCompiler = {
       };
     }
 
-    // Get signal inputs or use defaults from params
+    // Get signal inputs
     const hueOffsetArtifact = inputs.hueOffset;
     const hueSpreadArtifact = inputs.hueSpread;
     const saturationArtifact = inputs.saturation;
     const lightnessArtifact = inputs.lightness;
     const phaseArtifact = inputs.phase;
 
-    // Default values from params
-    const defaultHueOffset = Number(params.hueOffset ?? 0);
-    const defaultHueSpread = Number(params.hueSpread ?? 1);
-    const defaultSaturation = Number(params.saturation ?? 80);
-    const defaultLightness = Number(params.lightness ?? 60);
+    // Default values from inputs - values come from defaultSource or explicit connections
+    const defaultHueOffset = Number((inputs.hueOffset as any)?.value);
+    const defaultHueSpread = Number((inputs.hueSpread as any)?.value);
+    const defaultSaturation = Number((inputs.saturation as any)?.value);
+    const defaultLightness = Number((inputs.lightness as any)?.value);
 
     // Create the field function that evaluates signals at render time
     const field: Field<string> = (_seed, n, ctx) => {
       // Get runtime context for signal evaluation
-      const t = (ctx.env as { t?: number }).t ?? 0;
+      const t = (ctx.env as { t?: number }).t || 0;
       const runtimeCtx: RuntimeCtx = { viewport: { w: 0, h: 0, dpr: 1 } };
 
       // Evaluate signal inputs or use defaults

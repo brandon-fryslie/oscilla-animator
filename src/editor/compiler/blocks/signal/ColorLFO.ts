@@ -201,11 +201,17 @@ registerBlockType({
 export const ColorLFOBlock: BlockCompiler = {
   type: 'ColorLFO',
 
-  inputs: [{ name: 'phase', type: { kind: 'Signal:phase' }, required: true }],
+  inputs: [
+    { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
+    { name: 'base', type: { kind: 'Scalar:color' }, required: false },
+    { name: 'hueSpan', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'sat', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'light', type: { kind: 'Scalar:number' }, required: false },
+  ],
 
   outputs: [{ name: 'color', type: { kind: 'Signal:color' } }],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const phaseArtifact = inputs.phase;
     if (phaseArtifact === undefined || phaseArtifact.kind !== 'Signal:phase') {
       return {
@@ -217,10 +223,11 @@ export const ColorLFOBlock: BlockCompiler = {
     }
 
     const phaseSignal = phaseArtifact.value as Signal<number>;
-    const base = typeof params.base === 'string' ? params.base : '#3B82F6';
-    const hueSpan = Number(params.hueSpan ?? 180);
-    const sat = Number(params.sat ?? 0.8);
-    const light = Number(params.light ?? 0.5);
+    // Read from inputs - values come from defaultSource or explicit connections
+    const base = String((inputs.base as any)?.value);
+    const hueSpan = Number((inputs.hueSpan as any)?.value);
+    const sat = Number((inputs.sat as any)?.value);
+    const light = Number((inputs.light as any)?.value);
 
     // Extract base hue from base color
     const baseHSL = hexToHSL(base);

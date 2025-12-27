@@ -246,8 +246,9 @@ const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
       outputId = input.id;
   }
 
+  const slot = ctx.b.allocValueSlot();
   return {
-    outputs: [{ k: 'sig', id: outputId }],
+    outputs: [{ k: 'sig', id: outputId, slot }],
   };
 };
 
@@ -283,13 +284,15 @@ export const ShaperBlock: BlockCompiler = {
 
   inputs: [
     { name: 'in', type: { kind: 'Signal:number' }, required: true },
+    { name: 'kind', type: { kind: 'Scalar:string' }, required: false },
+    { name: 'amount', type: { kind: 'Scalar:number' }, required: false },
   ],
 
   outputs: [
     { name: 'out', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const inputArtifact = inputs.in;
     if (inputArtifact === undefined || inputArtifact.kind !== 'Signal:number') {
       return {
@@ -301,8 +304,9 @@ export const ShaperBlock: BlockCompiler = {
     }
 
     const inputSignal = inputArtifact.value as Signal<number>;
-    const kind = typeof params.kind === 'string' ? params.kind : 'smoothstep';
-    const amount = Number(params.amount ?? 1);
+    // Read from inputs - values come from defaultSource or explicit connections
+    const kind = String((inputs.kind as any)?.value);
+    const amount = Number((inputs.amount as any)?.value);
 
     const shapeFn = getShaper(kind, amount);
 

@@ -219,10 +219,12 @@ export class PatchStore {
     }
 
     // Create default sources for inputs with defaultSource metadata
+    // Pass migratedParams so macro params override slot defaults
     this.root.defaultSourceStore.createDefaultSourcesForBlock(
       id,
       block.inputs,
-      SLOT_TYPE_TO_TYPE_DESC
+      SLOT_TYPE_TO_TYPE_DESC,
+      migratedParams
     );
 
     // Process auto-bus connections for this block
@@ -390,10 +392,12 @@ export class PatchStore {
     this.blocks.push(block);
 
     // Create default sources for inputs with defaultSource metadata
+    // Pass migratedParams so macro params override slot defaults
     this.root.defaultSourceStore.createDefaultSourcesForBlock(
       id,
       block.inputs,
-      SLOT_TYPE_TO_TYPE_DESC
+      SLOT_TYPE_TO_TYPE_DESC,
+      migratedParams
     );
 
     // Add to lane at specific index
@@ -766,10 +770,12 @@ export class PatchStore {
     this.blocks.push(newBlock);
 
     // Create default sources for inputs with defaultSource metadata
+    // Pass newParams so copied params override slot defaults
     this.root.defaultSourceStore.createDefaultSourcesForBlock(
       newBlockId,
       newBlock.inputs,
-      SLOT_TYPE_TO_TYPE_DESC
+      SLOT_TYPE_TO_TYPE_DESC,
+      newParams
     );
 
     // Add to lane at the same position as old block

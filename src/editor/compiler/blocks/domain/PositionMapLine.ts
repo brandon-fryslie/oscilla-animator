@@ -52,8 +52,9 @@ const lowerPositionMapLine: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Create position field as const
   const posField = ctx.b.fieldConst(positions, { world: 'field', domain: 'vec2' });
 
+  const slot = ctx.b.allocValueSlot();
   return {
-    outputs: [{ k: 'field', id: posField }],
+    outputs: [{ k: 'field', id: posField, slot }],
   };
 };
 
@@ -79,13 +80,18 @@ export const PositionMapLineBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
+    { name: 'ax', type: { kind: 'Signal:number' }, required: false },
+    { name: 'ay', type: { kind: 'Signal:number' }, required: false },
+    { name: 'bx', type: { kind: 'Signal:number' }, required: false },
+    { name: 'by', type: { kind: 'Signal:number' }, required: false },
+    { name: 'distribution', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
     { name: 'pos', type: { kind: 'Field:vec2' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -97,11 +103,13 @@ export const PositionMapLineBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value;
-    const ax = Number(params.ax ?? 100);
-    const ay = Number(params.ay ?? 200);
-    const bx = Number(params.bx ?? 700);
-    const by = Number(params.by ?? 200);
-    const distribution = typeof params.distribution === 'string' ? params.distribution : 'even';
+
+    // Read from inputs - values come from defaultSource or explicit connections
+    const ax = Number((inputs.ax as any)?.value);
+    const ay = Number((inputs.ay as any)?.value);
+    const bx = Number((inputs.bx as any)?.value);
+    const by = Number((inputs.by as any)?.value);
+    const distribution = String((inputs.distribution as any)?.value);
 
     // Create the position field based on domain element count
     const positionField: PositionField = (_seed, n) => {

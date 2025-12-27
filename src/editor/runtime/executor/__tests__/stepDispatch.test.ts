@@ -91,7 +91,7 @@ describe("Step Dispatch", () => {
         kind: "busEval",
         deps: [],
         busIndex: 0,
-        outFrameSlot: 1,
+        outSlot: 1,
         publishers: [],
         combine: { mode: "last" },
         silent: { kind: "zero" },
@@ -156,9 +156,10 @@ describe("Step Dispatch", () => {
       const step: StepRenderAssemble = {
         id: "render-assemble-1",
         kind: "renderAssemble",
+        deps: [],
         instance2dListSlot: 0,
         pathBatchListSlot: 1,
-        outFrameSlot: 1,
+        outFrameSlot: 2,
       };
 
       // Provide schedule with the step so slotMeta is extracted

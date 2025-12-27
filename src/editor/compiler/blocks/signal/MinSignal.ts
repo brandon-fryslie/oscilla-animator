@@ -28,7 +28,8 @@ const lowerMinSignal: BlockLowerFn = ({ ctx, inputs }) => {
     outputType: outType,
   });
 
-  return { outputs: [{ k: 'sig', id: sigId }] };
+  const slot = ctx.b.allocValueSlot();
+  return { outputs: [{ k: 'sig', id: sigId, slot }] };
 };
 
 // Register block type for IR lowering

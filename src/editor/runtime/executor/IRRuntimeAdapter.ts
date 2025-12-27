@@ -13,10 +13,12 @@
  * - Support hot-swap via swapProgram()
  * - Stub Program.event() (events not implemented yet)
  * - BRIDGE MODE: Use legacy render closure while IR schedule manages time
+ * - PURE IR MODE: Return RenderFrameIR directly from schedule execution
  *
  * References:
  * - .agent_planning/compiler-rendering-integration/PLAN-2025-12-26-110434.md §P0-2
  * - design-docs/12-Compiler-Final/14-Compiled-IR-Program-Contract.md §9
+ * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md §E
  */
 
 import type { CompiledProgramIR } from "../../compiler/ir";
@@ -25,6 +27,40 @@ import type { RenderTree } from "../renderTree";
 import type { RenderTree as RenderCmdTree } from "../renderCmd";
 import { ScheduleExecutor } from "./ScheduleExecutor";
 import { createRuntimeState, type RuntimeState } from "./RuntimeState";
+
+/**
+ * RenderFrameIR - Simplified frame format for Canvas2D renderer.
+ * This is the output of executeRenderAssemble step.
+ */
+export interface RenderFrameIR {
+  version: 1;
+  clear: { r: number; g: number; b: number; a: number } | { mode: "none" };
+  passes: RenderPassIR[];
+  perf?: {
+    instances2d: number;
+    pathCmds: number;
+  };
+}
+
+export type RenderPassIR =
+  | { kind: "instances2d"; batch: Instances2DBatchIR }
+  | { kind: "paths2d"; batch: Paths2DBatchIR };
+
+export interface Instances2DBatchIR {
+  count: number;
+  x: Float32Array;
+  y: Float32Array;
+  radius: Float32Array;
+  r: Float32Array;
+  g: Float32Array;
+  b: Float32Array;
+  a: Float32Array;
+}
+
+export interface Paths2DBatchIR {
+  cmds: Uint16Array;
+  params: Float32Array;
+}
 
 /**
  * Legacy render function type.
@@ -68,14 +104,37 @@ export class IRRuntimeAdapter {
   }
 
   /**
-   * Create Program<RenderTree> interface for Player.
+   * Check if this adapter is in pure IR mode (outputs RenderFrameIR).
+   *
+   * @returns true if no legacy render function is set
+   */
+  isPureIRMode(): boolean {
+    return this.legacyRenderFn === null;
+  }
+
+  /**
+   * Execute a frame and return RenderFrameIR.
+   *
+   * This is the pure IR path - calls executeFrame which returns RenderFrameIR.
+   *
+   * @param tMs - Absolute time in milliseconds
+   * @returns RenderFrameIR for direct rendering
+   */
+  executeAndGetFrame(tMs: number): RenderFrameIR {
+    return this.executor.executeFrame(this.program, this.runtime, tMs);
+  }
+
+  /**
+   * Create Program<RenderTree> interface for Player (legacy compatibility).
    *
    * Returns a Program object that calls ScheduleExecutor under the hood.
-   * The Program's signal() method executes a frame and returns a RenderTree.
+   * The Program's signal() method executes a frame.
    *
    * BRIDGE MODE: If a legacy render function is provided, it's used for rendering
    * while the IR schedule still manages frame lifecycle (time, caches, etc.).
    * This enables incremental migration from closures to IR.
+   *
+   * PURE IR MODE: Use executeAndGetFrame() instead for direct RenderFrameIR access.
    *
    * RuntimeState is preserved across signal() calls (not recreated each frame).
    *
@@ -85,9 +144,7 @@ export class IRRuntimeAdapter {
     return {
       signal: (tMs: number, runtimeCtx: RuntimeCtx): RenderTree => {
         // Execute frame lifecycle using ScheduleExecutor
-        // This manages time derivation, caches, and frame state
-        // but may not produce the final render tree if IR isn't fully implemented
-        this.executor.executeFrame(this.program, this.runtime, tMs);
+        const frame = this.executor.executeFrame(this.program, this.runtime, tMs);
 
         // BRIDGE MODE: If legacy render function is provided, use it for actual rendering
         // This allows IR to manage time/state while closures still produce the render tree
@@ -96,19 +153,9 @@ export class IRRuntimeAdapter {
           return this.legacyRenderFn(tMs, runtimeCtx) as unknown as RenderTree;
         }
 
-        // Pure IR mode: try to extract render output from schedule execution
-        // Currently returns empty tree since IR render lowering isn't implemented
-        try {
-          if (this.program.outputs && this.program.outputs.length > 0) {
-            const outputSpec = this.program.outputs[0];
-            return this.runtime.values.read(outputSpec.slot) as RenderTree;
-          }
-        } catch {
-          // Slot read failed - fall through to empty tree
-        }
-
-        // Fallback: return empty cmds-based tree for Canvas2DRenderer compatibility
-        return { cmds: [] } as unknown as RenderTree;
+        // Pure IR mode: return the RenderFrameIR cast as RenderTree
+        // The caller should use executeAndGetFrame() for proper typing
+        return frame as unknown as RenderTree;
       },
 
       event: (_ev: KernelEvent): KernelEvent[] => {

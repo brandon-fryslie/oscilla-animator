@@ -663,6 +663,7 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
       publishers: [], // Will be merged with newPublishers by caller
       listeners: [], // Will be merged with newListeners by caller
       defaultSources: patch.defaultSources,
+      defaultSourceValues: patch.defaultSourceValues, // Pass through runtime-edited values
     },
     rewriteMap: rewriteBuilder.build(),
     newPublishers,

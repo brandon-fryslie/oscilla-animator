@@ -90,6 +90,18 @@ export interface RenderSinkIR {
   inputs: Record<string, ValueSlot>;
 }
 
+/**
+ * Domain definition for IR.
+ * Tracks the slot and count for each domain created.
+ */
+export interface DomainDefIR {
+  /** Value slot where domain handle is stored */
+  slot: ValueSlot;
+
+  /** Number of elements in the domain */
+  count: number;
+}
+
 // =============================================================================
 // Debug Index
 // =============================================================================
@@ -158,6 +170,9 @@ export interface BuilderProgramIR {
 
   /** Render sinks */
   renderSinks: readonly RenderSinkIR[];
+
+  /** Domain definitions (for initializing domain slots at runtime) */
+  domains: readonly DomainDefIR[];
 
   /** Debug index for error reporting */
   debugIndex: BuilderDebugIndex;

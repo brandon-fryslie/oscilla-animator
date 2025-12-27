@@ -68,8 +68,8 @@ export function extractTimeRootAutoPublications(
  * - sigWrapEvent() for end event
  */
 const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
-  const params = (config as any) || {};
-  const durationMs = Number(params.durationMs ?? 5000);
+  const configData = (config as any) || {};
+  const durationMs = Number(configData.durationMs);
 
   // Canonical time signals from TimeModel
   const systemTimeId = ctx.b.sigTimeAbsMs();
@@ -88,11 +88,11 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   return {
     outputs: [
-      { k: 'sig', id: systemTimeId },  // systemTime
-      { k: 'sig', id: progressId },     // progress
-      { k: 'sig', id: phaseId },        // phase
-      { k: 'sig', id: endId },          // end
-      { k: 'sig', id: energyId },       // energy
+      { k: 'sig', id: systemTimeId, slot: ctx.b.allocValueSlot() },  // systemTime
+      { k: 'sig', id: progressId, slot: ctx.b.allocValueSlot() },     // progress
+      { k: 'sig', id: phaseId, slot: ctx.b.allocValueSlot() },        // phase
+      { k: 'sig', id: endId, slot: ctx.b.allocValueSlot() },          // end
+      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot() },       // energy
     ],
     declares: { timeModel },
   };
@@ -108,9 +108,9 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
  * - sigWrapEvent() for wrap
  */
 const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
-  const params = (config as any) || {};
-  const periodMs = Number(params.periodMs ?? 3000);
-  const mode = typeof params.mode === 'string' ? params.mode : 'loop';
+  const configData = (config as any) || {};
+  const periodMs = Number(configData.periodMs);
+  const mode = String(configData.mode);
 
   // Canonical time signals from TimeModel
   const systemTimeId = ctx.b.sigTimeAbsMs();
@@ -144,12 +144,12 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   return {
     outputs: [
-      { k: 'sig', id: systemTimeId },  // systemTime
-      { k: 'sig', id: cycleTId },      // cycleT
-      { k: 'sig', id: phaseId },       // phase
-      { k: 'sig', id: wrapId },        // wrap
-      { k: 'sig', id: cycleIndexId },  // cycleIndex
-      { k: 'sig', id: energyId },      // energy
+      { k: 'sig', id: systemTimeId, slot: ctx.b.allocValueSlot() },  // systemTime
+      { k: 'sig', id: cycleTId, slot: ctx.b.allocValueSlot() },      // cycleT
+      { k: 'sig', id: phaseId, slot: ctx.b.allocValueSlot() },       // phase
+      { k: 'sig', id: wrapId, slot: ctx.b.allocValueSlot() },        // wrap
+      { k: 'sig', id: cycleIndexId, slot: ctx.b.allocValueSlot() },  // cycleIndex
+      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot() },      // energy
     ],
     declares: { timeModel },
   };
@@ -164,8 +164,8 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
  * - sigWrapEvent() for pulse
  */
 const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
-  const params = (config as any) || {};
-  const periodMs = Number(params.periodMs ?? 10000);
+  const configData = (config as any) || {};
+  const periodMs = Number(configData.periodMs);
 
   // Canonical time signals from TimeModel
   const systemTimeId = ctx.b.sigTimeAbsMs();
@@ -183,10 +183,10 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   return {
     outputs: [
-      { k: 'sig', id: systemTimeId },  // systemTime
-      { k: 'sig', id: phaseId },       // phase
-      { k: 'sig', id: pulseId },       // pulse
-      { k: 'sig', id: energyId },      // energy
+      { k: 'sig', id: systemTimeId, slot: ctx.b.allocValueSlot() },  // systemTime
+      { k: 'sig', id: phaseId, slot: ctx.b.allocValueSlot() },       // phase
+      { k: 'sig', id: pulseId, slot: ctx.b.allocValueSlot() },       // pulse
+      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot() },      // energy
     ],
     declares: { timeModel },
   };
@@ -254,7 +254,9 @@ registerBlockType({
 export const FiniteTimeRootBlock: BlockCompiler = {
   type: 'FiniteTimeRoot',
 
-  inputs: [],
+  inputs: [
+    { name: 'durationMs', type: { kind: 'Signal:number' }, required: false },
+  ],
 
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
@@ -264,8 +266,13 @@ export const FiniteTimeRootBlock: BlockCompiler = {
     { name: 'energy', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ params }): CompiledOutputs {
-    const durationMs = Number(params.durationMs ?? 5000);
+  compile({ inputs }): CompiledOutputs {
+    // Read from inputs - values come from defaultSource or explicit connections
+    // For Signal artifacts, .value is a function - call it at t=0 to get the current value
+    const durationArtifact = inputs.durationMs as any;
+    const durationMs = typeof durationArtifact?.value === 'function'
+      ? Number(durationArtifact.value(0, { viewport: { w: 0, h: 0, dpr: 1 } }))
+      : Number(durationArtifact?.value);
 
     // System time is identity (tMs passed in is the raw time)
     const systemTime: SignalNumber = (tMs) => tMs;
@@ -320,7 +327,10 @@ export const FiniteTimeRootBlock: BlockCompiler = {
 export const CycleTimeRootBlock: BlockCompiler = {
   type: 'CycleTimeRoot',
 
-  inputs: [],
+  inputs: [
+    { name: 'periodMs', type: { kind: 'Signal:number' }, required: false },
+    { name: 'mode', type: { kind: 'Scalar:string' }, required: false },
+  ],
 
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
@@ -331,9 +341,17 @@ export const CycleTimeRootBlock: BlockCompiler = {
     { name: 'energy', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ params }): CompiledOutputs {
-    const periodMs = Number(params.periodMs ?? 3000);
-    const mode = typeof params.mode === 'string' ? params.mode : 'loop';
+  compile({ inputs }): CompiledOutputs {
+    // Read from inputs - values come from defaultSource or explicit connections
+    // For Signal artifacts, .value is a function - call it at t=0 to get the current value
+    const periodArtifact = inputs.periodMs as any;
+    const periodMs = typeof periodArtifact?.value === 'function'
+      ? Number(periodArtifact.value(0, { viewport: { w: 0, h: 0, dpr: 1 } }))
+      : Number(periodArtifact?.value);
+    const modeArtifact = inputs.mode as any;
+    const mode = typeof modeArtifact?.value === 'function'
+      ? String(modeArtifact.value(0, { viewport: { w: 0, h: 0, dpr: 1 } }))
+      : String(modeArtifact?.value);
 
     // System time is identity
     const systemTime: SignalNumber = (tMs) => tMs;
@@ -407,7 +425,10 @@ export const CycleTimeRootBlock: BlockCompiler = {
 export const InfiniteTimeRootBlock: BlockCompiler = {
   type: 'InfiniteTimeRoot',
 
-  inputs: [],
+  inputs: [
+    { name: 'windowMs', type: { kind: 'Signal:number' }, required: false },
+    { name: 'periodMs', type: { kind: 'Signal:number' }, required: false },
+  ],
 
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
@@ -416,10 +437,16 @@ export const InfiniteTimeRootBlock: BlockCompiler = {
     { name: 'energy', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ params }): CompiledOutputs {
+  compile({ inputs }): CompiledOutputs {
+    // Read from inputs - values come from defaultSource or explicit connections
+    // For Signal artifacts, .value is a function - call it at t=0 to get the current value
+    const periodArtifact = inputs.periodMs as any;
+    const periodMs = typeof periodArtifact?.value === 'function'
+      ? Number(periodArtifact.value(0, { viewport: { w: 0, h: 0, dpr: 1 } }))
+      : Number(periodArtifact?.value);
+
     // System time is identity - just passes through the raw time
     const systemTime: SignalNumber = (tMs) => tMs;
-    const periodMs = Number(params.periodMs ?? 10000);
 
     // Ambient phase: simple 0..1 loop based on periodMs
     const phase: SignalNumber = (tMs) => {

@@ -173,7 +173,8 @@ export interface LensDefinition {
 export type LensParamBinding =
   | { kind: 'default'; defaultSourceId: string }
   | { kind: 'wire'; from: PortRef; adapterChain?: AdapterStep[]; lensStack?: LensInstance[] }
-  | { kind: 'bus'; busId: string; adapterChain?: AdapterStep[]; lensStack?: LensInstance[] };
+  | { kind: 'bus'; busId: string; adapterChain?: AdapterStep[]; lensStack?: LensInstance[] }
+  | { kind: 'literal'; value: unknown };
 
 export interface LensInstance {
   lensId: string;

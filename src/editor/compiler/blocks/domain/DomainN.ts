@@ -63,17 +63,17 @@ export const DomainNBlock: BlockCompiler = {
 
   inputs: [
     { name: 'n', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'seed', type: { kind: 'Scalar:number' }, required: false },
   ],
 
   outputs: [
     { name: 'domain', type: { kind: 'Domain' } },
   ],
 
-  compile({ id, params, inputs }) {
-    // Get n from input port or params
-    const nFromInput = inputs.n?.kind === 'Scalar:number' ? inputs.n.value : undefined;
-    const n = nFromInput ?? Number(params.n);
-    const seed = Number(params.seed);
+  compile({ id, inputs }) {
+    // Read from inputs - values come from defaultSource or explicit connections
+    const n = Number((inputs.n as any)?.value);
+    const seed = Number((inputs.seed as any)?.value);
 
     // Create a stable domain ID based on block id, n, and seed
     const domainId = `domain-${id}-${n}-${seed}`;

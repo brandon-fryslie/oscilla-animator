@@ -93,13 +93,15 @@ export const JitterFieldVec2Block: BlockCompiler = {
   inputs: [
     { name: 'idRand', type: { kind: 'Field:number' }, required: true },
     { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
+    { name: 'amount', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'frequency', type: { kind: 'Scalar:number' }, required: false },
   ],
 
   outputs: [
     { name: 'drift', type: { kind: 'Field:vec2' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const idRandArtifact = inputs.idRand;
     const phaseArtifact = inputs.phase;
 
@@ -123,8 +125,9 @@ export const JitterFieldVec2Block: BlockCompiler = {
 
     const idRandFn = idRandArtifact.value;
     const phaseFn = phaseArtifact.value;
-    const amount = Number(params.amount ?? 10);
-    const frequency = Number(params.frequency ?? 1);
+    // Read from inputs - values come from defaultSource or explicit connections
+    const amount = Number((inputs.amount as any)?.value);
+    const frequency = Number((inputs.frequency as any)?.value);
 
     // Create drift field that combines per-element random with phase
     // The field function captures both the idRand field and phase signal.

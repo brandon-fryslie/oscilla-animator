@@ -46,7 +46,8 @@ const lowerClampSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
     outputType: outType,
   });
 
-  return { outputs: [{ k: 'sig', id: clamped }] };
+  const slot = ctx.b.allocValueSlot();
+  return { outputs: [{ k: 'sig', id: clamped, slot }] };
 };
 
 // Register block type for IR lowering
@@ -71,13 +72,15 @@ export const ClampSignalBlock: BlockCompiler = {
 
   inputs: [
     { name: 'in', type: { kind: 'Signal:number' }, required: true },
+    { name: 'min', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'max', type: { kind: 'Scalar:number' }, required: false },
   ],
 
   outputs: [
     { name: 'out', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const inputArtifact = inputs.in;
     if (inputArtifact === undefined || inputArtifact.kind !== 'Signal:number') {
       return {
@@ -89,8 +92,9 @@ export const ClampSignalBlock: BlockCompiler = {
     }
 
     const inputSignal = inputArtifact.value as Signal<number>;
-    const min = Number(params.min ?? 0);
-    const max = Number(params.max ?? 1);
+    // Read from inputs - values come from defaultSource or explicit connections
+    const min = Number((inputs.min as any)?.value);
+    const max = Number((inputs.max as any)?.value);
 
     // Create clamped signal
     const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {

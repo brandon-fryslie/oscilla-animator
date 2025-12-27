@@ -136,20 +136,23 @@ function artifactToValueRef(
   if (kind === "Scalar:number") {
     const type: TypeDesc = { world: "signal", domain: "number" };
     const sigId = builder.sigConst(artifact.value, type);
-    return { k: "sig", id: sigId };
+    const slot = builder.allocValueSlot();
+    return { k: "sig", id: sigId, slot };
   }
 
   if (kind === "Scalar:vec2") {
     const type: TypeDesc = { world: "signal", domain: "vec2" };
     // For vec2, we need to create a constant. For now, use 0 as placeholder
     const sigId = builder.sigConst(0, type);
-    return { k: "sig", id: sigId };
+    const slot = builder.allocValueSlot();
+    return { k: "sig", id: sigId, slot };
   }
 
   if (kind === "Scalar:color") {
     const type: TypeDesc = { world: "signal", domain: "color" };
     const sigId = builder.sigConst(0, type);
-    return { k: "sig", id: sigId };
+    const slot = builder.allocValueSlot();
+    return { k: "sig", id: sigId, slot };
   }
 
   // Signal: create time-based signal (placeholder)
@@ -163,9 +166,10 @@ function artifactToValueRef(
   ) {
     // Create a time signal as placeholder - actual signal evaluation happens via closure
     const timeId = builder.sigTimeAbsMs();
+    const slot = builder.allocValueSlot();
     // For now, use time signal directly as placeholder
     // In Phase 4, we'll emit proper signal expressions
-    return { k: "sig", id: timeId };
+    return { k: "sig", id: timeId, slot };
   }
 
   // Field: create placeholder field node
@@ -181,7 +185,8 @@ function artifactToValueRef(
     const type = artifactKindToTypeDesc(kind);
     // Create constant field as placeholder
     const fieldId = builder.fieldConst(0, type);
-    return { k: "field", id: fieldId };
+    const slot = builder.allocValueSlot();
+    return { k: "field", id: fieldId, slot };
   }
 
   // Special types that don't map to IR (render trees, events, etc.)

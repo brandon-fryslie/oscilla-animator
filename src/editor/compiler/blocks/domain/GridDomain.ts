@@ -53,10 +53,11 @@ const lowerGridDomain: BlockLowerFn = ({ ctx, config }) => {
   // Create position field as const
   const posField = ctx.b.fieldConst(positions, { world: 'field', domain: 'vec2' });
 
+  const slot = ctx.b.allocValueSlot();
   return {
     outputs: [
       { k: 'special', tag: 'domain', id: domainSlot },
-      { k: 'field', id: posField },
+      { k: 'field', id: posField, slot },
     ],
     declares: {
       domainOut: { outPortIndex: 0, domainKind: 'domain' },
@@ -83,19 +84,38 @@ registerBlockType({
 export const GridDomainBlock: BlockCompiler = {
   type: 'GridDomain',
 
-  inputs: [],
+  inputs: [
+    { name: 'rows', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'cols', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'spacing', type: { kind: 'Signal:number' }, required: false },
+    { name: 'originX', type: { kind: 'Signal:number' }, required: false },
+    { name: 'originY', type: { kind: 'Signal:number' }, required: false },
+  ],
 
   outputs: [
     { name: 'domain', type: { kind: 'Domain' } },
     { name: 'pos0', type: { kind: 'Field:vec2' } },
   ],
 
-  compile({ id, params }) {
-    const rows = Math.max(1, Math.floor(Number(params.rows ?? 10)));
-    const cols = Math.max(1, Math.floor(Number(params.cols ?? 10)));
-    const spacing = Number(params.spacing ?? 20);
-    const originX = Number(params.originX ?? 100);
-    const originY = Number(params.originY ?? 100);
+  compile({ id, inputs }) {
+    // Helper to extract numeric value from Scalar or Signal artifacts
+    // Signal artifacts have .value as a function, Scalar artifacts have .value as a number
+    const extractNumber = (artifact: any): number => {
+      if (artifact.kind === 'Scalar:number') return Number(artifact.value);
+      if (artifact.kind === 'Signal:number') {
+        // Signal artifacts have .value as a function - call with t=0 for compile-time value
+        return Number(artifact.value(0, {}));
+      }
+      // Generic fallback for other artifact types that might have callable or direct values
+      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+    };
+
+    // Read from inputs - values come from defaultSource or explicit connections
+    const rows = Math.max(1, Math.floor(extractNumber(inputs.rows)));
+    const cols = Math.max(1, Math.floor(extractNumber(inputs.cols)));
+    const spacing = extractNumber(inputs.spacing);
+    const originX = extractNumber(inputs.originX);
+    const originY = extractNumber(inputs.originY);
 
     const elementCount = rows * cols;
 

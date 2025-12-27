@@ -65,21 +65,22 @@ const lowerRenderInstances2D: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error(`RenderInstances2D requires Field<color> color, got ${color.k}`);
   }
 
-  // Extract params
-  const params = (config as any) || {};
-  const opacity = Number(params.opacity ?? 1.0);
-  const glow = Boolean(params.glow ?? false);
-  const glowIntensity = Number(params.glowIntensity ?? 2.0);
+  // Extract config - values come from defaultSource
+  const configData = (config as any) || {};
+  const opacity = Number(configData.opacity);
+  const glow = Boolean(configData.glow);
+  const glowIntensity = Number(configData.glowIntensity);
 
   // Register render sink
   // The runtime will handle materializing these fields at render time
-  // Note: renderSink expects Record<string, ValueSlot> (numbers only)
-  // Convert all params to numeric values
+  // Note: renderSink expects Record<string, ValueSlot>
+  // - domain.id IS the ValueSlot (special types use id as slot)
+  // - field/signal inputs have separate .slot property
   const sinkInputs = {
-    domain: domain.id,
-    positions: positions.id,
-    radius: radius.id,
-    color: color.id,
+    domain: domain.id,  // Domain special type: id IS the slot
+    positions: positions.slot,  // Field: use .slot
+    radius: radius.slot,  // Field/Signal: use .slot
+    color: color.slot,  // Field: use .slot
     // Params are serialized as numbers into the IR
     opacity,
     glow: glow ? 1 : 0,  // Convert boolean to number
@@ -145,9 +146,12 @@ export const RenderInstances2DBlock: BlockCompiler = {
     { name: 'positions', type: { kind: 'Field:vec2' }, required: true },
     { name: 'radius', type: { kind: 'Field:number' }, required: true },
     { name: 'color', type: { kind: 'Field:color' }, required: true },
+    { name: 'opacity', type: { kind: 'Signal:number' }, required: false },
+    { name: 'glow', type: { kind: 'Scalar:boolean' }, required: false },
+    { name: 'glowIntensity', type: { kind: 'Signal:number' }, required: false },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -217,10 +221,30 @@ export const RenderInstances2DBlock: BlockCompiler = {
 
     const colorField: Field<unknown> = colorArtifact.value;
 
-    // Params
-    const opacity = Number(params.opacity ?? 1.0);
-    const glow = Boolean(params.glow ?? false);
-    const glowIntensity = Number(params.glowIntensity ?? 2.0);
+    // Helper to extract numeric value from Scalar or Signal artifacts
+    // Signal artifacts have .value as a function, Scalar artifacts have .value as a number
+    const extractNumber = (artifact: any): number => {
+      if (artifact.kind === 'Scalar:number') return Number(artifact.value);
+      if (artifact.kind === 'Signal:number') {
+        // Signal artifacts have .value as a function - call with t=0 for compile-time value
+        return Number(artifact.value(0, {}));
+      }
+      // Generic fallback for other artifact types that might have callable or direct values
+      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+    };
+
+    // Helper to extract boolean from Scalar or Signal artifacts
+    const extractBoolean = (artifact: any): boolean => {
+      if (artifact.kind === 'Scalar:boolean') return Boolean(artifact.value);
+      // Config values come as strings like 'true'/'false'
+      if (typeof artifact.value === 'string') return artifact.value === 'true';
+      return Boolean(artifact.value);
+    };
+
+    // Read from inputs - values come from defaultSource or explicit connections
+    const opacity = extractNumber(inputs.opacity);
+    const glow = extractBoolean(inputs.glow);
+    const glowIntensity = extractNumber(inputs.glowIntensity);
 
     // Create the render function - evaluates fields at render time
     const renderFn = (tMs: number, ctx: RuntimeCtx): DrawNode => {

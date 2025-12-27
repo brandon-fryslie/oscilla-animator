@@ -72,8 +72,9 @@ const lowerPulseDivider: BlockLowerFn = ({ ctx, inputs, config }) => {
     { divisions }
   );
 
+  const slot = ctx.b.allocValueSlot();
   return {
-    outputs: [{ k: 'sig', id: outputId }],
+    outputs: [{ k: 'sig', id: outputId, slot }],
   };
 };
 
@@ -110,13 +111,14 @@ export const PulseDividerBlock: BlockCompiler = {
 
   inputs: [
     { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
+    { name: 'divisions', type: { kind: 'Scalar:number' }, required: false },
   ],
 
   outputs: [
     { name: 'tick', type: { kind: 'Signal:Unit' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const phaseArtifact = inputs.phase;
     if (!isDefined(phaseArtifact) || phaseArtifact.kind !== 'Signal:phase') {
       return {
@@ -128,7 +130,8 @@ export const PulseDividerBlock: BlockCompiler = {
     }
 
     const phaseSignal = phaseArtifact.value as Signal<number>;
-    const divisions = Number(params.divisions ?? 4);
+    // Read from inputs - values come from defaultSource or explicit connections
+    const divisions = Number((inputs.divisions as any)?.value);
 
     // State for edge detection
     let lastSubPhase = -1;

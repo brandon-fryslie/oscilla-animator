@@ -37,9 +37,9 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error(`PhaseClock: expected sig input for tIn, got ${tIn.k}`);
   }
 
-  const params = (config as any) || {};
-  const periodSec = Number(params.period ?? 3.0);
-  const mode = typeof params.mode === 'string' ? params.mode : 'loop';
+  const configData = (config as any) || {};
+  const periodSec = Number(configData.period);
+  const mode = String(configData.mode);
 
   if (periodSec <= 0) {
     throw new Error('PhaseClock: period must be > 0');
@@ -128,8 +128,8 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   return {
     outputs: [
-      { k: 'sig', id: phaseId }, // phase
-      { k: 'sig', id: uId },     // u
+      { k: 'sig', id: phaseId, slot: ctx.b.allocValueSlot() }, // phase
+      { k: 'sig', id: uId, slot: ctx.b.allocValueSlot() },     // u
     ],
   };
 };
@@ -172,6 +172,8 @@ export const PhaseClockBlock: BlockCompiler = {
 
   inputs: [
     { name: 'tIn', type: { kind: 'Signal:Time' }, required: true },
+    { name: 'period', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'mode', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
@@ -179,7 +181,7 @@ export const PhaseClockBlock: BlockCompiler = {
     { name: 'u', type: { kind: 'Signal:Unit' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     // Validate required input
     const tInArtifact = inputs.tIn;
     if (!isDefined(tInArtifact)) {
@@ -195,8 +197,9 @@ export const PhaseClockBlock: BlockCompiler = {
       };
     }
 
-    const periodSec = Number(params.period ?? 3.0);
-    const mode = typeof params.mode === 'string' ? params.mode : 'loop';
+    // Read from inputs - values come from defaultSource or explicit connections
+    const periodSec = Number((inputs.period as any)?.value);
+    const mode = String((inputs.mode as any)?.value);
 
     if (periodSec <= 0) {
       return {

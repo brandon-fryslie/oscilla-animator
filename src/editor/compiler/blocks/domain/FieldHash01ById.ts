@@ -60,7 +60,8 @@ const lowerFieldHash01ById: BlockLowerFn = ({ ctx, inputs, config }) => {
     }
   );
 
-  return { outputs: [{ k: 'field', id: fieldId }] };
+  const slot = ctx.b.allocValueSlot();
+  return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 
 // Register block type for IR lowering
@@ -85,13 +86,14 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
+    { name: 'seed', type: { kind: 'Scalar:number' }, required: false },
   ],
 
   outputs: [
     { name: 'u', type: { kind: 'Field:number' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -103,7 +105,8 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value;
-    const blockSeed = Number(params.seed ?? 0);
+    // Read from inputs - values come from defaultSource or explicit connections
+    const blockSeed = Number((inputs.seed as any)?.value);
 
     // Create field that produces deterministic random per element
     const field: Field<number> = (seed, n) => {

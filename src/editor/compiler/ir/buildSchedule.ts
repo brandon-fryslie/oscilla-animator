@@ -39,6 +39,15 @@ import type {
 import { randomUUID } from "../../crypto";
 
 /**
+ * Domain handle - stored in ValueStore to represent a domain.
+ * Contains the element count for materialization steps.
+ */
+interface DomainHandle {
+  kind: "domain";
+  count: number;
+}
+
+/**
  * Instance2D batch descriptor - stored in ValueStore at instance2dListSlot.
  * References slots containing materialized buffers.
  */
@@ -287,10 +296,17 @@ function buildSchedule(builderIR: BuilderProgramIR): BuildScheduleResult {
       stepCache: {},
       materializationCache: {},
     },
-    // Store initial slot values for batch lists
+    // Store initial slot values for batch lists and domains
     initialSlotValues: {
       [SLOT_INSTANCE2D_LIST]: { batches: instance2dBatches } as Instance2DBatchList,
       [SLOT_PATH_BATCH_LIST]: { batches: pathBatches } as PathBatchList,
+      // Initialize domain slots with Domain handles
+      ...Object.fromEntries(
+        builderIR.domains.map((d) => [
+          d.slot,
+          { kind: "domain", count: d.count } as DomainHandle,
+        ])
+      ),
     },
   };
 

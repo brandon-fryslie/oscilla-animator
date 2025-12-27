@@ -131,7 +131,13 @@ export function executeMaterializeColor(
   }
 
   // 2. Read color value(s) from colorExprSlot
-  const colorValue = runtime.values.read(step.colorExprSlot);
+  let colorValue: unknown;
+  try {
+    colorValue = runtime.values.read(step.colorExprSlot);
+  } catch {
+    // Slot not initialized - will use default color below
+    colorValue = undefined;
+  }
 
   // 3. Allocate 4 Float32Array buffers for channels
   const rBuffer = runtime.values.ensureF32(step.outRSlot, instanceCount);
@@ -176,6 +182,15 @@ export function executeMaterializeColor(
       rBuffer[i] = 1.0;
       gBuffer[i] = 1.0;
       bBuffer[i] = 1.0;
+      aBuffer[i] = 1.0;
+    }
+  } else if (colorValue === undefined || colorValue === null) {
+    // Fallback: use default blue color when slot isn't initialized
+    // This happens when bus evaluation isn't wired yet
+    for (let i = 0; i < instanceCount; i++) {
+      rBuffer[i] = 0.23; // Blue color (#3B82F6)
+      gBuffer[i] = 0.51;
+      bBuffer[i] = 0.96;
       aBuffer[i] = 1.0;
     }
   } else {

@@ -193,8 +193,9 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, config }) => {
     outputType: ctx.outTypes[0],
   });
 
+  const slot = ctx.b.allocValueSlot();
   return {
-    outputs: [{ k: 'sig', id: output }],
+    outputs: [{ k: 'sig', id: output, slot }],
   };
 };
 
@@ -246,13 +247,14 @@ export const OscillatorBlock: BlockCompiler = {
     { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
     { name: 'amplitude', type: { kind: 'Signal:number' }, required: false },
     { name: 'bias', type: { kind: 'Signal:number' }, required: false },
+    { name: 'shape', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
     { name: 'out', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ inputs, params }) {
+  compile({ inputs }) {
     const phaseArtifact = inputs.phase;
     if (phaseArtifact === undefined || phaseArtifact.kind !== 'Signal:phase') {
       return {
@@ -265,16 +267,16 @@ export const OscillatorBlock: BlockCompiler = {
 
     const phaseSignal = phaseArtifact.value as Signal<number>;
 
-    // Shape is a param, not an input (like Shaper uses params.kind)
-    const shape = typeof params.shape === 'string' ? params.shape : 'sine';
-    const shapeFn = SHAPES[shape] ?? SHAPES.sine;
+    // Read from inputs - values come from defaultSource or explicit connections
+    const shape = String((inputs.shape as any)?.value);
+    const shapeFn = SHAPES[shape] || SHAPES.sine;
 
     const amplitudeSignal = inputs.amplitude?.kind === 'Signal:number'
       ? (inputs.amplitude.value as Signal<number>)
-      : (): number => Number(params.amplitude ?? 1);
+      : (): number => Number((inputs.amplitude as any)?.value);
     const biasSignal = inputs.bias?.kind === 'Signal:number'
       ? (inputs.bias.value as Signal<number>)
-      : (): number => Number(params.bias ?? 0);
+      : (): number => Number((inputs.bias as any)?.value);
 
     // Create output signal
     const signal: Signal<number> = (t: number, ctx: Readonly<RuntimeCtx>): number => {

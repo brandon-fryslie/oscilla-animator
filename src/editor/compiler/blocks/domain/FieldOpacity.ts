@@ -93,13 +93,16 @@ export const FieldOpacityBlock: BlockCompiler = {
 
   inputs: [
     { name: 'values', type: { kind: 'Field:number' }, required: true },
+    { name: 'min', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'max', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'curve', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
     { name: 'opacity', type: { kind: 'Field:number' } },
   ],
 
-  compile({ params, inputs }) {
+  compile({ inputs }) {
     const valuesArtifact = inputs.values;
     if (!isDefined(valuesArtifact) || valuesArtifact.kind !== 'Field:number') {
       return {
@@ -111,9 +114,10 @@ export const FieldOpacityBlock: BlockCompiler = {
     }
 
     const valuesFn = valuesArtifact.value;
-    const min = Number(params.min ?? 0);
-    const max = Number(params.max ?? 1);
-    const curve = typeof params.curve === 'string' ? params.curve : 'linear';
+    // Read from inputs - values come from defaultSource or explicit connections
+    const min = Number((inputs.min as any)?.value);
+    const max = Number((inputs.max as any)?.value);
+    const curve = String((inputs.curve as any)?.value);
 
     // Create opacity field
     const field: Field<number> = (seed, n, ctx) => {

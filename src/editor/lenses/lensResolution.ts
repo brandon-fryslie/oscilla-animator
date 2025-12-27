@@ -41,6 +41,10 @@ export function resolveLensParam(binding: LensParamBinding, ctx: ParamResolution
       const adapted = ctx.applyAdapterChain(art, binding.adapterChain);
       return ctx.applyLensStack(adapted, binding.lensStack);
     }
+    case 'literal': {
+      // Literal bindings store the value directly
+      return { kind: 'Scalar:number', value: binding.value as number };
+    }
   }
 }
 

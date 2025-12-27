@@ -92,6 +92,38 @@ export interface MacroExpansion {
  */
 export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // =============================================================================
+  // Test Macros - For testing new features
+  // =============================================================================
+
+  // IR Test - Minimal setup for testing IR rendering pipeline
+  // Just a domain + renderer, no animations, uses test geometry internally
+  'macro:testIR': {
+    blocks: [
+      { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
+        params: { periodMs: 3000 } },
+      { ref: 'domain', type: 'DomainN', laneKind: 'Fields', label: 'Domain',
+        params: { n: 9, seed: 42 } },
+      { ref: 'grid', type: 'PositionMapGrid', laneKind: 'Fields', label: 'Grid',
+        params: { rows: 3, cols: 3, spacing: 80, originX: 400, originY: 300, order: 'rowMajor' } },
+      { ref: 'radius', type: 'FieldConstNumber', laneKind: 'Fields', label: 'Radius',
+        params: { value: 20 } },
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
+    ],
+    connections: [
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'grid', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'radius', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
+      { fromRef: 'grid', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
+      { fromRef: 'radius', fromSlot: 'out', toRef: 'render', toSlot: 'radius' },
+    ],
+    publishers: [],
+    listeners: [
+      // Use phaseA for color variation
+      { busName: 'phaseA', toRef: 'render', toSlot: 'color' },
+    ],
+  },
+
+  // =============================================================================
   // Quick Start Macros - Simple, guaranteed-to-work patterns
   // =============================================================================
 

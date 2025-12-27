@@ -15,7 +15,7 @@
 
 import type { CompiledProgramIR, StepIR } from "../../compiler/ir";
 import type { RuntimeState } from "./RuntimeState";
-import type { RenderTree } from "../renderTree";
+import type { RenderFrameIR } from "./IRRuntimeAdapter";
 import { resolveTime, type EffectiveTime } from "./timeResolution";
 
 // Step executors
@@ -30,24 +30,23 @@ import { executeRenderAssemble } from "./steps/executeRenderAssemble";
 import { executeDebugProbe } from "./steps/executeDebugProbe";
 
 // ============================================================================
-// Type Guard for RenderTree
+// Type Guard for RenderFrameIR
 // ============================================================================
 
 /**
- * Type guard to check if a value is a valid RenderTree.
+ * Type guard to check if a value is a valid RenderFrameIR.
  *
- * A RenderTree is a DrawNode (group, shape, or effect).
+ * A RenderFrameIR has version, clear, and passes.
  */
-function isRenderTree(value: unknown): value is RenderTree {
+function isRenderFrameIR(value: unknown): value is RenderFrameIR {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
 
-  const node = value as { kind?: string };
+  const frame = value as { version?: number; passes?: unknown[] };
   return (
-    node.kind === 'group' ||
-    node.kind === 'shape' ||
-    node.kind === 'effect'
+    frame.version === 1 &&
+    Array.isArray(frame.passes)
   );
 }
 
@@ -86,13 +85,13 @@ export class ScheduleExecutor {
    * @param program - Compiled program IR
    * @param runtime - Runtime state (values, state, caches)
    * @param tMs - Absolute time in milliseconds
-   * @returns RenderTree for this frame
+   * @returns RenderFrameIR for this frame
    */
   public executeFrame(
     program: CompiledProgramIR,
     runtime: RuntimeState,
     tMs: number,
-  ): RenderTree {
+  ): RenderFrameIR {
     // 1. New frame lifecycle
     runtime.frameCache.newFrame();
     runtime.values.clear();
@@ -221,40 +220,39 @@ export class ScheduleExecutor {
   /**
    * Extract render output from runtime state.
    *
-   * Reads the RenderTree from the output slot specified in program.outputs[0].
-   * Validates that the value is a valid RenderTree structure.
+   * Reads the RenderFrameIR from the output slot specified in program.outputs[0].
+   * Validates that the value is a valid RenderFrameIR structure.
    *
    * @param program - Compiled program (contains output specification)
-   * @param runtime - Runtime state (contains ValueStore with render tree)
-   * @returns RenderTree for this frame
+   * @param runtime - Runtime state (contains ValueStore with render frame)
+   * @returns RenderFrameIR for this frame
    * @throws Error if no outputs defined or output slot is empty/invalid
    */
   private extractRenderOutput(
     program: CompiledProgramIR,
     runtime: RuntimeState,
-  ): RenderTree {
+  ): RenderFrameIR {
     // Handle case where program has no outputs
     if (!program.outputs || program.outputs.length === 0) {
-      // Return empty render tree compatible with canvas renderer
-      // Note: This uses the cmds-based RenderTree format from renderCmd.ts
-      // rather than the DrawNode format from renderTree.ts
-      // TODO: Unify these types in a future refactor
+      // Return empty render frame
       return {
-        cmds: [],
-      } as unknown as RenderTree;
+        version: 1,
+        clear: { mode: "none" },
+        passes: [],
+      };
     }
 
     // Get first output specification (render root)
     const outputSpec = program.outputs[0];
 
-    // Read render tree from output slot
+    // Read render frame from output slot
     const value = runtime.values.read(outputSpec.slot);
 
-    // Validate that value is a RenderTree
-    if (!isRenderTree(value)) {
+    // Validate that value is a RenderFrameIR
+    if (!isRenderFrameIR(value)) {
       throw new Error(
-        `extractRenderOutput: output slot ${outputSpec.slot} does not contain a valid RenderTree. ` +
-        `Expected DrawNode (group/shape/effect), got: ${typeof value === 'object' && value !== null ? (value as { kind?: string }).kind : typeof value}`
+        `extractRenderOutput: output slot ${outputSpec.slot} does not contain a valid RenderFrameIR. ` +
+        `Expected {version: 1, passes: [...]}, got: ${JSON.stringify(value)?.slice(0, 100)}`
       );
     }
 

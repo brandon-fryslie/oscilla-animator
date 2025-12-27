@@ -209,10 +209,9 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         if (useIR) {
           if (result.compiledIR) {
             // IR compilation succeeded - use IR path
-            // In pure IR mode (no legacyRenderFn), the schedule produces RenderFrameIR directly
-            // In bridge mode, legacy closure is used for rendering while IR manages time/state
-            const legacyRenderFn = result.canvasProgram?.signal;
-            const adapter = new IRRuntimeAdapter(result.compiledIR, legacyRenderFn);
+            // Pure IR mode: schedule produces RenderFrameIR directly, no legacy closure fallback
+            // This forces the IR pipeline to handle all rendering
+            const adapter = new IRRuntimeAdapter(result.compiledIR);
             const irProgram = adapter.createProgram();
 
             // Store adapter for direct frame access in render loop
@@ -230,8 +229,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
             player.applyTimeModel(result.compiledIR.timeModel);
             setTimeModel(result.compiledIR.timeModel);
             setHasCompiledProgram(true);
-            const bridgeMode = legacyRenderFn ? ' (bridge mode)' : '';
-            logStore.debug('renderer', `Hot swapped to IR program${bridgeMode} (timeModel: ${result.compiledIR.timeModel.kind})`);
+            logStore.debug('renderer', `Hot swapped to IR program (pure IR mode, timeModel: ${result.compiledIR.timeModel.kind})`);
 
             // Set debug index for trace infrastructure
             if (result.debugIndex) {
