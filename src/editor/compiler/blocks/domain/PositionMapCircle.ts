@@ -108,7 +108,7 @@ export const PositionMapCircleBlock: BlockCompiler = {
     { name: 'pos', type: { kind: 'Field:vec2' } },
   ],
 
-  compile({ inputs }) {
+  compile({ inputs, params }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -121,13 +121,27 @@ export const PositionMapCircleBlock: BlockCompiler = {
 
     const domain = domainArtifact.value;
 
-    // Read from inputs - values come from defaultSource or explicit connections
-    const centerX = Number((inputs.centerX as any)?.value);
-    const centerY = Number((inputs.centerY as any)?.value);
-    const radius = Number((inputs.radius as any)?.value);
-    const startAngle = Number((inputs.startAngle as any)?.value);
-    const winding = Number((inputs.winding as any)?.value);
-    const distribution = String((inputs.distribution as any)?.value);
+    // Helper to extract numeric value from artifact with default fallback
+    const extractNumber = (artifact: any, defaultValue: number): number => {
+      if (!artifact) return defaultValue;
+      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') return Number(artifact.value);
+      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+    };
+
+    // Helper to extract string value from artifact with default fallback
+    const extractString = (artifact: any, defaultValue: string): string => {
+      if (!artifact) return defaultValue;
+      if (artifact.kind === 'Scalar:string') return String(artifact.value);
+      return typeof artifact.value === 'function' ? String(artifact.value(0, {})) : String(artifact.value);
+    };
+
+    // Support both new (inputs) and old (params) parameter systems
+    const centerX = extractNumber(inputs.centerX, (params as any)?.centerX ?? 400);
+    const centerY = extractNumber(inputs.centerY, (params as any)?.centerY ?? 300);
+    const radius = extractNumber(inputs.radius, (params as any)?.radius ?? 150);
+    const startAngle = extractNumber(inputs.startAngle, (params as any)?.startAngle ?? 0);
+    const winding = extractNumber(inputs.winding, (params as any)?.winding ?? 1);
+    const distribution = extractString(inputs.distribution, (params as any)?.distribution ?? 'even');
 
     // Convert degrees to radians
     const startAngleRad = (startAngle * Math.PI) / 180;
