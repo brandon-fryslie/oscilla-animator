@@ -62,11 +62,10 @@ export const PathConstBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'path', type: { kind: 'Signal:path' }, required: false },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Field:path' } },
+    { name: 'out', type: { kind: 'Field:Path' } },
   ],
 
   compile({ inputs }) {
@@ -82,8 +81,8 @@ export const PathConstBlock: BlockCompiler = {
 
     const domain = domainArtifact.value;
 
-    // Read from inputs - values come from defaultSource or explicit connections
-    const pathExpr = (inputs.path as any)?.value ?? {
+    // Use default path expression - in future this could come from params
+    const pathExpr = {
       commands: [
         { kind: 'M', x: 0, y: 0 },
         { kind: 'L', x: 100, y: 0 },
@@ -100,7 +99,7 @@ export const PathConstBlock: BlockCompiler = {
     };
 
     return {
-      out: { kind: 'Field:path', value: field },
+      out: { kind: 'Field:Path', value: field },
     };
   },
 };

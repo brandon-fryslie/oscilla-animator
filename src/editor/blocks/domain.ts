@@ -1256,6 +1256,7 @@ export const BroadcastSignalColor = createBlock({
  * PathConst - Constant path field across all elements.
  *
  * Creates a Field<path> where all elements share the same path expression.
+ * The path shape is defined via params/config and broadcasted to all elements.
  * Useful for rendering identical shapes at different positions.
  */
 export const PathConst = createBlock({
@@ -1266,21 +1267,6 @@ export const PathConst = createBlock({
     input('domain', 'Domain', 'Domain', {
       tier: 'primary',
       defaultSource: { value: 1, world: 'field' },
-    }),
-    input('path', 'Path', 'Signal<path>', {
-      tier: 'primary',
-      defaultSource: {
-        value: {
-          commands: [
-            { kind: 'M', x: 0, y: 0 },
-            { kind: 'L', x: 100, y: 0 },
-            { kind: 'L', x: 100, y: 100 },
-            { kind: 'L', x: 0, y: 100 },
-            { kind: 'Z' },
-          ],
-        },
-        world: 'field',
-      },
     }),
   ],
   outputs: [

@@ -688,42 +688,19 @@ export class PatchStore {
 
   /**
    * Remove a block from the patch.
-   * @param id - The block ID to remove
-   * @param options - Optional settings
-   * @param options.suppressGraphCommitted - If true, don't emit GraphCommitted (used by replaceBlock)
+   *
+   * P0-2 MIGRATED: Now uses tx.removeBlockCascade() for undo/redo support.
+   * @param _options - DEPRECATED: Kept for backward compatibility with replaceBlock (Phase 3). Ignored.
+
    */
-  removeBlock(id: BlockId, options?: { suppressGraphCommitted?: boolean }): void {
+  removeBlock(id: BlockId, _options?: { suppressGraphCommitted?: boolean }): void {
     // Capture block type before deletion (needed for event)
     const block = this.blocks.find((b) => b.id === id);
     const blockType = block?.type ?? 'unknown';
-    const isTimeRoot = this.isTimeRootBlock(blockType);
 
-    // Count connections and bindings being removed (for diff)
-    const connectionsToRemove = this.connections.filter(
-      (c) => c.from.blockId === id || c.to.blockId === id
-    );
-    const publishersRemoved = this.root.busStore.publishers.filter((p) => p.from.blockId === id).length;
-    const listenersRemoved = this.root.busStore.listeners.filter((l) => l.to.blockId === id).length;
-
-    // Remove block
-    this.blocks = this.blocks.filter((b) => b.id !== id);
-
-    // Remove default sources for this block's inputs
-    this.root.defaultSourceStore.removeDefaultSourcesForBlock(id);
-
-    // Remove connections to/from this block (with cascade event emission)
-    for (const conn of connectionsToRemove) {
-      this.disconnect(conn.id, { suppressGraphCommitted: true });
-    }
-
-    // Remove from lanes
-    for (const lane of this.root.viewStore.lanes) {
-      lane.blockIds = lane.blockIds.filter((bid) => bid !== id);
-    }
-
-    // Remove publishers and listeners
-    this.root.busStore.publishers = this.root.busStore.publishers.filter((p) => p.from.blockId !== id);
-    this.root.busStore.listeners = this.root.busStore.listeners.filter((l) => l.to.blockId !== id);
+    runTx(this.root, { label: 'Remove Block' }, tx => {
+      tx.removeBlockCascade(id);
+    });
 
     // Emit BlockRemoved event AFTER state changes committed
     this.root.events.emit({
@@ -731,22 +708,6 @@ export class PatchStore {
       blockId: id,
       blockType,
     });
-
-    // Emit GraphCommitted unless suppressed (used by replaceBlock)
-    if (options?.suppressGraphCommitted !== true) {
-      this.emitGraphCommitted(
-        'userEdit',
-        {
-          blocksAdded: 0,
-          blocksRemoved: 1,
-          busesAdded: 0,
-          busesRemoved: 0,
-          bindingsChanged: publishersRemoved + listenersRemoved + connectionsToRemove.length,
-          timeRootChanged: isTimeRoot,
-        },
-        [id]
-      );
-    }
   }
 
   /**
