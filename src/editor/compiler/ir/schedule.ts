@@ -11,6 +11,7 @@
  */
 
 import type { StepId, NodeIndex, BusIndex, ValueSlot, StateId } from "./types";
+import type { ColorBufferDesc, PathCommandStreamDesc, FlattenPolicy } from "../ir/types/BufferDesc";
 
 // ============================================================================
 // Time Model IR (02-IR-Schema.md §4)
@@ -110,6 +111,8 @@ export type StepIR =
   | StepNodeEval
   | StepBusEval
   | StepMaterialize
+  | StepMaterializeColor
+  | StepMaterializePath
   | StepRenderAssemble
   | StepDebugProbe;
 
@@ -331,6 +334,110 @@ export interface BufferFormat {
 
   /** Element type */
   elementType: "f32" | "f64" | "i32" | "u32" | "u8";
+}
+
+// ============================================================================
+// Step 4a: Materialize Color (Phase C - Renderer IR)
+// ============================================================================
+
+/**
+ * MaterializeColor Step
+ *
+ * Converts field<color> or signal<color> to u8x4 premultiplied linear RGBA buffer.
+ *
+ * This is an explicit, cacheable materialization step that produces deterministic
+ * color buffers for renderer consumption.
+ *
+ * Semantics:
+ * - For signal<color>: quantize single value to 4 bytes
+ * - For field<color>: quantize instanceCount values to instanceCount*4 bytes
+ * - Uses quantizeColorRGBA() kernel from Phase B
+ * - Writes Uint8Array to bufferSlot in ValueStore
+ * - Emits performance counters for cache attribution
+ *
+ * References:
+ * - design-docs/13-Renderer/09-Materialization-Steps.md (MaterializeColor contract)
+ * - design-docs/13-Renderer/04-Decision-to-IR.md (ColorBufferDesc)
+ * - .agent_planning/renderer-ir/DOD-PHASE-CD-2025-12-26-173641.md §P0.C2
+ */
+export interface StepMaterializeColor extends StepBase {
+  kind: "materializeColor";
+
+  // Inputs
+  /** Source slot containing field<color> or signal<color> */
+  sourceSlot: ValueSlot;
+
+  /** Number of instances to materialize (undefined for signal<color>) */
+  instanceCount?: number;
+
+  // Outputs
+  /** Output slot for u8x4 buffer (Uint8Array) */
+  bufferSlot: ValueSlot;
+
+  /** Buffer descriptor (always canonical u8x4 premul linear RGBA) */
+  bufferDesc: ColorBufferDesc;
+
+  // Cache policy (optional - Phase E work)
+  /** Cache key specification for buffer reuse */
+  cacheKey?: CacheKeySpec;
+
+  // Debug/instrumentation
+  /** Debug label for performance attribution */
+  debugLabel?: string;
+}
+
+// ============================================================================
+// Step 4b: Materialize Path (Phase D - Renderer IR)
+// ============================================================================
+
+/**
+ * MaterializePath Step
+ *
+ * Converts path expressions to PathCommandStream buffers with optional flattening.
+ *
+ * This is an explicit, cacheable materialization step that encodes path geometry
+ * to typed buffers for renderer consumption.
+ *
+ * Semantics:
+ * - Evaluates path expression
+ * - Encodes commands to Uint16Array (0=M, 1=L, 2=Q, 3=C, 4=Z)
+ * - Packs points to Float32Array (interleaved xy pairs)
+ * - Optional flattening: curves → polylines with canonical tolerance
+ * - Writes commandsSlot and pointsSlot to ValueStore
+ * - Emits performance counters for cache attribution
+ *
+ * References:
+ * - design-docs/13-Renderer/09-Materialization-Steps.md (MaterializePath contract)
+ * - design-docs/13-Renderer/04-Decision-to-IR.md (PathCommandStreamDesc, FlattenPolicy)
+ * - .agent_planning/renderer-ir/DOD-PHASE-CD-2025-12-26-173641.md §P0.D2
+ */
+export interface StepMaterializePath extends StepBase {
+  kind: "materializePath";
+
+  // Inputs
+  /** Source slot containing path expression */
+  sourceSlot: ValueSlot;
+
+  /** Flattening policy (off or on-canonical) */
+  flattenPolicy: FlattenPolicy;
+
+  // Outputs
+  /** Output slot for command buffer (Uint16Array) */
+  commandsSlot: ValueSlot;
+
+  /** Output slot for points buffer (Float32Array) */
+  pointsSlot: ValueSlot;
+
+  /** Command descriptor (always canonical u16 LE) */
+  commandDesc: PathCommandStreamDesc;
+
+  // Cache policy (optional - Phase E work)
+  /** Cache key specification for buffer reuse */
+  cacheKey?: CacheKeySpec;
+
+  // Debug/instrumentation
+  /** Debug label for performance attribution */
+  debugLabel?: string;
 }
 
 // ============================================================================

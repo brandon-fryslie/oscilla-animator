@@ -23,6 +23,8 @@ import { executeTimeDerive } from "./steps/executeTimeDerive";
 import { executeNodeEval } from "./steps/executeNodeEval";
 import { executeBusEval } from "./steps/executeBusEval";
 import { executeMaterialize } from "./steps/executeMaterialize";
+import { executeMaterializeColor } from "./steps/executeMaterializeColor";
+import { executeMaterializePath } from "./steps/executeMaterializePath";
 import { executeRenderAssemble } from "./steps/executeRenderAssemble";
 import { executeDebugProbe } from "./steps/executeDebugProbe";
 
@@ -185,6 +187,14 @@ export class ScheduleExecutor {
 
       case "materialize":
         executeMaterialize(step, program, runtime);
+        break;
+
+      case "materializeColor":
+        executeMaterializeColor(step, program, runtime);
+        break;
+
+      case "materializePath":
+        executeMaterializePath(step, program, runtime);
         break;
 
       case "renderAssemble":
