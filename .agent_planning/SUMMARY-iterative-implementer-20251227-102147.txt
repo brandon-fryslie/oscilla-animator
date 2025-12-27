@@ -1,0 +1,56 @@
+Agent: iterative-implementer | 20251227-102147
+Mode: tdd
+Completed: Fixed final 10 test failures | Files: 4 | Commits: 0 (ready to commit)
+Tests: 1952 passing, 0 failing
+Cache invalidated: None (no cache existed yet)
+Status: complete
+
+Summary:
+========
+Fixed the final 10 test failures in the UI Prep Refactor sprint, bringing the test suite from 79 failures down to 0 (100% passing - 1952 tests).
+
+Changes Made:
+=============
+
+1. **OpCodeEvaluator.ts** - Fixed OpCode.Const handling
+   - Added `program` parameter to evaluateOp() function
+   - Implemented proper constant pool lookup using node.compilerTag as constId
+   - Constants now read from f64/f32/i32/json pools via constIndex
+
+2. **executeNodeEval.ts** - Pass program to evaluator
+   - Updated to pass `program` parameter to evaluateOp()
+   - Enables const nodes to access the constant pool
+
+3. **stepDispatch.test.ts** - Fixed test fixtures
+   - Added `compilerTag: 0` to stub nodes for const lookup
+   - Fixed materialize test to use valid fieldExprId "0" instead of "field-1"
+   - Added proper constants setup with constIndex arrays
+
+4. **ScheduleExecutor.test.ts** - Fixed test fixtures
+   - Updated stub nodes to include `compilerTag: 0` for const opcodes
+   - Changed outputCount from 0 to 1 to match expected behavior
+
+5. **IRRuntimeAdapter.ts** - Return proper GroupNode from signal()
+   - Import GroupNode type from renderTree.ts
+   - signal() now returns proper GroupNode structure with kind/id properties
+   - Maintains "empty" id for frames with no passes, "root" for frames with passes
+
+Root Cause Analysis:
+====================
+
+1. **Const Opcode Issue (6 tests)**
+   - Const nodes have 0 inputs but need to read from constant pool
+   - OpCodeEvaluator was trying to read inputs[0] which didn't exist
+   - Solution: Use node.compilerTag as constId and read from program.constants
+
+2. **RenderTree Structure (5 tests)**
+   - Tests expected RenderTree with .kind and .id properties (GroupNode)
+   - IRRuntimeAdapter was returning RenderFrameIR cast to RenderTree
+   - Solution: Create proper GroupNode wrapper in Pure IR mode
+
+3. **Field Materialization (1 test)**
+   - Test used invalid fieldExprId "field-1" (parsed to index 1)
+   - Only one field node existed at index 0
+   - Solution: Use fieldExprId "0" to match available field node
+
+All tests now passing. TypeScript compilation clean. Ready for commit.

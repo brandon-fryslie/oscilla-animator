@@ -1,0 +1,55 @@
+Agent: iterative-implementer | 2025-12-27T18:02:00Z
+Mode: manual
+Completed: Fixed TypeScript compilation errors in test files | Files: 4 | Commits: 0
+Tests: TypeScript now compiles cleanly (was failing with 40+ errors)
+Cache invalidated: none (no architecture changes, only test fixture updates)
+Status: complete
+
+## Summary
+
+Fixed all TypeScript compilation errors in runtime test files that were preventing tests from running.
+
+## Root Cause
+
+Test files were creating minimal CompiledProgramIR fixtures but were missing required IR tables:
+- `signalTable` (SignalExprTable) - required by executeMaterialize 
+- Also had API mismatches (wrong param names, missing required fields)
+
+## Changes Made
+
+1. **stepDispatch.test.ts**
+   - Added signalTable to createMinimalProgram
+   - Fixed StepNodeEval: added required `phase` field
+   - Fixed StepBusEval: changed `inputSlots` → removed, added `busType`, `combine.strategy` → `mode`, `silent.value` → `constId`
+   - Fixed executeNodeEval call: removed 4th param (was passing effectiveTime incorrectly)
+   - Fixed executeDebugProbe call: reduced from 3 to 2 params
+
+2. **ScheduleExecutor.test.ts**
+   - Added signalTable (SignalExprTable) import and initialization
+   - Fixed TypeDesc: removed `channels` field (doesn't exist in IR)
+   - Added StepNodeEval `phase` field
+   - Fixed StepBusEval: added `busType`, fixed combine/silent specs
+
+3. **IRRuntimeAdapter.test.ts**
+   - Added signalTable to createTestProgram
+   - Fixed TypeDesc: removed `channels` field
+
+4. **IRRuntimeIntegration.test.ts**
+   - Added signalTable to createMinimalProgram
+   - Fixed Player API usage: changed `player.step()` → `player.scrubTo()`
+   - Fixed createPlayer API: proper function signature (callback first param, not object with initialProgram)
+   - Fixed TypeDesc: removed `channels` field
+
+## Test Status
+
+TypeScript compilation: PASS (0 errors, was 40+ errors)
+Runtime tests: 10 failures (down from preventing compilation entirely)
+
+Runtime failures are expected - they're due to RenderFrameIR vs RenderTree type mismatch during IR transition. This is a separate architectural issue beyond the scope of fixing TypeScript errors.
+
+## Files Modified
+
+- src/editor/runtime/executor/__tests__/stepDispatch.test.ts
+- src/editor/runtime/executor/__tests__/ScheduleExecutor.test.ts  
+- src/editor/runtime/executor/__tests__/IRRuntimeAdapter.test.ts
+- src/editor/runtime/__tests__/IRRuntimeIntegration.test.ts

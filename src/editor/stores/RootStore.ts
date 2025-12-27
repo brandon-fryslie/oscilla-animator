@@ -2,7 +2,7 @@
  * @file Root Store
  * @description Ties all the other stores together.
  */
-import { makeObservable, computed, action } from 'mobx';
+import { makeObservable, computed, action, runInAction } from 'mobx';
 import { PatchStore } from './PatchStore';
 import { BusStore } from './BusStore';
 import { UIStateStore } from './UIStateStore';
@@ -17,11 +17,16 @@ import { DiagnosticHub } from '../diagnostics/DiagnosticHub';
 import { ActionExecutor } from '../diagnostics/ActionExecutor';
 import { TutorialStore } from './TutorialStore';
 import { DebugUIStore } from './DebugUIStore';
+import { Kernel } from '../kernel/PatchKernel';
+import type { PatchKernel } from '../kernel/types';
 import type { Block, Bus, Composite, Lane, Patch, Slot } from '../types';
 
 export class RootStore {
   // Event dispatcher (created first so stores can set up listeners)
   events: EventDispatcher;
+
+  // Kernel (semantic transaction manager)
+  kernel: PatchKernel;
 
   // Stores
   patchStore: PatchStore;
@@ -52,6 +57,32 @@ export class RootStore {
 
     // Create log store before other stores (they may want to log during init)
     this.logStore = new LogStore();
+
+    // Initialize kernel with empty patch
+    const initialPatch: Patch = {
+      version: 2,
+      blocks: [],
+      connections: [],
+      lanes: [],
+      buses: [],
+      publishers: [],
+      listeners: [],
+      defaultSources: [],
+      settings: {
+        seed: 0,
+        speed: 1,
+        currentLayoutId: 'default',
+        advancedLaneMode: false,
+        autoConnect: false,
+        showTypeHints: false,
+        highlightCompatible: false,
+        warnBeforeDisconnect: true,
+        filterByLane: false,
+        filterByConnection: false,
+        useNewCompiler: false,
+      },
+    };
+    this.kernel = new Kernel(initialPatch);
 
     // Create domain stores
     this.patchStore = new PatchStore(this);
@@ -163,6 +194,44 @@ export class RootStore {
     return `${prefix}-${this.nextId++}`;
   }
 
+  /**
+   * Synchronize MobX observables from kernel state.
+   * Called after kernel transaction commits to trigger MobX reactions.
+   *
+   * Note: Kernel.doc is typed as PatchDocument (minimal type) but internally
+   * stores a full Patch with all fields. Safe to cast here.
+   */
+  syncFromKernel(): void {
+    runInAction(() => {
+      // Kernel.doc is actually a full Patch, safe to cast
+      const patch = this.kernel.doc as unknown as Patch;
+
+      // Sync blocks
+      this.patchStore.blocks = patch.blocks.map(b => ({ ...b }));
+
+      // Sync connections
+      this.patchStore.connections = patch.connections.map(c => ({ ...c }));
+
+      // Sync buses
+      if (patch.buses) {
+        this.busStore.buses = patch.buses.map(b => ({ ...b }));
+      }
+
+      // Sync publishers
+      if (patch.publishers) {
+        this.busStore.publishers = patch.publishers.map(p => ({ ...p }));
+      }
+
+      // Sync listeners
+      if (patch.listeners) {
+        this.busStore.listeners = patch.listeners.map(l => ({ ...l }));
+      }
+
+      // Note: defaultSources and lanes are not in kernel yet
+      // They remain in their respective stores for now
+    });
+  }
+
   // =============================================================================
   // Computed Values
   // =============================================================================
@@ -221,6 +290,10 @@ export class RootStore {
   }
 
     loadPatch(patch: Patch): void {
+    // Load into kernel first
+    this.kernel = new Kernel(patch);
+
+    // Then sync to MobX observables
     this.patchStore.blocks = patch.blocks.map((block) => ({ ...block }));
     this.patchStore.connections = patch.connections.map((connection) => ({ ...connection }));
 
@@ -288,6 +361,21 @@ export class RootStore {
   }
 
   clearPatch(): void {
+    // Clear kernel
+    const emptyPatch: Patch = {
+      version: 2,
+      blocks: [],
+      connections: [],
+      lanes: this.viewStore.lanes.map(l => ({ ...l, blockIds: [] })),
+      buses: [],
+      publishers: [],
+      listeners: [],
+      defaultSources: [],
+      settings: this.uiStore.settings,
+    };
+    this.kernel = new Kernel(emptyPatch);
+
+    // Clear MobX observables
     this.patchStore.blocks = [];
     this.patchStore.connections = [];
     this.busStore.buses = [];
