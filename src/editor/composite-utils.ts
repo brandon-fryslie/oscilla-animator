@@ -161,8 +161,8 @@ export function createCompositeFromSelection(
   subcategory: string,
   selectedBlocks: Block[],
   allConnections: Connection[],
-  exposedInputIds: Set<string>,
-  exposedOutputIds: Set<string>,
+    _exposedInputIds: Set<string>,
+  _exposedOutputIds: Set<string>,
   exposedParams: ExposedParam[]
 ): Composite {
   const selectedBlockIds = new Set(selectedBlocks.map(b => b.id));
