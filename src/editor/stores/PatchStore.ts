@@ -680,10 +680,19 @@ export class PatchStore {
     return mapping[kind];
   }
 
+  /**
+   * Update a block's properties.
+   *
+   * P0-3 MIGRATED: Now uses runTx() for undo/redo support.
+   */
   updateBlock(id: BlockId, updates: Partial<Block>): void {
-    const block = this.blocks.find((b) => b.id === id);
-    if (block === undefined || block === null) return;
-    Object.assign(block, updates);
+    runTx(this.root, { label: 'Update Block' }, tx => {
+      const block = this.root.patchStore.blocks.find(b => b.id === id);
+      if (!block) return; // Silently ignore if block not found
+
+      const next = { ...block, ...updates };
+      tx.replace('blocks', id, next);
+    });
   }
 
   /**
@@ -863,13 +872,17 @@ export class PatchStore {
 
   /**
    * Update block parameters.
+   *
+   * P0-3 MIGRATED: Now uses runTx() for undo/redo support.
    */
   updateBlockParams(blockId: BlockId, params: Record<string, unknown>): void {
-    const block = this.blocks.find((b) => b.id === blockId);
-    if (block !== null && block !== undefined) {
-      // Use Object.assign to mutate in place for MobX reactivity
-      Object.assign(block.params, params);
-    }
+    runTx(this.root, { label: 'Update Params' }, tx => {
+      const block = this.root.patchStore.blocks.find(b => b.id === blockId);
+      if (!block) return; // Silently ignore if block not found
+
+      const next = { ...block, params: { ...block.params, ...params } };
+      tx.replace('blocks', blockId, next);
+    });
   }
 
   // =============================================================================
