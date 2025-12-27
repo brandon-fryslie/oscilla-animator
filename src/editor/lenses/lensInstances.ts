@@ -2,39 +2,36 @@ import type { DefaultSourceStore } from '../stores/DefaultSourceStore';
 import type { LensDefinition, LensInstance, LensParamBinding } from '../types';
 import { getLens } from './LensRegistry';
 
-export function createLensParamDefaultSourceId(bindingId: string, lensIndex: number, paramKey: string): string {
-  return `ds:${bindingId}:${lensIndex}:${paramKey}`;
-}
-
+/**
+ * Create a LensInstance from a LensDefinition using literal bindings.
+ * This stores param values directly on the instance, no DefaultSourceStore needed.
+ */
 export function createLensInstanceFromDefinition(
   lens: LensDefinition,
-  bindingId: string,
+  _bindingId: string,
   lensIndex: number,
-  defaultSourceStore: DefaultSourceStore
+  _defaultSourceStore: DefaultSourceStore
 ): LensInstance {
   const def = getLens(lens.type);
   if (def == null) {
+    // Unknown lens type - just pass through params as literals
+    const paramBindings: Record<string, LensParamBinding> = {};
+    for (const [paramKey, value] of Object.entries(lens.params)) {
+      paramBindings[paramKey] = { kind: 'literal', value };
+    }
     return {
       lensId: lens.type,
-      params: {},
+      params: paramBindings,
       enabled: true,
       sortKey: lensIndex,
     };
   }
 
+  // Build param bindings using literal values
   const paramBindings: Record<string, LensParamBinding> = {};
   for (const [paramKey, spec] of Object.entries(def.params)) {
-    const id = createLensParamDefaultSourceId(bindingId, lensIndex, paramKey);
     const value = paramKey in lens.params ? lens.params[paramKey] : spec.default;
-    // First ensure the source exists
-    defaultSourceStore.ensureDefaultSource(id, {
-      type: spec.type,
-      value,
-      uiHint: spec.uiHint,
-    });
-    // Then update the value (ensureDefaultSource doesn't update existing sources)
-    defaultSourceStore.setDefaultValue(id, value);
-    paramBindings[paramKey] = { kind: 'default', defaultSourceId: id };
+    paramBindings[paramKey] = { kind: 'literal', value };
   }
 
   return {
@@ -45,18 +42,25 @@ export function createLensInstanceFromDefinition(
   };
 }
 
+/**
+ * Convert a LensInstance back to a LensDefinition for UI editing.
+ * Handles both literal and defaultSource bindings.
+ */
 export function lensInstanceToDefinition(
   lens: LensInstance,
   defaultSourceStore: DefaultSourceStore
 ): LensDefinition {
   const params: Record<string, unknown> = {};
   for (const [paramKey, binding] of Object.entries(lens.params)) {
-    if (binding.kind === 'default') {
+    if (binding.kind === 'literal') {
+      params[paramKey] = binding.value;
+    } else if (binding.kind === 'default') {
       const source = defaultSourceStore.sources.get(binding.defaultSourceId);
       if (source != null) {
         params[paramKey] = source.value;
       }
     }
+    // bus bindings are not editable in the UI, skip them
   }
   return { type: lens.lensId, params };
 }
