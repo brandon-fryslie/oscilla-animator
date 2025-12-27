@@ -52,6 +52,7 @@ import './mobile.css';
 import { HelpCenterModal, HelpPanel, type HelpCenterTopicId } from './HelpCenter';
 import {DebugReplPanel} from "./components/DebugReplPanel.tsx";
 import { HistoryPanel } from "./components/HistoryPanel";
+import { DiagnosticsConsole } from './components/DiagnosticsConsole';
 import { TutorialOverlay } from './TutorialOverlay';
 import { DebugHUD, DebugDrawer, ProbeToggle, ProbeCard } from './debug-ui';
 
@@ -458,6 +459,8 @@ export const Editor = observer(() => {
     setDebugPanelCollapsed,
     historyPanelCollapsed,
     setHistoryPanelCollapsed,
+    diagnosticsCollapsed,
+    setDiagnosticsCollapsed,
     patchViewMode,
     setPatchViewMode,
     dragging,
@@ -1083,6 +1086,12 @@ export const Editor = observer(() => {
               <HistoryPanel
                 collapsed={historyPanelCollapsed}
                 onToggleCollapse={() => setHistoryPanelCollapsed((v) => !v)}
+              />
+
+              {/* Diagnostics Console Panel */}
+              <DiagnosticsConsole
+                collapsed={diagnosticsCollapsed}
+                onCollapsedChange={setDiagnosticsCollapsed}
               />
 
               {/* Embedded Help Panel */}

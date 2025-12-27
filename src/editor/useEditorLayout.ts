@@ -28,6 +28,7 @@ interface LayoutState {
   helpPanelCollapsed: boolean;
   debugPanelCollapsed: boolean;
   historyPanelCollapsed: boolean;
+  diagnosticsCollapsed: boolean;
   patchViewMode: PatchViewMode;
 }
 
@@ -45,6 +46,7 @@ const DEFAULT_LAYOUT: LayoutState = {
   helpPanelCollapsed: true,
   debugPanelCollapsed: true,
   historyPanelCollapsed: true,
+  diagnosticsCollapsed: true, // Collapsed by default to avoid overwhelming new users
   patchViewMode: 'lanes', // Default to traditional lane view
 };
 
@@ -99,6 +101,8 @@ export function useEditorLayout(): {
   setDebugPanelCollapsed: (value: boolean | ((prev: boolean) => boolean)) => void;
   historyPanelCollapsed: boolean;
   setHistoryPanelCollapsed: (value: boolean | ((prev: boolean) => boolean)) => void;
+  diagnosticsCollapsed: boolean;
+  setDiagnosticsCollapsed: (value: boolean | ((prev: boolean) => boolean)) => void;
   patchViewMode: PatchViewMode;
   setPatchViewMode: (value: PatchViewMode | ((prev: PatchViewMode) => PatchViewMode)) => void;
   dragging: null | 'left-split' | 'center-split' | 'bay-split';
@@ -128,6 +132,7 @@ export function useEditorLayout(): {
   const [helpPanelCollapsed, setHelpPanelCollapsedRaw] = useState(layoutState.helpPanelCollapsed);
   const [debugPanelCollapsed, setDebugPanelCollapsedRaw] = useState(layoutState.debugPanelCollapsed);
   const [historyPanelCollapsed, setHistoryPanelCollapsedRaw] = useState(layoutState.historyPanelCollapsed);
+  const [diagnosticsCollapsed, setDiagnosticsCollapsedRaw] = useState(layoutState.diagnosticsCollapsed);
   const [patchViewMode, setPatchViewModeRaw] = useState<PatchViewMode>(layoutState.patchViewMode);
 
   // P1: Bay collective collapse state (not persisted - ephemeral)
@@ -192,6 +197,10 @@ export function useEditorLayout(): {
     setHistoryPanelCollapsedRaw(value);
   }, []);
 
+  const setDiagnosticsCollapsed = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setDiagnosticsCollapsedRaw(value);
+  }, []);
+
   const setPatchViewMode = useCallback((value: PatchViewMode | ((prev: PatchViewMode) => PatchViewMode)) => {
     setPatchViewModeRaw(value);
   }, []);
@@ -212,6 +221,7 @@ export function useEditorLayout(): {
       helpPanelCollapsed,
       debugPanelCollapsed,
       historyPanelCollapsed,
+      diagnosticsCollapsed,
       patchViewMode,
     };
     saveLayoutState(newState);
@@ -229,6 +239,7 @@ export function useEditorLayout(): {
     helpPanelCollapsed,
     debugPanelCollapsed,
     historyPanelCollapsed,
+    diagnosticsCollapsed,
     patchViewMode,
   ]);
 
@@ -352,6 +363,8 @@ export function useEditorLayout(): {
     setDebugPanelCollapsed,
     historyPanelCollapsed,
     setHistoryPanelCollapsed,
+    diagnosticsCollapsed,
+    setDiagnosticsCollapsed,
     patchViewMode,
     setPatchViewMode,
     dragging,
