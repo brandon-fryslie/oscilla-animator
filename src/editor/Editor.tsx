@@ -415,6 +415,7 @@ function DragOverlayContent({
 export const Editor = observer(() => {
   // Create store once (memo to avoid recreating on re-renders)
   const store = useStore();
+  const { debugUIStore } = store;
 
   // Create control surface store
   const controlSurfaceStore = useMemo(() => new ControlSurfaceStore(store), [store]);
@@ -499,6 +500,18 @@ export const Editor = observer(() => {
       document.body.classList.remove('editor-mode');
     };
   }, []);
+
+  // Probe mode cursor class
+  useEffect(() => {
+    if (debugUIStore.probeMode) {
+      document.body.classList.add('probe-mode-active');
+    } else {
+      document.body.classList.remove('probe-mode-active');
+    }
+    return () => {
+      document.body.classList.remove('probe-mode-active');
+    };
+  }, [debugUIStore.probeMode]);
 
   // Help nudge on first visit
   useEffect(() => {

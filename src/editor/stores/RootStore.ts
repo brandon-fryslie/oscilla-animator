@@ -15,6 +15,7 @@ import { EventDispatcher } from '../events';
 import { DiagnosticHub } from '../diagnostics/DiagnosticHub';
 import { ActionExecutor } from '../diagnostics/ActionExecutor';
 import { TutorialStore } from './TutorialStore';
+import { DebugUIStore } from './DebugUIStore';
 import type { Block, Bus, Composite, Lane, Patch, Slot } from '../types';
 
 export class RootStore {
@@ -37,6 +38,9 @@ export class RootStore {
 
   // Tutorial
   tutorialStore: TutorialStore;
+
+  // Debug UI
+  debugUIStore: DebugUIStore;
 
   private nextId = 1;
 
@@ -76,6 +80,9 @@ export class RootStore {
 
     // Create tutorial store
     this.tutorialStore = new TutorialStore(this);
+
+    // Create debug UI store
+    this.debugUIStore = new DebugUIStore(this);
 
     makeObservable(this, {
       selectedBlock: computed,
