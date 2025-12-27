@@ -494,6 +494,7 @@ export function runTx(
       patchId: store.patchStore.patchId,
       patchRevision: store.patchStore.patchRevision,
       reason: 'userEdit',
+      label: spec.label,
       diffSummary: computeDiffSummary(result.ops),
     });
 

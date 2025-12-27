@@ -3,6 +3,7 @@
  * @description Tests for Op inversion and validation.
  */
 
+import { describe, it, expect } from 'vitest';
 import { computeInverse, validateOp, type Op, type Entity } from '../ops';
 import type { Block, Connection, Bus } from '../../types';
 

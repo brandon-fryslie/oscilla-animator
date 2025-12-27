@@ -364,12 +364,12 @@ describe('TxBuilder', () => {
       expect(emittedEvent.type).toBe('GraphCommitted');
       expect(emittedEvent.label).toBe('Add Blocks');
 
-      const diffSummary = emittedEvent.diff;
+      const diffSummary = emittedEvent.diffSummary;
       expect(diffSummary).toMatchObject({
         blocksAdded: 2,
         blocksRemoved: 0,
-        connectionsAdded: 0,
-        connectionsRemoved: 0,
+        // Uses bindingsChanged instead of separate connection counts
+        bindingsChanged: 0,
       });
     });
 

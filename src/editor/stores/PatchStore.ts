@@ -1040,6 +1040,7 @@ export class PatchStore {
         to: connection.to,
       });
     }
+  }
 
   /**
    * Remove a connection by ID.
