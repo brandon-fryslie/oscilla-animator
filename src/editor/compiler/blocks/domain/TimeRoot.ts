@@ -312,9 +312,7 @@ registerBlockType({
 export const FiniteTimeRootBlock: BlockCompiler = {
   type: 'FiniteTimeRoot',
 
-  inputs: [
-    { name: 'durationMs', type: { kind: 'Signal:number' }, required: false },
-  ],
+  inputs: [],
 
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
@@ -324,13 +322,9 @@ export const FiniteTimeRootBlock: BlockCompiler = {
     { name: 'energy', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ inputs }): CompiledOutputs {
-    // Read from inputs - values come from defaultSource or explicit connections
-    // For Signal artifacts, .value is a function - call it at t=0 to get the current value
-    const durationArtifact = inputs.durationMs as any;
-    const durationMs = typeof durationArtifact?.value === 'function'
-      ? Number(durationArtifact.value(0, { viewport: { w: 0, h: 0, dpr: 1 } }))
-      : Number(durationArtifact?.value);
+  compile({ params }): CompiledOutputs {
+    // Read from params - block configuration values
+    const durationMs = Number(params.durationMs ?? 5000);
 
     // System time is identity (tMs passed in is the raw time)
     const systemTime: SignalNumber = (tMs) => tMs;
@@ -385,10 +379,7 @@ export const FiniteTimeRootBlock: BlockCompiler = {
 export const CycleTimeRootBlock: BlockCompiler = {
   type: 'CycleTimeRoot',
 
-  inputs: [
-    { name: 'periodMs', type: { kind: 'Signal:number' }, required: false },
-    { name: 'mode', type: { kind: 'Scalar:string' }, required: false },
-  ],
+  inputs: [],
 
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
@@ -399,17 +390,10 @@ export const CycleTimeRootBlock: BlockCompiler = {
     { name: 'energy', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ inputs }): CompiledOutputs {
-    // Read from inputs - values come from defaultSource or explicit connections
-    // For Signal artifacts, .value is a function - call it at t=0 to get the current value
-    const periodArtifact = inputs.periodMs as any;
-    const periodMs = typeof periodArtifact?.value === 'function'
-      ? Number(periodArtifact.value(0, { viewport: { w: 0, h: 0, dpr: 1 } }))
-      : Number(periodArtifact?.value);
-    const modeArtifact = inputs.mode as any;
-    const mode = typeof modeArtifact?.value === 'function'
-      ? String(modeArtifact.value(0, { viewport: { w: 0, h: 0, dpr: 1 } }))
-      : String(modeArtifact?.value);
+  compile({ params }): CompiledOutputs {
+    // Read from params - block configuration values
+    const periodMs = Number(params.periodMs ?? 3000);
+    const mode = String(params.mode ?? 'loop');
 
     // System time is identity
     const systemTime: SignalNumber = (tMs) => tMs;
@@ -483,10 +467,7 @@ export const CycleTimeRootBlock: BlockCompiler = {
 export const InfiniteTimeRootBlock: BlockCompiler = {
   type: 'InfiniteTimeRoot',
 
-  inputs: [
-    { name: 'windowMs', type: { kind: 'Signal:number' }, required: false },
-    { name: 'periodMs', type: { kind: 'Signal:number' }, required: false },
-  ],
+  inputs: [],
 
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
@@ -495,13 +476,9 @@ export const InfiniteTimeRootBlock: BlockCompiler = {
     { name: 'energy', type: { kind: 'Signal:number' } },
   ],
 
-  compile({ inputs }): CompiledOutputs {
-    // Read from inputs - values come from defaultSource or explicit connections
-    // For Signal artifacts, .value is a function - call it at t=0 to get the current value
-    const periodArtifact = inputs.periodMs as any;
-    const periodMs = typeof periodArtifact?.value === 'function'
-      ? Number(periodArtifact.value(0, { viewport: { w: 0, h: 0, dpr: 1 } }))
-      : Number(periodArtifact?.value);
+  compile({ params }): CompiledOutputs {
+    // Read from params - block configuration values
+    const periodMs = Number(params.periodMs ?? 8000);
 
     // System time is identity - just passes through the raw time
     const systemTime: SignalNumber = (tMs) => tMs;

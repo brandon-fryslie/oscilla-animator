@@ -1,0 +1,5 @@
+Agent: status-planner | 2025-12-27-030440
+Topic: ui-prep-refactor
+Files: PLAN-2025-12-27-030440.md, DOD-2025-12-27-030440.md
+Items: 3 deliverables (P0: 3, P1: 3 deferred, P2: 2 deferred, P3: 2 deferred)
+Sprint Focus: Foundation - Stabilize tests, Complete Op system, Wire PatchStore to kernel
