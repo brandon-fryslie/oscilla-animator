@@ -23,6 +23,7 @@ import type { GraphCommitReason, GraphDiffSummary } from '../events/types';
 import { Validator, isAssignable, getTypeDesc } from '../semantic';
 import { storeToPatchDocument } from '../semantic/patchAdapter';
 import { randomUUID } from "../crypto";
+import { runTx } from '../transactions/TxBuilder';
 
 // =============================================================================
 // Migration Helpers
@@ -909,8 +910,11 @@ export class PatchStore {
    * Uses semantic Validator for preflight validation.
    * Automatically disconnects any existing connection to the target input.
    *
+   * Conservative migration: Uses runTx() for user-facing calls, but supports
+   * suppressGraphCommitted for internal use by complex methods not yet migrated.
+   *
    * @param options - Optional settings
-   * @param options.suppressGraphCommitted - If true, don't emit GraphCommitted (used internally)
+   * @param options.suppressGraphCommitted - If true, use direct mutation (for internal use)
    */
   connect(
     fromBlockId: BlockId,
@@ -964,69 +968,78 @@ export class PatchStore {
       to: { blockId: toBlockId, slotId: toSlotId, direction: 'input' },
     };
 
-    this.connections.push(connection);
+    // Conservative migration: check if this is an internal call
+    if (options?.suppressGraphCommitted === true) {
+      // Direct mutation for internal use (not yet migrated)
+      this.connections.push(connection);
 
-    // Emit WireAdded event AFTER connection created
-    this.root.events.emit({
-      type: 'WireAdded',
-      wireId: connection.id,
-      from: connection.from,
-      to: connection.to,
-    });
+      // Emit WireAdded event
+      this.root.events.emit({
+        type: 'WireAdded',
+        wireId: connection.id,
+        from: connection.from,
+        to: connection.to,
+      });
 
-    // Emit GraphCommitted unless suppressed
-    if (options?.suppressGraphCommitted !== true) {
-      this.emitGraphCommitted(
-        'userEdit',
-        {
-          blocksAdded: 0,
-          blocksRemoved: 0,
-          busesAdded: 0,
-          busesRemoved: 0,
-          bindingsChanged: 1,
-          timeRootChanged: false,
-        },
-        [fromBlockId, toBlockId]
-      );
+      // No GraphCommitted (suppressed)
+    } else {
+      // Use transaction system for user-facing calls
+      runTx(this.root, { label: 'Connect' }, tx => {
+        tx.add('connections', connection);
+      });
+
+      // Emit WireAdded event (fine-grained event, coexists with GraphCommitted)
+      this.root.events.emit({
+        type: 'WireAdded',
+        wireId: connection.id,
+        from: connection.from,
+        to: connection.to,
+      });
     }
   }
 
   /**
    * Remove a connection (helper method).
+   * 
+   * Conservative migration: Uses runTx() for user-facing calls, but supports
+   * suppressGraphCommitted for internal use by complex methods not yet migrated.
+   * 
    * @param options - Optional settings
-   * @param options.suppressGraphCommitted - If true, don't emit GraphCommitted (used internally)
+   * @param options.suppressGraphCommitted - If true, use direct mutation (for internal use)
    */
   disconnect(connectionId: string, options?: { suppressGraphCommitted?: boolean }): void {
     // Capture connection data BEFORE removal (for event)
     const connection = this.connections.find((c) => c.id === connectionId);
     if (connection === null || connection === undefined) return;
 
-    this.connections = this.connections.filter((c) => c.id !== connectionId);
+    // Conservative migration: check if this is an internal call
+    if (options?.suppressGraphCommitted === true) {
+      // Direct mutation for internal use (not yet migrated)
+      this.connections = this.connections.filter((c) => c.id !== connectionId);
 
-    // Emit WireRemoved event AFTER removal
-    this.root.events.emit({
-      type: 'WireRemoved',
-      wireId: connection.id,
-      from: connection.from,
-      to: connection.to,
-    });
+      // Emit WireRemoved event
+      this.root.events.emit({
+        type: 'WireRemoved',
+        wireId: connection.id,
+        from: connection.from,
+        to: connection.to,
+      });
 
-    // Emit GraphCommitted unless suppressed
-    if (options?.suppressGraphCommitted !== true) {
-      this.emitGraphCommitted(
-        'userEdit',
-        {
-          blocksAdded: 0,
-          blocksRemoved: 0,
-          busesAdded: 0,
-          busesRemoved: 0,
-          bindingsChanged: 1,
-          timeRootChanged: false,
-        },
-        [connection.from.blockId, connection.to.blockId]
-      );
+      // No GraphCommitted (suppressed)
+    } else {
+      // Use transaction system for user-facing calls
+      runTx(this.root, { label: 'Disconnect' }, tx => {
+        tx.remove('connections', connectionId);
+      });
+
+      // Emit WireRemoved event (fine-grained event, coexists with GraphCommitted)
+      this.root.events.emit({
+        type: 'WireRemoved',
+        wireId: connection.id,
+        from: connection.from,
+        to: connection.to,
+      });
     }
-  }
 
   /**
    * Remove a connection by ID.

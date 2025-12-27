@@ -12,6 +12,11 @@
 
 import type { StepId, NodeIndex, BusIndex, ValueSlot, StateId, SigExprId } from "./types";
 
+// Import 3D step types
+import type { StepCameraEval } from "../../runtime/executor/steps/executeCameraEval";
+import type { StepMeshMaterialize } from "../../runtime/executor/steps/executeMeshMaterialize";
+import type { StepInstances3DProjectTo2D } from "../../runtime/executor/steps/executeInstances3DProject";
+
 // ============================================================================
 // Time Model IR (02-IR-Schema.md §4)
 // ============================================================================
@@ -122,7 +127,11 @@ export type StepIR =
   | StepMaterializePath
   | StepMaterializeTestGeometry
   | StepRenderAssemble
-  | StepDebugProbe;
+  | StepDebugProbe
+  // 3D steps
+  | StepCameraEval
+  | StepMeshMaterialize
+  | StepInstances3DProjectTo2D;
 
 /** Base properties shared by all step types */
 export interface StepBase {
@@ -549,7 +558,7 @@ export interface StepRenderAssemble extends StepBase {
   /** @deprecated Use instance2dBatches instead */
   instance2dListSlot?: ValueSlot;
 
-  /** @deprecated Use pathBatches instead */
+  /** @deprecated Use pathBatchListSlot instead */
   pathBatchListSlot?: ValueSlot;
 
   // Output
