@@ -38,30 +38,11 @@ export const DebugDisplay = createBlock({
   outputs: [
     output('debug', 'Debug Info', 'RenderTree'),
   ],
-  paramSchema: [
-    {
-      key: 'label',
-      label: 'Label (auto if empty)',
-      type: 'string',
-      defaultValue: '',  // Empty = auto-generate from block ID
-    },
-    {
-      key: 'posX',
-      label: 'X Position (auto if 0)',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      defaultValue: 0,  // 0 = auto-position
-    },
-    {
-      key: 'posY',
-      label: 'Y Position (auto if 0)',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      defaultValue: 0,  // 0 = auto-position
-    },
-  ],
+  defaultParams: {
+    label: '',  // Empty = auto-generate from block ID
+    posX: 0,    // 0 = auto-position
+    posY: 0,    // 0 = auto-position
+  },
   color: '#F59E0B', // Amber - stands out for debugging
   laneKind: 'Program',
   priority: 200, // High priority so it's easy to find

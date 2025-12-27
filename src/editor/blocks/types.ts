@@ -3,12 +3,12 @@ import type { CompositeDefinition } from '../composites';
 
 // Re-export types that are used by other modules
 export type {
+  BlockForm,
   Slot,
   SlotType,
   LaneKind,
   LaneFlavor,
   BlockSubcategory,
-  BlockForm,
   // New types for "Remove Parameters" refactor (Phase 1)
   SlotWorld,
   SlotTier,
@@ -62,9 +62,6 @@ interface BlockDefinitionBase {
 
   /** Default parameter values */
   readonly defaultParams: BlockParams;
-
-  /** Parameter schema for UI generation */
-  readonly paramSchema: ParamSchema[];
 
   /** Color for visual identification */
   readonly color: string;
@@ -170,8 +167,21 @@ export interface CompoundEdge {
   readonly from: string;  // "nodeId.outputSlot"
   readonly to: string;    // "nodeId.inputSlot"
 }
+
+// =============================================================================
+// Legacy Parameter Schema Types (DEPRECATED - use defaultSource on inputs instead)
+// =============================================================================
+
+/**
+ * @deprecated Legacy parameter schema type. Use defaultSource on input slots instead.
+ * Kept for backward compatibility with tests only.
+ */
 export type ParamType = 'number' | 'string' | 'boolean' | 'select' | 'color';
 
+/**
+ * @deprecated Legacy parameter schema interface. Use defaultSource on input slots instead.
+ * Kept for backward compatibility with tests only.
+ */
 export interface ParamSchema {
   readonly key: string;
   readonly label: string;
@@ -201,8 +211,8 @@ export function getBlockForm(def: BlockDefinition): BlockForm {
     return 'macro';
   }
 
-  // Composites have a compositeDefinition (and typically 'composite:' prefix)
-  if (def.compositeDefinition != null) {
+  // Composites have a compositeDefinition
+  if (def.compositeDefinition) {
     return 'composite';
   }
 

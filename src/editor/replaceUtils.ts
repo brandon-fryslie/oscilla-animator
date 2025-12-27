@@ -240,10 +240,9 @@ export function copyCompatibleParams(
 ): Record<string, unknown> {
   const newParams = { ...newDef.defaultParams };
 
-  for (const paramSchema of newDef.paramSchema) {
-    const key = paramSchema.key;
+  // Copy any keys that exist in both old and new defaultParams
+  for (const key of Object.keys(newDef.defaultParams)) {
     if (key in oldParams) {
-      // Copy if the parameter exists in both
       newParams[key] = oldParams[key];
     }
   }

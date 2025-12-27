@@ -1,4 +1,4 @@
-import type { BlockDefinition, ParamSchema } from './types';
+import type { BlockDefinition } from './types';
 import { isNonEmptyString } from '../types/helpers';
 
 export function createBlock(
@@ -8,18 +8,12 @@ export function createBlock(
     paramSchema?: ParamSchema[];
   },
 ): BlockDefinition {
-  const { paramSchema = [] } = definition;
-
   if (!isNonEmptyString(definition.type)) {
     throw new Error('Block definition must have a type.');
   }
   if (!isNonEmptyString(definition.label)) {
     throw new Error(`Block definition '${definition.type}' must have a label.`);
   }
-
-  const defaultParams = Object.fromEntries(
-    paramSchema.map((p) => [p.key, p.defaultValue]),
-  );
 
   return {
     // Provide sensible defaults for required fields
@@ -28,10 +22,9 @@ export function createBlock(
     description: '',
     inputs: [],
     outputs: [],
+    defaultParams: {},
     color: '#CCCCCC',
     laneKind: 'Program', // Default lane kind
     ...definition,
-    paramSchema,
-    defaultParams,
   } as BlockDefinition;
 }

@@ -43,9 +43,7 @@ function createMockDefinition(overrides: Partial<BlockDefinition> = {}): BlockDe
     description: 'A test block',
     inputs: [],
     outputs: [],
-    defaultParams: {},
-    paramSchema: [],
-    color: '#666',
+    defaultParams: {},    color: '#666',
     laneKind: 'Scalars',
     ...overrides,
   } as BlockDefinition;
@@ -544,13 +542,7 @@ describe('copyCompatibleParams', () => {
         frequency: 1.0,
         amplitude: 5.0,
         offset: 0.0,
-      },
-      paramSchema: [
-        { key: 'frequency', type: 'number', label: 'Frequency', defaultValue: 1.0 },
-        { key: 'amplitude', type: 'number', label: 'Amplitude', defaultValue: 5.0 },
-        { key: 'offset', type: 'number', label: 'Offset', defaultValue: 0.0 },
-      ],
-    });
+      },    });
 
     const result = copyCompatibleParams(oldParams, newDef);
 
@@ -572,12 +564,7 @@ describe('copyCompatibleParams', () => {
       defaultParams: {
         newParam1: 'default1',
         newParam2: 100,
-      },
-      paramSchema: [
-        { key: 'newParam1', type: 'string', label: 'Param 1', defaultValue: 'default1' },
-        { key: 'newParam2', type: 'number', label: 'Param 2', defaultValue: 100 },
-      ],
-    });
+      },    });
 
     const result = copyCompatibleParams(oldParams, newDef);
 
@@ -595,12 +582,7 @@ describe('copyCompatibleParams', () => {
       defaultParams: {
         param1: 'value',
         param2: 123,
-      },
-      paramSchema: [
-        { key: 'param1', type: 'string', label: 'Param 1', defaultValue: 'value' },
-        { key: 'param2', type: 'number', label: 'Param 2', defaultValue: 123 },
-      ],
-    });
+      },    });
 
     const result = copyCompatibleParams(oldParams, newDef);
 
@@ -616,9 +598,7 @@ describe('copyCompatibleParams', () => {
     };
 
     const newDef = createMockDefinition({
-      defaultParams: {},
-      paramSchema: [],
-    });
+      defaultParams: {},    });
 
     const result = copyCompatibleParams(oldParams, newDef);
 
@@ -641,15 +621,7 @@ describe('copyCompatibleParams', () => {
         booleanParam: false,
         arrayParam: [],
         objectParam: {},
-      },
-      paramSchema: [
-        { key: 'stringParam', type: 'string', label: 'String', defaultValue: '' },
-        { key: 'numberParam', type: 'number', label: 'Number', defaultValue: 0 },
-        { key: 'booleanParam', type: 'boolean', label: 'Boolean', defaultValue: false },
-        { key: 'arrayParam', type: 'select', label: 'Array', defaultValue: [] },
-        { key: 'objectParam', type: 'string', label: 'Object', defaultValue: {} },
-      ],
-    });
+      },    });
 
     const result = copyCompatibleParams(oldParams, newDef);
 
@@ -683,14 +655,7 @@ describe('copyCompatibleParams', () => {
         shared2: 'default',
         newOnly1: false,
         newOnly2: 99,
-      },
-      paramSchema: [
-        { key: 'shared1', type: 'number', label: 'Shared 1', defaultValue: 1 },
-        { key: 'shared2', type: 'string', label: 'Shared 2', defaultValue: 'default' },
-        { key: 'newOnly1', type: 'boolean', label: 'New Only 1', defaultValue: false },
-        { key: 'newOnly2', type: 'number', label: 'New Only 2', defaultValue: 99 },
-      ],
-    });
+      },    });
 
     const result = copyCompatibleParams(oldParams, newDef);
 

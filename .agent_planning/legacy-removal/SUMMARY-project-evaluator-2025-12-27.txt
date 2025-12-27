@@ -1,0 +1,40 @@
+Agent: project-evaluator | 2025-12-27-035500
+Scope: project/full - Legacy Code Audit
+Branch: refactor (abb894c)
+
+## Key Findings
+
+REMOVED SINCE LAST EVAL:
+- PhaseClockLegacy block and compiler
+- TimelineHint type
+- Legacy lens field (lens?:)
+- migrateLegacyLenses()
+- runLegacyTimeRootCheck()
+- CompileSucceeded/CompileFailed events
+- block-legacy-badge CSS
+- DEFAULT_INPUT alias
+
+STILL PRESENT:
+- paramSchema (27 blocks, Phase 4 TODOs)
+- Feature Flags (controls legacy/IR compiler)
+- Legacy DebugStore API (7 deprecated methods)
+- Legacy Events (8 granular event types)
+- LegacyClosure Bridge (intentional for migration)
+- Legacy Lens Aliases (19 PascalCase aliases)
+- Legacy Type Aliases (4 minor aliases)
+
+## Metrics
+
+Removed: 8 major items
+Remaining: 5 categories (lower priority)
+Test Status: 15 failing files (79 failures - not legacy-related)
+Typecheck: PASS
+
+## Priority
+
+Phase 1 (Quick): Legacy events, type aliases
+Phase 2 (Moderate): DebugStore API, paramSchema
+Phase 3 (Major): Feature Flags (when IR stable)
+
+Workflow: CONTINUE
+-> Focus on current development; address legacy as cleanup opportunities

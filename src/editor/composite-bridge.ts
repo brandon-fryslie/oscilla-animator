@@ -65,7 +65,6 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
     inputs,
     outputs,
     defaultParams: {}, // Empty default params
-    paramSchema: [], // Parameters are dynamic from the exposed ports
     priority: 100, // Lower priority than primitive blocks
     tags: {
       ...def.tags,

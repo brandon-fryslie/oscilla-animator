@@ -13,7 +13,6 @@ export {
   getBlockDefinitions,
   getBlockDefinition,
   type BlockDefinition,
-  type ParamSchema,
 } from './blocks';
 export type {
   Block,

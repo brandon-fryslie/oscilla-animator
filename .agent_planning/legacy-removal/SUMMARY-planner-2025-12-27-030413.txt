@@ -1,0 +1,5 @@
+Agent: status-planner | 2025-12-27-030413
+Topic: Legacy Code Removal Refactor
+Files: PLAN-2025-12-27-030413.md, DOD-2025-12-27-030413.md
+Items: 2 (P1: 2, P2: 1 deferred)
+Sprint Scope: Low-risk cleanup - DebugStore API + Legacy Events
