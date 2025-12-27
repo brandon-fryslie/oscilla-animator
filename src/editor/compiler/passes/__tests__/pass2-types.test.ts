@@ -339,12 +339,12 @@ describe("pass2TypeGraph", () => {
   });
 
   describe("Reserved Bus Validation", () => {
-    it("accepts phaseA bus with Signal<number> type", () => {
+    it("accepts phaseA bus with Signal<phase> type", () => {
       const patch = createNormalizedPatch({
         buses: [
           createBus("phaseA", "phaseA", {
             world: "signal",
-            domain: "number",
+            domain: "phase01",
           }),
         ],
       });
@@ -367,7 +367,7 @@ describe("pass2TypeGraph", () => {
         /ReservedBusTypeViolation/
       );
       expect(() => pass2TypeGraph(patch)).toThrow(/phaseA/);
-      expect(() => pass2TypeGraph(patch)).toThrow(/signal<number>/);
+      expect(() => pass2TypeGraph(patch)).toThrow(/signal<phase01>/);
     });
 
     it("accepts pulse bus with Event<trigger> type", () => {

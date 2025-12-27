@@ -185,7 +185,7 @@ const RESERVED_BUS_CONSTRAINTS: Record<
 > = {
   phaseA: {
     world: "signal",
-    domain: "phase",
+    domain: "phase01",
     description: "Primary phase signal (0..1) with wrap semantics",
   },
   pulse: {
