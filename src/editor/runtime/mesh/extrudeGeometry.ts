@@ -397,8 +397,8 @@ function extrudeLinear(
 function extrudeRounded(
   profile: ProfilePoint[],
   depth: number,
-  roundSegments: number,
-  radius: number,
+  _roundSegments: number,
+  _radius: number,
   generateNormals: boolean,
   generateUVs: boolean
 ): ExtrusionResult {

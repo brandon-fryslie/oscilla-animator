@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
-import { runTx, TxBuilder } from '../TxBuilder';
+import { runTx } from '../TxBuilder';
 import type { Block, Bus } from '../../types';
 
 describe('TxBuilder', () => {
@@ -335,7 +335,7 @@ describe('TxBuilder', () => {
 
     it('emits GraphCommitted event with correct diff summary', () => {
       let emittedEvent: any;
-      const unsubscribe = rootStore.events.on('GraphCommitted', (event) => {
+      rootStore.events.on('GraphCommitted', (event) => {
         emittedEvent = event;
       });
 
@@ -428,8 +428,8 @@ describe('TxBuilder', () => {
         });
       });
 
-      let connections1: any[];
-      let connections2: any[];
+      let connections1: any[] = [];
+      let connections2: any[] = [];
 
       runTx(rootStore, { label: 'Query' }, tx => {
         connections1 = (tx as any).getConnectionsForBlock('block-1');
@@ -497,6 +497,7 @@ describe('TxBuilder', () => {
             busId: 'bus-1',
             from: { blockId: 'block-1', slotId: 'out', direction: 'output' },
             sortKey: 0,
+            enabled: true,
           });
 
           // Add listener to block-1
@@ -504,8 +505,7 @@ describe('TxBuilder', () => {
             id: 'lis-1',
             busId: 'bus-1',
             to: { blockId: 'block-1', slotId: 'in', direction: 'input' },
-            adapterStack: [],
-            lensStack: [],
+            enabled: true,
           });
         });
 
@@ -603,14 +603,14 @@ describe('TxBuilder', () => {
             busId: 'bus-1',
             from: { blockId: 'block-1', slotId: 'out', direction: 'output' },
             sortKey: 0,
+            enabled: true,
           });
 
           tx.add('listeners', {
             id: 'lis-1',
             busId: 'bus-1',
             to: { blockId: 'block-2', slotId: 'in', direction: 'input' },
-            adapterStack: [],
-            lensStack: [],
+            enabled: true,
           });
         });
 

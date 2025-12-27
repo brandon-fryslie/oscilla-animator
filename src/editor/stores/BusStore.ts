@@ -17,6 +17,7 @@ import type {
 import type { RootStore } from './RootStore';
 import { getSortedPublishers } from '../semantic/busSemantics';
 import { createLensInstanceFromDefinition } from '../lenses/lensInstances';
+import { runTx } from '../transactions/TxBuilder';
 
 export class BusStore {
   buses: Bus[] = [];
@@ -149,9 +150,12 @@ export class BusStore {
       origin: 'user', // User-created buses
     };
 
-    this.buses.push(bus);
+    // Use transaction system for undo/redo
+    runTx(this.root, { label: `Create Bus "${name}"` }, tx => {
+      tx.add('buses', bus);
+    });
 
-    // Emit BusCreated event AFTER bus added to store
+    // Emit BusCreated event (fine-grained event, coexists with GraphCommitted)
     this.root.events.emit({
       type: 'BusCreated',
       busId: bus.id,
@@ -238,9 +242,12 @@ export class BusStore {
       sortKey: maxSortKey + 10,
     };
 
-    this.publishers.push(publisher);
+    // Use transaction system for undo/redo
+    runTx(this.root, { label: 'Add Publisher' }, tx => {
+      tx.add('publishers', publisher);
+    });
 
-    // Emit BindingAdded event AFTER publisher added to store
+    // Emit BindingAdded event (fine-grained event, coexists with GraphCommitted)
     this.root.events.emit({
       type: 'BindingAdded',
       bindingId: publisher.id,
@@ -285,9 +292,12 @@ export class BusStore {
       return; // Silently ignore if not found (already removed)
     }
 
-    this.publishers = this.publishers.filter(p => p.id !== publisherId);
+    // Use transaction system for undo/redo
+    runTx(this.root, { label: 'Remove Publisher' }, tx => {
+      tx.remove('publishers', publisherId);
+    });
 
-    // Emit BindingRemoved event AFTER publisher removed
+    // Emit BindingRemoved event (fine-grained event, coexists with GraphCommitted)
     this.root.events.emit({
       type: 'BindingRemoved',
       bindingId: publisher.id,
@@ -346,9 +356,12 @@ export class BusStore {
       lensStack,
     };
 
-    this.listeners.push(listener);
+    // Use transaction system for undo/redo
+    runTx(this.root, { label: 'Add Listener' }, tx => {
+      tx.add('listeners', listener);
+    });
 
-    // Emit BindingAdded event AFTER listener added to store
+    // Emit BindingAdded event (fine-grained event, coexists with GraphCommitted)
     this.root.events.emit({
       type: 'BindingAdded',
       bindingId: listener.id,
@@ -468,9 +481,12 @@ export class BusStore {
       return; // Silently ignore if not found (already removed)
     }
 
-    this.listeners = this.listeners.filter(l => l.id !== listenerId);
+    // Use transaction system for undo/redo
+    runTx(this.root, { label: 'Remove Listener' }, tx => {
+      tx.remove('listeners', listenerId);
+    });
 
-    // Emit BindingRemoved event AFTER listener removed
+    // Emit BindingRemoved event (fine-grained event, coexists with GraphCommitted)
     this.root.events.emit({
       type: 'BindingRemoved',
       bindingId: listener.id,
@@ -482,74 +498,14 @@ export class BusStore {
   }
 
   /**
-   * Reorder publishers within a bus.
+   * Reorder a publisher's sort key (for combine ordering).
    */
   reorderPublisher(publisherId: string, newSortKey: number): void {
     const publisher = this.publishers.find(p => p.id === publisherId);
-    if (publisher === undefined) {
+    if (publisher === null || publisher === undefined) {
       throw new Error(`Publisher ${publisherId} not found`);
     }
 
-    const oldSortKey = publisher.sortKey;
     publisher.sortKey = newSortKey;
-
-    // Adjust other publishers in the same bus
-    this.publishers
-      .filter(p => p.busId === publisher.busId && p.id !== publisherId)
-      .forEach(p => {
-        if (oldSortKey < newSortKey && p.sortKey > oldSortKey && p.sortKey <= newSortKey) {
-          p.sortKey--;
-        } else if (oldSortKey > newSortKey && p.sortKey < oldSortKey && p.sortKey >= newSortKey) {
-          p.sortKey++;
-        }
-      });
-  }
-
-  // =============================================================================
-  // Query Methods - Bus Routing
-  // =============================================================================
-
-  /**
-   * Get all publishers for a bus, sorted deterministically.
-   *
-   * CRITICAL: Uses busSemantics module for consistent ordering.
-   * Do NOT duplicate sorting logic here.
-   */
-  getPublishersByBus(busId: string): Publisher[] {
-    return getSortedPublishers(busId, this.publishers, false);
-  }
-
-  /**
-   * Get all listeners for a bus.
-   */
-  getListenersByBus(busId: string): Listener[] {
-    return this.listeners.filter(l => l.busId === busId);
-  }
-
-  /**
-   * Get publishers for a specific block output port.
-   */
-  getPublishersByOutput(blockId: BlockId, slotId: string): Publisher[] {
-    return this.publishers.filter(
-      p => p.from.blockId === blockId && p.from.slotId === slotId
-    );
-  }
-
-  /**
-   * Get listeners for a specific block input port.
-   */
-  getListenersByInput(blockId: BlockId, slotId: string): Listener[] {
-    return this.listeners.filter(
-      l => l.to.blockId === blockId && l.to.slotId === slotId
-    );
-  }
-
-  /**
-   * Find all buses matching a type descriptor.
-   */
-  findBusesByTypeDesc(typeDesc: TypeDesc): Bus[] {
-    return this.buses.filter(b =>
-      b.type.world === typeDesc.world && b.type.domain === typeDesc.domain
-    );
   }
 }

@@ -196,7 +196,7 @@ function buildPathsPass(
     );
   }
 
-  const geometry = {
+  const geometry: Paths2DPassIR["geometry"] = {
     pathCount: count,
     pathCommandStart: { bufferId: batch.cmdStartSlot, type: "u32", length: cmdStart.length },
     pathCommandLen: { bufferId: batch.cmdLenSlot, type: "u32", length: cmdLen.length },

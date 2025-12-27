@@ -107,7 +107,7 @@ function createMinimalProgram(): CompiledProgramIR {
   return {
     schedule: { steps: [] },
     slotMeta,
-  } as CompiledProgramIR;
+  } as unknown as CompiledProgramIR;
 }
 
 // =============================================================================

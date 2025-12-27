@@ -1,65 +1,50 @@
 # 3D Projection Initiative - Status
 
-## Phase 4: Instances3D_ProjectTo2D - COMPLETE
+## Phase 6: End-to-End Integration - IN PROGRESS
 
-**Timestamp:** 2025-12-27 04:00:00
+**Timestamp:** 2025-12-27 05:00:00
 
 ### Completed Work
 
-1. **Step Definition** (`executeInstances3DProject.ts`)
-   - StepInstances3DProjectTo2D interface with all inputs/outputs
-   - CullMode, ClipMode, SizeSpace type definitions
-   - ViewportInfo interface
+1. **Compilation Error Fixes** ✅
+   - Fixed executeInstances3DProject.ts unused imports (removed CameraEval, CameraStore, FieldBufferPool, Materializer)
+   - Fixed executeRenderAssemble.ts type error (added explicit type annotation for geometry)
+   - Fixed extrudeGeometry.ts unused variable warnings (prefixed with underscore)
+   - Fixed executeInstances3DProject test type cast
 
-2. **Core Projection Math** (float32 deterministic)
-   - `projectPoint()` - 3D point through view-projection matrix
-   - `clipToNDC()` - Perspective divide and behind-camera check
-   - `ndcToScreen()` - NDC to screen coordinates with center origin, Y-down
+2. **Files Modified**
+   - `src/editor/runtime/executor/steps/executeInstances3DProject.ts`
+   - `src/editor/runtime/executor/steps/executeRenderAssemble.ts`
+   - `src/editor/runtime/mesh/extrudeGeometry.ts`
+   - `src/editor/runtime/executor/steps/__tests__/executeInstances3DProject.test.ts`
 
-3. **executeInstances3DProject Implementation**
-   - Domain count extraction
-   - CameraEval reading from cameraEvalSlot
-   - Position field materialization (vec3 = 3 floats per element)
-   - Color channel materialization (4 separate float arrays)
-   - Radius field materialization
-   - Element-by-element projection loop
-   - NaN/Inf detection and tracking
-   - Frustum culling (behind camera, outside NDC bounds)
-   - Screen clipping (discard or clamp modes)
-   - Optional z-sorting (stable sort by depth, tie-break by element index)
-   - Instance2DBufferRef allocation and population
-   - StepPerfCounters tracking (instancesIn/Out, culled, clipped, nan/inf counts)
+3. **Validation**
+   - All 3D-related compilation errors fixed
+   - TypeScript compiles successfully (excluding pre-existing BusChannel issues)
 
-4. **Tests** (`executeInstances3DProject.test.ts`)
-   - Basic projection (identity camera, single point, multiple points)
-   - Empty domain handling
-   - Culling tests (behind camera, frustum culling, cullMode=none)
-   - NaN/Inf handling and tracking
-   - Depth sorting (zSort=true/false)
-   - Color quantization (0-1 to 0-255, clamping)
-   - **All 12 tests passing**
+### Next Steps
 
-### Files Modified
-- `src/editor/runtime/executor/steps/executeInstances3DProject.ts` (NEW)
-- `src/editor/runtime/executor/steps/__tests__/executeInstances3DProject.test.ts` (NEW)
+1. **RuntimeState Integration**
+   - Add cameraStore and meshStore fields
+   - Initialize stores in createRuntimeState()
+   - Update hotSwap() to preserve 3D stores
 
-### Design Compliance
-- ✅ Float32 math throughout (Math.fround)
-- ✅ Deterministic projection (same inputs → same outputs)
-- ✅ NDC range [-1, 1] (OpenGL convention)
-- ✅ Screen origin center, Y-axis down
-- ✅ Split RGBA channels (Uint8Array 0-255)
-- ✅ Behind camera culling (w <= 0)
-- ✅ Frustum culling policy explicit
-- ✅ Stable sort tie-break by element index
-- ✅ All perf counters tracked
-- ✅ Instance2DBufferRef contract followed
+2. **ScheduleExecutor Integration**
+   - Add 3D step dispatch cases
+   - Initialize stores from program.cameras/meshes
+   - Add viewport tracking
 
-### Validation
-- All 12 tests passing
-- No stale eval-cache entries (cache is for buses/blocks/time, not runtime execution)
+3. **StepIR Type Union**
+   - Add 3D step types to StepIR union in schedule.ts
 
-### Next Steps (Future Phases)
-- Phase 5: Compiler integration (IR emission for Instances3D_ProjectTo2D steps)
-- Phase 6: Block implementation (Instances3D_ProjectTo2D block in domain/)
-- Phase 7: End-to-end integration with renderer
+4. **Module Exports**
+   - Export camera and mesh modules
+   - Export 3D step executors
+
+5. **Integration Test**
+   - Create end-to-end test
+   - Verify full 3D-to-2D pipeline
+
+## References
+- .agent_planning/3d-projection/PLAN.md
+- .agent_planning/3d-projection/SPRINT.md

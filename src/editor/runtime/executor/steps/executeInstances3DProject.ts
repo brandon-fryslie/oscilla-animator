@@ -32,11 +32,7 @@ import type { ValueSlot } from "../../../compiler/ir/types";
 import type {
   Instance2DBufferRef,
   StepPerfCounters,
-  CameraEval,
 } from "../../../compiler/ir/types3d";
-import type { CameraStore } from "../../camera/CameraStore";
-import type { FieldBufferPool } from "../../field/BufferPool";
-import type { Materializer } from "../../field/Materializer";
 import type { ValueStore } from "../../../compiler/ir/stores";
 import type { CameraEvalHandle } from "./executeCameraEval";
 
