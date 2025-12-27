@@ -166,7 +166,8 @@ export const BlockLibrary = observer(() => {
   const activeLane = store.activeLane;
   const filterByLane = store.uiStore.settings.filterByLane;
 
-  const blockDefs = useMemo(() => getBlockDefinitions(), []);
+  // Include composites in the block list
+  const blockDefs = useMemo(() => getBlockDefinitions(true), []);
 
   const formGroups = useMemo(
     () => groupBlocksByForm(blockDefs),
