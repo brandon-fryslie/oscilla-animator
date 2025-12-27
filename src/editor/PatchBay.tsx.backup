@@ -29,8 +29,6 @@ import {
 } from './portUtils';
 import { isDefined } from './types/helpers';
 import './PatchBay.css';
-import { DiagnosticBadge } from './components/DiagnosticBadge';
-
 
 /**
  * Get a color for a bus based on its domain type.
@@ -679,10 +677,6 @@ const DraggablePatchBlock = observer(({
           )}
         </div>
       )}
-
-      {/* Diagnostic Badge */}
-      <DiagnosticBadge blockId={block.id} />
-
     </div>
   );
 });

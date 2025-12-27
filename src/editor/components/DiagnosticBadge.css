@@ -1,0 +1,92 @@
+/**
+ * DiagnosticBadge Styles
+ *
+ * Inline badge that appears on blocks with diagnostics.
+ * Positioned in top-right corner, minimal and non-intrusive.
+ */
+
+.diagnostic-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  opacity: 0.9;
+  pointer-events: auto;
+}
+
+.diagnostic-badge:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.diagnostic-badge-icon {
+  line-height: 1;
+  font-size: 11px;
+}
+
+.diagnostic-badge-count {
+  line-height: 1;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* Severity-specific colors */
+.diagnostic-badge.severity-fatal {
+  background-color: rgba(220, 38, 38, 0.9);
+  color: white;
+  border: 1px solid rgba(220, 38, 38, 1);
+}
+
+.diagnostic-badge.severity-error {
+  background-color: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: 1px solid rgba(239, 68, 68, 1);
+}
+
+.diagnostic-badge.severity-warn {
+  background-color: rgba(245, 158, 11, 0.9);
+  color: white;
+  border: 1px solid rgba(245, 158, 11, 1);
+}
+
+.diagnostic-badge.severity-info {
+  background-color: rgba(59, 130, 246, 0.9);
+  color: white;
+  border: 1px solid rgba(59, 130, 246, 1);
+}
+
+.diagnostic-badge.severity-hint {
+  background-color: rgba(107, 114, 128, 0.9);
+  color: white;
+  border: 1px solid rgba(107, 114, 128, 1);
+}
+
+/* Hover states */
+.diagnostic-badge.severity-fatal:hover {
+  background-color: rgba(220, 38, 38, 1);
+}
+
+.diagnostic-badge.severity-error:hover {
+  background-color: rgba(239, 68, 68, 1);
+}
+
+.diagnostic-badge.severity-warn:hover {
+  background-color: rgba(245, 158, 11, 1);
+}
+
+.diagnostic-badge.severity-info:hover {
+  background-color: rgba(59, 130, 246, 1);
+}
+
+.diagnostic-badge.severity-hint:hover {
+  background-color: rgba(107, 114, 128, 1);
+}
