@@ -26,11 +26,14 @@ export function createLensInstanceFromDefinition(
   for (const [paramKey, spec] of Object.entries(def.params)) {
     const id = createLensParamDefaultSourceId(bindingId, lensIndex, paramKey);
     const value = paramKey in lens.params ? lens.params[paramKey] : spec.default;
+    // First ensure the source exists
     defaultSourceStore.ensureDefaultSource(id, {
       type: spec.type,
       value,
       uiHint: spec.uiHint,
     });
+    // Then update the value (ensureDefaultSource doesn't update existing sources)
+    defaultSourceStore.setDefaultValue(id, value);
     paramBindings[paramKey] = { kind: 'default', defaultSourceId: id };
   }
 
