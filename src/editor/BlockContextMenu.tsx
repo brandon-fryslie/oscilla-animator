@@ -172,8 +172,8 @@ export const BlockContextMenu = observer(() => {
       const compositeDefinition: CompositeDefinition = {
         id: composite.id.replace('user:', ''), // Remove prefix for definition ID
         label: composite.name,
-        description: undefined, // TODO: Add description from dialog
-        subcategory: 'Other', // TODO: Get from dialog
+        description: composite.description,
+        subcategory: (composite.subcategory as any) ?? 'Other',
         laneKind,
         graph: {
           nodes,
