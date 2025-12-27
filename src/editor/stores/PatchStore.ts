@@ -721,6 +721,12 @@ export class PatchStore {
 
   /**
    * Replace a block with a new block type, preserving connections where possible.
+   *
+   * NOTE: Phase 2 - suppressGraphCommitted pattern is still needed for replaceBlock().
+   * This complex operation will be refactored in Phase 3 to use a single multi-step
+   * transaction. For now, it uses the legacy dual-path mutation pattern.
+   *
+   * See: .agent_planning/undo-redo/PLAN-2025-12-27-phase2.md (P0-5: Deferred to Phase 3)
    */
   replaceBlock(oldBlockId: BlockId, newBlockType: BlockType): ReplacementResult {
     const oldBlock = this.blocks.find((b) => b.id === oldBlockId);
@@ -923,6 +929,12 @@ export class PatchStore {
    * Conservative migration: Uses runTx() for user-facing calls, but supports
    * suppressGraphCommitted for internal use by complex methods not yet migrated.
    *
+   * NOTE: Phase 2 - suppressGraphCommitted option is still needed for replaceBlock().
+   * This will be removed in Phase 3 when replaceBlock is refactored to use a proper
+   * multi-step transaction.
+   *
+   * See: .agent_planning/undo-redo/PLAN-2025-12-27-phase2.md (P0-5: Deferred to Phase 3)
+   *
    * @param options - Optional settings
    * @param options.suppressGraphCommitted - If true, use direct mutation (for internal use)
    */
@@ -1013,6 +1025,12 @@ export class PatchStore {
    *
    * Conservative migration: Uses runTx() for user-facing calls, but supports
    * suppressGraphCommitted for internal use by complex methods not yet migrated.
+   *
+   * NOTE: Phase 2 - suppressGraphCommitted option is still needed for replaceBlock().
+   * This will be removed in Phase 3 when replaceBlock is refactored to use a proper
+   * multi-step transaction.
+   *
+   * See: .agent_planning/undo-redo/PLAN-2025-12-27-phase2.md (P0-5: Deferred to Phase 3)
    *
    * @param options - Optional settings
    * @param options.suppressGraphCommitted - If true, use direct mutation (for internal use)
