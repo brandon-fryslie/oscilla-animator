@@ -8,11 +8,12 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useStore } from './stores';
 import { PRESET_LAYOUTS } from './laneLayouts';
 import { getAllMacroKeys, getMacroDisplayName } from './macros';
 import { isDefined } from './types/helpers';
+import type { Patch } from './types';
 import './SettingsToolbar.css';
 
 const STARTUP_MACRO_KEY = 'oscilla-startup-macro';
@@ -265,18 +266,223 @@ function StartupMacroDropdown() {
 }
 
 /**
+ * Error toast notification component.
+ */
+function ErrorToast({ message, onClose }: { message: string; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className="error-toast">
+      <span className="error-toast-message">{message}</span>
+      <button className="error-toast-close" onClick={onClose} title="Dismiss">
+        ×
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Generate filename with ISO timestamp format.
+ * Example: patch-2025-12-27-14-30-45.oscilla.json
+ */
+function generatePatchFilename(): string {
+  const now = new Date();
+  const timestamp = now.toISOString()
+    .replace(/[:.]/g, '-')
+    .replace('T', '-')
+    .slice(0, 19);
+  return `patch-${timestamp}.oscilla.json`;
+}
+
+/**
+ * Validate basic patch structure before attempting to load.
+ * Returns error message if invalid, null if valid.
+ */
+function validatePatchStructure(patch: unknown): string | null {
+  if (typeof patch !== 'object' || patch === null) {
+    return 'Invalid JSON file. Expected an object.';
+  }
+
+  const p = patch as Partial<Patch>;
+
+  if (typeof p.version !== 'number') {
+    return 'Invalid patch file. Missing required field: version';
+  }
+
+  if (p.version !== 2) {
+    return `Unsupported patch version: ${p.version}. This file may have been created by a newer version.`;
+  }
+
+  if (!Array.isArray(p.blocks)) {
+    return 'Invalid patch file. Missing required field: blocks';
+  }
+
+  if (!Array.isArray(p.connections)) {
+    return 'Invalid patch file. Missing required field: connections';
+  }
+
+  return null;
+}
+
+/**
+ * Detect if platform is macOS.
+ */
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+
+/**
  * Settings Toolbar component.
  */
 export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModalOpen, showHelpNudge, onDesignerView, onPerformanceView }: SettingsToolbarProps): React.ReactElement => {
   const store = useStore();
   const currentLayout = store.viewStore.currentLayout;
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleToggleCompiler = () => {
     store.uiStore.setUseNewCompiler(!store.uiStore.settings.useNewCompiler);
   };
 
+  /**
+   * Save current patch to a JSON file (download to disk).
+   */
+  const handleSavePatch = useCallback(() => {
+    try {
+      const patch = store.toJSON();
+      const json = JSON.stringify(patch, null, 2);
+      const filename = generatePatchFilename();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to save patch:', err);
+      setError('Failed to save patch. Please check the console for details.');
+    }
+  }, [store]);
+
+  /**
+   * Load patch from a JSON file (from disk).
+   */
+  const handleLoadPatch = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  /**
+   * Handle file selection from file picker.
+   */
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file === undefined) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = (event.target?.result as string) ?? '';
+
+        // Parse JSON
+        let patch: unknown;
+        try {
+          patch = JSON.parse(text);
+        } catch (err) {
+          console.error('JSON parse error:', err);
+          setError('Invalid JSON file. Please check the file format.');
+          return;
+        }
+
+        // Validate structure
+        const validationError = validatePatchStructure(patch);
+        if (validationError !== null) {
+          console.error('Patch validation error:', validationError);
+          setError(validationError);
+          return;
+        }
+
+        // Confirm before loading (will replace current patch)
+        const confirmed = window.confirm(
+          'Load this patch? Current patch will be replaced. Unsaved changes will be lost.'
+        );
+        if (!confirmed) {
+          return;
+        }
+
+        // Load patch
+        store.loadPatch(patch as Patch);
+
+        // Reset file input to allow reloading same file
+        if (fileInputRef.current !== null) {
+          fileInputRef.current.value = '';
+        }
+      } catch (err) {
+        console.error('Failed to load patch:', err);
+        setError('Failed to load patch. Please check the console for details.');
+      }
+    };
+
+    reader.onerror = () => {
+      console.error('FileReader error');
+      setError('Failed to read file. Please try again.');
+    };
+
+    reader.readAsText(file);
+  }, [store]);
+
+  /**
+   * Handle keyboard shortcuts.
+   */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if user is typing in input/textarea/contenteditable
+      const target = e.target as HTMLElement;
+      const isTyping = (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      );
+      if (isTyping) return;
+
+      const modKey = IS_MAC ? e.metaKey : e.ctrlKey;
+
+      // Cmd/Ctrl+S: Save
+      if (modKey && e.key === 's') {
+        e.preventDefault();
+        handleSavePatch();
+      }
+
+      // Cmd/Ctrl+O: Load
+      if (modKey && e.key === 'o') {
+        e.preventDefault();
+        handleLoadPatch();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSavePatch, handleLoadPatch]);
+
+  const shortcutKey = IS_MAC ? 'Cmd' : 'Ctrl';
+
   return (
     <div className="settings-toolbar">
+      {/* Error toast */}
+      {error !== null && (
+        <ErrorToast message={error} onClose={() => setError(null)} />
+      )}
+
+      {/* Hidden file input for loading patches */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,.oscilla.json"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+
       <div className="toolbar-left">
         <span className="toolbar-title">Loom Editor</span>
       </div>
@@ -435,18 +641,18 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
           Clear All
         </button>
 
-        {/* Action buttons - disabled until Phase 6 */}
+        {/* Action buttons */}
         <button
           className="toolbar-action-btn"
-          disabled
-          title="Save patch (Phase 6)"
+          onClick={handleSavePatch}
+          title={`Save patch (${shortcutKey}+S)`}
         >
           Save
         </button>
         <button
           className="toolbar-action-btn"
-          disabled
-          title="Load patch (Phase 6)"
+          onClick={handleLoadPatch}
+          title={`Load patch (${shortcutKey}+O)`}
         >
           Load
         </button>
