@@ -292,6 +292,7 @@ describe("RuntimeState", () => {
         {
           id: "step-time",
           kind: "timeDerive",
+          deps: [],
           tAbsMsSlot: 0,
           timeModel: program.timeModel,
           out: {
@@ -314,6 +315,7 @@ describe("RuntimeState", () => {
         {
           id: "step-node",
           kind: "nodeEval",
+          deps: [],
           nodeIndex: 0,
           inputSlots: [0, 1],
           outputSlots: [2, 3],
@@ -334,6 +336,7 @@ describe("RuntimeState", () => {
         {
           id: "step-bus",
           kind: "busEval",
+          deps: [],
           busIndex: 0,
           outSlot: 5,
           publishers: [
@@ -364,6 +367,7 @@ describe("RuntimeState", () => {
         {
           id: "step-1",
           kind: "nodeEval",
+          deps: [],
           nodeIndex: 0,
           inputSlots: [0, 1],
           outputSlots: [2],
@@ -372,6 +376,7 @@ describe("RuntimeState", () => {
         {
           id: "step-2",
           kind: "nodeEval",
+          deps: [],
           nodeIndex: 1,
           inputSlots: [2], // Slot 2 used as input
           outputSlots: [3],
@@ -391,6 +396,7 @@ describe("RuntimeState", () => {
         {
           id: "step-1",
           kind: "nodeEval",
+          deps: [],
           nodeIndex: 0,
           inputSlots: [0, 10, 20], // Sparse slot indices
           outputSlots: [30],
@@ -421,6 +427,7 @@ describe("RuntimeState", () => {
         {
           id: "step-1",
           kind: "nodeEval",
+          deps: [],
           nodeIndex: 0,
           inputSlots: [],
           outputSlots: [0, 1],
@@ -443,6 +450,7 @@ describe("RuntimeState", () => {
         {
           id: "step-1",
           kind: "nodeEval",
+          deps: [],
           nodeIndex: 0,
           inputSlots: [],
           outputSlots: [0],
@@ -462,6 +470,7 @@ describe("RuntimeState", () => {
         {
           id: "step-1",
           kind: "nodeEval",
+          deps: [],
           nodeIndex: 0,
           inputSlots: [],
           outputSlots: [0],

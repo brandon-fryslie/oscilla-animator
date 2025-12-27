@@ -126,6 +126,7 @@ describe("ScheduleExecutor", () => {
         {
           id: "step-time-derive",
           kind: "timeDerive",
+          deps: [],
           label: "Derive time signals",
           tAbsMsSlot: 0,
           timeModel,
@@ -176,6 +177,7 @@ describe("ScheduleExecutor", () => {
         {
           id: "step-1",
           kind: "timeDerive",
+          deps: [],
           tAbsMsSlot: 0,
           timeModel,
           out: { tModelMs: 1 },
@@ -183,6 +185,7 @@ describe("ScheduleExecutor", () => {
         {
           id: "step-2",
           kind: "nodeEval",
+          deps: [],
           nodeIndex: 0,
           inputSlots: [],
           outputSlots: [2],
@@ -191,6 +194,7 @@ describe("ScheduleExecutor", () => {
         {
           id: "step-3",
           kind: "busEval",
+          deps: [],
           busIndex: 0,
           outSlot: 3,
           publishers: [],
@@ -217,6 +221,7 @@ describe("ScheduleExecutor", () => {
         {
           id: "time",
           kind: "timeDerive",
+          deps: [],
           tAbsMsSlot: 0,
           timeModel,
           out: { tModelMs: 1 },
@@ -224,6 +229,7 @@ describe("ScheduleExecutor", () => {
         {
           id: "node",
           kind: "nodeEval",
+          deps: [],
           nodeIndex: 0,
           inputSlots: [],
           outputSlots: [],
@@ -232,6 +238,7 @@ describe("ScheduleExecutor", () => {
         {
           id: "bus",
           kind: "busEval",
+          deps: [],
           busIndex: 0,
           outSlot: 2,
           publishers: [],
@@ -242,6 +249,7 @@ describe("ScheduleExecutor", () => {
         {
           id: "materialize",
           kind: "materialize",
+          deps: [],
           materialization: {
             id: "mat-1",
             fieldExprId: "field-1",
@@ -253,13 +261,16 @@ describe("ScheduleExecutor", () => {
         },
         {
           id: "render",
+          deps: [],
           kind: "renderAssemble",
-          rootNodeIndex: 0,
-          outSlot: 5,
+          instance2dListSlot: 0,
+          pathBatchListSlot: 1,
+          outFrameSlot: 5,
         },
         {
           id: "debug",
           kind: "debugProbe",
+          deps: [],
           probe: {
             id: "probe-1",
             slots: [1, 2],

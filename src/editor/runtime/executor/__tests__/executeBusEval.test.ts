@@ -45,6 +45,7 @@ function createTestContext(slotCount: number = 150) {
       steps: [{
         kind: "busEval" as const,
         id: "test" as any,
+        deps: [],
         busIndex: 0 as any,
         outSlot: 100,
         publishers: [],
@@ -77,7 +78,7 @@ function createTestContext(slotCount: number = 150) {
 describe("executeBusEval - Combine Modes", () => {
   it("sum mode adds all publisher values", () => {
     const { program, runtime } = createTestContext();
-    
+
     runtime.values.write(0, 10);
     runtime.values.write(1, 20);
     runtime.values.write(2, 30);
@@ -85,6 +86,7 @@ describe("executeBusEval - Combine Modes", () => {
     const step: StepBusEval = {
       kind: "busEval",
       id: "test" as any,
+      deps: [],
       busIndex: 0 as any,
       outSlot: 100,
       publishers: [
@@ -103,7 +105,7 @@ describe("executeBusEval - Combine Modes", () => {
 
   it("average mode computes mean", () => {
     const { program, runtime } = createTestContext();
-    
+
     runtime.values.write(0, 10);
     runtime.values.write(1, 20);
     runtime.values.write(2, 30);
@@ -111,6 +113,7 @@ describe("executeBusEval - Combine Modes", () => {
     const step: StepBusEval = {
       kind: "busEval",
       id: "test" as any,
+      deps: [],
       busIndex: 0 as any,
       outSlot: 100,
       publishers: [
@@ -129,7 +132,7 @@ describe("executeBusEval - Combine Modes", () => {
 
   it("min mode returns minimum", () => {
     const { program, runtime } = createTestContext();
-    
+
     runtime.values.write(0, 50);
     runtime.values.write(1, 10);
     runtime.values.write(2, 30);
@@ -137,6 +140,7 @@ describe("executeBusEval - Combine Modes", () => {
     const step: StepBusEval = {
       kind: "busEval",
       id: "test" as any,
+      deps: [],
       busIndex: 0 as any,
       outSlot: 100,
       publishers: [
@@ -155,7 +159,7 @@ describe("executeBusEval - Combine Modes", () => {
 
   it("max mode returns maximum", () => {
     const { program, runtime } = createTestContext();
-    
+
     runtime.values.write(0, 50);
     runtime.values.write(1, 10);
     runtime.values.write(2, 30);
@@ -163,6 +167,7 @@ describe("executeBusEval - Combine Modes", () => {
     const step: StepBusEval = {
       kind: "busEval",
       id: "test" as any,
+      deps: [],
       busIndex: 0 as any,
       outSlot: 100,
       publishers: [
@@ -181,7 +186,7 @@ describe("executeBusEval - Combine Modes", () => {
 
   it("last mode returns last value", () => {
     const { program, runtime } = createTestContext();
-    
+
     runtime.values.write(0, 10);
     runtime.values.write(1, 20);
     runtime.values.write(2, 30);
@@ -189,6 +194,7 @@ describe("executeBusEval - Combine Modes", () => {
     const step: StepBusEval = {
       kind: "busEval",
       id: "test" as any,
+      deps: [],
       busIndex: 0 as any,
       outSlot: 100,
       publishers: [
@@ -207,7 +213,7 @@ describe("executeBusEval - Combine Modes", () => {
 
   it("product mode multiplies values", () => {
     const { program, runtime } = createTestContext();
-    
+
     runtime.values.write(0, 2);
     runtime.values.write(1, 3);
     runtime.values.write(2, 4);
@@ -215,6 +221,7 @@ describe("executeBusEval - Combine Modes", () => {
     const step: StepBusEval = {
       kind: "busEval",
       id: "test" as any,
+      deps: [],
       busIndex: 0 as any,
       outSlot: 100,
       publishers: [
@@ -239,6 +246,7 @@ describe("executeBusEval - Silent Values", () => {
     const step: StepBusEval = {
       kind: "busEval",
       id: "test" as any,
+      deps: [],
       busIndex: 0 as any,
       outSlot: 100,
       publishers: [],
@@ -257,6 +265,7 @@ describe("executeBusEval - Silent Values", () => {
     const step: StepBusEval = {
       kind: "busEval",
       id: "test" as any,
+      deps: [],
       busIndex: 0 as any,
       outSlot: 100,
       publishers: [],
@@ -275,6 +284,7 @@ describe("executeBusEval - Silent Values", () => {
     const step: StepBusEval = {
       kind: "busEval",
       id: "test" as any,
+      deps: [],
       busIndex: 0 as any,
       outSlot: 100,
       publishers: [
@@ -293,7 +303,7 @@ describe("executeBusEval - Silent Values", () => {
 describe("executeBusEval - Publisher Filtering", () => {
   it("skips disabled publishers", () => {
     const { program, runtime } = createTestContext();
-    
+
     runtime.values.write(0, 10);
     runtime.values.write(1, 20);
     runtime.values.write(2, 30);
@@ -301,6 +311,7 @@ describe("executeBusEval - Publisher Filtering", () => {
     const step: StepBusEval = {
       kind: "busEval",
       id: "test" as any,
+      deps: [],
       busIndex: 0 as any,
       outSlot: 100,
       publishers: [

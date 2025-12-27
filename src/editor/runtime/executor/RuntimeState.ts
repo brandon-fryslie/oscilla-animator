@@ -280,9 +280,29 @@ function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
         objectSlots.add(step.materialization.outBufferSlot);
         break;
 
+      case "materializeColor":
+        // MaterializeColor inputs and outputs
+        objectSlots.add(step.domainSlot);
+        objectSlots.add(step.colorExprSlot);
+        objectSlots.add(step.outRSlot);
+        objectSlots.add(step.outGSlot);
+        objectSlots.add(step.outBSlot);
+        objectSlots.add(step.outASlot);
+        break;
+
+      case "materializePath":
+        // MaterializePath inputs and outputs
+        objectSlots.add(step.domainSlot);
+        objectSlots.add(step.pathExprSlot);
+        objectSlots.add(step.outCmdsSlot);
+        objectSlots.add(step.outParamsSlot);
+        break;
+
       case "renderAssemble":
-        // RenderAssemble outputs are also objects (RenderTree)
-        objectSlots.add(step.outSlot);
+        // RenderAssemble inputs and outputs (all objects)
+        objectSlots.add(step.instance2dListSlot);
+        objectSlots.add(step.pathBatchListSlot);
+        objectSlots.add(step.outFrameSlot);
         break;
 
       case "debugProbe":

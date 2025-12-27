@@ -11,7 +11,6 @@
  */
 
 import type { StepId, NodeIndex, BusIndex, ValueSlot, StateId } from "./types";
-import type { ColorBufferDesc, PathCommandStreamDesc, FlattenPolicy } from "../../ir/types/BufferDesc";
 
 // ============================================================================
 // Time Model IR (02-IR-Schema.md §4)
@@ -123,6 +122,12 @@ export interface StepBase {
 
   /** Discriminator for step kind */
   kind: string;
+
+  /** Steps that must run before this one */
+  deps: StepId[];
+
+  /** Optional cache key specification for buffer reuse */
+  cacheKey?: CacheKeySpec;
 
   /** Optional debug label for UI/logs */
   label?: string;
@@ -337,130 +342,137 @@ export interface BufferFormat {
 }
 
 // ============================================================================
-// Step 4a: Materialize Color (Phase C - Renderer IR)
+// Step 4a: Materialize Color (Phase E - Final Integration)
 // ============================================================================
 
 /**
  * MaterializeColor Step
  *
- * Converts field<color> or signal<color> to u8x4 premultiplied linear RGBA buffer.
+ * Converts field<color> or signal<color> to 4 separate Float32Array channel buffers.
  *
  * This is an explicit, cacheable materialization step that produces deterministic
  * color buffers for renderer consumption.
  *
  * Semantics:
- * - For signal<color>: quantize single value to 4 bytes
- * - For field<color>: quantize instanceCount values to instanceCount*4 bytes
- * - Uses quantizeColorRGBA() kernel from Phase B
- * - Writes Uint8Array to bufferSlot in ValueStore
+ * - Reads domain handle from domainSlot to get instance count
+ * - Reads field expression handle from colorExprSlot
+ * - Evaluates color field expression for all instances
+ * - Writes 4 separate Float32Array buffers (R, G, B, A channels in [0..1] range)
  * - Emits performance counters for cache attribution
  *
  * References:
- * - design-docs/13-Renderer/09-Materialization-Steps.md (MaterializeColor contract)
- * - design-docs/13-Renderer/04-Decision-to-IR.md (ColorBufferDesc)
- * - .agent_planning/renderer-ir/DOD-PHASE-CD-2025-12-26-173641.md §P0.C2
+ * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md §A1
+ * - design-docs/13-Renderer/09-Materialization-Steps.md
  */
 export interface StepMaterializeColor extends StepBase {
   kind: "materializeColor";
 
   // Inputs
-  /** Source slot containing field<color> or signal<color> */
-  sourceSlot: ValueSlot;
+  /** Slot containing Domain handle (or count) */
+  domainSlot: ValueSlot;
 
-  /** Number of instances to materialize (undefined for signal<color>) */
-  instanceCount?: number;
+  /** Slot containing field expression handle for color */
+  colorExprSlot: ValueSlot;
 
-  // Outputs
-  /** Output slot for u8x4 buffer (Uint8Array) */
-  bufferSlot: ValueSlot;
+  // Outputs (4 separate Float32Array buffers, one per channel)
+  /** Output slot for R channel (Float32Array) */
+  outRSlot: ValueSlot;
 
-  /** Buffer descriptor (always canonical u8x4 premul linear RGBA) */
-  bufferDesc: ColorBufferDesc;
+  /** Output slot for G channel (Float32Array) */
+  outGSlot: ValueSlot;
 
-  // Cache policy (optional - Phase E work)
-  /** Cache key specification for buffer reuse */
-  cacheKey?: CacheKeySpec;
+  /** Output slot for B channel (Float32Array) */
+  outBSlot: ValueSlot;
 
-  // Debug/instrumentation
-  /** Debug label for performance attribution */
-  debugLabel?: string;
+  /** Output slot for A channel (Float32Array) */
+  outASlot: ValueSlot;
+
+  // Optional format specifier (future-proof)
+  /** Buffer format: always "rgba_f32" for now */
+  format?: "rgba_f32";
 }
 
 // ============================================================================
-// Step 4b: Materialize Path (Phase D - Renderer IR)
+// Step 4b: Materialize Path (Phase E - Final Integration)
 // ============================================================================
 
 /**
  * MaterializePath Step
  *
- * Converts path expressions to PathCommandStream buffers with optional flattening.
+ * Converts path expressions to command/param buffers with optional flattening.
  *
  * This is an explicit, cacheable materialization step that encodes path geometry
  * to typed buffers for renderer consumption.
  *
  * Semantics:
- * - Evaluates path expression
+ * - Reads domain handle from domainSlot to get instance count
+ * - Reads path field expression handle from pathExprSlot
+ * - Evaluates path expression for all instances
  * - Encodes commands to Uint16Array (0=M, 1=L, 2=Q, 3=C, 4=Z)
- * - Packs points to Float32Array (interleaved xy pairs)
- * - Optional flattening: curves → polylines with canonical tolerance
- * - Writes commandsSlot and pointsSlot to ValueStore
- * - Emits performance counters for cache attribution
+ * - Packs params to Float32Array (coordinates, control points)
+ * - Optional flattening: curves → polylines with tolerance
+ * - Writes outCmdsSlot and outParamsSlot to ValueStore
  *
  * References:
- * - design-docs/13-Renderer/09-Materialization-Steps.md (MaterializePath contract)
- * - design-docs/13-Renderer/04-Decision-to-IR.md (PathCommandStreamDesc, FlattenPolicy)
- * - .agent_planning/renderer-ir/DOD-PHASE-CD-2025-12-26-173641.md §P0.D2
+ * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md §A1
+ * - design-docs/13-Renderer/09-Materialization-Steps.md
  */
 export interface StepMaterializePath extends StepBase {
   kind: "materializePath";
 
   // Inputs
-  /** Source slot containing path expression */
-  sourceSlot: ValueSlot;
+  /** Slot containing Domain handle */
+  domainSlot: ValueSlot;
 
-  /** Flattening policy (off or on-canonical) */
-  flattenPolicy: FlattenPolicy;
+  /** Slot containing path field expression handle */
+  pathExprSlot: ValueSlot;
 
   // Outputs
   /** Output slot for command buffer (Uint16Array) */
-  commandsSlot: ValueSlot;
+  outCmdsSlot: ValueSlot;
 
-  /** Output slot for points buffer (Float32Array) */
-  pointsSlot: ValueSlot;
+  /** Output slot for params buffer (Float32Array) */
+  outParamsSlot: ValueSlot;
 
-  /** Command descriptor (always canonical u16 LE) */
-  commandDesc: PathCommandStreamDesc;
-
-  // Cache policy (optional - Phase E work)
-  /** Cache key specification for buffer reuse */
-  cacheKey?: CacheKeySpec;
-
-  // Debug/instrumentation
-  /** Debug label for performance attribution */
-  debugLabel?: string;
+  // Optional flatten tolerance (default from canonical 0.75px)
+  /** Flatten tolerance in pixels (undefined = keep curves) */
+  flattenTolerancePx?: number;
 }
 
 // ============================================================================
-// Step 5: Render Assembly (10-Schedule-Semantics.md §12.2)
+// Step 5: Render Assembly (Phase E - Final Integration)
 // ============================================================================
 
 /**
  * Render Assemble Step
  *
- * Assembles final render output from render node outputs.
+ * Assembles final RenderFrameIR from materialized buffers and batch descriptors.
+ *
+ * This step reads batch descriptor lists and produces the final RenderFrameIR
+ * that the Canvas2D renderer consumes.
  *
  * Semantics:
- * - Typically trivial: render node already wrote RenderTree to its output slot
- * - This step exists for stable finalization boundary (hot-swap + tracing)
+ * - Reads Instance2DBatchList from instance2dListSlot
+ * - Reads PathBatchList from pathBatchListSlot
+ * - Assembles RenderFrameIR with passes array
+ * - Writes RenderFrameIR to outFrameSlot
+ *
+ * References:
+ * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md §C2
  */
 export interface StepRenderAssemble extends StepBase {
   kind: "renderAssemble";
 
-  /** Root render node index */
-  rootNodeIndex: NodeIndex;
+  // Inputs
+  /** Slot containing Instance2D batch list descriptor */
+  instance2dListSlot: ValueSlot;
 
-  /** Output slot for final render output */
-  outSlot: ValueSlot;
+  /** Slot containing Path batch list descriptor */
+  pathBatchListSlot: ValueSlot;
+
+  // Output
+  /** Output slot for final RenderFrameIR */
+  outFrameSlot: ValueSlot;
 }
 
 // ============================================================================

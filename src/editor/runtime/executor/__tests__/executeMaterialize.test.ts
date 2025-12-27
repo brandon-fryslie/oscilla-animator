@@ -26,6 +26,7 @@ describe("executeMaterialize", () => {
     step = {
       id: "mat-1",
       kind: "materialize",
+      deps: [],
       materialization: {
         id: "mat-1",
         fieldExprId: "field-0",

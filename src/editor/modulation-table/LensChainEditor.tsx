@@ -73,8 +73,10 @@ interface LensChainEditorProps {
   sourceType?: TypeDesc;
   /** Target type (port) */
   targetType?: TypeDesc;
-  /** Close the editor */
-  onClose: () => void;
+  /** Close the editor (optional for inline mode) */
+  onClose?: () => void;
+  /** Inline mode - collapsible section, no popup controls */
+  inline?: boolean;
 }
 
 /**
@@ -802,6 +804,7 @@ export function LensChainEditor({
   sourceType,
   targetType,
   onClose,
+  inline = false,
 }: LensChainEditorProps): React.ReactElement {
   // Track enabled state per lens (default all enabled)
   const [enabledStates, setEnabledStates] = useState<boolean[]>(
@@ -810,6 +813,9 @@ export function LensChainEditor({
 
   // Show add lens UI
   const [showAddLens, setShowAddLens] = useState(false);
+
+  // Collapsed state for inline mode
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Available presets
   const presetsByCategory = useMemo(() => {
@@ -900,18 +906,12 @@ export function LensChainEditor({
 
   const handleAddPreset = useCallback(
     (presetId: string) => {
-      console.log('[LensChainEditor] handleAddPreset called:', presetId);
       const lens = createLensFromPreset(presetId);
-      console.log('[LensChainEditor] Created lens from preset:', lens);
       if (lens) {
-        const newChain = [...lensChain, lens];
-        console.log('[LensChainEditor] Calling onChange with new chain:', newChain);
-        onChange(newChain);
+        onChange([...lensChain, lens]);
         setEnabledStates((prev) => [...prev, true]);
         addRecentLens(lens, presetId);
         setRecentLenses(getRecentLenses());
-      } else {
-        console.warn('[LensChainEditor] Failed to create lens from preset:', presetId);
       }
       setShowAddLens(false);
     },
@@ -947,59 +947,79 @@ export function LensChainEditor({
   }, []);
 
   return (
-    <div className="lens-chain-editor">
-      <div className="lens-chain-header">
-        <span className="lens-chain-title">Lens Chain</span>
-        <button className="lens-chain-close" onClick={onClose} title="Close">
-          ×
+    <div className={`lens-chain-editor ${inline ? 'lens-chain-editor--inline' : ''}`}>
+      {/* Header - collapsible in inline mode */}
+      {inline ? (
+        <button
+          className={`lens-chain-header lens-chain-header--collapsible ${isCollapsed ? 'collapsed' : ''}`}
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          type="button"
+        >
+          <span className="lens-chain-collapse-icon">{isCollapsed ? '▸' : '▾'}</span>
+          <span className="lens-chain-title">Lenses</span>
+          {lensChain.length > 0 && (
+            <span className="lens-chain-count">{lensChain.length}</span>
+          )}
         </button>
-      </div>
-
-      {/* Type info */}
-      {sourceType && targetType && (
-        <div className="lens-chain-types">
-          <span className="type-badge source">
-            {sourceType.world}:{sourceType.domain}
-          </span>
-          <span className="type-arrow">→</span>
-          <span className="type-badge target">
-            {targetType.world}:{targetType.domain}
-          </span>
+      ) : (
+        <div className="lens-chain-header">
+          <span className="lens-chain-title">Lens Chain</span>
+          {onClose && (
+            <button className="lens-chain-close" onClick={onClose} title="Close">
+              ×
+            </button>
+          )}
         </div>
       )}
 
-      {/* Lens list */}
-      <div className="lens-chain-list">
-        {lensChain.length === 0 ? (
-          <div className="lens-chain-empty">
-            No lenses applied. Signal passes through directly.
-          </div>
-        ) : (
-          lensChain.map((lens, index) => (
-            <LensChainItem
-              key={`${lens.type}-${index}`}
-              lens={lens}
-              index={index}
-              isEnabled={enabledStates[index] ?? true}
-              onUpdate={(params) => handleUpdateLens(index, params)}
-              onRemove={() => handleRemoveLens(index)}
-              onToggleEnabled={() => handleToggleEnabled(index)}
-              onMoveUp={() => handleMoveUp(index)}
-              onMoveDown={() => handleMoveDown(index)}
-              isFirst={index === 0}
-              isLast={index === lensChain.length - 1}
-            />
-          ))
-        )}
-      </div>
+      {/* Content - hidden when collapsed in inline mode */}
+      {(!inline || !isCollapsed) && (
+        <>
+          {/* Type info */}
+          {sourceType && targetType && (
+            <div className="lens-chain-types">
+              <span className="type-badge source">
+                {sourceType.world}:{sourceType.domain}
+              </span>
+              <span className="type-arrow">→</span>
+              <span className="type-badge target">
+                {targetType.world}:{targetType.domain}
+              </span>
+            </div>
+          )}
 
-      {/* Add lens */}
-      {showAddLens ? (
-        <div className="lens-chain-add-panel">
-          {/* Recently Used */}
-          {recentLenses.length > 0 && (
-            <div className="lens-add-section lens-recent-section">
-              <div className="lens-add-section-title">Recently Used</div>
+          {/* Lens list */}
+          <div className="lens-chain-list">
+            {lensChain.length === 0 ? (
+              <div className="lens-chain-empty">
+                No lenses applied. Signal passes through directly.
+              </div>
+            ) : (
+              lensChain.map((lens, index) => (
+                <LensChainItem
+                  key={`${lens.type}-${index}`}
+                  lens={lens}
+                  index={index}
+                  isEnabled={enabledStates[index] ?? true}
+                  onUpdate={(params) => handleUpdateLens(index, params)}
+                  onRemove={() => handleRemoveLens(index)}
+                  onToggleEnabled={() => handleToggleEnabled(index)}
+                  onMoveUp={() => handleMoveUp(index)}
+                  onMoveDown={() => handleMoveDown(index)}
+                  isFirst={index === 0}
+                  isLast={index === lensChain.length - 1}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Add lens */}
+          {showAddLens ? (
+            <div className="lens-chain-add-panel">
+              {/* Recently Used */}
+              {recentLenses.length > 0 && (
+                <div className="lens-add-section lens-recent-section">
+                  <div className="lens-add-section-title">Recently Used</div>
               <div className="lens-recent-list">
                 {recentLenses.map((recent, idx) => {
                   const preset = recent.presetId != null
@@ -1109,31 +1129,37 @@ export function LensChainEditor({
             </div>
           </div>
 
-          <button
-            className="lens-add-cancel"
-            onClick={() => setShowAddLens(false)}
-          >
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <button
-          className="lens-chain-add-btn"
-          onClick={() => setShowAddLens(true)}
-        >
-          + Add Lens
-        </button>
-      )}
+              <button
+                className="lens-add-cancel"
+                onClick={() => setShowAddLens(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              className="lens-chain-add-btn"
+              onClick={() => setShowAddLens(true)}
+            >
+              + Add Lens
+            </button>
+          )}
 
-      {/* Actions */}
-      <div className="lens-chain-actions">
-        <button className="lens-chain-clear" onClick={() => onChange([])}>
-          Clear All
-        </button>
-        <button className="lens-chain-done" onClick={onClose}>
-          Done
-        </button>
-      </div>
+          {/* Actions */}
+          <div className="lens-chain-actions">
+            {lensChain.length > 0 && (
+              <button className="lens-chain-clear" onClick={() => onChange([])}>
+                Clear All
+              </button>
+            )}
+            {!inline && onClose && (
+              <button className="lens-chain-done" onClick={onClose}>
+                Done
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

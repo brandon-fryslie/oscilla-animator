@@ -1037,8 +1037,9 @@ const BusConnectionsSection = observer(({ block }: { block: Block }) => {
 
 /**
  * Render a control for editing a DefaultSource value based on its uiHint.
+ * Must be an observer to react to MobX value changes.
  */
-function DefaultSourceControl({
+const DefaultSourceControl = observer(function DefaultSourceControl({
   ds,
   isDriven,
   onChange,
@@ -1164,7 +1165,7 @@ function DefaultSourceControl({
       onChange={(e) => onChange(e.target.value)}
     />
   );
-}
+});
 
 /**
  * Diagnostics section - shows errors and warnings for a block

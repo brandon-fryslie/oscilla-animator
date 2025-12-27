@@ -1036,6 +1036,77 @@
   background: var(--accent-hover, #3b8eef);
 }
 
+/* ============================================================================= */
+/* Inline Mode - for ConnectionInspector */
+/* ============================================================================= */
+
+.lens-chain-editor--inline {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.lens-chain-header--collapsible {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #242424);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+  color: var(--text-primary, #e5e5e5);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lens-chain-header--collapsible:hover {
+  background: var(--bg-tertiary, #2a2a2a);
+  border-color: var(--border-hover, #444);
+}
+
+.lens-chain-header--collapsible.collapsed {
+  margin-bottom: 0;
+}
+
+.lens-chain-collapse-icon {
+  color: var(--text-secondary, #888);
+  font-size: 10px;
+}
+
+.lens-chain-count {
+  margin-left: auto;
+  padding: 2px 8px;
+  background: var(--accent-dim, #2a4a6a);
+  border-radius: 10px;
+  color: var(--accent-color, #4a9eff);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Inline mode adjustments */
+.lens-chain-editor--inline .lens-chain-types {
+  margin-top: 8px;
+}
+
+.lens-chain-editor--inline .lens-chain-list {
+  margin-top: 8px;
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+}
+
+.lens-chain-editor--inline .lens-chain-add-btn {
+  margin-top: 8px;
+}
+
+.lens-chain-editor--inline .lens-chain-actions {
+  margin-top: 8px;
+  justify-content: flex-start;
+}
+
 /* Recently Used Lenses */
 .lens-recent-section {
   background: var(--bg-secondary, #242424);

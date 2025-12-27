@@ -1,38 +1,59 @@
 /**
  * Execute MaterializePath Step
  *
- * Converts path expressions to PathCommandStream buffers with optional flattening.
+ * Converts path expressions to command/param buffers with optional flattening.
  *
  * This is an explicit, cacheable materialization step implementing the contract
- * from design-docs/13-Renderer/09-Materialization-Steps.md.
+ * from design-docs/13-Renderer/11-FINAL-INTEGRATION.md §B4.
  *
  * Algorithm:
- * 1. Read source path expression from sourceSlot
- * 2. Encode commands to Uint16Array (0=M, 1=L, 2=Q, 3=C, 4=Z)
- * 3. Pack control points to Float32Array (interleaved xy pairs)
- * 4. Optional: Flatten curves to polylines (if flattenPolicy.kind === 'on')
- * 5. Write commandsSlot and pointsSlot to ValueStore
- * 6. Emit performance counters (deferred to Phase E)
+ * 1. Read domain handle from domainSlot to get instance count
+ * 2. Read path expression/data from pathExprSlot
+ * 3. Allocate command buffer (Uint16Array) and params buffer (Float32Array)
+ * 4. Encode path commands and coordinates
+ * 5. Store buffers in outCmdsSlot and outParamsSlot
  *
- * Command encoding (canonical u16 opcodes):
- * - 0: MoveTo (M) - consumes 1 point (x, y)
- * - 1: LineTo (L) - consumes 1 point (x, y)
- * - 2: QuadraticTo (Q) - consumes 2 points (ctrl_x, ctrl_y, end_x, end_y)
- * - 3: CubicTo (C) - consumes 3 points (c1_x, c1_y, c2_x, c2_y, end_x, end_y)
- * - 4: Close (Z) - consumes 0 points
+ * Command encoding (u16):
+ * - 0: MoveTo (consumes 2 params: x, y)
+ * - 1: LineTo (consumes 2 params: x, y)
+ * - 2: QuadTo (consumes 4 params: cx, cy, x, y)
+ * - 3: CubicTo (consumes 6 params: c1x, c1y, c2x, c2y, x, y)
+ * - 4: Close (consumes 0 params)
  *
  * References:
- * - design-docs/13-Renderer/09-Materialization-Steps.md §MaterializePath
- * - design-docs/13-Renderer/04-Decision-to-IR.md §PathCommandStreamDesc
- * - .agent_planning/renderer-ir/DOD-PHASE-CD-2025-12-26-173641.md §P0.D1
+ * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md §B4
+ * - design-docs/13-Renderer/09-Materialization-Steps.md
  */
 
 import type { StepMaterializePath, CompiledProgramIR } from "../../../compiler/ir";
 import type { RuntimeState } from "../RuntimeState";
-import { CANONICAL_FLATTEN_TOL_PX } from "../../../ir/types/BufferDesc";
+
+// Path command opcodes
+const PATH_CMD_MOVETO = 0;
+const PATH_CMD_LINETO = 1;
+const PATH_CMD_QUADTO = 2;
+const PATH_CMD_CUBICTO = 3;
+const PATH_CMD_CLOSE = 4;
 
 /**
- * Path command types (abstract representation before encoding)
+ * Domain handle representation
+ */
+interface DomainHandle {
+  kind: "domain";
+  count: number;
+  ids?: Uint32Array;
+}
+
+/**
+ * Field expression handle representation
+ */
+interface FieldExprHandle {
+  kind: "fieldExpr";
+  exprId: string;
+}
+
+/**
+ * Path command types (abstract representation)
  */
 type PathCommand =
   | { kind: "M"; x: number; y: number }
@@ -42,203 +63,226 @@ type PathCommand =
   | { kind: "Z" };
 
 /**
- * Path expression representation (simplified for Phase C-D)
- *
- * In full implementation, this would be a proper path AST from the compiler.
- * For now, we support a simple command array.
+ * Path expression representation
  */
 interface PathExpr {
   commands: PathCommand[];
 }
 
 /**
- * Canonical command opcodes (u16)
+ * Type guard: check if value is a Domain handle
  */
-const PathOpcode = {
-  MoveTo: 0,
-  LineTo: 1,
-  QuadraticTo: 2,
-  CubicTo: 3,
-  Close: 4,
-} as const;
+function isDomainHandle(value: unknown): value is DomainHandle {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return v.kind === "domain" && typeof v.count === "number";
+}
 
 /**
  * Type guard: check if value is a valid PathExpr
  */
 function isPathExpr(value: unknown): value is PathExpr {
-  if (typeof value !== 'object' || value === null) return false;
+  if (typeof value !== "object" || value === null) return false;
   const p = value as Record<string, unknown>;
   return Array.isArray(p.commands);
 }
 
 /**
- * Encode path commands to u16 opcodes and f32 points.
- *
- * Produces:
- * - commands: Uint16Array of opcodes (0=M, 1=L, 2=Q, 3=C, 4=Z)
- * - points: Float32Array of interleaved xy pairs
- *
- * Point consumption:
- * - M: 1 point (x, y)
- * - L: 1 point (x, y)
- * - Q: 2 points (ctrl, end)
- * - C: 3 points (c1, c2, end)
- * - Z: 0 points
- *
- * @param pathExpr - Path expression with commands
- * @returns Encoded command and point buffers
+ * Type guard: check if value is an array of PathExpr
  */
-function encodePath(pathExpr: PathExpr): {
-  commands: Uint16Array;
-  points: Float32Array;
-} {
-  const commandCodes: number[] = [];
-  const points: number[] = [];
+function isPathExprArray(value: unknown): value is PathExpr[] {
+  if (!Array.isArray(value)) return false;
+  if (value.length === 0) return true;
+  return isPathExpr(value[0]);
+}
 
-  for (const cmd of pathExpr.commands) {
-    switch (cmd.kind) {
-      case "M":
-        commandCodes.push(PathOpcode.MoveTo);
-        points.push(cmd.x, cmd.y);
-        break;
+/**
+ * Type guard: check if value is a field expression handle
+ */
+function isFieldExprHandle(value: unknown): value is FieldExprHandle {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return v.kind === "fieldExpr" && typeof v.exprId === "string";
+}
 
-      case "L":
-        commandCodes.push(PathOpcode.LineTo);
-        points.push(cmd.x, cmd.y);
-        break;
+/**
+ * Calculate buffer sizes needed for paths
+ */
+function calculateBufferSizes(paths: PathExpr[]): { cmdCount: number; paramCount: number } {
+  let cmdCount = 0;
+  let paramCount = 0;
 
-      case "Q":
-        commandCodes.push(PathOpcode.QuadraticTo);
-        points.push(cmd.cx, cmd.cy, cmd.x, cmd.y);
-        break;
-
-      case "C":
-        commandCodes.push(PathOpcode.CubicTo);
-        points.push(cmd.c1x, cmd.c1y, cmd.c2x, cmd.c2y, cmd.x, cmd.y);
-        break;
-
-      case "Z":
-        commandCodes.push(PathOpcode.Close);
-        // Z consumes no points
-        break;
-
-      default: {
-        const _exhaustive: never = cmd;
-        throw new Error(`encodePath: Unknown command kind: ${(_exhaustive as PathCommand).kind}`);
+  for (const path of paths) {
+    for (const cmd of path.commands) {
+      cmdCount++;
+      switch (cmd.kind) {
+        case "M":
+        case "L":
+          paramCount += 2; // x, y
+          break;
+        case "Q":
+          paramCount += 4; // cx, cy, x, y
+          break;
+        case "C":
+          paramCount += 6; // c1x, c1y, c2x, c2y, x, y
+          break;
+        case "Z":
+          // No params
+          break;
       }
     }
   }
 
-  return {
-    commands: new Uint16Array(commandCodes),
-    points: new Float32Array(points),
-  };
+  return { cmdCount, paramCount };
 }
 
 /**
- * Flatten path curves to polylines.
- *
- * Converts Q and C commands to sequences of L commands using adaptive subdivision.
- * Tolerance is CANONICAL_FLATTEN_TOL_PX (0.75px in screen space).
- *
- * Phase D P1.D5 work - STUB for now.
- * Full implementation requires adaptive de Casteljau or midpoint subdivision.
- *
- * @param pathExpr - Path with curves
- * @param _tolerancePx - Flattening tolerance (currently ignored, always uses canonical)
- * @returns Flattened path (M, L, Z commands only)
+ * Encode command kind to opcode
  */
-function flattenPath(pathExpr: PathExpr, _tolerancePx: number): PathExpr {
-  // STUB: Phase D P1.D5 optional work
-  // For now, return path unchanged (curves preserved)
-  // Full implementation would:
-  // 1. For each Q command: subdivide quadratic bezier to polyline
-  // 2. For each C command: subdivide cubic bezier to polyline
-  // 3. Check deviation < tolerancePx, recursively subdivide if needed
-  // 4. Replace Q/C with L commands
-
-  console.warn(
-    `flattenPath: Curve flattening not yet implemented (Phase D P1.D5). ` +
-    `Preserving curves. Tolerance=${_tolerancePx}px ignored.`
-  );
-
-  return pathExpr;
+function encodeCommandKind(kind: string): number {
+  switch (kind) {
+    case "M":
+      return PATH_CMD_MOVETO;
+    case "L":
+      return PATH_CMD_LINETO;
+    case "Q":
+      return PATH_CMD_QUADTO;
+    case "C":
+      return PATH_CMD_CUBICTO;
+    case "Z":
+      return PATH_CMD_CLOSE;
+    default:
+      throw new Error(`Unknown path command kind: ${kind}`);
+  }
 }
 
 /**
  * Execute MaterializePath step.
  *
- * Converts path expressions to command/point buffers using canonical encoding.
- *
- * Supports:
- * - Curve preservation (flattenPolicy.kind === 'off') - default
- * - Curve flattening (flattenPolicy.kind === 'on') - Phase D P1.D5 stub
+ * Converts path expressions to command/param buffers.
  *
  * @param step - MaterializePath step specification
  * @param _program - Compiled program (not used, included for consistency)
  * @param runtime - Runtime state containing ValueStore
  *
- * @throws Error if sourceSlot contains invalid path data
- * @throws Error if flattenPolicy uses non-canonical tolerance
+ * @throws Error if domainSlot contains invalid domain
+ * @throws Error if pathExprSlot contains invalid path data
  */
 export function executeMaterializePath(
   step: StepMaterializePath,
   _program: CompiledProgramIR,
   runtime: RuntimeState,
 ): void {
-  // Performance tracking (Phase E will use this)
+  // Performance tracking
   const startTime = performance.now();
 
-  // 1. Read source path expression from sourceSlot
-  const sourceValue = runtime.values.read(step.sourceSlot);
+  // 1. Read domain handle from domainSlot
+  const domainValue = runtime.values.read(step.domainSlot);
+  let instanceCount: number;
 
-  if (!isPathExpr(sourceValue)) {
+  if (isDomainHandle(domainValue)) {
+    instanceCount = domainValue.count;
+  } else if (typeof domainValue === "number") {
+    instanceCount = domainValue;
+  } else {
     throw new Error(
-      `executeMaterializePath: sourceSlot contains invalid value. ` +
-      `Expected PathExpr, got: ${typeof sourceValue}`
+      `executeMaterializePath: domainSlot contains invalid value. ` +
+        `Expected Domain handle or count, got: ${typeof domainValue}`
     );
   }
 
-  let pathExpr = sourceValue;
+  // 2. Read path data from pathExprSlot
+  const pathValue = runtime.values.read(step.pathExprSlot);
 
-  // 2. Optional: Flatten curves to polylines
-  if (step.flattenPolicy.kind === 'on') {
-    // Validate canonical tolerance
-    if (step.flattenPolicy.tolerancePx !== CANONICAL_FLATTEN_TOL_PX) {
+  // 3. Determine paths to encode
+  let paths: PathExpr[];
+
+  if (isPathExpr(pathValue)) {
+    // Single path - replicate for all instances
+    paths = new Array(instanceCount).fill(pathValue);
+  } else if (isPathExprArray(pathValue)) {
+    // Array of paths
+    if (pathValue.length !== instanceCount) {
       throw new Error(
-        `executeMaterializePath: flattenPolicy must use canonical tolerance ` +
-        `(${CANONICAL_FLATTEN_TOL_PX}px), got ${step.flattenPolicy.tolerancePx}px`
+        `executeMaterializePath: path array length mismatch. ` +
+          `Expected ${instanceCount}, got ${pathValue.length}.`
       );
     }
-
-    pathExpr = flattenPath(pathExpr, step.flattenPolicy.tolerancePx);
-  }
-
-  // 3. Encode path to command/point buffers
-  const { commands, points } = encodePath(pathExpr);
-
-  // 4. Write buffers to ValueStore
-  runtime.values.write(step.commandsSlot, commands);
-  runtime.values.write(step.pointsSlot, points);
-
-  // 5. Performance counters (Phase E work - stubbed for now)
-  const cpuMs = performance.now() - startTime;
-
-  // Future Phase E: Emit performance counters
-  // - cpuMs: time spent in encoding/flattening
-  // - bytesCommands: commands.byteLength
-  // - bytesPoints: points.byteLength
-  // - cacheHit: false (no caching yet)
-  // - flattenedSegments: number of L commands generated (if flattened)
-
-  // Debug logging (can be removed in production)
-  if (step.debugLabel && cpuMs > 1.0) {
-    console.debug(
-      `MaterializePath[${step.debugLabel}]: ${cpuMs.toFixed(2)}ms, ` +
-      `${commands.length} commands, ${points.length / 2} points`
+    paths = pathValue;
+  } else if (isFieldExprHandle(pathValue)) {
+    // fieldExpr handle case: evaluate via PathRuntime
+    // Future work: call paths.evalPathsToCmdBuffers()
+    console.warn(
+      `executeMaterializePath: fieldExpr evaluation not implemented yet. ` +
+        `Using empty paths for ${instanceCount} instances.`
+    );
+    paths = new Array(instanceCount).fill({ commands: [] });
+  } else {
+    throw new Error(
+      `executeMaterializePath: pathExprSlot contains invalid value. ` +
+        `Expected PathExpr, PathExpr[], or FieldExprHandle, got: ${typeof pathValue}`
     );
   }
 
-  // Silence unused variable warnings
-  void cpuMs;
+  // 4. Calculate buffer sizes
+  const { cmdCount, paramCount } = calculateBufferSizes(paths);
+
+  // 5. Allocate buffers with minimum sizes
+  const minCmdSize = Math.max(cmdCount, 64);
+  const minParamSize = Math.max(paramCount, 128);
+
+  const cmdsBuffer = runtime.values.ensureU16(step.outCmdsSlot, minCmdSize);
+  const paramsBuffer = runtime.values.ensureF32(step.outParamsSlot, minParamSize);
+
+  // 6. Encode paths to buffers
+  let cmdIdx = 0;
+  let paramIdx = 0;
+
+  for (const path of paths) {
+    for (const cmd of path.commands) {
+      cmdsBuffer[cmdIdx++] = encodeCommandKind(cmd.kind);
+
+      switch (cmd.kind) {
+        case "M":
+        case "L":
+          paramsBuffer[paramIdx++] = cmd.x;
+          paramsBuffer[paramIdx++] = cmd.y;
+          break;
+        case "Q":
+          paramsBuffer[paramIdx++] = cmd.cx;
+          paramsBuffer[paramIdx++] = cmd.cy;
+          paramsBuffer[paramIdx++] = cmd.x;
+          paramsBuffer[paramIdx++] = cmd.y;
+          break;
+        case "C":
+          paramsBuffer[paramIdx++] = cmd.c1x;
+          paramsBuffer[paramIdx++] = cmd.c1y;
+          paramsBuffer[paramIdx++] = cmd.c2x;
+          paramsBuffer[paramIdx++] = cmd.c2y;
+          paramsBuffer[paramIdx++] = cmd.x;
+          paramsBuffer[paramIdx++] = cmd.y;
+          break;
+        case "Z":
+          // No params for close
+          break;
+      }
+    }
+  }
+
+  // 7. Optional flattening (future work)
+  if (step.flattenTolerancePx !== undefined) {
+    console.warn(
+      `executeMaterializePath: Curve flattening not implemented yet. ` +
+        `Preserving curves. Tolerance=${step.flattenTolerancePx}px ignored.`
+    );
+  }
+
+  // 8. Performance logging (debug mode)
+  const cpuMs = performance.now() - startTime;
+  if (cpuMs > 1.0) {
+    console.debug(
+      `MaterializePath: ${cpuMs.toFixed(2)}ms for ${instanceCount} paths, ` +
+        `${cmdCount} commands, ${paramCount} params`
+    );
+  }
 }

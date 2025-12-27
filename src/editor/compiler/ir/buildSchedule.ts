@@ -142,13 +142,19 @@ function buildSchedule(timeModel: TimeModelIR): ScheduleIR {
   const SLOT_T_ABS_MS = 0;
   const SLOT_T_MODEL_MS = 1;
   const SLOT_PROGRESS_01 = 2;
-  const SLOT_RENDER_OUT = 3;
+  // SLOT_RENDER_OUT = 3 was removed - now using outFrameSlot
+
+  // Slot allocation for batch descriptors and frame output
+  const SLOT_INSTANCE2D_LIST = 4;
+  const SLOT_PATH_BATCH_LIST = 5;
+  const SLOT_FRAME_OUT = 6;
 
   // Step 1: Time Derive
   // This step derives time-related signals from the absolute time (tAbsMs)
   steps.push({
     kind: "timeDerive",
     id: "step-time-derive",
+    deps: [], // First step, no dependencies
     label: "Derive time signals",
     tAbsMsSlot: SLOT_T_ABS_MS,
     timeModel,
@@ -164,13 +170,16 @@ function buildSchedule(timeModel: TimeModelIR): ScheduleIR {
   // Step 3: Materialize (placeholder - we'll add field materialization when implemented)
   // [No materialize steps in minimal implementation]
 
-  // Step 4: Render Assemble (placeholder - we'll add when render lowering is implemented)
+  // Step 4: Render Assemble
+  // Assembles RenderFrameIR from instance and path batch descriptors
   steps.push({
     kind: "renderAssemble",
     id: "step-render-assemble",
-    label: "Assemble render tree",
-    rootNodeIndex: 0, // Placeholder - no nodes yet
-    outSlot: SLOT_RENDER_OUT,
+    deps: ["step-time-derive"], // Depends on time derivation
+    label: "Assemble render frame",
+    instance2dListSlot: SLOT_INSTANCE2D_LIST,
+    pathBatchListSlot: SLOT_PATH_BATCH_LIST,
+    outFrameSlot: SLOT_FRAME_OUT,
   });
 
   // Build step index map

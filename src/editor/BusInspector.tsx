@@ -195,9 +195,7 @@ const ListenerItem = observer(({
   };
 
   const handleLensChange = (lens: LensDefinition | undefined) => {
-    console.log('[BusInspector] handleLensChange called:', { lens, listenerId: listener.id });
     if (!lens) {
-      console.log('[BusInspector] Clearing lens stack');
       store.busStore.updateListener(listener.id, { lensStack: undefined });
       return;
     }
@@ -207,9 +205,7 @@ const ListenerItem = observer(({
       0,
       store.defaultSourceStore
     );
-    console.log('[BusInspector] Created lens instance:', instance);
     store.busStore.updateListener(listener.id, { lensStack: [instance] });
-    console.log('[BusInspector] Called updateListener');
   };
 
   return (

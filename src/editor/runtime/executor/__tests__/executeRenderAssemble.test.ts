@@ -4,10 +4,10 @@
  * Verifies render tree assembly finalization step.
  *
  * Test Coverage:
- * - Slot read from rootNodeIndex output
- * - Slot write to step.outSlot
+ * - Slot read from instance2dListSlot, pathBatchListSlot
+ * - Slot write to step.outFrameSlot
  * - Validation (if implemented)
- * - Error cases (missing rootNodeIndex, invalid slot)
+ * - Error cases (missing inputs, invalid slot)
  *
  * References:
  * - .agent_planning/scheduled-runtime/DOD-2025-12-26-102151.md §Deliverable 1
@@ -21,12 +21,14 @@ import { createRuntimeState } from "../RuntimeState";
 import type { StepRenderAssemble, CompiledProgramIR } from "../../../compiler/ir";
 
 // Helper to create test program and runtime with pre-configured slots
-function createTestContext(outSlot: number = 100) {
+function createTestContext(outFrameSlot: number = 100) {
   const renderAssembleStep: StepRenderAssemble = {
     kind: "renderAssemble",
     id: "render-assemble" as any,
-    rootNodeIndex: 0 as any,
-    outSlot,
+    deps: [],
+    instance2dListSlot: 0 as any,
+    pathBatchListSlot: 1 as any,
+    outFrameSlot,
   };
 
   const program: CompiledProgramIR = {
@@ -65,7 +67,7 @@ function createTestContext(outSlot: number = 100) {
 }
 
 describe("executeRenderAssemble - Core Functionality", () => {
-  it("reads render tree from step.outSlot when already present", () => {
+  it("reads render tree from step.outFrameSlot when already present", () => {
     const { runtime, step } = createTestContext();
 
     // Pre-populate the output slot with a render tree
@@ -155,8 +157,10 @@ describe("executeRenderAssemble - Error Handling", () => {
     const step: StepRenderAssemble = {
       kind: "renderAssemble",
       id: "render-assemble" as any,
-      rootNodeIndex: 0 as any,
-      outSlot: 9999, // Not allocated
+      deps: [],
+      instance2dListSlot: 0 as any,
+      pathBatchListSlot: 1 as any,
+      outFrameSlot: 9999, // Not allocated
     };
 
     // ValueStore throws when slot not in slotMeta

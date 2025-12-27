@@ -37,6 +37,7 @@ describe("Step Dispatch", () => {
       const step: StepTimeDerive = {
         id: "time-derive-1",
         kind: "timeDerive",
+        deps: [],
         tAbsMsSlot: 0,
         timeModel,
         out: {
@@ -66,6 +67,7 @@ describe("Step Dispatch", () => {
       const step: StepNodeEval = {
         id: "node-eval-1",
         kind: "nodeEval",
+        deps: [],
         nodeIndex: 0,
         inputSlots: [],
         outputSlots: [],
@@ -87,8 +89,9 @@ describe("Step Dispatch", () => {
       const step: StepBusEval = {
         id: "bus-eval-1",
         kind: "busEval",
+        deps: [],
         busIndex: 0,
-        outSlot: 1,
+        outFrameSlot: 1,
         publishers: [],
         combine: { mode: "last" },
         silent: { kind: "zero" },
@@ -116,6 +119,7 @@ describe("Step Dispatch", () => {
       const step: StepMaterialize = {
         id: "materialize-1",
         kind: "materialize",
+        deps: [],
         materialization: {
           id: "mat-1",
           fieldExprId: "field-1",
@@ -152,8 +156,9 @@ describe("Step Dispatch", () => {
       const step: StepRenderAssemble = {
         id: "render-assemble-1",
         kind: "renderAssemble",
-        rootNodeIndex: 0,
-        outSlot: 1,
+        instance2dListSlot: 0,
+        pathBatchListSlot: 1,
+        outFrameSlot: 1,
       };
 
       // Provide schedule with the step so slotMeta is extracted
@@ -174,6 +179,7 @@ describe("Step Dispatch", () => {
       const step: StepDebugProbe = {
         id: "debug-probe-1",
         kind: "debugProbe",
+        deps: [],
         probe: {
           id: "probe-1",
           slots: [1, 2],

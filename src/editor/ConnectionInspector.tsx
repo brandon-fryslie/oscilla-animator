@@ -6,7 +6,7 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useStore } from './stores';
 import { InspectorContainer } from './components/InspectorContainer';
 import { describeSlotType } from './portUtils';
@@ -159,7 +159,6 @@ const WireConnectionView = observer(({
   onBack: () => void;
 }) => {
   const store = useStore();
-  const [isLensEditorOpen, setIsLensEditorOpen] = useState(false);
 
   const navigateToSource = useCallback(() => {
     store.uiStore.selectBlock(sourceBlock.id);
@@ -168,10 +167,6 @@ const WireConnectionView = observer(({
   const navigateToTarget = useCallback(() => {
     store.uiStore.selectBlock(targetBlock.id);
   }, [store, targetBlock.id]);
-
-  const handleToggleEnabled = useCallback(() => {
-    store.patchStore.setConnectionEnabled(connection.id, connection.enabled === false);
-  }, [store, connection.id, connection.enabled]);
 
   // Convert LensInstance[] to LensDefinition[] for the editor
   const lensChain = useMemo((): LensDefinition[] => {
@@ -192,20 +187,9 @@ const WireConnectionView = observer(({
     });
   }, [store, connection.id]);
 
-  const handleOpenLensEditor = useCallback(() => {
-    setIsLensEditorOpen(true);
-  }, []);
-
-  const handleCloseLensEditor = useCallback(() => {
-    setIsLensEditorOpen(false);
-  }, []);
-
   // Get type descriptors for lens editor
   const sourceType = useMemo(() => SLOT_TYPE_TO_TYPE_DESC[sourceSlot.type], [sourceSlot.type]);
   const targetType = useMemo(() => SLOT_TYPE_TO_TYPE_DESC[targetSlot.type], [targetSlot.type]);
-
-  const hasLenses = lensChain.length > 0;
-  const isEnabled = connection.enabled !== false;
 
   return (
     <InspectorContainer
@@ -234,52 +218,16 @@ const WireConnectionView = observer(({
         />
       </div>
 
-      <div className="conn-section">
-        <label className="conn-toggle-row">
-          <input
-            type="checkbox"
-            checked={isEnabled}
-            onChange={handleToggleEnabled}
-          />
-          <span>Enabled</span>
-        </label>
+      {/* Inline lens editor */}
+      <div className="conn-section conn-lens-section">
+        <LensChainEditor
+          lensChain={lensChain}
+          onChange={handleLensChainChange}
+          sourceType={sourceType}
+          targetType={targetType}
+          inline={true}
+        />
       </div>
-
-      {/* Lens section with full editor */}
-      <div className="conn-section">
-        <div className="conn-section-header">
-          <h4 className="conn-section-title">Lenses</h4>
-          <button
-            className="conn-action-btn conn-action-small"
-            onClick={handleOpenLensEditor}
-            title="Edit lens chain"
-          >
-            {hasLenses ? 'Edit' : 'Add'}
-          </button>
-        </div>
-        {hasLenses ? (
-          <div className="conn-lens-preview">
-            {lensChain.map((lens, i) => (
-              <span key={i} className="conn-lens-badge">{lens.type}</span>
-            ))}
-          </div>
-        ) : (
-          <p className="conn-hint">No lenses applied. Click Add to add transforms.</p>
-        )}
-      </div>
-
-      {/* Full lens chain editor */}
-      {isLensEditorOpen && (
-        <div className="conn-lens-editor-container">
-          <LensChainEditor
-            lensChain={lensChain}
-            onChange={handleLensChainChange}
-            sourceType={sourceType}
-            targetType={targetType}
-            onClose={handleCloseLensEditor}
-          />
-        </div>
-      )}
 
       <div className="conn-actions">
         <button className="conn-action-btn conn-action-danger" onClick={onDisconnect}>
@@ -311,7 +259,6 @@ const PublisherConnectionView = observer(({
   onBack: () => void;
 }) => {
   const store = useStore();
-  const [isLensEditorOpen, setIsLensEditorOpen] = useState(false);
 
   const navigateToSource = useCallback(() => {
     store.uiStore.selectBlock(sourceBlock.id);
@@ -320,10 +267,6 @@ const PublisherConnectionView = observer(({
   const navigateToBus = useCallback(() => {
     store.uiStore.selectBus(busId);
   }, [store, busId]);
-
-  const handleToggleEnabled = useCallback(() => {
-    store.busStore.updatePublisher(publisher.id, { enabled: !publisher.enabled });
-  }, [store, publisher.id, publisher.enabled]);
 
   // Convert LensInstance[] to LensDefinition[] for the editor
   const lensChain = useMemo((): LensDefinition[] => {
@@ -344,20 +287,10 @@ const PublisherConnectionView = observer(({
     });
   }, [store, publisher.id]);
 
-  const handleOpenLensEditor = useCallback(() => {
-    setIsLensEditorOpen(true);
-  }, []);
-
-  const handleCloseLensEditor = useCallback(() => {
-    setIsLensEditorOpen(false);
-  }, []);
-
   // Get type descriptors for lens editor
   const sourceType = useMemo(() => SLOT_TYPE_TO_TYPE_DESC[sourceSlot.type], [sourceSlot.type]);
   const bus = store.busStore.buses.find(b => b.id === busId);
   const targetType = bus?.type;
-
-  const hasLenses = lensChain.length > 0;
 
   return (
     <InspectorContainer
@@ -384,52 +317,16 @@ const PublisherConnectionView = observer(({
         />
       </div>
 
-      <div className="conn-section">
-        <label className="conn-toggle-row">
-          <input
-            type="checkbox"
-            checked={publisher.enabled}
-            onChange={handleToggleEnabled}
-          />
-          <span>Enabled</span>
-        </label>
+      {/* Inline lens editor */}
+      <div className="conn-section conn-lens-section">
+        <LensChainEditor
+          lensChain={lensChain}
+          onChange={handleLensChainChange}
+          sourceType={sourceType}
+          targetType={targetType}
+          inline={true}
+        />
       </div>
-
-      {/* Lens section with full editor */}
-      <div className="conn-section">
-        <div className="conn-section-header">
-          <h4 className="conn-section-title">Lenses</h4>
-          <button
-            className="conn-action-btn conn-action-small"
-            onClick={handleOpenLensEditor}
-            title="Edit lens chain"
-          >
-            {hasLenses ? 'Edit' : 'Add'}
-          </button>
-        </div>
-        {hasLenses ? (
-          <div className="conn-lens-preview">
-            {lensChain.map((lens, i) => (
-              <span key={i} className="conn-lens-badge">{lens.type}</span>
-            ))}
-          </div>
-        ) : (
-          <p className="conn-hint">No lenses applied. Click Add to add transforms.</p>
-        )}
-      </div>
-
-      {/* Full lens chain editor */}
-      {isLensEditorOpen && (
-        <div className="conn-lens-editor-container">
-          <LensChainEditor
-            lensChain={lensChain}
-            onChange={handleLensChainChange}
-            sourceType={sourceType}
-            targetType={targetType}
-            onClose={handleCloseLensEditor}
-          />
-        </div>
-      )}
 
       <div className="conn-actions">
         <button className="conn-action-btn conn-action-danger" onClick={onDisconnect}>
@@ -461,7 +358,6 @@ const ListenerConnectionView = observer(({
   onBack: () => void;
 }) => {
   const store = useStore();
-  const [isLensEditorOpen, setIsLensEditorOpen] = useState(false);
 
   const navigateToBus = useCallback(() => {
     store.uiStore.selectBus(busId);
@@ -470,10 +366,6 @@ const ListenerConnectionView = observer(({
   const navigateToTarget = useCallback(() => {
     store.uiStore.selectBlock(targetBlock.id);
   }, [store, targetBlock.id]);
-
-  const handleToggleEnabled = useCallback(() => {
-    store.busStore.updateListener(listener.id, { enabled: !listener.enabled });
-  }, [store, listener.id, listener.enabled]);
 
   // Convert LensInstance[] to LensDefinition[] for the editor
   const lensChain = useMemo((): LensDefinition[] => {
@@ -494,20 +386,10 @@ const ListenerConnectionView = observer(({
     });
   }, [store, listener.id]);
 
-  const handleOpenLensEditor = useCallback(() => {
-    setIsLensEditorOpen(true);
-  }, []);
-
-  const handleCloseLensEditor = useCallback(() => {
-    setIsLensEditorOpen(false);
-  }, []);
-
   // Get type descriptors for lens editor
   const bus = store.busStore.buses.find(b => b.id === busId);
   const sourceType = bus?.type;
   const targetType = useMemo(() => SLOT_TYPE_TO_TYPE_DESC[targetSlot.type], [targetSlot.type]);
-
-  const hasLenses = lensChain.length > 0;
 
   return (
     <InspectorContainer
@@ -534,52 +416,16 @@ const ListenerConnectionView = observer(({
         />
       </div>
 
-      <div className="conn-section">
-        <label className="conn-toggle-row">
-          <input
-            type="checkbox"
-            checked={listener.enabled}
-            onChange={handleToggleEnabled}
-          />
-          <span>Enabled</span>
-        </label>
+      {/* Inline lens editor */}
+      <div className="conn-section conn-lens-section">
+        <LensChainEditor
+          lensChain={lensChain}
+          onChange={handleLensChainChange}
+          sourceType={sourceType}
+          targetType={targetType}
+          inline={true}
+        />
       </div>
-
-      {/* Lens section with full editor */}
-      <div className="conn-section">
-        <div className="conn-section-header">
-          <h4 className="conn-section-title">Lenses</h4>
-          <button
-            className="conn-action-btn conn-action-small"
-            onClick={handleOpenLensEditor}
-            title="Edit lens chain"
-          >
-            {hasLenses ? 'Edit' : 'Add'}
-          </button>
-        </div>
-        {hasLenses ? (
-          <div className="conn-lens-preview">
-            {lensChain.map((lens, i) => (
-              <span key={i} className="conn-lens-badge">{lens.type}</span>
-            ))}
-          </div>
-        ) : (
-          <p className="conn-hint">No lenses applied. Click Add to add transforms.</p>
-        )}
-      </div>
-
-      {/* Full lens chain editor */}
-      {isLensEditorOpen && (
-        <div className="conn-lens-editor-container">
-          <LensChainEditor
-            lensChain={lensChain}
-            onChange={handleLensChainChange}
-            sourceType={sourceType}
-            targetType={targetType}
-            onClose={handleCloseLensEditor}
-          />
-        </div>
-      )}
 
       <div className="conn-actions">
         <button className="conn-action-btn conn-action-danger" onClick={onDisconnect}>
@@ -640,7 +486,6 @@ const CellConnectionView = observer(({
 }) => {
   const store = useStore();
   const { cell, row, column, block, slot, compatibility } = cellInfo;
-  const [isLensEditorOpen, setIsLensEditorOpen] = useState(false);
 
   const navigateToBlock = useCallback(() => {
     store.uiStore.selectBlock(block.id);
@@ -747,14 +592,6 @@ const CellConnectionView = observer(({
     }
   }, [store, binding, cell.listenerId, cell.publisherId]);
 
-  const handleOpenLensEditor = useCallback(() => {
-    setIsLensEditorOpen(true);
-  }, []);
-
-  const handleCloseLensEditor = useCallback(() => {
-    setIsLensEditorOpen(false);
-  }, []);
-
   const isBound = cell.status === 'bound';
   const isConvertible = compatibility.status === 'convertible';
   const isIncompatible = compatibility.status === 'incompatible';
@@ -765,8 +602,6 @@ const CellConnectionView = observer(({
   const color = isBound ? '#4f46e5' :
                 isConvertible ? '#f59e0b' :
                 isIncompatible ? '#ef4444' : '#10b981';
-
-  const hasLenses = lensChain.length > 0;
 
   return (
     <InspectorContainer
@@ -824,61 +659,15 @@ const CellConnectionView = observer(({
         )}
       </div>
 
-      {/* Enabled state for bound cells */}
+      {/* Inline lens editor (only for bound cells) */}
       {isBound && (
-        <div className="conn-section">
-          <label className="conn-toggle-row">
-            <input
-              type="checkbox"
-              checked={cell.enabled !== false}
-              onChange={() => {
-                // Toggle enabled state via appropriate store method
-                if (cell.listenerId) {
-                  store.busStore.updateListener(cell.listenerId, { enabled: !cell.enabled });
-                } else if (cell.publisherId) {
-                  store.busStore.updatePublisher(cell.publisherId, { enabled: !cell.enabled });
-                }
-              }}
-            />
-            <span>Enabled</span>
-          </label>
-        </div>
-      )}
-
-      {/* Lens section with full editor (only for bound cells) */}
-      {isBound && (
-        <div className="conn-section">
-          <div className="conn-section-header">
-            <h4 className="conn-section-title">Lenses</h4>
-            <button
-              className="conn-action-btn conn-action-small"
-              onClick={handleOpenLensEditor}
-              title="Edit lens chain"
-            >
-              {hasLenses ? 'Edit' : 'Add'}
-            </button>
-          </div>
-          {hasLenses ? (
-            <div className="conn-lens-preview">
-              {lensChain.map((lens, i) => (
-                <span key={i} className="conn-lens-badge">{lens.type}</span>
-              ))}
-            </div>
-          ) : (
-            <p className="conn-hint">No lenses applied. Click Add to add transforms.</p>
-          )}
-        </div>
-      )}
-
-      {/* Full lens chain editor */}
-      {isBound && isLensEditorOpen && (
-        <div className="conn-lens-editor-container">
+        <div className="conn-section conn-lens-section">
           <LensChainEditor
             lensChain={lensChain}
             onChange={handleLensChainChange}
             sourceType={row.direction === 'output' ? row.type : column.type}
             targetType={row.direction === 'output' ? column.type : row.type}
-            onClose={handleCloseLensEditor}
+            inline={true}
           />
         </div>
       )}

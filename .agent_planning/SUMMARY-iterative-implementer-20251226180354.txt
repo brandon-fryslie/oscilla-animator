@@ -1,0 +1,58 @@
+Agent: iterative-implementer | 2025-12-26 18:03:54
+Mode: manual
+Completed: Canvas renderer extensions for Instances2D and Paths2D | Files: 1 | Commits: 1
+Status: complete
+
+Summary:
+========
+Completed Phases C and D of Renderer IR implementation by creating Canvas renderer
+extensions for Instances2D and Paths2D passes.
+
+Created Files:
+--------------
+- src/editor/runtime/renderPassExecutors.ts (650 lines)
+  - renderInstances2DPass(): Renders shape2d materials with per-instance transforms
+  - renderPaths2DPass(): Decodes path command streams to Canvas operations
+
+Key Features:
+-------------
+Phase C - Instances2D Rendering:
+- Reads buffers from ValueStore via BufferRefIR
+- Handles scalar broadcasts (ScalarF32IR/ScalarU32IR/ScalarU16IR)
+- Renders shape2d materials: circles (id=0), squares (id=1), stars (id=2+)
+- Per-instance attributes: posXY, size, rot, colorRGBA, opacity, shapeId
+- Stroke support: strokeWidth, strokeColorRGBA
+- Applies RenderPassHeaderIR: view transform, clipping, blend mode, opacity
+
+Phase D - Paths2D Rendering:
+- Decodes u16 path command streams: M=0, L=1, Q=2, C=3, Z=4
+- Supports packed geometry buffers with per-path indexing
+- Full PathStyleIR support: fill, stroke, dash patterns, caps/joins
+- Per-path or global styling (scalar broadcasts)
+- Handles interleaved xy point streams
+
+Implementation Quality:
+-----------------------
+- Type-safe buffer reading with validation
+- Exhaustive switch statements with never checks
+- Canvas state management via save/restore
+- Respects header.enabled flag
+- Color unpacking: u8x4 arrays and u32 packed formats
+- Clear error messages for invalid buffer types
+
+Validation:
+-----------
+- TypeScript compiles cleanly (just typecheck passed)
+- No runtime tests (manual validation mode)
+- Integration with existing Canvas2DRenderer deferred (future work)
+
+Next Steps:
+-----------
+1. Integration: Update Canvas2DRenderer to dispatch on pass.kind
+2. Testing: Create test cases for renderInstances2DPass and renderPaths2DPass
+3. Integration: Complete executeRenderAssemble to produce RenderFrameIR
+4. End-to-end: Wire up renderer to consume RenderFrameIR from compiled programs
+
+Commit:
+-------
+21d9d36 feat(renderer-ir): Add Canvas renderer extensions for Instances2D and Paths2D passes

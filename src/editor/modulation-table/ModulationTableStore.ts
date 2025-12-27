@@ -725,30 +725,20 @@ export class ModulationTableStore {
    * Update cell lens chain (only for input/listener cells).
    */
   updateCellLenses(rowKey: RowKey, lensChain: LensDefinition[] | undefined): void {
-    console.log('[ModTableStore] updateCellLenses called:', { rowKey, lensChainLength: lensChain?.length });
     const parsed = parseRowKey(rowKey);
-    if (!parsed || parsed.direction !== 'input') {
-      console.log('[ModTableStore] Early return - parsed:', parsed);
-      return;
-    }
+    if (!parsed || parsed.direction !== 'input') return;
 
     const portKey = createPortRefKey(parsed.blockId, parsed.portId);
     const listenerId = this.patchIndex.listenersByInputPort.get(portKey);
-    console.log('[ModTableStore] Lookup result:', { portKey, listenerId });
 
-    if (listenerId == null) {
-      console.log('[ModTableStore] No listener found, returning');
-      return;
-    }
+    if (listenerId == null) return;
 
     const lensStack: LensInstance[] | undefined = lensChain
       ? lensChain.map((lens, index) =>
           createLensInstanceFromDefinition(lens, listenerId, index, this.root.defaultSourceStore)
         )
       : undefined;
-    console.log('[ModTableStore] Created lensStack:', lensStack);
     this.root.busStore.updateListener(listenerId, { lensStack });
-    console.log('[ModTableStore] Updated listener');
   }
 
   // =============================================================================

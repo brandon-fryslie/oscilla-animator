@@ -81,6 +81,30 @@ export interface ValueStore {
    * Resets write tracking but preserves storage arrays.
    */
   clear(): void;
+
+  /**
+   * Ensure a Float32Array buffer exists at the specified slot with the given length.
+   * Reuses existing buffer if size matches, otherwise allocates new one.
+   *
+   * Used by materialization steps to allocate output buffers.
+   *
+   * @param slot - ValueSlot index for buffer storage (uses object storage)
+   * @param length - Required buffer length
+   * @returns Float32Array at the slot (new or reused)
+   */
+  ensureF32(slot: ValueSlot, length: number): Float32Array;
+
+  /**
+   * Ensure a Uint16Array buffer exists at the specified slot with the given length.
+   * Reuses existing buffer if size matches, otherwise allocates new one.
+   *
+   * Used by path materialization steps to allocate command buffers.
+   *
+   * @param slot - ValueSlot index for buffer storage (uses object storage)
+   * @param length - Required buffer length
+   * @returns Uint16Array at the slot (new or reused)
+   */
+  ensureU16(slot: ValueSlot, length: number): Uint16Array;
 }
 
 /**
@@ -313,6 +337,67 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
       // Note: We don't clear the actual values - they persist until overwritten
       // This is an optimization: old values will be overwritten on next write
       writeLog.clear();
+    },
+
+    ensureF32(slot: ValueSlot, length: number): Float32Array {
+      // For ensureF32, we use object storage for the Float32Array
+      // First check if slot has metadata, if not we treat it as dynamic object slot
+      const meta = slotLookup.get(slot);
+
+      // Try to reuse existing buffer if size matches
+      const existing = meta?.storage === "object"
+        ? objects[meta.offset]
+        : objects[slot]; // Fallback to direct slot index if no metadata
+
+      if (existing instanceof Float32Array && existing.length === length) {
+        return existing;
+      }
+
+      // Allocate new buffer
+      const buffer = new Float32Array(length);
+
+      // Store in object array
+      if (meta && meta.storage === "object") {
+        objects[meta.offset] = buffer;
+      } else {
+        // Ensure objects array is large enough
+        while (objects.length <= slot) {
+          objects.push(undefined);
+        }
+        objects[slot] = buffer;
+      }
+
+      return buffer;
+    },
+
+    ensureU16(slot: ValueSlot, length: number): Uint16Array {
+      // For ensureU16, we use object storage for the Uint16Array
+      const meta = slotLookup.get(slot);
+
+      // Try to reuse existing buffer if size matches
+      const existing = meta?.storage === "object"
+        ? objects[meta.offset]
+        : objects[slot]; // Fallback to direct slot index if no metadata
+
+      if (existing instanceof Uint16Array && existing.length === length) {
+        return existing;
+      }
+
+      // Allocate new buffer
+      const buffer = new Uint16Array(length);
+
+      // Store in object array
+      if (meta && meta.storage === "object") {
+        objects[meta.offset] = buffer;
+      } else {
+        // Ensure objects array is large enough
+        while (objects.length <= slot) {
+          objects.push(undefined);
+        }
+        objects[slot] = buffer;
+      }
+
+      return buffer;
     },
   };
 }

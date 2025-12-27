@@ -49,18 +49,12 @@ export function LensSelector({ value, onChange, compact = false }: LensSelectorP
     : undefined;
 
   const handlePresetChange = (presetId: string) => {
-    console.log('[LensSelector] handlePresetChange called:', presetId);
     if (presetId === '') {
-      console.log('[LensSelector] Clearing lens (empty preset)');
       onChange(undefined);
     } else {
       const lens = createLensFromPreset(presetId);
-      console.log('[LensSelector] Created lens from preset:', lens);
       if (lens) {
         onChange(lens);
-        console.log('[LensSelector] Called onChange with lens');
-      } else {
-        console.warn('[LensSelector] Failed to create lens from preset:', presetId);
       }
     }
   };

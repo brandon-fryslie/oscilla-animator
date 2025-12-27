@@ -1,121 +1,195 @@
 /**
  * Execute Render Assemble Step
  *
- * Assembles final render output from render node.
+ * Assembles final RenderFrameIR from materialized buffers and batch descriptors.
  *
- * Per spec (design-docs/12-Compiler-Final/10-Schedule-Semantics.md §12.2 Step 5):
- * "Typically trivial: the render node already wrote a RenderTree/RenderCmds to its
- * output slot. This step exists so you have a single stable 'finalization' boundary
- * for hot-swap + tracing."
+ * This step reads batch descriptor lists and produces the final RenderFrameIR
+ * that the Canvas2D renderer consumes.
  *
- * **Updated for RenderFrameIR (Phase C+D Integration):**
- * This step now has two modes based on feature flags:
- * 1. Legacy mode: Just validates RenderTree exists (current behavior)
- * 2. IR mode: Assembles RenderFrameIR from materialized buffers
- *
- * In IR mode, this step:
- * - Reads materialized buffers from ValueStore
- * - Assembles Instances2DPassIR using assembleInstanceBuffers()
- * - Assembles Paths2DPassIR using assemblePathGeometry()
- * - Creates RenderFrameIR with passes and clear spec
- * - Writes RenderFrameIR to output slot
+ * Algorithm:
+ * 1. Read Instance2DBatchList from instance2dListSlot
+ * 2. Read PathBatchList from pathBatchListSlot
+ * 3. Assemble RenderFrameIR with passes array
+ * 4. Write RenderFrameIR to outFrameSlot
  *
  * References:
- * - HANDOFF.md Topic 3 (ScheduleExecutor - Render Assemble)
+ * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md §C2
  * - design-docs/12-Compiler-Final/10-Schedule-Semantics.md §12.2 Step 5
- * - .agent_planning/renderer-ir/DOD-PHASE-CD-2025-12-26-173641.md §P0.I2
  */
 
 import type { StepRenderAssemble, CompiledProgramIR } from "../../../compiler/ir";
 import type { RuntimeState } from "../RuntimeState";
-import type { RenderFrameIR } from "../../../compiler/ir/renderIR";
+import type { RenderFrameIR, Instances2DPassIR, Paths2DPassIR } from "../../../compiler/ir/renderIR";
+
+/**
+ * Instance2D batch descriptor - describes how to assemble an Instances2D pass
+ */
+interface Instance2DBatchDescriptor {
+  kind: "instance2d";
+  count: number;
+  xSlot: number;
+  ySlot: number;
+  radiusSlot: number;
+  rSlot: number;
+  gSlot: number;
+  bSlot: number;
+  aSlot: number;
+}
+
+/**
+ * Path batch descriptor - describes how to assemble a Paths2D pass
+ */
+interface PathBatchDescriptor {
+  kind: "path";
+  count: number;
+  cmdsSlot: number;
+  paramsSlot: number;
+  rSlot: number;
+  gSlot: number;
+  bSlot: number;
+  aSlot: number;
+}
+
+/**
+ * Type guard for Instance2D batch descriptor
+ */
+function isInstance2DBatch(value: unknown): value is Instance2DBatchDescriptor {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return v.kind === "instance2d" && typeof v.count === "number";
+}
+
+/**
+ * Type guard for Path batch descriptor
+ */
+function isPathBatch(value: unknown): value is PathBatchDescriptor {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return v.kind === "path" && typeof v.count === "number";
+}
 
 /**
  * Execute RenderAssemble step.
  *
- * Finalization step that ensures render output is accessible at a stable output slot.
- *
- * **Current Implementation:**
- * - Legacy mode: Validates RenderTree exists in output slot (original behavior)
- * - Stub mode: Creates minimal RenderFrameIR if no render tree exists
- * - Future IR mode: Assembles RenderFrameIR from materialized buffers
- *
- * Semantics (per spec §12.2 Step 5):
- * - Render node has already written RenderTree to its output slot
- * - This step reads that value and ensures it's at step.outSlot
- * - No transforms applied - just a finalization boundary
- *
- * Algorithm:
- * 1. Try to read render tree from step.outSlot
- * 2. If exists, validation passes (legacy path)
- * 3. If not exists, create stub RenderFrameIR (migration path)
- * 4. Render output is now accessible for extraction by ScheduleExecutor
- *
- * Note: rootNodeIndex is available for future use (if needed to locate render node's
- * output slot), but current spec suggests render node writes directly to step.outSlot.
- *
- * **Future IR Mode (Phase C+D):**
- * When enabled, this will:
- * 1. Check if materialized buffers exist for instances/paths
- * 2. Call assembleInstanceBuffers() for Instances2D passes
- * 3. Call assemblePathGeometry() for Paths2D passes
- * 4. Build RenderFrameIR with passes array and clear spec
- * 5. Write RenderFrameIR to step.outSlot
- *
- * For now, we stub this by creating a minimal empty RenderFrameIR when
- * the legacy RenderTree is not present, allowing the new renderFrame() path
- * to be tested.
+ * Assembles final RenderFrameIR from batch descriptors and materialized buffers.
  *
  * @param step - RenderAssemble step specification
- * @param _program - Compiled program (not used - render tree already in ValueStore)
- * @param runtime - Runtime state (contains ValueStore with render tree)
+ * @param _program - Compiled program (not used directly)
+ * @param runtime - Runtime state containing ValueStore
  */
 export function executeRenderAssemble(
   step: StepRenderAssemble,
   _program: CompiledProgramIR,
   runtime: RuntimeState,
 ): void {
-  // Per spec: "Typically trivial: the render node already wrote a RenderTree/RenderCmds
-  // to its output slot. This step exists so you have a single stable 'finalization'
-  // boundary for hot-swap + tracing."
+  const passes: (Instances2DPassIR | Paths2DPassIR)[] = [];
 
-  // Try to read render tree from output slot
-  // This validates the slot is written (render node succeeded)
+  // 1. Try to read Instance2D batch list
   try {
-    const renderTree = runtime.values.read(step.outSlot);
+    const instance2dList = runtime.values.read(step.instance2dListSlot);
 
-    // If we successfully read a value, it's either:
-    // - Legacy RenderTree (from old render nodes)
-    // - RenderFrameIR (from new IR-aware render nodes)
-    // Either way, our job is done - the value is accessible
+    if (Array.isArray(instance2dList)) {
+      for (const batch of instance2dList) {
+        if (isInstance2DBatch(batch)) {
+          // Read materialized buffers from ValueStore
+          const x = runtime.values.read(batch.xSlot) as Float32Array;
+          const y = runtime.values.read(batch.ySlot) as Float32Array;
+          const radius = runtime.values.read(batch.radiusSlot) as Float32Array;
+          const r = runtime.values.read(batch.rSlot) as Float32Array;
+          const g = runtime.values.read(batch.gSlot) as Float32Array;
+          const b = runtime.values.read(batch.bSlot) as Float32Array;
+          const a = runtime.values.read(batch.aSlot) as Float32Array;
 
-    // For future Phase 7 tracing work, we could emit trace event here
-    void renderTree; // Silence unused variable warning
+          // Assemble Instances2DPassIR
+          const pass: Instances2DPassIR = {
+            kind: "instances2d",
+            header: {
+              blendMode: "srcOver",
+              sortOrder: 0,
+            },
+            buffers: {
+              x: { kind: "f32", slot: batch.xSlot, offset: 0, stride: 1 },
+              y: { kind: "f32", slot: batch.ySlot, offset: 0, stride: 1 },
+              radius: { kind: "f32", slot: batch.radiusSlot, offset: 0, stride: 1 },
+              r: { kind: "f32", slot: batch.rSlot, offset: 0, stride: 1 },
+              g: { kind: "f32", slot: batch.gSlot, offset: 0, stride: 1 },
+              b: { kind: "f32", slot: batch.bSlot, offset: 0, stride: 1 },
+              a: { kind: "f32", slot: batch.aSlot, offset: 0, stride: 1 },
+            },
+            material: {
+              shape: "circle",
+            },
+            instanceCount: batch.count,
+            // Store actual buffer data for renderer access
+            _bufferData: { x, y, radius, r, g, b, a },
+          };
 
-    return;
+          passes.push(pass);
+        }
+      }
+    }
   } catch (_error) {
-    // Slot is uninitialized - this can happen during migration when
-    // render nodes haven't been updated to write RenderTree/RenderFrameIR yet
-
-    // Create a minimal stub RenderFrameIR to allow Canvas2DRenderer.renderFrame()
-    // to work even without a fully migrated compiler
-    const stubFrame: RenderFrameIR = {
-      version: 1,
-      clear: {
-        mode: "none",
-      },
-      passes: [],
-    };
-
-    // Write stub frame to output slot
-    runtime.values.write(step.outSlot, stubFrame);
+    // Slot not initialized - no instance2d batches
   }
 
-  // Future Phase C+D work:
-  // - Check for materialized buffer slots in step metadata
-  // - Call assembleInstanceBuffers() if instance buffers present
-  // - Call assemblePathGeometry() if path buffers present
-  // - Build RenderFrameIR with real passes
-  // - Emit trace event for debugger
-  // - Optional validation of render tree structure
+  // 2. Try to read Path batch list
+  try {
+    const pathList = runtime.values.read(step.pathBatchListSlot);
+
+    if (Array.isArray(pathList)) {
+      for (const batch of pathList) {
+        if (isPathBatch(batch)) {
+          // Read materialized buffers
+          const cmds = runtime.values.read(batch.cmdsSlot) as Uint16Array;
+          const params = runtime.values.read(batch.paramsSlot) as Float32Array;
+          const r = runtime.values.read(batch.rSlot) as Float32Array;
+          const g = runtime.values.read(batch.gSlot) as Float32Array;
+          const b = runtime.values.read(batch.bSlot) as Float32Array;
+          const a = runtime.values.read(batch.aSlot) as Float32Array;
+
+          // Assemble Paths2DPassIR
+          const pass: Paths2DPassIR = {
+            kind: "paths2d",
+            header: {
+              blendMode: "srcOver",
+              sortOrder: 0,
+            },
+            geometry: {
+              commands: { kind: "u16", slot: batch.cmdsSlot, offset: 0, stride: 1 },
+              params: { kind: "f32", slot: batch.paramsSlot, offset: 0, stride: 1 },
+              pathCount: batch.count,
+              pathOffsets: { kind: "u32", slot: 0, offset: 0, stride: 1 },
+            },
+            style: {
+              fill: {
+                r: { kind: "f32", slot: batch.rSlot, offset: 0, stride: 1 },
+                g: { kind: "f32", slot: batch.gSlot, offset: 0, stride: 1 },
+                b: { kind: "f32", slot: batch.bSlot, offset: 0, stride: 1 },
+                a: { kind: "f32", slot: batch.aSlot, offset: 0, stride: 1 },
+              },
+            },
+            pathCount: batch.count,
+            // Store actual buffer data for renderer access
+            _bufferData: { cmds, params, r, g, b, a },
+          };
+
+          passes.push(pass);
+        }
+      }
+    }
+  } catch (_error) {
+    // Slot not initialized - no path batches
+  }
+
+  // 3. Create RenderFrameIR
+  const frame: RenderFrameIR = {
+    version: 1,
+    clear: {
+      mode: "none",
+    },
+    passes,
+  };
+
+  // 4. Write to output slot
+  runtime.values.write(step.outFrameSlot, frame);
 }

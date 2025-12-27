@@ -141,6 +141,7 @@ describe("ScheduleExecutor.swapProgram()", () => {
         {
           id: "step-time",
           kind: "timeDerive",
+        deps: [],
           tAbsMsSlot: 0,
           timeModel: { kind: "infinite", windowMs: 10000 },
           out: { tModelMs: 1 },
@@ -191,6 +192,7 @@ describe("ScheduleExecutor.swapProgram()", () => {
         {
           id: "step-time",
           kind: "timeDerive",
+        deps: [],
           tAbsMsSlot: 0,
           timeModel: { kind: "infinite", windowMs: 10000 },
           out: { tModelMs: 1 },
@@ -291,6 +293,7 @@ describe("ScheduleExecutor.swapProgram()", () => {
         {
           id: "step-time",
           kind: "timeDerive",
+        deps: [],
           tAbsMsSlot: 0,
           timeModel: { kind: "infinite", windowMs: 10000 },
           out: { tModelMs: 1 },

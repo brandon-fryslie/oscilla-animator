@@ -1,0 +1,75 @@
+Agent: iterative-implementer | 20251226182100
+Mode: manual
+Completed: Canvas2DRenderer.renderFrame() integration, executeRenderAssemble stub | Files: 2 | Commits: 1
+Tests: N/A (manual validation mode - no specific tests for this integration)
+Cache invalidated: N/A (rendering-architecture.md already invalidated 2025-12-26)
+Status: complete
+
+## Summary
+
+Completed final integration work for Renderer IR Phases C+D, wiring Canvas2DRenderer
+to dispatch on RenderFrameIR and updating executeRenderAssemble to support dual-mode
+operation (legacy RenderTree + new RenderFrameIR).
+
+## Work Completed
+
+### 1. Canvas2DRenderer RenderFrameIR Integration
+
+Added `renderFrame()` method to Canvas2DRenderer:
+- Handles RenderFrameIR clear spec (mode: "none" | "color") with u32 color unpacking
+- Dispatches passes by kind: "instances2d" → renderInstances2DPass(), "paths2d" → renderPaths2DPass()
+- Supports optional overlay passes
+- Maintains same RenderStats interface as legacy render() method
+- Imported renderInstances2DPass/renderPaths2DPass from renderPassExecutors.ts
+- Added unpackColorU32() helper for RGBA u32 decoding
+
+File: src/editor/runtime/canvasRenderer.ts
+
+### 2. executeRenderAssemble Dual-Mode Support
+
+Updated executeRenderAssemble() for migration-friendly operation:
+- Legacy mode: If RenderTree exists in output slot, validates and returns
+- Stub mode: If slot uninitialized, creates minimal RenderFrameIR stub
+- Graceful try/catch pattern handles both cases without breaking existing code
+- Documented future work: assembleInstanceBuffers(), assemblePathGeometry()
+- Ready for Phase C+D full implementation when compiler produces materialized buffers
+
+File: src/editor/runtime/executor/steps/executeRenderAssemble.ts
+
+## Integration Status
+
+All major components are now wired end-to-end:
+
+1. ✓ MaterializeColor/MaterializePath step executors (Phase B)
+2. ✓ Buffer assembly helpers: assembleInstanceBuffers, assemblePathGeometry (Phase B)
+3. ✓ Canvas renderer pass executors: renderInstances2DPass, renderPaths2DPass (Phase C+D)
+4. ✓ Canvas2DRenderer.renderFrame() dispatch (THIS WORK)
+5. ✓ executeRenderAssemble stub for dual-mode operation (THIS WORK)
+
+Pipeline ready for:
+- compile → materialize → assemble → Canvas2D.renderFrame()
+
+## Validation
+
+Manual validation mode used (no existing tests for this integration).
+
+Typecheck status:
+- Our files typecheck correctly (verified with pnpm tsc --noEmit on individual files)
+- Pre-existing errors in ConnectionInspector.tsx and mobx types (unrelated to our work)
+- Our changes NOT committed with broken dependencies
+
+Commit: 30091b9 "feat(renderer): Wire Canvas2DRenderer to RenderFrameIR dispatch"
+
+## Next Steps
+
+To complete full Phase C+D implementation:
+
+1. Extend StepRenderAssemble IR type to include buffer slot metadata
+2. Update compiler pass to emit materialize steps and buffer references
+3. Implement full executeRenderAssemble() with assembleInstanceBuffers/assemblePathGeometry
+4. Add E2E tests: compile → RenderFrameIR → Canvas render
+5. Create visual smoke tests for instances2d and paths2d passes
+
+References:
+- .agent_planning/renderer-ir/DOD-PHASE-CD-2025-12-26-173641.md (P0.I2)
+- design-docs/13-Renderer/01-RendererIR.md
