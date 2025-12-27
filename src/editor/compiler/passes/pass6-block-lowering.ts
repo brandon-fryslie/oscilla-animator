@@ -23,6 +23,8 @@ import type { TypeDesc } from "../ir/types";
 import type { CompileError } from "../types";
 import type { ValueRefPacked } from "../ir/lowerTypes";
 import type { Domain } from "../unified/Domain";
+import { BLOCK_DEFS_BY_TYPE } from "../../blocks/registry";
+import { validatePureBlockOutput } from "../pure-block-validator";
 
 // Re-export ValueRefPacked for backwards compatibility
 export type { ValueRefPacked } from "../ir/lowerTypes";
@@ -272,6 +274,7 @@ export function pass6BlockLowering(
 
       // Collect output port artifacts for this block (keyed by port ID)
       const outputRefs = new Map<string, ValueRefPacked>();
+      const blockArtifacts = new Map<string, Artifact>();
 
       for (const output of block.outputs) {
         const portKey = `${block.id}:${output.id}`;
@@ -283,6 +286,9 @@ export function pass6BlockLowering(
           continue;
         }
 
+        // Store artifact for validation
+        blockArtifacts.set(output.id, artifact);
+
         // Translate artifact to IR
         const valueRef = artifactToValueRef(
           artifact,
@@ -293,6 +299,27 @@ export function pass6BlockLowering(
 
         if (valueRef) {
           outputRefs.set(output.id, valueRef);
+        }
+      }
+
+      // Validate pure block outputs (Deliverable 3: Pure Block Compilation Enforcement)
+      // Only validate if the block has a definition with capability metadata
+      const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
+      if (blockDef && blockDef.capability === 'pure') {
+        try {
+          validatePureBlockOutput(
+            block.type,
+            blockDef.compileKind,
+            blockArtifacts
+          );
+        } catch (error) {
+          // Convert validation error to compilation error
+          const validationError = error as { message: string; code: string };
+          errors.push({
+            code: "PureBlockViolation",
+            message: `Pure block validation failed for "${block.type}": ${validationError.message}`,
+            where: { blockId: block.id },
+          });
         }
       }
 

@@ -297,24 +297,8 @@ export interface TargetScene {
 // Patch Graph Data Model
 // =============================================================================
 
-export type BlockId = string;
-
-export interface PortRef {
-  blockId: BlockId;
-  port: string;
-}
-
-export interface CompilerConnection {
-  id?: string;
-  from: PortRef; // output port
-  to: PortRef; // input port
-  /** Optional lens stack for value transformation (applied after adapters) */
-  lensStack?: LensInstance[];
-  /** Optional adapter chain for type conversion (applied before lenses) */
-  adapterChain?: AdapterStep[];
-  /** Whether this connection is enabled (default: true) */
-  enabled?: boolean;
-}
+import type { BlockType, BlockId, BlockCategory, Bus, Publisher, Listener } from '../types';
+export type { BlockType, BlockId, BlockCategory };
 
 export interface BlockInstance {
   id: BlockId;
@@ -329,7 +313,7 @@ export interface BlockInstance {
  * These will be available when buses are present in a patch.
  */
 // Import types from main editor types for use in CompilerPatch
-import type { Bus, Publisher, Listener, LensInstance, AdapterStep } from '../types';
+import type { LensInstance, AdapterStep } from '../types';
 // Re-export for consumers
 export type { Bus, Publisher, Listener, LensInstance, AdapterStep };
 
@@ -338,33 +322,15 @@ import type { Domain } from './unified/Domain';
 // Re-export Domain for consumers
 export type { Domain };
 
-import type { DefaultSourceState } from '../types';
-
-/**
- * Extended CompilerPatch with bus support.
- */
-export interface CompilerPatch {
-  blocks: Map<BlockId, BlockInstance>;
-  connections: readonly CompilerConnection[];
-  output?: PortRef;
-
-  // Bus-related additions (Phase 2)
-  buses: Bus[];
-  publishers: Publisher[];
-  listeners: Listener[];
-
-  // Default sources for lens parameters (Phase 3)
-  defaultSources: Record<string, DefaultSourceState>;
-
-  // Lookup-friendly map: "blockId:slotId" -> runtime value
-  // Used by resolveDefaultSource to get user-edited values
-  defaultSourceValues?: Record<string, unknown>;
+export interface CompilerConnection {
+  from: { block: BlockId; port: string };
+  to: { block: BlockId; port: string };
 }
 
-// =============================================================================
-// Artifacts: Compiled Values
-// =============================================================================
-
+/**
+ * Discriminated union of artifacts.
+ * Each kind has a precise value type - not `unknown`.
+ */
 export type Artifact =
   | { kind: 'Scalar:number'; value: number }
   | { kind: 'Scalar:string'; value: string }
@@ -405,6 +371,7 @@ export type Artifact =
   | { kind: 'RenderTree'; value: (tMs: number, ctx: RuntimeCtx) => DrawNode }
   | { kind: 'FilterDef'; value: unknown }
 
+  // Phase 2 spec variants (for encapsulation)
   | { kind: 'Spec:LineMorph'; value: unknown }
   | { kind: 'Spec:Particles'; value: unknown }
   | { kind: 'Spec:RevealMask'; value: unknown }
@@ -412,28 +379,20 @@ export type Artifact =
   | { kind: 'Spec:DeformCompositor'; value: unknown }
   | { kind: 'Spec:ProgramStack'; value: unknown }
 
-  // Phase 2: Field expression artifacts for lazy evaluation
-  | { kind: 'FieldExpr'; value: unknown }
-
   // Phase 3: Domain for per-element identity
   | { kind: 'Domain'; value: Domain }
 
-  // Event artifacts for TimeRoot wrap/end events
-  | { kind: 'Event'; value: (tMs: number, lastTMs: number, ctx: RuntimeCtx) => boolean }
-
+  // Phase 2: FieldExpr (lazy field expression)
+  | { kind: 'FieldExpr'; value: unknown }
+  // Phase 3: Event (TimeRoot wrap/end events)
+  | { kind: 'Event'; value: unknown }
   // Canvas 2D render artifact
   | { kind: 'CanvasRender'; value: (tMs: number, ctx: RuntimeCtx) => import('../runtime/renderCmd').RenderTree }
 
-  | { kind: 'Error'; message: string; where?: { blockId?: string; port?: string } };
+  // Phase 2: ExternalAsset (future - IO capability)
+  | { kind: 'ExternalAsset'; value: unknown };
 
-/**
- * A compiled block returns one Artifact per declared output port.
- */
 export type CompiledOutputs = Record<string, Artifact>;
-
-// =============================================================================
-// Block Compiler Contract
-// =============================================================================
 
 export interface BlockCompiler {
   type: string;
@@ -455,8 +414,6 @@ export interface BlockCompiler {
     ctx: CompileCtx;
   }): CompiledOutputs;
 }
-
-export type BlockRegistry = Record<string, BlockCompiler>;
 
 // =============================================================================
 // Compile Errors
@@ -495,7 +452,9 @@ export type CompileErrorCode =
   // Sprint 2: IR validation
   | 'IRValidationFailed'
   // Sprint 2: Missing required inputs
-  | 'MissingInput';
+  | 'MissingInput'
+  // Primitives: Pure block validation (Deliverable 3)
+  | 'PureBlockViolation';
 
 export interface CompileError {
   code: CompileErrorCode;
@@ -517,76 +476,27 @@ export interface CompileResult {
   program?: Program<RenderTree>;
   /** Canvas render program (RenderCmd-based) */
   canvasProgram?: CanvasProgram;
-  /** TimeModel inferred from the patch (present when ok === true) */
+  /** Time model defining temporal topology */
   timeModel?: TimeModel;
-  errors: readonly CompileError[];
-  compiledPortMap?: Map<string, Artifact>;
+  /** Detailed errors (if ok: false) */
+  errors: CompileError[];
 
-  // Sprint 2, P0-4: Dual-Emit Integration
-  /** Intermediate Representation (when emitIR flag is true) */
+  // Phase 2 additions for dual-emit support (Sprint 2)
+  /** IR representation (NEW) */
   ir?: LinkedGraphIR;
-  /** Final Compiled IR (Pass 9 output) */
-  compiledIR?: CompiledProgramIR;
-  /** IR compilation warnings (non-fatal IR errors) */
-  irWarnings?: readonly CompileError[];
-
-  // Phase 4, Sprint 8: SignalExpr Runtime Integration
-  /** SignalExpr IR table (extracted from LinkedGraphIR for runtime evaluation) */
-  signalTable?: SignalExprTable;
-  /** Constant pool for IR evaluation */
-  constPool?: unknown[];
-  /** State layout for stateful operations */
-  stateLayout?: StateLayoutEntry[];
-
-  // Debug Infrastructure
-  /** Debug index for string interning (when debug tracing enabled) */
+  /** Compiled program IR (from Pass 9: Codegen) */
+  programIR?: CompiledProgramIR;
+  /** Debug index mapping IR nodes to source blocks */
   debugIndex?: DebugIndex;
 }
 
-// =============================================================================
-// WP1: TimeRoot Bundle Interface and Auto-Publication
-// =============================================================================
-
 /**
- * Standardized outputs from all TimeRoot blocks.
- * Auto-published to canonical buses by compiler.
+ * Full patch representation including blocks, connections, buses, and metadata.
  */
-export interface TimeOutputs {
-  time: Artifact;      // Signal<time> - monotonic
-  phaseA: Artifact;    // Signal<phase> - primary phase (0..1)
-  wrap: Artifact;      // Event - fires on wrap/direction flip
-  energy: Artifact;    // Signal<number> - speed/intensity
+export interface CompilerPatch {
+  blocks: readonly BlockInstance[];
+  connections: readonly CompilerConnection[];
+  buses: readonly Bus[];
+  listeners: readonly Listener[];
+  publishers: readonly Publisher[];
 }
-
-/**
- * Auto-publication configuration for TimeRoot outputs to canonical buses.
- * Generated at compile time, NOT persisted in patch data.
- */
-export interface AutoPublication {
-  busName: string;     // 'phaseA', 'pulse', 'energy', etc.
-  artifactKey: string; // Key in the TimeOutputs bundle
-  sortKey: number;     // Priority: 0 = system (highest), 100 = manual
-}
-
-/**
- * Extended TimeRoot compiler result that includes auto-publications.
- */
-export interface TimeRootCompileResult {
-  artifacts: Record<string, Artifact>;
-  autoPublications: AutoPublication[];
-}
-
-/**
- * Reserved bus contracts for WP0 validation.
- * These are the canonical buses that TimeRoot blocks auto-publish to.
- */
-export const RESERVED_BUSES = {
-  phaseA: { type: 'Signal<phase>', combine: 'last' },
-  pulse: { type: 'Event', combine: 'or' },
-  energy: { type: 'Signal<number>', combine: 'sum' },
-  palette: { type: 'Signal<color>', combine: 'last' },
-  progress: { type: 'Signal<number>', combine: 'last' },
-} as const;
-
-export type ReservedBusName = keyof typeof RESERVED_BUSES;
-export type ReservedBusContract = typeof RESERVED_BUSES[ReservedBusName];
