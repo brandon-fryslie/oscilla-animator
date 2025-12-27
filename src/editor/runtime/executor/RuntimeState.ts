@@ -336,6 +336,10 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
         objectSlots.add(step.pathExprSlot);
         objectSlots.add(step.outCmdsSlot);
         objectSlots.add(step.outParamsSlot);
+        objectSlots.add(step.outCmdStartSlot);
+        objectSlots.add(step.outCmdLenSlot);
+        objectSlots.add(step.outPointStartSlot);
+        objectSlots.add(step.outPointLenSlot);
         break;
 
       case "materializeTestGeometry":
@@ -367,6 +371,15 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
           for (const batch of step.pathBatches) {
             objectSlots.add(batch.cmdsSlot);
             objectSlots.add(batch.paramsSlot);
+            objectSlots.add(batch.cmdStartSlot);
+            objectSlots.add(batch.cmdLenSlot);
+            objectSlots.add(batch.pointStartSlot);
+            objectSlots.add(batch.pointLenSlot);
+            if (batch.fillColorSlot !== undefined) objectSlots.add(batch.fillColorSlot);
+            if (batch.strokeColorSlot !== undefined) objectSlots.add(batch.strokeColorSlot);
+            if (batch.strokeWidthSlot !== undefined) objectSlots.add(batch.strokeWidthSlot);
+            if (batch.opacitySlot !== undefined) objectSlots.add(batch.opacitySlot);
+            objectSlots.add(batch.domainSlot);
           }
         }
         objectSlots.add(step.outFrameSlot);

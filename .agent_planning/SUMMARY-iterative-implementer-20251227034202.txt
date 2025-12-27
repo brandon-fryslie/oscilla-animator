@@ -1,0 +1,25 @@
+Agent: iterative-implementer | 2025-12-27T03:00:00Z
+Mode: manual
+Completed: Phase 2 IR Schema - 3D types, camera/mesh tables, new opcodes | Files: 4 | Commits: 1
+Tests: N/A (type definitions only)
+Cache invalidated: 0 entries (new feature, no existing cache)
+Status: complete
+
+Summary:
+Phase 2 of 3D Projection Initiative completed successfully. Added complete IR schema
+for 3D support including camera IR, mesh IR (extrusion-only), Instance2DBufferRef,
+and performance counters.
+
+Deliverables:
+1. Created types3d.ts with CameraIR, CameraEval, CameraTable
+2. Created MeshIR (extrusion-only), MeshBufferRef, MeshTable
+3. Created Instance2DBufferRef for projection output
+4. Created StepPerfCounters for 3D step instrumentation
+5. Extended CompiledProgramIR with optional cameras and meshes tables
+6. Added 3 new OpCodes: CameraEval (720), MeshMaterialize (721), Instances3DProjectTo2D (722)
+7. Added "3d" category to OpCodeCategory enum
+8. Exported all new types from ir/index.ts
+
+All types are properly documented with references to design docs.
+No runtime implementation yet - this is schema-only phase.
+TypeCheck passed (pre-existing errors unrelated to this work).

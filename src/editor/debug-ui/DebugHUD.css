@@ -1,0 +1,88 @@
+/**
+ * Debug HUD Styles
+ */
+
+.debug-hud {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(30, 30, 35, 0.9);
+  border: 1px solid rgba(100, 100, 120, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+.status-light {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  background: rgba(50, 50, 60, 0.6);
+  border: 1px solid rgba(80, 80, 100, 0.4);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 70px;
+}
+
+.status-light:hover {
+  background: rgba(60, 60, 70, 0.8);
+  border-color: rgba(100, 100, 120, 0.6);
+}
+
+.status-light-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+}
+
+.status-light-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: inherit;
+}
+
+/* Status colors */
+.status-light-ok {
+  color: #6c6;
+  border-color: rgba(100, 200, 100, 0.3);
+}
+
+.status-light-warning {
+  color: #cc6;
+  border-color: rgba(200, 200, 100, 0.3);
+}
+
+.status-light-error {
+  color: #c66;
+  border-color: rgba(200, 100, 100, 0.3);
+}
+
+.status-light-info {
+  color: #8ac;
+  border-color: rgba(100, 150, 200, 0.3);
+}
+
+.status-light-ok:hover {
+  background: rgba(100, 200, 100, 0.1);
+}
+
+.status-light-warning:hover {
+  background: rgba(200, 200, 100, 0.1);
+}
+
+.status-light-error:hover {
+  background: rgba(200, 100, 100, 0.1);
+}
+
+.status-light-info:hover {
+  background: rgba(100, 150, 200, 0.1);
+}

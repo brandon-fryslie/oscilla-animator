@@ -459,6 +459,18 @@ export interface StepMaterializePath extends StepBase {
   /** Output slot for params buffer (Float32Array) */
   outParamsSlot: ValueSlot;
 
+  /** Output slot for per-path command start indices (Uint32Array) */
+  outCmdStartSlot: ValueSlot;
+
+  /** Output slot for per-path command lengths (Uint32Array) */
+  outCmdLenSlot: ValueSlot;
+
+  /** Output slot for per-path point start indices (Uint32Array) */
+  outPointStartSlot: ValueSlot;
+
+  /** Output slot for per-path point lengths (Uint32Array) */
+  outPointLenSlot: ValueSlot;
+
   // Optional flatten tolerance (default from canonical 0.75px)
   /** Flatten tolerance in pixels (undefined = keep curves) */
   flattenTolerancePx?: number;
@@ -571,10 +583,41 @@ export interface Instance2DBatch {
  */
 export interface PathBatch {
   kind: "path";
+  /** Number of paths in the batch (0 if runtime-determined) */
+  count: number;
+  /** Slot containing domain handle */
+  domainSlot: ValueSlot;
   /** Slot containing path commands buffer */
   cmdsSlot: ValueSlot;
-  /** Slot containing path parameters buffer */
+  /** Slot containing path parameters buffer (points XY) */
   paramsSlot: ValueSlot;
+  /** Slot containing per-path command start indices */
+  cmdStartSlot: ValueSlot;
+  /** Slot containing per-path command lengths */
+  cmdLenSlot: ValueSlot;
+  /** Slot containing per-path point start indices */
+  pointStartSlot: ValueSlot;
+  /** Slot containing per-path point lengths */
+  pointLenSlot: ValueSlot;
+
+  /** Optional fill color (scalar or buffer slot) */
+  fillColorSlot?: ValueSlot;
+  /** Optional stroke color (scalar or buffer slot) */
+  strokeColorSlot?: ValueSlot;
+  /** Optional stroke width (scalar or buffer slot) */
+  strokeWidthSlot?: ValueSlot;
+  /** Optional opacity (scalar or buffer slot) */
+  opacitySlot?: ValueSlot;
+
+  /** Draw mode control */
+  draw: { stroke: boolean; fill: boolean };
+
+  /** Optional style settings */
+  fillRule?: "nonzero" | "evenodd";
+  lineCap?: "butt" | "round" | "square";
+  lineJoin?: "miter" | "round" | "bevel";
+  miterLimit?: number;
+  dash?: { pattern: number[]; offset?: number } | null;
 }
 
 // ============================================================================
