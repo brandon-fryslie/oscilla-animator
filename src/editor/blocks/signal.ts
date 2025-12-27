@@ -103,6 +103,10 @@ export const Oscillator = createBlock({
   color: '#3B82F6',
   laneKind: 'Phase',
   priority: 10,
+  // Auto-subscribe phase to phaseA bus when no explicit connection
+  autoBusSubscriptions: {
+    phase: 'phaseA',
+  },
 });
 
 /**
@@ -283,6 +287,10 @@ export const ColorLFO = createBlock({
   color: '#F59E0B',
   laneKind: 'Phase',
   priority: 12,
+  // Auto-subscribe phase to phaseA bus when no explicit connection
+  autoBusSubscriptions: {
+    phase: 'phaseA',
+  },
 });
 
 /**

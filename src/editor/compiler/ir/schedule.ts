@@ -11,7 +11,7 @@
  */
 
 import type { StepId, NodeIndex, BusIndex, ValueSlot, StateId } from "./types";
-import type { ColorBufferDesc, PathCommandStreamDesc, FlattenPolicy } from "../ir/types/BufferDesc";
+import type { ColorBufferDesc, PathCommandStreamDesc, FlattenPolicy } from "../../ir/types/BufferDesc";
 
 // ============================================================================
 // Time Model IR (02-IR-Schema.md §4)

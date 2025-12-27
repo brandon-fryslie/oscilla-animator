@@ -22,8 +22,14 @@ export const FieldAddVec2 = createBlock({
   label: 'Add Vectors',
   description: 'Add two vec2 fields element-wise',
   inputs: [
-    input('a', 'A', 'Field<vec2>'),
-    input('b', 'B', 'Field<vec2>'),
+    input('a', 'A', 'Field<vec2>', {
+      tier: 'primary',
+      defaultSource: { value: [0, 0], world: 'field' },
+    }),
+    input('b', 'B', 'Field<vec2>', {
+      tier: 'primary',
+      defaultSource: { value: [0, 0], world: 'field' },
+    }),
   ],
   outputs: [
     output('out', 'Result', 'Field<vec2>'),
@@ -53,7 +59,10 @@ export const FieldColorize = createBlock({
   label: 'Colorize Field',
   description: 'Map numeric field to colors',
   inputs: [
-    input('values', 'Values', 'Field<number>'),
+    input('values', 'Values', 'Field<number>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'field' },
+    }),
     input('colorA', 'Color A', 'Signal<color>', {
       tier: 'primary',
       defaultSource: {
@@ -133,7 +142,10 @@ export const FieldOpacity = createBlock({
   label: 'Field Opacity',
   description: 'Convert numeric field to opacity',
   inputs: [
-    input('values', 'Values', 'Field<number>'),
+    input('values', 'Values', 'Field<number>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'field' },
+    }),
     input('min', 'Min Opacity', 'Signal<number>', {
       tier: 'primary',
       defaultSource: {
@@ -230,7 +242,10 @@ export const FieldHueGradient = createBlock({
   label: 'Hue Gradient',
   description: 'Generate per-element rainbow colors from domain',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
     input('hueOffset', 'Hue Offset', 'Signal<number>', {
       tier: 'primary',
       defaultSource: {
@@ -342,7 +357,10 @@ export const FieldFromExpression = createBlock({
   label: 'Expression Field',
   description: 'Generate field from expression (i, n, signal). Returns strings.',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
     input('signal', 'Signal', 'Signal<phase>', {
       tier: 'primary',
       defaultSource: {
@@ -388,7 +406,10 @@ export const FieldStringToColor = createBlock({
   label: 'String → Color',
   description: 'Convert Field<string> to Field<color>',
   inputs: [
-    input('strings', 'Strings', 'Field<string>'),
+    input('strings', 'Strings', 'Field<string>', {
+      tier: 'primary',
+      defaultSource: { value: '', world: 'field' },
+    }),
   ],
   outputs: [
     output('colors', 'Colors', 'Field<color>'),

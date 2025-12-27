@@ -900,6 +900,116 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
         lens: { type: 'scale', params: { scale: 10, offset: 2 } } },
     ],
   },
+
+  // =============================================================================
+  // Tutorial Macro - Learn by connecting
+  // =============================================================================
+
+  // Tutorial: All blocks, no connections - user wires everything themselves
+  'macro:tutorial': {
+    blocks: [
+      // ─────────────────────────────────────────────────────────────────────────
+      // PHASE LANE: Time & Animation Sources
+      // These blocks generate the timing signals that drive animations
+      // ─────────────────────────────────────────────────────────────────────────
+
+      // 1. Time Root - The master clock. Everything starts here.
+      //    Outputs: phase (0→1 cycle), cycleT (time within cycle), wrap (trigger each cycle)
+      { ref: 'timeRoot', type: 'CycleTimeRoot', laneKind: 'Phase', label: '① Time Root',
+        params: { periodMs: 2000 } },
+
+      // 2. Oscillator - Converts phase into smooth waves
+      //    Connect phase input ← Time Root's phase output
+      { ref: 'oscillator', type: 'Oscillator', laneKind: 'Phase', label: '② Oscillator',
+        params: { shape: 'sine', amplitude: 1.0, bias: 0 } },
+
+      // 3. Shaper - Transforms wave shapes (smooth, sharpen, etc.)
+      //    Connect in ← Oscillator's out
+      { ref: 'shaper', type: 'Shaper', laneKind: 'Phase', label: '③ Shaper',
+        params: { curve: 'smoothstep' } },
+
+      // 4. Pulse Divider - Creates rhythm by dividing the main cycle
+      //    Connect phase ← Time Root's phase, or use phaseA bus
+      { ref: 'pulseDivider', type: 'PulseDivider', laneKind: 'Phase', label: '④ Pulse Divider',
+        params: { divisions: 4 } },
+
+      // 5. Envelope - Attack/Decay response to triggers
+      //    Connect trigger ← Pulse Divider's tick output
+      { ref: 'envelope', type: 'EnvelopeAD', laneKind: 'Phase', label: '⑤ Envelope',
+        params: { attack: 0.05, decay: 0.3, peak: 1.0 } },
+
+      // 6. Color LFO - Generates cycling colors based on phase
+      //    Connect phase ← Time Root, Oscillator, or phaseA bus
+      { ref: 'colorLfo', type: 'ColorLFO', laneKind: 'Phase', label: '⑥ Color LFO',
+        params: { base: '#3B82F6', hueSpan: 180, sat: 0.8, light: 0.55 } },
+
+      // ─────────────────────────────────────────────────────────────────────────
+      // SCENE LANE: Global Scene Information
+      // ─────────────────────────────────────────────────────────────────────────
+
+      // 7. Viewport Info - Provides canvas dimensions
+      //    Use for centering, responsive layouts
+      { ref: 'viewport', type: 'ViewportInfo', laneKind: 'Scene', label: '⑦ Viewport Info' },
+
+      // ─────────────────────────────────────────────────────────────────────────
+      // FIELDS LANE: Per-Element Data
+      // These create and transform data for each element in the domain
+      // ─────────────────────────────────────────────────────────────────────────
+
+      // 8. Grid Domain - Creates a grid of elements with positions
+      //    This is the "domain" - the set of elements to render
+      { ref: 'gridDomain', type: 'GridDomain', laneKind: 'Fields', label: '⑧ Grid Domain',
+        params: { rows: 8, cols: 8, spacing: 40, originX: 200, originY: 100 } },
+
+      // 9. Stable ID Hash - Per-element randomness that stays consistent
+      //    Connect domain ← Grid Domain's domain output
+      { ref: 'idHash', type: 'StableIdHash', laneKind: 'Fields', label: '⑨ ID Hash (Random)',
+        params: { salt: 42 } },
+
+      // 10. Field Colorize - Creates color gradients from hash values
+      //     Connect values ← ID Hash's hash output
+      { ref: 'colorize', type: 'FieldColorize', laneKind: 'Fields', label: '⑩ Colorize',
+        params: { colorA: '#3B82F6', colorB: '#EC4899', mode: 'lerp' } },
+
+      // 11. Broadcast - Spreads a Signal value across all field elements
+      //     Connect signal ← any Signal output (Oscillator, Shaper, etc.)
+      //     Connect domain ← Grid Domain's domain
+      { ref: 'broadcast', type: 'FieldFromSignalBroadcast', laneKind: 'Fields', label: '⑪ Broadcast Signal' },
+
+      // 12. Constant Radius - Fixed value for all elements
+      //     Connect domain ← Grid Domain's domain
+      { ref: 'radius', type: 'FieldConstNumber', laneKind: 'Fields', label: '⑫ Base Radius',
+        params: { value: 8 } },
+
+      // ─────────────────────────────────────────────────────────────────────────
+      // PROGRAM LANE: Rendering
+      // The final output that draws to the canvas
+      // ─────────────────────────────────────────────────────────────────────────
+
+      // 13. Render - Draws all elements
+      //     Required: domain, positions
+      //     Optional: radius, color, opacity
+      { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: '⑬ Render',
+        params: { opacity: 0.9 } },
+    ],
+
+    // Minimal essential connections - Envelope REQUIRES a trigger to function
+    // All other connections are left for the user to create
+    connections: [
+      // This connection is required for the Envelope to work at all
+      { fromRef: 'pulseDivider', fromSlot: 'tick', toRef: 'envelope', toSlot: 'trigger' },
+    ],
+
+    // Publish Time Root outputs to standard buses for reference
+    publishers: [
+      { fromRef: 'timeRoot', fromSlot: 'phase', busName: 'phaseA' },
+      { fromRef: 'envelope', fromSlot: 'value', busName: 'energy' },
+      { fromRef: 'pulseDivider', fromSlot: 'tick', busName: 'pulse' },
+    ],
+
+    // NO LISTENERS - User will connect via buses or direct wires
+    listeners: [],
+  },
 };
 
 /**

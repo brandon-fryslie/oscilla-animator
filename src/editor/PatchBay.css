@@ -302,6 +302,22 @@
   animation: warning-glow 1s ease-in-out infinite;
 }
 
+/* Tutorial highlight - pulsing glow to guide users */
+@keyframes tutorial-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px 2px rgba(107, 138, 253, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 16px 4px rgba(167, 139, 250, 0.6);
+  }
+}
+
+.block.tutorial-highlight {
+  outline: 2px solid rgba(107, 138, 253, 0.9);
+  outline-offset: 2px;
+  animation: tutorial-pulse 1.5s ease-in-out infinite;
+}
+
 /* Block color indicator - thin left bar */
 .block-color-indicator {
   position: absolute;

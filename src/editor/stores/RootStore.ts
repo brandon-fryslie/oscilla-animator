@@ -14,6 +14,7 @@ import { LogStore } from '../logStore';
 import { EventDispatcher } from '../events';
 import { DiagnosticHub } from '../diagnostics/DiagnosticHub';
 import { ActionExecutor } from '../diagnostics/ActionExecutor';
+import { TutorialStore } from './TutorialStore';
 import type { Block, Bus, Composite, Lane, Patch, Slot } from '../types';
 
 export class RootStore {
@@ -33,6 +34,9 @@ export class RootStore {
   diagnosticHub: DiagnosticHub;
   diagnosticStore: DiagnosticStore;
   actionExecutor: ActionExecutor;
+
+  // Tutorial
+  tutorialStore: TutorialStore;
 
   private nextId = 1;
 
@@ -70,6 +74,9 @@ export class RootStore {
 
         );
 
+    // Create tutorial store
+    this.tutorialStore = new TutorialStore(this);
+
     makeObservable(this, {
       selectedBlock: computed,
       selectedBus: computed,
@@ -92,10 +99,23 @@ export class RootStore {
    * This decouples stores from each other - they communicate via events.
    */
   private setupEventListeners(): void {
-    // MacroExpanded → Auto-clear logs if setting enabled
-    this.events.on('MacroExpanded', () => {
+    // MacroExpanded → Auto-clear logs if setting enabled, trigger tutorial if needed
+    this.events.on('MacroExpanded', (event) => {
       if (this.logStore.autoClearOnMacro) {
         this.logStore.clear();
+      }
+
+      // Start tutorial if this is the tutorial macro
+      if (event.macroType === 'macro:tutorial') {
+        // Build block ID to label mapping from the created blocks
+        const blockIdToLabel = new Map<string, string>();
+        for (const blockId of event.createdBlockIds) {
+          const block = this.patchStore.blocks.find(b => b.id === blockId);
+          if (block) {
+            blockIdToLabel.set(blockId, block.label);
+          }
+        }
+        this.tutorialStore.start(blockIdToLabel);
       }
     });
 

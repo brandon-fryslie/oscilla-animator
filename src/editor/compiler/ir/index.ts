@@ -93,6 +93,8 @@ export type {
   StepNodeEval,
   StepBusEval,
   StepMaterialize,
+  StepMaterializeColor,
+  StepMaterializePath,
   StepRenderAssemble,
   StepDebugProbe,
 

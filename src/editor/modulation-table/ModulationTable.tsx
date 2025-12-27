@@ -661,7 +661,12 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
   // Handle lens chain update
   const handleLensChainChange = useCallback(
     (lensChain: LensDefinition[]) => {
-      if (!lensEditor) return;
+      console.log('[ModulationTable] handleLensChainChange called:', { lensChain, lensEditor });
+      if (!lensEditor) {
+        console.log('[ModulationTable] No lensEditor, returning');
+        return;
+      }
+      console.log('[ModulationTable] Calling updateCellLenses:', { rowKey: lensEditor.rowKey, chainLength: lensChain.length });
       store.updateCellLenses(lensEditor.rowKey, lensChain.length > 0 ? lensChain : undefined);
     },
     [store, lensEditor]

@@ -23,7 +23,10 @@ import type { Diagnostic, Severity, TargetRef, DiagnosticAction } from './diagno
 import { isNonEmptyString } from './types/helpers';
 import './LogWindow.css';
 
-type LogSize = 'collapsed' | 'compact' | 'full';
+// Height constraints for the resizable log window
+const MIN_HEIGHT = 100;
+const MAX_HEIGHT = 600;
+const DEFAULT_HEIGHT = 200;
 
 /**
  * Format timestamp as HH:MM:SS.mmm
@@ -372,7 +375,25 @@ export const LogWindow = observer((): React.ReactElement => {
   const diagnosticStore = store.diagnosticStore;
   const actionExecutor = store.actionExecutor;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState<LogSize>('collapsed');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Expanded state (collapsed/expanded)
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Height for resizing (persisted in localStorage)
+  const [height, setHeight] = useState(() => {
+    try {
+      const saved = localStorage.getItem('log-window-height');
+      return saved ? Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, parseInt(saved, 10))) : DEFAULT_HEIGHT;
+    } catch {
+      return DEFAULT_HEIGHT;
+    }
+  });
+
+  // Drag state for resize handle
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartY = useRef(0);
+  const dragStartHeight = useRef(0);
 
   // Auto-scroll to bottom when new entries arrive
   useEffect(() => {
@@ -380,6 +401,57 @@ export const LogWindow = observer((): React.ReactElement => {
       scrollRef.current.scrollTop = 0; // Newest at top
     }
   }, [logStore.filteredEntries.length, logStore.autoScroll]);
+
+  // Auto-open when errors occur
+  const prevErrorCount = useRef(diagnosticStore.errorCount + diagnosticStore.fatalCount);
+  useEffect(() => {
+    const currentErrorCount = diagnosticStore.errorCount + diagnosticStore.fatalCount;
+    // Only auto-open on NEW errors (count increased)
+    if (currentErrorCount > prevErrorCount.current && !isExpanded) {
+      setIsExpanded(true);
+    }
+    prevErrorCount.current = currentErrorCount;
+  }, [diagnosticStore.errorCount, diagnosticStore.fatalCount, isExpanded]);
+
+  // Save height to localStorage when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('log-window-height', height.toString());
+    } catch {
+      // Ignore storage errors
+    }
+  }, [height]);
+
+  // Resize drag handlers
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    dragStartY.current = e.clientY;
+    dragStartHeight.current = height;
+  }, [height]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Dragging up increases height (clientY decreases)
+      const delta = dragStartY.current - e.clientY;
+      const newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, dragStartHeight.current + delta));
+      setHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   const handleToggleLevel = (level: LogLevel) => {
     logStore.toggleLevel(level);
@@ -393,12 +465,8 @@ export const LogWindow = observer((): React.ReactElement => {
     logStore.clear();
   };
 
-  const cycleSize = () => {
-    setSize((prev) => {
-      if (prev === 'collapsed') return 'compact';
-      if (prev === 'compact') return 'full';
-      return 'collapsed';
-    });
+  const toggleExpanded = () => {
+    setIsExpanded((prev) => !prev);
   };
 
   // Diagnostic handlers
@@ -461,22 +529,35 @@ export const LogWindow = observer((): React.ReactElement => {
 
   const isDiagnosticsHealthy = diagTotalCount === 0;
 
-  const sizeIcon = size === 'collapsed' ? '\u25B2' : size === 'compact' ? '\u25C6' : '\u25BC';
-  const sizeTitle = size === 'collapsed' ? 'Expand logs' : size === 'compact' ? 'Full size' : 'Collapse';
+  const toggleIcon = isExpanded ? '\u25BC' : '\u25B2';
+  const toggleTitle = isExpanded ? 'Collapse' : 'Expand logs';
 
   return (
-    <div className={`log-window log-window-${size}`}>
-      {/* Header bar - clickable to cycle sizes */}
+    <div
+      ref={containerRef}
+      className={`log-window ${isExpanded ? 'log-window-expanded' : 'log-window-collapsed'} ${isDragging ? 'dragging' : ''}`}
+      style={isExpanded ? { height: `${height}px` } : undefined}
+    >
+      {/* Resize handle - only shown when expanded */}
+      {isExpanded && (
+        <div
+          className="log-resize-handle"
+          onMouseDown={handleDragStart}
+          title="Drag to resize"
+        />
+      )}
+
+      {/* Header bar - clickable to toggle */}
       <div
         className="log-header"
-        onClick={cycleSize}
-        title={sizeTitle}
+        onClick={toggleExpanded}
+        title={toggleTitle}
         style={{ cursor: 'pointer' }}
       >
-        <span className="log-size-icon">{sizeIcon}</span>
+        <span className="log-size-icon">{toggleIcon}</span>
         <span className="log-title">Logs</span>
 
-        {size !== 'collapsed' && (
+        {isExpanded && (
           <>
             <div className="log-filters" onClick={(e) => e.stopPropagation()}>
               <MultiSelect
@@ -515,17 +596,17 @@ export const LogWindow = observer((): React.ReactElement => {
         {/* Right side: badges + status */}
         <div className="log-right-group">
           {/* When collapsed, show interactive diagnostic badge */}
-          {size === 'collapsed' && (
+          {!isExpanded && (
             <DiagnosticBadgeWithTooltip
               diagnostics={sortedDiagnostics}
               errorCount={diagErrorCount + diagFatalCount}
               warningCount={diagWarningCount}
               onExecuteAction={handleExecuteAction}
-              onExpand={() => setSize('compact')}
+              onExpand={() => setIsExpanded(true)}
             />
           )}
           {/* When expanded, show simple badges */}
-          {size !== 'collapsed' && (
+          {isExpanded && (
             <>
               {logStore.errorCount > 0 && (
                 <span className="log-badge log-badge-error">{logStore.errorCount}</span>
@@ -546,7 +627,7 @@ export const LogWindow = observer((): React.ReactElement => {
       </div>
 
       {/* Log entries and diagnostics panel - hidden when collapsed */}
-      {size !== 'collapsed' && (
+      {isExpanded && (
         <div className="log-body">
           {/* Left: Log entries */}
           <div className="log-entries" ref={scrollRef}>

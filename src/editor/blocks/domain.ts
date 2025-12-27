@@ -291,7 +291,10 @@ export const StableIdHash = createBlock({
   label: 'Stable ID Hash',
   description: 'Hash stable element IDs to deterministic [0,1) values with salt',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
     input('salt', 'Salt', 'Scalar:number', {
       tier: 'primary',
       defaultSource: {
@@ -331,7 +334,10 @@ export const PositionMapGrid = createBlock({
   label: 'Grid Layout',
   description: 'Arrange domain elements in a grid pattern',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
     input('rows', 'Rows', 'Scalar:number', {
       tier: 'primary',
       defaultSource: { value: 10, world: 'scalar', uiHint: { kind: 'slider', min: 1, max: 100, step: 1 } },
@@ -443,7 +449,10 @@ export const PositionMapCircle = createBlock({
   label: 'Circle Layout',
   description: 'Arrange domain elements in a circle',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
     input('centerX', 'Center X', 'Signal<number>', {
       tier: 'primary',
       defaultSource: { value: 400, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
@@ -566,7 +575,10 @@ export const PositionMapLine = createBlock({
   label: 'Line Layout',
   description: 'Arrange domain elements along a line',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
     input('ax', 'Start X', 'Signal<number>', {
       tier: 'primary',
       defaultSource: { value: 100, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
@@ -661,7 +673,10 @@ export const FieldConstNumber = createBlock({
   label: 'Constant Number',
   description: 'Uniform numeric value for all elements',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
     input('value', 'Value', 'Signal<number>', {
       tier: 'primary',
       defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: -10000, max: 10000, step: 0.1 } },
@@ -695,7 +710,10 @@ export const FieldConstColor = createBlock({
   label: 'Constant Color',
   description: 'Uniform color for all elements',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
     input('color', 'Color', 'Signal<color>', {
       tier: 'primary',
       defaultSource: { value: '#3B82F6', world: 'signal', uiHint: { kind: 'color' } },
@@ -728,7 +746,10 @@ export const FieldHash01ById = createBlock({
   label: 'Random Per Element',
   description: 'Deterministic random value per element (0 to 1)',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
     input('seed', 'Seed', 'Scalar:number', {
       tier: 'secondary',
       defaultSource: { value: 0, world: 'scalar', uiHint: { kind: 'number', min: 0, max: 999999, step: 1 } },
@@ -762,7 +783,10 @@ export const FieldMapNumber = createBlock({
   label: 'Map Number',
   description: 'Apply a function to each element of a numeric field',
   inputs: [
-    input('x', 'Input', 'Field<number>'),
+    input('x', 'Input', 'Field<number>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'field' },
+    }),
     input('fn', 'Function', 'Signal<string>', {
       tier: 'primary',
       defaultSource: {
@@ -860,7 +884,10 @@ export const FieldMapVec2 = createBlock({
   label: 'Transform Positions',
   description: 'Apply spatial transformations to position fields',
   inputs: [
-    input('vec', 'Input', 'Field<vec2>'),
+    input('vec', 'Input', 'Field<vec2>', {
+      tier: 'primary',
+      defaultSource: { value: [0, 0], world: 'field' },
+    }),
     input('fn', 'Function', 'Signal<string>', {
       tier: 'primary',
       defaultSource: {
@@ -1000,8 +1027,14 @@ export const FieldZipNumber = createBlock({
   label: 'Combine Numbers',
   description: 'Combine two numeric fields element-wise',
   inputs: [
-    input('a', 'A', 'Field<number>'),
-    input('b', 'B', 'Field<number>'),
+    input('a', 'A', 'Field<number>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'field' },
+    }),
+    input('b', 'B', 'Field<number>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'field' },
+    }),
     input('op', 'Operation', 'Signal<string>', {
       tier: 'primary',
       defaultSource: {
@@ -1055,8 +1088,14 @@ export const JitterFieldVec2 = createBlock({
   label: 'Jitter Field',
   description: 'Animated per-element position drift',
   inputs: [
-    input('idRand', 'Random', 'Field<number>'),
-    input('phase', 'Phase', 'Signal<phase>'),
+    input('idRand', 'Random', 'Field<number>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'field' },
+    }),
+    input('phase', 'Phase', 'Signal<phase>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'signal', defaultBus: 'phaseA', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 } },
+    }),
     input('amount', 'Amount', 'Signal<number>', {
       tier: 'primary',
       defaultSource: { value: 5, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 100, step: 1 } },
@@ -1106,8 +1145,14 @@ export const FieldFromSignalBroadcast = createBlock({
   label: 'Signal to Field',
   description: 'Broadcast signal value to all field elements',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
-    input('signal', 'Signal', 'Signal<number>'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
+    input('signal', 'Signal', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 } },
+    }),
   ],
   outputs: [
     output('field', 'Field', 'Field<number>'),
@@ -1129,8 +1174,14 @@ export const FieldZipSignal = createBlock({
   label: 'Field + Signal',
   description: 'Combine field with signal value',
   inputs: [
-    input('field', 'Field', 'Field<number>'),
-    input('signal', 'Signal', 'Signal<number>'),
+    input('field', 'Field', 'Field<number>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'field' },
+    }),
+    input('signal', 'Signal', 'Signal<number>', {
+      tier: 'primary',
+      defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 } },
+    }),
     input('fn', 'Operation', 'Signal<string>', {
       tier: 'primary',
       defaultSource: {
@@ -1183,8 +1234,14 @@ export const BroadcastSignalColor = createBlock({
   label: 'Signal to Field (Color)',
   description: 'Broadcast a single color signal to all elements in a domain.',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
-    input('signal', 'Signal', 'Signal<color>'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
+    input('signal', 'Signal', 'Signal<color>', {
+      tier: 'primary',
+      defaultSource: { value: '#3B82F6', world: 'signal', uiHint: { kind: 'color' } },
+    }),
   ],
   outputs: [
     output('field', 'Field', 'Field<color>'),
@@ -1210,8 +1267,14 @@ export const RenderInstances2D = createBlock({
   description: 'Render domain elements as 2D circles',
   subcategory: 'Render',
   inputs: [
-    input('domain', 'Domain', 'Domain'),
-    input('positions', 'Positions', 'Field<vec2>'),
+    input('domain', 'Domain', 'Domain', {
+      tier: 'primary',
+      defaultSource: { value: 100, world: 'field' },
+    }),
+    input('positions', 'Positions', 'Field<vec2>', {
+      tier: 'primary',
+      defaultSource: { value: [0, 0], world: 'field' },
+    }),
     input('radius', 'Radius', 'Field<number>', {
       tier: 'primary',
       defaultSource: { value: 5, world: 'field', uiHint: { kind: 'slider', min: 1, max: 50, step: 1 } },

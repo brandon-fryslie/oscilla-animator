@@ -408,6 +408,9 @@ const DraggablePatchBlock = observer(({
   const hasError = diagnostics.some(d => d.severity === 'error' || d.severity === 'fatal');
   const hasWarning = !hasError && diagnostics.some(d => d.severity === 'warn');
 
+  // Tutorial highlighting
+  const isTutorialHighlighted = store.tutorialStore.getHighlightedBlockIds().includes(block.id);
+
   // Get hovered/selected port state
   const hoveredPort = store.uiStore.uiState.hoveredPort;
   const selectedPort = store.uiStore.uiState.selectedPort;
@@ -540,7 +543,7 @@ const DraggablePatchBlock = observer(({
         ...style,
         '--block-color': blockColor,
       } as React.CSSProperties}
-      className={`block ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isOverDropTarget ? 'drop-target' : ''} ${hasInputs ? 'has-inputs' : ''} ${hasOutputs ? 'has-outputs' : ''} ${hasError ? 'has-error' : ''} ${hasWarning ? 'has-warning' : ''}`}
+      className={`block ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isOverDropTarget ? 'drop-target' : ''} ${hasInputs ? 'has-inputs' : ''} ${hasOutputs ? 'has-outputs' : ''} ${hasError ? 'has-error' : ''} ${hasWarning ? 'has-warning' : ''} ${isTutorialHighlighted ? 'tutorial-highlight' : ''}`}
       onClick={(e) => {
         e.stopPropagation();
         onSelect();

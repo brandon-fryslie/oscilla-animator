@@ -20,7 +20,7 @@ import { listCompositeDefinitions } from '../composites';
 import type { RootStore } from './RootStore';
 import { mapConnections, copyCompatibleParams, type ReplacementResult } from '../replaceUtils';
 import type { GraphCommitReason, GraphDiffSummary } from '../events/types';
-import { Validator } from '../semantic';
+import { Validator, isAssignable, getTypeDesc } from '../semantic';
 import { storeToPatchDocument } from '../semantic/patchAdapter';
 import { randomUUID } from "../crypto";
 
@@ -319,7 +319,7 @@ export class PatchStore {
     if (macroKey !== null && macroKey !== undefined && macroKey !== '') {
       const expansion = getMacroExpansion(macroKey);
       if (expansion !== null && expansion !== undefined) {
-        return this.expandMacro(expansion);
+        return this.expandMacro(expansion, macroKey);
       }
       // Macro has no expansion - crash immediately
       throw new Error(`Macro "${macroKey}" has no expansion registered in MACRO_REGISTRY`);
@@ -360,7 +360,7 @@ export class PatchStore {
     if (macroKey !== null && macroKey !== undefined && macroKey !== '') {
       const expansion = getMacroExpansion(macroKey);
       if (expansion !== null && expansion !== undefined) {
-        return this.expandMacro(expansion);
+        return this.expandMacro(expansion, macroKey);
       }
       throw new Error(`Macro "${macroKey}" has no expansion registered in MACRO_REGISTRY`);
     }
@@ -431,8 +431,10 @@ export class PatchStore {
   /**
    * Expand a macro into multiple blocks with connections.
    * Also creates bus publishers and listeners if defined in the macro.
+   * @param expansion - The macro expansion definition
+   * @param macroKey - The original macro key (e.g., 'macro:tutorial') for event emission
    */
-  expandMacro(expansion: MacroExpansion): BlockId {
+  expandMacro(expansion: MacroExpansion, macroKey?: string): BlockId {
     // Clear the patch first - macros replace everything
     this.root.clearPatch();
 
@@ -452,16 +454,45 @@ export class PatchStore {
       refToId.set(macroBlock.ref, id);
     }
 
-    // Create all connections
+    // Create all connections (with validation - skip invalid ones)
+    // Build a fresh patch document for validation after blocks are created
+    const patchDoc = storeToPatchDocument(this.root);
+    const validator = new Validator(patchDoc, this.patchRevision);
+
     for (const conn of expansion.connections) {
       const fromId = refToId.get(conn.fromRef);
       const toId = refToId.get(conn.toRef);
       if (fromId === undefined) {
-        throw new Error(`Macro connection references unknown source block ref "${conn.fromRef}"`);
+        console.warn(`[expandMacro] Skipping connection: unknown source block ref "${conn.fromRef}"`);
+        continue;
       }
       if (toId === undefined) {
-        throw new Error(`Macro connection references unknown target block ref "${conn.toRef}"`);
+        console.warn(`[expandMacro] Skipping connection: unknown target block ref "${conn.toRef}"`);
+        continue;
       }
+
+      // Validate this connection before adding it
+      try {
+        const validationResult = validator.canAddConnection(
+          patchDoc,
+          { blockId: fromId, slotId: conn.fromSlot, direction: 'output' },
+          { blockId: toId, slotId: conn.toSlot, direction: 'input' }
+        );
+
+        if (!validationResult.ok) {
+          // Skip invalid connections instead of creating broken wires
+          const firstError = validationResult.errors[0];
+          console.warn(
+            `[expandMacro] Skipping invalid connection ${conn.fromRef}.${conn.fromSlot} → ${conn.toRef}.${conn.toSlot}: ${firstError?.message ?? 'unknown error'}`
+          );
+          continue;
+        }
+      } catch (e) {
+        // If validation itself fails, skip the connection to be safe
+        console.warn(`[expandMacro] Skipping connection due to validation error:`, e);
+        continue;
+      }
+
       const connection: Connection = {
         id: this.generateConnectionId(),
         from: { blockId: fromId, slotId: conn.fromSlot, direction: 'output' },
@@ -478,18 +509,37 @@ export class PatchStore {
       });
     }
 
-    // Create bus publishers if defined
+    // Create bus publishers if defined (with validation - skip invalid ones)
     if (expansion.publishers !== null && expansion.publishers !== undefined) {
       for (const pub of expansion.publishers) {
         const blockId = refToId.get(pub.fromRef);
         if (blockId === undefined) {
-          throw new Error(`Macro publisher references unknown block ref "${pub.fromRef}"`);
+          console.warn(`[expandMacro] Skipping publisher: unknown block ref "${pub.fromRef}"`);
+          continue;
         }
 
         // Find the bus by name
         const bus = this.root.busStore.buses.find((b) => b.name === pub.busName);
         if (bus === null || bus === undefined) {
-          throw new Error(`Macro publisher references unknown bus "${pub.busName}"`);
+          console.warn(`[expandMacro] Skipping publisher: unknown bus "${pub.busName}"`);
+          continue;
+        }
+
+        // Validate type compatibility between source slot and bus
+        const sourceBlock = this.blocks.find((b) => b.id === blockId);
+        const sourceSlot = sourceBlock?.outputs.find((s) => s.id === pub.fromSlot);
+        if (!sourceBlock || !sourceSlot) {
+          console.warn(`[expandMacro] Skipping publisher: slot "${pub.fromSlot}" not found on block "${pub.fromRef}"`);
+          continue;
+        }
+
+        // Get TypeDesc for the slot and check compatibility with bus type
+        const slotTypeDesc = getTypeDesc(sourceSlot.type);
+        if (slotTypeDesc && bus.type && !isAssignable(slotTypeDesc, bus.type)) {
+          console.warn(
+            `[expandMacro] Skipping incompatible bus publisher: ${pub.fromRef}.${pub.fromSlot} (${sourceSlot.type}) → bus "${pub.busName}" (${bus.type.world}:${bus.type.domain})`
+          );
+          continue;
         }
 
         // Add publisher
@@ -497,18 +547,37 @@ export class PatchStore {
       }
     }
 
-    // Create bus listeners if defined
+    // Create bus listeners if defined (with validation - skip invalid ones)
     if (expansion.listeners !== null && expansion.listeners !== undefined) {
       for (const lis of expansion.listeners) {
         const blockId = refToId.get(lis.toRef);
         if (blockId === undefined) {
-          throw new Error(`Macro listener references unknown block ref "${lis.toRef}"`);
+          console.warn(`[expandMacro] Skipping listener: unknown block ref "${lis.toRef}"`);
+          continue;
         }
 
         // Find the bus by name
         const bus = this.root.busStore.buses.find((b) => b.name === lis.busName);
         if (bus === null || bus === undefined) {
-          throw new Error(`Macro listener references unknown bus "${lis.busName}"`);
+          console.warn(`[expandMacro] Skipping listener: unknown bus "${lis.busName}"`);
+          continue;
+        }
+
+        // Validate type compatibility between bus and target slot
+        const targetBlock = this.blocks.find((b) => b.id === blockId);
+        const targetSlot = targetBlock?.inputs.find((s) => s.id === lis.toSlot);
+        if (!targetBlock || !targetSlot) {
+          console.warn(`[expandMacro] Skipping listener: slot "${lis.toSlot}" not found on block "${lis.toRef}"`);
+          continue;
+        }
+
+        // Get TypeDesc for the slot and check compatibility with bus type
+        const slotTypeDesc = getTypeDesc(targetSlot.type);
+        if (slotTypeDesc && bus.type && !isAssignable(bus.type, slotTypeDesc)) {
+          console.warn(
+            `[expandMacro] Skipping incompatible bus listener: bus "${lis.busName}" (${bus.type.world}:${bus.type.domain}) → ${lis.toRef}.${lis.toSlot} (${targetSlot.type})`
+          );
+          continue;
         }
 
         // Add listener with optional lens
@@ -522,7 +591,7 @@ export class PatchStore {
     // Emit MacroExpanded event AFTER all state changes committed
     this.root.events.emit({
       type: 'MacroExpanded',
-      macroType: expansion.blocks[0]?.type ?? 'unknown',
+      macroType: macroKey ?? expansion.blocks[0]?.type ?? 'unknown',
       createdBlockIds: Array.from(refToId.values()),
     });
 

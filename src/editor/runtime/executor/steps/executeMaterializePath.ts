@@ -29,7 +29,6 @@
 
 import type { StepMaterializePath, CompiledProgramIR } from "../../../compiler/ir";
 import type { RuntimeState } from "../RuntimeState";
-import type { FlattenPolicy } from "../../../ir/types/BufferDesc";
 import { CANONICAL_FLATTEN_TOL_PX } from "../../../ir/types/BufferDesc";
 
 /**
@@ -55,13 +54,13 @@ interface PathExpr {
 /**
  * Canonical command opcodes (u16)
  */
-const enum PathOpcode {
-  MoveTo = 0,
-  LineTo = 1,
-  QuadraticTo = 2,
-  CubicTo = 3,
-  Close = 4,
-}
+const PathOpcode = {
+  MoveTo: 0,
+  LineTo: 1,
+  QuadraticTo: 2,
+  CubicTo: 3,
+  Close: 4,
+} as const;
 
 /**
  * Type guard: check if value is a valid PathExpr

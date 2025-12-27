@@ -20,9 +20,29 @@ export const ContextMenu = observer(() => {
   const [showConfirm, setShowConfirm] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Extract values needed for hooks BEFORE any early returns
+  const portRef = contextMenu.portRef;
+  const isOpen = contextMenu.isOpen && portRef !== null;
+
+  // Get block/slot info for display (needed for useMemo dependency)
+  const block = isOpen ? store.patchStore.blocks.find((b) => b.id === portRef.blockId) : null;
+  const slots = isOpen ? (portRef.direction === 'input' ? block?.inputs : block?.outputs) : null;
+  const slot = slots?.find((s) => s.id === portRef?.slotId);
+
+  // Find compatible ports that can be connected - MUST be before early return
+  const compatiblePorts = useMemo(() => {
+    if (!isOpen || !slot || !portRef) return [];
+    return findCompatiblePorts(
+      portRef,
+      slot,
+      store.patchStore.blocks,
+      store.patchStore.connections
+    ).slice(0, 8); // Limit to 8 to keep menu compact
+  }, [isOpen, portRef, slot, store.patchStore.blocks, store.patchStore.connections]);
+
   // Close menu when clicking outside
   useEffect(() => {
-    if (!contextMenu.isOpen) return;
+    if (!isOpen) return;
 
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -49,35 +69,18 @@ export const ContextMenu = observer(() => {
       document.removeEventListener('click', handleClick);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [contextMenu.isOpen, store]);
+  }, [isOpen, store]);
 
-  if (!contextMenu.isOpen || !contextMenu.portRef) {
+  if (!isOpen || !portRef) {
     return null;
   }
 
-  const { portRef } = contextMenu;
   const connections = getConnectionsForPort(
     portRef.blockId,
     portRef.slotId,
     portRef.direction,
     store.patchStore.connections
   );
-
-  // Get block/slot info for display
-  const block = store.patchStore.blocks.find((b) => b.id === portRef.blockId);
-  const slots = portRef.direction === 'input' ? block?.inputs : block?.outputs;
-  const slot = slots?.find((s) => s.id === portRef.slotId);
-
-  // Find compatible ports that can be connected
-  const compatiblePorts = useMemo(() => {
-    if (!slot) return [];
-    return findCompatiblePorts(
-      portRef,
-      slot,
-      store.patchStore.blocks,
-      store.patchStore.connections
-    ).slice(0, 8); // Limit to 8 to keep menu compact
-  }, [portRef, slot, store.patchStore.blocks, store.patchStore.connections]);
 
   const handleConnect = (targetBlockId: string, targetSlotId: string) => {
     if (portRef.direction === 'output') {

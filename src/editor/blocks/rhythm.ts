@@ -55,6 +55,10 @@ export const PulseDivider = createBlock({
   color: '#F59E0B',
   laneKind: 'Phase',
   priority: 15,
+  // Auto-subscribe phase to phaseA bus when no explicit connection
+  autoBusSubscriptions: {
+    phase: 'phaseA',
+  },
 });
 
 /**
@@ -71,7 +75,13 @@ export const EnvelopeAD = createBlock({
   label: 'Envelope (AD)',
   description: 'Attack/Decay envelope triggered by events',
   inputs: [
-    input('trigger', 'Trigger', 'Signal<Unit>'),
+    input('trigger', 'Trigger', 'Signal<Unit>', {
+      tier: 'primary',
+      defaultSource: {
+        value: false,
+        world: 'signal',
+      },
+    }),
     input('attack', 'Attack (s)', 'Signal<number>', {
       tier: 'primary',
       defaultSource: {
@@ -133,4 +143,6 @@ export const EnvelopeAD = createBlock({
   color: '#F59E0B',
   laneKind: 'Phase',
   priority: 16,
+  // Note: trigger input requires explicit wire connection from PulseDivider.tick
+  // The pulse bus type (event:trigger) is incompatible with Signal<Unit>
 });

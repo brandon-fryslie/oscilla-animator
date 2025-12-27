@@ -208,6 +208,19 @@ export const MacroBreathingDots = createMacro({
   color: '#06B6D4',
 });
 
+// =============================================================================
+// Tutorial Macro - Learn by connecting
+// =============================================================================
+
+export const MacroTutorial = createMacro({
+  type: 'macro:tutorial',
+  label: '📚 Tutorial',
+  description: 'Learn by doing: All the blocks, no connections. Wire them yourself to understand how everything works!',
+  priority: -200, // Show at the very top
+  color: '#10B981',
+  subcategory: 'Quick Start',
+});
+
 // Note: Composite-based macros have been removed as composites may not work reliably.
 // All macros now use ONLY primitive blocks.
 

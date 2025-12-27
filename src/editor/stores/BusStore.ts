@@ -366,19 +366,24 @@ export class BusStore {
    * Replaces the entire listener object to avoid mutating readonly fields.
    */
   updateListener(listenerId: string, updates: Partial<Pick<Listener, 'enabled' | 'lensStack'>>): void {
+    console.log('[BusStore] updateListener called:', { listenerId, updates });
     const index = this.listeners.findIndex(l => l.id === listenerId);
     if (index === -1) {
+      console.error('[BusStore] Listener not found:', listenerId);
       throw new Error(`Listener ${listenerId} not found`);
     }
 
     const existing = this.listeners[index];
+    console.log('[BusStore] Existing listener:', existing);
     const updated: Listener = {
       ...existing,
       ...(updates.lensStack !== undefined && { lensStack: updates.lensStack }),
       ...(updates.enabled !== undefined && { enabled: updates.enabled }),
     };
+    console.log('[BusStore] Updated listener:', updated);
 
     this.listeners = this.listeners.map((l, i) => (i === index ? updated : l));
+    console.log('[BusStore] Listeners array updated, length:', this.listeners.length);
   }
 
   /**

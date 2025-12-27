@@ -51,6 +51,7 @@ import './Editor.css';
 import './mobile.css';
 import { HelpCenterModal, HelpPanel, type HelpCenterTopicId } from './HelpCenter';
 import {DebugReplPanel} from "./components/DebugReplPanel.tsx";
+import { TutorialOverlay } from './TutorialOverlay';
 
 type HelpTopic = 'intro' | 'library' | 'inspector' | 'preview' | 'patch' | 'controlSurface';
 const TOUR_COMPLETE_KEY = 'loom-editor-tour-complete';
@@ -1060,6 +1061,9 @@ export const Editor = observer(() => {
         {/* Context menu for right-click actions */}
         <ContextMenu />
         <BlockContextMenu />
+
+        {/* Interactive Tutorial */}
+        <TutorialOverlay />
       </div>
 
       <PathManagerModal

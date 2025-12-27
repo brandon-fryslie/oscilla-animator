@@ -8,20 +8,60 @@
   background: #111;
   border-top: 1px solid #333;
   flex-shrink: 0;
-  transition: height 0.15s ease;
+  position: relative;
 }
 
-/* Size modes */
+/* Collapsed state - just header */
 .log-window-collapsed {
   height: 32px;
 }
 
-.log-window-compact {
-  height: 90px;
+/* Expanded state - height set via inline style */
+.log-window-expanded {
+  /* Height controlled by React state */
 }
 
-.log-window-full {
-  height: 200px;
+/* Disable transitions while dragging for smooth resize */
+.log-window.dragging {
+  user-select: none;
+}
+
+/* Resize handle at top of expanded window */
+.log-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: transparent;
+  cursor: ns-resize;
+  z-index: 10;
+  transition: background 0.15s;
+}
+
+.log-resize-handle:hover,
+.log-window.dragging .log-resize-handle {
+  background: linear-gradient(to bottom, rgba(100, 150, 255, 0.4), transparent);
+}
+
+.log-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 3px;
+  background: #444;
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.log-resize-handle:hover::after,
+.log-window.dragging .log-resize-handle::after {
+  opacity: 1;
+  background: #666;
 }
 
 /* Header bar - clickable to cycle sizes */

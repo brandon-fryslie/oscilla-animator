@@ -900,12 +900,18 @@ export function LensChainEditor({
 
   const handleAddPreset = useCallback(
     (presetId: string) => {
+      console.log('[LensChainEditor] handleAddPreset called:', presetId);
       const lens = createLensFromPreset(presetId);
+      console.log('[LensChainEditor] Created lens from preset:', lens);
       if (lens) {
-        onChange([...lensChain, lens]);
+        const newChain = [...lensChain, lens];
+        console.log('[LensChainEditor] Calling onChange with new chain:', newChain);
+        onChange(newChain);
         setEnabledStates((prev) => [...prev, true]);
         addRecentLens(lens, presetId);
         setRecentLenses(getRecentLenses());
+      } else {
+        console.warn('[LensChainEditor] Failed to create lens from preset:', presetId);
       }
       setShowAddLens(false);
     },

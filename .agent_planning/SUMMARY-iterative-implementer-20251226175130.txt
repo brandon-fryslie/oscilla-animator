@@ -1,0 +1,171 @@
+Agent: iterative-implementer | 2025-12-26-190000
+Mode: manual (no existing tests for renderer IR phases)
+Completed: 2 deliverables (StepMaterialzeColor, StepMaterializePath) | Files: 4 | Commits: 1
+Status: in_progress
+
+=== COMPLETED WORK ===
+
+Phase C+D: Materialization Step Types and Executors
+
+1. schedule.ts IR Extensions (P0.C2 + P0.D2)
+   - Added StepMaterializeColor interface
+   - Added StepMaterializePath interface
+   - Extended StepIR union type
+   - Imported BufferDesc types from Phase B
+
+2. executeMaterializeColor.ts (P0.C1)
+   - Implements MaterializeColor step executor
+   - Handles signal<color> → u8x4 (4 bytes)
+   - Handles field<color> → u8x4 array (instanceCount*4 bytes)
+   - Uses quantizeColorRGBA/Batch from ColorQuantize kernel (Phase B)
+   - Validates instanceCount matches
+   - Performance counter stubs for Phase E
+   - Debug logging support
+
+3. executeMaterializePath.ts (P0.D1)
+   - Implements MaterializePath step executor
+   - Encodes path commands to Uint16Array (canonical opcodes 0-4)
+   - Packs points to Float32Array (interleaved xy pairs)
+   - Supports FlattenPolicy (off or on-canonical)
+   - Path flattening STUBBED (P1.D5 optional - console.warn)
+   - Performance counter stubs for Phase E
+   - Debug logging support
+
+4. ScheduleExecutor.ts Integration (P0.I1)
+   - Added imports for new step executors
+   - Added case "materializeColor" dispatch
+   - Added case "materializePath" dispatch
+   - Exhaustive switch ensures all step types handled
+
+=== REMAINING WORK (High Priority) ===
+
+Phase C - Instances2D Runtime:
+
+P0.C3: InstanceBufferSetIR Assembly
+- [ ] Create assembleInstanceBuffers() function
+- [ ] Handle posXY (required), size/rot/colorRGBA (optional)
+- [ ] Support scalar broadcasts (ScalarF32IR, ScalarU32IR)
+- [ ] Allocate bufferIds from ValueStore
+- [ ] Produce InstanceBufferSetIR with BufferRefIR references
+
+P0.C4: Canvas Renderer Instances2D Support
+- [ ] Create renderInstances2DPass() function
+- [ ] Read buffers from ValueStore via BufferRefIR
+- [ ] Handle scalar broadcasts as constant values
+- [ ] Draw shape2d material (circles, squares, stars)
+- [ ] Apply per-instance posXY, size, rot, colorRGBA
+- [ ] Respect RenderPassHeaderIR (z, clip, view, blend)
+
+P1.C5: Instance Sorting (optional)
+- [ ] Create sortInstances() function
+- [ ] Handle InstanceSortIR.kind="byKey"
+- [ ] Sort indices, not buffers (stable sort)
+- [ ] Canvas renderer draws in sorted order
+
+Phase D - Paths2D Runtime:
+
+P0.D3: PathGeometryBufferIR Assembly
+- [ ] Create assemblePathGeometry() function
+- [ ] Handle multiple paths (pathCount > 1)
+- [ ] Generate pathCommandStart/Len arrays (Uint32Array)
+- [ ] Generate pathPointStart/Len arrays (Uint32Array)
+- [ ] Concatenate command/point streams
+- [ ] Produce PathGeometryBufferIR with BufferRefIR references
+
+P0.D4: Canvas Renderer Paths2D Support
+- [ ] Create renderPaths2DPass() function
+- [ ] Read command/point buffers from ValueStore
+- [ ] Decode u16 commands to Canvas path operations
+- [ ] Apply PathStyleIR (fill, stroke, dash, caps, joins)
+- [ ] Handle per-path or global styling
+- [ ] Respect RenderPassHeaderIR
+
+P1.D5: Path Flattening Kernel (optional)
+- [ ] Create flattenPathKernel() function
+- [ ] Adaptive subdivision (de Casteljau or midpoint)
+- [ ] CANONICAL_FLATTEN_TOL_PX (0.75px)
+- [ ] Deterministic output
+
+Integration:
+
+P0.I2: Complete executeRenderAssemble
+- [ ] Extend to produce RenderFrameIR (not just RenderTree)
+- [ ] Assemble RenderPassHeaderIR for each pass
+- [ ] Assemble Instances2DPassIR from instance buffers
+- [ ] Assemble Paths2DPassIR from path geometry
+- [ ] Write RenderFrameIR to output slot
+- [ ] Handle ClearSpecIR
+
+P1.I3: Feature Flag (Dual-Emit Pattern)
+- [ ] Add USE_RENDER_FRAME_IR flag (compiler featureFlags.ts)
+- [ ] When true: emit RenderFrameIR path
+- [ ] When false: emit legacy RenderCmd path
+- [ ] Both paths coexist during migration
+
+=== BLOCKERS / QUESTIONS ===
+
+CRITICAL DESIGN QUESTION:
+The DOD assumes ValueStore can store typed arrays (Uint8Array, Uint16Array, Float32Array) as "objects".
+Current ValueStore.objects is typed as unknown[], which should support this.
+
+HOWEVER: BufferRefIR references use `bufferId` as dense index.
+- Is bufferId the same as ValueSlot (object slot index)?
+- OR does ValueStore need a separate buffer registry?
+
+The RenderFrameIR types use BufferRefIR with `bufferId: number`, implying a separate
+buffer ID space from ValueSlots.
+
+RECOMMENDATION: Proceed with assumption that buffers go into ValueStore.objects[]
+and BufferRefIR.bufferId === ValueSlot for object-stored buffers. This aligns with
+current phase 6 infrastructure.
+
+=== FILES MODIFIED ===
+
+/Users/bmf/code/oscilla-animator_codex/src/editor/compiler/ir/schedule.ts
+/Users/bmf/code/oscilla-animator_codex/src/editor/runtime/executor/ScheduleExecutor.ts
+/Users/bmf/code/oscilla-animator_codex/src/editor/runtime/executor/steps/executeMaterializeColor.ts (NEW)
+/Users/bmf/code/oscilla-animator_codex/src/editor/runtime/executor/steps/executeMaterializePath.ts (NEW)
+
+=== COMMITS ===
+
+0e2c742 feat(renderer-ir): Add MaterializeColor and MaterializePath step types and executors
+
+=== NEXT STEPS ===
+
+1. IMMEDIATE: Clarify BufferRefIR / ValueStore buffer storage contract
+   - Confirm bufferId === ValueSlot for object-stored buffers
+   - OR implement separate buffer registry if needed
+
+2. Phase C (Instances2D):
+   - Implement assembleInstanceBuffers() helper
+   - Extend Canvas renderer with renderInstances2DPass()
+   - E2E test: MaterializeColor → assemble → render
+
+3. Phase D (Paths2D):
+   - Implement assemblePathGeometry() helper
+   - Extend Canvas renderer with renderPaths2DPass()
+   - E2E test: MaterializePath → assemble → render
+
+4. Integration:
+   - Complete executeRenderAssemble to produce RenderFrameIR
+   - Add USE_RENDER_FRAME_IR feature flag
+   - Visual smoke tests (1000 circles, paths with curves)
+
+=== TESTING STRATEGY ===
+
+Manual verification (no existing tests):
+- Unit tests for step executors (after buffer assembly complete)
+- E2E tests for complete pipeline (compile → IR → render)
+- Visual smoke tests:
+  - 1000 circles with random colors (Instances2D)
+  - Path with M, L, Q, C commands (Paths2D)
+
+Performance targets (defer to Phase F):
+- Instances2D: ≥90% of legacy RenderCmd performance
+- Color quantization: <1ms for 1000 instances
+- Path encoding: <5ms for 1000-point path
+
+=== CACHE INVALIDATION ===
+
+No eval-cache entries to invalidate (renderer IR is new work, no prior cached evaluations).
+
