@@ -124,11 +124,16 @@ export class TxBuilder {
       throw new Error(`Cannot replace entity ${id} with entity ${next.id} (id mismatch)`);
     }
 
+    // Deep clone prev to avoid reference issues when applyUpdate mutates the object
+    // Without this, prev and the store object are the same reference, and when
+    // applyUpdate uses Object.assign, it mutates both, breaking undo
+    const prevClone = structuredClone(prev);
+
     this.ops.push({
       type: 'Update',
       table,
       id,
-      prev,
+      prev: prevClone,
       next,
     });
   }

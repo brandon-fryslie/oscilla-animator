@@ -1,0 +1,38 @@
+Agent: iterative-implementer | 2025-12-27-102230
+Mode: manual
+Completed: P0-2, P0-3, P1-1, P1-2, P1-3 | Files: 2 | Commits: 5
+Tests: 66 passing, 0 failing
+Cache invalidated: None (no relevant cache entries for store mutations)
+Status: in_progress
+
+# Summary
+
+Completed undo-redo Phase 2 migrations for basic store operations:
+
+## PatchStore Migrations (P0-2, P0-3)
+- P0-2: removeBlock() now uses tx.removeBlockCascade()
+  - Kept backward-compat option for replaceBlock() (Phase 3)
+  - All cascade removal logic centralized in TxBuilder
+- P0-3: updateBlock() and updateBlockParams() now use tx.replace()
+  - Immutable updates for proper transaction tracking
+  
+## BusStore Migrations (P1-1, P1-2, P1-3)
+- P1-1: deleteBus() now uses tx.removeBusCascade()
+  - All routing (publishers + listeners) removed atomically
+- P1-2: updateBus() now uses tx.replace()
+  - Properties: name, combineMode, defaultValue
+- P1-3: updatePublisher() and updateListener() now use tx.replace()
+  - Publisher: enabled, sortKey, adapterChain, lensStack
+  - Listener: enabled, lensStack
+
+## Not Done
+- P0-1: addBlock() - ALREADY MIGRATED (previous agent)
+- P0-4: setTimeRoot() - Method doesn't exist in PatchStore (may not be needed)
+- P0-5: Remove suppressGraphCommitted - PARTIALLY DONE (kept for backward compat)
+- P0-6: Integration tests - DEFERRED (next step)
+- P0-7: Manual testing - DEFERRED (next step)
+
+## Next Steps
+1. Write integration tests for undo/redo of all migrated operations
+2. Manual testing with Chrome DevTools MCP
+3. Phase 3: Migrate complex operations (replaceBlock, expandMacro)
