@@ -1,0 +1,5 @@
+Agent: status-planner | 2025-12-27-103000
+Topic: undo-redo Phase 2
+Files: PLAN-2025-12-27-phase2.md, DOD-2025-12-27-phase2.md
+Items: 10 (P0: 7, P1: 3)
+Deferred: replaceBlock, expandMacro, lens ops, block positions, gesture buffer

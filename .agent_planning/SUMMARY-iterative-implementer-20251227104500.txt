@@ -1,0 +1,70 @@
+Agent: iterative-implementer | 2025-12-27-104500
+Mode: manual
+Completed: Workstream B (IR Lowering & Compiler Wiring) | Files: 5 | Commits: 1
+Status: complete
+
+## Work Completed
+
+### B1) RenderPaths2D Compiler Block - VERIFIED ✓
+- Already exists at src/editor/compiler/blocks/domain/RenderPaths2D.ts
+- IR lowering correctly emits paths2d sink with all required inputs
+- Properly exported in domain/index.ts and blocks/index.ts
+- Legacy compile throws (IR-only as required)
+
+### B2) PathConst Compiler Block - CREATED ✓
+Created: src/editor/compiler/blocks/domain/PathConst.ts
+- IR lowering uses ctx.b.fieldConst(pathExpr, { world: 'field', domain: 'path' })
+- Follows FieldConstNumber/FieldConstColor pattern exactly
+- Legacy compile creates Field<path> with fill() for const values
+- Registered in compiler block registry
+- Exported from domain/index.ts
+
+Added UI block definition:
+- Added PathConst block to src/editor/blocks/domain.ts
+- Inputs: domain (Domain), path (Signal<path>)
+- Output: Field<path>
+- DefaultSource: simple rectangle path
+- Priority: 8, laneKind: 'Fields', color: '#F59E0B'
+
+### B3) Schedule Builder - VERIFIED ✓
+- processPaths2DSink already correctly implemented in buildSchedule.ts
+- Registers pathExprSlot with { kind: 'fieldExpr', exprId: ... }
+- Emits materializePath step
+- Allocates cmdStart/cmdLen/pointStart/pointLen slots
+- Materializes style fields (fillColor, strokeColor, strokeWidth, opacity)
+
+### B4) DefaultSource Handling - VERIFIED ✓
+- createDefaultRef in pass8-link-resolution.ts handles Field<path> automatically
+- Uses builder.fieldConst() for field world defaults
+- Path defaultSource (JSON object) emitted to const pool
+
+## Files Modified
+- src/editor/compiler/blocks/domain/PathConst.ts (created)
+- src/editor/compiler/blocks/domain/RenderPaths2D.ts (created, was in staging)
+- src/editor/compiler/blocks/domain/index.ts (export PathConstBlock)
+- src/editor/compiler/blocks/index.ts (import and register PathConst)
+- src/editor/blocks/domain.ts (added PathConst UI block)
+
+## Commits
+- 89280bc: feat(paths2d): Add PathConst compiler block and UI definition
+
+## Validation
+- RenderPaths2D compiler block verified (IR-only, correct lowering)
+- PathConst compiler block created (follows existing patterns)
+- Schedule builder handles paths2d sinks correctly (no changes needed)
+- DefaultSource handling works for Field<path> (existing infrastructure)
+
+## Next Steps
+The IR lowering and compiler wiring for Paths2D is complete. The remaining work:
+- Workstream C: Runtime Path Field Evaluation (if needed for dynamic paths)
+- Workstream D: Renderer Integration & Validation
+
+Milestone 1 should now be achievable:
+"RenderPaths2D renders a const path with defaultSources only"
+Pipeline: PathConst block → IR lowering → fieldConst → materializePath → renderPass → Canvas
+
+## Notes
+- No tests exist for this feature (manual mode validation)
+- Pre-existing TypeScript errors in bus-compilation.test.ts unrelated to this work
+- All changes follow existing architectural patterns
+- No breaking changes or API modifications

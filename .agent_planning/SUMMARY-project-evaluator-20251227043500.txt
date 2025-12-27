@@ -1,0 +1,22 @@
+Agent: project-evaluator | 2025-12-27-043500
+Scope: project/undo-redo-phase2
+Completion: Foundation 100%, Migration 15% | Gaps: 12 methods not migrated | Test Quality: 4/5
+Reused: 0 findings | Fresh: all findings (new evaluation scope)
+Cache updated: N/A (topic-specific evaluation)
+Ambiguities: 4 found | Workflow: CONTINUE
+
+Key Findings:
+- Sprint 1 delivered complete foundation: ops, TxBuilder, HistoryStore, UI (66 tests)
+- Critical gap: PatchStore methods (addBlock, removeBlock, updateBlockParams) bypass runTx()
+- User cannot undo most operations because stores use direct mutations
+- BusStore partially migrated (~50%): createBus, addPublisher, addListener use runTx()
+- Block position undo not implemented (applySetBlockPosition is no-op)
+
+Priority for Phase 2:
+1. Migrate addBlock() - most common operation
+2. Migrate removeBlock() - should use removeBlockCascade
+3. Migrate updateBlockParams() - every param slider
+4. Complete BusStore migration (deleteBus, updateBus, update methods)
+5. Add integration tests for undo flow
+
+-> Next: Implementer should migrate PatchStore.addBlock() to use runTx()

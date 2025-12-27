@@ -12,6 +12,8 @@ import type {
   BlockSubcategory,
   BlockType,
   LensInstance,
+  Publisher,
+  Listener,
 } from '../types';
 import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import { getBlockDefinition } from '../blocks';
@@ -315,6 +317,8 @@ export class PatchStore {
 
   /**
    * Add a block to the patch.
+   *
+   * P0-1 MIGRATED: Now uses runTx() for undo/redo support.
    */
   addBlock(type: BlockType, params?: Record<string, unknown>): BlockId {
     // Check if this is a macro that should expand
@@ -333,22 +337,54 @@ export class PatchStore {
       throw new Error(`Cannot add macro block "${type}" directly. Macros must have an expansion in MACRO_REGISTRY.`);
     }
 
-    // Use shared block creation logic
-    const id = this._createBlock(type, params);
+    // Generate block ID before transaction
+    const id = this.generateBlockId();
+    const definition = getBlockDefinition(type);
 
-    // Emit GraphCommitted for diagnostics
-    this.emitGraphCommitted(
-      'userEdit',
-      {
-        blocksAdded: 1,
-        blocksRemoved: 0,
-        busesAdded: 0,
-        busesRemoved: 0,
-        bindingsChanged: 0,
-        timeRootChanged: this.isTimeRootBlock(type),
-      },
-      [id]
+    if (definition === undefined) {
+      throw new Error(`Block type "${type}" not found in registry`);
+    }
+
+    // Merge params with defaults and migrate old values
+    const rawParams = params ?? definition.defaultParams ?? {};
+    const migratedParams = migrateBlockParams(type, rawParams);
+
+    const block: Block = {
+      id,
+      type,
+      label: definition.label ?? type,
+      inputs: definition.inputs ?? [],
+      outputs: definition.outputs ?? [],
+      params: migratedParams,
+      category: definition.subcategory ?? 'Other',
+      description: definition.description ?? `${type} block`,
+    };
+
+    // Use transaction system for undo/redo
+    runTx(this.root, { label: `Add ${type}` }, tx => {
+      tx.add('blocks', block);
+    });
+
+    // Create default sources for inputs with defaultSource metadata
+    // NOTE: This currently doesn't use transactions (deferred to later migration)
+    this.root.defaultSourceStore.createDefaultSourcesForBlock(
+      id,
+      block.inputs,
+      SLOT_TYPE_TO_TYPE_DESC,
+      migratedParams
     );
+
+    // Process auto-bus connections for this block
+    // NOTE: This calls addPublisher/addListener which use their own transactions
+    this.processAutoBusConnections(id, type);
+
+    // Emit BlockAdded event (fine-grained event, coexists with GraphCommitted)
+    this.root.events.emit({
+      type: 'BlockAdded',
+      blockId: id,
+      blockType: type,
+      laneId: '', // Legacy payload, unused by ViewStore now
+    });
 
     return id;
   }
@@ -1000,10 +1036,10 @@ export class PatchStore {
 
   /**
    * Remove a connection (helper method).
-   * 
+   *
    * Conservative migration: Uses runTx() for user-facing calls, but supports
    * suppressGraphCommitted for internal use by complex methods not yet migrated.
-   * 
+   *
    * @param options - Optional settings
    * @param options.suppressGraphCommitted - If true, use direct mutation (for internal use)
    */

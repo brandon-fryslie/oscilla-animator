@@ -1,0 +1,4 @@
+Agent: status-planner | 2025-12-27-095558
+Topic: 3d-config-ui
+Files: PLAN-2025-12-27-095558.md, DOD-2025-12-27-095558.md
+Items: 3 (P0: 2, P1: 1)
