@@ -28,6 +28,15 @@ import type { Connection, Publisher, Listener, Lane } from '../types';
 import type { GraphDiffSummary } from '../events/types';
 
 /**
+ * Deep clone an object using JSON serialization.
+ * This works for plain objects but strips functions, symbols, etc.
+ * For our use case (entity data), this is sufficient.
+ */
+function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+/**
  * Transaction specification.
  */
 export interface TxSpec {
@@ -127,7 +136,7 @@ export class TxBuilder {
     // Deep clone prev to avoid reference issues when applyUpdate mutates the object
     // Without this, prev and the store object are the same reference, and when
     // applyUpdate uses Object.assign, it mutates both, breaking undo
-    const prevClone = structuredClone(prev);
+    const prevClone = deepClone(prev);
 
     this.ops.push({
       type: 'Update',
