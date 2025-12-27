@@ -22,6 +22,9 @@ import * as MacroBlocks from './macros';
 // Import composite bridge for optional composite support
 import { getCompositeBlockDefinitions } from '../composite-bridge';
 
+// Import validation for primitive closure enforcement
+import { validateBlockDefinitions } from './registry-validation';
+
 const ALL_INDIVIDUAL_BLOCKS: BlockDefinition[] = [
   ...Object.values(DomainBlocks),
   ...Object.values(TimeRootBlocks),
@@ -65,6 +68,22 @@ export function getBlockDefinitions(includeComposites: boolean = false): readonl
   }
 
   return coreBlocks;
+}
+
+// ============================================================================
+// Registry Validation - Enforces Primitive Closure
+// ============================================================================
+// Validate all block definitions on module load (fail-fast).
+// This ensures the registry complies with KERNEL_PRIMITIVES allowlist.
+try {
+  const allDefinitions = getBlockDefinitions(true);
+  validateBlockDefinitions(allDefinitions);
+} catch (error) {
+  // Re-throw with context about where the error occurred
+  if (error instanceof Error) {
+    error.message = `Registry validation failed during initialization:\n${error.message}`;
+  }
+  throw error;
 }
 
 export const BLOCK_DEFS_BY_TYPE = new Map<string, BlockDefinition>(
