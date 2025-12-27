@@ -1,0 +1,40 @@
+Agent: iterative-implementer | 2025-12-27 10:37:30
+Mode: tdd
+Completed: Fixed tx.replace() undo bug | Files: 1 | Commits: 1
+Tests: 21 passing, 0 failing
+Cache invalidated: None (transaction system not cached)
+Status: complete
+
+## Problem
+Integration tests revealed that Update operations didn't undo correctly. After update and undo, values remained in their updated state instead of reverting to previous values.
+
+## Root Cause Analysis
+The bug was in TxBuilder.replace():
+1. It captured `prev` by getting a reference to the store object
+2. It stored this reference in the Update op
+3. When applyUpdate() ran, it used Object.assign(block, next) to mutate the store object
+4. Because `prev` was the same reference as the store object, both got mutated
+5. When undo tried to restore `prev`, it was already the updated value
+
+## Solution
+Deep clone `prev` using JSON.parse(JSON.stringify(prev)) before storing it in the Update op. This ensures:
+- `prev` captures the true previous state
+- `prev` is a separate object reference
+- When applyUpdate() mutates the store object, `prev` remains unchanged
+- Undo correctly restores the previous state
+
+## Test Results
+All 21 integration tests now pass:
+- Block operations (5/5 pass)
+- Connection operations (2/2 pass)
+- Bus operations (3/3 pass)
+- Publisher/Listener operations (4/4 pass)
+- Multi-step undo/redo (2/2 pass)
+- MobX reactivity (2/2 pass)
+- Edge cases (3/3 pass)
+
+## Files Modified
+- src/editor/transactions/TxBuilder.ts (added deepClone helper, updated replace() method)
+
+## Commit
+- e432626: fix(transactions): Deep clone prev state in replace() to fix undo bug

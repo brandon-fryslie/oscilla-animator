@@ -1,0 +1,22 @@
+Agent: project-evaluator | 2025-12-27-104200
+Scope: project/undo-redo-phase3
+Phase 2 Status: COMPLETE | Tests: 87/87 passing
+Methods Migrated: 15/22 (68%)
+
+Phase 3 Recommendations:
+  P0: replaceBlock() - HIGH complexity, user-impacting bug (partial undo)
+  P0: Lens operations (7 methods) - MEDIUM complexity, straightforward pattern
+  P1: addBlockAtIndex() - MEDIUM complexity, completes addBlock story
+
+Defer to Phase 4+:
+  - expandMacro (needs clearPatch atomicity decision)
+  - Block positions (needs gesture buffer)
+  - IndexedDB persistence
+  - Advanced history UI
+
+Key Findings:
+  - replaceBlock currently broken: nested transactions cause partial undo
+  - suppressGraphCommitted pattern only needed for replaceBlock now
+  - Lens ops are low-hanging fruit: all follow same tx.replace pattern
+
+Workflow: CONTINUE - clear implementation path for Phase 3
