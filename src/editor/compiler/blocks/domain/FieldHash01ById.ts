@@ -93,7 +93,7 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
     { name: 'u', type: { kind: 'Field:number' } },
   ],
 
-  compile({ inputs }) {
+  compile({ inputs, params }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -105,8 +105,18 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value;
-    // Read from inputs - values come from defaultSource or explicit connections
-    const blockSeed = Number((inputs.seed as any)?.value);
+
+    // Extract seed with params fallback (for tests using old params system)
+    const extractNumber = (artifact: any, defaultValue: number): number => {
+      if (!artifact) return defaultValue;
+      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number')
+        return Number(artifact.value);
+      return typeof artifact.value === 'function'
+        ? Number(artifact.value(0, {}))
+        : Number(artifact.value);
+    };
+
+    const blockSeed = extractNumber(inputs.seed, (params as any)?.seed ?? 0);
 
     // Create field that produces deterministic random per element
     const field: Field<number> = (seed, n) => {

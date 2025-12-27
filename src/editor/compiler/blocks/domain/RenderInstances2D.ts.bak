@@ -236,8 +236,7 @@ export const RenderInstances2DBlock: BlockCompiler = {
     };
 
     // Helper to extract boolean from Scalar or Signal artifacts
-    const extractBoolean = (artifact: any, defaultValue: boolean): boolean => {
-      if (!artifact) return defaultValue;
+    const extractBoolean = (artifact: any): boolean => {
       if (artifact.kind === 'Scalar:boolean') return Boolean(artifact.value);
       // Config values come as strings like 'true'/'false'
       if (typeof artifact.value === 'string') return artifact.value === 'true';
@@ -245,9 +244,9 @@ export const RenderInstances2DBlock: BlockCompiler = {
     };
 
     // Read from inputs - values come from defaultSource or explicit connections
-    const opacity = extractNumber(inputs.opacity, (params as any)?.opacity ?? 1.0);
-    const glow = extractBoolean(inputs.glow, (params as any)?.glow ?? false);
-    const glowIntensity = extractNumber(inputs.glowIntensity, (params as any)?.glowIntensity ?? 0.5);
+    const opacity = extractNumber(inputs.opacity);
+    const glow = extractBoolean(inputs.glow);
+    const glowIntensity = extractNumber(inputs.glowIntensity);
 
     // Create the render function - evaluates fields at render time
     const renderFn = (tMs: number, ctx: RuntimeCtx): DrawNode => {

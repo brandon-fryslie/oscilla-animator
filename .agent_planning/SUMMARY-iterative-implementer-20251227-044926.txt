@@ -1,0 +1,85 @@
+Agent: iterative-implementer | 20251227-044926
+Mode: tdd
+Completed: Domain block compiler fixes | Files: 7 | Commits: 2
+Tests: 1933 passing, 19 failing (was 29) - 35% reduction
+Cache invalidated: None (read-only planning docs)
+Status: in_progress
+
+=== Summary ===
+
+Continued Phase 2C of UI Prep Refactor - fixing test failures from IR compiler migration.
+
+PROGRESS:
+- Started with 29 test failures
+- Fixed to 19 test failures (35% reduction)
+- 8 test files still failing (was 9)
+
+BLOCKS FIXED (params + inputs dual support):
+1. DomainN - Added extractNumber helper, params fallback for n/seed
+2. GridDomain - Params fallback for rows/cols/spacing/originX/originY
+3. StableIdHash - Fixed salt parameter extraction
+4. PositionMapGrid - Added extractNumber/extractString helpers
+5. FieldConstNumber - Added extractNumber helper
+6. PositionMapCircle - Added extract helpers for all circle params
+
+ROOT CAUSE:
+Domain block compilers were migrated to use the new "inputs via default sources" system
+but tests still use the old "params" system. When inputs are undefined, Number(undefined)
+produces NaN, causing empty arrays and invalid calculations.
+
+SOLUTION PATTERN:
+```typescript
+compile({ inputs, params }) {
+  const extractNumber = (artifact: any, defaultValue: number): number => {
+    if (!artifact) return defaultValue;
+    if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number')
+      return Number(artifact.value);
+    return typeof artifact.value === 'function'
+      ? Number(artifact.value(0, {}))
+      : Number(artifact.value);
+  };
+
+  const value = extractNumber(inputs.value, (params as any)?.value ?? DEFAULT);
+}
+```
+
+REMAINING WORK (19 failures across 8 files):
+1. domain-pipeline.test.ts (4 failures)
+   - FieldHash01ById: salt not varying (needs params support like StableIdHash)
+   - FieldMapNumber: k parameter not applied (needs params support)
+   - FieldZipNumber: likely missing params
+   - RenderInstances2D: depends on above fixes
+
+2. busContracts.test.ts (3 failures)
+   - Reserved bus contract validation issues
+
+3. validator.test.ts (1 failure)
+   - Reserved bus contract acceptance
+
+4. ScheduleExecutor.test.ts (1 failure)
+   - Step kind handling
+
+5. IRRuntimeIntegration.test.ts (4 failures)
+   - RenderTree execution issues
+
+6. IRRuntimeAdapter.test.ts (2 failures)
+   - Signal execution
+
+7. stepDispatch.test.ts (1 failure)
+   - Materialize step
+
+8. BufferPool.test.ts (1 failure)
+   - Uint8ClampedArray vs Uint8Array
+
+COMMITS:
+- b671121: fix(compiler): Support both params and inputs in domain block compilers
+- edd5686: fix(compiler): Add params support to PositionMapCircle
+
+NEXT STEPS:
+1. Fix remaining domain blocks: FieldHash01ById, FieldMapNumber, FieldZipNumber
+2. Fix FieldConstColor if needed
+3. Address bus contract validation failures
+4. Fix IR runtime issues (RenderTree, buffer types)
+5. Commit batch and continue until 0 failures
+
+ESTIMATED REMAINING: 2-3 more iterations to reach 0 failures
