@@ -274,6 +274,143 @@ export class TxBuilder {
     );
   }
 
+  /**
+   * Get all publishers for a bus.
+   */
+  getPublishersForBus(busId: string): Publisher[] {
+    return this.root.busStore.publishers.filter(p => p.busId === busId);
+  }
+
+  /**
+   * Get all listeners for a bus.
+   */
+  getListenersForBus(busId: string): Listener[] {
+    return this.root.busStore.listeners.filter(l => l.busId === busId);
+  }
+
+  /**
+   * Get default sources for a block.
+   */
+  getDefaultSourcesForBlock(blockId: string): string[] {
+    const slotMap = (this.root.defaultSourceStore as any).blockSlotIndex.get(blockId);
+    if (!slotMap) return [];
+    return Array.from(slotMap.values());
+  }
+
+  /**
+   * Get lanes containing a block.
+   */
+  getLanesContainingBlock(blockId: string): Lane[] {
+    return this.root.viewStore.lanes.filter(l => l.blockIds.includes(blockId));
+  }
+
+  // ===========================================================================
+  // Cascade Helpers
+  // ===========================================================================
+
+  /**
+   * Remove a block and all its dependencies in correct order.
+   *
+   * Removal order:
+   * 1. All connections to/from the block
+   * 2. All bus publishers from the block
+   * 3. All bus listeners to the block
+   * 4. All default sources for the block's inputs
+   * 5. Block from all lanes
+   * 6. The block itself
+   *
+   * This generates a Many op containing all sub-ops.
+   * The inverse will recreate everything in reverse order.
+   *
+   * @param blockId The block ID to remove
+   * @throws if block doesn't exist
+   */
+  removeBlockCascade(blockId: string): void {
+    // Verify block exists
+    const block = this.lookup('blocks', blockId);
+    if (!block) {
+      throw new Error(`Block ${blockId} not found for cascade removal`);
+    }
+
+    this.many(() => {
+      // 1. Remove all connections to/from this block
+      const connections = this.getConnectionsForBlock(blockId);
+      for (const conn of connections) {
+        this.remove('connections', conn.id);
+      }
+
+      // 2. Remove all publishers from this block
+      const publishers = this.getPublishersForBlock(blockId);
+      for (const pub of publishers) {
+        this.remove('publishers', pub.id);
+      }
+
+      // 3. Remove all listeners to this block
+      const listeners = this.getListenersForBlock(blockId);
+      for (const listener of listeners) {
+        this.remove('listeners', listener.id);
+      }
+
+      // 4. Remove default sources for this block's inputs
+      const defaultSources = this.getDefaultSourcesForBlock(blockId);
+      for (const dsId of defaultSources) {
+        this.remove('defaultSources', dsId);
+      }
+
+      // 5. Remove block from all lanes
+      const lanes = this.getLanesContainingBlock(blockId);
+      for (const lane of lanes) {
+        const updatedLane: Lane = {
+          ...lane,
+          blockIds: lane.blockIds.filter(id => id !== blockId),
+        };
+        this.replace('lanes', lane.id, updatedLane);
+      }
+
+      // 6. Remove the block itself
+      this.remove('blocks', blockId);
+    });
+  }
+
+  /**
+   * Remove a bus and all its routing in correct order.
+   *
+   * Removal order:
+   * 1. All publishers on this bus
+   * 2. All listeners on this bus
+   * 3. The bus itself
+   *
+   * This generates a Many op containing all sub-ops.
+   * The inverse will recreate everything in reverse order.
+   *
+   * @param busId The bus ID to remove
+   * @throws if bus doesn't exist
+   */
+  removeBusCascade(busId: string): void {
+    // Verify bus exists
+    const bus = this.lookup('buses', busId);
+    if (!bus) {
+      throw new Error(`Bus ${busId} not found for cascade removal`);
+    }
+
+    this.many(() => {
+      // 1. Remove all publishers on this bus
+      const publishers = this.getPublishersForBus(busId);
+      for (const pub of publishers) {
+        this.remove('publishers', pub.id);
+      }
+
+      // 2. Remove all listeners on this bus
+      const listeners = this.getListenersForBus(busId);
+      for (const listener of listeners) {
+        this.remove('listeners', listener.id);
+      }
+
+      // 3. Remove the bus itself
+      this.remove('buses', busId);
+    });
+  }
+
   // ===========================================================================
   // Commit
   // ===========================================================================
