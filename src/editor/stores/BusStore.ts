@@ -195,16 +195,19 @@ export class BusStore {
 
   /**
    * Update bus properties.
+   *
+   * P1-2 MIGRATED: Now uses runTx() for undo/redo support.
    */
   updateBus(busId: string, updates: Partial<Pick<Bus, 'name' | 'combineMode' | 'defaultValue'>>): void {
-    const bus = this.buses.find(b => b.id === busId);
-    if (bus === null || bus === undefined) {
-      throw new Error(`Bus ${busId} not found`);
-    }
+    runTx(this.root, { label: 'Update Bus' }, tx => {
+      const bus = this.root.busStore.buses.find(b => b.id === busId);
+      if (!bus) {
+        throw new Error(`Bus ${busId} not found`);
+      }
 
-    if (updates.name !== undefined) bus.name = updates.name;
-    if (updates.combineMode !== undefined) bus.combineMode = updates.combineMode;
-    if (updates.defaultValue !== undefined) bus.defaultValue = updates.defaultValue;
+      const next = { ...bus, ...updates };
+      tx.replace('buses', busId, next);
+    });
   }
 
   // =============================================================================
