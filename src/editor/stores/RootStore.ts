@@ -10,6 +10,7 @@ import { ViewStateStore } from './ViewStateStore';
 import { CompositeStore } from './CompositeStore';
 import { DefaultSourceStore } from './DefaultSourceStore';
 import { DiagnosticStore } from './DiagnosticStore';
+import { HistoryStore } from './HistoryStore';
 import { LogStore } from '../logStore';
 import { EventDispatcher } from '../events';
 import { DiagnosticHub } from '../diagnostics/DiagnosticHub';
@@ -30,6 +31,7 @@ export class RootStore {
   compositeStore: CompositeStore;
   defaultSourceStore: DefaultSourceStore;
   logStore: LogStore;
+  historyStore: HistoryStore;
 
   // Diagnostics
   diagnosticHub: DiagnosticHub;
@@ -59,6 +61,9 @@ export class RootStore {
     this.compositeStore = new CompositeStore(this);
     this.defaultSourceStore = new DefaultSourceStore();
     this.defaultSourceStore.setRoot(this);
+
+    // Create history store (after domain stores, before transaction usage)
+    this.historyStore = new HistoryStore(this);
 
     // Create diagnostic infrastructure (after patchStore)
     this.diagnosticHub = new DiagnosticHub(this.events, this.patchStore);
@@ -208,7 +213,7 @@ export class RootStore {
       publishers: this.busStore.publishers.map((p) => ({ ...p })),
       listeners: this.busStore.listeners.map((l) => ({ ...l })),
       defaultSources: Array.from(this.defaultSourceStore.sources.values()).map((s) => ({ ...s })),
-      settings: { 
+      settings: {
         ...this.uiStore.settings,
         currentLayoutId: this.viewStore.currentLayoutId,
       },

@@ -7,6 +7,7 @@
  * - Calls user build function
  * - Commits ops to stores atomically
  * - Computes inverse ops for undo
+ * - Records revision in HistoryStore
  * - Emits GraphCommitted event
  *
  * Design principles:
@@ -19,11 +20,12 @@
  * @see design-docs/6-Transactions/3-TxBuilderSpec.md
  */
 
-import { runInAction } from 'mobx';
 import type { RootStore } from '../stores/RootStore';
 import type { Op, TableName, Entity, Position } from './ops';
 import { computeInverse, validateOp } from './ops';
-import type { Block, Connection, Bus, Publisher, Listener, Lane, Composite, PortRef } from '../types';
+import { applyOps } from './applyOps';
+import type { Connection, Publisher, Listener, Lane } from '../types';
+import type { GraphDiffSummary } from '../events/types';
 
 /**
  * Transaction specification.
@@ -135,16 +137,23 @@ export class TxBuilder {
    * Set block position in layout.
    * Captures prev position for inverse.
    * @throws if block doesn't exist or position is invalid
+   *
+   * NOTE: Currently disabled - ViewStateStore doesn't have blockPositions yet.
+   * This will be enabled when ViewStateStore is migrated to use transactions.
    */
   setBlockPosition(blockId: string, next: Position): void {
-    const prev = this.root.viewStore.blockPositions.get(blockId);
-    if (!prev) {
-      throw new Error(`No position found for block ${blockId}`);
-    }
+    // TODO: Enable when ViewStateStore has blockPositions Map
+    // const prev = this.root.viewStore.blockPositions.get(blockId);
+    // if (!prev) {
+    //   throw new Error(`No position found for block ${blockId}`);
+    // }
 
     if (typeof next.x !== 'number' || typeof next.y !== 'number') {
       throw new Error(`Invalid position for block ${blockId}: ${JSON.stringify(next)}`);
     }
+
+    // For now, emit op but it won't apply (see applyOps.ts)
+    const prev = { x: 0, y: 0 }; // Placeholder
 
     this.ops.push({
       type: 'SetBlockPosition',
@@ -426,199 +435,13 @@ export class TxBuilder {
     // Compute inverse ops BEFORE applying (we need current state)
     const inverseOps = this.ops.map(computeInverse).reverse();
 
-    // Apply ops in a single MobX action for atomic update
-    runInAction(() => {
-      this.ops.forEach(op => this.applyOp(op));
-    });
+    // Apply ops using shared applyOps function
+    applyOps(this.ops, this.root);
 
     return {
       ops: this.ops,
       inverseOps,
     };
-  }
-
-  /**
-   * Apply a single op to stores.
-   * This is the low-level mutation that actually changes state.
-   */
-  private applyOp(op: Op): void {
-    switch (op.type) {
-      case 'Add':
-        this.applyAdd(op.table, op.entity);
-        break;
-
-      case 'Remove':
-        this.applyRemove(op.table, op.id);
-        break;
-
-      case 'Update':
-        this.applyUpdate(op.table, op.id, op.next);
-        break;
-
-      case 'SetBlockPosition':
-        this.applySetBlockPosition(op.blockId, op.next);
-        break;
-
-      case 'SetTimeRoot':
-        this.applySetTimeRoot(op.next);
-        break;
-
-      case 'SetTimelineHint':
-        this.applySetTimelineHint(op.next);
-        break;
-
-      case 'Many':
-        op.ops.forEach(nestedOp => this.applyOp(nestedOp));
-        break;
-
-      default:
-        const _exhaustive: never = op;
-        throw new Error(`Unknown op type: ${JSON.stringify(_exhaustive)}`);
-    }
-  }
-
-  private applyAdd(table: TableName, entity: Entity): void {
-    switch (table) {
-      case 'blocks':
-        this.root.patchStore.blocks.push(entity as Block);
-        break;
-      case 'connections':
-        this.root.patchStore.connections.push(entity as Connection);
-        break;
-      case 'buses':
-        this.root.busStore.buses.push(entity as Bus);
-        break;
-      case 'publishers':
-        this.root.busStore.publishers.push(entity as Publisher);
-        break;
-      case 'listeners':
-        this.root.busStore.listeners.push(entity as Listener);
-        break;
-      case 'lanes':
-        this.root.viewStore.lanes.push(entity as Lane);
-        break;
-      case 'composites':
-        this.root.compositeStore.composites.push(entity as Composite);
-        break;
-      case 'defaultSources':
-        this.root.defaultSourceStore.sources.set(entity.id, entity as any);
-        break;
-      default:
-        const _exhaustive: never = table;
-        throw new Error(`Unknown table: ${_exhaustive}`);
-    }
-  }
-
-  private applyRemove(table: TableName, id: string): void {
-    switch (table) {
-      case 'blocks':
-        this.root.patchStore.blocks = this.root.patchStore.blocks.filter(b => b.id !== id);
-        break;
-      case 'connections':
-        this.root.patchStore.connections = this.root.patchStore.connections.filter(c => c.id !== id);
-        break;
-      case 'buses':
-        this.root.busStore.buses = this.root.busStore.buses.filter(b => b.id !== id);
-        break;
-      case 'publishers':
-        this.root.busStore.publishers = this.root.busStore.publishers.filter(p => p.id !== id);
-        break;
-      case 'listeners':
-        this.root.busStore.listeners = this.root.busStore.listeners.filter(l => l.id !== id);
-        break;
-      case 'lanes':
-        this.root.viewStore.lanes = this.root.viewStore.lanes.filter(l => l.id !== id);
-        break;
-      case 'composites':
-        this.root.compositeStore.composites = this.root.compositeStore.composites.filter(c => c.id !== id);
-        break;
-      case 'defaultSources':
-        this.root.defaultSourceStore.sources.delete(id);
-        break;
-      default:
-        const _exhaustive: never = table;
-        throw new Error(`Unknown table: ${_exhaustive}`);
-    }
-  }
-
-  private applyUpdate(table: TableName, id: string, next: Entity): void {
-    // Update mutates entity in place to preserve MobX reactivity
-    switch (table) {
-      case 'blocks': {
-        const block = this.root.patchStore.blocks.find(b => b.id === id);
-        if (block) {
-          Object.assign(block, next);
-        }
-        break;
-      }
-      case 'connections': {
-        const conn = this.root.patchStore.connections.find(c => c.id === id);
-        if (conn) {
-          Object.assign(conn, next);
-        }
-        break;
-      }
-      case 'buses': {
-        const bus = this.root.busStore.buses.find(b => b.id === id);
-        if (bus) {
-          Object.assign(bus, next);
-        }
-        break;
-      }
-      case 'publishers': {
-        const pub = this.root.busStore.publishers.find(p => p.id === id);
-        if (pub) {
-          Object.assign(pub, next);
-        }
-        break;
-      }
-      case 'listeners': {
-        const listener = this.root.busStore.listeners.find(l => l.id === id);
-        if (listener) {
-          Object.assign(listener, next);
-        }
-        break;
-      }
-      case 'lanes': {
-        const lane = this.root.viewStore.lanes.find(l => l.id === id);
-        if (lane) {
-          Object.assign(lane, next);
-        }
-        break;
-      }
-      case 'composites': {
-        const composite = this.root.compositeStore.composites.find(c => c.id === id);
-        if (composite) {
-          Object.assign(composite, next);
-        }
-        break;
-      }
-      case 'defaultSources': {
-        const source = this.root.defaultSourceStore.sources.get(id);
-        if (source) {
-          Object.assign(source, next);
-        }
-        break;
-      }
-      default:
-        const _exhaustive: never = table;
-        throw new Error(`Unknown table: ${_exhaustive}`);
-    }
-  }
-
-  private applySetBlockPosition(blockId: string, next: Position): void {
-    this.root.viewStore.blockPositions.set(blockId, next);
-  }
-
-  private applySetTimeRoot(next: string | undefined): void {
-    // TimeRoot is currently implicit (first TimeRoot: block)
-    // This is a placeholder for when we have explicit time root tracking
-    // For now, this is a no-op
-  }
-
-  private applySetTimelineHint(next: unknown): void {
-    // Timeline hint storage is not yet implemented
-    // This is a placeholder for future functionality
   }
 }
 
@@ -626,7 +449,7 @@ export class TxBuilder {
  * Run a transaction - the ONLY way to mutate patch state.
  *
  * Creates a TxBuilder, calls the build function, commits ops,
- * and emits GraphCommitted event.
+ * records revision in history, and emits GraphCommitted event.
  *
  * @param store Root store
  * @param spec Transaction specification
@@ -655,16 +478,23 @@ export function runTx(
     // Commit phase: apply ops and compute inverses
     const result = tx.commit();
 
+    // Record revision in history
+    store.historyStore.addRevision(
+      result.ops,
+      result.inverseOps,
+      spec.label ?? 'Edit'
+    );
+
     // Increment patch revision
     store.patchStore.patchRevision++;
 
     // Emit GraphCommitted event
     store.events.emit({
       type: 'GraphCommitted',
-      reason: 'user-edit',
-      label: spec.label,
-      diff: computeDiffSummary(result.ops),
+      patchId: store.patchStore.patchId,
       patchRevision: store.patchStore.patchRevision,
+      reason: 'userEdit',
+      diffSummary: computeDiffSummary(result.ops),
     });
 
     return result;
@@ -678,26 +508,32 @@ export function runTx(
 /**
  * Compute diff summary from ops for event payload.
  */
-function computeDiffSummary(ops: Op[]): {
-  blocksAdded: number;
-  blocksRemoved: number;
-  connectionsAdded: number;
-  connectionsRemoved: number;
-} {
+function computeDiffSummary(ops: Op[]): GraphDiffSummary {
   let blocksAdded = 0;
   let blocksRemoved = 0;
-  let connectionsAdded = 0;
-  let connectionsRemoved = 0;
+  let busesAdded = 0;
+  let busesRemoved = 0;
+  let bindingsChanged = 0;
+  let timeRootChanged = false;
 
   const countOp = (op: Op): void => {
     switch (op.type) {
       case 'Add':
         if (op.table === 'blocks') blocksAdded++;
-        if (op.table === 'connections') connectionsAdded++;
+        if (op.table === 'buses') busesAdded++;
+        if (op.table === 'connections' || op.table === 'publishers' || op.table === 'listeners') {
+          bindingsChanged++;
+        }
         break;
       case 'Remove':
         if (op.table === 'blocks') blocksRemoved++;
-        if (op.table === 'connections') connectionsRemoved++;
+        if (op.table === 'buses') busesRemoved++;
+        if (op.table === 'connections' || op.table === 'publishers' || op.table === 'listeners') {
+          bindingsChanged++;
+        }
+        break;
+      case 'SetTimeRoot':
+        timeRootChanged = true;
         break;
       case 'Many':
         op.ops.forEach(countOp);
@@ -707,5 +543,12 @@ function computeDiffSummary(ops: Op[]): {
 
   ops.forEach(countOp);
 
-  return { blocksAdded, blocksRemoved, connectionsAdded, connectionsRemoved };
+  return {
+    blocksAdded,
+    blocksRemoved,
+    busesAdded,
+    busesRemoved,
+    bindingsChanged,
+    timeRootChanged,
+  };
 }
