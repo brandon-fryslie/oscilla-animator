@@ -1,0 +1,328 @@
+/**
+ * Board Component Styles
+ *
+ * Styling for the structured graph board components.
+ * Supports viewport transforms, focus states, and density modes.
+ */
+
+/* =============================================================================
+ * GraphWorkspace - Main container
+ * ============================================================================= */
+
+.graph-workspace {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #1a1a1a;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* =============================================================================
+ * ViewportSurface - Pan/zoom container
+ * ============================================================================= */
+
+.viewport-surface {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.viewport-surface.panning {
+  cursor: grabbing;
+}
+
+.viewport-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* =============================================================================
+ * BoardScene - Block container
+ * ============================================================================= */
+
+.board-scene {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+/* =============================================================================
+ * BlockView - Individual block
+ * ============================================================================= */
+
+.block-view {
+  position: absolute;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+  cursor: pointer;
+}
+
+.block-view:hover {
+  border-color: #666;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.block-view.focused {
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.3), 0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.block-view.dimmed {
+  opacity: 0.3;
+}
+
+.block-view.highlighted {
+  border-color: #4a9eff;
+  opacity: 1;
+}
+
+/* Block header */
+.block-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.block-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block-role-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: #444;
+  color: #aaa;
+  text-transform: uppercase;
+}
+
+/* Block summary (collapsed state) */
+.block-summary {
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* Port rails (expanded state) */
+.block-ports {
+  display: none;
+  margin-top: 8px;
+  gap: 4px;
+  flex-direction: column;
+}
+
+.block-view:hover .block-ports,
+.block-view.focused .block-ports {
+  display: flex;
+}
+
+.port-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.port-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #aaa;
+}
+
+.port-item.input {
+  flex-direction: row;
+}
+
+.port-item.output {
+  flex-direction: row-reverse;
+}
+
+.port-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.port-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #666;
+}
+
+.port-indicator.connected {
+  background: #4a9eff;
+}
+
+/* =============================================================================
+ * ConnectorOverlay - SVG layer
+ * ============================================================================= */
+
+.connector-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.connector {
+  fill: none;
+  stroke: #666;
+  stroke-width: 1.5;
+  opacity: 0.6;
+  transition: stroke 0.15s ease, opacity 0.15s ease;
+}
+
+.connector.glow {
+  stroke: #4a9eff;
+  stroke-width: 2;
+  opacity: 1;
+  filter: drop-shadow(0 0 3px rgba(74, 158, 255, 0.6));
+}
+
+.connector-arrowhead {
+  fill: #666;
+  transition: fill 0.15s ease;
+}
+
+.connector.glow .connector-arrowhead {
+  fill: #4a9eff;
+}
+
+/* =============================================================================
+ * BoardHUD - Controls overlay
+ * ============================================================================= */
+
+.board-hud {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 200;
+  pointer-events: none;
+}
+
+.board-hud > * {
+  pointer-events: auto;
+}
+
+.hud-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(42, 42, 42, 0.95);
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.hud-button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #aaa;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.hud-button:hover {
+  background: #444;
+  border-color: #666;
+  color: #fff;
+}
+
+.hud-button:active {
+  background: #555;
+}
+
+.hud-separator {
+  height: 1px;
+  background: #444;
+  margin: 4px 0;
+}
+
+.density-indicator {
+  font-size: 10px;
+  color: #888;
+  text-align: center;
+  padding: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* =============================================================================
+ * Density-responsive sizing
+ * ============================================================================= */
+
+/* Overview mode - compact */
+.graph-workspace.density-overview .block-view {
+  padding: 4px 6px;
+}
+
+.graph-workspace.density-overview .block-name {
+  font-size: 11px;
+}
+
+.graph-workspace.density-overview .block-summary {
+  display: none;
+}
+
+/* Detail mode - expanded */
+.graph-workspace.density-detail .block-view {
+  padding: 12px;
+}
+
+.graph-workspace.density-detail .block-name {
+  font-size: 14px;
+}
+
+.graph-workspace.density-detail .block-summary {
+  font-size: 12px;
+}
+
+/* =============================================================================
+ * Utilities
+ * ============================================================================= */
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
