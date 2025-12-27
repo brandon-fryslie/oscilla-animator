@@ -28,6 +28,9 @@ import type {
   Transform2D,
 } from './renderCmd';
 import { colorToCss, unpackToColorRGBA } from './renderCmd';
+import type { RenderFrameIR } from '../compiler/ir/renderIR';
+import type { ValueStore } from '../compiler/ir/stores';
+import { renderInstances2DPass, renderPaths2DPass } from './renderPassExecutors';
 
 // =============================================================================
 // Types
@@ -73,6 +76,19 @@ function withSavedState(ctx: CanvasRenderingContext2D, fn: () => void): void {
   } finally {
     ctx.restore();
   }
+}
+
+/**
+ * Unpack u32 packed color to CSS rgba string.
+ *
+ * Assumes RGBA u32 encoding (little-endian byte order).
+ */
+function unpackColorU32(packed: number): string {
+  const r = (packed >>> 0) & 0xFF;
+  const g = (packed >>> 8) & 0xFF;
+  const b = (packed >>> 16) & 0xFF;
+  const a = (packed >>> 24) & 0xFF;
+  return `rgba(${r},${g},${b},${a / 255})`;
 }
 
 // =============================================================================
@@ -155,6 +171,93 @@ export class Canvas2DRenderer {
   }
 
   /**
+   * Render a RenderFrameIR.
+   *
+   * This is the new IR-based rendering path that dispatches on pass.kind
+   * and uses the render pass executors (renderInstances2DPass, renderPaths2DPass).
+   *
+   * Algorithm:
+   * 1. Clear canvas based on clear spec
+   * 2. Execute each render pass in order
+   * 3. Execute optional overlay passes
+   *
+   * @param frame - RenderFrameIR from executeRenderAssemble
+   * @param valueStore - ValueStore containing buffers referenced by BufferRefIR
+   * @returns RenderStats for this frame
+   */
+  renderFrame(frame: RenderFrameIR, valueStore: ValueStore): RenderStats {
+    const startTime = performance.now();
+    const ctx = this.ctx;
+
+    // Reset stats
+    this.stats = {
+      drawCallCount: 0,
+      stateChangeCount: 0,
+      renderTimeMs: 0,
+      instanceCount: 0,
+    };
+
+    // Reset state each frame
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+
+    // 1. Clear canvas
+    if (frame.clear.mode === 'color') {
+      const colorRGBA = frame.clear.colorRGBA;
+      if (colorRGBA !== undefined) {
+        const cssColor = unpackColorU32(colorRGBA);
+        ctx.fillStyle = cssColor;
+        ctx.fillRect(0, 0, this.width, this.height);
+        this.stats.drawCallCount++;
+      }
+    }
+
+    // 2. Execute render passes
+    for (const pass of frame.passes) {
+      this.renderPass(pass, valueStore);
+    }
+
+    // 3. Execute overlay passes (if any)
+    if (frame.overlays) {
+      for (const overlay of frame.overlays) {
+        this.renderPass(overlay, valueStore);
+      }
+    }
+
+    this.stats.renderTimeMs = performance.now() - startTime;
+    return this.stats;
+  }
+
+  /**
+   * Render a single pass by dispatching on pass.kind.
+   *
+   * @param pass - RenderPassIR (Instances2D, Paths2D, or PostFX)
+   * @param valueStore - ValueStore for buffer reads
+   */
+  private renderPass(pass: RenderFrameIR['passes'][0], valueStore: ValueStore): void {
+    switch (pass.kind) {
+      case 'instances2d':
+        renderInstances2DPass(pass, this.ctx, valueStore);
+        break;
+
+      case 'paths2d':
+        renderPaths2DPass(pass, this.ctx, valueStore);
+        break;
+
+      case 'postfx':
+        // PostFX not implemented yet - skip silently
+        console.warn('Canvas2DRenderer: PostFX passes not implemented yet');
+        break;
+
+      default: {
+        const _exhaustive: never = pass;
+        throw new Error(`Canvas2DRenderer: unknown pass kind ${(_exhaustive as any).kind}`);
+      }
+    }
+  }
+
+  /**
    * Clear the canvas.
    */
   clear(): void {
@@ -176,7 +279,7 @@ export class Canvas2DRenderer {
   }
 
   // ===========================================================================
-  // Private: Command Execution
+  // Private: Command Execution (Legacy RenderTree path)
   // ===========================================================================
 
   private exec(cmd: RenderCmd): void {
