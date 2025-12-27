@@ -8,6 +8,8 @@
  * - StateBuffer: cross-frame persistent state
  * - FrameCache: memoization cache with signal/field caches
  * - frameId: monotonic frame counter
+ * - 3D stores: CameraStore, MeshStore
+ * - viewport: ViewportInfo for 3D projection
  *
  * References:
  * - HANDOFF.md Topic 3 (ScheduleExecutor)
@@ -25,6 +27,9 @@ import type { SlotMeta } from "../../compiler/ir/stores";
 import type { CompiledProgramIR } from "../../compiler/ir/program";
 import type { FieldHandle } from "../field/types";
 import { preserveState } from "./StateSwap";
+import { CameraStore } from "../camera/CameraStore";
+import { MeshStore } from "../mesh/MeshStore";
+import type { ViewportInfo } from "../camera/evaluateCamera";
 
 // ============================================================================
 // RuntimeState Interface
@@ -52,6 +57,15 @@ export interface RuntimeState {
 
   /** Monotonic frame counter */
   frameId: number;
+
+  /** Camera evaluation cache (3D rendering) */
+  cameraStore: CameraStore;
+
+  /** Mesh materialization cache (3D rendering) */
+  meshStore: MeshStore;
+
+  /** Viewport info for 3D projection */
+  viewport: ViewportInfo;
 
   /**
    * Hot-swap to a new program while preserving state and time continuity.
@@ -388,6 +402,29 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
       case "debugProbe":
         for (const slot of step.probe.slots) numericSlots.add(slot);
         break;
+
+      // 3D steps
+      case "CameraEval":
+        objectSlots.add(step.outSlot);
+        break;
+
+      case "MeshMaterialize":
+        objectSlots.add(step.outSlot);
+        break;
+
+      case "Instances3DProjectTo2D":
+        objectSlots.add(step.domainSlot);
+        objectSlots.add(step.cameraEvalSlot);
+        objectSlots.add(step.positionSlot);
+        if (step.rotationSlot !== undefined) objectSlots.add(step.rotationSlot);
+        if (step.scaleSlot !== undefined) objectSlots.add(step.scaleSlot);
+        objectSlots.add(step.colorRSlot);
+        objectSlots.add(step.colorGSlot);
+        objectSlots.add(step.colorBSlot);
+        objectSlots.add(step.colorASlot);
+        objectSlots.add(step.radiusSlot);
+        objectSlots.add(step.outSlot);
+        break;
     }
   }
 
@@ -450,9 +487,13 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
  * and initializes state cells from the constant pool.
  *
  * @param program - Compiled program
+ * @param viewport - Viewport info for 3D projection (optional, defaults to 1920x1080@1)
  * @returns Initialized RuntimeState
  */
-export function createRuntimeState(program: CompiledProgramIR): RuntimeState {
+export function createRuntimeState(
+  program: CompiledProgramIR,
+  viewport?: ViewportInfo
+): RuntimeState {
   // Extract slot metadata (placeholder extraction for Sprint 1)
   const slotMeta = extractSlotMeta(program);
 
@@ -494,16 +535,38 @@ export function createRuntimeState(program: CompiledProgramIR): RuntimeState {
   const fieldCapacity = 512; // Default field cache capacity
   const frameCache = createFrameCache(sigCapacity, fieldCapacity);
 
+  // Create 3D stores
+  const cameraStore = new CameraStore();
+  const meshStore = new MeshStore();
+
+  // Initialize camera and mesh tables if present in program
+  if (program.cameras) {
+    cameraStore.setCameraTable(program.cameras);
+  }
+  if (program.meshes) {
+    meshStore.setMeshTable(program.meshes);
+  }
+
+  // Default viewport (1920x1080 @ 1x DPR)
+  const defaultViewport: ViewportInfo = viewport || {
+    width: 1920,
+    height: 1080,
+    dpr: 1,
+  };
+
   const runtimeState: RuntimeState = {
     values,
     state,
     frameCache,
     frameId: 0,
+    cameraStore,
+    meshStore,
+    viewport: defaultViewport,
 
     // Hot-swap implementation
     hotSwap(newProgram: CompiledProgramIR): RuntimeState {
-      // Create new runtime from new program
-      const newRuntime = createRuntimeState(newProgram);
+      // Create new runtime from new program (preserve viewport)
+      const newRuntime = createRuntimeState(newProgram, this.viewport);
 
       // Preserve state cells from old to new
       preserveState(this, newRuntime, program, newProgram);
@@ -514,6 +577,8 @@ export function createRuntimeState(program: CompiledProgramIR): RuntimeState {
 
       // Invalidate caches (preserving frameId)
       newRuntime.frameCache.invalidate();
+      newRuntime.cameraStore.invalidateAll();
+      newRuntime.meshStore.invalidateAll();
 
       return newRuntime;
     },

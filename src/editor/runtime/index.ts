@@ -7,6 +7,7 @@
  * - Player (RAF loop, hot swap, scrubbing)
  * - SvgRenderer (keyed reconciliation)
  * - Canvas2DRenderer (command execution)
+ * - 3D Camera and Mesh systems
  */
 
 // SVG RenderTree types and helpers
@@ -112,3 +113,38 @@ export {
   colorToCss,
   parseColor,
 } from './renderCmd';
+
+// 3D Camera system
+export {
+  // Matrix utilities
+  buildViewMatrix,
+  buildPerspectiveMatrix,
+  buildOrthographicMatrix,
+  multiplyMat4,
+  quatToMat4,
+
+  // Camera evaluation
+  evaluateCamera,
+
+  // Camera store
+  CameraStore,
+
+  // Types
+  type ViewportInfo,
+} from './camera';
+
+// 3D Mesh system
+export {
+  // Mesh store
+  MeshStore,
+
+  // Mesh materialization
+  materializeMesh,
+
+  // Extrude geometry
+  generateProfile,
+  extrudeProfile,
+  type ProfilePoint,
+  type ExtrusionResult,
+  type ExtrudeOptions,
+} from './mesh';

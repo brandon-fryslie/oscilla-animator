@@ -30,6 +30,11 @@ import { executeRenderAssemble } from "./steps/executeRenderAssemble";
 import { executeDebugProbe } from "./steps/executeDebugProbe";
 import { executeSignalEval } from "./steps/executeSignalEval";
 
+// 3D step executors
+import { executeCameraEval } from "./steps/executeCameraEval";
+import { executeMeshMaterialize } from "./steps/executeMeshMaterialize";
+import { executeInstances3DProject } from "./steps/executeInstances3DProject";
+
 // ============================================================================
 // Type Guard for RenderFrameIR
 // ============================================================================
@@ -212,6 +217,31 @@ export class ScheduleExecutor {
 
       case "debugProbe":
         executeDebugProbe(step, runtime);
+        break;
+
+      // 3D steps
+      case "CameraEval":
+        executeCameraEval(
+          step,
+          runtime.cameraStore,
+          runtime.viewport,
+          runtime.values
+        );
+        break;
+
+      case "MeshMaterialize": {
+        const { result } = executeMeshMaterialize(step, runtime.meshStore);
+        // Write mesh buffer to output slot
+        runtime.values.write(step.outSlot, { kind: 'meshBuffer', buffer: result });
+        break;
+      }
+
+      case "Instances3DProjectTo2D":
+        executeInstances3DProject(
+          step,
+          runtime.values,
+          runtime.viewport
+        );
         break;
 
       default: {
