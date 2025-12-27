@@ -126,8 +126,8 @@ describe('ColorLFOBlock', () => {
         phase: { kind: 'Signal:phase', value: phaseSignal },
         base: { kind: 'Scalar:color', value: '#3B82F6' },
         hueSpan: { kind: 'Scalar:number', value: 180 },
-        sat: { kind: 'Scalar:number', value: 80 },
-        light: { kind: 'Scalar:number', value: 50 },
+        sat: { kind: 'Scalar:number', value: 0.8 },
+        light: { kind: 'Scalar:number', value: 0.5 },
       },
       ctx: { env: {}, geom: mockGeom },
     });
