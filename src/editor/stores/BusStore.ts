@@ -266,22 +266,21 @@ export class BusStore {
    * Update publisher properties.
    * Replaces the entire publisher object to avoid mutating readonly fields.
    */
+  /**
+   * Update a publisher's properties.
+   *
+   * P1-3 MIGRATED: Now uses runTx() for undo/redo support.
+   */
   updatePublisher(publisherId: string, updates: Partial<Pick<Publisher, 'enabled' | 'sortKey' | 'adapterChain' | 'lensStack'>>): void {
-    const index = this.publishers.findIndex(p => p.id === publisherId);
-    if (index === -1) {
-      throw new Error(`Publisher ${publisherId} not found`);
-    }
+    runTx(this.root, { label: 'Update Publisher' }, tx => {
+      const existing = this.root.busStore.publishers.find(p => p.id === publisherId);
+      if (!existing) {
+        throw new Error(`Publisher ${publisherId} not found`);
+      }
 
-    const existing = this.publishers[index];
-    const updated: Publisher = {
-      ...existing,
-      ...(updates.adapterChain !== undefined && { adapterChain: updates.adapterChain }),
-      ...(updates.lensStack !== undefined && { lensStack: updates.lensStack }),
-      ...(updates.enabled !== undefined && { enabled: updates.enabled }),
-      ...(updates.sortKey !== undefined && { sortKey: updates.sortKey }),
-    };
-
-    this.publishers[index] = updated;
+      const next = { ...existing, ...updates };
+      tx.replace('publishers', publisherId, next);
+    });
   }
 
   /**
@@ -380,20 +379,21 @@ export class BusStore {
    * Update listener properties.
    * Replaces the entire listener object to avoid mutating readonly fields.
    */
+  /**
+   * Update a listener's properties.
+   *
+   * P1-3 MIGRATED: Now uses runTx() for undo/redo support.
+   */
   updateListener(listenerId: string, updates: Partial<Pick<Listener, 'enabled' | 'lensStack'>>): void {
-    const index = this.listeners.findIndex(l => l.id === listenerId);
-    if (index === -1) {
-      throw new Error(`Listener ${listenerId} not found`);
-    }
+    runTx(this.root, { label: 'Update Listener' }, tx => {
+      const existing = this.root.busStore.listeners.find(l => l.id === listenerId);
+      if (!existing) {
+        throw new Error(`Listener ${listenerId} not found`);
+      }
 
-    const existing = this.listeners[index];
-    const updated: Listener = {
-      ...existing,
-      ...(updates.lensStack !== undefined && { lensStack: updates.lensStack }),
-      ...(updates.enabled !== undefined && { enabled: updates.enabled }),
-    };
-
-    this.listeners = this.listeners.map((l, i) => (i === index ? updated : l));
+      const next = { ...existing, ...updates };
+      tx.replace('listeners', listenerId, next);
+    });
   }
 
   /**
