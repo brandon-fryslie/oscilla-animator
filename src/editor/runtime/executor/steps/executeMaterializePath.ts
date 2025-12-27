@@ -105,6 +105,46 @@ function isFieldExprHandle(value: unknown): value is FieldExprHandle {
   return v.kind === "fieldExpr" && typeof v.exprId === "string";
 }
 
+function parseFieldExprId(exprId: string): number {
+  const direct = parseInt(exprId, 10);
+  if (!isNaN(direct)) {
+    return direct;
+  }
+
+  const match = exprId.match(/(\d+)$/);
+  if (match !== null) {
+    return parseInt(match[1], 10);
+  }
+
+  throw new Error(`executeMaterializePath: unable to parse field expr id "${exprId}"`);
+}
+
+function resolvePathExprFromField(
+  program: CompiledProgramIR,
+  exprId: string,
+): PathExpr | PathExpr[] {
+  const fieldId = parseFieldExprId(exprId);
+  const fieldNode = program.fields.nodes[fieldId];
+  if (!fieldNode) {
+    throw new Error(`executeMaterializePath: missing field expr ${exprId}`);
+  }
+
+  if (fieldNode.kind !== "const") {
+    throw new Error(
+      `executeMaterializePath: path field expr ${exprId} must be const, got ${fieldNode.kind}`
+    );
+  }
+
+  const value = program.constants.json[fieldNode.constId];
+  if (isPathExpr(value) || isPathExprArray(value)) {
+    return value;
+  }
+
+  throw new Error(
+    `executeMaterializePath: const field expr ${exprId} does not contain path data`
+  );
+}
+
 /**
  * Calculate buffer sizes needed for paths
  */
@@ -170,7 +210,7 @@ function encodeCommandKind(kind: string): number {
  */
 export function executeMaterializePath(
   step: StepMaterializePath,
-  _program: CompiledProgramIR,
+  program: CompiledProgramIR,
   runtime: RuntimeState,
 ): void {
   // Performance tracking
@@ -210,13 +250,22 @@ export function executeMaterializePath(
     }
     paths = pathValue;
   } else if (isFieldExprHandle(pathValue)) {
-    // fieldExpr handle case: evaluate via PathRuntime
-    // Future work: call paths.evalPathsToCmdBuffers()
-    console.warn(
-      `executeMaterializePath: fieldExpr evaluation not implemented yet. ` +
-        `Using empty paths for ${instanceCount} instances.`
-    );
-    paths = new Array(instanceCount).fill({ commands: [] });
+    const resolved = resolvePathExprFromField(program, pathValue.exprId);
+    if (isPathExpr(resolved)) {
+      paths = new Array(instanceCount).fill(resolved);
+    } else if (isPathExprArray(resolved)) {
+      if (resolved.length !== instanceCount) {
+        throw new Error(
+          `executeMaterializePath: path array length mismatch. ` +
+            `Expected ${instanceCount}, got ${resolved.length}.`
+        );
+      }
+      paths = resolved;
+    } else {
+      throw new Error(
+        `executeMaterializePath: fieldExpr ${pathValue.exprId} did not resolve to path data`
+      );
+    }
   } else {
     throw new Error(
       `executeMaterializePath: pathExprSlot contains invalid value. ` +
@@ -233,12 +282,21 @@ export function executeMaterializePath(
 
   const cmdsBuffer = runtime.values.ensureU16(step.outCmdsSlot, minCmdSize);
   const paramsBuffer = runtime.values.ensureF32(step.outParamsSlot, minParamSize);
+  const cmdStartBuffer = runtime.values.ensureU32(step.outCmdStartSlot, instanceCount);
+  const cmdLenBuffer = runtime.values.ensureU32(step.outCmdLenSlot, instanceCount);
+  const pointStartBuffer = runtime.values.ensureU32(step.outPointStartSlot, instanceCount);
+  const pointLenBuffer = runtime.values.ensureU32(step.outPointLenSlot, instanceCount);
 
   // 6. Encode paths to buffers
   let cmdIdx = 0;
   let paramIdx = 0;
 
-  for (const path of paths) {
+  for (let pathIndex = 0; pathIndex < paths.length; pathIndex++) {
+    const path = paths[pathIndex];
+    const cmdStart = cmdIdx;
+    const pointStart = paramIdx / 2;
+    let pointCount = 0;
+
     for (const cmd of path.commands) {
       cmdsBuffer[cmdIdx++] = encodeCommandKind(cmd.kind);
 
@@ -247,12 +305,14 @@ export function executeMaterializePath(
         case "L":
           paramsBuffer[paramIdx++] = cmd.x;
           paramsBuffer[paramIdx++] = cmd.y;
+          pointCount += 1;
           break;
         case "Q":
           paramsBuffer[paramIdx++] = cmd.cx;
           paramsBuffer[paramIdx++] = cmd.cy;
           paramsBuffer[paramIdx++] = cmd.x;
           paramsBuffer[paramIdx++] = cmd.y;
+          pointCount += 2;
           break;
         case "C":
           paramsBuffer[paramIdx++] = cmd.c1x;
@@ -261,12 +321,18 @@ export function executeMaterializePath(
           paramsBuffer[paramIdx++] = cmd.c2y;
           paramsBuffer[paramIdx++] = cmd.x;
           paramsBuffer[paramIdx++] = cmd.y;
+          pointCount += 3;
           break;
         case "Z":
           // No params for close
           break;
       }
     }
+
+    cmdStartBuffer[pathIndex] = cmdStart;
+    cmdLenBuffer[pathIndex] = cmdIdx - cmdStart;
+    pointStartBuffer[pathIndex] = pointStart;
+    pointLenBuffer[pathIndex] = pointCount;
   }
 
   // 7. Optional flattening (future work)

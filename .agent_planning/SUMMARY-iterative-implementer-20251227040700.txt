@@ -1,0 +1,28 @@
+Agent: iterative-implementer | 2025-12-27-04:07:00
+Mode: tdd
+Completed: P0-4 (HistoryStore), P0-5 (undo/redo logic) | Files: 5 | Commits: 1
+Tests: 25 passing, 0 failing
+Cache invalidated: None (eval-cache empty)
+Status: complete
+
+Implementation Summary:
+- Created HistoryStore to maintain revision tree for undo/redo
+- Implemented applyOps module for shared op application (TxBuilder + HistoryStore)
+- Integrated HistoryStore with TxBuilder's runTx() to auto-record revisions
+- Updated RootStore to include HistoryStore
+- Added comprehensive test suite (25 tests covering all functionality)
+
+Key Design Decisions:
+- Revision 0 is implicit root (no RevisionNode), actual revisions start at 1
+- rootPreferredChildId on HistoryStore tracks preferred child for root
+- parentId = 0 for revisions created from root (not null)
+- Shared applyOps() function eliminates code duplication
+- Tree structure (not linear) enables future branching features
+
+All acceptance criteria met:
+- HistoryStore maintains revision tree with parent/child links
+- New revisions added after each runTx() commit
+- undo() applies inverse ops and moves to parent
+- redo() applies forward ops and moves to child
+- canUndo/canRedo work correctly
+- All 25 tests passing

@@ -105,6 +105,18 @@ export interface ValueStore {
    * @returns Uint16Array at the slot (new or reused)
    */
   ensureU16(slot: ValueSlot, length: number): Uint16Array;
+
+  /**
+   * Ensure a Uint32Array buffer exists at the specified slot with the given length.
+   * Reuses existing buffer if size matches, otherwise allocates new one.
+   *
+   * Used by path materialization steps to allocate indexing buffers.
+   *
+   * @param slot - ValueSlot index for buffer storage (uses object storage)
+   * @param length - Required buffer length
+   * @returns Uint32Array at the slot (new or reused)
+   */
+  ensureU32(slot: ValueSlot, length: number): Uint32Array;
 }
 
 /**
@@ -391,6 +403,31 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
         objects[meta.offset] = buffer;
       } else {
         // Ensure objects array is large enough
+        while (objects.length <= slot) {
+          objects.push(undefined);
+        }
+        objects[slot] = buffer;
+      }
+
+      return buffer;
+    },
+
+    ensureU32(slot: ValueSlot, length: number): Uint32Array {
+      const meta = slotLookup.get(slot);
+
+      const existing = meta?.storage === "object"
+        ? objects[meta.offset]
+        : objects[slot];
+
+      if (existing instanceof Uint32Array && existing.length === length) {
+        return existing;
+      }
+
+      const buffer = new Uint32Array(length);
+
+      if (meta && meta.storage === "object") {
+        objects[meta.offset] = buffer;
+      } else {
         while (objects.length <= slot) {
           objects.push(undefined);
         }

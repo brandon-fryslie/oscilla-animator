@@ -52,8 +52,24 @@ interface Instance2DBatchList {
  */
 interface PathBatchDescriptor {
   kind: "path";
+  count: number;
+  domainSlot: number;
   cmdsSlot: number;
   paramsSlot: number;
+  cmdStartSlot: number;
+  cmdLenSlot: number;
+  pointStartSlot: number;
+  pointLenSlot: number;
+  fillColorSlot?: number;
+  strokeColorSlot?: number;
+  strokeWidthSlot?: number;
+  opacitySlot?: number;
+  draw: { stroke: boolean; fill: boolean };
+  fillRule?: "nonzero" | "evenodd";
+  lineCap?: "butt" | "round" | "square";
+  lineJoin?: "miter" | "round" | "bevel";
+  miterLimit?: number;
+  dash?: { pattern: number[]; offset?: number } | null;
 }
 
 /**
@@ -66,6 +82,7 @@ interface PathBatchList {
 interface DomainHandle {
   kind: "domain";
   count: number;
+  elementIds?: readonly string[];
 }
 
 function isInstance2DBatchList(value: unknown): value is Instance2DBatchList {
@@ -127,8 +144,156 @@ function buildInstancesPass(
   };
 }
 
-function buildPathsPass(_batch: PathBatchDescriptor): Paths2DPassIR | null {
-  return null;
+function buildPathsPass(
+  batch: PathBatchDescriptor,
+  runtime: RuntimeState,
+): Paths2DPassIR {
+  let count = batch.count;
+  if (count <= 0) {
+    const domainValue = runtime.values.read(batch.domainSlot);
+    if (isDomainHandle(domainValue)) {
+      count = domainValue.count;
+    }
+  }
+
+  const commands = runtime.values.read(batch.cmdsSlot);
+  if (!(commands instanceof Uint16Array)) {
+    throw new Error(
+      `buildPathsPass: commands must be Uint16Array, got ${commands?.constructor.name}`
+    );
+  }
+
+  const points = runtime.values.read(batch.paramsSlot);
+  if (!(points instanceof Float32Array)) {
+    throw new Error(
+      `buildPathsPass: points must be Float32Array, got ${points?.constructor.name}`
+    );
+  }
+
+  const cmdStart = runtime.values.read(batch.cmdStartSlot);
+  const cmdLen = runtime.values.read(batch.cmdLenSlot);
+  const pointStart = runtime.values.read(batch.pointStartSlot);
+  const pointLen = runtime.values.read(batch.pointLenSlot);
+
+  if (!(cmdStart instanceof Uint32Array)) {
+    throw new Error(
+      `buildPathsPass: cmdStart must be Uint32Array, got ${cmdStart?.constructor.name}`
+    );
+  }
+  if (!(cmdLen instanceof Uint32Array)) {
+    throw new Error(
+      `buildPathsPass: cmdLen must be Uint32Array, got ${cmdLen?.constructor.name}`
+    );
+  }
+  if (!(pointStart instanceof Uint32Array)) {
+    throw new Error(
+      `buildPathsPass: pointStart must be Uint32Array, got ${pointStart?.constructor.name}`
+    );
+  }
+  if (!(pointLen instanceof Uint32Array)) {
+    throw new Error(
+      `buildPathsPass: pointLen must be Uint32Array, got ${pointLen?.constructor.name}`
+    );
+  }
+
+  const geometry = {
+    pathCount: count,
+    pathCommandStart: { bufferId: batch.cmdStartSlot, type: "u32", length: cmdStart.length },
+    pathCommandLen: { bufferId: batch.cmdLenSlot, type: "u32", length: cmdLen.length },
+    pathPointStart: { bufferId: batch.pointStartSlot, type: "u32", length: pointStart.length },
+    pathPointLen: { bufferId: batch.pointLenSlot, type: "u32", length: pointLen.length },
+    commands: { bufferId: batch.cmdsSlot, type: "u16", length: commands.length },
+    pointsXY: { bufferId: batch.paramsSlot, type: "f32", length: points.length },
+    encoding: { kind: "v1", commands: ["M", "L", "Q", "C", "Z"] },
+  };
+
+  const style: Paths2DPassIR["style"] = {
+    fillRule: batch.fillRule,
+    lineCap: batch.lineCap,
+    lineJoin: batch.lineJoin,
+    miterLimit: batch.miterLimit,
+    dash: batch.dash,
+  };
+
+  if (batch.fillColorSlot !== undefined) {
+    const fillValue = runtime.values.read(batch.fillColorSlot);
+    if (typeof fillValue === "number") {
+      style.fillColorRGBA = { kind: "scalar:u32", value: fillValue };
+    } else if (fillValue instanceof Uint8Array || fillValue instanceof Uint8ClampedArray) {
+      style.fillColorRGBA = {
+        bufferId: batch.fillColorSlot,
+        type: "u8",
+        length: fillValue.length,
+      };
+    } else {
+      throw new Error(
+        `buildPathsPass: fillColor must be number or Uint8Array, got ${fillValue?.constructor.name}`
+      );
+    }
+  }
+
+  if (batch.strokeColorSlot !== undefined) {
+    const strokeValue = runtime.values.read(batch.strokeColorSlot);
+    if (typeof strokeValue === "number") {
+      style.strokeColorRGBA = { kind: "scalar:u32", value: strokeValue };
+    } else if (strokeValue instanceof Uint8Array || strokeValue instanceof Uint8ClampedArray) {
+      style.strokeColorRGBA = {
+        bufferId: batch.strokeColorSlot,
+        type: "u8",
+        length: strokeValue.length,
+      };
+    } else {
+      throw new Error(
+        `buildPathsPass: strokeColor must be number or Uint8Array, got ${strokeValue?.constructor.name}`
+      );
+    }
+  }
+
+  if (batch.strokeWidthSlot !== undefined) {
+    const widthValue = runtime.values.read(batch.strokeWidthSlot);
+    if (typeof widthValue === "number") {
+      style.strokeWidth = { kind: "scalar:f32", value: widthValue };
+    } else if (widthValue instanceof Float32Array) {
+      style.strokeWidth = {
+        bufferId: batch.strokeWidthSlot,
+        type: "f32",
+        length: widthValue.length,
+      };
+    } else {
+      throw new Error(
+        `buildPathsPass: strokeWidth must be number or Float32Array, got ${widthValue?.constructor.name}`
+      );
+    }
+  }
+
+  if (batch.opacitySlot !== undefined) {
+    const opacityValue = runtime.values.read(batch.opacitySlot);
+    if (typeof opacityValue === "number") {
+      style.opacity = { kind: "scalar:f32", value: opacityValue };
+    } else if (opacityValue instanceof Float32Array) {
+      style.opacity = {
+        bufferId: batch.opacitySlot,
+        type: "f32",
+        length: opacityValue.length,
+      };
+    } else {
+      throw new Error(
+        `buildPathsPass: opacity must be number or Float32Array, got ${opacityValue?.constructor.name}`
+      );
+    }
+  }
+
+  return {
+    kind: "paths2d",
+    header: {
+      id: `paths2d-${batch.domainSlot}`,
+      z: 0,
+      enabled: true,
+    },
+    geometry,
+    style,
+    draw: batch.draw,
+  };
 }
 
 /**
@@ -177,10 +342,7 @@ export function executeRenderAssemble(
   // Prefer embedded config (new path), fallback to slots (legacy/deprecated)
   if (step.pathBatches && step.pathBatches.length > 0) {
     for (const batch of step.pathBatches) {
-      const pass = buildPathsPass(batch);
-      if (pass) {
-        passes.push(pass);
-      }
+      passes.push(buildPathsPass(batch, runtime));
     }
   } else if (step.pathBatchListSlot !== undefined) {
     try {
@@ -189,10 +351,7 @@ export function executeRenderAssemble(
       if (isPathBatchList(pathList)) {
         for (const batch of pathList.batches) {
           if (batch.kind === "path") {
-            const pass = buildPathsPass(batch);
-            if (pass) {
-              passes.push(pass);
-            }
+            passes.push(buildPathsPass(batch, runtime));
           }
         }
       }

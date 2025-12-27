@@ -63,6 +63,7 @@ export interface ScheduleDebugConfig {
 interface DomainHandle {
   kind: "domain";
   count: number;
+  elementIds?: readonly string[];
 }
 
 // Note: Instance2DBatchDescriptor, Instance2DBatchList, PathBatchList, and
@@ -241,6 +242,7 @@ function buildSchedule(
   const slots = new SlotAllocator(builderIR.nextValueSlot ?? 0);
   const probeMode = options?.debugConfig?.probeMode ?? 'off';
   let probeCounter = 0;
+  const initialSlotValues: Record<number, unknown> = {};
 
   /**
    * Insert a debug probe step after a preceding step.
@@ -381,7 +383,19 @@ function buildSchedule(
         ]);
       }
     }
-    // Future: handle "paths2d" sinks
+    if (sink.sinkType === "paths2d") {
+      const result = processPaths2DSink(
+        sink,
+        sinkIdx,
+        slots,
+        steps,
+        sigSlotToId,
+        fieldSlotToId,
+        initialSlotValues,
+      );
+      pathBatches.push(result.batch);
+      materializeStepIds.push(...result.stepIds);
+    }
   }
 
   // Step 3: Render Assemble
@@ -430,11 +444,19 @@ function buildSchedule(
     // Batch lists are now embedded in the renderAssemble step (compile-time config)
     initialSlotValues: {
       ...Object.fromEntries(
-        builderIR.domains.map((d) => [
-          d.slot,
-          { kind: "domain", count: d.count } as DomainHandle,
-        ])
+        builderIR.domains.map((d) => {
+          const elementIds = (d as { elementIds?: readonly string[] }).elementIds;
+          return [
+            d.slot,
+            {
+              kind: "domain",
+              count: d.count,
+              elementIds,
+            } as DomainHandle,
+          ];
+        })
       ),
+      ...initialSlotValues,
     },
   };
 
@@ -442,6 +464,94 @@ function buildSchedule(
     schedule,
     frameOutSlot: SLOT_FRAME_OUT,
   };
+}
+
+function materializeColorField(
+  label: string,
+  fieldSlot: ValueSlot | undefined,
+  domainSlot: ValueSlot,
+  sinkIdx: number,
+  slots: SlotAllocator,
+  steps: StepIR[],
+  sigSlotToId: Map<ValueSlot, number>,
+  fieldSlotToId: Map<ValueSlot, number>,
+  stepIds: string[],
+): ValueSlot | undefined {
+  if (fieldSlot === undefined) {
+    return undefined;
+  }
+
+  const fieldId = fieldSlotToId.get(fieldSlot);
+  if (fieldId !== undefined) {
+    const outSlot = slots.alloc();
+    const stepId = `step-mat-${label}-${sinkIdx}`;
+    steps.push({
+      kind: "materialize",
+      id: stepId,
+      deps: ["step-time-derive"],
+      label: `Materialize ${label} for sink ${sinkIdx}`,
+      materialization: {
+        id: `mat-${label}-${sinkIdx}`,
+        fieldExprId: String(fieldId),
+        domainSlot,
+        outBufferSlot: outSlot,
+        format: { components: 4, elementType: "u8" },
+        policy: "perFrame",
+      },
+    });
+    stepIds.push(stepId);
+    return outSlot;
+  }
+
+  if (!sigSlotToId.has(fieldSlot)) {
+    throw new Error(`processPaths2DSink: ${label} slot ${fieldSlot} has no signal or field expression`);
+  }
+
+  return fieldSlot;
+}
+
+function materializeScalarField(
+  label: string,
+  fieldSlot: ValueSlot | undefined,
+  domainSlot: ValueSlot,
+  sinkIdx: number,
+  slots: SlotAllocator,
+  steps: StepIR[],
+  sigSlotToId: Map<ValueSlot, number>,
+  fieldSlotToId: Map<ValueSlot, number>,
+  stepIds: string[],
+): ValueSlot | undefined {
+  if (fieldSlot === undefined) {
+    return undefined;
+  }
+
+  const fieldId = fieldSlotToId.get(fieldSlot);
+  if (fieldId !== undefined) {
+    const outSlot = slots.alloc();
+    const stepId = `step-mat-${label}-${sinkIdx}`;
+    steps.push({
+      kind: "materialize",
+      id: stepId,
+      deps: ["step-time-derive"],
+      label: `Materialize ${label} for sink ${sinkIdx}`,
+      materialization: {
+        id: `mat-${label}-${sinkIdx}`,
+        fieldExprId: String(fieldId),
+        domainSlot,
+        outBufferSlot: outSlot,
+        format: { components: 1, elementType: "f32" },
+        policy: "perFrame",
+      },
+    });
+    stepIds.push(stepId);
+    return outSlot;
+  }
+
+  if (!sigSlotToId.has(fieldSlot)) {
+    throw new Error(`processPaths2DSink: ${label} slot ${fieldSlot} has no signal or field expression`);
+  }
+
+  return fieldSlot;
 }
 
 /**
@@ -561,6 +671,138 @@ function processInstances2DSink(
     sizeSlot: sizeOutSlot,
     colorRGBASlot: colorOutSlot,
     opacitySlot,
+  };
+
+  return { batch, stepIds };
+}
+
+function processPaths2DSink(
+  sink: RenderSinkIR,
+  sinkIdx: number,
+  slots: SlotAllocator,
+  steps: StepIR[],
+  sigSlotToId: Map<ValueSlot, number>,
+  fieldSlotToId: Map<ValueSlot, number>,
+  initialSlotValues: Record<number, unknown>,
+): { batch: PathBatch; stepIds: string[] } {
+  const stepIds: string[] = [];
+
+  const domainSlot = sink.inputs.domain as ValueSlot;
+  const pathSlot = sink.inputs.paths as ValueSlot;
+  if (pathSlot === undefined) {
+    throw new Error("processPaths2DSink: missing paths input");
+  }
+
+  if (sink.inputs.opacity === undefined) {
+    throw new Error("processPaths2DSink: missing opacity input");
+  }
+  const opacitySlot = sink.inputs.opacity as ValueSlot;
+
+  const pathFieldId = fieldSlotToId.get(pathSlot);
+  if (pathFieldId === undefined) {
+    throw new Error(`processPaths2DSink: paths slot ${pathSlot} has no field expression`);
+  }
+
+  initialSlotValues[pathSlot] = { kind: "fieldExpr", exprId: String(pathFieldId) };
+
+  const outCmdsSlot = slots.alloc();
+  const outParamsSlot = slots.alloc();
+  const outCmdStartSlot = slots.alloc();
+  const outCmdLenSlot = slots.alloc();
+  const outPointStartSlot = slots.alloc();
+  const outPointLenSlot = slots.alloc();
+
+  const pathStepId = `step-mat-path-${sinkIdx}`;
+  steps.push({
+    kind: "materializePath",
+    id: pathStepId,
+    deps: ["step-time-derive"],
+    label: `Materialize paths for sink ${sinkIdx}`,
+    domainSlot,
+    pathExprSlot: pathSlot,
+    outCmdsSlot,
+    outParamsSlot,
+    outCmdStartSlot,
+    outCmdLenSlot,
+    outPointStartSlot,
+    outPointLenSlot,
+  });
+  stepIds.push(pathStepId);
+
+  const fillColorSlot = materializeColorField(
+    "fill-color",
+    sink.inputs.fillColor as ValueSlot | undefined,
+    domainSlot,
+    sinkIdx,
+    slots,
+    steps,
+    sigSlotToId,
+    fieldSlotToId,
+    stepIds,
+  );
+
+  const strokeColorSlot = materializeColorField(
+    "stroke-color",
+    sink.inputs.strokeColor as ValueSlot | undefined,
+    domainSlot,
+    sinkIdx,
+    slots,
+    steps,
+    sigSlotToId,
+    fieldSlotToId,
+    stepIds,
+  );
+
+  const strokeWidthSlot = materializeScalarField(
+    "stroke-width",
+    sink.inputs.strokeWidth as ValueSlot | undefined,
+    domainSlot,
+    sinkIdx,
+    slots,
+    steps,
+    sigSlotToId,
+    fieldSlotToId,
+    stepIds,
+  );
+
+  const resolvedOpacitySlot = materializeScalarField(
+    "opacity",
+    opacitySlot,
+    domainSlot,
+    sinkIdx,
+    slots,
+    steps,
+    sigSlotToId,
+    fieldSlotToId,
+    stepIds,
+  );
+
+  const drawFill = fillColorSlot !== undefined;
+  const drawStroke = strokeColorSlot !== undefined;
+
+  if (!drawFill && !drawStroke) {
+    throw new Error("processPaths2DSink: expected fillColor or strokeColor input");
+  }
+
+  if (drawStroke && strokeWidthSlot === undefined) {
+    throw new Error("processPaths2DSink: strokeColor requires strokeWidth input");
+  }
+
+  const batch: PathBatch = {
+    kind: "path",
+    count: 0,
+    domainSlot,
+    cmdsSlot: outCmdsSlot,
+    paramsSlot: outParamsSlot,
+    cmdStartSlot: outCmdStartSlot,
+    cmdLenSlot: outCmdLenSlot,
+    pointStartSlot: outPointStartSlot,
+    pointLenSlot: outPointLenSlot,
+    fillColorSlot,
+    strokeColorSlot,
+    strokeWidthSlot,
+    opacitySlot: resolvedOpacitySlot,
+    draw: { fill: drawFill, stroke: drawStroke },
   };
 
   return { batch, stepIds };

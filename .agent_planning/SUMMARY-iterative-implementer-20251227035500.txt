@@ -1,0 +1,38 @@
+Agent: iterative-implementer | 2025-12-27-035500
+Mode: tdd
+Completed: P0-3 Cascade Helpers | Files: 2 | Commits: 1
+Tests: 41 passing
+Cache invalidated: None needed (new code only)
+Status: complete
+
+PHASE P0-3 COMPLETE: Cascade Helpers
+
+Implementation:
+- Added removeBlockCascade() to TxBuilder
+  * Removes connections, publishers, listeners, default sources, lane memberships
+  * Generates Many op with all sub-ops in correct order
+  * Inverse ops recreate everything in reverse order
+  
+- Added removeBusCascade() to TxBuilder
+  * Removes publishers, listeners, and bus itself
+  * Generates Many op with proper sequencing
+  * Inverse ops support full undo capability
+
+- Added query helpers:
+  * getPublishersForBus()
+  * getListenersForBus()
+  * getDefaultSourcesForBlock()
+  * getLanesContainingBlock()
+
+Testing:
+- Created comprehensive cascade tests
+- Verified removal of all dependencies
+- Verified inverse ops correctness
+- Fixed test to account for default buses (6 created on clearPatch)
+- All 41 tests passing (20 ops tests + 21 TxBuilder tests)
+
+Files Modified:
+- src/editor/transactions/TxBuilder.ts (137 lines added)
+- src/editor/transactions/__tests__/TxBuilder.test.ts (269 lines added)
+
+Next Phase: P0-4 - Implement HistoryStore with revision tree and snapshot policy

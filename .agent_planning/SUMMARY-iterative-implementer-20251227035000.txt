@@ -1,0 +1,77 @@
+Agent: iterative-implementer | 2025-12-27-035000
+Mode: manual
+Completed: Phase 3 Camera System | Files: 7 | Commits: 1
+Tests: 38 passing (cameraMatrix.test.ts: 22, CameraStore.test.ts: 16)
+Cache invalidated: None (new code, no existing cache entries affected)
+Status: complete
+
+Summary:
+Implemented Phase 3 of 3D Projection Initiative - Camera System
+
+Deliverables:
+1. Camera Matrix Utilities (cameraMatrix.ts)
+   - quatToMat4(): Convert unit quaternion to 4x4 rotation matrix
+   - buildViewMatrix(): Compute view matrix from camera pose
+   - buildPerspectiveMatrix(): Perspective projection matrix
+   - buildOrthographicMatrix(): Orthographic projection matrix
+   - multiplyMat4(): 4x4 matrix multiplication
+   - All math uses float32 (Math.fround) for determinism
+
+2. Camera Evaluation (evaluateCamera.ts)
+   - evaluateCamera(): CameraIR -> CameraEval (matrices)
+   - Validates camera convention (right-handed, -Z forward, +Y up)
+   - Computes aspect ratio from viewport
+   - Produces view, proj, and viewProj matrices
+
+3. Camera Store (CameraStore.ts)
+   - Runtime cache for evaluated cameras
+   - Cache key: (cameraId, viewport width, height, dpr)
+   - Invalidation: invalidateAll(), invalidateCamera(id)
+   - Statistics: getStats() for debugging
+
+4. Step Executor (executeCameraEval.ts)
+   - StepCameraEval definition
+   - CameraEvalHandle for ValueStore
+   - executeCameraEval() implementation
+   - StepPerfCounters integration
+
+5. Tests (38 passing)
+   - Matrix math correctness (identity, rotations, orthogonality)
+   - View matrix construction
+   - Perspective/orthographic projection
+   - Matrix multiplication
+   - Full camera pipeline integration
+   - Float32 determinism verification
+   - CameraStore caching behavior
+   - Cache invalidation
+   - Multi-viewport support
+
+Critical Design Decisions:
+- Float32 math throughout (Math.fround) for determinism
+- Right-handed, -Z forward, +Y up (locked for Rust/WASM parity)
+- Column-major matrices (WebGL convention)
+- Quaternions MUST be normalized before use (no implicit normalization)
+- Cache keyed by viewport dimensions (aspect affects projection)
+
+Files Modified:
+- src/editor/runtime/camera/cameraMatrix.ts (new)
+- src/editor/runtime/camera/evaluateCamera.ts (new)
+- src/editor/runtime/camera/CameraStore.ts (new)
+- src/editor/runtime/camera/index.ts (new)
+- src/editor/runtime/executor/steps/executeCameraEval.ts (new)
+- src/editor/runtime/camera/__tests__/cameraMatrix.test.ts (new)
+- src/editor/runtime/camera/__tests__/CameraStore.test.ts (new)
+
+Commit: de6dfbe
+
+Next Steps:
+Phase 3 is complete. Next phases would be:
+- Phase 4: Mesh materialization (MeshStore, mesh recipe execution)
+- Phase 5: 3D-to-2D projection (Instances3D_ProjectTo2D step executor)
+- Integration with schedule executor
+- Viewport info propagation through runtime
+
+References:
+- design-docs/13-Renderer/07-3d-Canonical.md (Camera evaluation contract)
+- design-docs/13-Renderer/06-3d-IR-Deltas.md (Camera math requirements)
+- src/editor/compiler/ir/types3d.ts (CameraIR, CameraEval definitions)
