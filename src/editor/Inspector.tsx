@@ -603,21 +603,6 @@ function DefinitionPreview({ definition }: { definition: BlockDefinition }) {
         </div>
       </div>
 
-      {/* Parameters preview */}
-      {definition.paramSchema.length > 0 && (
-        <div className="insp-section">
-          <span className="insp-section-title">Parameters</span>
-          <div className="param-preview-list">
-            {definition.paramSchema.map(param => (
-              <div key={param.key} className="param-preview-item">
-                <span className="param-preview-key">{param.label}</span>
-                <span className="param-preview-type">{param.type}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <p className="insp-hint">Drag to patch bay to use</p>
     </InspectorContainer>
   );
