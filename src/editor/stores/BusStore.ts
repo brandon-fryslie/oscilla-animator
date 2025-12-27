@@ -169,6 +169,11 @@ export class BusStore {
   /**
    * Delete a bus and all its routing.
    */
+  /**
+   * Delete a bus and all its routing.
+   *
+   * P1-1 MIGRATED: Now uses tx.removeBusCascade() for undo/redo support.
+   */
   deleteBus(busId: string): void {
     // Get bus data before removal (for event)
     const bus = this.buses.find(b => b.id === busId);
@@ -176,22 +181,16 @@ export class BusStore {
       throw new Error(`Bus ${busId} not found`);
     }
 
-    // Emit BusDeleted event BEFORE removing (so event contains bus data)
+    runTx(this.root, { label: 'Delete Bus' }, tx => {
+      tx.removeBusCascade(busId);
+    });
+
+    // Emit BusDeleted event AFTER state changes committed
     this.root.events.emit({
       type: 'BusDeleted',
       busId: bus.id,
       name: bus.name,
     });
-
-    // Remove bus
-    this.buses = this.buses.filter(b => b.id !== busId);
-
-    // Remove all publishers and listeners for this bus
-    this.publishers = this.publishers.filter(p => p.busId !== busId);
-    this.listeners = this.listeners.filter(l => l.busId !== busId);
-
-    // NOTE: Selection clearing moved to event listener in RootStore
-    // (decoupling BusStore from UIStateStore)
   }
 
   /**
