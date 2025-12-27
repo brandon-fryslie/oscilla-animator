@@ -19,7 +19,7 @@ describe('Bus Contracts', () => {
       expect(RESERVED_BUS_CONTRACTS.phaseA).toEqual({
         type: {
           world: 'signal',
-          domain: 'phase01',
+          domain: 'phase',
           semantics: 'primary',
           category: 'core',
           busEligible: true,
@@ -51,7 +51,7 @@ describe('Bus Contracts', () => {
     it('should validate correct reserved bus contracts', () => {
       const correctPhaseA: TypeDesc = {
         world: 'signal',
-        domain: 'phase01',
+        domain: 'phase',
         semantics: 'primary',
         category: 'core',
         busEligible: true,
@@ -79,7 +79,7 @@ describe('Bus Contracts', () => {
     it('should reject reserved bus with wrong combine mode', () => {
       const correctType: TypeDesc = {
         world: 'signal',
-        domain: 'phase01',
+        domain: 'phase',
         semantics: 'primary',
         category: 'core',
         busEligible: true,

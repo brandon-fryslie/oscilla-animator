@@ -337,7 +337,7 @@ describe('Validator', () => {
             name: 'phaseA',
             type: {
               world: 'signal',
-              domain: 'phase01',
+              domain: 'phase',
               semantics: 'primary',
               category: 'core',
               busEligible: true,
@@ -684,7 +684,7 @@ describe('Validator', () => {
             name: 'phases',
             type: {
               world: 'signal',
-              domain: 'phase01',
+              domain: 'phase',
               category: 'core',
               busEligible: true,
             },
@@ -723,7 +723,7 @@ describe('Validator', () => {
             name: 'phases',
             type: {
               world: 'signal',
-              domain: 'phase01',
+              domain: 'phase',
               category: 'core',
               busEligible: true,
             },
@@ -766,7 +766,7 @@ describe('Validator', () => {
             name: 'phaseA',
             type: {
               world: 'signal',
-              domain: 'phase01',
+              domain: 'phase',
               semantics: 'primary',
               category: 'core',
               busEligible: true,
@@ -826,7 +826,7 @@ describe('Validator', () => {
             name: 'phaseA',
             type: {
               world: 'signal',
-              domain: 'phase01',
+              domain: 'phase',
               semantics: 'primary',
               category: 'core',
               busEligible: true,
