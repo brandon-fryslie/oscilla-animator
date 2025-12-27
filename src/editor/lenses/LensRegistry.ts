@@ -758,7 +758,17 @@ export function initLensRegistry(): void {
     params: {},
   });
 
-  // Legacy aliases (pre-canonical IDs)
+  /**
+   * Legacy Lens Aliases (Backward Compatibility)
+   *
+   * These aliases map old PascalCase lens IDs to canonical camelCase IDs.
+   * They exist to support loading saved patches that reference the old IDs.
+   *
+   * Status: Safe to keep indefinitely - additive aliases that don't block anything.
+   * Migration: Can be removed after all production patches use camelCase IDs.
+   *
+   * Canonical IDs: Always use camelCase in new code (e.g., 'polarity' not 'Polarity')
+   */
   registerLensAlias('Polarity', 'polarity');
   registerLensAlias('Softclip', 'softclip');
   registerLensAlias('Hysteresis', 'hysteresis');
