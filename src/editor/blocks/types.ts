@@ -1,4 +1,4 @@
-import type { BlockForm, BlockSubcategory, Slot, BlockParams, LaneKind, LaneFlavor } from '../types';
+import type { BlockForm, BlockSubcategory, Slot, BlockParams, LaneKind, LaneFlavor, KernelCapability, KernelId, PureCompileKind } from '../types';
 import type { CompositeDefinition } from '../composites';
 
 // Re-export types that are used by other modules
@@ -14,6 +14,11 @@ export type {
   SlotTier,
   UIControlHint,
   DefaultSource,
+  // New types for Capability Enforcement
+  Capability,
+  KernelCapability,
+  KernelId,
+  PureCompileKind,
 } from '../types';
 
 export type BlockTagValue =
@@ -24,7 +29,10 @@ export type BlockTagValue =
 
 export type BlockTags = Record<string, BlockTagValue>;
 
-export interface BlockDefinition {
+/**
+ * Base fields shared by all block definitions.
+ */
+interface BlockDefinitionBase {
   /**
    * Flexible map of string tags for organization and filtering.
    * Example: { role: 'input', domain: 'Scene' }
@@ -100,6 +108,38 @@ export interface BlockDefinition {
    */
   readonly autoBusPublications?: Record<string, string>;
 }
+
+/**
+ * Kernel block definition - has kernel capability and kernelId.
+ * These blocks have special authority (time/identity/state/render/io).
+ */
+export interface KernelBlockDefinition extends BlockDefinitionBase {
+  /** Kernel capability - one of the five authorities */
+  readonly capability: KernelCapability;
+
+  /** Kernel ID - must match type and be in KERNEL_PRIMITIVES */
+  readonly kernelId: KernelId;
+}
+
+/**
+ * Pure block definition - no kernelId allowed.
+ * These blocks compile to pure expressions with no special authority.
+ */
+export interface PureBlockDefinition extends BlockDefinitionBase {
+  /** Pure capability marker */
+  readonly capability: 'pure';
+
+  /** How this pure block compiles */
+  readonly compileKind: PureCompileKind;
+
+  // kernelId is NOT present - enforced by type system
+}
+
+/**
+ * BlockDefinition discriminated union.
+ * Enforces compile-time safety: kernel blocks MUST have kernelId, pure blocks MUST NOT.
+ */
+export type BlockDefinition = KernelBlockDefinition | PureBlockDefinition;
 
 /**
  * Defines the internal primitive graph of a compound block.

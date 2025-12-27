@@ -16,9 +16,12 @@ import { input, output } from './utils';
  * - divisions: Scalar world (compile-time constant, triggers rebuild)
  */
 export const PulseDivider = createBlock({
+
   type: 'PulseDivider',
   label: 'Pulse Divider',
   description: 'Generate tick events at phase subdivisions (e.g., quarter notes)',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('phase', 'Phase', 'Signal<phase>', {
       tier: 'primary',
@@ -58,8 +61,7 @@ export const PulseDivider = createBlock({
   // Auto-subscribe phase to phaseA bus when no explicit connection
   autoBusSubscriptions: {
     phase: 'phaseA',
-  },
-});
+  },});
 
 /**
  * EnvelopeAD - Attack/Decay envelope from trigger events
@@ -71,9 +73,12 @@ export const PulseDivider = createBlock({
  * - attack/decay/peak: Signal world (can be animated for dynamic envelopes)
  */
 export const EnvelopeAD = createBlock({
+
   type: 'EnvelopeAD',
   label: 'Envelope (AD)',
   description: 'Attack/Decay envelope triggered by events',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('trigger', 'Trigger', 'Signal<Unit>', {
       tier: 'primary',

@@ -1,12 +1,12 @@
 import type { BlockDefinition, ParamSchema } from './types';
 import { isNonEmptyString } from '../types/helpers';
 
-type BlockDefinitionInput = Omit<BlockDefinition, 'defaultParams'> & {
-  paramSchema: ParamSchema[];
-};
-
 export function createBlock(
-  definition: Partial<BlockDefinitionInput>,
+  definition: Partial<BlockDefinition> & {
+    type: string;
+    label: string;
+    paramSchema?: ParamSchema[];
+  },
 ): BlockDefinition {
   const { paramSchema = [] } = definition;
 
@@ -29,7 +29,7 @@ export function createBlock(
     inputs: [],
     outputs: [],
     color: '#CCCCCC',
-    laneKind: 'any',
+    laneKind: 'Program', // Default lane kind
     ...definition,
     paramSchema,
     defaultParams,

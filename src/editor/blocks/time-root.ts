@@ -13,6 +13,7 @@
  */
 import { createBlock } from './factory';
 import { input, output } from './utils';
+import type { KernelBlockDefinition } from './types';
 
 /**
  * FiniteTimeRoot - Finite performance with known duration.
@@ -22,10 +23,12 @@ import { input, output } from './utils';
  *
  * Produces TimeModel: { kind: 'finite', durationMs }
  */
-export const FiniteTimeRoot = createBlock({
+export const FiniteTimeRoot: KernelBlockDefinition = createBlock({
   type: 'FiniteTimeRoot',
   label: 'Finite Time',
   description: 'Finite performance with known duration',
+  capability: 'time',
+  kernelId: 'FiniteTimeRoot',
   inputs: [
     input('durationMs', 'Duration (ms)', 'Signal<number>', {
       tier: 'primary',
@@ -65,7 +68,7 @@ export const FiniteTimeRoot = createBlock({
     progress: 'progress',
     energy: 'energy',
   },
-});
+}) as KernelBlockDefinition;
 
 /**
  * CycleTimeRoot - Looping primary cycle.
@@ -75,10 +78,12 @@ export const FiniteTimeRoot = createBlock({
  *
  * Produces TimeModel: { kind: 'cyclic', periodMs, mode }
  */
-export const CycleTimeRoot = createBlock({
+export const CycleTimeRoot: KernelBlockDefinition = createBlock({
   type: 'CycleTimeRoot',
   label: 'Cycle Time',
   description: 'Looping primary cycle',
+  capability: 'time',
+  kernelId: 'CycleTimeRoot',
   inputs: [
     input('periodMs', 'Period (ms)', 'Signal<number>', {
       tier: 'primary',
@@ -143,7 +148,7 @@ export const CycleTimeRoot = createBlock({
     wrap: 'pulse',
     energy: 'energy',
   },
-});
+}) as KernelBlockDefinition;
 
 /**
  * InfiniteTimeRoot - Ambient, unbounded time (no primary cycle).
@@ -153,10 +158,12 @@ export const CycleTimeRoot = createBlock({
  *
  * Produces TimeModel: { kind: 'infinite', windowMs }
  */
-export const InfiniteTimeRoot = createBlock({
+export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
   type: 'InfiniteTimeRoot',
   label: 'Infinite Time',
   description: 'Ambient, unbounded time (no primary cycle)',
+  capability: 'time',
+  kernelId: 'InfiniteTimeRoot',
   inputs: [
     input('windowMs', 'Preview Window (ms)', 'Signal<number>', {
       tier: 'primary',
@@ -212,7 +219,7 @@ export const InfiniteTimeRoot = createBlock({
     pulse: 'pulse',
     energy: 'energy',
   },
-});
+}) as KernelBlockDefinition;
 
 /**
  * All TimeRoot block definitions for registration.

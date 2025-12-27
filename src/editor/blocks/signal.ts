@@ -18,9 +18,12 @@ import { input, output } from './utils';
  * - amplitude/bias: Signal world - can be animated via bus/wire
  */
 export const Oscillator = createBlock({
+
   type: 'Oscillator',
   label: 'Oscillator',
   description: 'Generate waveforms (sine, cosine, triangle, saw) from phase',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('phase', 'Phase', 'Signal<phase>', {
       tier: 'primary',
@@ -106,8 +109,7 @@ export const Oscillator = createBlock({
   // Auto-subscribe phase to phaseA bus when no explicit connection
   autoBusSubscriptions: {
     phase: 'phaseA',
-  },
-});
+  },});
 
 /**
  * Shaper - Apply waveshaping to signals
@@ -120,9 +122,12 @@ export const Oscillator = createBlock({
  * - amount: Signal world (can be modulated)
  */
 export const Shaper = createBlock({
+
   type: 'Shaper',
   label: 'Shaper',
   description: 'Shape signals with tanh, sigmoid, smoothstep, etc.',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('in', 'Input', 'Signal<number>', {
       tier: 'primary',
@@ -188,8 +193,7 @@ export const Shaper = createBlock({
   ],
   color: '#3B82F6',
   laneKind: 'Phase',
-  priority: 11,
-});
+  priority: 11,});
 
 /**
  * ColorLFO - Generate color from phase
@@ -200,9 +204,12 @@ export const Shaper = createBlock({
  * All inputs are Signal world - colors can be animated.
  */
 export const ColorLFO = createBlock({
+
   type: 'ColorLFO',
   label: 'Color LFO',
   description: 'Generate color from phase (hue rotation)',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('phase', 'Phase', 'Signal<phase>', {
       tier: 'primary',
@@ -290,8 +297,7 @@ export const ColorLFO = createBlock({
   // Auto-subscribe phase to phaseA bus when no explicit connection
   autoBusSubscriptions: {
     phase: 'phaseA',
-  },
-});
+  },});
 
 /**
  * AddSignal - Add two signals
@@ -299,9 +305,12 @@ export const ColorLFO = createBlock({
  * Combines signals by addition. Useful for energy summation, modulation, etc.
  */
 export const AddSignal = createBlock({
+
   type: 'AddSignal',
   label: 'Add',
   description: 'Add two signals element-wise',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('a', 'A', 'Signal<number>', {
       tier: 'primary',
@@ -326,8 +335,7 @@ export const AddSignal = createBlock({
   paramSchema: [],
   color: '#8B5CF6',
   laneKind: 'Phase',
-  priority: 20,
-});
+  priority: 20,});
 
 /**
  * MulSignal - Multiply two signals
@@ -335,9 +343,12 @@ export const AddSignal = createBlock({
  * Combines signals by multiplication. Useful for amplitude modulation, gating, etc.
  */
 export const MulSignal = createBlock({
+
   type: 'MulSignal',
   label: 'Multiply',
   description: 'Multiply two signals element-wise',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('a', 'A', 'Signal<number>', {
       tier: 'primary',
@@ -362,16 +373,18 @@ export const MulSignal = createBlock({
   paramSchema: [],
   color: '#8B5CF6',
   laneKind: 'Phase',
-  priority: 21,
-});
+  priority: 21,});
 
 /**
  * MinSignal - Component-wise minimum of two signals
  */
 export const MinSignal = createBlock({
+
   type: 'MinSignal',
   label: 'Min',
   description: 'Component-wise minimum of two signals',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('a', 'A', 'Signal<number>', {
       tier: 'primary',
@@ -396,16 +409,18 @@ export const MinSignal = createBlock({
   paramSchema: [],
   color: '#8B5CF6',
   laneKind: 'Phase',
-  priority: 22,
-});
+  priority: 22,});
 
 /**
  * MaxSignal - Component-wise maximum of two signals
  */
 export const MaxSignal = createBlock({
+
   type: 'MaxSignal',
   label: 'Max',
   description: 'Component-wise maximum of two signals',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('a', 'A', 'Signal<number>', {
       tier: 'primary',
@@ -430,8 +445,7 @@ export const MaxSignal = createBlock({
   paramSchema: [],
   color: '#8B5CF6',
   laneKind: 'Phase',
-  priority: 23,
-});
+  priority: 23,});
 
 /**
  * ClampSignal - Clamp signal to range
@@ -439,9 +453,12 @@ export const MaxSignal = createBlock({
  * Both min/max are Signal world - ranges can be animated.
  */
 export const ClampSignal = createBlock({
+
   type: 'ClampSignal',
   label: 'Clamp',
   description: 'Clamp signal values to a range',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('in', 'Input', 'Signal<number>', {
       tier: 'primary',
@@ -494,5 +511,4 @@ export const ClampSignal = createBlock({
   ],
   color: '#8B5CF6',
   laneKind: 'Phase',
-  priority: 24,
-});
+  priority: 24,});

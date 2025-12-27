@@ -52,6 +52,8 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
   return {
     type: `composite:${def.id}`,
     label: def.label,
+    capability: 'pure',
+    compileKind: 'composite',
     description: def.description !== undefined && def.description !== ''
       ? def.description
       : `Composite: ${def.label}`,

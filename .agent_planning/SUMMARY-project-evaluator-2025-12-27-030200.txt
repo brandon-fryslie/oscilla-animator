@@ -1,0 +1,25 @@
+Agent: project-evaluator | 2025-12-27-030200
+Scope: primitives/kernel-architecture
+Completion: 25% | Critical Gaps: 8 | Test Quality: N/A (not evaluated)
+Reused: 0 findings | Fresh: All findings new
+Cache updated: None (primitives topic is new)
+Ambiguities: 3 found (non-blocking) | Workflow: CONTINUE
+-> Add capability field to BlockDefinition and create KERNEL_PRIMITIVES allowlist
+
+Key Findings:
+- KERNEL_PRIMITIVES allowlist: MISSING
+- capability field on BlockDefinition: MISSING
+- validateBlockDefinition(): MISSING
+- validatePureBlockOutput(): MISSING
+- CI enforcement scripts: MISSING
+- 3D-safe types (vec3/mat4/quat): MISSING
+- State blocks in UI registry: MISSING (only runtime classes exist)
+- Pre-commit hooks: MISSING
+
+Existing Implementations:
+- TimeRoot blocks (3): EXISTS
+- Identity blocks (DomainN, SVGSampleDomain): EXISTS
+- RenderInstances2D: EXISTS
+- IntegrateBlock/HistoryBlock runtime: EXISTS (not in UI)
+
+Test Status: 1873 passing, 79 failing (unrelated to primitives work)

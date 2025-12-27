@@ -24,6 +24,57 @@ export * from './types/dnd';
  */
 export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
 
+// =============================================================================
+// Kernel Capabilities (Primitive Enforcement)
+// =============================================================================
+
+/**
+ * Kernel capabilities - the five authorities that define primitives.
+ * These represent the different kinds of "special powers" a block can have.
+ *
+ * Only blocks listed in KERNEL_PRIMITIVES may claim non-pure capabilities.
+ */
+export type KernelCapability = 'time' | 'identity' | 'state' | 'render' | 'io';
+
+/**
+ * Full capability type including pure.
+ * - 'pure': Block has no special authority, compiles to pure expressions
+ * - KernelCapability: Block has kernel-level authority (time/identity/state/render/io)
+ */
+export type Capability = KernelCapability | 'pure';
+
+/**
+ * The exhaustive list of kernel primitive IDs.
+ * This union type provides COMPILE-TIME enforcement.
+ * A developer cannot declare a new kernel primitive without editing this.
+ */
+export type KernelId =
+  // Time Authority (3)
+  | 'FiniteTimeRoot'
+  | 'CycleTimeRoot'
+  | 'InfiniteTimeRoot'
+  // Identity Authority (2)
+  | 'DomainN'
+  | 'SVGSampleDomain'
+  // State Authority (2)
+  | 'IntegrateBlock'
+  | 'HistoryBlock'
+  // Render Authority (3, some future)
+  | 'RenderInstances'
+  | 'RenderStrokes'
+  | 'RenderProgramStack'
+  // External IO Authority (2, future)
+  | 'TextSource'
+  | 'ImageSource';
+
+/**
+ * Compile kind for pure blocks - determines what AST they can produce.
+ * - 'operator': Must compile to SignalExpr/FieldExpr AST nodes (not closures)
+ * - 'composite': Black-box combination of primitives
+ * - 'spec': Declarative specification (config that compiles to programs)
+ */
+export type PureCompileKind = 'operator' | 'composite' | 'spec';
+
 /**
  * Core domains - what users see in the bus system.
  * These are the learnable creative vocabulary.

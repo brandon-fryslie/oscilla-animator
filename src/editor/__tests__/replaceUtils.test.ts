@@ -33,10 +33,12 @@ function createMockBlock(overrides: Partial<Block>): Block {
   };
 }
 
-function createMockDefinition(overrides: Partial<BlockDefinition>): BlockDefinition {
+function createMockDefinition(overrides: Partial<BlockDefinition> = {}): BlockDefinition {
   return {
     type: 'MockBlock',
     label: 'Mock Block',
+    capability: 'pure',
+    compileKind: 'operator',
     subcategory: 'Math',
     description: 'A test block',
     inputs: [],
@@ -46,7 +48,7 @@ function createMockDefinition(overrides: Partial<BlockDefinition>): BlockDefinit
     color: '#666',
     laneKind: 'Scalars',
     ...overrides,
-  };
+  } as BlockDefinition;
 }
 
 function createMockConnection(

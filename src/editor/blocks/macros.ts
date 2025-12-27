@@ -1,4 +1,4 @@
-import type { BlockDefinition, BlockSubcategory } from './types';
+import type { BlockSubcategory, PureBlockDefinition } from './types';
 import { isNonEmptyString } from '../types/helpers';
 
 // =============================================================================
@@ -15,13 +15,15 @@ function createMacro(config: {
   priority: number;
   color?: string;
   subcategory?: BlockSubcategory;
-}): BlockDefinition {
+}): PureBlockDefinition {
   return {
     type: config.type,
     label: config.label,
     // Note: form is derived from type prefix 'macro:' via getBlockForm()
     subcategory: isNonEmptyString(config.subcategory) ? config.subcategory : 'Quick Start',
     description: config.description,
+    capability: 'pure',
+    compileKind: 'spec', // Macros are spec-level (expand to blocks)
     inputs: [],
     outputs: [],
     defaultParams: {},
@@ -49,192 +51,207 @@ export const MacroTestIR = createMacro({
 // Quick Start Macros - Simple, reliable patterns using ONLY primitives
 // =============================================================================
 
-export const MacroSimpleGrid = createMacro({
-  type: 'macro:simpleGrid',
-  label: '✨ Simple Grid',
-  description: 'Macro: Basic grid of dots - the simplest possible patch.',
+export const MacroBreathing = createMacro({
+  type: 'macro:breathing',
+  label: 'Breathing',
+  description: 'Macro: Simple breathing animation using phaseA bus',
   priority: -100,
-  color: '#3B82F6',
-});
-
-export const MacroAnimatedCircleRing = createMacro({
-  type: 'macro:animatedCircleRing',
-  label: '🔵 Animated Circle Ring',
-  description: 'Macro: Circle layout with oscillating radius animation.',
-  priority: -99,
-  color: '#EC4899',
-});
-
-export const MacroLineWave = createMacro({
-  type: 'macro:lineWave',
-  label: '〰️ Line Wave',
-  description: 'Macro: Line of dots with phase-offset wave animation.',
-  priority: -98,
-  color: '#8B5CF6',
-});
-
-export const MacroRainbowGrid = createMacro({
-  type: 'macro:rainbowGrid',
-  label: '🌈 Rainbow Grid',
-  description: 'Macro: Grid with per-element color variation from ColorLFO.',
-  priority: -97,
-  color: '#F59E0B',
-});
-
-export const MacroPulsingGrid = createMacro({
-  type: 'macro:pulsingGrid',
-  label: '💓 Pulsing Grid',
-  description: 'Macro: Grid with pulse-driven rhythmic radius animation.',
-  priority: -96,
-  color: '#EF4444',
-});
-
-export const MacroDriftingCircle = createMacro({
-  type: 'macro:driftingCircle',
-  label: '🌊 Drifting Circle',
-  description: 'Macro: Circle layout with smooth jitter motion.',
-  priority: -95,
-  color: '#22C55E',
-});
-
-export const MacroMultiRing = createMacro({
-  type: 'macro:multiRing',
-  label: '⭕ Multi-Ring',
-  description: 'Macro: Multiple concentric circles with size variation.',
-  priority: -94,
-  color: '#06B6D4',
-});
-
-export const MacroBreathingLine = createMacro({
-  type: 'macro:breathingLine',
-  label: '🫁 Breathing Line',
-  description: 'Macro: Line with synchronized breathing animation.',
-  priority: -93,
-  color: '#14B8A6',
-});
-
-export const MacroColorPulse = createMacro({
-  type: 'macro:colorPulse',
-  label: '🎨 Color Pulse',
-  description: 'Macro: Grid with animated color from ColorLFO.',
-  priority: -92,
-  color: '#A855F7',
-});
-
-export const MacroRhythmicDots = createMacro({
-  type: 'macro:rhythmicDots',
-  label: '🥁 Rhythmic Dots',
-  description: 'Macro: Grid with PulseDivider envelope for rhythmic accents.',
-  priority: -91,
-  color: '#F59E0B',
-});
-
-export const MacroFullShowcase = createMacro({
-  type: 'macro:fullShowcase',
-  label: '🎡 Full Showcase',
-  description: 'Macro: A complex scene demonstrating color, size, opacity, and position animations.',
-  priority: -101,
-  color: '#d946ef',
-});
-
-// =============================================================================
-// Slice Demo Macros - Demonstrate new block capabilities
-// =============================================================================
-
-export const MacroBreathingWave = createMacro({
-  type: 'macro:breathingWave',
-  label: 'Breathing Wave',
-  description: 'Macro: Demonstrates Oscillator + Shaper for smooth breathing intensity curves. (Slice 1)',
-  priority: -80,
-  color: '#3B82F6',
-});
-
-export const MacroRhythmicPulse = createMacro({
-  type: 'macro:rhythmicPulse',
-  label: 'Rhythmic Pulse',
-  description: 'Macro: Demonstrates PulseDivider + EnvelopeAD for rhythmic accent triggers. (Slice 2)',
-  priority: -79,
-  color: '#F59E0B',
-});
-
-export const MacroColorDrift = createMacro({
-  type: 'macro:colorDrift',
-  label: 'Color Drift',
-  description: 'Macro: Demonstrates ColorLFO for slow hue cycling color animation. (Slice 3)',
-  priority: -78,
-  color: '#EC4899',
-});
-
-export const MacroStableGrid = createMacro({
-  type: 'macro:stableGrid',
-  label: 'Stable Grid',
-  description: 'Macro: Demonstrates GridDomain + StableIdHash for per-element deterministic randomness. (Slice 4)',
-  priority: -77,
-  color: '#8B5CF6',
-});
-
-export const MacroPhaseSpread = createMacro({
-  type: 'macro:phaseSpread',
-  label: 'Phase Spread',
-  description: 'Macro: Demonstrates FieldZipSignal for per-element phase offset animation. (Slice 5)',
-  priority: -76,
-  color: '#A855F7',
-});
-
-export const MacroDriftingDots = createMacro({
-  type: 'macro:driftingDots',
-  label: 'Drifting Dots',
-  description: 'Macro: Demonstrates JitterFieldVec2 + FieldAddVec2 for animated position drift. (Slice 6)',
-  priority: -75,
-  color: '#22C55E',
-});
-
-export const MacroStyledElements = createMacro({
-  type: 'macro:styledElements',
-  label: 'Styled Elements',
-  description: 'Macro: Demonstrates FieldColorize + FieldOpacity for per-element visual variety. (Slice 7)',
-  priority: -74,
-  color: '#F59E0B',
-});
-
-export const MacroResponsiveGrid = createMacro({
-  type: 'macro:responsiveGrid',
-  label: 'Responsive Grid',
-  description: 'Macro: Demonstrates ViewportInfo for viewport-centered responsive layouts. (Slice 8)',
-  priority: -73,
-  color: '#14B8A6',
-});
-
-export const MacroGoldenPatch = createMacro({
-  type: 'macro:goldenPatch',
-  label: 'Golden Patch',
-  description: 'Macro: Complete "Breathing Constellation" - validates all slices working together. (Slice 9)',
-  priority: -72,
-  color: '#EF4444',
-});
-
-export const MacroBreathingDots = createMacro({
-  type: 'macro:breathingDots',
-  label: 'Breathing Dots',
-  description: 'Macro: Simple grid with breathing animation using bus-driven radius. Demonstrates domain + bus integration.',
-  priority: -71,
-  color: '#06B6D4',
-});
-
-// =============================================================================
-// Tutorial Macro - Learn by connecting
-// =============================================================================
-
-export const MacroTutorial = createMacro({
-  type: 'macro:tutorial',
-  label: '📚 Tutorial',
-  description: 'Learn by doing: All the blocks, no connections. Wire them yourself to understand how everything works!',
-  priority: -200, // Show at the very top
   color: '#10B981',
   subcategory: 'Quick Start',
 });
 
-// Note: Composite-based macros have been removed as composites may not work reliably.
-// All macros now use ONLY primitive blocks.
+export const MacroWave = createMacro({
+  type: 'macro:wave',
+  label: 'Wave',
+  description: 'Macro: Ripple wave effect with phase delay',
+  priority: -90,
+  color: '#3B82F6',
+  subcategory: 'Quick Start',
+});
 
-// Legacy macros have been archived to .agent_planning/LEGACY-BLOCKS-ARCHIVE.md
+export const MacroOrbit = createMacro({
+  type: 'macro:orbit',
+  label: 'Orbit',
+  description: 'Macro: Circular orbit motion',
+  priority: -80,
+  color: '#8B5CF6',
+  subcategory: 'Quick Start',
+});
+
+export const MacroRainbow = createMacro({
+  type: 'macro:rainbow',
+  label: 'Rainbow',
+  description: 'Macro: Color spectrum based on element position',
+  priority: -70,
+  color: '#EC4899',
+  subcategory: 'Quick Start',
+});
+
+// =============================================================================
+// Animation Style Macros - Common motion patterns
+// =============================================================================
+
+export const MacroFlicker = createMacro({
+  type: 'macro:flicker',
+  label: 'Flicker',
+  description: 'Macro: Random per-element opacity flicker',
+  priority: -60,
+  color: '#F59E0B',
+  subcategory: 'Animation Styles',
+});
+
+export const MacroStagger = createMacro({
+  type: 'macro:stagger',
+  label: 'Stagger',
+  description: 'Macro: Delayed animation cascade',
+  priority: -50,
+  color: '#14B8A6',
+  subcategory: 'Animation Styles',
+});
+
+export const MacroSpiral = createMacro({
+  type: 'macro:spiral',
+  label: 'Spiral',
+  description: 'Macro: Expanding spiral motion',
+  priority: -40,
+  color: '#A855F7',
+  subcategory: 'Animation Styles',
+});
+
+export const MacroElastic = createMacro({
+  type: 'macro:elastic',
+  label: 'Elastic',
+  description: 'Macro: Bouncy elastic motion',
+  priority: -30,
+  color: '#EF4444',
+  subcategory: 'Animation Styles',
+});
+
+// =============================================================================
+// Effect Macros - Visual effects and compositing
+// =============================================================================
+
+export const MacroBloom = createMacro({
+  type: 'macro:bloom',
+  label: 'Bloom',
+  description: 'Macro: Glow/bloom effect on particles',
+  priority: -20,
+  color: '#FBBF24',
+  subcategory: 'Effects',
+});
+
+export const MacroTrails = createMacro({
+  type: 'macro:trails',
+  label: 'Trails',
+  description: 'Macro: Motion trails effect',
+  priority: -10,
+  color: '#06B6D4',
+  subcategory: 'Effects',
+});
+
+// =============================================================================
+// Slice Demo Macros - Demonstrate specific slices
+// =============================================================================
+
+export const MacroSlice1Demo = createMacro({
+  type: 'macro:slice1Demo',
+  label: 'Slice 1: Energy',
+  description: 'Macro: Demonstrates Slice 1 - Breathing Energy System',
+  priority: 100,
+  color: '#10B981',
+  subcategory: 'Slice Demos',
+});
+
+export const MacroSlice2Demo = createMacro({
+  type: 'macro:slice2Demo',
+  label: 'Slice 2: Rhythm',
+  description: 'Macro: Demonstrates Slice 2 - Rhythmic Accent System',
+  priority: 101,
+  color: '#3B82F6',
+  subcategory: 'Slice Demos',
+});
+
+export const MacroSlice3Demo = createMacro({
+  type: 'macro:slice3Demo',
+  label: 'Slice 3: Wobble',
+  description: 'Macro: Demonstrates Slice 3 - Wobble Modulator',
+  priority: 102,
+  color: '#8B5CF6',
+  subcategory: 'Slice Demos',
+});
+
+export const MacroSlice4Demo = createMacro({
+  type: 'macro:slice4Demo',
+  label: 'Slice 4: Spiral',
+  description: 'Macro: Demonstrates Slice 4 - Spiral Modulator',
+  priority: 103,
+  color: '#EC4899',
+  subcategory: 'Slice Demos',
+});
+
+export const MacroSlice5Demo = createMacro({
+  type: 'macro:slice5Demo',
+  label: 'Slice 5: Jitter',
+  description: 'Macro: Demonstrates Slice 5 - Jitter Displacement',
+  priority: 104,
+  color: '#F59E0B',
+  subcategory: 'Slice Demos',
+});
+
+export const MacroSlice6Demo = createMacro({
+  type: 'macro:slice6Demo',
+  label: 'Slice 6: Wave',
+  description: 'Macro: Demonstrates Slice 6 - Wave Deformation',
+  priority: 105,
+  color: '#14B8A6',
+  subcategory: 'Slice Demos',
+});
+
+export const MacroSlice7Demo = createMacro({
+  type: 'macro:slice7Demo',
+  label: 'Slice 7: Element Index',
+  description: 'Macro: Demonstrates Slice 7 - Element Index Usage',
+  priority: 106,
+  color: '#A855F7',
+  subcategory: 'Slice Demos',
+});
+
+export const MacroSlice8Demo = createMacro({
+  type: 'macro:slice8Demo',
+  label: 'Slice 8: Hash Variation',
+  description: 'Macro: Demonstrates Slice 8 - Hash-based Per-Element Variation',
+  priority: 107,
+  color: '#EF4444',
+  subcategory: 'Slice Demos',
+});
+
+// =============================================================================
+// Complex Macros - Advanced compositions
+// =============================================================================
+
+export const MacroConstellation = createMacro({
+  type: 'macro:constellation',
+  label: 'Constellation',
+  description: 'Macro: Starfield with twinkling and connections',
+  priority: 200,
+  color: '#1E40AF',
+  subcategory: 'Animation Styles',
+});
+
+export const MacroFlocking = createMacro({
+  type: 'macro:flocking',
+  label: 'Flocking',
+  description: 'Macro: Boid-like flocking behavior',
+  priority: 201,
+  color: '#7C3AED',
+  subcategory: 'Animation Styles',
+});
+
+export const MacroParticleSystem = createMacro({
+  type: 'macro:particleSystem',
+  label: 'Particle System',
+  description: 'Macro: Full particle system with emission, forces, and lifecycle',
+  priority: 202,
+  color: '#DC2626',
+  subcategory: 'Effects',
+});

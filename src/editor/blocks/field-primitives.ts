@@ -18,9 +18,12 @@ import { input, output } from './utils';
  * Useful for composing base positions with offsets/drift.
  */
 export const FieldAddVec2 = createBlock({
+
   type: 'FieldAddVec2',
   label: 'Add Vectors',
   description: 'Add two vec2 fields element-wise',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('a', 'A', 'Field<vec2>', {
       tier: 'primary',
@@ -37,8 +40,7 @@ export const FieldAddVec2 = createBlock({
   paramSchema: [],
   color: '#A855F7',
   laneKind: 'Fields',
-  priority: 31,
-});
+  priority: 31,});
 
 // =============================================================================
 // Slice 7: Visual Styling
@@ -55,9 +57,12 @@ export const FieldAddVec2 = createBlock({
  * - mode: Config world (triggers hot-swap for different interpolation)
  */
 export const FieldColorize = createBlock({
+
   type: 'FieldColorize',
   label: 'Colorize Field',
   description: 'Map numeric field to colors',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('values', 'Values', 'Field<number>', {
       tier: 'primary',
@@ -124,8 +129,7 @@ export const FieldColorize = createBlock({
   ],
   color: '#F59E0B',
   laneKind: 'Fields',
-  priority: 40,
-});
+  priority: 40,});
 
 /**
  * FieldOpacity - Set per-element opacity from Field<number>
@@ -138,9 +142,12 @@ export const FieldColorize = createBlock({
  * - curve: Config world (triggers hot-swap for different curve shapes)
  */
 export const FieldOpacity = createBlock({
+
   type: 'FieldOpacity',
   label: 'Field Opacity',
   description: 'Convert numeric field to opacity',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('values', 'Values', 'Field<number>', {
       tier: 'primary',
@@ -217,8 +224,7 @@ export const FieldOpacity = createBlock({
   ],
   color: '#F59E0B',
   laneKind: 'Fields',
-  priority: 41,
-});
+  priority: 41,});
 
 // =============================================================================
 // Field Color Generation
@@ -238,9 +244,12 @@ export const FieldOpacity = createBlock({
  * - phase: Signal world - animate the hue rotation
  */
 export const FieldHueGradient = createBlock({
+
   type: 'FieldHueGradient',
   label: 'Hue Gradient',
   description: 'Generate per-element rainbow colors from domain',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('domain', 'Domain', 'Domain', {
       tier: 'primary',
@@ -330,8 +339,7 @@ export const FieldHueGradient = createBlock({
   ],
   color: '#F472B6', // Pink for color blocks
   laneKind: 'Fields',
-  priority: 42,
-});
+  priority: 42,});
 
 // =============================================================================
 // Field Expression Adapter
@@ -353,9 +361,12 @@ export const FieldHueGradient = createBlock({
  * - "i % 2 === 0 ? signal : 0" - alternating pattern
  */
 export const FieldFromExpression = createBlock({
+
   type: 'FieldFromExpression',
   label: 'Expression Field',
   description: 'Generate field from expression (i, n, signal). Returns strings.',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('domain', 'Domain', 'Domain', {
       tier: 'primary',
@@ -392,8 +403,7 @@ export const FieldFromExpression = createBlock({
   ],
   color: '#10B981', // Emerald for adapter blocks
   laneKind: 'Fields',
-  priority: 43,
-});
+  priority: 43,});
 
 /**
  * FieldStringToColor - Adapter from Field<string> to Field<color>
@@ -402,9 +412,12 @@ export const FieldFromExpression = createBlock({
  * Use with FieldFromExpression when your expression returns color strings.
  */
 export const FieldStringToColor = createBlock({
+
   type: 'FieldStringToColor',
   label: 'String → Color',
   description: 'Convert Field<string> to Field<color>',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [
     input('strings', 'Strings', 'Field<string>', {
       tier: 'primary',
@@ -417,8 +430,7 @@ export const FieldStringToColor = createBlock({
   paramSchema: [],
   color: '#F472B6',
   laneKind: 'Fields',
-  priority: 44,
-});
+  priority: 44,});
 
 // =============================================================================
 // Slice 8: Viewport
@@ -431,9 +443,12 @@ export const FieldStringToColor = createBlock({
  * These values come from runtime context.
  */
 export const ViewportInfo = createBlock({
+
   type: 'ViewportInfo',
   label: 'Viewport Info',
   description: 'Viewport dimensions and center point',
+  capability: 'pure',
+  compileKind: 'operator',
   inputs: [],
   outputs: [
     output('size', 'Size', 'Scalar:vec2'),
@@ -442,5 +457,4 @@ export const ViewportInfo = createBlock({
   paramSchema: [],
   color: '#8B5CF6',
   laneKind: 'Scene',
-  priority: 10,
-});
+  priority: 10,});
