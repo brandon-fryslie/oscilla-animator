@@ -1,7 +1,7 @@
 /**
  * BlockContextMenu Component
  *
- * Right-click context menu for blocks, showing replacement options.
+ * Right-click context menu for blocks, showing replacement options and composite creation.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -9,19 +9,29 @@ import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
 import { getBlockDefinitions } from './blocks/registry';
 import { findCompatibleReplacements } from './replaceUtils';
+import { SaveCompositeDialog } from './components/SaveCompositeDialog';
 import type { BlockDefinition } from './blocks/types';
 import './BlockContextMenu.css';
 
 /**
  * BlockContextMenu renders a right-click menu for block operations.
  * Shows "Replace with..." submenu with compatible block types.
+ * Shows "Save as Composite" option when multiple blocks are selected.
  */
 export const BlockContextMenu = observer(() => {
   const store = useStore();
   const { blockContextMenu } = store.uiStore.uiState;
   const [showReplacements, setShowReplacements] = useState(false);
+  const [showSaveCompositeDialog, setShowSaveCompositeDialog] = useState(false);
   const [replacementResult, setReplacementResult] = useState<{ preserved: number; dropped: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Check if multi-select is active
+  const hasMultiSelection = store.uiStore.hasMultiSelection;
+  const selectedBlockIds = Array.from(store.uiStore.uiState.selectedBlockIds);
+  const selectedBlocks = selectedBlockIds
+    .map(id => store.patchStore.blocks.find(b => b.id === id))
+    .filter((b): b is NonNullable<typeof b> => b !== null && b !== undefined);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -108,6 +118,21 @@ export const BlockContextMenu = observer(() => {
     }
   };
 
+  const handleSaveAsComposite = () => {
+    setShowSaveCompositeDialog(true);
+    store.uiStore.closeBlockContextMenu();
+  };
+
+  const handleSaveComposite = (composite: any, exposedInputs: any[], exposedOutputs: any[]) => {
+    // TODO: Wire to CompositeStore and composite-bridge
+    console.log('Save composite:', composite, exposedInputs, exposedOutputs);
+    setShowSaveCompositeDialog(false);
+  };
+
+  const handleCancelSaveComposite = () => {
+    setShowSaveCompositeDialog(false);
+  };
+
   // Calculate position, keeping menu on screen
   const style: React.CSSProperties = {
     left: blockContextMenu.x,
@@ -115,79 +140,102 @@ export const BlockContextMenu = observer(() => {
   };
 
   return (
-    <div className="context-menu-overlay">
-      <div ref={menuRef} className="block-context-menu" style={style}>
-        <div className="context-menu-header">
-          <span className="context-menu-block-type">{block.type}</span>
-          <span className="context-menu-block-label">{block.label}</span>
-        </div>
-
-        {replacementResult ? (
-          <div className="replacement-feedback">
-            <div className="feedback-success">
-              Block replaced!
-            </div>
-            <div className="feedback-stats">
-              {replacementResult.preserved} connection{replacementResult.preserved !== 1 ? 's' : ''} preserved
-              {replacementResult.dropped > 0 && (
-                <span className="feedback-warning">
-                  , {replacementResult.dropped} dropped
-                </span>
-              )}
-            </div>
+    <>
+      <div className="context-menu-overlay">
+        <div ref={menuRef} className="block-context-menu" style={style}>
+          <div className="context-menu-header">
+            <span className="context-menu-block-type">{block.type}</span>
+            <span className="context-menu-block-label">{block.label}</span>
           </div>
-        ) : (
-          <>
-            <div className="context-menu-section">
-              <button
-                className="context-menu-action"
-                onClick={() => {
-                  store.uiStore.selectBlock(blockId);
-                  store.uiStore.closeBlockContextMenu();
-                }}
-              >
-                <span className="context-menu-icon">🔍</span>
-                <span>View in Inspector</span>
-              </button>
-              <button
-                className="context-menu-action"
-                onClick={() => setShowReplacements(!showReplacements)}
-              >
-                <span className="context-menu-icon">⇄</span>
-                <span>Replace with...</span>
-                <span className="context-menu-arrow">{showReplacements ? '▼' : '▶'}</span>
-              </button>
-            </div>
 
-            {showReplacements && (
-              <div className="replacement-submenu">
-                {compatibleBlocks.length === 0 ? (
-                  <div className="context-menu-empty">
-                    No compatible blocks found
-                  </div>
-                ) : (
-                  Object.entries(blocksBySubcategory).map(([subcategory, blocks]) => (
-                    <div key={subcategory} className="replacement-category">
-                      <div className="replacement-category-label">{subcategory}</div>
-                      {blocks.map((def) => (
-                        <button
-                          key={def.type}
-                          className="replacement-option"
-                          onClick={() => handleReplaceWith(def.type)}
-                          style={{ borderLeftColor: def.color }}
-                        >
-                          <span className="replacement-label">{def.label}</span>
-                          <span className="replacement-type">{def.type}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ))
+          {replacementResult ? (
+            <div className="replacement-feedback">
+              <div className="feedback-success">
+                Block replaced!
+              </div>
+              <div className="feedback-stats">
+                {replacementResult.preserved} connection{replacementResult.preserved !== 1 ? 's' : ''} preserved
+                {replacementResult.dropped > 0 && (
+                  <span className="feedback-warning">
+                    , {replacementResult.dropped} dropped
+                  </span>
                 )}
               </div>
-            )}
-          </>
-        )}
+            </div>
+          ) : (
+            <>
+              <div className="context-menu-section">
+                <button
+                  className="context-menu-action"
+                  onClick={() => {
+                    store.uiStore.selectBlock(blockId);
+                    store.uiStore.closeBlockContextMenu();
+                  }}
+                >
+                  <span className="context-menu-icon">🔍</span>
+                  <span>View in Inspector</span>
+                </button>
+
+                {hasMultiSelection && selectedBlocks.length > 1 && (
+                  <button
+                    className="context-menu-action"
+                    onClick={handleSaveAsComposite}
+                  >
+                    <span className="context-menu-icon">📦</span>
+                    <span>Save as Composite ({selectedBlocks.length} blocks)</span>
+                  </button>
+                )}
+
+                <button
+                  className="context-menu-action"
+                  onClick={() => setShowReplacements(!showReplacements)}
+                >
+                  <span className="context-menu-icon">⇄</span>
+                  <span>Replace with...</span>
+                  <span className="context-menu-arrow">{showReplacements ? '▼' : '▶'}</span>
+                </button>
+              </div>
+
+              {showReplacements && (
+                <div className="replacement-submenu">
+                  {compatibleBlocks.length === 0 ? (
+                    <div className="context-menu-empty">
+                      No compatible blocks found
+                    </div>
+                  ) : (
+                    Object.entries(blocksBySubcategory).map(([subcategory, blocks]) => (
+                      <div key={subcategory} className="replacement-category">
+                        <div className="replacement-category-label">{subcategory}</div>
+                        {blocks.map((def) => (
+                          <button
+                            key={def.type}
+                            className="replacement-option"
+                            onClick={() => handleReplaceWith(def.type)}
+                            style={{ borderLeftColor: def.color }}
+                          >
+                            <span className="replacement-label">{def.label}</span>
+                            <span className="replacement-type">{def.type}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+
+      {showSaveCompositeDialog && (
+        <SaveCompositeDialog
+          selectedBlocks={selectedBlocks}
+          allConnections={store.patchStore.connections}
+          existingComposites={store.compositeStore.composites}
+          onSave={handleSaveComposite}
+          onCancel={handleCancelSaveComposite}
+        />
+      )}
+    </>
   );
 });

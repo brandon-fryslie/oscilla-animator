@@ -11,7 +11,7 @@
  * - Patchbay lanes: fan-out sources
  */
 
-import React from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import Tippy from '@tippyjs/react';
@@ -364,6 +364,7 @@ const DraggablePatchBlock = observer(({
   index,
   laneColor,
   isSelected,
+  isMultiSelected,
   onSelect,
   portColorMap,
 }: {
@@ -372,7 +373,8 @@ const DraggablePatchBlock = observer(({
   index: number;
   laneColor: string;
   isSelected: boolean;
-  onSelect: () => void;
+  isMultiSelected: boolean;
+  onSelect: (shiftKey: boolean) => void;
   portColorMap: Map<string, string>;
 }) => {
   const store = useStore();
@@ -545,10 +547,10 @@ const DraggablePatchBlock = observer(({
         ...style,
         '--block-color': blockColor,
       } as React.CSSProperties}
-      className={`block ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isOverDropTarget ? 'drop-target' : ''} ${hasInputs ? 'has-inputs' : ''} ${hasOutputs ? 'has-outputs' : ''} ${hasError ? 'has-error' : ''} ${hasWarning ? 'has-warning' : ''} ${isTutorialHighlighted ? 'tutorial-highlight' : ''}`}
+      className={`block ${isSelected ? 'selected' : ''} ${isMultiSelected ? 'multi-selected' : ''} ${isDragging ? 'dragging' : ''} ${isOverDropTarget ? 'drop-target' : ''} ${hasInputs ? 'has-inputs' : ''} ${hasOutputs ? 'has-outputs' : ''} ${hasError ? 'has-error' : ''} ${hasWarning ? 'has-warning' : ''} ${isTutorialHighlighted ? 'tutorial-highlight' : ''}`}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect();
+        onSelect(e.shiftKey);
       }}
       onContextMenu={handleBlockContextMenu}
       {...listeners}
@@ -820,6 +822,7 @@ const DroppableLane = observer(({
                 if (!block) return null;
 
                 const isSelected = store.uiStore.uiState.selectedBlockId === blockId;
+                const isMultiSelected = store.uiStore.uiState.selectedBlockIds.has(blockId);
 
                 return (
                   <React.Fragment key={blockId}>
@@ -829,7 +832,14 @@ const DroppableLane = observer(({
                       index={index}
                       laneColor={laneColor}
                       isSelected={isSelected}
-                      onSelect={() => store.uiStore.selectBlock(blockId)}
+                      isMultiSelected={isMultiSelected}
+                      onSelect={(shiftKey) => {
+                        if (shiftKey) {
+                          store.uiStore.toggleBlockSelection(blockId);
+                        } else {
+                          store.uiStore.selectBlock(blockId);
+                        }
+                      }}
                       portColorMap={portColorMap}
                     />
                     {/* Insertion point after each block */}
@@ -846,6 +856,38 @@ const DroppableLane = observer(({
 });
 
 /**
+ * SelectionRectangle component - renders the drag-select box
+ */
+const SelectionRectangle = observer(() => {
+  const store = useStore();
+  const rect = store.uiStore.uiState.selectionRectangle;
+
+  if (!rect) return null;
+
+  const left = Math.min(rect.startX, rect.currentX);
+  const top = Math.min(rect.startY, rect.currentY);
+  const width = Math.abs(rect.currentX - rect.startX);
+  const height = Math.abs(rect.currentY - rect.startY);
+
+  return (
+    <div
+      className="selection-rectangle"
+      style={{
+        position: 'fixed',
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+        border: '2px dashed #4a9eff',
+        backgroundColor: 'rgba(74, 158, 255, 0.1)',
+        pointerEvents: 'none',
+        zIndex: 1000,
+      }}
+    />
+  );
+});
+
+/**
  * PatchBay renders lanes with blocks.
  * Per lanes-overview.md: visual hierarchy from Scene → Output
  */
@@ -853,6 +895,8 @@ export const PatchBay = observer(() => {
   const store = useStore();
   const activeLaneId = store.uiStore.uiState.activeLaneId;
   const draggingLaneKind = store.uiStore.uiState.draggingLaneKind;
+  const patchBayRef = useRef<HTMLDivElement>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
 
   // Build port color map for visual connection indication
   const portColorMap = buildPortColorMap(store.patchStore.connections);
@@ -866,8 +910,87 @@ export const PatchBay = observer(() => {
     }
   };
 
+  // Drag-select handling
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Only start selection on background, not on blocks/ports
+    if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.lane-content, .patch-bay-lanes')) {
+      // Don't start selection if clicking on a lane header or other interactive elements
+      if ((e.target as HTMLElement).closest('.lane-header, .block, .port')) {
+        return;
+      }
+
+      setIsSelecting(true);
+      store.uiStore.startSelectionRectangle(e.clientX, e.clientY);
+    }
+  }, [store]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isSelecting && store.uiStore.uiState.selectionRectangle) {
+      store.uiStore.updateSelectionRectangle(e.clientX, e.clientY);
+    }
+  }, [isSelecting, store]);
+
+  const handleMouseUp = useCallback(() => {
+    if (isSelecting && store.uiStore.uiState.selectionRectangle) {
+      const rect = store.uiStore.uiState.selectionRectangle;
+      const left = Math.min(rect.startX, rect.currentX);
+      const top = Math.min(rect.startY, rect.currentY);
+      const right = Math.max(rect.startX, rect.currentX);
+      const bottom = Math.max(rect.startY, rect.currentY);
+
+      // Find all blocks within the selection rectangle
+      const selectedIds = new Set<string>();
+
+      // Get all block elements and check if they intersect with selection rect
+      if (patchBayRef.current) {
+        const blockElements = patchBayRef.current.querySelectorAll('[class*="block "]');
+        blockElements.forEach((elem) => {
+          const elemRect = elem.getBoundingClientRect();
+
+          // Check if rectangles intersect
+          if (
+            elemRect.left < right &&
+            elemRect.right > left &&
+            elemRect.top < bottom &&
+            elemRect.bottom > top
+          ) {
+            // Extract block ID from the draggable ID
+            const draggableId = (elem as HTMLElement).getAttribute('data-rbd-draggable-id');
+            if (draggableId) {
+              const blockId = draggableId.replace('patch-block-', '');
+              selectedIds.add(blockId);
+            }
+
+            // Also try to find block ID from the block's data
+            const block = store.patchStore.blocks.find(b => {
+              const blockElem = elem.querySelector('.block-label');
+              return blockElem?.textContent === b.label;
+            });
+            if (block) {
+              selectedIds.add(block.id);
+            }
+          }
+        });
+      }
+
+      if (selectedIds.size > 0) {
+        store.uiStore.setBlockSelection(selectedIds);
+      }
+
+      store.uiStore.endSelectionRectangle();
+      setIsSelecting(false);
+    }
+  }, [isSelecting, store]);
+
   return (
-    <div className="patch-bay" onClick={handleBackgroundClick}>
+    <div
+      ref={patchBayRef}
+      className="patch-bay"
+      onClick={handleBackgroundClick}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
       <LayoutSelector />
       <div className="patch-bay-lanes" onClick={handleBackgroundClick}>
         {store.viewStore.lanes.map((lane) => (
@@ -880,6 +1003,7 @@ export const PatchBay = observer(() => {
           />
         ))}
       </div>
+      <SelectionRectangle />
       <BlockContextMenu />
     </div>
   );

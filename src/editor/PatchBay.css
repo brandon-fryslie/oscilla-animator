@@ -270,6 +270,15 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--block-color, #4a9eff) 30%, transparent);
 }
 
+/* Multi-selected blocks - distinct visual with dashed border */
+.block.multi-selected {
+  border-color: #4a9eff;
+  background: #333;
+  border-style: dashed;
+  border-width: 2px;
+  box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.4);
+}
+
 .block.dragging {
   opacity: 0.5;
   cursor: grabbing;
