@@ -45,7 +45,7 @@ export interface CompilerFeatureFlags {
  * Legacy compiler is the default until IR rendering is fully implemented.
  */
 const DEFAULT_FLAGS: CompilerFeatureFlags = {
-  useUnifiedCompiler: false,
+  useUnifiedCompiler: true,
   strictStateValidation: true,
   busCompilation: true,
   timeCtxPropagation: true,
