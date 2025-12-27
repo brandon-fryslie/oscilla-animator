@@ -27,7 +27,6 @@ function createMacro(config: {
     inputs: [],
     outputs: [],
     defaultParams: {},
-    paramSchema: [],
     color: isNonEmptyString(config.color) ? config.color : '#fbbf24',
     laneKind: 'Program',
     priority: config.priority,
