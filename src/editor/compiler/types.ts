@@ -225,6 +225,7 @@ export type ValueKind =
   | 'Signal:Unit'
   | 'Signal:vec2'
   | 'Signal:phase'
+  | 'Signal:phase01'
   | 'Signal:color'
 
   // Special types
@@ -365,6 +366,7 @@ export type Artifact =
   | { kind: 'Signal:Unit'; value: (t: number, ctx: RuntimeCtx) => number }
   | { kind: 'Signal:vec2'; value: (t: number, ctx: RuntimeCtx) => Vec2 }
   | { kind: 'Signal:phase'; value: (t: number, ctx: RuntimeCtx) => number }
+  | { kind: 'Signal:phase01'; value: (t: number, ctx: RuntimeCtx) => number }
   | { kind: 'Signal:color'; value: (t: number, ctx: RuntimeCtx) => string }
   | { kind: 'RenderNode'; value: DrawNode }
   | { kind: 'RenderNodeArray'; value: readonly DrawNode[] }

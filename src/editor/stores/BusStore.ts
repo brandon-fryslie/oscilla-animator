@@ -65,8 +65,8 @@ export class BusStore {
    * Only creates if no buses exist yet.
    *
    * Default buses (Signal world only):
-   * - phaseA: signal:phase (primary phase source)
-   * - phaseB: signal:phase (secondary phase source)
+   * - phaseA: signal:phase01 (primary phase source)
+   * - phaseB: signal:phase01 (secondary phase source)
    * - energy: signal:number (accumulated energy)
    * - pulse: signal:trigger (discrete trigger events)
    * - palette: signal:color (color bias/palette signal)
@@ -80,13 +80,13 @@ export class BusStore {
     const defaults: Array<{
       name: string;
       world: 'signal' | 'event';
-      domain: 'phase' | 'number' | 'trigger' | 'color';
+      domain: 'phase01' | 'number' | 'trigger' | 'color';
       combineMode: BusCombineMode;
       defaultValue: unknown;
       semantics?: string;
     }> = [
-      { name: 'phaseA', world: 'signal', domain: 'phase', combineMode: 'last', defaultValue: 0, semantics: 'primary' },
-      { name: 'phaseB', world: 'signal', domain: 'phase', combineMode: 'last', defaultValue: 0, semantics: 'secondary' },
+      { name: 'phaseA', world: 'signal', domain: 'phase01', combineMode: 'last', defaultValue: 0, semantics: 'primary' },
+      { name: 'phaseB', world: 'signal', domain: 'phase01', combineMode: 'last', defaultValue: 0, semantics: 'secondary' },
       { name: 'energy', world: 'signal', domain: 'number', combineMode: 'sum', defaultValue: 0, semantics: 'energy' },
       // pulse is event<trigger>, NOT signal<trigger> - discrete events, not continuous
       { name: 'pulse', world: 'event', domain: 'trigger', combineMode: 'last', defaultValue: null, semantics: 'pulse' },

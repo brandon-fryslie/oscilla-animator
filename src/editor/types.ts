@@ -85,6 +85,7 @@ export type CoreDomain =
   | 'color'    // Color values
   | 'boolean'  // True/false values
   | 'time'     // Time values (always in seconds)
+  | 'phase01'   // Phase values [0,1] (normalized phase)
   | 'phase'    // Phase values [0,1]
   | 'rate'     // Rate/multiplier values
   | 'trigger'; // Pulse/event signals
@@ -967,6 +968,7 @@ export const CORE_DOMAIN_DEFAULTS: Record<CoreDomain, unknown> = {
   color: '#000000',
   boolean: false,
   time: 0.0, // Always seconds!
+  phase01: 0.0,
   phase: 0.0,
   rate: 1.0,
   trigger: false, // Pulse state
@@ -1024,6 +1026,7 @@ export function validateDefaultValue(typeDesc: TypeDesc, value: unknown): boolea
     case 'number':
     case 'time':
     case 'phase':
+    case 'phase01':
     case 'rate':
       return typeof value === 'number';
     case 'boolean':

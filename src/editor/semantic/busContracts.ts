@@ -33,7 +33,7 @@ export const RESERVED_BUS_CONTRACTS: Record<string, ReservedBusContract> = {
   phaseA: {
     type: {
       world: 'signal',
-      domain: 'phase',
+      domain: 'phase01',
       semantics: 'primary',
       category: 'core',
       busEligible: true,
@@ -45,7 +45,7 @@ export const RESERVED_BUS_CONTRACTS: Record<string, ReservedBusContract> = {
   phaseB: {
     type: {
       world: 'signal',
-      domain: 'phase',
+      domain: 'phase01',
       semantics: 'secondary',
       category: 'core',
       busEligible: true,
@@ -120,6 +120,7 @@ export const COMBINE_MODE_COMPATIBILITY: Record<string, BusCombineMode[]> = {
   'number': ['sum', 'average', 'max', 'min', 'last'],
   'phase': ['last'],  // Phases are positions, only last-writer wins
   'color': ['last', 'layer'], // Colors can be layered
+  'phase01': ['last'],  // Phase01 values (0..1) are positions, only last-writer wins
   'boolean': ['last'], // Boolean values use last writer
   'time': ['last'],     // Time values are authoritative
   'rate': ['last'],     // Rates are authoritative

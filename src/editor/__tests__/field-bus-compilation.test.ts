@@ -23,7 +23,7 @@ function createCanonicalBuses(): Bus[] {
     {
       id: 'phaseA',
       name: 'phaseA',
-      type: { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'primary' },
+      type: { world: 'signal', domain: 'phase01', category: 'core', busEligible: true, semantics: 'primary' },
       combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
@@ -31,7 +31,7 @@ function createCanonicalBuses(): Bus[] {
     {
       id: 'pulse',
       name: 'pulse',
-      type: { world: 'signal', domain: 'trigger', category: 'core', busEligible: true, semantics: 'pulse' },
+      type: { world: 'event', domain: 'trigger', category: 'core', busEligible: true, semantics: 'pulse' },
       combineMode: 'last',
       defaultValue: false,
       sortKey: 0,
@@ -69,7 +69,7 @@ function createFieldTestRegistry(): BlockRegistry {
       outputs: [
         { name: 'systemTime', type: { kind: 'Signal:Time' }, required: true },
         { name: 'cycleT', type: { kind: 'Signal:Time' }, required: true },
-        { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
+        { name: 'phase', type: { kind: 'Signal:phase01' }, required: true },
         { name: 'wrap', type: { kind: 'Event' }, required: true },
         { name: 'cycleIndex', type: { kind: 'Signal:number' }, required: true },
         { name: 'energy', type: { kind: 'Signal:number' }, required: true },
@@ -79,7 +79,7 @@ function createFieldTestRegistry(): BlockRegistry {
         return {
           systemTime: { kind: 'Signal:Time', value: (t: number) => t },
           cycleT: { kind: 'Signal:Time', value: (t: number) => t % periodMs },
-          phase: { kind: 'Signal:phase', value: (t: number) => (t / periodMs) % 1 },
+          phase: { kind: 'Signal:phase01', value: (t: number) => (t / periodMs) % 1 },
           wrap: { kind: 'Event', value: (t: number, lastT: number) => Math.floor(t / periodMs) > Math.floor(lastT / periodMs) },
           cycleIndex: { kind: 'Signal:number', value: (t: number) => Math.floor(t / periodMs) },
           energy: { kind: 'Signal:number', value: () => 1.0 },
@@ -579,7 +579,7 @@ describe('Mixed Signal and Field Buses', () => {
     const phaseBus: Bus = {
       id: 'phaseA',
       name: 'Phase A',
-      type: { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
+      type: { world: 'signal', domain: 'phase01', category: 'core', busEligible: true },
       combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,

@@ -44,6 +44,7 @@ const DEFAULT_BUS_NAMES: Record<CoreDomain, string> = {
   vec2: 'position',
   color: 'palette',
   phase: 'phaseA',
+  phase01: 'phaseA',
   time: 'clock',
   rate: 'speed',
   trigger: 'pulse',
@@ -57,6 +58,7 @@ const DEFAULT_COMBINE_MODES: Record<CoreDomain, BusCombineMode> = {
   number: 'sum',
   vec2: 'sum',
   color: 'layer',
+  phase01: 'last',
   phase: 'last',
   time: 'last',
   rate: 'last',
@@ -71,6 +73,7 @@ function getCombineModeOptions(domain: CoreDomain): BusCombineMode[] {
   const options: Record<CoreDomain, BusCombineMode[]> = {
     number: ['sum', 'average', 'max', 'min', 'last'],
     vec2: ['sum', 'average', 'last'],
+    phase01: ['last'],
     color: ['layer', 'last'],
     phase: ['last'],
     time: ['last'],
