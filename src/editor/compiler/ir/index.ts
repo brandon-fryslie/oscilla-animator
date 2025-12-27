@@ -283,6 +283,33 @@ export type {
 } from "./fieldExpr";
 
 // ============================================================================
+// 3D IR Types
+// ============================================================================
+
+export type {
+  // Camera IR
+  CameraId,
+  ProjectionKind,
+  CameraIR,
+  CameraEval,
+  CameraTable,
+
+  // Mesh IR (extrusion-only)
+  MeshId,
+  ExtrudeProfile2D,
+  ExtrudeKind,
+  MeshIR,
+  MeshBufferRef,
+  MeshTable,
+
+  // Instance2D buffers (3D-to-2D projection output)
+  Instance2DBufferRef,
+
+  // Performance counters
+  StepPerfCounters,
+} from "./types3d";
+
+// ============================================================================
 // IRBuilder
 // ============================================================================
 

@@ -6,6 +6,7 @@
  *
  * References:
  * - design-docs/12-Compiler-Final/11-Opcode-Taxonomy.md
+ * - design-docs/13-Renderer/06-3d-IR-Deltas.md (3D opcodes)
  * - HANDOFF.md Topic 6: Opcode Registry
  */
 
@@ -28,6 +29,7 @@ import type { TypeDesc } from "./types";
  * - 500-519: Domain/Identity operations
  * - 600-619: Field operations
  * - 700-719: Render operations
+ * - 720-729: 3D operations (camera, mesh, projection)
  * - 800-819: Transform operations
  */
 export const OpCode = {
@@ -122,6 +124,11 @@ export const OpCode = {
   RenderRect: 702,
   RenderCircle: 703,
 
+  // 3D Operations (720-729) - camera, mesh, projection
+  CameraEval: 720,
+  MeshMaterialize: 721,
+  Instances3DProjectTo2D: 722,
+
   // Transform (800-819)
   TransformScale: 800,
   TransformBias: 801,
@@ -149,6 +156,7 @@ export type OpCodeCategory =
   | "domain"
   | "field"
   | "render"
+  | "3d"
   | "transform";
 
 /**
@@ -224,9 +232,39 @@ const numberField: TypeDesc = {
   domain: "number",
 };
 
+const mat4Field: TypeDesc = {
+  world: "field",
+  domain: "mat4",
+};
+
+const colorField: TypeDesc = {
+  world: "field",
+  domain: "color",
+};
+
 const renderTreeSpecial: TypeDesc = {
   world: "special",
   domain: "renderTree",
+};
+
+const renderCmdsSpecial: TypeDesc = {
+  world: "special",
+  domain: "renderCmds",
+};
+
+const cameraSpecial: TypeDesc = {
+  world: "special",
+  domain: "camera",
+};
+
+const meshSpecial: TypeDesc = {
+  world: "special",
+  domain: "mesh",
+};
+
+const domainSpecial: TypeDesc = {
+  world: "special",
+  domain: "domain",
 };
 
 // =============================================================================
@@ -908,6 +946,37 @@ export const OPCODE_REGISTRY: Record<OpCode, OpCodeMeta> = {
     outputType: renderTreeSpecial,
     purity: "io",
     description: "Circle rendering",
+  },
+
+  // 3D Operations (design-docs/13-Renderer/06-3d-IR-Deltas.md §7.1)
+  [OpCode.CameraEval]: {
+    opcode: OpCode.CameraEval,
+    name: "cameraEval",
+    category: "3d",
+    inputTypes: [cameraSpecial],
+    outputType: cameraSpecial,
+    purity: "pure",
+    description: "Evaluate camera to view/projection matrices",
+  },
+
+  [OpCode.MeshMaterialize]: {
+    opcode: OpCode.MeshMaterialize,
+    name: "meshMaterialize",
+    category: "3d",
+    inputTypes: [meshSpecial],
+    outputType: meshSpecial,
+    purity: "pure",
+    description: "Materialize mesh from procedural recipe",
+  },
+
+  [OpCode.Instances3DProjectTo2D]: {
+    opcode: OpCode.Instances3DProjectTo2D,
+    name: "instances3DProjectTo2D",
+    category: "3d",
+    inputTypes: [domainSpecial, cameraSpecial, mat4Field, colorField, numberField],
+    outputType: renderCmdsSpecial,
+    purity: "pure",
+    description: "Project 3D instances to 2D for Canvas rendering",
   },
 
   // Transform

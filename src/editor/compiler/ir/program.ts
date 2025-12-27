@@ -10,6 +10,7 @@
  * References:
  * - design-docs/12-Compiler-Final/02-IR-Schema.md §3
  * - design-docs/12-Compiler-Final/14-Compiled-IR-Program-Contract.md §1-9
+ * - design-docs/13-Renderer/06-3d-IR-Deltas.md (3D extensions)
  */
 
 import type { NodeId, BusId, TypeTable } from "./types";
@@ -17,6 +18,7 @@ import type { TimeModelIR, ScheduleIR } from "./schedule";
 import type { StateLayout } from "./stores";
 import type { SignalExprTable } from "./signalExpr";
 import type { FieldExprIR } from "./fieldExpr";
+import type { CameraTable, MeshTable } from "./types3d";
 
 // ============================================================================
 // Top-Level Compiled Program (02-IR-Schema.md §3)
@@ -112,6 +114,26 @@ export interface CompiledProgramIR {
    * - RuntimeState uses this instead of inferring from schedule steps
    */
   slotMeta?: import("./stores").SlotMeta[];
+
+  // ============================================================================
+  // 3D Support (Optional but First-Class)
+  // ============================================================================
+
+  /**
+   * Camera table (optional)
+   *
+   * Cameras defined in the program. Only present if 3D features are used.
+   * See design-docs/13-Renderer/06-3d-IR-Deltas.md §1
+   */
+  cameras?: CameraTable;
+
+  /**
+   * Mesh table (optional)
+   *
+   * Procedural mesh recipes. Only present if 3D features are used.
+   * See design-docs/13-Renderer/06-3d-IR-Deltas.md §2
+   */
+  meshes?: MeshTable;
 
   // ============================================================================
   // Execution Schedule
