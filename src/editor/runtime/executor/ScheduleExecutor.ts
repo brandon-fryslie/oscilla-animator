@@ -25,6 +25,7 @@ import { executeBusEval } from "./steps/executeBusEval";
 import { executeMaterialize } from "./steps/executeMaterialize";
 import { executeMaterializeColor } from "./steps/executeMaterializeColor";
 import { executeMaterializePath } from "./steps/executeMaterializePath";
+import { executeMaterializeTestGeometry } from "./steps/executeMaterializeTestGeometry";
 import { executeRenderAssemble } from "./steps/executeRenderAssemble";
 import { executeDebugProbe } from "./steps/executeDebugProbe";
 
@@ -195,6 +196,10 @@ export class ScheduleExecutor {
 
       case "materializePath":
         executeMaterializePath(step, program, runtime);
+        break;
+
+      case "materializeTestGeometry":
+        executeMaterializeTestGeometry(step, program, runtime);
         break;
 
       case "renderAssemble":

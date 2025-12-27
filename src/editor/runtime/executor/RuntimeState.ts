@@ -298,6 +298,14 @@ function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
         objectSlots.add(step.outParamsSlot);
         break;
 
+      case "materializeTestGeometry":
+        // MaterializeTestGeometry inputs and outputs
+        objectSlots.add(step.domainSlot);
+        objectSlots.add(step.outXSlot);
+        objectSlots.add(step.outYSlot);
+        objectSlots.add(step.outRadiusSlot);
+        break;
+
       case "renderAssemble":
         // RenderAssemble inputs and outputs (all objects)
         objectSlots.add(step.instance2dListSlot);
@@ -366,6 +374,15 @@ export function createRuntimeState(program: CompiledProgramIR): RuntimeState {
 
   // Create ValueStore with real implementation
   const values = createValueStore(slotMeta);
+
+  // Initialize slots with compile-time values from schedule
+  // These include batch descriptor lists for render assembly
+  if (program.schedule?.initialSlotValues) {
+    for (const [slotStr, value] of Object.entries(program.schedule.initialSlotValues)) {
+      const slot = Number(slotStr);
+      values.write(slot, value);
+    }
+  }
 
   // Create StateBuffer with real implementation
   // Guard against incomplete program objects (used in some tests)

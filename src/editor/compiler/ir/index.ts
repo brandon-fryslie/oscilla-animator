@@ -95,6 +95,7 @@ export type {
   StepMaterialize,
   StepMaterializeColor,
   StepMaterializePath,
+  StepMaterializeTestGeometry,
   StepRenderAssemble,
   StepDebugProbe,
 

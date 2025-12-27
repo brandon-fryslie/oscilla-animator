@@ -93,6 +93,13 @@ export interface ScheduleIR {
 
   /** Caching policies per step */
   caching: CachingIR;
+
+  /**
+   * Initial slot values to populate at runtime initialization.
+   * Used for batch descriptor lists and other compile-time-known objects.
+   * The runtime should write these values to the ValueStore before first frame.
+   */
+  initialSlotValues?: Record<ValueSlot, unknown>;
 }
 
 // ============================================================================
@@ -112,6 +119,7 @@ export type StepIR =
   | StepMaterialize
   | StepMaterializeColor
   | StepMaterializePath
+  | StepMaterializeTestGeometry
   | StepRenderAssemble
   | StepDebugProbe;
 
@@ -437,6 +445,43 @@ export interface StepMaterializePath extends StepBase {
   // Optional flatten tolerance (default from canonical 0.75px)
   /** Flatten tolerance in pixels (undefined = keep curves) */
   flattenTolerancePx?: number;
+}
+
+// ============================================================================
+// Step 4c: Materialize Test Geometry (Temporary - Phase E)
+// ============================================================================
+
+/**
+ * MaterializeTestGeometry Step
+ *
+ * TEMPORARY step that creates test geometry data (positions and radius) for circles.
+ * This is a placeholder until we implement full field materialization for vec2 and number types.
+ *
+ * Semantics:
+ * - Reads domain handle from domainSlot to get instance count
+ * - Creates test position data (x, y) in a grid pattern
+ * - Creates test radius data (fixed radius for all instances)
+ * - Writes 3 Float32Array buffers (x, y, radius)
+ *
+ * This step will be replaced with proper StepMaterializeVec2 and StepMaterializeNumber
+ * steps in a future iteration.
+ */
+export interface StepMaterializeTestGeometry extends StepBase {
+  kind: "materializeTestGeometry";
+
+  // Inputs
+  /** Slot containing Domain handle (or count) */
+  domainSlot: ValueSlot;
+
+  // Outputs
+  /** Output slot for X positions (Float32Array) */
+  outXSlot: ValueSlot;
+
+  /** Output slot for Y positions (Float32Array) */
+  outYSlot: ValueSlot;
+
+  /** Output slot for radius values (Float32Array) */
+  outRadiusSlot: ValueSlot;
 }
 
 // ============================================================================
