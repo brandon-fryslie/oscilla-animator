@@ -4,6 +4,25 @@
  * This module provides the canonical type system for the IR compiler.
  * It bridges the gap between editor types and compiler types.
  *
+ * ## Authoring vs Storage Types
+ *
+ * TypeDesc represents **authoring-time semantics**: what does this value mean
+ * in the creative context? Examples: field<color>, signal<vec2>, scalar<number>
+ *
+ * For physical storage layouts (how values are encoded in buffers), see:
+ * @see BufferDesc - Storage-time encodings (u8x4 premul RGBA, f32x2 LE, etc.)
+ *
+ * This separation prevents semantic types from leaking into physical storage:
+ * - TypeDesc = "what does this value mean?" (semantic, authoring)
+ * - BufferDesc = "how is this value stored?" (physical, runtime)
+ *
+ * **Example:**
+ * - Authoring: `field<color>` (TypeDesc: world=field, domain=color)
+ * - Storage: `linear_premul_rgba8` (ColorBufferDesc: u8x4, premultiplied, linear)
+ *
+ * The same TypeDesc may materialize to different BufferDescs depending on context
+ * (e.g., field<color> → u8x4 for rendering, f32x4 for HDR export).
+ *
  * @module ir/types/TypeDesc
  */
 
