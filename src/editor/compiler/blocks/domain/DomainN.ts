@@ -70,10 +70,18 @@ export const DomainNBlock: BlockCompiler = {
     { name: 'domain', type: { kind: 'Domain' } },
   ],
 
-  compile({ id, inputs }) {
-    // Read from inputs - values come from defaultSource or explicit connections
-    const n = Number((inputs.n as any)?.value);
-    const seed = Number((inputs.seed as any)?.value);
+  compile({ id, inputs, params }) {
+    // Helper to extract numeric value from artifact with default fallback
+    const extractNumber = (artifact: any, defaultValue: number): number => {
+      if (!artifact) return defaultValue;
+      if (artifact.kind === 'Scalar:number') return Number(artifact.value);
+      // Generic fallback for other artifact types
+      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+    };
+
+    // Support both new (inputs) and old (params) parameter systems
+    const n = extractNumber(inputs.n, (params as any)?.n ?? 100);
+    const seed = extractNumber(inputs.seed, (params as any)?.seed ?? 0);
 
     // Create a stable domain ID based on block id, n, and seed
     const domainId = `domain-${id}-${n}-${seed}`;

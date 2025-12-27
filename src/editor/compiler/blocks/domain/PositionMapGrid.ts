@@ -106,7 +106,7 @@ export const PositionMapGridBlock: BlockCompiler = {
     { name: 'pos', type: { kind: 'Field:vec2' } },
   ],
 
-  compile({ inputs }) {
+  compile({ inputs, params }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -119,12 +119,29 @@ export const PositionMapGridBlock: BlockCompiler = {
 
     const domain = domainArtifact.value;
 
-    // Read from inputs - values come from defaultSource or explicit connections
-    const cols = Number((inputs.cols as any)?.value);
-    const spacing = Number((inputs.spacing as any)?.value);
-    const originX = Number((inputs.originX as any)?.value);
-    const originY = Number((inputs.originY as any)?.value);
-    const order = String((inputs.order as any)?.value);
+    // Helper to extract numeric value from artifact with default fallback
+    const extractNumber = (artifact: any, defaultValue: number): number => {
+      if (!artifact) return defaultValue;
+      if (artifact.kind === 'Scalar:number') return Number(artifact.value);
+      if (artifact.kind === 'Signal:number') {
+        return Number(artifact.value(0, {}));
+      }
+      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+    };
+
+    // Helper to extract string value from artifact with default fallback
+    const extractString = (artifact: any, defaultValue: string): string => {
+      if (!artifact) return defaultValue;
+      if (artifact.kind === 'Scalar:string') return String(artifact.value);
+      return typeof artifact.value === 'function' ? String(artifact.value(0, {})) : String(artifact.value);
+    };
+
+    // Support both new (inputs) and old (params) parameter systems
+    const cols = extractNumber(inputs.cols, (params as any)?.cols ?? 10);
+    const spacing = extractNumber(inputs.spacing, (params as any)?.spacing ?? 20);
+    const originX = extractNumber(inputs.originX, (params as any)?.originX ?? 0);
+    const originY = extractNumber(inputs.originY, (params as any)?.originY ?? 0);
+    const order = extractString(inputs.order, (params as any)?.order ?? 'rowMajor');
 
     // Create the position field based on domain element count
     const positionField: PositionField = (_seed, n) => {

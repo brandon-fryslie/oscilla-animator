@@ -1,0 +1,57 @@
+Agent: iterative-implementer | 2025-12-27T04:33:33
+Mode: tdd
+Completed: Phase 2B - Field Infrastructure | Files: 3 | Commits: 1
+Tests: 20 passing (was 2), 0 failing (was 18)
+Cache invalidated: None (no eval-cache modifications needed)
+Status: complete
+
+Summary:
+========
+Fixed 18 failing executeMaterialize tests by adding missing IR table structures
+to test setup and updating buffer cache type handling.
+
+Work Completed:
+--------------
+1. Test Infrastructure Fix (executeMaterialize.test.ts):
+   - Created createMinimalProgram() helper function
+   - Added required fields table with const node
+   - Added signalTable with empty nodes array
+   - Added constants pool for field evaluation
+   - Fixed fieldExprId format (0 vs field-0)
+
+2. Production Code Fix (executeMaterialize.ts):
+   - Wrapped ArrayBufferView in BufferHandle objects
+   - BufferHandle includes {kind: "buffer", data, format}
+   - Cache stores complete handles for ValueStore compatibility
+   - Maintains format metadata through caching layer
+
+3. Type System Update (RuntimeState.ts):
+   - Changed FrameCache.fieldBuffers from Map<string, ArrayBufferView>
+     to Map<string, unknown>
+   - Accommodates BufferHandle objects without circular dependencies
+   - Added documentation explaining handle storage design
+
+Test Results:
+------------
+- executeMaterialize: 20/20 passing (was 2/20)
+- Overall: 47 → 29 failures (18 tests fixed)
+- No regressions introduced
+
+Technical Details:
+----------------
+Root cause: Tests created minimal CompiledProgramIR without required IR tables.
+Production code expected program.fields.nodes and program.signalTable.nodes,
+which were undefined in test setup.
+
+Solution: Provide minimal valid IR structures in test programs. The field table
+contains a single const node (evaluated from constants pool), and signalTable
+is empty but present.
+
+Secondary issue: Buffer caching type mismatch. The materialize step needs to
+cache complete BufferHandle objects (with format metadata), not just raw
+ArrayBufferView data. Updated cache type to unknown for flexibility.
+
+Next Steps:
+----------
+Continue with remaining 29 test failures. Based on error messages, likely
+candidates for Phase 2C are compiler/type-system tests or other runtime tests.

@@ -60,7 +60,7 @@ export const FieldConstNumberBlock: BlockCompiler = {
     { name: 'out', type: { kind: 'Field:number' } },
   ],
 
-  compile({ inputs }) {
+  compile({ inputs, params }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -73,8 +73,15 @@ export const FieldConstNumberBlock: BlockCompiler = {
 
     const domain = domainArtifact.value;
 
-    // Read from inputs - values come from defaultSource or explicit connections
-    const value = Number((inputs.value as any)?.value);
+    // Helper to extract numeric value from artifact with default fallback
+    const extractNumber = (artifact: any, defaultValue: number): number => {
+      if (!artifact) return defaultValue;
+      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') return Number(artifact.value);
+      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+    };
+
+    // Support both new (inputs) and old (params) parameter systems
+    const value = extractNumber(inputs.value, (params as any)?.value ?? 0);
 
     // Create constant field that returns the same value for all elements
     const field: Field<number> = (_seed, n) => {

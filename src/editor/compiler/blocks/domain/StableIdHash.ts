@@ -93,7 +93,7 @@ export const StableIdHashBlock: BlockCompiler = {
     { name: 'u01', type: { kind: 'Field:number' } },
   ],
 
-  compile({ inputs }) {
+  compile({ inputs, params }) {
     const domainArtifact = inputs.domain;
     if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
@@ -105,8 +105,17 @@ export const StableIdHashBlock: BlockCompiler = {
     }
 
     const domain = domainArtifact.value;
-    // Read from inputs - values come from defaultSource or explicit connections
-    const salt = Number((inputs.salt as any)?.value);
+
+    // Helper to extract numeric value from artifact with default fallback
+    const extractNumber = (artifact: any, defaultValue: number): number => {
+      if (!artifact) return defaultValue;
+      if (artifact.kind === 'Scalar:number') return Number(artifact.value);
+      // Generic fallback for other artifact types
+      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+    };
+
+    // Support both new (inputs) and old (params) parameter systems
+    const salt = extractNumber(inputs.salt, (params as any)?.salt ?? 0);
 
     // Create field that produces stable hash per element
     const field: Field<number> = (_seed, n) => {
