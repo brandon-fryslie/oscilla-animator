@@ -10,7 +10,11 @@ import { useStore } from './stores';
 import { getBlockDefinitions } from './blocks/registry';
 import { findCompatibleReplacements } from './replaceUtils';
 import { SaveCompositeDialog } from './components/SaveCompositeDialog';
+import { registerComposite as registerCompositeDefinition } from './composites';
+import { registerComposite as registerCompositeCompiler } from './composite-bridge';
 import type { BlockDefinition } from './blocks/types';
+import type { CompositeDefinition, ExposedPort } from './composites';
+import type { Composite } from './types';
 import './BlockContextMenu.css';
 
 /**
@@ -123,10 +127,76 @@ export const BlockContextMenu = observer(() => {
     store.uiStore.closeBlockContextMenu();
   };
 
-  const handleSaveComposite = (composite: any, exposedInputs: any[], exposedOutputs: any[]) => {
-    // TODO: Wire to CompositeStore and composite-bridge
-    console.log('Save composite:', composite, exposedInputs, exposedOutputs);
-    setShowSaveCompositeDialog(false);
+  const handleSaveComposite = (composite: Composite, exposedInputs: ExposedPort[], exposedOutputs: ExposedPort[]) => {
+    try {
+      // Save to CompositeStore (in-memory)
+      store.compositeStore.saveComposite(composite);
+
+      // Convert Composite to CompositeDefinition for registration
+      // We need to determine the lane kind from the selected blocks
+      const laneKinds = new Set(
+        selectedBlocks.map(b => {
+          const lane = store.viewStore.lanes.find(l => l.blockIds.includes(b.id));
+          return lane?.kind;
+        }).filter(Boolean)
+      );
+
+      // Use the first lane kind, or default to 'Scalars' if none found
+      const laneKind = laneKinds.size > 0 ? Array.from(laneKinds)[0]! : 'Scalars';
+
+      // Build the composite graph
+      const nodes: Record<string, { type: string; params?: Record<string, unknown> }> = {};
+      for (const block of composite.blocks) {
+        nodes[block.id] = {
+          type: block.type,
+          params: block.params,
+        };
+      }
+
+      const edges = composite.connections.map(conn => ({
+        from: `${conn.from.blockId}:${conn.from.slotId}`,
+        to: `${conn.to.blockId}:${conn.to.slotId}`,
+      }));
+
+      // Build input/output maps
+      const inputMap: Record<string, string> = {};
+      for (const input of exposedInputs) {
+        inputMap[input.id] = `${input.nodeId}:${input.nodePort}`;
+      }
+
+      const outputMap: Record<string, string> = {};
+      for (const output of exposedOutputs) {
+        outputMap[output.id] = `${output.nodeId}:${output.nodePort}`;
+      }
+
+      const compositeDefinition: CompositeDefinition = {
+        id: composite.id.replace('user:', ''), // Remove prefix for definition ID
+        label: composite.name,
+        description: undefined, // TODO: Add description from dialog
+        subcategory: 'Other', // TODO: Get from dialog
+        laneKind,
+        graph: {
+          nodes,
+          edges,
+          inputMap,
+          outputMap,
+        },
+        exposedInputs,
+        exposedOutputs,
+      };
+
+      // Register in the composite registry
+      registerCompositeDefinition(compositeDefinition);
+
+      // Register compiler
+      registerCompositeCompiler(compositeDefinition);
+
+      console.log('Composite saved and registered:', composite.name);
+      setShowSaveCompositeDialog(false);
+    } catch (error) {
+      console.error('Failed to save composite:', error);
+      alert(`Failed to save composite: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   const handleCancelSaveComposite = () => {
