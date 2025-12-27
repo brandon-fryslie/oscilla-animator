@@ -139,6 +139,9 @@ export interface MaterializerEnv {
   /** Domain count function */
   getDomainCount: (domainId: number) => number;
 
+  /** Optional domain element IDs for per-element identity ops */
+  domainElements?: readonly string[];
+
   /** Debug tracer (optional) */
   debug?: MaterializationDebug;
 }
@@ -187,7 +190,53 @@ function evalSig(
 /**
  * Apply a FieldOp to a scalar value
  */
-function applyFieldOp(op: FieldOp, value: number): number {
+function readParamNumber(
+  params: Record<string, unknown> | undefined,
+  key: string,
+  opLabel: string,
+  env: MaterializerEnv
+): number {
+  if (!params || !(key in params)) {
+    throw new Error(`Missing param "${key}" for field op ${opLabel}`);
+  }
+  const raw = params[key];
+  if (
+    typeof raw === "object" &&
+    raw !== null &&
+    "signalSlot" in raw &&
+    typeof (raw as { signalSlot?: unknown }).signalSlot === "number"
+  ) {
+    return evalSig(
+      (raw as { signalSlot: number }).signalSlot,
+      env.sigEnv,
+      env.sigNodes
+    );
+  }
+  const num = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(num)) {
+    throw new Error(`Invalid param "${key}" for field op ${opLabel}: ${String(raw)}`);
+  }
+  return num;
+}
+
+function hash01ById(elementId: string, seed: number): number {
+  let h = seed;
+  for (let i = 0; i < elementId.length; i++) {
+    h = ((h << 5) - h + elementId.charCodeAt(i)) | 0;
+    h = Math.imul(h, 0x5bd1e995);
+    h ^= h >>> 15;
+  }
+  const t = (h * 12.9898 + 78.233) * 43758.5453;
+  return t - Math.floor(t);
+}
+
+function applyFieldOp(
+  op: FieldOp,
+  value: number,
+  params: Record<string, unknown> | undefined,
+  index: number,
+  env: MaterializerEnv
+): number {
   switch (op) {
     case FieldOp.Identity:
       return value;
@@ -202,15 +251,65 @@ function applyFieldOp(op: FieldOp, value: number): number {
     case FieldOp.Round:
       return Math.round(value);
     case FieldOp.Sin:
-      return Math.sin(value);
+      return Math.sin(value * readParamNumber(params, 'k', 'sin', env));
     case FieldOp.Cos:
-      return Math.cos(value);
+      return Math.cos(value * readParamNumber(params, 'k', 'cos', env));
+    case FieldOp.Tanh:
+      return Math.tanh(value * readParamNumber(params, 'k', 'tanh', env));
     case FieldOp.Sqrt:
       return Math.sqrt(value);
     case FieldOp.Exp:
       return Math.exp(value);
     case FieldOp.Log:
       return Math.log(value);
+    case FieldOp.Smoothstep: {
+      const a = readParamNumber(params, 'a', 'smoothstep', env);
+      const b = readParamNumber(params, 'b', 'smoothstep', env);
+      const t = (value - a) / (b - a);
+      const u = Math.max(0, Math.min(1, t));
+      return u * u * (3 - 2 * u);
+    }
+    case FieldOp.Clamp: {
+      const a = readParamNumber(params, 'a', 'clamp', env);
+      const b = readParamNumber(params, 'b', 'clamp', env);
+      return Math.max(a, Math.min(b, value));
+    }
+    case FieldOp.Scale:
+      return value * readParamNumber(params, 'k', 'scale', env);
+    case FieldOp.Offset:
+      return value + readParamNumber(params, 'k', 'offset', env);
+    case FieldOp.Hash01ById: {
+      const seed = readParamNumber(params, 'seed', 'hash01ById', env);
+      const elementId = env.domainElements?.[index] ?? String(index);
+      return hash01ById(elementId, seed);
+    }
+    case FieldOp.ZipSignal: {
+      const signalValue = readParamNumber(params, 'signal', 'zipSignal', env);
+      const op = params?.op;
+      if (typeof op !== 'string') {
+        throw new Error(`Missing param "op" for field op zipSignal`);
+      }
+      switch (op) {
+        case 'add':
+          return value + signalValue;
+        case 'sub':
+          return value - signalValue;
+        case 'mul':
+          return value * signalValue;
+        case 'min':
+          return Math.min(value, signalValue);
+        case 'max':
+          return Math.max(value, signalValue);
+        default:
+          throw new Error(`zipSignal unsupported op "${op}"`);
+      }
+    }
+    case FieldOp.Vec2Rotate:
+    case FieldOp.Vec2Scale:
+    case FieldOp.Vec2Translate:
+    case FieldOp.Vec2Reflect:
+    case FieldOp.JitterVec2:
+      throw new Error(`applyFieldOp: vec2 op ${op} requires vec2 materialization`);
     default: {
       const _exhaustive: never = op;
       throw new Error(`Unknown field operation: ${String(_exhaustive)}`);
@@ -459,6 +558,132 @@ function fillBufferConst(
       break;
     }
 
+
+    case 'vec3': {
+      const arr = out as Float32Array;
+      
+      // Scalar broadcast: single number → (cv, cv, cv)
+      if (typeof value === 'number') {
+        for (let i = 0; i < N; i++) {
+          arr[i * 3 + 0] = value;
+          arr[i * 3 + 1] = value;
+          arr[i * 3 + 2] = value;
+        }
+        return;
+      }
+
+      // Object constant: {x, y, z}
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const v = value as { x?: number; y?: number; z?: number };
+        const x = Number(v.x ?? 0);
+        const y = Number(v.y ?? 0);
+        const z = Number(v.z ?? 0);
+        for (let i = 0; i < N; i++) {
+          arr[i * 3 + 0] = x;
+          arr[i * 3 + 1] = y;
+          arr[i * 3 + 2] = z;
+        }
+        return;
+      }
+
+      throw new Error(`fillBufferConst: invalid vec3 constant (${typeof value})`);
+    }
+
+    case 'vec4': {
+      const arr = out as Float32Array;
+      
+      // Scalar broadcast: single number → (cv, cv, cv, cv)
+      if (typeof value === 'number') {
+        for (let i = 0; i < N; i++) {
+          arr[i * 4 + 0] = value;
+          arr[i * 4 + 1] = value;
+          arr[i * 4 + 2] = value;
+          arr[i * 4 + 3] = value;
+        }
+        return;
+      }
+
+      // Object constant: {x, y, z, w}
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const v = value as { x?: number; y?: number; z?: number; w?: number };
+        const x = Number(v.x ?? 0);
+        const y = Number(v.y ?? 0);
+        const z = Number(v.z ?? 0);
+        const w = Number(v.w ?? 0);
+        for (let i = 0; i < N; i++) {
+          arr[i * 4 + 0] = x;
+          arr[i * 4 + 1] = y;
+          arr[i * 4 + 2] = z;
+          arr[i * 4 + 3] = w;
+        }
+        return;
+      }
+
+      throw new Error(`fillBufferConst: invalid vec4 constant (${typeof value})`);
+    }
+
+    case 'quat': {
+      const arr = out as Float32Array;
+      
+      // Quaternion constant: {x, y, z, w}
+      // CRITICAL: Must be normalized (unit quaternion)
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const v = value as { x?: number; y?: number; z?: number; w?: number };
+        const x = Number(v.x ?? 0);
+        const y = Number(v.y ?? 0);
+        const z = Number(v.z ?? 0);
+        const w = Number(v.w ?? 0);
+
+        // Validate unit quaternion: |q| ≈ 1.0 (tolerance: 0.001)
+        const len = Math.sqrt(x * x + y * y + z * z + w * w);
+        if (Math.abs(len - 1.0) > 0.001) {
+          throw new Error(
+            `Quaternion must be normalized (length ${len.toFixed(6)}, expected 1.0)`
+          );
+        }
+
+        // Fill buffer with normalized quaternion
+        for (let i = 0; i < N; i++) {
+          arr[i * 4 + 0] = x;
+          arr[i * 4 + 1] = y;
+          arr[i * 4 + 2] = z;
+          arr[i * 4 + 3] = w;
+        }
+        return;
+      }
+
+      throw new Error(`fillBufferConst: invalid quat constant (${typeof value})`);
+    }
+
+    case 'mat4': {
+      const arr = out as Float32Array;
+      
+      // Matrix constant: 16-element array
+      // Layout: COLUMN-MAJOR (WebGL convention)
+      // Column 0: elements 0-3   (m00, m10, m20, m30)
+      // Column 1: elements 4-7   (m01, m11, m21, m31)
+      // Column 2: elements 8-11  (m02, m12, m22, m32)
+      // Column 3: elements 12-15 (m03, m13, m23, m33)
+      if (Array.isArray(value)) {
+        if (value.length !== 16) {
+          throw new Error(
+            `fillBufferConst: mat4 requires exactly 16 elements, got ${value.length}`
+          );
+        }
+
+        // Fill buffer with matrix elements
+        for (let i = 0; i < N; i++) {
+          const off = i * 16;
+          for (let j = 0; j < 16; j++) {
+            arr[off + j] = Number(value[j]);
+          }
+        }
+        return;
+      }
+
+      throw new Error(`fillBufferConst: mat4 constant must be a 16-element array`);
+    }
+
     case 'color': {
       const outArr = out as Uint8Array;
       if (!(outArr instanceof Uint8Array)) {
@@ -566,32 +791,172 @@ function fillBufferOp(
   N: number,
   env: MaterializerEnv
 ): void {
-  if (handle.type.kind !== 'number') {
-    throw new Error(`fillBufferOp: unsupported type ${handle.type.kind}`);
-  }
   // For now, only support single-arg operations
   if (handle.args.length !== 1) {
     throw new Error(`Expected 1 argument for Op, got ${handle.args.length}`);
   }
 
-  // Materialize input field
-  const srcBuffer = materialize(
-    {
-      fieldId: handle.args[0],
-      domainId: env.fieldEnv.domainId,
-      format: 'f32',
-      layout: 'scalar',
-      usageTag: 'op-input',
-    },
-    env
-  ) as Float32Array;
+  if (handle.type.kind === 'number') {
+    const srcBuffer = materialize(
+      {
+        fieldId: handle.args[0],
+        domainId: env.fieldEnv.domainId,
+        format: 'f32',
+        layout: 'scalar',
+        usageTag: 'op-input',
+      },
+      env
+    ) as Float32Array;
 
-  const outArr = out as Float32Array;
+    const outArr = out as Float32Array;
 
-  // Apply operation element-wise
-  for (let i = 0; i < N; i++) {
-    outArr[i] = applyFieldOp(handle.op, srcBuffer[i]);
+    for (let i = 0; i < N; i++) {
+      outArr[i] = applyFieldOp(handle.op, srcBuffer[i], handle.params, i, env);
+    }
+    return;
   }
+
+  if (handle.type.kind === 'vec2') {
+    if (handle.op === FieldOp.Vec2Rotate) {
+      const srcBuffer = materialize(
+        {
+          fieldId: handle.args[0],
+          domainId: env.fieldEnv.domainId,
+          format: 'vec2f32',
+          layout: 'vec2',
+          usageTag: 'op-input',
+        },
+        env
+      ) as Float32Array;
+
+      const outArr = out as Float32Array;
+      const centerX = readParamNumber(handle.params, 'centerX', 'vec2Rotate', env);
+      const centerY = readParamNumber(handle.params, 'centerY', 'vec2Rotate', env);
+      const angleDeg = readParamNumber(handle.params, 'angle', 'vec2Rotate', env);
+      const angleRad = (angleDeg * Math.PI) / 180;
+      const cos = Math.cos(angleRad);
+      const sin = Math.sin(angleRad);
+
+      for (let i = 0; i < N; i++) {
+        const x = srcBuffer[i * 2];
+        const y = srcBuffer[i * 2 + 1];
+        const dx = x - centerX;
+        const dy = y - centerY;
+        outArr[i * 2] = centerX + dx * cos - dy * sin;
+        outArr[i * 2 + 1] = centerY + dx * sin + dy * cos;
+      }
+      return;
+    }
+
+    if (handle.op === FieldOp.Vec2Scale) {
+      const srcBuffer = materialize(
+        {
+          fieldId: handle.args[0],
+          domainId: env.fieldEnv.domainId,
+          format: 'vec2f32',
+          layout: 'vec2',
+          usageTag: 'op-input',
+        },
+        env
+      ) as Float32Array;
+
+      const outArr = out as Float32Array;
+      const centerX = readParamNumber(handle.params, 'centerX', 'vec2Scale', env);
+      const centerY = readParamNumber(handle.params, 'centerY', 'vec2Scale', env);
+      const scaleX = readParamNumber(handle.params, 'scaleX', 'vec2Scale', env);
+      const scaleY = readParamNumber(handle.params, 'scaleY', 'vec2Scale', env);
+
+      for (let i = 0; i < N; i++) {
+        const x = srcBuffer[i * 2];
+        const y = srcBuffer[i * 2 + 1];
+        const dx = x - centerX;
+        const dy = y - centerY;
+        outArr[i * 2] = centerX + dx * scaleX;
+        outArr[i * 2 + 1] = centerY + dy * scaleY;
+      }
+      return;
+    }
+
+    if (handle.op === FieldOp.Vec2Translate) {
+      const srcBuffer = materialize(
+        {
+          fieldId: handle.args[0],
+          domainId: env.fieldEnv.domainId,
+          format: 'vec2f32',
+          layout: 'vec2',
+          usageTag: 'op-input',
+        },
+        env
+      ) as Float32Array;
+
+      const outArr = out as Float32Array;
+      const offsetX = readParamNumber(handle.params, 'offsetX', 'vec2Translate', env);
+      const offsetY = readParamNumber(handle.params, 'offsetY', 'vec2Translate', env);
+
+      for (let i = 0; i < N; i++) {
+        outArr[i * 2] = srcBuffer[i * 2] + offsetX;
+        outArr[i * 2 + 1] = srcBuffer[i * 2 + 1] + offsetY;
+      }
+      return;
+    }
+
+    if (handle.op === FieldOp.Vec2Reflect) {
+      const srcBuffer = materialize(
+        {
+          fieldId: handle.args[0],
+          domainId: env.fieldEnv.domainId,
+          format: 'vec2f32',
+          layout: 'vec2',
+          usageTag: 'op-input',
+        },
+        env
+      ) as Float32Array;
+
+      const outArr = out as Float32Array;
+      const centerX = readParamNumber(handle.params, 'centerX', 'vec2Reflect', env);
+      const centerY = readParamNumber(handle.params, 'centerY', 'vec2Reflect', env);
+
+      for (let i = 0; i < N; i++) {
+        const x = srcBuffer[i * 2];
+        const y = srcBuffer[i * 2 + 1];
+        outArr[i * 2] = centerX - (x - centerX);
+        outArr[i * 2 + 1] = centerY - (y - centerY);
+      }
+      return;
+    }
+
+    if (handle.op === FieldOp.JitterVec2) {
+      const srcBuffer = materialize(
+        {
+          fieldId: handle.args[0],
+          domainId: env.fieldEnv.domainId,
+          format: 'f32',
+          layout: 'scalar',
+          usageTag: 'op-input',
+        },
+        env
+      ) as Float32Array;
+
+      const outArr = out as Float32Array;
+      const phase = readParamNumber(handle.params, 'phase', 'jitterVec2', env);
+      const amount = readParamNumber(handle.params, 'amount', 'jitterVec2', env);
+      const frequency = readParamNumber(handle.params, 'frequency', 'jitterVec2', env);
+      const twoPi = Math.PI * 2;
+
+      for (let i = 0; i < N; i++) {
+        const r = srcBuffer[i];
+        const angle = r * twoPi;
+        const mag = Math.sin((phase * frequency + r) * twoPi) * amount;
+        outArr[i * 2] = Math.cos(angle) * mag;
+        outArr[i * 2 + 1] = Math.sin(angle) * mag;
+      }
+      return;
+    }
+
+    throw new Error(`fillBufferOp: unsupported vec2 op ${handle.op}`);
+  }
+
+  throw new Error(`fillBufferOp: unsupported type ${handle.type.kind}`);
 }
 
 /**

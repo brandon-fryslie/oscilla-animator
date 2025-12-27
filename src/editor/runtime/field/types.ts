@@ -21,6 +21,8 @@ export type TypeDesc =
   | { kind: 'vec2' }
   | { kind: 'vec3' }
   | { kind: 'vec4' }
+  | { kind: 'quat' } // Quaternion (x, y, z, w) for 3D rotations
+  | { kind: 'mat4' } // 4x4 matrix for 3D transformations
   | { kind: 'color' }
   | { kind: 'boolean' }
   | { kind: 'string' };
@@ -36,6 +38,12 @@ export const vec3Type: TypeDesc = { kind: 'vec3' };
 
 /** Vec4 type descriptor singleton */
 export const vec4Type: TypeDesc = { kind: 'vec4' };
+
+/** Quaternion type descriptor singleton */
+export const quatType: TypeDesc = { kind: 'quat' };
+
+/** Mat4 type descriptor singleton */
+export const mat4Type: TypeDesc = { kind: 'mat4' };
 
 /** Color type descriptor singleton */
 export const colorType: TypeDesc = { kind: 'color' };
@@ -56,9 +64,21 @@ export const FieldOp = {
   Round: 'round',
   Sin: 'sin',
   Cos: 'cos',
+  Tanh: 'tanh',
   Sqrt: 'sqrt',
   Exp: 'exp',
   Log: 'log',
+  Smoothstep: 'smoothstep',
+  Clamp: 'clamp',
+  Scale: 'scale',
+  Offset: 'offset',
+  Hash01ById: 'hash01ById',
+  Vec2Rotate: 'vec2Rotate',
+  Vec2Scale: 'vec2Scale',
+  Vec2Translate: 'vec2Translate',
+  Vec2Reflect: 'vec2Reflect',
+  JitterVec2: 'jitterVec2',
+  ZipSignal: 'zipSignal',
 } as const;
 
 export type FieldOp = typeof FieldOp[keyof typeof FieldOp];
@@ -123,10 +143,10 @@ export type FieldHandle =
   | { kind: 'Const'; constId: number; type: TypeDesc }
 
   // Result of a unary operation
-  | { kind: 'Op'; op: FieldOp; args: readonly FieldExprId[]; type: TypeDesc }
+  | { kind: 'Op'; op: FieldOp; args: readonly FieldExprId[]; type: TypeDesc; params?: Record<string, unknown> }
 
   // Zip two fields element-wise
-  | { kind: 'Zip'; op: FieldZipOp; a: FieldExprId; b: FieldExprId; type: TypeDesc }
+  | { kind: 'Zip'; op: FieldZipOp; a: FieldExprId; b: FieldExprId; type: TypeDesc; params?: Record<string, unknown> }
 
   // Conditional per-element selection
   | { kind: 'Select'; cond: FieldExprId; t: FieldExprId; f: FieldExprId; type: TypeDesc }
@@ -152,6 +172,7 @@ export type FieldHandle =
  */
 export interface FnRef {
   opcode: string;
+  params?: Record<string, unknown>;
 }
 
 /**
@@ -232,6 +253,8 @@ export type BufferFormat =
   | 'vec2f32'
   | 'vec3f32'
   | 'vec4f32'
+  | 'quatf32' // 4 floats: x, y, z, w (unit quaternion)
+  | 'mat4f32' // 16 floats: column-major layout (WebGL convention)
   | 'rgba8';
 
 /**

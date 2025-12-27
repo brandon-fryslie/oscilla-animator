@@ -36,6 +36,7 @@ export type TypeDomain =
   | "vec2"
   | "vec3"
   | "vec4"
+  | "quat" // Quaternion for 3D rotations (x, y, z, w)
   | "color"
   | "bounds"
   | "timeMs"

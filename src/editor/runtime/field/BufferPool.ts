@@ -123,6 +123,12 @@ function allocateBuffer(format: BufferFormat, count: number): ArrayBufferView {
     case 'vec4f32':
       return new Float32Array(count * 4);
 
+    case 'quatf32':
+      return new Float32Array(count * 4);
+
+    case 'mat4f32':
+      return new Float32Array(count * 16);
+
     case 'rgba8':
       return new Uint8Array(count * 4);
 
