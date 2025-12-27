@@ -28,9 +28,23 @@ import type { CompilerService, Viewport } from './compiler';
 import type { Program, CanvasProgram } from './compiler/types';
 import { useStore } from './stores';
 import { TimeConsole } from './components/TimeConsole';
-import { IRRuntimeAdapter } from './runtime/executor/IRRuntimeAdapter';
+import { IRRuntimeAdapter, type RenderFrameIR } from './runtime/executor/IRRuntimeAdapter';
 import { TraceContext } from './debug';
 import './PreviewPanel.css';
+
+/**
+ * Type guard for RenderFrameIR (simple IR format with inline buffers)
+ */
+function isRenderFrameIR(value: unknown): value is RenderFrameIR {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'version' in value &&
+    (value as RenderFrameIR).version === 1 &&
+    'passes' in value &&
+    Array.isArray((value as RenderFrameIR).passes)
+  );
+}
 
 /**
  * Empty placeholder program shown when no patch is compiled.
@@ -81,6 +95,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const lastGoodProgramRef = useRef<Program<SvgRenderTree> | null>(null);
   const lastGoodCanvasProgramRef = useRef<CanvasProgram | null>(null);
   const lastGoodIRProgramRef = useRef<Program<SvgRenderTree> | null>(null);
+  const irAdapterRef = useRef<IRRuntimeAdapter | null>(null);
 
   // Which renderer is active: 'svg' or 'canvas'
   const [activeRenderer, setActiveRenderer] = useState<'svg' | 'canvas'>('svg');
@@ -193,12 +208,15 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         // === IR PATH (NEW COMPILER) ===
         if (useIR) {
           if (result.compiledIR) {
-            // IR compilation succeeded - use IR path with legacy render bridge
-            // Pass canvasProgram.signal as the legacy render function for bridge mode
-            // This allows IR to manage time/state while closures still produce render output
+            // IR compilation succeeded - use IR path
+            // In pure IR mode (no legacyRenderFn), the schedule produces RenderFrameIR directly
+            // In bridge mode, legacy closure is used for rendering while IR manages time/state
             const legacyRenderFn = result.canvasProgram?.signal;
             const adapter = new IRRuntimeAdapter(result.compiledIR, legacyRenderFn);
             const irProgram = adapter.createProgram();
+
+            // Store adapter for direct frame access in render loop
+            irAdapterRef.current = adapter;
 
             const isFirstProgram = lastGoodIRProgramRef.current === null && lastGoodProgramRef.current === null;
 
@@ -323,10 +341,25 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
 
         if (useIR) {
           // IR mode: ONLY use IR program
-          if (lastGoodIRProgramRef.current) {
-            renderTree = lastGoodIRProgramRef.current.signal(tMs, ctx);
+          const adapter = irAdapterRef.current;
+          if (adapter) {
+            if (adapter.isPureIRMode()) {
+              // Pure IR mode: get RenderFrameIR directly and use renderFrameSimple
+              const frame = adapter.executeAndGetFrame(tMs);
+              if (frame && isRenderFrameIR(frame)) {
+                canvasRenderer.renderFrameSimple(frame);
+                // Don't call render() below - we already rendered
+                animationFrameId = requestAnimationFrame(renderFrame);
+                return;
+              }
+            } else {
+              // Bridge mode: use legacy render function via signal()
+              if (lastGoodIRProgramRef.current) {
+                renderTree = lastGoodIRProgramRef.current.signal(tMs, ctx);
+              }
+            }
           }
-          // If no IR program, renderTree stays null - shows blank/error
+          // If no adapter or frame, renderTree stays null - shows blank/error
         } else {
           // Legacy mode: ONLY use legacy canvas program
           if (lastGoodCanvasProgramRef.current) {
@@ -446,7 +479,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     setZoom(1);
   }, []);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
 
     const canvas = canvasRef.current;
@@ -473,6 +506,17 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
     setZoom(newZoom);
     setPanOffset({ x: newPanX, y: newPanY });
   }, [zoom, panOffset, width, height]);
+
+  // Attach wheel listener with { passive: false } to allow preventDefault
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      canvas.removeEventListener('wheel', handleWheel);
+    };
+  }, [handleWheel]);
 
   return (
     <div className="preview-panel">
@@ -514,7 +558,6 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         onMouseLeave={handlePanEnd}
         onClick={handleCanvasClick}
         onDoubleClick={handleResetView}
-        onWheel={handleWheel}
       >
         {/* SVG Renderer - visible when activeRenderer is 'svg' */}
         <svg
