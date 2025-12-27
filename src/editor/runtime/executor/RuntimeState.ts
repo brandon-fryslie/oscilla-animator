@@ -149,8 +149,16 @@ export interface FrameCache {
   /** Frame stamps for field cache validation */
   fieldStamp: Uint32Array;
 
-  /** Materialized buffer pool (per-frame cache) */
-  fieldBuffers: Map<string, ArrayBufferView>;
+  /**
+   * Materialized buffer pool (per-frame cache).
+   *
+   * Stores complete buffer handles (including format metadata) from materialize steps.
+   * These handles are written to the ValueStore and may be read by downstream steps.
+   *
+   * Type is `unknown` to accommodate different handle types (BufferHandle, etc.)
+   * without creating circular dependencies.
+   */
+  fieldBuffers: Map<string, unknown>;
 
   /**
    * Start a new frame.
@@ -205,7 +213,7 @@ export function createFrameCache(
   const fieldStamp = new Uint32Array(fieldCapacity);
 
   // Initialize buffer pool
-  const fieldBuffers = new Map<string, ArrayBufferView>();
+  const fieldBuffers = new Map<string, unknown>();
 
   return {
     frameId: 1, // Start at 1 to avoid collision with initial stamp values (0)

@@ -20,6 +20,34 @@ import type {
 // Default effective time for tests
 const defaultTime = { tAbsMs: 1000, tModelMs: 1000, phase01: 0.5 };
 
+/**
+ * Helper to create a minimal test program IR.
+ * Only includes the fields needed by executeMaterialize.
+ */
+function createMinimalProgram(step: StepMaterialize): CompiledProgramIR {
+  return {
+    schedule: { steps: [step] },
+    // Minimal field expression table - single const node
+    fields: {
+      nodes: [
+        {
+          kind: "const",
+          type: { world: "field", domain: "number", channels: 1 },
+          constId: 0,
+        },
+      ],
+    },
+    // Minimal signal expression table
+    signalTable: {
+      nodes: [],
+    },
+    // Minimal constant pool
+    constants: {
+      json: [42], // const value for field node
+    },
+  } as unknown as CompiledProgramIR;
+}
+
 describe("executeMaterialize", () => {
   let runtime: RuntimeState;
   let program: CompiledProgramIR;
@@ -32,7 +60,7 @@ describe("executeMaterialize", () => {
       deps: [],
       materialization: {
         id: "mat-1",
-        fieldExprId: "field-0",
+        fieldExprId: "0",
         domainSlot: 0,
         outBufferSlot: 1,
         format: { components: 1, elementType: "f32" },
@@ -40,10 +68,7 @@ describe("executeMaterialize", () => {
       },
     };
 
-    program = {
-      schedule: { steps: [step] },
-    } as CompiledProgramIR;
-
+    program = createMinimalProgram(step);
     runtime = createRuntimeState(program);
   });
 
@@ -235,10 +260,8 @@ describe("executeMaterialize", () => {
 
     it("writes to correct output slot", () => {
       step.materialization.outBufferSlot = 5;
-      // Rebuild runtime with updated step to get proper slot metadata
-      program = {
-        schedule: { steps: [step] },
-      } as CompiledProgramIR;
+      // Rebuild program and runtime with updated step
+      program = createMinimalProgram(step);
       runtime = createRuntimeState(program);
       runtime.values.write(0, 10);
 

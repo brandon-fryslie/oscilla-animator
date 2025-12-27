@@ -149,11 +149,11 @@ export function executeMaterialize(
 
   // 2. Check buffer pool cache (per-frame cache from FrameCache)
   const cacheKey = `${mat.fieldExprId}_${mat.domainSlot}_${mat.format.components}_${mat.format.elementType}`;
-  const cachedBuffer = runtime.frameCache.fieldBuffers.get(cacheKey);
+  const cachedHandle = runtime.frameCache.fieldBuffers.get(cacheKey);
 
-  if (cachedBuffer !== undefined) {
-    // Cache hit - reuse existing buffer
-    runtime.values.write(mat.outBufferSlot, cachedBuffer);
+  if (cachedHandle !== undefined) {
+    // Cache hit - reuse existing buffer handle
+    runtime.values.write(mat.outBufferSlot, cachedHandle);
     return;
   }
 
@@ -179,11 +179,18 @@ export function executeMaterialize(
   // 5. Materialize the field
   const buffer = materialize(request, env);
 
-  // 6. Store in buffer pool cache
-  runtime.frameCache.fieldBuffers.set(cacheKey, buffer);
+  // 6. Create buffer handle
+  const bufferHandle: BufferHandle = {
+    kind: "buffer",
+    data: buffer,
+    format: mat.format,
+  };
 
-  // 7. Write buffer handle to output slot
-  runtime.values.write(mat.outBufferSlot, buffer);
+  // 7. Store in buffer pool cache
+  runtime.frameCache.fieldBuffers.set(cacheKey, bufferHandle);
+
+  // 8. Write buffer handle to output slot
+  runtime.values.write(mat.outBufferSlot, bufferHandle);
 }
 
 // =============================================================================
@@ -242,7 +249,7 @@ function buildMaterializerEnv(
   const pool = new FieldBufferPool();
 
   // Use FrameCache's buffer map as per-frame cache
-  const fieldBufferCache = runtime.frameCache.fieldBuffers;
+  const fieldBufferCache = new Map<string, ArrayBufferView>();
 
   // Build field environment with required fields
   const fieldEnv = {
