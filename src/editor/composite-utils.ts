@@ -3,9 +3,10 @@
  * @description Helper functions for creating and managing custom composites
  */
 
-import type { Block, Connection, Composite, CompositeConnection } from './types';
+import type { Block, Connection, Composite, CompositeConnection, ExposedParam } from './types';
 import type { ExposedPort } from './composites';
 import { getBlockDefinition } from './blocks';
+import type { ParamSchema } from './blocks/types';
 
 /**
  * Auto-detect exposed ports from a selection of blocks.
@@ -93,6 +94,53 @@ export function detectExposedPorts(
 }
 
 /**
+ * Exposable parameter - a parameter from an internal block that can be exposed
+ * at the composite level.
+ */
+export interface ExposableParameter {
+  /** Unique ID for this parameter: `${blockId}__${paramKey}` */
+  id: string;
+  /** Display label: `${blockLabel}.${paramLabel}` */
+  label: string;
+  /** Internal block ID */
+  blockId: string;
+  /** Parameter key on the block */
+  paramKey: string;
+  /** Parameter schema from block definition */
+  schema: ParamSchema;
+  /** Current value */
+  currentValue: unknown;
+}
+
+/**
+ * Detect all parameters from internal blocks that could be exposed.
+ * Returns a list of exposable parameters with their current values.
+ */
+export function detectExposableParameters(selectedBlocks: Block[]): ExposableParameter[] {
+  const exposable: ExposableParameter[] = [];
+
+  for (const block of selectedBlocks) {
+    const definition = getBlockDefinition(block.type);
+    if (!definition || !definition.paramSchema || definition.paramSchema.length === 0) {
+      continue;
+    }
+
+    for (const paramDef of definition.paramSchema) {
+      exposable.push({
+        id: `${block.id}__${paramDef.key}`,
+        label: `${block.label}.${paramDef.label}`,
+        blockId: block.id,
+        paramKey: paramDef.key,
+        schema: paramDef,
+        currentValue: block.params[paramDef.key] ?? paramDef.defaultValue,
+      });
+    }
+  }
+
+  return exposable;
+}
+
+/**
  * Generate a sanitized composite ID from a name.
  * Format: "user:<sanitized-name>"
  */
@@ -109,12 +157,13 @@ export function generateCompositeId(name: string): string {
  */
 export function createCompositeFromSelection(
   name: string,
-  _description: string | undefined,
-  _subcategory: string,
+  description: string | undefined,
+  subcategory: string,
   selectedBlocks: Block[],
   allConnections: Connection[],
-  _exposedInputIds: Set<string>,
-  _exposedOutputIds: Set<string>
+  exposedInputIds: Set<string>,
+  exposedOutputIds: Set<string>,
+  exposedParams: ExposedParam[]
 ): Composite {
   const selectedBlockIds = new Set(selectedBlocks.map(b => b.id));
 
@@ -141,6 +190,8 @@ export function createCompositeFromSelection(
   const composite: Composite = {
     id: generateCompositeId(name),
     name,
+    description,
+    subcategory,
     blocks: selectedBlocks.map(b => ({
       id: b.id,
       type: b.type,
@@ -152,6 +203,7 @@ export function createCompositeFromSelection(
       description: b.description,
     })),
     connections: internalConnections,
+    exposedParams,
   };
 
   return composite;
@@ -176,3 +228,6 @@ export function validateCompositeName(
 
   return { valid: true };
 }
+
+// Re-export ExposedParam for convenience
+export type { ExposedParam };

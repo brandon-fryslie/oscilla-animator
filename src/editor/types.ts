@@ -644,6 +644,15 @@ export interface Composite {
 
   /** Internal connections between blocks */
   connections: CompositeConnection[];
+
+  /** Optional description */
+  description?: string;
+
+  /** Optional subcategory for organization */
+  subcategory?: string;
+
+  /** Exposed parameters - maps composite-level params to internal block params */
+  exposedParams?: ExposedParam[];
 }
 
 /**
@@ -668,6 +677,24 @@ export interface CompositeConnection {
   };
 }
 
+
+/**
+ * Exposed parameter mapping - maps a composite-level parameter to an internal block parameter.
+ * Used for parameter forwarding in user-created composites.
+ */
+export interface ExposedParam {
+  /** Composite-level parameter ID (unique within composite) */
+  readonly id: string;
+
+  /** Composite-level display name */
+  readonly label: string;
+
+  /** Internal block ID that owns this parameter */
+  readonly blockId: BlockId;
+
+  /** Internal parameter key on the block */
+  readonly paramKey: string;
+}
 // =============================================================================
 // Lanes
 // =============================================================================
