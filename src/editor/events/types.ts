@@ -465,6 +465,8 @@ export interface RuntimeHealthSnapshotEvent {
     raised: Diagnostic[];
     resolved: string[]; // diagnostic IDs that are now resolved
   };
+  /** Current bus values for debug UI (sampled at snapshot time) */
+  busValues?: Record<string, import('../debug/types').ValueSummary>;
 }
 
 // ============================================================================

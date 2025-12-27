@@ -52,6 +52,7 @@ import './mobile.css';
 import { HelpCenterModal, HelpPanel, type HelpCenterTopicId } from './HelpCenter';
 import {DebugReplPanel} from "./components/DebugReplPanel.tsx";
 import { TutorialOverlay } from './TutorialOverlay';
+import { DebugHUD, DebugDrawer, ProbeToggle, ProbeCard } from './debug-ui';
 
 type HelpTopic = 'intro' | 'library' | 'inspector' | 'preview' | 'patch' | 'controlSurface';
 const TOUR_COMPLETE_KEY = 'loom-editor-tour-complete';
@@ -1080,6 +1081,15 @@ export const Editor = observer(() => {
 
         {/* Interactive Tutorial */}
         <TutorialOverlay />
+
+        {/* Debug UI */}
+        <DebugHUD />
+        <DebugDrawer />
+        <ProbeToggle />
+        <ProbeCard
+          target={debugUIStore.probeTarget}
+          position={debugUIStore.cursorPosition}
+        />
       </div>
 
       <PathManagerModal
