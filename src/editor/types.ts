@@ -284,6 +284,8 @@ export type SlotType =
   | 'Signal<phase>'     // Phase value 0..1 (TimeRoot output)
   | 'Signal<color>'     // Time-varying color
   | 'Signal<string>'    // Time-varying string (config enums, etc.)
+  | 'Field<path>'       // Per-element path expressions
+
   | 'Signal<PhaseSample>' // Phase machine output
   | 'Event<string>'     // Discrete text events (typewriter)
   | 'Event<any>'        // Generic events
@@ -871,6 +873,8 @@ export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc> = {
   'Field<number>': { world: 'field', domain: 'number', category: 'core', busEligible: true },
   'Field<vec2>': { world: 'field', domain: 'vec2', category: 'core', busEligible: true, semantics: 'position' },
   'Field<color>': { world: 'field', domain: 'color', category: 'core', busEligible: true },
+  'Field<path>': { world: 'field', domain: 'path', category: 'internal', busEligible: false },
+
   'Field<string>': { world: 'field', domain: 'color', category: 'core', busEligible: true, semantics: 'hex-color' },
   'Signal<number>': { world: 'signal', domain: 'number', category: 'core', busEligible: true },
   'Signal<Point>': { world: 'signal', domain: 'vec2', category: 'core', busEligible: true, semantics: 'point' },
