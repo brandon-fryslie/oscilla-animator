@@ -14,7 +14,7 @@ import { registerComposite as registerCompositeDefinition } from './composites';
 import { registerComposite as registerCompositeCompiler } from './composite-bridge';
 import type { BlockDefinition } from './blocks/types';
 import type { CompositeDefinition, ExposedPort } from './composites';
-import type { Composite } from './types';
+import type { Composite, BlockSubcategory } from './types';
 import './BlockContextMenu.css';
 
 /**
@@ -173,7 +173,7 @@ export const BlockContextMenu = observer(() => {
         id: composite.id.replace('user:', ''), // Remove prefix for definition ID
         label: composite.name,
         description: composite.description,
-        subcategory: (composite.subcategory as any) ?? 'Other',
+        subcategory: (composite.subcategory ?? 'Other') as BlockSubcategory,
         laneKind,
         graph: {
           nodes,
@@ -183,6 +183,7 @@ export const BlockContextMenu = observer(() => {
         },
         exposedInputs,
         exposedOutputs,
+        exposedParams: composite.exposedParams,
       };
 
       // Register in the composite registry

@@ -1,4 +1,4 @@
-import type { BlockSubcategory, LaneKind, LaneFlavor, SlotType } from './types';
+import type { BlockSubcategory, LaneKind, LaneFlavor, SlotType, ExposedParam } from './types';
 import type { BlockTags } from './blocks';
 
 export interface ExposedPort {
@@ -43,6 +43,11 @@ export interface CompositeDefinition {
   graph: CompositeGraph;
   exposedInputs: readonly ExposedPort[];
   exposedOutputs: readonly ExposedPort[];
+  /**
+   * Exposed parameters - parameters from internal blocks that are exposed
+   * at the composite level for user control.
+   */
+  exposedParams?: readonly ExposedParam[];
 }
 
 const compositeRegistry: CompositeDefinition[] = [];

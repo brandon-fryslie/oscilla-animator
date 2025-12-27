@@ -1,0 +1,116 @@
+Agent: iterative-implementer | 2025-12-27-03:55
+Mode: manual
+Completed: Parameter Forwarding UI (Partial) | Files: 5 | Commits: 3
+Cache invalidated: None (no cache modified)
+Status: in_progress
+
+## Summary
+
+Partially completed Deliverable 3: Parameter Forwarding UI from the Composite Library sprint.
+
+## What Was Completed
+
+### 1. Core Types and Utilities (Commit: cf6ccc6)
+- Added ExposedParam interface to types.ts
+- Extended Composite interface with:
+  - description?: string
+  - subcategory?: string
+  - exposedParams?: ExposedParam[]
+- Created detectExposableParameters() utility to scan selected blocks for parameters
+- Updated createCompositeFromSelection() to accept and store exposedParams
+
+### 2. Dialog UI - Parameters Tab (Commit: e7eebfb)
+- Added tab navigation to SaveCompositeDialog (Ports / Parameters)
+- Parameters tab shows all parameters from selected blocks
+- Checkbox list to select which parameters to expose
+- Input fields for custom parameter labels
+- Full CSS styling for tabs and parameter list
+- Proper state management for parameter selection and labels
+
+### 3. Composite Definition Integration (Commit: 330372a)
+- Updated BlockContextMenu to use composite.description and composite.subcategory
+- These fields now flow from dialog → Composite → CompositeDefinition
+
+## What Remains for Deliverable 3
+
+### 1. CompositeDefinition Parameter Schema Generation
+The saved composite has exposedParams, but when converting to CompositeDefinition (in BlockContextMenu.tsx line 172), we need to:
+- Generate paramSchema array from exposedParams
+- Add it to the CompositeDefinition
+
+### 2. Internal Block Parameter Forwarding
+When the composite graph is built (line 147-154), internal block params need to reference composite-level params:
+```typescript
+nodes[block.id] = {
+  type: block.type,
+  params: {
+    // For exposed params, use: { __fromParam: 'compositeLevelParamId' }
+    // For non-exposed params, use actual value
+  }
+};
+```
+
+### 3. Inspector Integration
+The Inspector needs to show composite-level parameters when a composite instance is selected. This requires:
+- Checking if the selected block is a composite
+- Loading its paramSchema
+- Displaying param controls
+- Updating the composite instance's params (which then flow to internal blocks)
+
+### 4. Testing
+Per DOD, need to add:
+- Unit test: Parameter forwarding during composite expansion
+- Unit test: Inspector shows forwarded params correctly
+- E2E test: Create composite with forwarded params → edit param → rendering updates
+
+## Technical Notes
+
+### Architecture Understanding
+- User composites: stored as Composite in CompositeStore (types.ts)
+- Built-in composites: defined as CompositeDefinition in composites.ts
+- Conversion happens in BlockContextMenu.handleSaveComposite()
+- The __fromParam mechanism is compile-time (see domain-composites.ts)
+
+### Current Flow
+1. User selects blocks → right-click → "Save as Composite"
+2. SaveCompositeDialog opens with Ports and Parameters tabs
+3. User selects exposed parameters and provides labels
+4. Dialog calls onSave() with Composite object including exposedParams
+5. BlockContextMenu converts Composite → CompositeDefinition
+6. CompositeDefinition is registered in composite registry
+7. New composite block appears in palette
+
+### Missing Link
+The paramSchema is not currently generated during step 5, and the internal block params don't use __fromParam. This means:
+- Composite instances won't show parameters in Inspector
+- Changing composite-level params won't affect internal blocks
+
+## Files Modified
+
+/Users/bmf/code/oscilla-animator_codex/.worktrees/full-system-design/src/editor/types.ts
+/Users/bmf/code/oscilla-animator_codex/.worktrees/full-system-design/src/editor/composite-utils.ts
+/Users/bmf/code/oscilla-animator_codex/.worktrees/full-system-design/src/editor/components/SaveCompositeDialog.tsx
+/Users/bmf/code/oscilla-animator_codex/.worktrees/full-system-design/src/editor/components/SaveCompositeDialog.css
+/Users/bmf/code/oscilla-animator_codex/.worktrees/full-system-design/src/editor/BlockContextMenu.tsx
+
+## Next Steps
+
+1. Generate paramSchema in BlockContextMenu.handleSaveComposite()
+2. Update internal block params to use __fromParam for exposed parameters
+3. Verify Inspector shows composite params (may work automatically if paramSchema is correct)
+4. Add unit tests for parameter detection
+5. Add E2E test for parameter forwarding
+
+## Status Assessment
+
+Deliverable 3 is approximately 60% complete:
+- [x] Dialog has Parameters tab
+- [x] Tab lists all parameters with checkboxes
+- [x] User can select and label parameters
+- [x] Saved composite includes exposedParams metadata
+- [ ] Inspector shows composite-level parameters
+- [ ] Changing composite parameter updates internal block
+- [ ] Compilation uses __fromParam mechanism
+- [ ] Tests written
+
+The foundation is solid. The remaining work is primarily wiring up the parameter forwarding at compile time.

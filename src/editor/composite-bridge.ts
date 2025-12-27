@@ -5,11 +5,12 @@
  * (in composites.ts) and the existing block registry and compiler systems.
  */
 
-import type { BlockDefinition, BlockTags } from './blocks/types';
+import type { BlockDefinition, BlockTags, ParamSchema } from './blocks/types';
 import type { CompoundGraph } from './blocks/types';
-import type { CompositeDefinition, CompositeGraph } from './composites';
+import type { CompositeDefinition } from './composites';
 import type { BlockCompiler } from './compiler/types';
 import { listCompositeDefinitions } from './composites';
+import { getBlockDefinition } from './blocks';
 
 // Type declaration for dynamic require to avoid circular dependency
 declare function require(module: string): {
@@ -49,6 +50,15 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
     direction: 'output' as const,
   }));
 
+  // Generate paramSchema from exposedParams
+  const paramSchema = generateParamSchema(def);
+
+  // Generate default params from paramSchema
+  const defaultParams: Record<string, unknown> = {};
+  for (const param of paramSchema) {
+    defaultParams[param.key] = param.defaultValue;
+  }
+
   return {
     type: `composite:${def.id}`,
     label: def.label,
@@ -64,7 +74,8 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
     // Note: form is derived from compositeDefinition via getBlockForm()
     inputs,
     outputs,
-    defaultParams: {}, // Empty default params
+    defaultParams,
+    paramSchema,
     priority: 100, // Lower priority than primitive blocks
     tags: {
       ...def.tags,
@@ -74,17 +85,109 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
     } as BlockTags,
     // Store the composite definition for compiler integration
     compositeDefinition: def,
-    primitiveGraph: compositeToPrimitiveGraph(def.graph),
+    primitiveGraph: compositeToPrimitiveGraph(def),
   };
 }
 
 /**
- * Convert a CompositeGraph to the CompoundGraph format expected by the compiler.
- * The formats are actually compatible, just need type conversion.
+ * Generate paramSchema from exposedParams.
+ * Looks up the parameter definitions from internal blocks.
  */
-export function compositeToPrimitiveGraph(graph: CompositeGraph): CompoundGraph {
+function generateParamSchema(def: CompositeDefinition): ParamSchema[] {
+  if (!def.exposedParams || def.exposedParams.length === 0) {
+    return [];
+  }
+
+  const paramSchemas: ParamSchema[] = [];
+
+  for (const exposedParam of def.exposedParams) {
+    // Find the internal node
+    const node = def.graph.nodes[exposedParam.blockId];
+    if (!node) {
+      console.warn(`Exposed param references unknown node: ${exposedParam.blockId}`);
+      continue;
+    }
+
+    // Get the block definition for this node
+    const blockDef = getBlockDefinition(node.type);
+    if (!blockDef || !blockDef.paramSchema) {
+      console.warn(`Block type ${node.type} has no paramSchema`);
+      continue;
+    }
+
+    // Find the parameter in the block's schema
+    const paramDef = blockDef.paramSchema.find(p => p.key === exposedParam.paramKey);
+    if (!paramDef) {
+      console.warn(`Parameter ${exposedParam.paramKey} not found in ${node.type}`);
+      continue;
+    }
+
+    // Create a new ParamSchema entry with the exposed label
+    // Use the exposed param ID as the key (this is what the composite instance will use)
+    paramSchemas.push({
+      key: exposedParam.id,
+      label: exposedParam.label,
+      type: paramDef.type,
+      min: paramDef.min,
+      max: paramDef.max,
+      step: paramDef.step,
+      options: paramDef.options,
+      defaultValue: paramDef.defaultValue,
+    });
+  }
+
+  return paramSchemas;
+}
+
+/**
+ * Convert a CompositeGraph to the CompoundGraph format expected by the compiler.
+ * Applies __fromParam mechanism for exposed parameters.
+ */
+export function compositeToPrimitiveGraph(def: CompositeDefinition): CompoundGraph {
+  const graph = def.graph;
+
+  // If there are no exposed params, return the graph as-is
+  if (!def.exposedParams || def.exposedParams.length === 0) {
+    return {
+      nodes: graph.nodes,
+      edges: graph.edges,
+      inputMap: graph.inputMap,
+      outputMap: graph.outputMap,
+    };
+  }
+
+  // Create a map from (blockId, paramKey) -> exposedParamId
+  const paramMap = new Map<string, string>();
+  for (const exposedParam of def.exposedParams) {
+    const key = `${exposedParam.blockId}:${exposedParam.paramKey}`;
+    paramMap.set(key, exposedParam.id);
+  }
+
+  // Transform nodes to apply __fromParam
+  const transformedNodes: Record<string, { type: string; params?: Record<string, unknown> }> = {};
+
+  for (const [nodeId, node] of Object.entries(graph.nodes)) {
+    const transformedParams: Record<string, unknown> = { ...node.params };
+
+    // Check if any parameters of this node are exposed
+    for (const paramKey of Object.keys(node.params || {})) {
+      const mapKey = `${nodeId}:${paramKey}`;
+      const exposedParamId = paramMap.get(mapKey);
+
+      if (exposedParamId) {
+        // Replace the value with __fromParam directive
+        transformedParams[paramKey] = { __fromParam: exposedParamId };
+      }
+    }
+
+    transformedNodes[nodeId] = {
+      type: node.type,
+      params: transformedParams,
+    };
+  }
+
   return {
-    nodes: graph.nodes,
+    nodes: transformedNodes,
     edges: graph.edges,
     inputMap: graph.inputMap,
     outputMap: graph.outputMap,
