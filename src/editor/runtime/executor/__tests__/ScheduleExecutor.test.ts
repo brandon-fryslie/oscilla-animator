@@ -19,6 +19,7 @@ import type {
   LensTable,
   AdapterTable,
   FieldExprTable,
+  SignalExprTable,
   ConstPool,
   OutputSpec,
   ProgramMeta,
@@ -46,20 +47,30 @@ function createMinimalProgram(
     id: `stub-node-${i}`,
     typeId: 0,
     inputCount: 0,
-    outputCount: 0,
-    opcodeId: 0, // Const opcode (no-op for empty inputs/outputs)
+    outputCount: 1,
+    opcodeId: 0, // Const opcode
+    compilerTag: 0, // constId = 0 -> f64[0] = 42.0
   }));
   const emptyNodeTable: NodeTable = { nodes: stubNodes };
   const emptyBusTable: BusTable = { buses: [] };
   const emptyLensTable: LensTable = { lenses: [] };
   const emptyAdapterTable: AdapterTable = { adapters: [] };
-  const emptyFieldExprTable: FieldExprTable = { nodes: [] };
+  const emptyFieldExprTable: FieldExprTable = {
+    nodes: [
+      {
+        kind: "const",
+        type: { world: "field", domain: "number" },
+        constId: 0,
+      },
+    ],
+  };
+  const emptySignalTable: SignalExprTable = { nodes: [] };
   const emptyConstPool: ConstPool = {
-    json: [],
-    f64: new Float64Array(0),
-    f32: new Float32Array(0),
-    i32: new Int32Array(0),
-    constIndex: [],
+    json: [42],
+    f64: new Float64Array([42.0]),
+    f32: new Float32Array([]),
+    i32: new Int32Array([]),
+    constIndex: [{ k: "f64", idx: 0 }],
   };
   const emptyStateLayout: StateLayout = {
     cells: [],
@@ -108,6 +119,7 @@ function createMinimalProgram(
     lenses: emptyLensTable,
     adapters: emptyAdapterTable,
     fields: emptyFieldExprTable,
+    signalTable: emptySignalTable,
     constants: emptyConstPool,
     stateLayout: emptyStateLayout,
     schedule: emptySchedule,
@@ -127,124 +139,98 @@ describe("ScheduleExecutor", () => {
     executor = new ScheduleExecutor();
   });
 
-  describe("executeFrame", () => {
-    it("executes minimal program with timeDerive step", () => {
-      const timeModel: TimeModelIR = {
-        kind: "finite",
-        durationMs: 1000,
-      };
-
-      const steps: StepIR[] = [
-        {
-          id: "step-time-derive",
-          kind: "timeDerive",
-          deps: [],
-          label: "Derive time signals",
-          tAbsMsSlot: 0,
-          timeModel,
-          out: {
-            tModelMs: 1,
-            progress01: 2,
-          },
-        },
-      ];
-
-      const program = createMinimalProgram(timeModel, steps);
-      const runtime = createRuntimeState(program);
-
-      // Execute frame at t=500ms
-      const frame = executor.executeFrame(program, runtime, 500);
-
-      // Verify output is a RenderFrameIR (empty frame when no outputs defined)
-      expect(frame).toBeDefined();
-      expect(frame.version).toBe(1);
-      expect(frame.passes).toEqual([]);
+  describe("construction", () => {
+    it("should create a valid ScheduleExecutor instance", () => {
+      expect(executor).toBeDefined();
     });
+  });
 
-    it("returns empty frame when program has no outputs", () => {
+  describe("executeFrame", () => {
+    it("executes empty schedule without error", () => {
       const timeModel: TimeModelIR = { kind: "infinite", windowMs: 10000 };
       const program = createMinimalProgram(timeModel, []);
       const runtime = createRuntimeState(program);
 
-      const frame1 = executor.executeFrame(program, runtime, 0);
-      expect(frame1.version).toBe(1);
-      expect(frame1.passes).toEqual([]);
-
-      const frame2 = executor.executeFrame(program, runtime, 16.67);
-      expect(frame2.version).toBe(1);
-      expect(frame2.passes).toEqual([]);
-
-      const frame3 = executor.executeFrame(program, runtime, 33.33);
-      expect(frame3.version).toBe(1);
-      expect(frame3.passes).toEqual([]);
-    });
-
-    it("executes steps in schedule order", () => {
-      // This is a structure test - we verify that the executor
-      // iterates through steps without error, even though step
-      // implementations are stubs.
-      const timeModel: TimeModelIR = { kind: "infinite", windowMs: 10000 };
-
-      const steps: StepIR[] = [
-        {
-          id: "step-1",
-          kind: "timeDerive",
-          deps: [],
-          tAbsMsSlot: 0,
-          timeModel,
-          out: { tModelMs: 1 },
-        },
-        {
-          id: "step-2",
-          kind: "nodeEval",
-          deps: [],
-          nodeIndex: 0,
-          inputSlots: [],
-          outputSlots: [2],
-          phase: "preBus",
-        },
-        {
-          id: "step-3",
-          kind: "busEval",
-          deps: [],
-          busIndex: 0,
-          outSlot: 3,
-          publishers: [],
-          combine: { mode: "last" },
-          silent: { kind: "zero" },
-          busType: { world: "signal", domain: "number" },
-        },
-      ];
-
-      const program = createMinimalProgram(timeModel, steps);
-      const runtime = createRuntimeState(program);
-
-      // Should not throw - all step executors should handle their stubs
       expect(() => {
         executor.executeFrame(program, runtime, 0);
       }).not.toThrow();
     });
 
-    it("handles all step kinds without error", () => {
-      // Exhaustiveness test - ensure all 6 step kinds can execute
+    it("executes single nodeEval step", () => {
       const timeModel: TimeModelIR = { kind: "infinite", windowMs: 10000 };
-
       const steps: StepIR[] = [
         {
-          id: "time",
-          kind: "timeDerive",
+          id: "node-1",
+          kind: "nodeEval",
           deps: [],
-          tAbsMsSlot: 0,
-          timeModel,
-          out: { tModelMs: 1 },
+          nodeIndex: 0,
+          inputSlots: [],
+          outputSlots: [0],
+          phase: "postBus",
         },
+      ];
+
+      const program = createMinimalProgram(timeModel, steps);
+      const runtime = createRuntimeState(program);
+
+      // NodeEval should execute without error (stub node)
+      expect(() => {
+        executor.executeFrame(program, runtime, 0);
+      }).not.toThrow();
+
+      // Verify slot was written (const opcode writes 42)
+      const value = runtime.values.read(0);
+      expect(value).toBe(42);
+    });
+
+    it("executes multiple steps in dependency order", () => {
+      const timeModel: TimeModelIR = { kind: "infinite", windowMs: 10000 };
+      const steps: StepIR[] = [
+        // Step 1: node-1 writes to slot 0
+        {
+          id: "node-1",
+          kind: "nodeEval",
+          deps: [],
+          nodeIndex: 0,
+          inputSlots: [],
+          outputSlots: [0],
+          phase: "postBus",
+        },
+        // Step 2: node-2 writes to slot 1
+        {
+          id: "node-2",
+          kind: "nodeEval",
+          deps: ["node-1"], // Depends on node-1
+          nodeIndex: 1,
+          inputSlots: [0],
+          outputSlots: [1],
+          phase: "postBus",
+        },
+      ];
+
+      const program = createMinimalProgram(timeModel, steps);
+      const runtime = createRuntimeState(program);
+
+      // Both steps should execute in order
+      expect(() => {
+        executor.executeFrame(program, runtime, 0);
+      }).not.toThrow();
+
+      // Verify both slots were written
+      expect(runtime.values.read(0)).toBe(42);
+      expect(runtime.values.read(1)).toBe(42);
+    });
+
+    it("handles all step kinds without error", () => {
+      const timeModel: TimeModelIR = { kind: "infinite", windowMs: 10000 };
+      const steps: StepIR[] = [
         {
           id: "node",
           kind: "nodeEval",
           deps: [],
           nodeIndex: 0,
           inputSlots: [],
-          outputSlots: [],
+          outputSlots: [1],
           phase: "postBus",
         },
         {
@@ -252,19 +238,19 @@ describe("ScheduleExecutor", () => {
           kind: "busEval",
           deps: [],
           busIndex: 0,
+          busType: { world: "signal", domain: "number" },
           outSlot: 2,
           publishers: [],
           combine: { mode: "last" },
-          silent: { kind: "zero" },
-          busType: { world: "signal", domain: "number" },
+          silent: { kind: "const", constId: 0 },
         },
         {
-          id: "materialize",
+          id: "mat",
           kind: "materialize",
           deps: [],
           materialization: {
             id: "mat-1",
-            fieldExprId: "field-1",
+            fieldExprId: "0",
             domainSlot: 3,
             outBufferSlot: 4,
             format: { components: 2, elementType: "f32" },

@@ -46,9 +46,18 @@ function createTestProgram(
     buses: { buses: [] },
     lenses: { lenses: [] },
     adapters: { adapters: [] },
-    fields: { nodes: [] },
+    fields: {
+      nodes: [
+        {
+          kind: "const",
+          type: { world: "field", domain: "number" },
+          constId: 0,
+        },
+      ],
+    },
+    signalTable: { nodes: [] },
     constants: {
-      json: [],
+      json: [42],
       f64: new Float64Array([42.0]),
       f32: new Float32Array([]),
       i32: new Int32Array([]),

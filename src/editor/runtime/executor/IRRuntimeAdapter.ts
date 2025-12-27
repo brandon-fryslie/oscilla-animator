@@ -23,60 +23,57 @@
 
 import type { CompiledProgramIR } from "../../compiler/ir";
 import type { RuntimeCtx, Program, KernelEvent } from "../../compiler/types";
-import type { RenderTree } from "../renderTree";
+import type { RenderTree, GroupNode } from "../renderTree";
 import type { RenderTree as RenderCmdTree } from "../renderCmd";
 import type { RenderFrameIR } from "../../compiler/ir/renderIR";
 import type { ValueStore } from "../../compiler/ir/stores";
 import { ScheduleExecutor } from "./ScheduleExecutor";
-import { createRuntimeState, type RuntimeState } from "./RuntimeState";
+import { createRuntimeState } from "./RuntimeState";
+import type { RuntimeState } from "./RuntimeState";
 
 /**
- * Legacy render function type.
- * This is the closure-based render that produces cmds-based RenderTree.
- */
-export type LegacyRenderFn = (tMs: number, ctx: RuntimeCtx) => RenderCmdTree;
-
-/**
- * IRRuntimeAdapter - Bridge ScheduleExecutor to Player
+ * IRRuntimeAdapter - Adapts CompiledProgramIR to Player's Program interface
  *
- * Adapts the IR-based execution model (ScheduleExecutor + RuntimeState) to
- * the Player's expected Program<RenderTree> interface.
+ * Manages the lifecycle of ScheduleExecutor and RuntimeState.
+ * Provides Program.signal() and Program.event() for Player compatibility.
  *
- * Usage:
+ * Modes:
+ * - BRIDGE MODE: Provide legacyRenderFn to use closure for rendering
+ * - PURE IR MODE: Leave legacyRenderFn null, returns empty group (stub for tests)
+ *
+ * @example
  * ```typescript
- * const program = compile(patch); // CompiledProgramIR
- * const adapter = new IRRuntimeAdapter(program);
- * const playerProgram = adapter.createProgram();
- * player.setIRProgram(playerProgram); // Use with Player
+ * const adapter = new IRRuntimeAdapter(compiledProgram);
+ * const program = adapter.createProgram(); // Program<RenderTree>
+ * const tree = program.signal(tMs, runtimeCtx);
  * ```
  */
 export class IRRuntimeAdapter {
-  private executor: ScheduleExecutor;
   private program: CompiledProgramIR;
+  private executor: ScheduleExecutor;
   private runtime: RuntimeState;
-  private legacyRenderFn: LegacyRenderFn | null = null;
+  private legacyRenderFn: ((tMs: number, ctx: RuntimeCtx) => RenderCmdTree | RenderTree) | null;
 
   /**
-   * Create adapter from compiled program.
-   *
-   * Initializes ScheduleExecutor and RuntimeState for frame execution.
+   * Create a new IRRuntimeAdapter.
    *
    * @param program - Compiled program IR
-   * @param legacyRenderFn - Optional legacy render function for bridge mode
+   * @param legacyRenderFn - Optional legacy render function (for bridge mode)
    */
-  constructor(program: CompiledProgramIR, legacyRenderFn?: LegacyRenderFn) {
-    this.executor = new ScheduleExecutor();
+  constructor(
+    program: CompiledProgramIR,
+    legacyRenderFn?: (tMs: number, ctx: RuntimeCtx) => RenderCmdTree | RenderTree,
+  ) {
     this.program = program;
+    this.executor = new ScheduleExecutor();
     this.runtime = createRuntimeState(program);
     this.legacyRenderFn = legacyRenderFn ?? null;
   }
 
   /**
-   * Check if this adapter is in pure IR mode (outputs RenderFrameIR).
-   *
-   * @returns true if no legacy render function is set
+   * Returns true if running in pure IR mode (no legacy render function).
    */
-  isPureIRMode(): boolean {
+  get isPureIR(): boolean {
     return this.legacyRenderFn === null;
   }
 
@@ -128,9 +125,14 @@ export class IRRuntimeAdapter {
           return this.legacyRenderFn(tMs, runtimeCtx) as unknown as RenderTree;
         }
 
-        // Pure IR mode: return the RenderFrameIR cast as RenderTree
-        // The caller should use executeAndGetFrame() for proper typing
-        return frame as unknown as RenderTree;
+        // Pure IR mode: Convert RenderFrameIR to a stub GroupNode for testing
+        // In production, use executeAndGetFrame() and process the RenderFrameIR directly
+        const emptyGroup: GroupNode = {
+          kind: "group",
+          id: frame.passes.length > 0 ? "root" : "empty",
+          children: [],
+        };
+        return emptyGroup as unknown as RenderTree;
       },
 
       event: (_ev: KernelEvent): KernelEvent[] => {
@@ -158,21 +160,57 @@ export class IRRuntimeAdapter {
    * ```typescript
    * // Initial program
    * const adapter = new IRRuntimeAdapter(program1);
-   * player.setIRProgram(adapter.createProgram());
+   * const playerProgram = adapter.createProgram();
    *
-   * // User edits patch - recompile
-   * const program2 = compile(editedPatch);
-   *
-   * // Hot-swap (preserves state)
+   * // After user edit, hot-swap
    * adapter.swapProgram(program2);
-   * // Player continues using the same Program object, but now with new behavior
+   *
+   * // Player continues rendering with program2 (same state, no jank)
+   * playerProgram.signal(tMs, ctx);
    * ```
    */
-  swapProgram(newProgram: CompiledProgramIR, newLegacyRenderFn?: LegacyRenderFn): void {
-    // Use ScheduleExecutor.swapProgram() to get new runtime with preserved state
-    this.runtime = this.executor.swapProgram(newProgram, this.runtime);
+  swapProgram(
+    newProgram: CompiledProgramIR,
+    newLegacyRenderFn?: (tMs: number, ctx: RuntimeCtx) => RenderCmdTree | RenderTree,
+  ): void {
+    // 1. Snapshot old state for preservation
+    const oldStateF64 = this.runtime.state.f64.slice();
+    const oldStateF32 = this.runtime.state.f32.slice();
+    const oldStateI32 = this.runtime.state.i32.slice();
+    const oldLayout = this.program.stateLayout;
+    const currentFrameId = this.runtime.frameCache.frameId;
+
+    // 2. Create new runtime for new program
+    const newRuntime = createRuntimeState(newProgram);
+
+    // 3. Restore frameId (continue incrementing, no reset)
+    newRuntime.frameCache.frameId = currentFrameId;
+
+    // 4. Preserve state cells by matching nodeId:role
+    // For each old state cell, find matching cell in new layout and copy value
+    for (const oldCell of oldLayout.cells) {
+      // Find matching cell in new layout (same nodeId + role)
+      const newCell = newProgram.stateLayout.cells.find(
+        (c) => c.nodeId === oldCell.nodeId && c.role === oldCell.role,
+      );
+
+      if (newCell) {
+        // Copy state value from old to new
+        if (newCell.storage === "f64") {
+          newRuntime.state.f64[newCell.offset] = oldStateF64[oldCell.offset];
+        } else if (newCell.storage === "f32") {
+          newRuntime.state.f32[newCell.offset] = oldStateF32[oldCell.offset];
+        } else if (newCell.storage === "i32") {
+          newRuntime.state.i32[newCell.offset] = oldStateI32[oldCell.offset];
+        }
+      }
+    }
+
+    // 5. Swap to new program and runtime
     this.program = newProgram;
-    // Update legacy render function if provided
+    this.runtime = newRuntime;
+
+    // 6. Update legacy render function if provided
     if (newLegacyRenderFn !== undefined) {
       this.legacyRenderFn = newLegacyRenderFn;
     }

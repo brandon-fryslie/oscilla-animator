@@ -44,8 +44,8 @@ export function executeNodeEval(
   // If opcodeId is missing, it might be a no-op or pass-through
   // Default to OpCode.Const (0) which is safe-ish, or OpCode.Passthrough if available
   const opcode = (node.opcodeId as OpCode) ?? OpCode.Const;
-  
-  const outputs = evaluateOp(opcode, inputs, runtime, node);
+
+  const outputs = evaluateOp(opcode, inputs, runtime, node, program);
 
   // 4. Write outputs
   // Ensure we don't write more outputs than we have slots for

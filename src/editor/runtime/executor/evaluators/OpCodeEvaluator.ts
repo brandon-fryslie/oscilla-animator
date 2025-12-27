@@ -14,7 +14,7 @@
 import { OpCode } from "../../../compiler/ir/opcodes";
 import { Vec2 } from "../../../../core/types";
 import type { RuntimeState } from "../RuntimeState";
-import type { NodeIR } from "../../../compiler/ir/program";
+import type { NodeIR, CompiledProgramIR } from "../../../compiler/ir/program";
 
 // ============================================================================
 // Types
@@ -27,13 +27,15 @@ import type { NodeIR } from "../../../compiler/ir/program";
  * @param inputs - Array of input values
  * @param state - Runtime state (for time, state buffers, etc.)
  * @param node - The node being evaluated (for metadata, state bindings, etc.)
+ * @param program - Compiled program (for const pool access)
  * @returns Array of output values
  */
 export function evaluateOp(
   opcode: OpCode,
   inputs: unknown[],
   _state: RuntimeState,
-  _node: NodeIR
+  node: NodeIR,
+  program?: CompiledProgramIR
 ): unknown[] {
   switch (opcode) {
     // ========================================================================
@@ -97,15 +99,48 @@ export function evaluateOp(
     // ========================================================================
     // Constants (0-9)
     // ========================================================================
-    case OpCode.Const:
-      // Constants are usually baked into the node inputs (if source is const)
-      // or the node references `constId`.
-      // NodeIR has `opcodeId`. Does it have `constId`?
-      // The `CompiledProgramIR` definition of `NodeIR` didn't show `constId`.
-      // It showed `compilerTag` and `opcodeId`.
-      // InputSourceIR has `kind: 'const'`.
-      // So `OpCode.Const` node might essentially be a passthrough of its 1st input (which is the const value).
-      return [inputs[0]];
+    case OpCode.Const: {
+      // Constants are read from the constant pool.
+      // The node.compilerTag holds the constId.
+      if (!program || !program.constants) {
+        console.warn("OpCode.Const: no program or constant pool available");
+        return [0];
+      }
+
+      const constId = node.compilerTag ?? 0;
+      const constPool = program.constants;
+
+      // Use constIndex to find the storage location
+      if (
+        constPool.constIndex &&
+        constId < constPool.constIndex.length
+      ) {
+        const entry = constPool.constIndex[constId];
+        switch (entry.k) {
+          case "f64":
+            return [constPool.f64[entry.idx]];
+          case "f32":
+            return [constPool.f32[entry.idx]];
+          case "i32":
+            return [constPool.i32[entry.idx]];
+          case "json":
+            return [constPool.json[entry.idx]];
+        }
+      }
+
+      // Fallback: try f64 pool directly
+      if (constId < constPool.f64.length) {
+        return [constPool.f64[constId]];
+      }
+
+      // Last fallback: try json pool
+      if (constId < constPool.json.length) {
+        return [constPool.json[constId]];
+      }
+
+      console.warn(`OpCode.Const: constId ${constId} not found in pool`);
+      return [0];
+    }
 
     // ========================================================================
     // Pure Math - Binary (100-139)
