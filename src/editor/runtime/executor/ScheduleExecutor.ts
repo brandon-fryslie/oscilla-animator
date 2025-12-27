@@ -15,7 +15,7 @@
 
 import type { CompiledProgramIR, StepIR } from "../../compiler/ir";
 import type { RuntimeState } from "./RuntimeState";
-import type { RenderFrameIR } from "./IRRuntimeAdapter";
+import type { RenderFrameIR } from "../../compiler/ir/renderIR";
 import { resolveTime, type EffectiveTime } from "./timeResolution";
 
 // Step executors
@@ -28,6 +28,7 @@ import { executeMaterializePath } from "./steps/executeMaterializePath";
 import { executeMaterializeTestGeometry } from "./steps/executeMaterializeTestGeometry";
 import { executeRenderAssemble } from "./steps/executeRenderAssemble";
 import { executeDebugProbe } from "./steps/executeDebugProbe";
+import { executeSignalEval } from "./steps/executeSignalEval";
 
 // ============================================================================
 // Type Guard for RenderFrameIR
@@ -177,6 +178,10 @@ export class ScheduleExecutor {
         executeTimeDerive(step, runtime, effectiveTime);
         break;
 
+      case "signalEval":
+        executeSignalEval(step, program, runtime, effectiveTime);
+        break;
+
       case "nodeEval":
         executeNodeEval(step, program, runtime);
         break;
@@ -186,7 +191,7 @@ export class ScheduleExecutor {
         break;
 
       case "materialize":
-        executeMaterialize(step, program, runtime);
+        executeMaterialize(step, program, runtime, effectiveTime);
         break;
 
       case "materializeColor":

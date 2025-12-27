@@ -62,6 +62,10 @@ function fnRefToFieldZipOp(fn: FnRef): FieldZipOp {
     Max: FieldZipOp.Max,
     Pow: FieldZipOp.Pow,
     Mod: FieldZipOp.Mod,
+    Vec2Add: FieldZipOp.Vec2Add,
+    Vec2Sub: FieldZipOp.Vec2Sub,
+    Vec2Mul: FieldZipOp.Vec2Mul,
+    Vec2Div: FieldZipOp.Vec2Div,
   };
 
   const op = opMap[fn.opcode];

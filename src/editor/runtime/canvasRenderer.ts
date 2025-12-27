@@ -31,7 +31,6 @@ import { colorToCss, unpackToColorRGBA } from './renderCmd';
 import type { RenderFrameIR } from '../compiler/ir/renderIR';
 import type { ValueStore } from '../compiler/ir/stores';
 import { renderInstances2DPass, renderPaths2DPass } from './renderPassExecutors';
-import type { RenderFrameIR as SimpleRenderFrameIR } from './executor/IRRuntimeAdapter';
 
 // =============================================================================
 // Types
@@ -256,129 +255,6 @@ export class Canvas2DRenderer {
         throw new Error(`Canvas2DRenderer: unknown pass kind ${(_exhaustive as any).kind}`);
       }
     }
-  }
-
-  /**
-   * Render a SimpleRenderFrameIR (inline buffers, no ValueStore lookup).
-   *
-   * This is the simplified IR rendering path for Phase E integration.
-   * Buffers are stored directly in the pass structure, not via BufferRefIR.
-   *
-   * @param frame - SimpleRenderFrameIR from executeRenderAssemble
-   * @returns RenderStats for this frame
-   */
-  renderFrameSimple(frame: SimpleRenderFrameIR): RenderStats {
-    const startTime = performance.now();
-    const ctx = this.ctx;
-
-    // Reset stats
-    this.stats = {
-      drawCallCount: 0,
-      stateChangeCount: 0,
-      renderTimeMs: 0,
-      instanceCount: 0,
-    };
-
-    // Reset state each frame
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-
-    // 1. Clear canvas
-    if ('mode' in frame.clear && frame.clear.mode === 'none') {
-      // No clear - skip
-    } else if ('r' in frame.clear) {
-      // RGBA clear color
-      const c = frame.clear;
-      ctx.fillStyle = `rgba(${(c.r * 255) | 0},${(c.g * 255) | 0},${(c.b * 255) | 0},${c.a})`;
-      ctx.fillRect(0, 0, this.width, this.height);
-      this.stats.drawCallCount++;
-    }
-
-    // 2. Execute render passes
-    for (const pass of frame.passes) {
-      if (pass.kind === 'instances2d') {
-        this.renderInstances2DSimple(pass.batch);
-      } else if (pass.kind === 'paths2d') {
-        this.renderPaths2DSimple(pass.batch);
-      }
-    }
-
-    this.stats.renderTimeMs = performance.now() - startTime;
-    return this.stats;
-  }
-
-  /**
-   * Render Instances2D batch with inline Float32Array buffers.
-   */
-  private renderInstances2DSimple(batch: {
-    count: number;
-    x: Float32Array;
-    y: Float32Array;
-    radius: Float32Array;
-    r: Float32Array;
-    g: Float32Array;
-    b: Float32Array;
-    a: Float32Array;
-  }): void {
-    const ctx = this.ctx;
-    const n = batch.count;
-
-    this.stats.instanceCount += n;
-
-    for (let i = 0; i < n; i++) {
-      const x = batch.x[i];
-      const y = batch.y[i];
-      const r = batch.radius[i];
-      const red = batch.r[i];
-      const green = batch.g[i];
-      const blue = batch.b[i];
-      const alpha = batch.a[i];
-
-      ctx.fillStyle = `rgba(${(red * 255) | 0},${(green * 255) | 0},${(blue * 255) | 0},${alpha})`;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-      this.stats.drawCallCount++;
-    }
-  }
-
-  /**
-   * Render Paths2D batch with inline buffers.
-   */
-  private renderPaths2DSimple(batch: {
-    cmds: Uint16Array;
-    params: Float32Array;
-  }): void {
-    const ctx = this.ctx;
-    const cmds = batch.cmds;
-    const p = batch.params;
-    let pi = 0;
-
-    ctx.beginPath();
-    for (let ci = 0; ci < cmds.length; ci++) {
-      const c = cmds[ci];
-      switch (c) {
-        case 0: { // MoveTo
-          const x = p[pi++], y = p[pi++];
-          ctx.moveTo(x, y);
-          break;
-        }
-        case 1: { // LineTo
-          const x = p[pi++], y = p[pi++];
-          ctx.lineTo(x, y);
-          break;
-        }
-        case 2: { // Close
-          ctx.closePath();
-          break;
-        }
-        default:
-          console.warn(`Canvas2DRenderer: Unknown path cmd ${c}`);
-      }
-    }
-    ctx.stroke();
-    this.stats.drawCallCount++;
   }
 
   /**

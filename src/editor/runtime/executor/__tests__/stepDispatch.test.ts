@@ -74,7 +74,14 @@ describe("Step Dispatch", () => {
         phase: "preBus",
       };
 
-      const program = {} as CompiledProgramIR;
+      // Provide minimal program structure with a node
+      const program = {
+        nodes: {
+          nodes: [
+            { id: "test-node", typeId: 0, inputCount: 0, outputCount: 0, opcodeId: 0 },
+          ],
+        },
+      } as CompiledProgramIR;
       const runtime = createRuntimeState(program);
 
       // Should not throw (stubs handle empty arrays)
@@ -141,7 +148,7 @@ describe("Step Dispatch", () => {
 
       // Should not throw - materializes field and writes buffer handle
       expect(() => {
-        executeMaterialize(step, program, runtime);
+        executeMaterialize(step, program, runtime, { tAbsMs: 1000, tModelMs: 1000 });
       }).not.toThrow();
 
       // Verify buffer handle was written
@@ -190,10 +197,144 @@ describe("Step Dispatch", () => {
 
       const runtime = createRuntimeState({} as CompiledProgramIR);
 
-      // Should not throw (stub is no-op)
+      // Should not throw
       expect(() => {
         executeDebugProbe(step, runtime);
       }).not.toThrow();
+    });
+
+    it("no-ops when TraceController.mode is 'off'", async () => {
+      // Import TraceController dynamically to reset it
+      const { TraceController } = await import("../../../debug/TraceController");
+      TraceController._resetForTesting();
+      TraceController.instance.setMode('off');
+
+      const initialWritePtr = TraceController.instance.valueRing.getWritePtr();
+
+      const step: StepDebugProbe = {
+        id: "debug-probe-2",
+        kind: "debugProbe",
+        deps: [],
+        probe: {
+          id: "probe-2",
+          slots: [0],
+          mode: "value",
+        },
+      };
+
+      // Create a timeDerive step to ensure slot 0 gets allocated
+      const timeStep = {
+        id: "time-derive-1",
+        kind: "timeDerive" as const,
+        deps: [],
+        tAbsMsSlot: 0,
+        timeModel: { kind: "infinite" as const, windowMs: 10000 },
+        out: { tModelMs: 1 },
+      };
+
+      // Setup minimal runtime with slot allocated via schedule
+      const program = {
+        schedule: { steps: [timeStep, step] },
+      } as CompiledProgramIR;
+      const runtime = createRuntimeState(program);
+      runtime.values.write(0, 42);
+
+      executeDebugProbe(step, runtime);
+
+      // No values should have been written (mode is 'off')
+      expect(TraceController.instance.valueRing.getWritePtr()).toBe(initialWritePtr);
+    });
+
+    it("writes to ValueRing when mode is 'full'", async () => {
+      // Import TraceController dynamically to reset it
+      const { TraceController } = await import("../../../debug/TraceController");
+      TraceController._resetForTesting();
+      TraceController.instance.setMode('full');
+
+      const initialWritePtr = TraceController.instance.valueRing.getWritePtr();
+
+      const step: StepDebugProbe = {
+        id: "debug-probe-3",
+        kind: "debugProbe",
+        deps: [],
+        probe: {
+          id: "probe-3",
+          slots: [0],
+          mode: "value",
+        },
+      };
+
+      // Create a timeDerive step to ensure slot 0 gets allocated
+      const timeStep = {
+        id: "time-derive-1",
+        kind: "timeDerive" as const,
+        deps: [],
+        tAbsMsSlot: 0,
+        timeModel: { kind: "infinite" as const, windowMs: 10000 },
+        out: { tModelMs: 1 },
+      };
+
+      // Setup runtime with slot allocated via schedule
+      const program = {
+        schedule: { steps: [timeStep, step] },
+      } as CompiledProgramIR;
+      const runtime = createRuntimeState(program);
+      runtime.values.write(0, 42.5);
+
+      executeDebugProbe(step, runtime);
+
+      // One value should have been written
+      expect(TraceController.instance.valueRing.getWritePtr()).toBe(initialWritePtr + 1);
+
+      // Reset mode to avoid affecting other tests
+      TraceController.instance.setMode('off');
+    });
+
+    it("records values for multiple slots", async () => {
+      // Import TraceController dynamically to reset it
+      const { TraceController } = await import("../../../debug/TraceController");
+      TraceController._resetForTesting();
+      TraceController.instance.setMode('full');
+
+      const initialWritePtr = TraceController.instance.valueRing.getWritePtr();
+
+      const step: StepDebugProbe = {
+        id: "debug-probe-4",
+        kind: "debugProbe",
+        deps: [],
+        probe: {
+          id: "probe-4",
+          slots: [0, 1, 2],
+          mode: "value",
+        },
+      };
+
+      // Create a timeDerive step with multiple output slots
+      const timeStep = {
+        id: "time-derive-1",
+        kind: "timeDerive" as const,
+        deps: [],
+        tAbsMsSlot: 0,
+        timeModel: { kind: "cyclic" as const, periodMs: 1000, mode: "loop" as const, phaseDomain: "0..1" },
+        out: { tModelMs: 1, phase01: 2 },
+      };
+
+      // Setup runtime with multiple slots allocated via schedule
+      const program = {
+        schedule: { steps: [timeStep, step] },
+      } as CompiledProgramIR;
+      const runtime = createRuntimeState(program);
+      runtime.values.write(0, 1.0);
+      runtime.values.write(1, 0.5);
+      runtime.values.write(2, 0.75);
+
+      executeDebugProbe(step, runtime);
+
+      // Three values should have been written
+      expect(TraceController.instance.valueRing.getWritePtr()).toBe(initialWritePtr + 3);
+
+      // Reset mode to avoid affecting other tests
+      TraceController.instance.setMode('off');
     });
   });
 });

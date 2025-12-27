@@ -86,6 +86,7 @@ export interface FieldExprMap {
   type: TypeDesc;
   src: FieldExprId;
   fn: PureFnRef;
+  params?: Record<string, unknown>;
 }
 
 /** Zip operation - apply function to two field inputs */
@@ -95,6 +96,7 @@ export interface FieldExprZip {
   a: FieldExprId;
   b: FieldExprId;
   fn: PureFnRef;
+  params?: Record<string, unknown>;
 }
 
 /** Select operation - conditional branching per element */

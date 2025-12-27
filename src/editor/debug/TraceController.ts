@@ -8,7 +8,14 @@
  * - 'full': Emit spans + value samples (FieldStats, scalar samples)
  *
  * Mode persists across hot reloads via localStorage.
+ *
+ * Also manages ring buffers for value and span storage.
  */
+
+import { ValueRing, DEFAULT_VALUE_CAPACITY } from './ValueRing';
+import { SpanRing, DEFAULT_SPAN_CAPACITY } from './SpanRing';
+import type { ValueRecord32 } from './ValueRecord';
+import type { SpanData } from './SpanTypes';
 
 export type TraceMode = 'off' | 'timing' | 'full';
 
@@ -39,9 +46,26 @@ export class TraceController {
 
   private mode: TraceMode;
 
+  /** Ring buffer for value samples (used in 'full' mode) */
+  readonly valueRing: ValueRing;
+
+  /** Ring buffer for span records (used in 'timing' and 'full' modes) */
+  readonly spanRing: SpanRing;
+
+  /** Last time we emitted UI update events (for throttling) */
+  private lastUIEmitMs = 0;
+
+  /** Throttle UI updates to ~10Hz (100ms interval) */
+  private static readonly UI_EMIT_INTERVAL_MS = 100;
+
   private constructor() {
     // Restore mode from localStorage (default: 'off')
     this.mode = this.loadModeFromStorage();
+
+    // Initialize ring buffers (always allocated, but only used when mode !== 'off')
+    this.valueRing = new ValueRing(DEFAULT_VALUE_CAPACITY);
+    this.spanRing = new SpanRing(DEFAULT_SPAN_CAPACITY);
+
     console.log(`[TraceController] initialized with mode: ${this.mode}`);
   }
 
@@ -75,6 +99,62 @@ export class TraceController {
    */
   shouldCaptureValues(): boolean {
     return this.mode === 'full';
+  }
+
+  // ===========================================================================
+  // Ring Buffer Operations
+  // ===========================================================================
+
+  /**
+   * Write a value record to the value ring buffer.
+   * Only writes if mode is 'full'.
+   *
+   * @param value - Value record to write
+   * @returns Index where value was written, or -1 if skipped
+   */
+  writeValue(value: ValueRecord32): number {
+    if (this.mode !== 'full') {
+      return -1;
+    }
+    return this.valueRing.writeValue(value);
+  }
+
+  /**
+   * Write a span record to the span ring buffer.
+   * Only writes if mode is 'timing' or 'full'.
+   *
+   * @param span - Span data to write
+   * @returns Index where span was written, or -1 if skipped
+   */
+  writeSpan(span: SpanData): number {
+    if (this.mode === 'off') {
+      return -1;
+    }
+    return this.spanRing.writeSpan(span);
+  }
+
+  /**
+   * Check if it's time to emit UI update events (throttled to ~10Hz).
+   * Returns true and updates last emit time if interval has passed.
+   *
+   * @param nowMs - Current time in milliseconds
+   * @returns True if UI should be updated
+   */
+  shouldEmitUIUpdate(nowMs: number): boolean {
+    if (nowMs - this.lastUIEmitMs >= TraceController.UI_EMIT_INTERVAL_MS) {
+      this.lastUIEmitMs = nowMs;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Clear all ring buffers.
+   * Called when switching modes or resetting debug state.
+   */
+  clearBuffers(): void {
+    this.valueRing.clear();
+    this.spanRing.clear();
   }
 
   // ===========================================================================

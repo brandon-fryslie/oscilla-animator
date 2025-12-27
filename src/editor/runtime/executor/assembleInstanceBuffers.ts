@@ -186,7 +186,7 @@ export function assembleInstanceBuffers(
     if (typeof colorValue === "number") {
       // Scalar broadcast - packed u32 RGBA
       bufferSet.colorRGBA = { kind: "scalar:u32", value: colorValue };
-    } else if (colorValue instanceof Uint8Array) {
+    } else if (colorValue instanceof Uint8Array || colorValue instanceof Uint8ClampedArray) {
       // Per-instance colors - u8x4 array (length = count*4)
       if (colorValue.length !== count * 4) {
         throw new Error(

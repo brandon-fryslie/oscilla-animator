@@ -27,6 +27,7 @@ import type {
   RenderPassHeaderIR,
 } from "../compiler/ir/renderIR";
 import type { ValueStore } from "../compiler/ir/stores";
+import { unpremultiplyColor } from "./kernels/ColorQuantize";
 
 // ============================================================================
 // Helper: Buffer Reading
@@ -78,13 +79,13 @@ function readBuffer(
       return value;
 
     case "u8":
-      if (!(value instanceof Uint8Array)) {
+      if (!(value instanceof Uint8Array || value instanceof Uint8ClampedArray)) {
         throw new Error(
           `readBuffer: expected Uint8Array for bufferId=${bufferRef.bufferId}, ` +
           `got ${value?.constructor.name}`
         );
       }
-      return value;
+      return value as Uint8Array;
 
     default: {
       const _exhaustive: never = bufferRef.type;
@@ -102,7 +103,7 @@ function readBuffer(
  * @param valueStore - ValueStore for buffer reads
  * @returns Object with { isScalar, value, buffer }
  */
-function resolveAttribute(
+function requireAttribute(
   attr: BufferRefIR | ScalarF32IR | ScalarU32IR | ScalarU16IR | undefined,
   valueStore: ValueStore
 ): {
@@ -111,7 +112,7 @@ function resolveAttribute(
   buffer: Float32Array | Uint32Array | Uint16Array | Uint8Array | null;
 } {
   if (attr === undefined) {
-    return { isScalar: true, value: 0, buffer: null };
+    throw new Error("renderPassExecutors: missing required instance attribute");
   }
 
   // Check for scalar broadcasts
@@ -123,7 +124,7 @@ function resolveAttribute(
         return { isScalar: true, value: attr.value, buffer: null };
       default: {
         const _exhaustive: never = attr;
-        throw new Error(`resolveAttribute: unknown scalar kind ${(_exhaustive as any).kind}`);
+        throw new Error(`requireAttribute: unknown scalar kind ${(_exhaustive as any).kind}`);
       }
     }
   }
@@ -131,6 +132,21 @@ function resolveAttribute(
   // BufferRefIR - read from ValueStore
   const buffer = readBuffer(attr, valueStore);
   return { isScalar: false, value: 0, buffer };
+}
+
+function optionalAttribute(
+  attr: BufferRefIR | ScalarF32IR | ScalarU32IR | ScalarU16IR | undefined,
+  valueStore: ValueStore,
+  defaultScalar: number
+): {
+  isScalar: boolean;
+  value: number;
+  buffer: Float32Array | Uint32Array | Uint16Array | Uint8Array | null;
+} {
+  if (attr === undefined) {
+    return { isScalar: true, value: defaultScalar, buffer: null };
+  }
+  return requireAttribute(attr, valueStore);
 }
 
 // ============================================================================
@@ -207,11 +223,12 @@ function applyPassHeader(
  * @returns CSS rgba() string
  */
 function unpackColorU8(buffer: Uint8Array, index: number): string {
-  const r = buffer[index + 0];
-  const g = buffer[index + 1];
-  const b = buffer[index + 2];
-  const a = buffer[index + 3];
-  return `rgba(${r},${g},${b},${a / 255})`;
+  const slice = buffer.subarray(index, index + 4);
+  const c = unpremultiplyColor(slice);
+  const r = Math.round(c.r * 255);
+  const g = Math.round(c.g * 255);
+  const b = Math.round(c.b * 255);
+  return `rgba(${r},${g},${b},${c.a})`;
 }
 
 /**
@@ -227,7 +244,8 @@ function unpackColorU32(packed: number): string {
   const g = (packed >>> 8) & 0xFF;
   const b = (packed >>> 16) & 0xFF;
   const a = (packed >>> 24) & 0xFF;
-  return `rgba(${r},${g},${b},${a / 255})`;
+  const c = unpremultiplyColor(new Uint8Array([r, g, b, a]));
+  return `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${c.a})`;
 }
 
 // ============================================================================
@@ -287,13 +305,13 @@ export function renderInstances2DPass(
     const posXY = readBuffer(pass.buffers.posXY, valueStore) as Float32Array;
 
     // Resolve optional attribute buffers/scalars
-    const size = resolveAttribute(pass.buffers.size, valueStore);
-    const rot = resolveAttribute(pass.buffers.rot, valueStore);
-    const colorRGBA = resolveAttribute(pass.buffers.colorRGBA, valueStore);
-    const opacity = resolveAttribute(pass.buffers.opacity, valueStore);
-    const shapeId = resolveAttribute(pass.buffers.shapeId, valueStore);
-    const strokeWidth = resolveAttribute(pass.buffers.strokeWidth, valueStore);
-    const strokeColorRGBA = resolveAttribute(pass.buffers.strokeColorRGBA, valueStore);
+    const size = requireAttribute(pass.buffers.size, valueStore);
+    const colorRGBA = requireAttribute(pass.buffers.colorRGBA, valueStore);
+    const opacity = requireAttribute(pass.buffers.opacity, valueStore);
+    const shapeId = requireAttribute(pass.buffers.shapeId, valueStore);
+    const rot = optionalAttribute(pass.buffers.rot, valueStore, 0);
+    const strokeWidth = optionalAttribute(pass.buffers.strokeWidth, valueStore, 0);
+    const strokeColorRGBA = optionalAttribute(pass.buffers.strokeColorRGBA, valueStore, 0);
 
     // Render each instance
     for (let i = 0; i < pass.count; i++) {
@@ -543,10 +561,10 @@ export function renderPaths2DPass(
     const pointsXY = readBuffer(pass.geometry.pointsXY, valueStore) as Float32Array;
 
     // Resolve style attributes
-    const fillColorRGBA = resolveAttribute(pass.style.fillColorRGBA, valueStore);
-    const strokeColorRGBA = resolveAttribute(pass.style.strokeColorRGBA, valueStore);
-    const strokeWidth = resolveAttribute(pass.style.strokeWidth, valueStore);
-    const opacity = resolveAttribute(pass.style.opacity, valueStore);
+    const fillColorRGBA = optionalAttribute(pass.style.fillColorRGBA, valueStore, 0);
+    const strokeColorRGBA = optionalAttribute(pass.style.strokeColorRGBA, valueStore, 0);
+    const strokeWidth = optionalAttribute(pass.style.strokeWidth, valueStore, 1);
+    const opacity = optionalAttribute(pass.style.opacity, valueStore, 1);
 
     // Render each path
     for (let pathIdx = 0; pathIdx < pass.geometry.pathCount; pathIdx++) {

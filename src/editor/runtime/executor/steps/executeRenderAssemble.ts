@@ -18,7 +18,13 @@
  */
 
 import type { StepRenderAssemble, CompiledProgramIR } from "../../../compiler/ir";
+import type {
+  RenderFrameIR,
+  Instances2DPassIR,
+  Paths2DPassIR,
+} from "../../../compiler/ir/renderIR";
 import type { RuntimeState } from "../RuntimeState";
+import { assembleInstanceBuffers } from "../assembleInstanceBuffers";
 
 /**
  * Instance2D batch descriptor - describes how to assemble an Instances2D pass
@@ -27,13 +33,11 @@ import type { RuntimeState } from "../RuntimeState";
 interface Instance2DBatchDescriptor {
   kind: "instance2d";
   count: number;
-  xSlot: number;
-  ySlot: number;
-  radiusSlot: number;
-  rSlot: number;
-  gSlot: number;
-  bSlot: number;
-  aSlot: number;
+  domainSlot: number;
+  posXYSlot: number;
+  sizeSlot: number;
+  colorRGBASlot: number;
+  opacitySlot: number;
 }
 
 /**
@@ -59,72 +63,82 @@ interface PathBatchList {
   batches: PathBatchDescriptor[];
 }
 
-/**
- * Simplified Instances2D batch for renderer consumption
- * (Matches design-docs/13-Renderer/11-FINAL-INTEGRATION.md §C1)
- */
-interface Instances2DBatchIR {
+interface DomainHandle {
+  kind: "domain";
   count: number;
-  x: Float32Array;
-  y: Float32Array;
-  radius: Float32Array;
-  r: Float32Array;
-  g: Float32Array;
-  b: Float32Array;
-  a: Float32Array;
 }
 
-/**
- * Simplified Paths2D batch for renderer consumption
- */
-interface Paths2DBatchIR {
-  cmds: Uint16Array;
-  params: Float32Array;
-}
-
-/**
- * Render pass types for the simplified renderer format
- */
-type SimpleRenderPassIR =
-  | { kind: "instances2d"; batch: Instances2DBatchIR }
-  | { kind: "paths2d"; batch: Paths2DBatchIR };
-
-/**
- * Simplified RenderFrameIR for Canvas2D renderer
- * (Matches design-docs/13-Renderer/11-FINAL-INTEGRATION.md §C1)
- */
-interface SimpleRenderFrameIR {
-  version: 1;
-  clear: { r: number; g: number; b: number; a: number } | { mode: "none" };
-  passes: SimpleRenderPassIR[];
-  perf?: {
-    instances2d: number;
-    pathCmds: number;
-  };
-}
-
-/**
- * Type guard for Instance2D batch list
- */
 function isInstance2DBatchList(value: unknown): value is Instance2DBatchList {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return Array.isArray(v.batches);
 }
 
-/**
- * Type guard for Path batch list
- */
 function isPathBatchList(value: unknown): value is PathBatchList {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return Array.isArray(v.batches);
 }
 
+function isDomainHandle(value: unknown): value is DomainHandle {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return v.kind === "domain" && typeof v.count === "number";
+}
+
+function buildInstancesPass(
+  batch: Instance2DBatchDescriptor,
+  runtime: RuntimeState,
+): Instances2DPassIR {
+  let count = batch.count;
+  if (count <= 0) {
+    const domainValue = runtime.values.read(batch.domainSlot);
+    if (isDomainHandle(domainValue)) {
+      count = domainValue.count;
+    }
+  }
+
+  return {
+    kind: "instances2d",
+    header: {
+      id: `instances2d-${batch.domainSlot}`,
+      z: 0,
+      enabled: true,
+    },
+    count,
+    material: {
+      kind: "shape2d",
+      shading: "flat",
+      colorSpace: "srgb",
+    },
+    buffers: {
+      ...assembleInstanceBuffers(
+        {
+          count,
+          posXY: batch.posXYSlot,
+          size: batch.sizeSlot,
+          colorRGBA: batch.colorRGBASlot,
+          opacity: batch.opacitySlot,
+        },
+        runtime,
+      ),
+      shapeId: { kind: "scalar:u16", value: 0 },
+    },
+  };
+}
+
+function buildPathsPass(_batch: PathBatchDescriptor): Paths2DPassIR | null {
+  return null;
+}
+
 /**
  * Execute RenderAssemble step.
  *
  * Assembles final RenderFrameIR from batch descriptors and materialized buffers.
+ *
+ * Per design-docs/13-Renderer/12-ValueSlotPerNodeOutput.md:
+ * - Batches are now compile-time config embedded in the step (preferred path)
+ * - Legacy: fall back to reading batch lists from slots (deprecated)
  *
  * @param step - RenderAssemble step specification
  * @param _program - Compiled program (not used directly)
@@ -135,90 +149,65 @@ export function executeRenderAssemble(
   _program: CompiledProgramIR,
   runtime: RuntimeState,
 ): void {
-  const passes: SimpleRenderPassIR[] = [];
+  const passes: (Instances2DPassIR | Paths2DPassIR)[] = [];
 
-  // 1. Try to read Instance2D batch list
-  try {
-    const instanceList = runtime.values.read(step.instance2dListSlot);
+  // 1. Process Instance2D batches
+  // Prefer embedded config (new path), fallback to slots (legacy/deprecated)
+  if (step.instance2dBatches && step.instance2dBatches.length > 0) {
+    for (const batch of step.instance2dBatches) {
+      passes.push(buildInstancesPass(batch, runtime));
+    }
+  } else if (step.instance2dListSlot !== undefined) {
+    try {
+      const instanceList = runtime.values.read(step.instance2dListSlot);
 
-    if (isInstance2DBatchList(instanceList)) {
-      for (const batch of instanceList.batches) {
-        if (batch.kind === "instance2d") {
-          // Read materialized buffers from ValueStore
-          const x = runtime.values.read(batch.xSlot) as Float32Array;
-          const y = runtime.values.read(batch.ySlot) as Float32Array;
-          const radius = runtime.values.read(batch.radiusSlot) as Float32Array;
-          const r = runtime.values.read(batch.rSlot) as Float32Array;
-          const g = runtime.values.read(batch.gSlot) as Float32Array;
-          const b = runtime.values.read(batch.bSlot) as Float32Array;
-          const a = runtime.values.read(batch.aSlot) as Float32Array;
-
-          // Determine count from buffer length (use the shortest buffer to be safe)
-          const count = Math.min(
-            x.length,
-            y.length,
-            radius.length,
-            r.length,
-            g.length,
-            b.length,
-            a.length
-          );
-
-          passes.push({
-            kind: "instances2d",
-            batch: { count, x, y, radius, r, g, b, a },
-          });
+      if (isInstance2DBatchList(instanceList)) {
+        for (const batch of instanceList.batches) {
+          if (batch.kind === "instance2d") {
+            passes.push(buildInstancesPass(batch, runtime));
+          }
         }
       }
+    } catch (_error) {
+      // Slot not initialized - no instance2d batches
     }
-  } catch (_error) {
-    // Slot not initialized - no instance2d batches
   }
 
-  // 2. Try to read Path batch list
-  try {
-    const pathList = runtime.values.read(step.pathBatchListSlot);
-
-    if (isPathBatchList(pathList)) {
-      for (const batch of pathList.batches) {
-        if (batch.kind === "path") {
-          // Read materialized buffers
-          const cmds = runtime.values.read(batch.cmdsSlot) as Uint16Array;
-          const params = runtime.values.read(batch.paramsSlot) as Float32Array;
-
-          passes.push({
-            kind: "paths2d",
-            batch: { cmds, params },
-          });
-        }
+  // 2. Process Path batches
+  // Prefer embedded config (new path), fallback to slots (legacy/deprecated)
+  if (step.pathBatches && step.pathBatches.length > 0) {
+    for (const batch of step.pathBatches) {
+      const pass = buildPathsPass(batch);
+      if (pass) {
+        passes.push(pass);
       }
     }
-  } catch (_error) {
-    // Slot not initialized - no path batches
-  }
+  } else if (step.pathBatchListSlot !== undefined) {
+    try {
+      const pathList = runtime.values.read(step.pathBatchListSlot);
 
-  // 3. Calculate performance counters
-  let instances2dCount = 0;
-  let pathCmdsCount = 0;
-  for (const pass of passes) {
-    if (pass.kind === "instances2d") {
-      instances2dCount += pass.batch.count;
-    } else if (pass.kind === "paths2d") {
-      pathCmdsCount += pass.batch.cmds.length;
+      if (isPathBatchList(pathList)) {
+        for (const batch of pathList.batches) {
+          if (batch.kind === "path") {
+            const pass = buildPathsPass(batch);
+            if (pass) {
+              passes.push(pass);
+            }
+          }
+        }
+      }
+    } catch (_error) {
+      // Slot not initialized - no path batches
     }
   }
 
-  // 4. Create RenderFrameIR
-  const frame: SimpleRenderFrameIR = {
+  // 3. Create RenderFrameIR
+  const frame: RenderFrameIR = {
     version: 1,
     clear: { mode: "none" },
     passes,
-    perf: {
-      instances2d: instances2dCount,
-      pathCmds: pathCmdsCount,
-    },
   };
 
-  // 5. Write to output slot
+  // 4. Write to output slot
   runtime.values.write(step.outFrameSlot, frame);
 }

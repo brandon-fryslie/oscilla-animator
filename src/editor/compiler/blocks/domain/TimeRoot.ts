@@ -71,6 +71,26 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const configData = (config as any) || {};
   const durationMs = Number(configData.durationMs);
 
+  // Allocate time-related slots upfront
+  const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
+  const progress01Type = { world: 'signal' as const, domain: 'number' as const };
+  const phase01Type = { world: 'signal' as const, domain: 'phase01' as const };
+  const triggerType = { world: 'event' as const, domain: 'trigger' as const };
+
+  const tAbsMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'tAbsMs');
+  const tModelMsSlot = ctx.b.allocValueSlot(progress01Type, 'progress');
+  const phase01Slot = ctx.b.allocValueSlot(phase01Type, 'phase');
+  const wrapEventSlot = ctx.b.allocValueSlot(triggerType, 'end');
+
+  // Register time slots so schedule can reference them
+  ctx.b.setTimeSlots({
+    tAbsMs: tAbsMsSlot,
+    tModelMs: tModelMsSlot,
+    phase01: phase01Slot,
+    progress01: tModelMsSlot, // For finite, progress is the same as model time
+    wrapEvent: wrapEventSlot,
+  });
+
   // Canonical time signals from TimeModel
   const systemTimeId = ctx.b.sigTimeAbsMs();
   const progressId = ctx.b.sigTimeModelMs(); // Will be scaled by TimeModel
@@ -88,11 +108,11 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   return {
     outputs: [
-      { k: 'sig', id: systemTimeId, slot: ctx.b.allocValueSlot() },  // systemTime
-      { k: 'sig', id: progressId, slot: ctx.b.allocValueSlot() },     // progress
-      { k: 'sig', id: phaseId, slot: ctx.b.allocValueSlot() },        // phase
-      { k: 'sig', id: endId, slot: ctx.b.allocValueSlot() },          // end
-      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot() },       // energy
+      { k: 'sig', id: systemTimeId, slot: tAbsMsSlot },       // systemTime
+      { k: 'sig', id: progressId, slot: tModelMsSlot },       // progress
+      { k: 'sig', id: phaseId, slot: phase01Slot },           // phase
+      { k: 'sig', id: endId, slot: wrapEventSlot },           // end
+      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot({ world: 'signal', domain: 'number' }, 'energy') },
     ],
     declares: { timeModel },
   };
@@ -111,6 +131,25 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const configData = (config as any) || {};
   const periodMs = Number(configData.periodMs);
   const mode = String(configData.mode);
+
+  // Allocate time-related slots upfront
+  const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
+  const phase01Type = { world: 'signal' as const, domain: 'phase01' as const };
+  const triggerType = { world: 'event' as const, domain: 'trigger' as const };
+  const numberType = { world: 'signal' as const, domain: 'number' as const };
+
+  const tAbsMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'tAbsMs');
+  const tModelMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'cycleT');
+  const phase01Slot = ctx.b.allocValueSlot(phase01Type, 'phase');
+  const wrapEventSlot = ctx.b.allocValueSlot(triggerType, 'wrap');
+
+  // Register time slots so schedule can reference them
+  ctx.b.setTimeSlots({
+    tAbsMs: tAbsMsSlot,
+    tModelMs: tModelMsSlot,
+    phase01: phase01Slot,
+    wrapEvent: wrapEventSlot,
+  });
 
   // Canonical time signals from TimeModel
   const systemTimeId = ctx.b.sigTimeAbsMs();
@@ -144,12 +183,12 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   return {
     outputs: [
-      { k: 'sig', id: systemTimeId, slot: ctx.b.allocValueSlot() },  // systemTime
-      { k: 'sig', id: cycleTId, slot: ctx.b.allocValueSlot() },      // cycleT
-      { k: 'sig', id: phaseId, slot: ctx.b.allocValueSlot() },       // phase
-      { k: 'sig', id: wrapId, slot: ctx.b.allocValueSlot() },        // wrap
-      { k: 'sig', id: cycleIndexId, slot: ctx.b.allocValueSlot() },  // cycleIndex
-      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot() },      // energy
+      { k: 'sig', id: systemTimeId, slot: tAbsMsSlot },           // systemTime
+      { k: 'sig', id: cycleTId, slot: tModelMsSlot },             // cycleT
+      { k: 'sig', id: phaseId, slot: phase01Slot },               // phase
+      { k: 'sig', id: wrapId, slot: wrapEventSlot },              // wrap
+      { k: 'sig', id: cycleIndexId, slot: ctx.b.allocValueSlot(numberType, 'cycleIndex') },
+      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot(numberType, 'energy') },
     ],
     declares: { timeModel },
   };
@@ -167,6 +206,25 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const configData = (config as any) || {};
   const periodMs = Number(configData.periodMs);
 
+  // Allocate time-related slots upfront
+  const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
+  const phase01Type = { world: 'signal' as const, domain: 'phase01' as const };
+  const triggerType = { world: 'event' as const, domain: 'trigger' as const };
+  const numberType = { world: 'signal' as const, domain: 'number' as const };
+
+  const tAbsMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'tAbsMs');
+  const phase01Slot = ctx.b.allocValueSlot(phase01Type, 'phase');
+  const wrapEventSlot = ctx.b.allocValueSlot(triggerType, 'pulse');
+
+  // Register time slots so schedule can reference them
+  // Note: InfiniteTimeRoot has no model time - tAbsMs is used directly
+  ctx.b.setTimeSlots({
+    tAbsMs: tAbsMsSlot,
+    tModelMs: tAbsMsSlot, // For infinite, model time = absolute time
+    phase01: phase01Slot,
+    wrapEvent: wrapEventSlot,
+  });
+
   // Canonical time signals from TimeModel
   const systemTimeId = ctx.b.sigTimeAbsMs();
   const phaseId = ctx.b.sigPhase01();
@@ -183,10 +241,10 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   return {
     outputs: [
-      { k: 'sig', id: systemTimeId, slot: ctx.b.allocValueSlot() },  // systemTime
-      { k: 'sig', id: phaseId, slot: ctx.b.allocValueSlot() },       // phase
-      { k: 'sig', id: pulseId, slot: ctx.b.allocValueSlot() },       // pulse
-      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot() },      // energy
+      { k: 'sig', id: systemTimeId, slot: tAbsMsSlot },             // systemTime
+      { k: 'sig', id: phaseId, slot: phase01Slot },                 // phase
+      { k: 'sig', id: pulseId, slot: wrapEventSlot },               // pulse
+      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot(numberType, 'energy') },
     ],
     declares: { timeModel },
   };

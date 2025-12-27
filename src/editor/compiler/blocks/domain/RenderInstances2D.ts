@@ -45,8 +45,8 @@ const DEFAULT_CTX = {
  *
  * And registers a render sink with these inputs.
  */
-const lowerRenderInstances2D: BlockLowerFn = ({ ctx, inputs, config }) => {
-  const [domain, positions, radius, color] = inputs;
+const lowerRenderInstances2D: BlockLowerFn = ({ ctx, inputs }) => {
+  const [domain, positions, radius, color, opacity] = inputs;
 
   // Validate inputs
   if (domain.k !== 'special' || domain.tag !== 'domain') {
@@ -65,11 +65,9 @@ const lowerRenderInstances2D: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error(`RenderInstances2D requires Field<color> color, got ${color.k}`);
   }
 
-  // Extract config - values come from defaultSource
-  const configData = (config as any) || {};
-  const opacity = Number(configData.opacity);
-  const glow = Boolean(configData.glow);
-  const glowIntensity = Number(configData.glowIntensity);
+  if (opacity.k !== 'sig') {
+    throw new Error(`RenderInstances2D requires Signal<number> opacity, got ${opacity.k}`);
+  }
 
   // Register render sink
   // The runtime will handle materializing these fields at render time
@@ -81,10 +79,7 @@ const lowerRenderInstances2D: BlockLowerFn = ({ ctx, inputs, config }) => {
     positions: positions.slot,  // Field: use .slot
     radius: radius.slot,  // Field/Signal: use .slot
     color: color.slot,  // Field: use .slot
-    // Params are serialized as numbers into the IR
-    opacity,
-    glow: glow ? 1 : 0,  // Convert boolean to number
-    glowIntensity,
+    opacity: opacity.slot,
   };
 
   ctx.b.renderSink('instances2d', sinkInputs);
@@ -125,6 +120,12 @@ registerBlockType({
       label: 'Color',
       dir: 'in',
       type: { world: 'field', domain: 'color' },
+    },
+    {
+      portId: 'opacity',
+      label: 'Opacity',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
     },
   ],
   outputs: [

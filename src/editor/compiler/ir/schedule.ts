@@ -10,7 +10,7 @@
  * - design-docs/12-Compiler-Final/02-IR-Schema.md §12-15
  */
 
-import type { StepId, NodeIndex, BusIndex, ValueSlot, StateId } from "./types";
+import type { StepId, NodeIndex, BusIndex, ValueSlot, StateId, SigExprId } from "./types";
 
 // ============================================================================
 // Time Model IR (02-IR-Schema.md §4)
@@ -114,6 +114,7 @@ export interface ScheduleIR {
  */
 export type StepIR =
   | StepTimeDerive
+  | StepSignalEval
   | StepNodeEval
   | StepBusEval
   | StepMaterialize
@@ -139,6 +140,22 @@ export interface StepBase {
 
   /** Optional debug label for UI/logs */
   label?: string;
+}
+
+// ============================================================================
+// Step 1b: Signal Eval
+// ============================================================================
+
+/**
+ * SignalEval Step
+ *
+ * Evaluates signal expressions and writes their outputs to slots.
+ */
+export interface StepSignalEval extends StepBase {
+  kind: "signalEval";
+
+  /** Signal outputs to evaluate this frame */
+  outputs: Array<{ sigId: SigExprId; slot: ValueSlot }>;
 }
 
 // ============================================================================
@@ -508,16 +525,56 @@ export interface StepMaterializeTestGeometry extends StepBase {
 export interface StepRenderAssemble extends StepBase {
   kind: "renderAssemble";
 
-  // Inputs
-  /** Slot containing Instance2D batch list descriptor */
-  instance2dListSlot: ValueSlot;
+  // Compile-time batch configuration (per 12-ValueSlotPerNodeOutput.md)
+  // These are embedded in the step, not read from slots
+  /** Instance2D batches (compile-time configuration) */
+  instance2dBatches?: Instance2DBatch[];
 
-  /** Slot containing Path batch list descriptor */
-  pathBatchListSlot: ValueSlot;
+  /** Path batches (compile-time configuration) */
+  pathBatches?: PathBatch[];
+
+  // Legacy slot-based inputs (for backward compatibility)
+  /** @deprecated Use instance2dBatches instead */
+  instance2dListSlot?: ValueSlot;
+
+  /** @deprecated Use pathBatches instead */
+  pathBatchListSlot?: ValueSlot;
 
   // Output
   /** Output slot for final RenderFrameIR */
   outFrameSlot: ValueSlot;
+}
+
+/**
+ * Instance2D batch descriptor.
+ * Compile-time configuration for one batch of 2D circle instances.
+ */
+export interface Instance2DBatch {
+  kind: "instance2d";
+  /** Number of elements (may be 0 if domain count is runtime-determined) */
+  count: number;
+  /** Slot containing domain handle */
+  domainSlot: ValueSlot;
+  /** Slot containing interleaved xy buffer */
+  posXYSlot: ValueSlot;
+  /** Slot containing size/radius buffer or scalar */
+  sizeSlot: ValueSlot;
+  /** Slot containing packed color RGBA buffer or scalar */
+  colorRGBASlot: ValueSlot;
+  /** Slot containing opacity scalar or buffer */
+  opacitySlot: ValueSlot;
+}
+
+/**
+ * Path batch descriptor.
+ * Compile-time configuration for one batch of path primitives.
+ */
+export interface PathBatch {
+  kind: "path";
+  /** Slot containing path commands buffer */
+  cmdsSlot: ValueSlot;
+  /** Slot containing path parameters buffer */
+  paramsSlot: ValueSlot;
 }
 
 // ============================================================================

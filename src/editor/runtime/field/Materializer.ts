@@ -23,6 +23,8 @@ import type {
   TransformChainId,
 } from './types';
 import type { SignalBridge } from '../integration/SignalBridge';
+import { parseColor } from '../renderCmd';
+import { quantizeColorRGBA } from '../kernels/ColorQuantize';
 
 // Phase 4 SignalExpr Runtime integration
 import { evalSig as evalSigIR } from '../signal-expr/SigEvaluator';
@@ -93,7 +95,7 @@ export interface SigEnv {
  * Constants table
  */
 export interface ConstantsTable {
-  get(constId: number): number;
+  get(constId: number): unknown;
 }
 
 /**
@@ -237,6 +239,12 @@ function applyFieldZipOp(op: FieldZipOp, a: number, b: number): number {
       return Math.pow(a, b);
     case FieldZipOp.Mod:
       return a % b;
+    // Vec2 operations are handled separately in fillBufferZip for vec2 types
+    case FieldZipOp.Vec2Add:
+    case FieldZipOp.Vec2Sub:
+    case FieldZipOp.Vec2Mul:
+    case FieldZipOp.Vec2Div:
+      throw new Error(`Vec2 operations must be handled in fillBufferZip, not applyFieldZipOp`);
     default: {
       const _exhaustive: never = op;
       throw new Error(`Unknown field zip operation: ${String(_exhaustive)}`);
@@ -378,11 +386,129 @@ function fillBufferConst(
   env: MaterializerEnv
 ): void {
   const value = env.constants.get(handle.constId);
-  const arr = out as Float32Array;
 
-  for (let i = 0; i < N; i++) {
-    arr[i] = value;
+  switch (handle.type.kind) {
+    case 'number': {
+      if (typeof value === 'number') {
+        const arr = out as Float32Array;
+        for (let i = 0; i < N; i++) {
+          arr[i] = value;
+        }
+        return;
+      }
+
+      if (Array.isArray(value)) {
+        if (value.length !== N) {
+          throw new Error(
+            `fillBufferConst: number array length mismatch (expected ${N}, got ${value.length})`
+          );
+        }
+        const arr = out as Float32Array;
+        for (let i = 0; i < N; i++) {
+          arr[i] = Number(value[i]);
+        }
+        return;
+      }
+
+      if (typeof value === 'boolean') {
+        const arr = out as Float32Array;
+        const numeric = value ? 1 : 0;
+        for (let i = 0; i < N; i++) {
+          arr[i] = numeric;
+        }
+        return;
+      }
+      break;
+    }
+
+    case 'vec2': {
+      const arr = out as Float32Array;
+      if (Array.isArray(value)) {
+        if (value.length !== N) {
+          throw new Error(
+            `fillBufferConst: vec2 array length mismatch (expected ${N}, got ${value.length})`
+          );
+        }
+        for (let i = 0; i < N; i++) {
+          const v = value[i] as { x: number; y: number };
+          arr[i * 2 + 0] = Number(v?.x ?? 0);
+          arr[i * 2 + 1] = Number(v?.y ?? 0);
+        }
+        return;
+      }
+
+      if (value && typeof value === 'object') {
+        const v = value as { x?: number; y?: number };
+        const x = Number(v.x ?? 0);
+        const y = Number(v.y ?? 0);
+        for (let i = 0; i < N; i++) {
+          arr[i * 2 + 0] = x;
+          arr[i * 2 + 1] = y;
+        }
+        return;
+      }
+
+      // Scalar number broadcasts to both x and y
+      if (typeof value === 'number') {
+        for (let i = 0; i < N; i++) {
+          arr[i * 2 + 0] = value;
+          arr[i * 2 + 1] = value;
+        }
+        return;
+      }
+      break;
+    }
+
+    case 'color': {
+      const outArr = out as Uint8Array;
+      if (!(outArr instanceof Uint8Array)) {
+        throw new Error('fillBufferConst: color output must be a Uint8Array');
+      }
+
+      if (Array.isArray(value)) {
+        if (value.length !== N) {
+          throw new Error(
+            `fillBufferConst: color array length mismatch (expected ${N}, got ${value.length})`
+          );
+        }
+        for (let i = 0; i < N; i++) {
+          const rgba = toColorRGBA(value[i]);
+          const q = quantizeColorRGBA(rgba.r, rgba.g, rgba.b, rgba.a);
+          outArr[i * 4 + 0] = q[0];
+          outArr[i * 4 + 1] = q[1];
+          outArr[i * 4 + 2] = q[2];
+          outArr[i * 4 + 3] = q[3];
+        }
+        return;
+      }
+
+      const rgba = toColorRGBA(value);
+      const q = quantizeColorRGBA(rgba.r, rgba.g, rgba.b, rgba.a);
+      for (let i = 0; i < N; i++) {
+        outArr[i * 4 + 0] = q[0];
+        outArr[i * 4 + 1] = q[1];
+        outArr[i * 4 + 2] = q[2];
+        outArr[i * 4 + 3] = q[3];
+      }
+      return;
+    }
+
+    case 'boolean': {
+      const numeric = value ? 1 : 0;
+      const arr = out as Float32Array;
+      for (let i = 0; i < N; i++) {
+        arr[i] = numeric;
+      }
+      return;
+    }
+
+    default:
+      break;
   }
+
+  throw new Error(
+    `fillBufferConst: unsupported const for type ${handle.type.kind} (${typeof value})`
+  );
 }
 
 /**
@@ -440,6 +566,9 @@ function fillBufferOp(
   N: number,
   env: MaterializerEnv
 ): void {
+  if (handle.type.kind !== 'number') {
+    throw new Error(`fillBufferOp: unsupported type ${handle.type.kind}`);
+  }
   // For now, only support single-arg operations
   if (handle.args.length !== 1) {
     throw new Error(`Expected 1 argument for Op, got ${handle.args.length}`);
@@ -478,7 +607,76 @@ function fillBufferZip(
   N: number,
   env: MaterializerEnv
 ): void {
-  // Materialize input fields
+  if (handle.type.kind === 'vec2') {
+    if (
+      handle.op !== FieldZipOp.Vec2Add &&
+      handle.op !== FieldZipOp.Vec2Sub &&
+      handle.op !== FieldZipOp.Vec2Mul &&
+      handle.op !== FieldZipOp.Vec2Div
+    ) {
+      throw new Error(`fillBufferZip: unsupported vec2 op ${handle.op}`);
+    }
+
+    const aBuffer = materialize(
+      {
+        fieldId: handle.a,
+        domainId: env.fieldEnv.domainId,
+        format: 'vec2f32',
+        layout: 'vec2',
+        usageTag: 'zip-a',
+      },
+      env
+    ) as Float32Array;
+
+    const bBuffer = materialize(
+      {
+        fieldId: handle.b,
+        domainId: env.fieldEnv.domainId,
+        format: 'vec2f32',
+        layout: 'vec2',
+        usageTag: 'zip-b',
+      },
+      env
+    ) as Float32Array;
+
+    const outArr = out as Float32Array;
+
+    for (let i = 0; i < N; i++) {
+      const idx = i * 2;
+      const ax = aBuffer[idx];
+      const ay = aBuffer[idx + 1];
+      const bx = bBuffer[idx];
+      const by = bBuffer[idx + 1];
+
+      switch (handle.op) {
+        case FieldZipOp.Vec2Add:
+          outArr[idx] = ax + bx;
+          outArr[idx + 1] = ay + by;
+          break;
+        case FieldZipOp.Vec2Sub:
+          outArr[idx] = ax - bx;
+          outArr[idx + 1] = ay - by;
+          break;
+        case FieldZipOp.Vec2Mul:
+          outArr[idx] = ax * bx;
+          outArr[idx + 1] = ay * by;
+          break;
+        case FieldZipOp.Vec2Div:
+          outArr[idx] = ax / bx;
+          outArr[idx + 1] = ay / by;
+          break;
+        default:
+          throw new Error(`fillBufferZip: unsupported vec2 op ${handle.op}`);
+      }
+    }
+
+    return;
+  }
+
+  if (handle.type.kind !== 'number') {
+    throw new Error(`fillBufferZip: unsupported type ${handle.type.kind}`);
+  }
+
   const aBuffer = materialize(
     {
       fieldId: handle.a,
@@ -503,7 +701,6 @@ function fillBufferZip(
 
   const outArr = out as Float32Array;
 
-  // Apply zip operation element-wise
   for (let i = 0; i < N; i++) {
     outArr[i] = applyFieldZipOp(handle.op, aBuffer[i], bBuffer[i]);
   }
@@ -523,6 +720,9 @@ function fillBufferSelect(
   N: number,
   env: MaterializerEnv
 ): void {
+  if (handle.type.kind !== 'number') {
+    throw new Error(`fillBufferSelect: unsupported type ${handle.type.kind}`);
+  }
   // Materialize condition field
   const condBuffer = materialize(
     {
@@ -579,12 +779,23 @@ function fillBufferSelect(
  */
 function fillBufferTransform(
   handle: Extract<FieldHandle, { kind: 'Transform' }>,
-  out: ArrayBufferView,
-  N: number,
+  _out: ArrayBufferView,
+  _N: number,
   env: MaterializerEnv
 ): void {
-  // Materialize source field
-  const srcBuffer = materialize(
+  if (handle.type.kind !== 'number') {
+    throw new Error(`fillBufferTransform: unsupported type ${handle.type.kind}`);
+  }
+
+  // Get transform chain
+  const chain = env.transforms?.get(handle.chain);
+  if (!chain) {
+    throw new Error(`fillBufferTransform: missing transform chain ${handle.chain}`);
+  }
+
+  // TODO: Phase 6 - actually apply transform chain to source field
+  // For now, just materialize source and throw (placeholder)
+  materialize(
     {
       fieldId: handle.src,
       domainId: env.fieldEnv.domainId,
@@ -593,26 +804,33 @@ function fillBufferTransform(
       usageTag: 'transform-src',
     },
     env
-  ) as Float32Array;
+  );
 
-  // Get transform chain
-  const chain = env.transforms?.get(handle.chain);
-  if (!chain) {
-    // Fallback: identity transform (copy source to output)
-    // This allows the system to work even without transform chain support
-    const outArr = out as Float32Array;
-    for (let i = 0; i < N; i++) {
-      outArr[i] = srcBuffer[i];
+  throw new Error(`fillBufferTransform: transform chain evaluation not implemented`);
+}
+
+function toColorRGBA(value: unknown): { r: number; g: number; b: number; a: number } {
+  if (typeof value === 'string') {
+    return parseColor(value);
+  }
+
+  if (value && typeof value === 'object') {
+    const v = value as { r?: number; g?: number; b?: number; a?: number };
+    if (
+      typeof v.r === 'number' &&
+      typeof v.g === 'number' &&
+      typeof v.b === 'number'
+    ) {
+      return {
+        r: v.r,
+        g: v.g,
+        b: v.b,
+        a: typeof v.a === 'number' ? v.a : 1,
+      };
     }
-    return;
   }
 
-  // TODO: Apply transform chain steps
-  // For now, use identity transform as placeholder
-  const outArr = out as Float32Array;
-  for (let i = 0; i < N; i++) {
-    outArr[i] = srcBuffer[i];
-  }
+  throw new Error(`toColorRGBA: unsupported color value ${String(value)}`);
 }
 
 /**
@@ -628,6 +846,9 @@ function fillBufferCombine(
   N: number,
   env: MaterializerEnv
 ): void {
+  if (handle.type.kind !== 'number') {
+    throw new Error(`fillBufferCombine: unsupported type ${handle.type.kind}`);
+  }
   const outArr = out as Float32Array;
   const { terms, mode } = handle;
 
@@ -708,6 +929,14 @@ function combineElement(
     case 'last': {
       // Last term wins
       return termBuffers[termBuffers.length - 1][index];
+    }
+
+    case 'product': {
+      let product = 1;
+      for (const buffer of termBuffers) {
+        product *= buffer[index];
+      }
+      return product;
     }
 
     default: {

@@ -22,6 +22,7 @@ import { IRBuilderImpl } from "../ir/IRBuilderImpl";
 import type { TypeDesc } from "../ir/types";
 import type { CompileError } from "../types";
 import type { ValueRefPacked } from "../ir/lowerTypes";
+import type { Domain } from "../unified/Domain";
 
 // Re-export ValueRefPacked for backwards compatibility
 export type { ValueRefPacked } from "../ir/lowerTypes";
@@ -136,7 +137,8 @@ function artifactToValueRef(
   if (kind === "Scalar:number") {
     const type: TypeDesc = { world: "signal", domain: "number" };
     const sigId = builder.sigConst(artifact.value, type);
-    const slot = builder.allocValueSlot();
+    const slot = builder.allocValueSlot(type);
+    builder.registerSigSlot(sigId, slot);
     return { k: "sig", id: sigId, slot };
   }
 
@@ -144,14 +146,16 @@ function artifactToValueRef(
     const type: TypeDesc = { world: "signal", domain: "vec2" };
     // For vec2, we need to create a constant. For now, use 0 as placeholder
     const sigId = builder.sigConst(0, type);
-    const slot = builder.allocValueSlot();
+    const slot = builder.allocValueSlot(type);
+    builder.registerSigSlot(sigId, slot);
     return { k: "sig", id: sigId, slot };
   }
 
   if (kind === "Scalar:color") {
     const type: TypeDesc = { world: "signal", domain: "color" };
     const sigId = builder.sigConst(0, type);
-    const slot = builder.allocValueSlot();
+    const slot = builder.allocValueSlot(type);
+    builder.registerSigSlot(sigId, slot);
     return { k: "sig", id: sigId, slot };
   }
 
@@ -166,7 +170,8 @@ function artifactToValueRef(
   ) {
     // Create a time signal as placeholder - actual signal evaluation happens via closure
     const timeId = builder.sigTimeAbsMs();
-    const slot = builder.allocValueSlot();
+    const slot = builder.allocValueSlot({ world: "signal", domain: "timeMs" });
+    builder.registerSigSlot(timeId, slot);
     // For now, use time signal directly as placeholder
     // In Phase 4, we'll emit proper signal expressions
     return { k: "sig", id: timeId, slot };
@@ -185,7 +190,8 @@ function artifactToValueRef(
     const type = artifactKindToTypeDesc(kind);
     // Create constant field as placeholder
     const fieldId = builder.fieldConst(0, type);
-    const slot = builder.allocValueSlot();
+    const slot = builder.allocValueSlot(type);
+    builder.registerFieldSlot(fieldId, slot);
     return { k: "field", id: fieldId, slot };
   }
 
@@ -200,8 +206,14 @@ function artifactToValueRef(
     kind === "StrokeStyle" ||
     kind === "ElementCount" ||
     kind === "Event" ||     // Discrete events - handled by event system, not signal graph
-    kind === "Domain"       // Domain configuration - not a signal/field value
+    kind === "Domain"       // Domain configuration - handled separately
   ) {
+    if (kind === "Domain") {
+      const domain = artifact.value as Domain | undefined;
+      const count = domain?.elements?.length ?? 0;
+      const domainSlot = builder.domainFromN(count);
+      return { k: "special", tag: "domain", id: domainSlot };
+    }
     return null; // No IR representation
   }
 
@@ -255,6 +267,9 @@ export function pass6BlockLowering(
         continue;
       }
 
+      // Set current block ID for debug index tracking (Phase 7)
+      builder.setCurrentBlockId(block.id);
+
       // Collect output port artifacts for this block (keyed by port ID)
       const outputRefs = new Map<string, ValueRefPacked>();
 
@@ -287,6 +302,9 @@ export function pass6BlockLowering(
       }
     }
   }
+
+  // Clear block ID after processing all blocks
+  builder.setCurrentBlockId(undefined);
 
   return {
     builder,

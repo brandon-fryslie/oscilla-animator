@@ -62,6 +62,8 @@ import { extractSignalExprTable } from './ir/extractSignalExprTable';
 // Debug Infrastructure
 import { createDebugIndex } from '../debug';
 import { randomUUID } from '../crypto';
+// Domain support for default sources
+import { createSimpleDomain } from './unified/Domain';
 
 
 // =============================================================================
@@ -1409,6 +1411,12 @@ function createDefaultArtifact(value: unknown, kind: string): Artifact {
       // Broadcast vec2 to field
       const vec = (value as Vec2) ?? { x: 0, y: 0 };
       return { kind: 'Field:vec2', value: (_s: Seed, n: number) => Array.from({ length: n }, () => vec) };
+    }
+    case 'Domain': {
+      // Create a simple domain with N elements (default 30 if not specified)
+      const count = typeof value === 'number' ? value : 30;
+      const domainId = `default-domain-${randomUUID().slice(0, 8)}`;
+      return { kind: 'Domain', value: createSimpleDomain(domainId, count) };
     }
     default:
       return { kind: 'Error', message: `Default source not supported for ${kind}` };

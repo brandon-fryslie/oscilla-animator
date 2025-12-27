@@ -107,20 +107,21 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
         params: { rows: 3, cols: 3, spacing: 80, originX: 400, originY: 300, order: 'rowMajor' } },
       { ref: 'radius', type: 'FieldConstNumber', laneKind: 'Fields', label: 'Radius',
         params: { value: 20 } },
+      { ref: 'color', type: 'FieldConstColor', laneKind: 'Fields', label: 'Color',
+        params: { color: '#3B82F6' } },
       { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render' },
     ],
     connections: [
       { fromRef: 'domain', fromSlot: 'domain', toRef: 'grid', toSlot: 'domain' },
       { fromRef: 'domain', fromSlot: 'domain', toRef: 'radius', toSlot: 'domain' },
+      { fromRef: 'domain', fromSlot: 'domain', toRef: 'color', toSlot: 'domain' },
       { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'grid', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
       { fromRef: 'radius', fromSlot: 'out', toRef: 'render', toSlot: 'radius' },
+      { fromRef: 'color', fromSlot: 'out', toRef: 'render', toSlot: 'color' },
     ],
     publishers: [],
-    listeners: [
-      // Use phaseA for color variation
-      { busName: 'phaseA', toRef: 'render', toSlot: 'color' },
-    ],
+    listeners: [],
   },
 
   // =============================================================================

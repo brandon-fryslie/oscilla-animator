@@ -124,7 +124,7 @@ function allocateBuffer(format: BufferFormat, count: number): ArrayBufferView {
       return new Float32Array(count * 4);
 
     case 'rgba8':
-      return new Uint8ClampedArray(count * 4);
+      return new Uint8Array(count * 4);
 
     default: {
       const _exhaustive: never = format;

@@ -28,7 +28,7 @@ import type {
 } from "./types";
 import type { TransformStepIR } from "./transforms";
 import type { StatefulSignalOp } from "./signalExpr";
-import type { PureFnRef, ReduceFn, BuilderProgramIR } from "./builderTypes";
+import type { PureFnRef, ReduceFn, BuilderProgramIR, TimeSlots } from "./builderTypes";
 
 /**
  * IRBuilder interface for constructing Intermediate Representation.
@@ -37,6 +37,18 @@ import type { PureFnRef, ReduceFn, BuilderProgramIR } from "./builderTypes";
  * Implementations must maintain internal state for ID allocation and graph construction.
  */
 export interface IRBuilder {
+  // =============================================================================
+  // Debug Tracking (Phase 7)
+  // =============================================================================
+
+  /**
+   * Set the current block ID for debug index tracking.
+   * Called by the compiler before lowering each block instance.
+   *
+   * @param blockId - Block instance ID (or undefined to clear)
+   */
+  setCurrentBlockId(blockId: string | undefined): void;
+
   // =============================================================================
   // ID Allocation
   // =============================================================================
@@ -66,8 +78,26 @@ export interface IRBuilder {
 
   /**
    * Allocate a value slot (runtime storage location).
+   * @param type - Optional type descriptor for slot metadata
+   * @param debugName - Optional debug name for the slot
    */
-  allocValueSlot(): ValueSlot;
+  allocValueSlot(type?: TypeDesc, debugName?: string): ValueSlot;
+
+  /**
+   * Register a signal output slot for a signal expression ID.
+   */
+  registerSigSlot(sigId: SigExprId, slot: ValueSlot): void;
+
+  /**
+   * Register a ValueSlot for a field expression output.
+   */
+  registerFieldSlot(fieldId: FieldExprId, slot: ValueSlot): void;
+
+  /**
+   * Set time slots allocated by TimeRoot during lowering.
+   * Schedule will reference these rather than allocating its own.
+   */
+  setTimeSlots(slots: TimeSlots): void;
 
   // =============================================================================
   // Signal Expressions

@@ -204,6 +204,7 @@ function lowerBusToCombineNode(
 
     const sigId = builder.sigCombine(busIndex, sigTerms, safeMode, irType);
     const slot = builder.allocValueSlot();
+    builder.registerSigSlot(sigId, slot);
     return { k: "sig", id: sigId, slot };
   }
 
@@ -219,6 +220,7 @@ function lowerBusToCombineNode(
 
     const fieldId = builder.fieldCombine(busIndex, fieldTerms, safeMode, irType);
     const slot = builder.allocValueSlot();
+    builder.registerFieldSlot(fieldId, slot);
     return { k: "field", id: fieldId, slot };
   }
 
@@ -237,6 +239,7 @@ function createDefaultBusValue(bus: Bus, builder: IRBuilder): ValueRefPacked | n
     const value = typeof bus.defaultValue === "number" ? bus.defaultValue : 0;
     const sigId = builder.sigConst(value, type);
     const slot = builder.allocValueSlot();
+    builder.registerSigSlot(sigId, slot);
     return { k: "sig", id: sigId, slot };
   }
 
@@ -245,6 +248,7 @@ function createDefaultBusValue(bus: Bus, builder: IRBuilder): ValueRefPacked | n
     const value = bus.defaultValue ?? 0;
     const fieldId = builder.fieldConst(value, type);
     const slot = builder.allocValueSlot();
+    builder.registerFieldSlot(fieldId, slot);
     return { k: "field", id: fieldId, slot };
   }
 

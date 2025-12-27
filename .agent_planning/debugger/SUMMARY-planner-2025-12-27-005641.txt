@@ -1,0 +1,4 @@
+Agent: status-planner | 2025-12-27-005641
+Topic: Phase 7 Debug Infrastructure
+Files: PLAN-2025-12-27-005641.md, DOD-2025-12-27-005641.md
+Items: 3 (P0: 2, P1: 1)

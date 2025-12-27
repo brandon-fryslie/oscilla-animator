@@ -75,6 +75,10 @@ export const FieldZipOp = {
   Max: 'Max',
   Pow: 'Pow',
   Mod: 'Mod',
+  Vec2Add: 'Vec2Add',
+  Vec2Sub: 'Vec2Sub',
+  Vec2Mul: 'Vec2Mul',
+  Vec2Div: 'Vec2Div',
 } as const;
 
 export type FieldZipOp = typeof FieldZipOp[keyof typeof FieldZipOp];
@@ -82,7 +86,7 @@ export type FieldZipOp = typeof FieldZipOp[keyof typeof FieldZipOp];
 /**
  * CombineMode: How to combine multiple field terms
  */
-export type CombineMode = 'sum' | 'average' | 'min' | 'max' | 'last';
+export type CombineMode = 'sum' | 'average' | 'min' | 'max' | 'last' | 'product';
 
 // =============================================================================
 // ID Types
@@ -194,7 +198,7 @@ export interface SlotHandles {
  */
 export interface FieldHandleCache {
   handles: FieldHandle[];
-  stamp: number[];
+  stamp: Uint32Array | number[];
   frameId: number;
 }
 

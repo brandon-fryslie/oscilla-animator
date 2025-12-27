@@ -445,4 +445,190 @@ describe("IRBuilder", () => {
       expect(ir.renderSinks[0].inputs.color).toBe(slot1);
     });
   });
+
+  describe("Debug Index Population", () => {
+    it("tracks sigExprSource when currentBlockId is set", () => {
+      const builder = new IRBuilderImpl();
+      const type = makeType("signal", "number");
+
+      builder.setCurrentBlockId("Block#1");
+      const sig1 = builder.sigConst(42, type);
+      const sig2 = builder.sigTimeAbsMs();
+
+      builder.setCurrentBlockId("Block#2");
+      const sig3 = builder.sigPhase01();
+
+      const ir = builder.build();
+
+      expect(ir.debugIndex.sigExprSource.get(sig1)).toBe("Block#1");
+      expect(ir.debugIndex.sigExprSource.get(sig2)).toBe("Block#1");
+      expect(ir.debugIndex.sigExprSource.get(sig3)).toBe("Block#2");
+    });
+
+    it("tracks fieldExprSource when currentBlockId is set", () => {
+      const builder = new IRBuilderImpl();
+      const type = makeType("field", "number");
+
+      builder.setCurrentBlockId("FieldBlock#1");
+      const field1 = builder.fieldConst([1, 2, 3], type);
+
+      builder.setCurrentBlockId("FieldBlock#2");
+      const field2 = builder.fieldConst([4, 5, 6], type);
+
+      const ir = builder.build();
+
+      expect(ir.debugIndex.fieldExprSource.get(field1)).toBe("FieldBlock#1");
+      expect(ir.debugIndex.fieldExprSource.get(field2)).toBe("FieldBlock#2");
+    });
+
+    it("tracks slotSource when currentBlockId and debugName are set", () => {
+      const builder = new IRBuilderImpl();
+      const type = makeType("signal", "number");
+
+      builder.setCurrentBlockId("TimeRoot#1");
+      const slot1 = builder.allocValueSlot(type, "phase01");
+      const slot2 = builder.allocValueSlot(type, "tModelMs");
+
+      builder.setCurrentBlockId("Oscillator#1");
+      const slot3 = builder.allocValueSlot(type, "output");
+
+      const ir = builder.build();
+
+      expect(ir.debugIndex.slotSource.get(slot1)).toEqual({ blockId: "TimeRoot#1", slotId: "phase01" });
+      expect(ir.debugIndex.slotSource.get(slot2)).toEqual({ blockId: "TimeRoot#1", slotId: "tModelMs" });
+      expect(ir.debugIndex.slotSource.get(slot3)).toEqual({ blockId: "Oscillator#1", slotId: "output" });
+    });
+
+    it("does not track when currentBlockId is undefined", () => {
+      const builder = new IRBuilderImpl();
+      const type = makeType("signal", "number");
+
+      // No setCurrentBlockId call
+      const sig = builder.sigConst(42, type);
+
+      const ir = builder.build();
+
+      expect(ir.debugIndex.sigExprSource.get(sig)).toBeUndefined();
+    });
+
+    it("given 3 blocks, debugIndex contains 3+ sigExpr mappings", () => {
+      const builder = new IRBuilderImpl();
+      const type = makeType("signal", "number");
+
+      // Simulate compiling 3 blocks
+      builder.setCurrentBlockId("Block#1");
+      builder.sigConst(1, type);
+      builder.sigTimeAbsMs();
+
+      builder.setCurrentBlockId("Block#2");
+      builder.sigConst(2, type);
+      builder.sigPhase01();
+
+      builder.setCurrentBlockId("Block#3");
+      builder.sigConst(3, type);
+
+      const ir = builder.build();
+
+      // Should have at least 5 entries (2 + 2 + 1)
+      expect(ir.debugIndex.sigExprSource.size).toBeGreaterThanOrEqual(5);
+
+      // Should have entries from all 3 blocks
+      const blockIds = new Set(ir.debugIndex.sigExprSource.values());
+      expect(blockIds.has("Block#1")).toBe(true);
+      expect(blockIds.has("Block#2")).toBe(true);
+      expect(blockIds.has("Block#3")).toBe(true);
+    });
+
+    it("given field-using blocks, debugIndex.fieldExprSource is populated", () => {
+      const builder = new IRBuilderImpl();
+      const sigType = makeType("signal", "number");
+      const fieldType = makeType("field", "number");
+
+      // Simulate a block that uses fields
+      builder.setCurrentBlockId("DomainBlock#1");
+      const domainSlot = builder.domainFromN(100);
+
+      builder.setCurrentBlockId("PositionBlock#1");
+      const sig = builder.sigConst(42, sigType);
+      const broadcastField = builder.broadcastSigToField(sig, domainSlot, fieldType);
+
+      const ir = builder.build();
+
+      // Should have field expression mappings
+      expect(ir.debugIndex.fieldExprSource.size).toBeGreaterThan(0);
+      expect(ir.debugIndex.fieldExprSource.get(broadcastField)).toBe("PositionBlock#1");
+    });
+
+    it("clearing currentBlockId stops tracking", () => {
+      const builder = new IRBuilderImpl();
+      const type = makeType("signal", "number");
+
+      builder.setCurrentBlockId("Block#1");
+      const sig1 = builder.sigConst(1, type);
+
+      builder.setCurrentBlockId(undefined);
+      const sig2 = builder.sigConst(2, type);
+
+      const ir = builder.build();
+
+      expect(ir.debugIndex.sigExprSource.get(sig1)).toBe("Block#1");
+      expect(ir.debugIndex.sigExprSource.get(sig2)).toBeUndefined();
+    });
+
+    it("tracks all signal expression types", () => {
+      const builder = new IRBuilderImpl();
+      const type = makeType("signal", "number");
+
+      builder.setCurrentBlockId("TestBlock#1");
+      const const1 = builder.sigConst(42, type);
+      const timeAbs = builder.sigTimeAbsMs();
+      const timeModel = builder.sigTimeModelMs();
+      const phase = builder.sigPhase01();
+      const wrap = builder.sigWrapEvent();
+      const mapped = builder.sigMap(const1, { fnId: "sin", outputType: type });
+      const zipped = builder.sigZip(const1, const1, { fnId: "add", outputType: type });
+      const selected = builder.sigSelect(const1, const1, const1, type);
+      const combined = builder.sigCombine(0 as import("../types").BusIndex, [const1], "sum", type);
+
+      const ir = builder.build();
+
+      // All signal expressions should be tracked
+      expect(ir.debugIndex.sigExprSource.get(const1)).toBe("TestBlock#1");
+      expect(ir.debugIndex.sigExprSource.get(timeAbs)).toBe("TestBlock#1");
+      expect(ir.debugIndex.sigExprSource.get(timeModel)).toBe("TestBlock#1");
+      expect(ir.debugIndex.sigExprSource.get(phase)).toBe("TestBlock#1");
+      expect(ir.debugIndex.sigExprSource.get(wrap)).toBe("TestBlock#1");
+      expect(ir.debugIndex.sigExprSource.get(mapped)).toBe("TestBlock#1");
+      expect(ir.debugIndex.sigExprSource.get(zipped)).toBe("TestBlock#1");
+      expect(ir.debugIndex.sigExprSource.get(selected)).toBe("TestBlock#1");
+      expect(ir.debugIndex.sigExprSource.get(combined)).toBe("TestBlock#1");
+    });
+
+    it("tracks all field expression types", () => {
+      const builder = new IRBuilderImpl();
+      const sigType = makeType("signal", "number");
+      const fieldType = makeType("field", "number");
+
+      builder.setCurrentBlockId("TestFieldBlock#1");
+      const domainSlot = builder.domainFromN(10);
+      const const1 = builder.sigConst(42, sigType);
+
+      const fieldConst = builder.fieldConst([1, 2, 3], fieldType);
+      const fieldMapped = builder.fieldMap(fieldConst, { fnId: "sin", outputType: fieldType });
+      const fieldZipped = builder.fieldZip(fieldConst, fieldConst, { fnId: "add", outputType: fieldType });
+      const fieldSelected = builder.fieldSelect(fieldConst, fieldConst, fieldConst, fieldType);
+      const broadcast = builder.broadcastSigToField(const1, domainSlot, fieldType);
+      const combined = builder.fieldCombine(0 as import("../types").BusIndex, [fieldConst], "sum", fieldType);
+
+      const ir = builder.build();
+
+      // All field expressions should be tracked
+      expect(ir.debugIndex.fieldExprSource.get(fieldConst)).toBe("TestFieldBlock#1");
+      expect(ir.debugIndex.fieldExprSource.get(fieldMapped)).toBe("TestFieldBlock#1");
+      expect(ir.debugIndex.fieldExprSource.get(fieldZipped)).toBe("TestFieldBlock#1");
+      expect(ir.debugIndex.fieldExprSource.get(fieldSelected)).toBe("TestFieldBlock#1");
+      expect(ir.debugIndex.fieldExprSource.get(broadcast)).toBe("TestFieldBlock#1");
+      expect(ir.debugIndex.fieldExprSource.get(combined)).toBe("TestFieldBlock#1");
+    });
+  });
 });

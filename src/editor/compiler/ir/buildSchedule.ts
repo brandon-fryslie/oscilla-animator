@@ -31,12 +31,30 @@ import type {
   StateCellLayout,
   ScheduleIR,
   StepIR,
+  StepDebugProbe,
   OutputSpec,
   ProgramMeta,
   TypeTable,
   ValueSlot,
+  Instance2DBatch,
+  PathBatch,
 } from "./index";
 import { randomUUID } from "../../crypto";
+
+/**
+ * Debug configuration for schedule building.
+ *
+ * Controls insertion of debug probe steps into the schedule.
+ */
+export interface ScheduleDebugConfig {
+  /**
+   * Probe mode:
+   * - 'off': No debug probes inserted (default)
+   * - 'basic': Insert probes after key evaluation steps (time, bus, signals)
+   * - 'full': Insert probes after every significant step
+   */
+  probeMode: 'off' | 'basic' | 'full';
+}
 
 /**
  * Domain handle - stored in ValueStore to represent a domain.
@@ -47,44 +65,9 @@ interface DomainHandle {
   count: number;
 }
 
-/**
- * Instance2D batch descriptor - stored in ValueStore at instance2dListSlot.
- * References slots containing materialized buffers.
- */
-interface Instance2DBatchDescriptor {
-  kind: "instance2d";
-  count: number;
-  xSlot: ValueSlot;
-  ySlot: ValueSlot;
-  radiusSlot: ValueSlot;
-  rSlot: ValueSlot;
-  gSlot: ValueSlot;
-  bSlot: ValueSlot;
-  aSlot: ValueSlot;
-}
-
-/**
- * Instance2D batch list - stored in ValueStore
- */
-interface Instance2DBatchList {
-  batches: Instance2DBatchDescriptor[];
-}
-
-/**
- * Path batch descriptor
- */
-interface PathBatchDescriptor {
-  kind: "path";
-  cmdsSlot: ValueSlot;
-  paramsSlot: ValueSlot;
-}
-
-/**
- * Path batch list
- */
-interface PathBatchList {
-  batches: PathBatchDescriptor[];
-}
+// Note: Instance2DBatchDescriptor, Instance2DBatchList, PathBatchList, and
+// PathBatchDescriptor were moved to compile-time config embedded in the step,
+// not slot values. See 12-ValueSlotPerNodeOutput.md
 
 /**
  * Convert BuilderProgramIR to CompiledProgramIR.
@@ -97,7 +80,8 @@ export function buildCompiledProgram(
   builderIR: BuilderProgramIR,
   patchId: string,
   patchRevision: number,
-  seed: number
+  seed: number,
+  debugConfig?: ScheduleDebugConfig,
 ): CompiledProgramIR {
   // Create empty tables (will be populated as we implement more passes)
   const emptyTypeTable: TypeTable = { typeIds: [] };
@@ -105,7 +89,8 @@ export function buildCompiledProgram(
   const emptyBusTable: BusTable = { buses: [] };
   const emptyLensTable: LensTable = { lenses: [] };
   const emptyAdapterTable: AdapterTable = { adapters: [] };
-  const emptyFieldExprTable: FieldExprTable = { nodes: [] };
+  const fieldExprTable: FieldExprTable = { nodes: builderIR.fieldIR.nodes };
+  const signalTable = { nodes: builderIR.signalIR.nodes };
 
   // Convert constants from simple array to packed format
   const constPool: ConstPool = {
@@ -134,13 +119,13 @@ export function buildCompiledProgram(
   };
 
   // Build schedule (now processes render sinks)
-  const { schedule, frameOutSlot } = buildSchedule(builderIR);
+  const { schedule, frameOutSlot } = buildSchedule(builderIR, { debugConfig });
 
   // Create outputs that reference the frame output slot
   const outputs: OutputSpec[] = frameOutSlot !== undefined
     ? [{
         id: "frame",
-        kind: "renderTree" as const,
+        kind: "renderFrame" as const,
         slot: frameOutSlot,
         label: "Render Frame",
       }]
@@ -158,6 +143,14 @@ export function buildCompiledProgram(
     },
   };
 
+  // Convert SlotMetaEntry to SlotMeta (add offset = slot for dense allocation)
+  const slotMeta = builderIR.slotMeta.map((entry) => ({
+    slot: entry.slot,
+    storage: entry.storage,
+    offset: entry.slot, // Dense allocation: offset = slot index
+    type: entry.type,
+  }));
+
   return {
     irVersion: 1,
     patchId,
@@ -170,9 +163,11 @@ export function buildCompiledProgram(
     buses: emptyBusTable,
     lenses: emptyLensTable,
     adapters: emptyAdapterTable,
-    fields: emptyFieldExprTable,
+    fields: fieldExprTable,
+    signalTable,
     constants: constPool,
     stateLayout,
+    slotMeta,
     schedule,
     outputs,
     meta,
@@ -183,7 +178,11 @@ export function buildCompiledProgram(
  * Slot allocator - tracks next available slot.
  */
 class SlotAllocator {
-  private nextSlot = 0;
+  private nextSlot: number;
+
+  constructor(startSlot = 0) {
+    this.nextSlot = startSlot;
+  }
 
   alloc(): ValueSlot {
     return this.nextSlot++ as ValueSlot;
@@ -203,6 +202,14 @@ interface BuildScheduleResult {
 }
 
 /**
+ * Options for buildSchedule.
+ */
+interface BuildScheduleOptions {
+  /** Debug configuration (optional) */
+  debugConfig?: ScheduleDebugConfig;
+}
+
+/**
  * Build a basic execution schedule.
  *
  * The schedule is minimal but follows the correct evaluation order:
@@ -212,24 +219,96 @@ interface BuildScheduleResult {
  * 4. Geometry materialization (test data for now)
  * 5. Render assembly
  *
+ * Per design-docs/13-Renderer/12-ValueSlotPerNodeOutput.md:
+ * - Lowering allocates all output slots (including time slots from TimeRoot)
+ * - Schedule only orders and allocates buffers (materialization outputs + frame slot)
+ *
+ * Debug Probe Insertion (Phase 7):
+ * - probeMode='off': No probes (default, zero overhead)
+ * - probeMode='basic': Probes after time derive and signal eval steps
+ * - probeMode='full': Probes after every significant step
+ *
  * References:
  * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md §A2
+ * - design-docs/13-Renderer/12-ValueSlotPerNodeOutput.md
+ * - .agent_planning/debugger/PLAN-2025-12-27-005641.md (Phase 7 Debug Infrastructure)
  */
-function buildSchedule(builderIR: BuilderProgramIR): BuildScheduleResult {
+function buildSchedule(
+  builderIR: BuilderProgramIR,
+  options?: BuildScheduleOptions,
+): BuildScheduleResult {
   const steps: StepIR[] = [];
-  const slots = new SlotAllocator();
+  const slots = new SlotAllocator(builderIR.nextValueSlot ?? 0);
+  const probeMode = options?.debugConfig?.probeMode ?? 'off';
+  let probeCounter = 0;
 
-  // Allocate time-related slots
-  const SLOT_T_ABS_MS = slots.alloc();
-  const SLOT_T_MODEL_MS = slots.alloc();
-  const SLOT_PROGRESS_01 = slots.alloc();
+  /**
+   * Insert a debug probe step after a preceding step.
+   * Only inserts if probeMode is not 'off'.
+   *
+   * @param category - Category for probe ID (e.g., 'time', 'signal', 'bus')
+   * @param precedingStepId - ID of the step this probe follows
+   * @param slotsToProbe - Slots to capture values from
+   */
+  const maybeInsertProbe = (
+    category: string,
+    precedingStepId: string,
+    slotsToProbe: ValueSlot[],
+  ): void => {
+    if (probeMode === 'off' || slotsToProbe.length === 0) {
+      return;
+    }
 
-  // Allocate batch list slots
-  const SLOT_INSTANCE2D_LIST = slots.alloc();
-  const SLOT_PATH_BATCH_LIST = slots.alloc();
+    const probeId = `probe:${category}:${probeCounter++}`;
+    const probe: StepDebugProbe = {
+      kind: 'debugProbe',
+      id: `step-${probeId}`,
+      deps: [precedingStepId],
+      probe: {
+        id: probeId,
+        slots: slotsToProbe,
+        mode: 'value',
+      },
+    };
+    steps.push(probe);
+  };
+
+  const sigSlotToId = new Map<ValueSlot, number>();
+  builderIR.sigValueSlots.forEach((slot, sigId) => {
+    if (slot !== undefined) {
+      sigSlotToId.set(slot, sigId);
+    }
+  });
+
+  const fieldSlotToId = new Map<ValueSlot, number>();
+  builderIR.fieldValueSlots.forEach((slot, fieldId) => {
+    if (slot !== undefined) {
+      fieldSlotToId.set(slot, fieldId);
+    }
+  });
+
+  // Time slots come from lowering (TimeRoot block allocates them)
+  // If no TimeRoot was lowered, we fall back to local allocation
+  const timeSlots = builderIR.timeSlots ?? {
+    // Fallback for patches without TimeRoot (allocate locally)
+    tAbsMs: slots.alloc(),
+    tModelMs: slots.alloc(),
+    progress01: slots.alloc(),
+  };
+
+  const SLOT_T_ABS_MS = timeSlots.tAbsMs;
+  const SLOT_T_MODEL_MS = timeSlots.tModelMs;
+  const SLOT_PROGRESS_01 = timeSlots.progress01 ?? timeSlots.tModelMs;
+
+  // Allocate frame output slot
+  // Per 12-ValueSlotPerNodeOutput.md: schedule allocates only:
+  // - Materialization buffer slots (done in processInstances2DSink)
+  // - Frame output slot
+  // Batch lists are compile-time config embedded in the step, not slots
   const SLOT_FRAME_OUT = slots.alloc();
 
   // Step 1: Time Derive
+  // Use slots from lowering where available
   steps.push({
     kind: "timeDerive",
     id: "step-time-derive",
@@ -240,36 +319,87 @@ function buildSchedule(builderIR: BuilderProgramIR): BuildScheduleResult {
     out: {
       tModelMs: SLOT_T_MODEL_MS,
       progress01: SLOT_PROGRESS_01,
+      phase01: timeSlots.phase01,
+      wrapEvent: timeSlots.wrapEvent,
     },
   });
 
+  // Debug probe after time derive (basic + full mode)
+  {
+    const timeSlotsToProbe: ValueSlot[] = [SLOT_T_MODEL_MS, SLOT_PROGRESS_01];
+    if (timeSlots.phase01 !== undefined) timeSlotsToProbe.push(timeSlots.phase01);
+    if (timeSlots.wrapEvent !== undefined) timeSlotsToProbe.push(timeSlots.wrapEvent);
+    maybeInsertProbe('time', 'step-time-derive', timeSlotsToProbe);
+  }
+
+  // Step 1b: Signal Eval (write signal outputs to slots)
+  const signalOutputs = builderIR.sigValueSlots
+    .map((slot, sigId) => (slot !== undefined ? { sigId, slot } : null))
+    .filter((entry): entry is { sigId: number; slot: ValueSlot } => entry !== null);
+
+  if (signalOutputs.length > 0) {
+    steps.push({
+      kind: "signalEval",
+      id: "step-signal-eval",
+      deps: ["step-time-derive"],
+      label: "Evaluate signals",
+      outputs: signalOutputs,
+    });
+
+    // Debug probe after signal eval (basic + full mode)
+    const signalSlots = signalOutputs.map(o => o.slot);
+    maybeInsertProbe('signal', 'step-signal-eval', signalSlots);
+  }
+
   // Step 2: Process render sinks and emit materialization steps
-  const instance2dBatches: Instance2DBatchDescriptor[] = [];
-  const pathBatches: PathBatchDescriptor[] = [];
+  // Batch descriptors are compile-time config, not slot values
+  const instance2dBatches: Instance2DBatch[] = [];
+  const pathBatches: PathBatch[] = [];
   const materializeStepIds: string[] = [];
 
   for (let sinkIdx = 0; sinkIdx < builderIR.renderSinks.length; sinkIdx++) {
     const sink = builderIR.renderSinks[sinkIdx];
 
     if (sink.sinkType === "instances2d") {
-      const result = processInstances2DSink(sink, sinkIdx, slots, steps);
+      const result = processInstances2DSink(
+        sink,
+        sinkIdx,
+        slots,
+        steps,
+        sigSlotToId,
+        fieldSlotToId,
+      );
       instance2dBatches.push(result.batch);
       materializeStepIds.push(...result.stepIds);
+
+      // In 'full' mode, add probes after each materialization step
+      if (probeMode === 'full') {
+        // Probe the output buffer slots from each materialization
+        maybeInsertProbe('materialize', result.stepIds[result.stepIds.length - 1], [
+          result.batch.posXYSlot,
+          result.batch.colorRGBASlot,
+        ]);
+      }
     }
     // Future: handle "paths2d" sinks
   }
 
   // Step 3: Render Assemble
   // Depends on all materialization steps
-  const renderAssembleDeps = ["step-time-derive", ...materializeStepIds];
+  // Batch lists are embedded directly in the step (compile-time config)
+  const renderAssembleDeps = [
+    "step-time-derive",
+    ...(signalOutputs.length > 0 ? ["step-signal-eval"] : []),
+    ...materializeStepIds,
+  ];
 
   steps.push({
     kind: "renderAssemble",
     id: "step-render-assemble",
     deps: renderAssembleDeps,
     label: "Assemble render frame",
-    instance2dListSlot: SLOT_INSTANCE2D_LIST,
-    pathBatchListSlot: SLOT_PATH_BATCH_LIST,
+    instance2dBatches,
+    pathBatches,
     outFrameSlot: SLOT_FRAME_OUT,
   });
 
@@ -296,11 +426,9 @@ function buildSchedule(builderIR: BuilderProgramIR): BuildScheduleResult {
       stepCache: {},
       materializationCache: {},
     },
-    // Store initial slot values for batch lists and domains
+    // Initialize domain slots with Domain handles
+    // Batch lists are now embedded in the renderAssemble step (compile-time config)
     initialSlotValues: {
-      [SLOT_INSTANCE2D_LIST]: { batches: instance2dBatches } as Instance2DBatchList,
-      [SLOT_PATH_BATCH_LIST]: { batches: pathBatches } as PathBatchList,
-      // Initialize domain slots with Domain handles
       ...Object.fromEntries(
         builderIR.domains.map((d) => [
           d.slot,
@@ -320,76 +448,119 @@ function buildSchedule(builderIR: BuilderProgramIR): BuildScheduleResult {
  * Process an instances2d render sink.
  * Allocates buffer slots and emits materializeColor step + test geometry step.
  *
- * @returns Batch descriptor and step IDs for dependencies
+ * Per 12-ValueSlotPerNodeOutput.md:
+ * - Schedule allocates only materialization buffer slots (step outputs)
+ * - Batch descriptor is compile-time config, not a slot value
+ *
+ * @returns Batch descriptor (compile-time config) and step IDs for dependencies
  */
 function processInstances2DSink(
   sink: RenderSinkIR,
   sinkIdx: number,
   slots: SlotAllocator,
-  steps: StepIR[]
-): { batch: Instance2DBatchDescriptor; stepIds: string[] } {
+  steps: StepIR[],
+  sigSlotToId: Map<ValueSlot, number>,
+  fieldSlotToId: Map<ValueSlot, number>,
+): { batch: Instance2DBatch; stepIds: string[] } {
   const stepIds: string[] = [];
 
   // Get input slots from sink
   const domainSlot = sink.inputs.domain as ValueSlot;
   const colorSlot = sink.inputs.color as ValueSlot;
+  const positionsSlot = sink.inputs.positions as ValueSlot;
+  const radiusSlot = sink.inputs.radius as ValueSlot;
+  if (sink.inputs.opacity === undefined) {
+    throw new Error("processInstances2DSink: missing opacity input");
+  }
+  const opacitySlot = sink.inputs.opacity as ValueSlot;
 
-  // Allocate output buffer slots for position (x, y)
-  const xSlot = slots.alloc();
-  const ySlot = slots.alloc();
+  const positionsFieldId = fieldSlotToId.get(positionsSlot);
+  if (positionsFieldId === undefined) {
+    throw new Error(`processInstances2DSink: positions slot ${positionsSlot} has no field expression`);
+  }
 
-  // Allocate output buffer slot for radius
-  const radiusOutSlot = slots.alloc();
+  const colorFieldId = fieldSlotToId.get(colorSlot);
+  if (colorFieldId === undefined) {
+    throw new Error(`processInstances2DSink: color slot ${colorSlot} has no field expression`);
+  }
 
-  // Allocate output buffer slots for RGBA
-  const rSlot = slots.alloc();
-  const gSlot = slots.alloc();
-  const bSlot = slots.alloc();
-  const aSlot = slots.alloc();
+  const radiusSigId = sigSlotToId.get(radiusSlot);
+  const radiusFieldId = fieldSlotToId.get(radiusSlot);
+  if (radiusSigId === undefined && radiusFieldId === undefined) {
+    throw new Error(`processInstances2DSink: radius slot ${radiusSlot} has no signal or field expression`);
+  }
 
-  // Emit StepMaterializeColor for the color field
+  // Allocate output buffer slots for positions and size/color
+  const posXYSlot = slots.alloc();
+  const sizeOutSlot = radiusFieldId !== undefined ? slots.alloc() : radiusSlot;
+  const colorOutSlot = slots.alloc();
+
+  // Emit StepMaterialize for positions (vec2f32)
+  const posStepId = `step-mat-pos-${sinkIdx}`;
+  steps.push({
+    kind: "materialize",
+    id: posStepId,
+    deps: ["step-time-derive"],
+    label: `Materialize positions for sink ${sinkIdx}`,
+    materialization: {
+      id: `mat-pos-${sinkIdx}`,
+      fieldExprId: String(positionsFieldId),
+      domainSlot,
+      outBufferSlot: posXYSlot,
+      format: { components: 2, elementType: "f32" },
+      policy: "perFrame",
+    },
+  });
+  stepIds.push(posStepId);
+
+  // Emit StepMaterialize for radius if needed
+  if (radiusFieldId !== undefined) {
+    const radiusStepId = `step-mat-size-${sinkIdx}`;
+    steps.push({
+      kind: "materialize",
+      id: radiusStepId,
+      deps: ["step-time-derive"],
+      label: `Materialize size for sink ${sinkIdx}`,
+      materialization: {
+        id: `mat-size-${sinkIdx}`,
+        fieldExprId: String(radiusFieldId),
+        domainSlot,
+        outBufferSlot: sizeOutSlot,
+        format: { components: 1, elementType: "f32" },
+        policy: "perFrame",
+      },
+    });
+    stepIds.push(radiusStepId);
+  }
+
+  // Emit StepMaterialize for color (rgba8)
   const colorStepId = `step-mat-color-${sinkIdx}`;
   steps.push({
-    kind: "materializeColor",
+    kind: "materialize",
     id: colorStepId,
     deps: ["step-time-derive"],
     label: `Materialize color for sink ${sinkIdx}`,
-    domainSlot,
-    colorExprSlot: colorSlot,
-    outRSlot: rSlot,
-    outGSlot: gSlot,
-    outBSlot: bSlot,
-    outASlot: aSlot,
+    materialization: {
+      id: `mat-color-${sinkIdx}`,
+      fieldExprId: String(colorFieldId),
+      domainSlot,
+      outBufferSlot: colorOutSlot,
+      format: { components: 4, elementType: "u8" },
+      policy: "perFrame",
+    },
   });
   stepIds.push(colorStepId);
 
-  // Emit StepMaterializeTestGeometry for positions and radius
-  // This is a temporary step that creates test data until we implement full field materialization
-  const geomStepId = `step-mat-test-geom-${sinkIdx}`;
-  steps.push({
-    kind: "materializeTestGeometry",
-    id: geomStepId,
-    deps: ["step-time-derive"],
-    label: `Materialize test geometry for sink ${sinkIdx}`,
-    domainSlot,
-    outXSlot: xSlot,
-    outYSlot: ySlot,
-    outRadiusSlot: radiusOutSlot,
-  });
-  stepIds.push(geomStepId);
-
-  // Create batch descriptor that references the output slots
-  // The count will be determined at runtime from the domain
-  const batch: Instance2DBatchDescriptor = {
+  // Create batch descriptor (compile-time configuration)
+  // References materialization buffer slots allocated above
+  const batch: Instance2DBatch = {
     kind: "instance2d",
-    count: 0, // Will be set at runtime from domain
-    xSlot,
-    ySlot,
-    radiusSlot: radiusOutSlot,
-    rSlot,
-    gSlot,
-    bSlot,
-    aSlot,
+    count: 0, // Will be determined at runtime from domain
+    domainSlot,
+    posXYSlot,
+    sizeSlot: sizeOutSlot,
+    colorRGBASlot: colorOutSlot,
+    opacitySlot,
   };
 
   return { batch, stepIds };

@@ -17,6 +17,9 @@ import type {
   CompiledProgramIR,
 } from "../../../compiler/ir";
 
+// Default effective time for tests
+const defaultTime = { tAbsMs: 1000, tModelMs: 1000, phase01: 0.5 };
+
 describe("executeMaterialize", () => {
   let runtime: RuntimeState;
   let program: CompiledProgramIR;
@@ -49,7 +52,7 @@ describe("executeMaterialize", () => {
       runtime.values.write(0, 0);
 
       expect(() => {
-        executeMaterialize(step, program, runtime);
+        executeMaterialize(step, program, runtime, defaultTime);
       }).toThrow("Invalid domain count 0");
     });
 
@@ -57,7 +60,7 @@ describe("executeMaterialize", () => {
       runtime.values.write(0, -10);
 
       expect(() => {
-        executeMaterialize(step, program, runtime);
+        executeMaterialize(step, program, runtime, defaultTime);
       }).toThrow("Invalid domain count -10");
     });
 
@@ -65,7 +68,7 @@ describe("executeMaterialize", () => {
       runtime.values.write(0, 100);
 
       expect(() => {
-        executeMaterialize(step, program, runtime);
+        executeMaterialize(step, program, runtime, defaultTime);
       }).not.toThrow();
     });
   });
@@ -74,7 +77,7 @@ describe("executeMaterialize", () => {
     it("creates buffer with correct element count for scalar format", () => {
       runtime.values.write(0, 50);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.kind).toBe("buffer");
@@ -85,7 +88,7 @@ describe("executeMaterialize", () => {
       step.materialization.format = { components: 2, elementType: "f32" };
       runtime.values.write(0, 25);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.data.byteLength).toBe(25 * 2 * 4); // 25 vec2f32 elements
@@ -95,7 +98,7 @@ describe("executeMaterialize", () => {
       step.materialization.format = { components: 4, elementType: "f32" };
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.data.byteLength).toBe(10 * 4 * 4); // 10 vec4f32 elements
@@ -107,7 +110,7 @@ describe("executeMaterialize", () => {
       step.materialization.format = { components: 1, elementType: "f32" };
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.data).toBeInstanceOf(Float32Array);
@@ -117,7 +120,7 @@ describe("executeMaterialize", () => {
       step.materialization.format = { components: 1, elementType: "f64" };
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.data).toBeInstanceOf(Float64Array);
@@ -127,7 +130,7 @@ describe("executeMaterialize", () => {
       step.materialization.format = { components: 1, elementType: "i32" };
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.data).toBeInstanceOf(Int32Array);
@@ -137,7 +140,7 @@ describe("executeMaterialize", () => {
       step.materialization.format = { components: 1, elementType: "u32" };
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.data).toBeInstanceOf(Uint32Array);
@@ -147,7 +150,7 @@ describe("executeMaterialize", () => {
       step.materialization.format = { components: 1, elementType: "u8" };
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.data).toBeInstanceOf(Uint8Array);
@@ -158,14 +161,14 @@ describe("executeMaterialize", () => {
     it("returns cached buffer for same field+domain+format within frame", () => {
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
       const handle1 = runtime.values.read(1) as BufferHandle;
 
       // Clear the output slot to allow re-write
       runtime.values.clear();
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
       const handle2 = runtime.values.read(1) as BufferHandle;
 
       // Same buffer instance should be returned (cached)
@@ -175,7 +178,7 @@ describe("executeMaterialize", () => {
     it("returns fresh buffer after newFrame", () => {
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
       const handle1 = runtime.values.read(1) as BufferHandle;
 
       // Start new frame
@@ -183,7 +186,7 @@ describe("executeMaterialize", () => {
       runtime.values.clear();
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
       const handle2 = runtime.values.read(1) as BufferHandle;
 
       // Different buffer instance after newFrame (cache was cleared)
@@ -193,7 +196,7 @@ describe("executeMaterialize", () => {
     it("returns different buffers for different formats", () => {
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
       const handle1 = runtime.values.read(1) as BufferHandle;
 
       // Change format
@@ -201,7 +204,7 @@ describe("executeMaterialize", () => {
       runtime.values.clear();
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
       const handle2 = runtime.values.read(1) as BufferHandle;
 
       // Different buffers for different formats
@@ -213,7 +216,7 @@ describe("executeMaterialize", () => {
     it("writes buffer handle with correct kind", () => {
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.kind).toBe("buffer");
@@ -223,7 +226,7 @@ describe("executeMaterialize", () => {
       step.materialization.format = { components: 2, elementType: "f64" };
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.format.components).toBe(2);
@@ -239,7 +242,7 @@ describe("executeMaterialize", () => {
       runtime = createRuntimeState(program);
       runtime.values.write(0, 10);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(5) as BufferHandle;
       expect(handle).toBeDefined();
@@ -251,7 +254,7 @@ describe("executeMaterialize", () => {
     it("handles small domain (N=1)", () => {
       runtime.values.write(0, 1);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.data.byteLength).toBe(4); // 1 f32
@@ -260,7 +263,7 @@ describe("executeMaterialize", () => {
     it("handles medium domain (N=100)", () => {
       runtime.values.write(0, 100);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.data.byteLength).toBe(400); // 100 f32
@@ -269,7 +272,7 @@ describe("executeMaterialize", () => {
     it("handles large domain (N=10000)", () => {
       runtime.values.write(0, 10000);
 
-      executeMaterialize(step, program, runtime);
+      executeMaterialize(step, program, runtime, defaultTime);
 
       const handle = runtime.values.read(1) as BufferHandle;
       expect(handle.data.byteLength).toBe(40000); // 10000 f32

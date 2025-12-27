@@ -121,6 +121,49 @@ export interface BuilderDebugIndex {
 }
 
 // =============================================================================
+// Slot Metadata (emitted during lowering)
+// =============================================================================
+
+/**
+ * Metadata for a value slot, emitted during lowering.
+ * This is the canonical source of slot type/storage info.
+ */
+export interface SlotMetaEntry {
+  /** Slot index */
+  slot: ValueSlot;
+
+  /** Storage type (inferred from TypeDesc) */
+  storage: "f64" | "f32" | "i32" | "u32" | "object";
+
+  /** Type descriptor for this slot */
+  type: TypeDesc;
+
+  /** Optional debug name for the slot */
+  debugName?: string;
+}
+
+/**
+ * Time-related slots allocated by TimeRoot during lowering.
+ * Schedule references these rather than allocating its own.
+ */
+export interface TimeSlots {
+  /** Slot for absolute time in ms (input from runtime) */
+  tAbsMs: ValueSlot;
+
+  /** Slot for model-adjusted time in ms */
+  tModelMs: ValueSlot;
+
+  /** Slot for phase [0,1] */
+  phase01?: ValueSlot;
+
+  /** Slot for progress [0,1] */
+  progress01?: ValueSlot;
+
+  /** Slot for wrap event trigger */
+  wrapEvent?: ValueSlot;
+}
+
+// =============================================================================
 // Signal IR Table
 // =============================================================================
 
@@ -179,4 +222,34 @@ export interface BuilderProgramIR {
 
   /** Time model (placeholder until time topology pass) */
   timeModel: TimeModelIR;
+
+  /**
+   * Slot metadata - canonical source for all allocated slots.
+   * Emitted during lowering, used by RuntimeState.
+   */
+  slotMeta: readonly SlotMetaEntry[];
+
+  /**
+   * Mapping from SigExprId to output slot.
+   * Indexed by SigExprId; entries may be undefined if unused.
+   */
+  sigValueSlots: readonly (ValueSlot | undefined)[];
+
+  /**
+   * Mapping from FieldExprId to output slot.
+   * Indexed by FieldExprId; entries may be undefined if unused.
+   */
+  fieldValueSlots: readonly (ValueSlot | undefined)[];
+
+  /**
+   * Next available value slot after lowering.
+   * Used by schedule builders to avoid slot collisions.
+   */
+  nextValueSlot: ValueSlot;
+
+  /**
+   * Time-related slots allocated by TimeRoot during lowering.
+   * Schedule references these rather than allocating new ones.
+   */
+  timeSlots?: TimeSlots;
 }

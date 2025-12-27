@@ -8,7 +8,7 @@
  * 2. Check buffer pool cache (same field+domain+format → same buffer)
  * 3. If cache miss, call FieldMaterializer to produce buffer
  * 4. Store buffer in pool cache
- * 5. Write buffer handle to outBufferSlot
+ * 5. Write buffer to outBufferSlot
  *
  * References:
  * - .agent_planning/scheduled-runtime/DOD-2025-12-26-092613.md §Deliverable 3
@@ -27,12 +27,19 @@ import type { MaterializerEnv } from "../../field/Materializer";
 import type {
   MaterializationRequest,
   BufferLayout,
-  FieldExprIR,
   BufferFormat as RuntimeBufferFormat,
   FieldHandle,
   InputSlot,
 } from "../../field/types";
 import { FieldBufferPool } from "../../field/BufferPool";
+import { createSigEnv } from "../../signal-expr/SigEnv";
+import type { SigFrameCache } from "../../signal-expr/SigFrameCache";
+import type { SlotValueReader } from "../../signal-expr/SlotValueReader";
+import type { SignalExprIR } from "../../../compiler/ir/signalExpr";
+import type { FieldExprIR as CompilerFieldExprIR } from "../../../compiler/ir/fieldExpr";
+import type { FieldExprIR as RuntimeFieldExprIR } from "../../field/types";
+import { compilerToRuntimeType } from "../../integration/typeAdapter";
+import { OpCode } from "../../../compiler/ir/opcodes";
 
 // =============================================================================
 // Buffer Handle Type
@@ -117,16 +124,25 @@ function irFormatToRuntimeFormat(irFormat: IRBufferFormat): RuntimeBufferFormat 
 export function executeMaterialize(
   step: StepMaterialize,
   program: CompiledProgramIR,
-  runtime: RuntimeState
+  runtime: RuntimeState,
+  effectiveTime: { tAbsMs: number; tModelMs?: number; phase01?: number; wrapEvent?: number },
 ): void {
   const mat = step.materialization;
 
   // 1. Read domain count from ValueStore
-  const domainCount = runtime.values.read(mat.domainSlot) as number;
+  const domainValue = runtime.values.read(mat.domainSlot);
+  const domainCount =
+    typeof domainValue === "number"
+      ? domainValue
+      : typeof domainValue === "object" &&
+          domainValue !== null &&
+          (domainValue as { kind?: string; count?: number }).kind === "domain"
+        ? (domainValue as { count: number }).count
+        : undefined;
 
   if (typeof domainCount !== "number" || domainCount <= 0) {
     throw new Error(
-      `executeMaterialize: Invalid domain count ${domainCount} from slot ${mat.domainSlot}. ` +
+      `executeMaterialize: Invalid domain count ${String(domainValue)} from slot ${mat.domainSlot}. ` +
         `Domain count must be a positive integer.`
     );
   }
@@ -137,12 +153,7 @@ export function executeMaterialize(
 
   if (cachedBuffer !== undefined) {
     // Cache hit - reuse existing buffer
-    const bufferHandle: BufferHandle = {
-      kind: "buffer",
-      data: cachedBuffer,
-      format: mat.format,
-    };
-    runtime.values.write(mat.outBufferSlot, bufferHandle);
+    runtime.values.write(mat.outBufferSlot, cachedBuffer);
     return;
   }
 
@@ -162,61 +173,22 @@ export function executeMaterialize(
   };
 
   // 4. Build MaterializerEnv from program and runtime
-  const env = buildMaterializerEnv(program, runtime, domainCount);
+  const env = buildMaterializerEnv(program, runtime, domainCount, effectiveTime);
+  env.fieldEnv.domainId = mat.domainSlot;
 
   // 5. Materialize the field
-  // If no field nodes are available (test/stub mode), create a const buffer
-  let buffer: ArrayBufferView;
-  if (env.fieldNodes.length === 0 || fieldId >= env.fieldNodes.length) {
-    // Stub: create empty buffer with correct format
-    const totalElements = domainCount * mat.format.components;
-    buffer = createTypedArray(mat.format.elementType, totalElements);
-  } else {
-    buffer = materialize(request, env);
-  }
+  const buffer = materialize(request, env);
 
   // 6. Store in buffer pool cache
   runtime.frameCache.fieldBuffers.set(cacheKey, buffer);
 
   // 7. Write buffer handle to output slot
-  const bufferHandle: BufferHandle = {
-    kind: "buffer",
-    data: buffer,
-    format: mat.format,
-  };
-  runtime.values.write(mat.outBufferSlot, bufferHandle);
+  runtime.values.write(mat.outBufferSlot, buffer);
 }
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
-
-/**
- * Create a typed array of the specified element type.
- *
- * @param elementType - Element type (f32, f64, i32, u32, u8)
- * @param length - Number of elements
- * @returns TypedArray of appropriate type
- */
-function createTypedArray(
-  elementType: string,
-  length: number
-): ArrayBufferView {
-  switch (elementType) {
-    case "f32":
-      return new Float32Array(length);
-    case "f64":
-      return new Float64Array(length);
-    case "i32":
-      return new Int32Array(length);
-    case "u32":
-      return new Uint32Array(length);
-    case "u8":
-      return new Uint8Array(length);
-    default:
-      return new Float32Array(length); // Default fallback
-  }
-}
 
 /**
  * Parse field expression ID from string format.
@@ -263,13 +235,14 @@ function parseFieldId(fieldExprId: string): number {
 function buildMaterializerEnv(
   program: CompiledProgramIR,
   runtime: RuntimeState,
-  domainCount: number
+  domainCount: number,
+  effectiveTime: { tAbsMs: number; tModelMs?: number; phase01?: number; wrapEvent?: number },
 ): MaterializerEnv {
   // Create buffer pool
   const pool = new FieldBufferPool();
 
   // Use FrameCache's buffer map as per-frame cache
-  const cache = runtime.frameCache.fieldBuffers;
+  const fieldBufferCache = runtime.frameCache.fieldBuffers;
 
   // Build field environment with required fields
   const fieldEnv = {
@@ -277,46 +250,78 @@ function buildMaterializerEnv(
     slotHandles: {
       read: (inputSlot: InputSlot): FieldHandle => {
         const value = runtime.values.read(inputSlot.slot);
-        // Return the value if it's a FieldHandle, otherwise create a const handle
         if (value !== null && typeof value === "object" && "kind" in value) {
           return value as FieldHandle;
         }
-        // For numeric values, wrap in const handle
-        return {
-          kind: "Const" as const,
-          constId: 0,
-          type: { kind: "number" as const },
-        };
+        throw new Error(
+          `executeMaterialize: slot ${inputSlot.slot} does not contain a FieldHandle`
+        );
       },
     },
     // Use FrameCache as handle cache
     cache: {
       handles: runtime.frameCache.fieldHandle,
-      stamp: Array.from(runtime.frameCache.fieldStamp),
+      stamp: runtime.frameCache.fieldStamp,
       frameId: runtime.frameCache.frameId,
     },
     domainId: 0, // Default domain
   };
 
-  // Extract field nodes from program (use empty array if not available)
-  // Note: fieldExprTable is in the IR but may not be on CompiledProgramIR yet
-  const fieldNodes: FieldExprIR[] = [];
+  const fieldNodes = convertFieldNodes(program.fields.nodes);
 
-  // Build signal environment
-  const sigEnv = {
-    time: Date.now(), // Will be replaced by proper time from schedule
+  const signalTable = program.signalTable?.nodes as SignalExprIR[] | undefined;
+  if (!signalTable) {
+    throw new Error("executeMaterialize: program.signalTable is missing");
+  }
+
+  const constPool = program.constants?.json ?? [];
+  const numbers = constPool.map((value) => (typeof value === "number" ? value : NaN));
+
+  const sigFrameCache: SigFrameCache = {
+    frameId: runtime.frameCache.frameId,
+    value: runtime.frameCache.sigValue,
+    stamp: runtime.frameCache.sigStamp,
+    validMask: runtime.frameCache.sigValidMask,
   };
 
-  // Extract signal nodes from program (use empty array if not available)
-  const sigNodes: unknown[] = [];
+  const slotValues: SlotValueReader = {
+    readNumber(slot) {
+      const value = runtime.values.read(slot);
+      if (typeof value !== "number") {
+        throw new Error(`executeMaterialize: slot ${slot} is not a number`);
+      }
+      return value;
+    },
+    hasValue(slot) {
+      try {
+        const value = runtime.values.read(slot);
+        return typeof value === "number";
+      } catch {
+        return false;
+      }
+    },
+  };
+
+  const irEnv = createSigEnv({
+    tAbsMs: effectiveTime.tAbsMs,
+    tModelMs: effectiveTime.tModelMs,
+    phase01: effectiveTime.phase01,
+    wrapOccurred: effectiveTime.wrapEvent === 1,
+    constPool: { numbers },
+    cache: sigFrameCache,
+    slotValues,
+  });
+
+  const sigEnv = {
+    time: effectiveTime.tAbsMs,
+    irEnv,
+    irNodes: signalTable,
+  };
 
   // Build constants table accessor
   const constants = {
-    get: (constId: number): number => {
-      if (program.constants?.f64 !== undefined) {
-        return program.constants.f64[constId] ?? 0;
-      }
-      return 0;
+    get: (constId: number): unknown => {
+      return program.constants?.json?.[constId];
     },
   };
 
@@ -335,13 +340,107 @@ function buildMaterializerEnv(
 
   return {
     pool,
-    cache,
+    cache: fieldBufferCache,
     fieldEnv,
     fieldNodes,
     sigEnv,
-    sigNodes,
+    sigNodes: [],
     constants,
     sources,
     getDomainCount,
   };
+}
+
+function opcodeToName(opcode: OpCode): string {
+  switch (opcode) {
+    case OpCode.Abs:
+      return "abs";
+    case OpCode.Floor:
+      return "floor";
+    case OpCode.Ceil:
+      return "ceil";
+    case OpCode.Round:
+      return "round";
+    case OpCode.Sin:
+      return "sin";
+    case OpCode.Cos:
+      return "cos";
+    case OpCode.Add:
+      return "Add";
+    case OpCode.Sub:
+      return "Sub";
+    case OpCode.Mul:
+      return "Mul";
+    case OpCode.Div:
+      return "Div";
+    case OpCode.Min:
+      return "Min";
+    case OpCode.Max:
+      return "Max";
+    case OpCode.Pow:
+      return "Pow";
+    case OpCode.Mod:
+      return "Mod";
+    case OpCode.Vec2Add:
+      return "Vec2Add";
+    case OpCode.Vec2Sub:
+      return "Vec2Sub";
+    case OpCode.Vec2Mul:
+      return "Vec2Mul";
+    case OpCode.Vec2Div:
+      return "Vec2Div";
+    default:
+      // OpCode is a const object, not an enum, so we can't do reverse lookup
+      return String(opcode);
+  }
+}
+
+function convertFieldNodes(nodes: CompilerFieldExprIR[]): RuntimeFieldExprIR[] {
+  return nodes.map((node) => {
+    const type = compilerToRuntimeType(node.type);
+
+    switch (node.kind) {
+      case "const":
+        return { kind: "const", type, constId: node.constId };
+      case "broadcastSig":
+        return {
+          kind: "sampleSignal",
+          type,
+          signalSlot: node.sig,
+          domainId: node.domainSlot,
+        };
+      case "map":
+        if (node.fn.kind !== "opcode") {
+          throw new Error(`executeMaterialize: field map kernel ${node.fn.kind} not supported`);
+        }
+        return {
+          kind: "map",
+          type,
+          src: node.src,
+          fn: { opcode: opcodeToName(node.fn.opcode) },
+        };
+      case "zip":
+        if (node.fn.kind !== "opcode") {
+          throw new Error(`executeMaterialize: field zip kernel ${node.fn.kind} not supported`);
+        }
+        return {
+          kind: "zip",
+          type,
+          a: node.a,
+          b: node.b,
+          fn: { opcode: opcodeToName(node.fn.opcode) },
+        };
+      case "select":
+        return { kind: "select", type, cond: node.cond, t: node.t, f: node.f };
+      case "transform":
+        return { kind: "transform", type, src: node.src, chain: node.chain };
+      case "busCombine":
+        return {
+          kind: "busCombine",
+          type,
+          combine: { mode: node.combine.mode },
+          terms: node.terms,
+        };
+    }
+  });
 }

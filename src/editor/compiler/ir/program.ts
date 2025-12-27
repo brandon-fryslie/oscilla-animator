@@ -15,6 +15,8 @@
 import type { NodeId, BusId, TypeTable } from "./types";
 import type { TimeModelIR, ScheduleIR } from "./schedule";
 import type { StateLayout } from "./stores";
+import type { SignalExprTable } from "./signalExpr";
+import type { FieldExprIR } from "./fieldExpr";
 
 // ============================================================================
 // Top-Level Compiled Program (02-IR-Schema.md §3)
@@ -92,11 +94,24 @@ export interface CompiledProgramIR {
   /** Field expression table (may be empty until runtime builds exprs) */
   fields: FieldExprTable;
 
+  /** Signal expression table (for SigEvaluator) */
+  signalTable?: SignalExprTable;
+
   /** Constant pool (JSON + packed numeric values) */
   constants: ConstPool;
 
   /** State layout (for stateful nodes) */
   stateLayout: StateLayout;
+
+  /**
+   * Slot metadata - canonical source for all allocated slots.
+   *
+   * Per design-docs/13-Renderer/12-ValueSlotPerNodeOutput.md:
+   * - Emitted during lowering, not inferred from schedule
+   * - Every node output has a slot, regardless of consumption
+   * - RuntimeState uses this instead of inferring from schedule steps
+   */
+  slotMeta?: import("./stores").SlotMeta[];
 
   // ============================================================================
   // Execution Schedule
@@ -259,19 +274,18 @@ export interface AdapterIR {
  *
  * FieldExpr pool + materialization plan.
  * May be empty initially - runtime can build expressions lazily.
- *
- * Placeholder for Phase 5 implementation.
  */
 export interface FieldExprTable {
-  /** Array of field expression nodes */
-  nodes: FieldExprNodeIR[];
+  /** Array of field expression nodes (uses full FieldExprIR from fieldExpr.ts) */
+  nodes: FieldExprIR[];
 
   /** Materialization plan */
   materialization?: FieldMaterializationPlan;
 }
 
 /**
- * Field Expression Node IR (placeholder)
+ * Field Expression Node IR (placeholder for nodes that need stable IDs)
+ * This is kept for backwards compatibility but FieldExprIR is preferred.
  */
 export interface FieldExprNodeIR {
   id: string;
@@ -341,7 +355,7 @@ export interface OutputSpec {
   id: string;
 
   /** Output kind */
-  kind: "renderTree" | "export" | "debug";
+  kind: "renderTree" | "renderFrame" | "export" | "debug";
 
   /** Slot containing the output value */
   slot: import("./types").ValueSlot;

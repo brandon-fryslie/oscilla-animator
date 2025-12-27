@@ -126,6 +126,9 @@ export interface FrameCache {
   /** Frame stamps for signal cache validation */
   sigStamp: Uint32Array;
 
+  /** Validity mask for non-number signal types */
+  sigValidMask: Uint8Array;
+
   /** Cached field handles - lazy recipes (indexed by FieldExprId) */
   fieldHandle: FieldHandle[];
 
@@ -179,6 +182,7 @@ export function createFrameCache(
   // Allocate signal cache arrays
   const sigValue = new Float64Array(sigCapacity);
   const sigStamp = new Uint32Array(sigCapacity);
+  const sigValidMask = new Uint8Array(sigCapacity);
 
   // Allocate field cache arrays
   // FieldHandle[] cannot be pre-allocated with type safety, so use empty array with reserved length
@@ -193,6 +197,7 @@ export function createFrameCache(
     frameId: 1, // Start at 1 to avoid collision with initial stamp values (0)
     sigValue,
     sigStamp,
+    sigValidMask,
     fieldHandle,
     fieldStamp,
     fieldBuffers,
@@ -227,20 +232,49 @@ export function createFrameCache(
 // ============================================================================
 
 /**
- * Extract slot metadata from program schedule.
+ * Extract slot metadata from program.
  *
- * This is a placeholder implementation for Sprint 1.
- * In future sprints, the compiler will emit slotMeta directly in CompiledProgramIR.
- *
- * Current strategy:
- * - Scan all steps for inputSlots and outputSlots
- * - Assign f64 storage to all slots by default (conservative)
- * - Use dense offset allocation (offset = slot index)
+ * Per design-docs/13-Renderer/12-ValueSlotPerNodeOutput.md:
+ * - Prefer compiler-emitted slotMeta when available
+ * - Fall back to inferring from schedule only when slotMeta is missing
  *
  * @param program - Compiled program
  * @returns Slot metadata array
  */
 function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
+  const compilerMeta = program.slotMeta && program.slotMeta.length > 0
+    ? [...program.slotMeta]
+    : [];
+  const inferred = inferSlotMetaFromSchedule(program);
+
+  if (compilerMeta.length === 0) {
+    return inferred;
+  }
+
+  const bySlot = new Map<number, SlotMeta>();
+  for (const meta of compilerMeta) {
+    bySlot.set(meta.slot, meta);
+  }
+  for (const meta of inferred) {
+    if (!bySlot.has(meta.slot)) {
+      compilerMeta.push(meta);
+      bySlot.set(meta.slot, meta);
+    }
+  }
+
+  return compilerMeta;
+}
+
+/**
+ * Infer slot metadata from schedule steps.
+ *
+ * This is the legacy fallback when compiler-emitted slotMeta is not available.
+ * It scans schedule steps to find all referenced slots.
+ *
+ * @param program - Compiled program
+ * @returns Slot metadata array
+ */
+function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
   const numericSlots = new Set<number>();
   const objectSlots = new Set<number>(); // Slots that hold objects (buffers, handles)
 
@@ -260,6 +294,12 @@ function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
           numericSlots.add(step.out.wrapEvent);
         if (step.out.progress01 !== undefined)
           numericSlots.add(step.out.progress01);
+        break;
+
+      case "signalEval":
+        for (const output of step.outputs) {
+          numericSlots.add(output.slot);
+        }
         break;
 
       case "nodeEval":
@@ -308,14 +348,42 @@ function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
 
       case "renderAssemble":
         // RenderAssemble inputs and outputs (all objects)
-        objectSlots.add(step.instance2dListSlot);
-        objectSlots.add(step.pathBatchListSlot);
+        if (step.instance2dListSlot !== undefined) {
+          objectSlots.add(step.instance2dListSlot);
+        }
+        if (step.pathBatchListSlot !== undefined) {
+          objectSlots.add(step.pathBatchListSlot);
+        }
+        if (step.instance2dBatches) {
+          for (const batch of step.instance2dBatches) {
+            objectSlots.add(batch.domainSlot);
+            objectSlots.add(batch.posXYSlot);
+            objectSlots.add(batch.sizeSlot);
+            objectSlots.add(batch.colorRGBASlot);
+            numericSlots.add(batch.opacitySlot);
+          }
+        }
+        if (step.pathBatches) {
+          for (const batch of step.pathBatches) {
+            objectSlots.add(batch.cmdsSlot);
+            objectSlots.add(batch.paramsSlot);
+          }
+        }
         objectSlots.add(step.outFrameSlot);
         break;
 
       case "debugProbe":
         for (const slot of step.probe.slots) numericSlots.add(slot);
         break;
+    }
+  }
+
+  if (program.schedule.initialSlotValues) {
+    for (const slotStr of Object.keys(program.schedule.initialSlotValues)) {
+      const slot = Number(slotStr);
+      if (!Number.isNaN(slot)) {
+        objectSlots.add(slot);
+      }
     }
   }
 
@@ -337,6 +405,9 @@ function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
 
   // Object slots get object storage
   for (const slot of objectSlots) {
+    if (numericSlots.has(slot)) {
+      continue;
+    }
     slotMeta.push({
       slot,
       storage: "object",

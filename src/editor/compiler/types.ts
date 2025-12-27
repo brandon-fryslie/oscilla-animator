@@ -493,7 +493,9 @@ export type CompileErrorCode =
   | 'DanglingBindingEndpoint'
   | 'UnresolvedPort'
   // Sprint 2: IR validation
-  | 'IRValidationFailed';
+  | 'IRValidationFailed'
+  // Sprint 2: Missing required inputs
+  | 'MissingInput';
 
 export interface CompileError {
   code: CompileErrorCode;

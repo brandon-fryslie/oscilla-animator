@@ -90,6 +90,7 @@ export type {
   StepIR,
   StepBase,
   StepTimeDerive,
+  StepSignalEval,
   StepNodeEval,
   StepBusEval,
   StepMaterialize,
@@ -98,6 +99,10 @@ export type {
   StepMaterializeTestGeometry,
   StepRenderAssemble,
   StepDebugProbe,
+
+  // Batch descriptors (compile-time config for renderAssemble)
+  Instance2DBatch,
+  PathBatch,
 
   // Step components
   PublisherIR,

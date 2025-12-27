@@ -18,6 +18,8 @@ import type { BusIndex } from "../ir/types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import type { IRWithBusRoots, ValueRefPacked } from "./pass7-bus-lowering";
 import type { CompilerConnection, CompileError } from "../types";
+import { getBlockType } from "../ir/lowerTypes";
+import type { LowerCtx } from "../ir/lowerTypes";
 
 // =============================================================================
 // Types
@@ -94,6 +96,7 @@ export function pass8LinkResolution(
 
   // Build BlockOutputRootIR from Pass 6 results
   const blockOutputRoots = buildBlockOutputRoots(blocks, blockOutputs);
+  registerFieldSlots(builder, blockOutputRoots);
 
   // Build BlockInputRootIR by resolving wires, listeners, and defaults
   const blockInputRoots = buildBlockInputRoots(
@@ -105,6 +108,8 @@ export function pass8LinkResolution(
     errors
   );
 
+  applyRenderLowering(builder, blocks, blockInputRoots, errors);
+
   return {
     builder,
     busRoots,
@@ -112,6 +117,108 @@ export function pass8LinkResolution(
     blockInputRoots,
     errors,
   };
+}
+
+function registerFieldSlots(
+  builder: IRBuilder,
+  blockOutputRoots: BlockOutputRootIR,
+): void {
+  for (const ref of blockOutputRoots.refs) {
+    if (ref && ref.k === "field") {
+      builder.registerFieldSlot(ref.id, ref.slot);
+    }
+  }
+}
+
+function applyRenderLowering(
+  builder: IRBuilder,
+  blocks: readonly Block[],
+  blockInputRoots: BlockInputRootIR,
+  errors: CompileError[],
+): void {
+  function createDefaultRef(
+    type: import("../ir/types").TypeDesc,
+    defaultValue: unknown
+  ): ValueRefPacked | null {
+    if (type.world === "signal") {
+      if (typeof defaultValue !== "number") {
+        return null;
+      }
+      const sigId = builder.sigConst(defaultValue, type);
+      const slot = builder.allocValueSlot(type);
+      builder.registerSigSlot(sigId, slot);
+      return { k: "sig", id: sigId, slot };
+    }
+
+    if (type.world === "field") {
+      const fieldId = builder.fieldConst(defaultValue, type);
+      const slot = builder.allocValueSlot(type);
+      builder.registerFieldSlot(fieldId, slot);
+      return { k: "field", id: fieldId, slot };
+    }
+
+    return null;
+  }
+
+  for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
+    const block = blocks[blockIdx];
+    const decl = getBlockType(block.type);
+    if (!decl || decl.capability !== "render") {
+      continue;
+    }
+
+    const inputs: ValueRefPacked[] = [];
+    let missingInput = false;
+
+    for (const inputDecl of decl.inputs) {
+      const portIdx = block.inputs.findIndex((p) => p.id === inputDecl.portId);
+      if (portIdx < 0) {
+        missingInput = true;
+        break;
+      }
+      const ref = blockInputRoots.refs[blockInputRoots.indexOf(blockIdx as BlockIndex, portIdx)];
+      if (!ref) {
+        const input = block.inputs[portIdx];
+        const defaultSource = input.defaultSource;
+        if (defaultSource) {
+          const defaultRef = createDefaultRef(inputDecl.type, defaultSource.value);
+          if (defaultRef) {
+            inputs.push(defaultRef);
+            continue;
+          }
+        }
+        errors.push({
+          code: "MissingInput",
+          message: `Missing required input for ${block.type}.${inputDecl.portId} (no defaultSource).`,
+          where: { blockId: block.id, port: inputDecl.portId },
+        });
+        missingInput = true;
+        break;
+      }
+      inputs.push(ref);
+    }
+
+    if (missingInput) {
+      continue;
+    }
+
+    const ctx: LowerCtx = {
+      blockIdx: blockIdx as BlockIndex,
+      blockType: block.type,
+      instanceId: block.id,
+      label: block.label,
+      inTypes: decl.inputs.map((input) => input.type),
+      outTypes: decl.outputs.map((output) => output.type),
+      b: builder,
+      seedConstId: builder.allocConstId(0),
+    };
+
+    decl.lower({
+      ctx,
+      inputs,
+      config: block.params,
+    });
+  }
 }
 
 /**
@@ -263,6 +370,13 @@ function buildBlockInputRoots(
       // For now, if we reach here, the input is unresolved
       // This is acceptable for Sprint 2 - we're creating structural IR
       // Unresolved ports are not errors - they're just optional inputs without sources
+      if (!input.defaultSource) {
+        errors.push({
+          code: "MissingInput",
+          message: `Missing required input for ${block.type}.${input.id} (no defaultSource).`,
+          where: { blockId: block.id, port: input.id },
+        });
+      }
     }
   }
 

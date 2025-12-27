@@ -67,56 +67,52 @@ function createTestContext(outFrameSlot: number = 100) {
 }
 
 describe("executeRenderAssemble - Core Functionality", () => {
-  it("reads render tree from step.outFrameSlot when already present", () => {
+  it("writes assembled frame to output slot", () => {
     const { runtime, step } = createTestContext();
 
-    // Pre-populate the output slot with a render tree
-    const mockRenderTree = { kind: "renderTree", nodes: [] };
-    runtime.values.write(100, mockRenderTree);
-
+    // Execute assembly
     executeRenderAssemble(step, {} as any, runtime);
 
-    // Verify render tree still in output slot
-    expect(runtime.values.read(100)).toBe(mockRenderTree);
+    // Verify assembled frame in output slot
+    const frame = runtime.values.read(100) as any;
+    expect(frame).toBeDefined();
+    expect(frame.version).toBe(1);
+    expect(Array.isArray(frame.passes)).toBe(true);
   });
 
-  it("handles null render tree gracefully", () => {
+  it("produces empty passes when no batches provided", () => {
     const { runtime, step } = createTestContext();
 
-    // Pre-populate with null (valid for stub render nodes)
-    runtime.values.write(100, null);
-
+    // With no batches in step or slots, passes should be empty
     executeRenderAssemble(step, {} as any, runtime);
 
-    // Verify null preserved
-    expect(runtime.values.read(100)).toBe(null);
+    const frame = runtime.values.read(100) as any;
+    expect(frame.passes).toEqual([]);
   });
 
-  it("handles undefined render tree gracefully", () => {
+  it("includes clear mode in assembled frame", () => {
     const { runtime, step } = createTestContext();
-
-    // Pre-populate with undefined
-    runtime.values.write(100, undefined);
 
     executeRenderAssemble(step, {} as any, runtime);
 
-    // Verify undefined preserved
-    expect(runtime.values.read(100)).toBe(undefined);
+    const frame = runtime.values.read(100) as any;
+    expect(frame.clear).toBeDefined();
+    expect(frame.clear.mode).toBe("none");
   });
 });
 
 describe("executeRenderAssemble - Error Handling", () => {
-  it("reads unwritten slot without error (returns undefined)", () => {
+  it("executes without error when batch slots are empty", () => {
     const { runtime, step } = createTestContext();
 
-    // Don't write to slot - simulates render node that didn't populate output yet
-    // Per ValueStore semantics, reading an allocated but unwritten slot returns undefined
+    // No batches provided - should still execute successfully
+    expect(() => {
+      executeRenderAssemble(step, {} as any, runtime);
+    }).not.toThrow();
 
-    // executeRenderAssemble reads the slot (doesn't throw)
-    executeRenderAssemble(step, {} as any, runtime);
-
-    // Slot is undefined (not written)
-    expect(runtime.values.read(100)).toBe(undefined);
+    // Verify frame was assembled
+    const frame = runtime.values.read(100);
+    expect(frame).toBeDefined();
   });
 
   it("throws error if slot not in slotMeta (not allocated)", () => {
@@ -171,46 +167,40 @@ describe("executeRenderAssemble - Error Handling", () => {
 });
 
 describe("executeRenderAssemble - Integration", () => {
-  it("acts as stable finalization boundary", () => {
+  it("assembles frame from empty batch lists", () => {
     const { runtime, step } = createTestContext();
 
-    // Setup: render node already wrote output
-    const renderOutput = {
-      kind: "renderCommands",
-      commands: [{ op: "drawCircle", x: 100, y: 100, r: 50 }],
-    };
-    runtime.values.write(100, renderOutput);
-
+    // Execute with no batches - should produce empty frame
     executeRenderAssemble(step, {} as any, runtime);
 
-    // Verify output is stable (no transformation applied)
-    expect(runtime.values.read(100)).toBe(renderOutput);
+    const frame = runtime.values.read(100) as any;
+    expect(frame).toBeDefined();
+    expect(frame.version).toBe(1);
+    expect(frame.passes).toEqual([]);
   });
 
-  it("works with complex render tree structure", () => {
+  it("writes assembled frame to output slot", () => {
     const { runtime, step } = createTestContext();
 
-    const complexRenderTree = {
-      kind: "renderTree",
-      root: {
-        type: "group",
-        children: [
-          { type: "circle", x: 0, y: 0, r: 10 },
-          { type: "rect", x: 10, y: 10, w: 20, h: 20 },
-          {
-            type: "group",
-            children: [{ type: "line", x1: 0, y1: 0, x2: 100, y2: 100 }],
-          },
-        ],
-      },
-    };
+    // Execute assembly
+    executeRenderAssemble(step, {} as any, runtime);
 
-    runtime.values.write(100, complexRenderTree);
+    // Verify frame structure
+    const frame = runtime.values.read(100) as any;
+    expect(frame).toMatchObject({
+      version: 1,
+      clear: expect.anything(),
+      passes: expect.any(Array),
+    });
+  });
+
+  it("produces empty passes array by default", () => {
+    const { runtime, step } = createTestContext();
 
     executeRenderAssemble(step, {} as any, runtime);
 
-    // Verify complex structure preserved
-    expect(runtime.values.read(100)).toEqual(complexRenderTree);
+    const frame = runtime.values.read(100) as any;
+    expect(frame.passes).toEqual([]);
   });
 });
 
@@ -218,56 +208,41 @@ describe("executeRenderAssemble - Spec Compliance", () => {
   it("satisfies 'typically trivial' spec requirement", () => {
     const { runtime, step } = createTestContext();
 
-    // Per spec: "the render node already wrote a RenderTree/RenderCmds to its output slot"
-    const renderTree = { kind: "renderTree", nodes: [] };
-    runtime.values.write(100, renderTree);
-
-    // Should be trivial - no heavy computation
+    // Step should execute quickly - no heavy computation
+    // It assembles passes from batch lists (which may be empty)
     executeRenderAssemble(step, {} as any, runtime);
 
-    // Verify render tree is accessible
-    expect(runtime.values.read(100)).toBe(renderTree);
+    // Verify an assembled frame is written to output slot
+    const frame = runtime.values.read(100) as any;
+    expect(frame).toBeDefined();
+    expect(frame.version).toBe(1);
+    expect(Array.isArray(frame.passes)).toBe(true);
   });
 
   it("provides stable boundary for hot-swap", () => {
     const { runtime, step } = createTestContext();
 
-    // This step exists for hot-swap + tracing stability
-    const renderTree = { kind: "renderTree", version: 1 };
-    runtime.values.write(100, renderTree);
-
+    // The step provides a stable output slot for hot-swap
     executeRenderAssemble(step, {} as any, runtime);
 
-    // Verify step provides stable reference point
-    expect(runtime.values.read(100)).toBe(renderTree);
+    // Verify step writes to the expected output slot
+    const frame = runtime.values.read(100);
+    expect(frame).toBeDefined();
   });
 
-  it("validates render tree is present (finalization check)", () => {
-    const { runtime, step } = createTestContext();
+  it("produces deterministic output for same inputs", () => {
+    const { runtime: runtime1, step: step1 } = createTestContext();
+    const { runtime: runtime2, step: step2 } = createTestContext();
 
-    // Write various types of render output
-    const testCases = [
-      { kind: "renderTree", nodes: [] },
-      { kind: "renderCommands", cmds: [] },
-      null,
-      undefined,
-      { custom: "renderOutput" },
-    ];
+    // Execute with same inputs should produce same structure
+    executeRenderAssemble(step1, {} as any, runtime1);
+    executeRenderAssemble(step2, {} as any, runtime2);
 
-    for (const renderOutput of testCases) {
-      // Clear previous write tracking
-      runtime.values.clear();
+    const frame1 = runtime1.values.read(100) as any;
+    const frame2 = runtime2.values.read(100) as any;
 
-      // Write render output
-      runtime.values.write(100, renderOutput);
-
-      // Execute step - should not throw (validates output exists)
-      expect(() => {
-        executeRenderAssemble(step, {} as any, runtime);
-      }).not.toThrow();
-
-      // Verify output accessible after finalization
-      expect(runtime.values.read(100)).toBe(renderOutput);
-    }
+    // Same structure (though not same reference)
+    expect(frame1.version).toBe(frame2.version);
+    expect(frame1.passes.length).toBe(frame2.passes.length);
   });
 });

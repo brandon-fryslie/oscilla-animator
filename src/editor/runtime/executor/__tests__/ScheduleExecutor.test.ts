@@ -37,7 +37,19 @@ function createMinimalProgram(
   steps: StepIR[],
 ): CompiledProgramIR {
   const emptyTypeTable: TypeTable = { typeIds: [] };
-  const emptyNodeTable: NodeTable = { nodes: [] };
+  // Include stub nodes for any nodeEval steps in the schedule
+  const nodeEvalSteps = steps.filter((s) => s.kind === "nodeEval") as { nodeIndex: number }[];
+  const maxNodeIndex = nodeEvalSteps.length > 0
+    ? Math.max(...nodeEvalSteps.map((s) => s.nodeIndex))
+    : -1;
+  const stubNodes = Array.from({ length: maxNodeIndex + 1 }, (_, i) => ({
+    id: `stub-node-${i}`,
+    typeId: 0,
+    inputCount: 0,
+    outputCount: 0,
+    opcodeId: 0, // Const opcode (no-op for empty inputs/outputs)
+  }));
+  const emptyNodeTable: NodeTable = { nodes: stubNodes };
   const emptyBusTable: BusTable = { buses: [] };
   const emptyLensTable: LensTable = { lenses: [] };
   const emptyAdapterTable: AdapterTable = { adapters: [] };

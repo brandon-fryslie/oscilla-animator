@@ -29,7 +29,21 @@ import type {
   RenderSinkIR,
   DomainDefIR,
   BuilderProgramIR,
+  SlotMetaEntry,
+  TimeSlots,
 } from "./builderTypes";
+
+/**
+ * Infer storage type from TypeDesc.
+ * Signals/events are numeric, fields/special types are objects.
+ */
+function inferStorage(type: TypeDesc): "f64" | "object" {
+  if (type.world === "signal" || type.world === "event") {
+    return "f64";
+  }
+  // Fields, special types (domain, renderTree) are stored as objects
+  return "object";
+}
 
 /**
  * Implementation of IRBuilder.
@@ -49,6 +63,40 @@ export class IRBuilderImpl implements IRBuilder {
 
   // Value slot counter
   private nextValueSlot = 0;
+  private sigValueSlots: Array<ValueSlot | undefined> = [];
+  private fieldValueSlots: Array<ValueSlot | undefined> = [];
+
+  // Slot metadata - emitted during lowering
+  private slotMetaEntries: SlotMetaEntry[] = [];
+
+  // Time slots - set by TimeRoot lowering
+  private timeSlots: TimeSlots | undefined;
+
+  // =============================================================================
+  // Debug Index Tracking (Phase 7)
+  // =============================================================================
+
+  /** Current block ID being compiled (set by caller before lowering) */
+  private currentBlockId: string | undefined;
+
+  /** Map signal expression IDs to source block */
+  private sigExprSourceMap: Map<SigExprId, string> = new Map();
+
+  /** Map field expression IDs to source block */
+  private fieldExprSourceMap: Map<FieldExprId, string> = new Map();
+
+  /** Map value slots to source port */
+  private slotSourceMap: Map<ValueSlot, { blockId: string; slotId: string }> = new Map();
+
+  /**
+   * Set the current block ID for debug tracking.
+   * Called by the compiler before lowering each block.
+   *
+   * @param blockId - Block instance ID
+   */
+  setCurrentBlockId(blockId: string | undefined): void {
+    this.currentBlockId = blockId;
+  }
 
   // =============================================================================
   // ID Allocation
@@ -90,8 +138,44 @@ export class IRBuilderImpl implements IRBuilder {
     return constId;
   }
 
-  allocValueSlot(): ValueSlot {
-    return this.nextValueSlot++ as ValueSlot;
+  allocValueSlot(type?: TypeDesc, debugName?: string): ValueSlot {
+    const slot = this.nextValueSlot++ as ValueSlot;
+
+    // Track metadata if type is provided
+    if (type) {
+      this.slotMetaEntries.push({
+        slot,
+        storage: inferStorage(type),
+        type,
+        debugName,
+      });
+    }
+
+    // Track slot source for debug index (if current block is set)
+    if (this.currentBlockId && debugName) {
+      this.slotSourceMap.set(slot, {
+        blockId: this.currentBlockId,
+        slotId: debugName,
+      });
+    }
+
+    return slot;
+  }
+
+  registerSigSlot(sigId: SigExprId, slot: ValueSlot): void {
+    this.sigValueSlots[sigId] = slot;
+  }
+
+  registerFieldSlot(fieldId: FieldExprId, slot: ValueSlot): void {
+    this.fieldValueSlots[fieldId] = slot;
+  }
+
+  /**
+   * Set time slots allocated by TimeRoot during lowering.
+   * Schedule will reference these rather than allocating its own.
+   */
+  setTimeSlots(slots: TimeSlots): void {
+    this.timeSlots = slots;
   }
 
   // =============================================================================
@@ -106,6 +190,12 @@ export class IRBuilderImpl implements IRBuilder {
       type,
       constId,
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -118,6 +208,12 @@ export class IRBuilderImpl implements IRBuilder {
         domain: "timeMs",
       },
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -130,6 +226,12 @@ export class IRBuilderImpl implements IRBuilder {
         domain: "timeMs",
       },
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -142,6 +244,12 @@ export class IRBuilderImpl implements IRBuilder {
         domain: "phase01",
       },
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -154,6 +262,12 @@ export class IRBuilderImpl implements IRBuilder {
         domain: "trigger",
       },
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -167,6 +281,12 @@ export class IRBuilderImpl implements IRBuilder {
         ? { kind: "opcode", opcode: fn.opcode }
         : { kind: "kernel", kernelId: fn.fnId },
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -181,6 +301,12 @@ export class IRBuilderImpl implements IRBuilder {
         ? { kind: "opcode", opcode: fn.opcode }
         : { kind: "kernel", kernelId: fn.fnId },
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -193,6 +319,12 @@ export class IRBuilderImpl implements IRBuilder {
       t,
       f,
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -205,6 +337,12 @@ export class IRBuilderImpl implements IRBuilder {
       src,
       chain,
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -222,6 +360,12 @@ export class IRBuilderImpl implements IRBuilder {
       terms: [...terms],
       combine: { mode },
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -241,6 +385,12 @@ export class IRBuilderImpl implements IRBuilder {
       stateId,
       params,
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -256,6 +406,12 @@ export class IRBuilderImpl implements IRBuilder {
       type,
       constId,
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.fieldExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -268,7 +424,14 @@ export class IRBuilderImpl implements IRBuilder {
       fn: fn.opcode
         ? { kind: "opcode", opcode: fn.opcode }
         : { kind: "kernel", kernelId: fn.fnId },
+      params: fn.params,
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.fieldExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -282,7 +445,14 @@ export class IRBuilderImpl implements IRBuilder {
       fn: fn.opcode
         ? { kind: "opcode", opcode: fn.opcode }
         : { kind: "kernel", kernelId: fn.fnId },
+      params: fn.params,
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.fieldExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -295,6 +465,12 @@ export class IRBuilderImpl implements IRBuilder {
       t,
       f,
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.fieldExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -307,6 +483,12 @@ export class IRBuilderImpl implements IRBuilder {
       src,
       chain,
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.fieldExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -324,6 +506,12 @@ export class IRBuilderImpl implements IRBuilder {
       terms: [...terms],
       combine: { mode: mode === "layer" ? "last" : mode },
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.fieldExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -335,6 +523,12 @@ export class IRBuilderImpl implements IRBuilder {
       sig,
       domainSlot,
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.fieldExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -351,6 +545,12 @@ export class IRBuilderImpl implements IRBuilder {
         kernelId: `reduce_${fn.reducerId}`,
       },
     });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.sigExprSourceMap.set(id, this.currentBlockId);
+    }
+
     return id;
   }
 
@@ -416,14 +616,19 @@ export class IRBuilderImpl implements IRBuilder {
       renderSinks: this.renderSinks,
       domains: this.domains,
       debugIndex: {
-        sigExprSource: new Map(),
-        fieldExprSource: new Map(),
-        slotSource: new Map(),
+        sigExprSource: this.sigExprSourceMap,
+        fieldExprSource: this.fieldExprSourceMap,
+        slotSource: this.slotSourceMap,
       },
       timeModel: {
         kind: "infinite",
         windowMs: 30000,
       },
+      slotMeta: this.slotMetaEntries,
+      sigValueSlots: this.sigValueSlots,
+      fieldValueSlots: this.fieldValueSlots,
+      nextValueSlot: this.nextValueSlot,
+      timeSlots: this.timeSlots,
     };
   }
 }

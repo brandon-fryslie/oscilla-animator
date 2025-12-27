@@ -28,23 +28,9 @@ import type { CompilerService, Viewport } from './compiler';
 import type { Program, CanvasProgram } from './compiler/types';
 import { useStore } from './stores';
 import { TimeConsole } from './components/TimeConsole';
-import { IRRuntimeAdapter, type RenderFrameIR } from './runtime/executor/IRRuntimeAdapter';
+import { IRRuntimeAdapter } from './runtime/executor/IRRuntimeAdapter';
 import { TraceContext } from './debug';
 import './PreviewPanel.css';
-
-/**
- * Type guard for RenderFrameIR (simple IR format with inline buffers)
- */
-function isRenderFrameIR(value: unknown): value is RenderFrameIR {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'version' in value &&
-    (value as RenderFrameIR).version === 1 &&
-    'passes' in value &&
-    Array.isArray((value as RenderFrameIR).passes)
-  );
-}
 
 /**
  * Empty placeholder program shown when no patch is compiled.
@@ -94,7 +80,6 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
   const canvasRendererRef = useRef<Canvas2DRenderer | null>(null);
   const lastGoodProgramRef = useRef<Program<SvgRenderTree> | null>(null);
   const lastGoodCanvasProgramRef = useRef<CanvasProgram | null>(null);
-  const lastGoodIRProgramRef = useRef<Program<SvgRenderTree> | null>(null);
   const irAdapterRef = useRef<IRRuntimeAdapter | null>(null);
 
   // Which renderer is active: 'svg' or 'canvas'
@@ -211,16 +196,13 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
             // IR compilation succeeded - use IR path
             // Pure IR mode: schedule produces RenderFrameIR directly, no legacy closure fallback
             // This forces the IR pipeline to handle all rendering
+            const isFirstProgram = irAdapterRef.current === null && lastGoodProgramRef.current === null;
             const adapter = new IRRuntimeAdapter(result.compiledIR);
-            const irProgram = adapter.createProgram();
 
             // Store adapter for direct frame access in render loop
             irAdapterRef.current = adapter;
 
-            const isFirstProgram = lastGoodIRProgramRef.current === null && lastGoodProgramRef.current === null;
-
             // Set the IR program as the new source of truth for canvas rendering
-            lastGoodIRProgramRef.current = irProgram;
             lastGoodCanvasProgramRef.current = null;
             lastGoodProgramRef.current = null;
 
@@ -245,7 +227,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
             // This is an error condition - log it prominently
             logStore.error('renderer', 'IR compiler mode enabled but CompiledProgramIR not available. Check IR compilation.');
             // Keep last good IR program if it exists, otherwise show error
-            if (!lastGoodIRProgramRef.current) {
+            if (!irAdapterRef.current) {
               setHasCompiledProgram(false);
             }
           }
@@ -254,11 +236,11 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         else {
           if (result.canvasProgram && result.canvasProgram !== lastGoodCanvasProgramRef.current) {
             // New canvas program
-            const isFirstProgram = lastGoodCanvasProgramRef.current === null && lastGoodProgramRef.current === null && lastGoodIRProgramRef.current === null;
+            const isFirstProgram = lastGoodCanvasProgramRef.current === null && lastGoodProgramRef.current === null && irAdapterRef.current === null;
 
             lastGoodCanvasProgramRef.current = result.canvasProgram;
             lastGoodProgramRef.current = null; // Clear SVG program
-            lastGoodIRProgramRef.current = null; // Clear IR program
+            irAdapterRef.current = null; // Clear IR adapter
             setActiveRenderer('canvas');
             player.setFactory(() => EMPTY_PROGRAM); // Time tracking only
             player.applyTimeModel(result.timeModel!);
@@ -278,7 +260,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
             }
           } else if (result.program && result.program !== (lastGoodProgramRef.current as unknown)) {
             // New SVG program
-            const isFirstProgram = lastGoodProgramRef.current === null && lastGoodCanvasProgramRef.current === null && lastGoodIRProgramRef.current === null;
+            const isFirstProgram = lastGoodProgramRef.current === null && lastGoodCanvasProgramRef.current === null && irAdapterRef.current === null;
 
             const program = result.program as unknown as Program<SvgRenderTree>;
             player.setFactory(() => program);
@@ -287,7 +269,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
             setTimeModel(result.timeModel!);
             lastGoodProgramRef.current = program;
             lastGoodCanvasProgramRef.current = null; // Clear canvas program
-            lastGoodIRProgramRef.current = null; // Clear IR program
+            irAdapterRef.current = null; // Clear IR adapter
             setActiveRenderer('svg');
             setHasCompiledProgram(true);
             logStore.debug('renderer', `Hot swapped to SVG program (timeModel: ${result.timeModel!.kind})`);
@@ -333,31 +315,18 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         let renderTree = null;
 
         // NO FALLBACK - Use only the appropriate program based on mode
-        // IR mode: use lastGoodIRProgramRef ONLY
+        // IR mode: use IRRuntimeAdapter ONLY
         // Legacy mode: use lastGoodCanvasProgramRef ONLY
         const useIR = store.uiStore.settings.useNewCompiler;
 
         if (useIR) {
-          // IR mode: ONLY use IR program
           const adapter = irAdapterRef.current;
           if (adapter) {
-            if (adapter.isPureIRMode()) {
-              // Pure IR mode: get RenderFrameIR directly and use renderFrameSimple
-              const frame = adapter.executeAndGetFrame(tMs);
-              if (frame && isRenderFrameIR(frame)) {
-                canvasRenderer.renderFrameSimple(frame);
-                // Don't call render() below - we already rendered
-                animationFrameId = requestAnimationFrame(renderFrame);
-                return;
-              }
-            } else {
-              // Bridge mode: use legacy render function via signal()
-              if (lastGoodIRProgramRef.current) {
-                renderTree = lastGoodIRProgramRef.current.signal(tMs, ctx);
-              }
-            }
+            const frame = adapter.executeAndGetFrame(tMs);
+            canvasRenderer.renderFrame(frame, adapter.getValueStore());
+            animationFrameId = requestAnimationFrame(renderFrame);
+            return;
           }
-          // If no adapter or frame, renderTree stays null - shows blank/error
         } else {
           // Legacy mode: ONLY use legacy canvas program
           if (lastGoodCanvasProgramRef.current) {

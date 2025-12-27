@@ -171,28 +171,13 @@ export function executeMaterializeColor(
       aBuffer[i] = c.a;
     }
   } else if (isFieldExprHandle(colorValue)) {
-    // fieldExpr handle case: evaluate via FieldRuntime
-    // Future work: call fields.evalToBuffer() for each channel
-    // For now, fill with default white color
-    console.warn(
-      `executeMaterializeColor: fieldExpr evaluation not implemented yet. ` +
-        `Using default white color for ${instanceCount} instances.`
+    throw new Error(
+      `executeMaterializeColor: fieldExpr evaluation not implemented for colorExprSlot ${step.colorExprSlot}.`
     );
-    for (let i = 0; i < instanceCount; i++) {
-      rBuffer[i] = 1.0;
-      gBuffer[i] = 1.0;
-      bBuffer[i] = 1.0;
-      aBuffer[i] = 1.0;
-    }
   } else if (colorValue === undefined || colorValue === null) {
-    // Fallback: use default blue color when slot isn't initialized
-    // This happens when bus evaluation isn't wired yet
-    for (let i = 0; i < instanceCount; i++) {
-      rBuffer[i] = 0.23; // Blue color (#3B82F6)
-      gBuffer[i] = 0.51;
-      bBuffer[i] = 0.96;
-      aBuffer[i] = 1.0;
-    }
+    throw new Error(
+      `executeMaterializeColor: colorExprSlot ${step.colorExprSlot} is uninitialized.`
+    );
   } else {
     throw new Error(
       `executeMaterializeColor: colorExprSlot contains invalid value. ` +

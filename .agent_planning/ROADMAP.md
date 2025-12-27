@@ -502,46 +502,78 @@ Reference: `design-docs/12-Compiler-Final/`
 
 ---
 
-## Phase 7: Debug Infrastructure [QUEUED]
+## Phase 7: Debug Infrastructure [IN PROGRESS]
 
 **Goal:** Build power-user debugger with ring buffers, causal links, and trace storage.
 
 **Migration Safety:** Debug infrastructure is additive - doesn't affect core execution.
 
-### Topics
+**Started:** 2025-12-27
+**Sprint 1 Focus:** DebugIndex population + executeDebugProbe implementation
 
-#### debug-index-compile [PROPOSED]
-**Description:** Emit `DebugIndex` during compilation: string interning, portKeyToId, busIdToId, node provenance arrays.
-**Spec:** 20-TraceStorage (§1), 14-Compiled-IR-Program-Contract (§9)
+### Sprint 1 Topics (Current)
+
+#### debug-index-compile [IN PROGRESS]
+**Description:** Emit `DebugIndex` during compilation: track blockId when allocating signal/field expressions and value slots. Populate sigExprSource, fieldExprSource, slotSource maps.
+**Spec:** 20-TraceStorage (§1), 14-Compiled-IR-Program-Contract (§9), PLAN-2025-12-27-005641.md
 **Dependencies:** lowering-passes
 **Labels:** debug, compiler, indexing
-**Test Strategy:** DebugIndex contains all entities
+**Test Strategy:** DebugIndex contains entries for all allocated nodes/slots after build()
 
-#### type-key-encoding [PROPOSED]
+#### execute-debug-probe [IN PROGRESS]
+**Description:** Implement executeDebugProbe step executor: read TraceController.mode, sample values from slots, record to ValueRing with timestamp, throttle UI events to 10Hz.
+**Spec:** 18-Debugger-Part-1 (§4), PLAN-2025-12-27-005641.md
+**Dependencies:** debug-index-compile, trace-controller
+**Labels:** debug, runtime, step-executor
+**Test Strategy:** executeDebugProbe with mode='basic' records to ValueRing; mode='off' no-ops
+
+#### schedule-probe-insertion [PROPOSED]
+**Description:** Modify buildSchedule to insert StepDebugProbe steps at key boundaries (after bus eval, block signal eval, field materialization). Basic/full probe modes.
+**Spec:** 18-Debugger-Part-1 (§4), PLAN-2025-12-27-005641.md
+**Dependencies:** execute-debug-probe
+**Labels:** debug, compiler, schedule
+**Test Strategy:** Schedule contains debugProbe steps when probeMode='basic'
+
+### Existing Infrastructure (Completed)
+
+#### type-key-encoding [COMPLETED]
 **Description:** Implement `TypeKeyId` encoding: TypeKey→dense u16, stable serialization. Map all TypeDesc to TypeKeyId.
 **Spec:** 19-Debugger-ValueKind (§1)
-**Dependencies:** type-unification, debug-index-compile
+**Dependencies:** type-unification
 **Labels:** debug, types, encoding
 **Test Strategy:** TypeKey roundtrip stable
+**Implementation:** `src/editor/debug/TypeKeyEncoding.ts` - encodeTypeKey(), decodeTypeKey()
 
-#### span-ring-buffer [PROPOSED]
+#### span-ring-buffer [COMPLETED]
 **Description:** Implement `SpanRing` typed array buffer: frame, tMs, kind, subject, parent, duration, flags. Zero-allocation hot path.
 **Spec:** 18-Debugger-Part-1 (§3.2), 20-TraceStorage (§2.2)
-**Dependencies:** debug-index-compile
+**Dependencies:** None
 **Labels:** debug, tracing, performance
 **Test Strategy:** Ring buffer wraps correctly, no GC
+**Implementation:** `src/editor/debug/SpanRing.ts`
 
-#### value-record-encoding [PROPOSED]
+#### value-record-encoding [COMPLETED]
 **Description:** Implement `ValueRecord` 32-byte encoding: tag, typeId, payload fields. Stats for fields (min/max/hash), samples for signals.
 **Spec:** 19-Debugger-ValueKind (§2-3)
 **Dependencies:** type-key-encoding
 **Labels:** debug, values, encoding
 **Test Strategy:** All value types encode/decode correctly
+**Implementation:** `src/editor/debug/ValueRing.ts`
+
+#### trace-controller [COMPLETED]
+**Description:** Implement `TraceController`: mode switching (OFF/TIMING/FULL), sampling policies, buffer size limits, drop policy.
+**Spec:** 18-Debugger-Part-1 (§8), 19-Debugger-ValueKind (§5)
+**Dependencies:** None
+**Labels:** debug, control, performance
+**Test Strategy:** Trace modes have expected overhead
+**Implementation:** `src/editor/debug/TraceController.ts`
+
+### Future Topics (Phase 7.2+)
 
 #### causal-edge-system [PROPOSED]
-**Description:** Implement `EdgeRing` for causal links: producedValueId, inputValueId, relation (Wire/BusCombine/Adapter/Lens/Sample/Materialize).
+**Description:** Implement `EdgeRing` for causal links: producedValueId, inputValueId, relation (Wire/BusCombine/Adapter/Lens/Sample/Materialize). Enables "why" queries.
 **Spec:** 18-Debugger-Part-1 (§3.2.3, §6)
-**Dependencies:** span-ring-buffer
+**Dependencies:** execute-debug-probe, dependency-index-population
 **Labels:** debug, causality, tracing
 **Test Strategy:** Causal graph reconstructable from edges
 
@@ -552,12 +584,42 @@ Reference: `design-docs/12-Compiler-Final/`
 **Labels:** debug, instrumentation, runtime
 **Test Strategy:** All evaluation points emit spans
 
-#### trace-controller [PROPOSED]
-**Description:** Implement `TraceController`: mode switching (OFF/TIMING/FULL), sampling policies, buffer size limits, drop policy.
-**Spec:** 18-Debugger-Part-1 (§8), 19-Debugger-ValueKind (§5)
-**Dependencies:** instrumentation-hooks
-**Labels:** debug, control, performance
-**Test Strategy:** Trace modes have expected overhead
+### Debug UI Topics (from design-docs/11-Debugger/)
+
+#### debug-hud [PROPOSED]
+**Description:** Minimal always-visible debug strip: Clock (Finite/Cyclic/Infinite), Health (OK/Warning/Error), Performance (FPS + heavy fields), Stability (scrub-safe indicator).
+**Spec:** design-docs/11-Debugger/1-NonTech-Overview.md (§Debug HUD)
+**Dependencies:** trace-controller
+**Labels:** debug, ui, hud
+**Test Strategy:** HUD reflects actual runtime state
+
+#### probe-mode [PROPOSED]
+**Description:** Cursor-based inspection mode. Hover anything (bus, block, port, lens) to see probe card with live value, source chain, and common fixes.
+**Spec:** design-docs/11-Debugger/1-NonTech-Overview.md (§Probe Mode)
+**Dependencies:** debug-index-compile, execute-debug-probe
+**Labels:** debug, ui, inspection
+**Test Strategy:** Probe card shows correct source chain
+
+#### debug-drawer [PROPOSED]
+**Description:** Slide-up diagnostics panel with tabs: Overview, Buses, Time, Output, Performance, Changes. Structured searchable debug interface.
+**Spec:** design-docs/11-Debugger/1-NonTech-Overview.md (§Debug Drawer)
+**Dependencies:** probe-mode
+**Labels:** debug, ui, panel
+**Test Strategy:** All tabs display correct information
+
+#### value-summary-display [PROPOSED]
+**Description:** Visualizations for debug values: sparkline history, meter bars, contribution lists for bus combines, lens chain visualization.
+**Spec:** design-docs/11-Debugger/10-PowerUser-Overview.md (§DebugSnapshot)
+**Dependencies:** value-record-encoding
+**Labels:** debug, ui, visualization
+**Test Strategy:** All value types render correctly
+
+#### issue-detection [PROPOSED]
+**Description:** Rules engine for detecting common problems: silent buses, constant values, conflicting layers, heavy field materialization. Plain-language issue descriptions with one-click fixes.
+**Spec:** design-docs/11-Debugger/5-NonTech-RulesEngine.md
+**Dependencies:** execute-debug-probe
+**Labels:** debug, rules, diagnostics
+**Test Strategy:** Known problem patterns detected and reported
 
 ---
 
@@ -603,6 +665,165 @@ Reference: `design-docs/12-Compiler-Final/`
 **Dependencies:** legacy-runtime-removal
 **Labels:** architecture, rust, future
 **Test Strategy:** IR serializes/deserializes cleanly
+
+---
+
+## Phase 9: Path-Focused Composition [QUEUED]
+
+**Goal:** Replace graph-based patch editing with linear path-focused composition. Users think in signal chains, not node graphs.
+
+**Philosophy:** The current "here's all your blocks, arrange them yourself" model creates cognitive overhead. The new model: "here's one path from TimeRoot → Canvas, compose it step by step."
+
+**Migration Safety:** This is a fundamental UX shift but doesn't affect compilation or runtime.
+
+### Foundation (do first)
+
+#### undo-redo [PROPOSED]
+**Description:** Command-based undo/redo system. Every patch mutation (add block, delete block, connect, disconnect, change param) becomes an undoable command. Users can experiment freely knowing Cmd+Z will save them.
+
+**Implementation approach:**
+- Command pattern: each action creates a Command object with execute() and undo()
+- CommandHistory stack with undo/redo pointers
+- Integrate with MobX stores (PatchStore, ConnectionStore, etc.)
+- Keyboard shortcuts: Cmd+Z (undo), Cmd+Shift+Z (redo)
+- Visual indicator showing undo stack depth
+
+**Commands to implement:**
+- AddBlock / RemoveBlock
+- AddConnection / RemoveConnection
+- SetBlockParam / SetDefaultSource
+- AddBus / RemoveBus
+- AddPublisher / RemovePublisher
+- AddListener / RemoveListener
+- BatchCommand (for compound operations)
+
+**Dependencies:** None
+**Labels:** ux, editor, foundation, reliability
+**Test Strategy:** Any sequence of edits can be fully undone and redone
+
+### Core Topics
+
+#### path-focus-mode [PROPOSED]
+**Description:** Primary composition mode showing one signal path at a time. This is THE way to build patches, not a secondary view.
+
+**Core behavior:**
+- Focus on a render sink (auto-selects first one, or user clicks)
+- Walk dependency graph backwards to find all contributing blocks
+- Display as linear chain: TimeRoot → processing → Render
+- Everything outside this path fades/hides completely
+- Next/Prev navigation between different render paths
+- Full editing capability: add blocks, make connections, adjust params
+- Buses shown as clean join points (only relevant publishers visible)
+
+**Why this works:**
+- Patches ARE linear signal flows, we just display them as messy graphs
+- Users naturally think "time → oscillator → shape → color → render"
+- Eliminates "where do I put this block" anxiety
+- Buses handle cross-path sharing implicitly
+
+**Dependencies:** None (can prototype with existing infrastructure)
+**Labels:** ux, editor, core-workflow, composition
+**Test Strategy:** User can build complete animation without ever seeing full graph view
+
+#### path-discovery [PROPOSED]
+**Description:** Algorithm to extract linear paths from patch graph. Given a render sink, produce ordered list of blocks from TimeRoot to sink. Handle bus joins, multiple publishers, diamond dependencies.
+**Dependencies:** None
+**Labels:** algorithm, graph, core
+**Test Strategy:** Golden patch produces correct path ordering
+
+#### path-layout-engine [PROPOSED]
+**Description:** Layout engine for path-focus mode. Linear left-to-right (or top-to-bottom) arrangement. Automatic spacing, no user positioning needed. Buses shown as compact join nodes.
+**Dependencies:** path-discovery
+**Labels:** ux, layout, rendering
+**Test Strategy:** Any path renders cleanly without overlap
+
+#### live-port-preview [PROPOSED]
+**Description:** When composing in path mode, hovering over a potential connection target shows live preview of what would render. Ghosted/transparent overlay on canvas. Essential for "what if I connect this?" workflow.
+**Dependencies:** Phase 6 complete (efficient recompilation)
+**Labels:** ux, editor, preview
+**Test Strategy:** Hover over valid target → canvas shows preview of connected result
+
+#### smart-defaults [PROPOSED]
+**Description:** Expand defaultSource coverage so blocks render something immediately when added to path. No "blank canvas" state - every block contributes visible output with sensible defaults.
+**Dependencies:** None
+**Labels:** ux, defaults, blocks
+**Test Strategy:** Add block to path → immediate visible change on canvas
+
+#### path-block-insertion [PROPOSED]
+**Description:** Add blocks directly into path at cursor position. "Insert Oscillator here" → block appears in chain with auto-wired connections. No drag-and-drop, no manual wiring for common cases.
+**Dependencies:** path-focus-mode, path-layout-engine
+**Labels:** ux, editor, workflow
+**Test Strategy:** Insert block into path → auto-connected, path remains valid
+
+#### quick-swap [PROPOSED]
+**Description:** Replace one block with another compatible block, preserving all connections. Right-click block → "Replace with..." → shows compatible alternatives. Wiring transfers automatically.
+
+**Use cases:**
+- Swap Oscillator for different wave shape
+- Replace one layout (Grid → Circle → Line)
+- Upgrade simple block to more configurable version
+
+**Implementation:**
+- Detect compatible replacements (same/compatible input/output types)
+- Transfer connections to matching ports by name or type
+- Undo-able as single operation
+
+**Dependencies:** undo-redo
+**Labels:** ux, editor, workflow
+**Test Strategy:** Replace block → all valid connections preserved
+
+#### auto-connect [PROPOSED]
+**Description:** When adding a block, automatically connect it to the most sensible available ports. No manual wiring for obvious cases.
+
+**Heuristics:**
+- Match by type: Domain output → Domain input
+- Match by common patterns: TimeRoot.phase → Oscillator.phase
+- Prefer unconnected ports over already-connected ones
+- If ambiguous, don't auto-connect (let user choose)
+
+**Dependencies:** undo-redo
+**Labels:** ux, editor, connections
+**Test Strategy:** Add block near compatible block → auto-connected correctly
+
+#### auto-layout-graph [PROPOSED]
+**Description:** Automatic positioning of blocks in graph view. Dagre/ELK-style layout algorithm. Users never manually position blocks - the system arranges them based on connection topology.
+
+**Features:**
+- Left-to-right flow (TimeRoot on left, Render on right)
+- Minimize edge crossings
+- Group related blocks
+- Re-layout on any topology change
+- Smooth animated transitions
+
+**Dependencies:** None
+**Labels:** ux, layout, graph
+**Test Strategy:** Any patch auto-layouts without overlaps
+
+### Deprioritized (may not be needed with path-focus)
+
+#### auto-wire-on-drop [PROPOSED]
+**Description:** When you drop a block near another, auto-connect compatible ports. May be superseded by path-block-insertion.
+**Dependencies:** None
+**Labels:** ux, editor, connections
+**Test Strategy:** Drop near compatible block → connection created
+
+#### auto-layout [PROPOSED]
+**Description:** Smart positioning for graph view. Lower priority since path-focus-mode handles layout automatically.
+**Dependencies:** None
+**Labels:** ux, editor, layout
+**Test Strategy:** Blocks positioned reasonably in graph view
+
+#### connect-to-menu [PROPOSED]
+**Description:** Right-click → "Connect to..." menu. Still useful for edge cases in path mode.
+**Dependencies:** type-unification
+**Labels:** ux, editor, connections
+**Test Strategy:** Right-click port → menu shows only compatible targets
+
+#### fix-this-button [PROPOSED]
+**Description:** One-click solutions for missing required inputs. Less critical if path-focus prevents invalid states.
+**Dependencies:** None
+**Labels:** ux, editor, validation
+**Test Strategy:** Missing required input shows actionable fix button
 
 ---
 

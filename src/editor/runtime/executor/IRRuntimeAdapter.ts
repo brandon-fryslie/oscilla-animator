@@ -25,42 +25,10 @@ import type { CompiledProgramIR } from "../../compiler/ir";
 import type { RuntimeCtx, Program, KernelEvent } from "../../compiler/types";
 import type { RenderTree } from "../renderTree";
 import type { RenderTree as RenderCmdTree } from "../renderCmd";
+import type { RenderFrameIR } from "../../compiler/ir/renderIR";
+import type { ValueStore } from "../../compiler/ir/stores";
 import { ScheduleExecutor } from "./ScheduleExecutor";
 import { createRuntimeState, type RuntimeState } from "./RuntimeState";
-
-/**
- * RenderFrameIR - Simplified frame format for Canvas2D renderer.
- * This is the output of executeRenderAssemble step.
- */
-export interface RenderFrameIR {
-  version: 1;
-  clear: { r: number; g: number; b: number; a: number } | { mode: "none" };
-  passes: RenderPassIR[];
-  perf?: {
-    instances2d: number;
-    pathCmds: number;
-  };
-}
-
-export type RenderPassIR =
-  | { kind: "instances2d"; batch: Instances2DBatchIR }
-  | { kind: "paths2d"; batch: Paths2DBatchIR };
-
-export interface Instances2DBatchIR {
-  count: number;
-  x: Float32Array;
-  y: Float32Array;
-  radius: Float32Array;
-  r: Float32Array;
-  g: Float32Array;
-  b: Float32Array;
-  a: Float32Array;
-}
-
-export interface Paths2DBatchIR {
-  cmds: Uint16Array;
-  params: Float32Array;
-}
 
 /**
  * Legacy render function type.
@@ -122,6 +90,13 @@ export class IRRuntimeAdapter {
    */
   executeAndGetFrame(tMs: number): RenderFrameIR {
     return this.executor.executeFrame(this.program, this.runtime, tMs);
+  }
+
+  /**
+   * Access the current ValueStore for render frame execution.
+   */
+  getValueStore(): ValueStore {
+    return this.runtime.values;
   }
 
   /**

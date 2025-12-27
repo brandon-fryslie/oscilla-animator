@@ -425,6 +425,9 @@ export const Editor = observer(() => {
   // Create compiler service
   const compilerService = useMemo(() => createCompilerService(store), [store]);
 
+  // Devtools hook for debugging compiler output
+  (window as unknown as { __compilerService?: unknown }).__compilerService = compilerService;
+
   // Layout state - persisted in localStorage via useEditorLayout hook
   const {
     libraryCollapsed,
