@@ -8,8 +8,7 @@ import type { BlockDefinition } from './blocks/types';
 import { getBlockDefinitions, getBlocksForPalette, getBlockTags, getBlockForm } from './blocks';
 import './BlockLibrary.css';
 
-// import { listCompositeDefinitions } from './composites'; // TODO: Refactor composites
-const listCompositeDefinitions = () => [];
+import { listCompositeDefinitions } from './composites';
 
 const FORM_ORDER: BlockForm[] = ['macro', 'composite', 'primitive'];
 
