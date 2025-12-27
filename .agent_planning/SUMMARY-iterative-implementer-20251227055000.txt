@@ -1,0 +1,64 @@
+Agent: iterative-implementer | 2025-12-27 05:50:00
+Mode: manual
+Completed: Phase 6 Integration (3D step executors) | Files: 5 | Commits: 1
+Cache invalidated: N/A (no cache entries to invalidate)
+Status: complete
+
+## Work Completed
+
+### Phase 6: Complete 3D Integration into Runtime
+
+Successfully integrated all 3D step executors into the schedule runtime system.
+
+#### Deliverables Completed:
+
+1. **StepIR Type Union** - Added 3D step types to schedule.ts
+   - Added imports for StepCameraEval, StepMeshMaterialize, StepInstances3DProjectTo2D
+   - Included all 3D step types in the StepIR discriminated union
+   - Note: This was actually completed in a previous session (commit c3c0d1a)
+
+2. **Step Dispatch** - Added 3D execution cases to ScheduleExecutor.ts
+   - Imported 3D step executor functions
+   - Added dispatch cases for CameraEval, MeshMaterialize, Instances3DProjectTo2D
+   - Proper handling of mesh materialization result wrapping
+
+3. **RuntimeState Extensions** - Added 3D stores and viewport
+   - Added cameraStore: CameraStore field
+   - Added meshStore: MeshStore field
+   - Added viewport: ViewportInfo field
+   - Initialize stores from program.cameras and program.meshes if present
+   - Invalidate 3D stores on hot-swap (invalidateAll())
+   - Added viewport parameter to createRuntimeState factory (optional, defaults to 1920x1080@1)
+   - Updated inferSlotMetaFromSchedule to handle 3D step slot types
+
+4. **Module Exports** - Wired up all module exports
+   - Created src/editor/runtime/executor/steps/index.ts to export all step executors
+   - Updated src/editor/runtime/index.ts to export camera and mesh modules
+   - Exported ViewportInfo type from camera module
+
+5. **ViewportInfo Type** - Already exported from evaluateCamera.ts (no changes needed)
+
+## Files Modified:
+- src/editor/compiler/ir/schedule.ts (already committed in previous session)
+- src/editor/runtime/executor/ScheduleExecutor.ts
+- src/editor/runtime/executor/RuntimeState.ts
+- src/editor/runtime/executor/steps/index.ts (new file)
+- src/editor/runtime/index.ts
+
+## Commits:
+- 6647e40: feat(3d-integration): Complete Phase 6 - Integrate 3D step executors into runtime
+
+## Verification:
+- Typecheck passes for all modified files (no new errors introduced)
+- Pre-existing compilation errors in PatchStore.ts are unrelated to this work
+- All 3D step types properly integrated into StepIR union with exhaustive switch handling
+- 3D stores properly initialized and invalidated during hot-swap
+
+## Next Steps:
+Phase 6 is now complete. The 3D projection pipeline is fully integrated into the IR runtime:
+- Camera evaluation with caching ✓
+- Mesh materialization with caching ✓
+- 3D-to-2D projection step ✓
+- Viewport tracking and hot-swap preservation ✓
+
+The system is ready for compiler integration (emitting 3D steps from RenderInstances3D blocks).
