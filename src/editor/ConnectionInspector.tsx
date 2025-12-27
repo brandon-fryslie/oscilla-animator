@@ -6,7 +6,7 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useStore } from './stores';
 import { InspectorContainer } from './components/InspectorContainer';
 import { describeSlotType } from './portUtils';
