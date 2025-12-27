@@ -40,27 +40,6 @@ export const DomainN = createBlock({
   outputs: [
     output('domain', 'Domain', 'Domain'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'n',
-      label: 'Count',
-      type: 'number',
-      min: 1,
-      max: 10000,
-      step: 1,
-      defaultValue: 100,
-    },
-    {
-      key: 'seed',
-      label: 'Seed',
-      type: 'number',
-      min: 0,
-      max: 999999,
-      step: 1,
-      defaultValue: 0,
-    },
-  ],
   color: '#8B5CF6',
   laneKind: 'Scene',
   priority: 0,
@@ -126,54 +105,6 @@ export const GridDomain = createBlock({
     output('domain', 'Domain', 'Domain'),
     output('pos0', 'Base Positions', 'Field<vec2>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'rows',
-      label: 'Rows',
-      type: 'number',
-      min: 1,
-      max: 100,
-      step: 1,
-      defaultValue: 10,
-    },
-    {
-      key: 'cols',
-      label: 'Columns',
-      type: 'number',
-      min: 1,
-      max: 100,
-      step: 1,
-      defaultValue: 10,
-    },
-    {
-      key: 'spacing',
-      label: 'Spacing',
-      type: 'number',
-      min: 1,
-      max: 200,
-      step: 1,
-      defaultValue: 20,
-    },
-    {
-      key: 'originX',
-      label: 'Origin X',
-      type: 'number',
-      min: -1000,
-      max: 2000,
-      step: 10,
-      defaultValue: 100,
-    },
-    {
-      key: 'originY',
-      label: 'Origin Y',
-      type: 'number',
-      min: -1000,
-      max: 2000,
-      step: 10,
-      defaultValue: 100,
-    },
-  ],
   color: '#8B5CF6',
   laneKind: 'Scene',
   priority: 1,
@@ -238,43 +169,6 @@ export const SVGSampleDomain = createBlock({
     output('domain', 'Domain', 'Domain'),
     output('pos0', 'Sampled Positions', 'Field<vec2>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'asset',
-      label: 'SVG Path Asset',
-      type: 'string',
-      defaultValue: '',
-    },
-    {
-      key: 'sampleCount',
-      label: 'Sample Count',
-      type: 'number',
-      min: 1,
-      max: 5000,
-      step: 1,
-      defaultValue: 100,
-    },
-    {
-      key: 'seed',
-      label: 'Seed',
-      type: 'number',
-      min: 0,
-      max: 999999,
-      step: 1,
-      defaultValue: 0,
-    },
-    {
-      key: 'distribution',
-      label: 'Distribution',
-      type: 'select',
-      options: [
-        { value: 'even', label: 'Even (arc length)' },
-        { value: 'parametric', label: 'Parametric (t-value)' },
-      ],
-      defaultValue: 'even',
-    },
-  ],
   color: '#8B5CF6',
   laneKind: 'Scene',
   priority: 2,
@@ -306,18 +200,6 @@ export const StableIdHash = createBlock({
   ],
   outputs: [
     output('u01', 'Hash [0,1)', 'Field<number>'),
-  ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'salt',
-      label: 'Salt',
-      type: 'number',
-      min: 0,
-      max: 999999,
-      step: 1,
-      defaultValue: 0,
-    },
   ],
   color: '#EC4899',
   laneKind: 'Fields',
@@ -375,64 +257,6 @@ export const PositionMapGrid = createBlock({
   ],
   outputs: [
     output('pos', 'Positions', 'Field<vec2>'),
-  ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'rows',
-      label: 'Rows',
-      type: 'number',
-      min: 1,
-      max: 100,
-      step: 1,
-      defaultValue: 10,
-    },
-    {
-      key: 'cols',
-      label: 'Columns',
-      type: 'number',
-      min: 1,
-      max: 100,
-      step: 1,
-      defaultValue: 10,
-    },
-    {
-      key: 'spacing',
-      label: 'Spacing',
-      type: 'number',
-      min: 1,
-      max: 200,
-      step: 1,
-      defaultValue: 20,
-    },
-    {
-      key: 'originX',
-      label: 'Origin X',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      step: 10,
-      defaultValue: 100,
-    },
-    {
-      key: 'originY',
-      label: 'Origin Y',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      step: 10,
-      defaultValue: 100,
-    },
-    {
-      key: 'order',
-      label: 'Order',
-      type: 'select',
-      options: [
-        { value: 'rowMajor', label: 'Row Major' },
-        { value: 'serpentine', label: 'Serpentine' },
-      ],
-      defaultValue: 'rowMajor',
-    },
   ],
   color: '#22C55E',
   laneKind: 'Fields',
@@ -501,65 +325,6 @@ export const PositionMapCircle = createBlock({
   outputs: [
     output('pos', 'Positions', 'Field<vec2>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'centerX',
-      label: 'Center X',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      step: 10,
-      defaultValue: 400,
-    },
-    {
-      key: 'centerY',
-      label: 'Center Y',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      step: 10,
-      defaultValue: 300,
-    },
-    {
-      key: 'radius',
-      label: 'Radius',
-      type: 'number',
-      min: 10,
-      max: 500,
-      step: 10,
-      defaultValue: 150,
-    },
-    {
-      key: 'startAngle',
-      label: 'Start Angle (deg)',
-      type: 'number',
-      min: 0,
-      max: 360,
-      step: 15,
-      defaultValue: 0,
-    },
-    {
-      key: 'winding',
-      label: 'Winding',
-      type: 'select',
-      options: [
-        { value: '1', label: 'Clockwise' },
-        { value: '-1', label: 'Counter-Clockwise' },
-      ],
-      defaultValue: '1',
-    },
-    {
-      key: 'distribution',
-      label: 'Distribution',
-      type: 'select',
-      options: [
-        { value: 'even', label: 'Even' },
-        { value: 'goldenAngle', label: 'Golden Angle' },
-      ],
-      defaultValue: 'even',
-    },
-  ],
   color: '#22C55E',
   laneKind: 'Fields',
   priority: 2,
@@ -612,54 +377,6 @@ export const PositionMapLine = createBlock({
   outputs: [
     output('pos', 'Positions', 'Field<vec2>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'ax',
-      label: 'Start X',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      step: 10,
-      defaultValue: 100,
-    },
-    {
-      key: 'ay',
-      label: 'Start Y',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      step: 10,
-      defaultValue: 200,
-    },
-    {
-      key: 'bx',
-      label: 'End X',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      step: 10,
-      defaultValue: 700,
-    },
-    {
-      key: 'by',
-      label: 'End Y',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      step: 10,
-      defaultValue: 200,
-    },
-    {
-      key: 'distribution',
-      label: 'Distribution',
-      type: 'select',
-      options: [
-        { value: 'even', label: 'Even' },
-      ],
-      defaultValue: 'even',
-    },
-  ],
   color: '#22C55E',
   laneKind: 'Fields',
   priority: 3,
@@ -685,18 +402,6 @@ export const FieldConstNumber = createBlock({
   outputs: [
     output('out', 'Value', 'Field<number>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'value',
-      label: 'Value',
-      type: 'number',
-      min: -10000,
-      max: 10000,
-      step: 0.1,
-      defaultValue: 1,
-    },
-  ],
   color: '#F59E0B',
   laneKind: 'Fields',
   priority: 4,
@@ -721,15 +426,6 @@ export const FieldConstColor = createBlock({
   ],
   outputs: [
     output('out', 'Color', 'Field<color>'),
-  ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'color',
-      label: 'Color',
-      type: 'color',
-      defaultValue: '#3B82F6',
-    },
   ],
   color: '#F59E0B',
   laneKind: 'Fields',
@@ -757,18 +453,6 @@ export const FieldHash01ById = createBlock({
   ],
   outputs: [
     output('u', 'Random', 'Field<number>'),
-  ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'seed',
-      label: 'Seed',
-      type: 'number',
-      min: 0,
-      max: 999999,
-      step: 1,
-      defaultValue: 0,
-    },
   ],
   color: '#EC4899',
   laneKind: 'Fields',
@@ -823,53 +507,6 @@ export const FieldMapNumber = createBlock({
   ],
   outputs: [
     output('y', 'Output', 'Field<number>'),
-  ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'fn',
-      label: 'Function',
-      type: 'select',
-      options: [
-        { value: 'neg', label: 'Negate' },
-        { value: 'abs', label: 'Absolute' },
-        { value: 'sin', label: 'Sine' },
-        { value: 'cos', label: 'Cosine' },
-        { value: 'tanh', label: 'Tanh' },
-        { value: 'smoothstep', label: 'Smoothstep' },
-        { value: 'scale', label: 'Scale' },
-        { value: 'offset', label: 'Offset' },
-        { value: 'clamp', label: 'Clamp' },
-      ],
-      defaultValue: 'sin',
-    },
-    {
-      key: 'k',
-      label: 'Parameter',
-      type: 'number',
-      min: -100,
-      max: 100,
-      step: 0.1,
-      defaultValue: 1,
-    },
-    {
-      key: 'a',
-      label: 'Range Min',
-      type: 'number',
-      min: -100,
-      max: 100,
-      step: 0.1,
-      defaultValue: 0,
-    },
-    {
-      key: 'b',
-      label: 'Range Max',
-      type: 'number',
-      min: -100,
-      max: 100,
-      step: 0.1,
-      defaultValue: 1,
-    },
   ],
   color: '#A855F7',
   laneKind: 'Fields',
@@ -936,84 +573,6 @@ export const FieldMapVec2 = createBlock({
   outputs: [
     output('out', 'Output', 'Field<vec2>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'fn',
-      label: 'Function',
-      type: 'select',
-      options: [
-        { value: 'rotate', label: 'Rotate' },
-        { value: 'scale', label: 'Scale' },
-        { value: 'translate', label: 'Translate' },
-        { value: 'reflect', label: 'Reflect' },
-      ],
-      defaultValue: 'rotate',
-    },
-    {
-      key: 'angle',
-      label: 'Angle (deg)',
-      type: 'number',
-      min: -360,
-      max: 360,
-      step: 15,
-      defaultValue: 0,
-    },
-    {
-      key: 'scaleX',
-      label: 'Scale X',
-      type: 'number',
-      min: 0.1,
-      max: 10,
-      step: 0.1,
-      defaultValue: 1,
-    },
-    {
-      key: 'scaleY',
-      label: 'Scale Y',
-      type: 'number',
-      min: 0.1,
-      max: 10,
-      step: 0.1,
-      defaultValue: 1,
-    },
-    {
-      key: 'offsetX',
-      label: 'Offset X',
-      type: 'number',
-      min: -500,
-      max: 500,
-      step: 10,
-      defaultValue: 0,
-    },
-    {
-      key: 'offsetY',
-      label: 'Offset Y',
-      type: 'number',
-      min: -500,
-      max: 500,
-      step: 10,
-      defaultValue: 0,
-    },
-    {
-      key: 'centerX',
-      label: 'Center X',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      step: 10,
-      defaultValue: 400,
-    },
-    {
-      key: 'centerY',
-      label: 'Center Y',
-      type: 'number',
-      min: 0,
-      max: 1000,
-      step: 10,
-      defaultValue: 300,
-    },
-  ],
   color: '#A855F7',
   laneKind: 'Fields',
   priority: 11,
@@ -1056,22 +615,6 @@ export const FieldZipNumber = createBlock({
   outputs: [
     output('out', 'Result', 'Field<number>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'op',
-      label: 'Operation',
-      type: 'select',
-      options: [
-        { value: 'add', label: 'Add' },
-        { value: 'sub', label: 'Subtract' },
-        { value: 'mul', label: 'Multiply' },
-        { value: 'min', label: 'Min' },
-        { value: 'max', label: 'Max' },
-      ],
-      defaultValue: 'add',
-    },
-  ],
   color: '#A855F7',
   laneKind: 'Fields',
   priority: 12,
@@ -1108,27 +651,6 @@ export const JitterFieldVec2 = createBlock({
   outputs: [
     output('drift', 'Drift', 'Field<vec2>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'amount',
-      label: 'Amount',
-      type: 'number',
-      min: 0,
-      max: 100,
-      step: 1,
-      defaultValue: 5,
-    },
-    {
-      key: 'frequency',
-      label: 'Frequency',
-      type: 'number',
-      min: 0.1,
-      max: 10,
-      step: 0.1,
-      defaultValue: 1,
-    },
-  ],
   color: '#A855F7',
   laneKind: 'Fields',
   priority: 15,
@@ -1157,7 +679,6 @@ export const FieldFromSignalBroadcast = createBlock({
   outputs: [
     output('field', 'Field', 'Field<number>'),
   ],
-  paramSchema: [],
   color: '#A855F7',
   laneKind: 'Fields',
   priority: 13,
@@ -1203,22 +724,6 @@ export const FieldZipSignal = createBlock({
   outputs: [
     output('out', 'Result', 'Field<number>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'fn',
-      label: 'Operation',
-      type: 'select',
-      options: [
-        { value: 'add', label: 'Add' },
-        { value: 'sub', label: 'Subtract' },
-        { value: 'mul', label: 'Multiply' },
-        { value: 'min', label: 'Min' },
-        { value: 'max', label: 'Max' },
-      ],
-      defaultValue: 'add',
-    },
-  ],
   color: '#A855F7',
   laneKind: 'Fields',
   priority: 14,
@@ -1246,7 +751,6 @@ export const BroadcastSignalColor = createBlock({
   outputs: [
     output('field', 'Field', 'Field<color>'),
   ],
-  paramSchema: [],
   color: '#4ade80', // Green, for adapters/conversion
   laneKind: 'Fields',
   priority: 100, // Adapters should be easy to find
@@ -1329,33 +833,6 @@ export const RenderInstances2D = createBlock({
   // No outputs shown in UI - this is a terminal sink block
   // The compiler still defines the 'render' output for patch output inference
   outputs: [],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'opacity',
-      label: 'Opacity',
-      type: 'number',
-      min: 0,
-      max: 1,
-      step: 0.1,
-      defaultValue: 1.0,
-    },
-    {
-      key: 'glow',
-      label: 'Glow',
-      type: 'boolean',
-      defaultValue: false,
-    },
-    {
-      key: 'glowIntensity',
-      label: 'Glow Intensity',
-      type: 'number',
-      min: 0,
-      max: 5,
-      step: 0.5,
-      defaultValue: 2.0,
-    },
-  ],
   color: '#EF4444',
   laneKind: 'Program',
   priority: 100,
@@ -1431,7 +908,6 @@ export const Render2dCanvas = createBlock({
   outputs: [
     output('render', 'Render', 'CanvasRender'),
   ],
-  paramSchema: [],
   color: '#F97316', // Orange, distinct from SVG red
   laneKind: 'Program',
   priority: 101,

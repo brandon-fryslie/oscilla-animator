@@ -70,39 +70,6 @@ export const Oscillator = createBlock({
   outputs: [
     output('out', 'Output', 'Signal<number>'),
   ],
-  // TODO: Remove paramSchema after compiler updated to use defaultSource (Phase 4)
-  paramSchema: [
-    {
-      key: 'shape',
-      label: 'Waveform',
-      type: 'select',
-      options: [
-        { value: 'sine', label: 'Sine' },
-        { value: 'cosine', label: 'Cosine' },
-        { value: 'triangle', label: 'Triangle' },
-        { value: 'saw', label: 'Sawtooth' },
-      ],
-      defaultValue: 'sine',
-    },
-    {
-      key: 'amplitude',
-      label: 'Amplitude',
-      type: 'number',
-      min: 0,
-      max: 10,
-      step: 0.1,
-      defaultValue: 1,
-    },
-    {
-      key: 'bias',
-      label: 'Bias',
-      type: 'number',
-      min: -10,
-      max: 10,
-      step: 0.1,
-      defaultValue: 0,
-    },
-  ],
   color: '#3B82F6',
   laneKind: 'Phase',
   priority: 10,
@@ -165,31 +132,6 @@ export const Shaper = createBlock({
   ],
   outputs: [
     output('out', 'Output', 'Signal<number>'),
-  ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'kind',
-      label: 'Shape',
-      type: 'select',
-      options: [
-        { value: 'tanh', label: 'Tanh' },
-        { value: 'softclip', label: 'Soft Clip' },
-        { value: 'sigmoid', label: 'Sigmoid' },
-        { value: 'smoothstep', label: 'Smoothstep' },
-        { value: 'pow', label: 'Power' },
-      ],
-      defaultValue: 'smoothstep',
-    },
-    {
-      key: 'amount',
-      label: 'Amount',
-      type: 'number',
-      min: 0.1,
-      max: 10,
-      step: 0.1,
-      defaultValue: 1,
-    },
   ],
   color: '#3B82F6',
   laneKind: 'Phase',
@@ -255,42 +197,6 @@ export const ColorLFO = createBlock({
   outputs: [
     output('color', 'Color', 'Signal<color>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'base',
-      label: 'Base Color',
-      type: 'color',
-      defaultValue: '#3B82F6',
-    },
-    {
-      key: 'hueSpan',
-      label: 'Hue Span',
-      type: 'number',
-      min: 0,
-      max: 360,
-      step: 1,
-      defaultValue: 180,
-    },
-    {
-      key: 'sat',
-      label: 'Saturation',
-      type: 'number',
-      min: 0,
-      max: 1,
-      step: 0.01,
-      defaultValue: 0.8,
-    },
-    {
-      key: 'light',
-      label: 'Lightness',
-      type: 'number',
-      min: 0,
-      max: 1,
-      step: 0.01,
-      defaultValue: 0.5,
-    },
-  ],
   color: '#F59E0B',
   laneKind: 'Phase',
   priority: 12,
@@ -332,7 +238,6 @@ export const AddSignal = createBlock({
   outputs: [
     output('out', 'Sum', 'Signal<number>'),
   ],
-  paramSchema: [],
   color: '#8B5CF6',
   laneKind: 'Phase',
   priority: 20,});
@@ -370,7 +275,6 @@ export const MulSignal = createBlock({
   outputs: [
     output('out', 'Product', 'Signal<number>'),
   ],
-  paramSchema: [],
   color: '#8B5CF6',
   laneKind: 'Phase',
   priority: 21,});
@@ -406,7 +310,6 @@ export const MinSignal = createBlock({
   outputs: [
     output('out', 'Min', 'Signal<number>'),
   ],
-  paramSchema: [],
   color: '#8B5CF6',
   laneKind: 'Phase',
   priority: 22,});
@@ -442,7 +345,6 @@ export const MaxSignal = createBlock({
   outputs: [
     output('out', 'Max', 'Signal<number>'),
   ],
-  paramSchema: [],
   color: '#8B5CF6',
   laneKind: 'Phase',
   priority: 23,});
@@ -487,27 +389,6 @@ export const ClampSignal = createBlock({
   ],
   outputs: [
     output('out', 'Output', 'Signal<number>'),
-  ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'min',
-      label: 'Min',
-      type: 'number',
-      min: -100,
-      max: 100,
-      step: 0.1,
-      defaultValue: 0,
-    },
-    {
-      key: 'max',
-      label: 'Max',
-      type: 'number',
-      min: -100,
-      max: 100,
-      step: 0.1,
-      defaultValue: 1,
-    },
   ],
   color: '#8B5CF6',
   laneKind: 'Phase',

@@ -43,18 +43,6 @@ export const PulseDivider = createBlock({
   outputs: [
     output('tick', 'Tick', 'Signal<Unit>'),
   ],
-  // TODO: Remove paramSchema after compiler updated to use defaultSource (Phase 4)
-  paramSchema: [
-    {
-      key: 'divisions',
-      label: 'Divisions',
-      type: 'number',
-      min: 1,
-      max: 64,
-      step: 1,
-      defaultValue: 4,
-    },
-  ],
   color: '#F59E0B',
   laneKind: 'Phase',
   priority: 15,
@@ -114,36 +102,6 @@ export const EnvelopeAD = createBlock({
   ],
   outputs: [
     output('env', 'Envelope', 'Signal<number>'),
-  ],
-  // TODO: Remove paramSchema after compiler updated to use defaultSource (Phase 4)
-  paramSchema: [
-    {
-      key: 'attack',
-      label: 'Attack (s)',
-      type: 'number',
-      min: 0.001,
-      max: 2.0,
-      step: 0.01,
-      defaultValue: 0.05,
-    },
-    {
-      key: 'decay',
-      label: 'Decay (s)',
-      type: 'number',
-      min: 0.001,
-      max: 5.0,
-      step: 0.01,
-      defaultValue: 0.5,
-    },
-    {
-      key: 'peak',
-      label: 'Peak Value',
-      type: 'number',
-      min: 0,
-      max: 10,
-      step: 0.1,
-      defaultValue: 1.0,
-    },
   ],
   color: '#F59E0B',
   laneKind: 'Phase',

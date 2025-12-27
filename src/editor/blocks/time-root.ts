@@ -46,18 +46,6 @@ export const FiniteTimeRoot: KernelBlockDefinition = createBlock({
     output('end', 'End Event', 'Event<any>'),
     output('energy', 'Energy', 'Signal<number>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'durationMs',
-      label: 'Duration (ms)',
-      type: 'number',
-      min: 100,
-      max: 30000,
-      step: 100,
-      defaultValue: 5000,
-    },
-  ],
   color: '#ef4444', // Red for finite
   laneKind: 'Phase',
   subcategory: 'TimeRoot',
@@ -116,28 +104,6 @@ export const CycleTimeRoot: KernelBlockDefinition = createBlock({
     output('cycleIndex', 'Cycle Index', 'Signal<number>'),
     output('energy', 'Energy', 'Signal<number>'),
   ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'periodMs',
-      label: 'Period (ms)',
-      type: 'number',
-      min: 100,
-      max: 10000,
-      step: 100,
-      defaultValue: 3000,
-    },
-    {
-      key: 'mode',
-      label: 'Mode',
-      type: 'select',
-      options: [
-        { value: 'loop', label: 'Loop' },
-        { value: 'pingpong', label: 'Ping-Pong' },
-      ],
-      defaultValue: 'loop',
-    },
-  ],
   color: '#3b82f6', // Blue for cyclic
   laneKind: 'Phase',
   subcategory: 'TimeRoot',
@@ -187,27 +153,6 @@ export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
     output('phase', 'Ambient Phase', 'Signal<phase>'),
     output('pulse', 'Ambient Pulse', 'Event<any>'),
     output('energy', 'Energy', 'Signal<number>'),
-  ],
-  // TODO: Remove paramSchema after compiler updated (Phase 4)
-  paramSchema: [
-    {
-      key: 'windowMs',
-      label: 'Preview Window (ms)',
-      type: 'number',
-      min: 1000,
-      max: 60000,
-      step: 1000,
-      defaultValue: 10000,
-    },
-    {
-      key: 'periodMs',
-      label: 'Ambient Period (ms)',
-      type: 'number',
-      min: 1000,
-      max: 60000,
-      step: 1000,
-      defaultValue: 10000,
-    },
   ],
   color: '#8b5cf6', // Purple for infinite
   laneKind: 'Phase',

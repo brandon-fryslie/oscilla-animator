@@ -37,7 +37,6 @@ export const FieldAddVec2 = createBlock({
   outputs: [
     output('out', 'Result', 'Field<vec2>'),
   ],
-  paramSchema: [],
   color: '#A855F7',
   laneKind: 'Fields',
   priority: 31,});
@@ -102,31 +101,6 @@ export const FieldColorize = createBlock({
   outputs: [
     output('colors', 'Colors', 'Field<color>'),
   ],
-  // TODO: Remove paramSchema after compiler updated to use defaultSource (Phase 4)
-  paramSchema: [
-    {
-      key: 'colorA',
-      label: 'Color A',
-      type: 'color',
-      defaultValue: '#3B82F6',
-    },
-    {
-      key: 'colorB',
-      label: 'Color B',
-      type: 'color',
-      defaultValue: '#EF4444',
-    },
-    {
-      key: 'mode',
-      label: 'Mode',
-      type: 'select',
-      options: [
-        { value: 'lerp', label: 'Linear' },
-        { value: 'hue', label: 'Hue Rotate' },
-      ],
-      defaultValue: 'lerp',
-    },
-  ],
   color: '#F59E0B',
   laneKind: 'Fields',
   priority: 40,});
@@ -188,39 +162,6 @@ export const FieldOpacity = createBlock({
   ],
   outputs: [
     output('opacity', 'Opacity', 'Field<number>'),
-  ],
-  // TODO: Remove paramSchema after compiler updated to use defaultSource (Phase 4)
-  paramSchema: [
-    {
-      key: 'min',
-      label: 'Min Opacity',
-      type: 'number',
-      min: 0,
-      max: 1,
-      step: 0.1,
-      defaultValue: 0,
-    },
-    {
-      key: 'max',
-      label: 'Max Opacity',
-      type: 'number',
-      min: 0,
-      max: 1,
-      step: 0.1,
-      defaultValue: 1,
-    },
-    {
-      key: 'curve',
-      label: 'Curve',
-      type: 'select',
-      options: [
-        { value: 'linear', label: 'Linear' },
-        { value: 'smoothstep', label: 'Smooth' },
-        { value: 'square', label: 'Square' },
-        { value: 'sqrt', label: 'Square Root' },
-      ],
-      defaultValue: 'linear',
-    },
   ],
   color: '#F59E0B',
   laneKind: 'Fields',
@@ -299,44 +240,6 @@ export const FieldHueGradient = createBlock({
   outputs: [
     output('colors', 'Colors', 'Field<color>'),
   ],
-  paramSchema: [
-    {
-      key: 'hueOffset',
-      label: 'Hue Offset',
-      type: 'number',
-      min: 0,
-      max: 360,
-      step: 1,
-      defaultValue: 0,
-    },
-    {
-      key: 'hueSpread',
-      label: 'Hue Spread',
-      type: 'number',
-      min: 0,
-      max: 1,
-      step: 0.1,
-      defaultValue: 1,
-    },
-    {
-      key: 'saturation',
-      label: 'Saturation',
-      type: 'number',
-      min: 0,
-      max: 100,
-      step: 1,
-      defaultValue: 80,
-    },
-    {
-      key: 'lightness',
-      label: 'Lightness',
-      type: 'number',
-      min: 0,
-      max: 100,
-      step: 1,
-      defaultValue: 60,
-    },
-  ],
   color: '#F472B6', // Pink for color blocks
   laneKind: 'Fields',
   priority: 42,});
@@ -393,14 +296,6 @@ export const FieldFromExpression = createBlock({
   outputs: [
     output('field', 'Field', 'Field<string>'),
   ],
-  paramSchema: [
-    {
-      key: 'expression',
-      label: 'Expression',
-      type: 'string',
-      defaultValue: 'hsl(i / n * 360 + signal * 360, 80, 60)',
-    },
-  ],
   color: '#10B981', // Emerald for adapter blocks
   laneKind: 'Fields',
   priority: 43,});
@@ -427,7 +322,6 @@ export const FieldStringToColor = createBlock({
   outputs: [
     output('colors', 'Colors', 'Field<color>'),
   ],
-  paramSchema: [],
   color: '#F472B6',
   laneKind: 'Fields',
   priority: 44,});
@@ -454,7 +348,6 @@ export const ViewportInfo = createBlock({
     output('size', 'Size', 'Scalar:vec2'),
     output('center', 'Center', 'Scalar:vec2'),
   ],
-  paramSchema: [],
   color: '#8B5CF6',
   laneKind: 'Scene',
   priority: 10,});
