@@ -138,7 +138,6 @@ describe("RenderInstances3D block lowering", () => {
 
       const assembleStep = assembleSteps[0];
       if (assembleStep.kind === "renderAssemble") {
-      if (assembleStep.kind === "renderAssemble") {
         expect(assembleStep.instance2dBatches).toBeDefined();
         if (assembleStep.instance2dBatches) {
           expect(assembleStep.instance2dBatches.length).toBeGreaterThan(0);
