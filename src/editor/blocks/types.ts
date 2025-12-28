@@ -29,6 +29,31 @@ export type BlockTagValue =
 
 export type BlockTags = Record<string, BlockTagValue>;
 
+// =============================================================================
+// Legacy Parameter Schema Types (DEPRECATED - use defaultSource on inputs instead)
+// =============================================================================
+
+/**
+ * @deprecated Legacy parameter schema type. Use defaultSource on input slots instead.
+ * Kept for backward compatibility with tests only.
+ */
+export type ParamType = 'number' | 'string' | 'boolean' | 'select' | 'color';
+
+/**
+ * @deprecated Legacy parameter schema interface. Use defaultSource on input slots instead.
+ * Kept for backward compatibility with tests only.
+ */
+export interface ParamSchema {
+  readonly key: string;
+  readonly label: string;
+  readonly type: ParamType;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+  readonly options?: readonly { value: string; label: string }[];
+  readonly defaultValue: unknown;
+}
+
 /**
  * Base fields shared by all block definitions.
  */
@@ -62,6 +87,12 @@ interface BlockDefinitionBase {
 
   /** Default parameter values */
   readonly defaultParams: BlockParams;
+
+  /**
+   * @deprecated Legacy parameter schema. Use defaultSource on input slots instead.
+   * Kept for backward compatibility with existing code.
+   */
+  readonly paramSchema?: readonly ParamSchema[];
 
   /** Color for visual identification */
   readonly color: string;
@@ -166,31 +197,6 @@ export interface CompoundNode {
 export interface CompoundEdge {
   readonly from: string;  // "nodeId.outputSlot"
   readonly to: string;    // "nodeId.inputSlot"
-}
-
-// =============================================================================
-// Legacy Parameter Schema Types (DEPRECATED - use defaultSource on inputs instead)
-// =============================================================================
-
-/**
- * @deprecated Legacy parameter schema type. Use defaultSource on input slots instead.
- * Kept for backward compatibility with tests only.
- */
-export type ParamType = 'number' | 'string' | 'boolean' | 'select' | 'color';
-
-/**
- * @deprecated Legacy parameter schema interface. Use defaultSource on input slots instead.
- * Kept for backward compatibility with tests only.
- */
-export interface ParamSchema {
-  readonly key: string;
-  readonly label: string;
-  readonly type: ParamType;
-  readonly min?: number;
-  readonly max?: number;
-  readonly step?: number;
-  readonly options?: readonly { value: string; label: string }[];
-  readonly defaultValue: unknown;
 }
 
 // =============================================================================

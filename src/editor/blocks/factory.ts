@@ -1,4 +1,4 @@
-import type { BlockDefinition } from './types';
+import type { BlockDefinition, ParamSchema } from './types';
 import { isNonEmptyString } from '../types/helpers';
 
 export function createBlock(
