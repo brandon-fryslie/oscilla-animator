@@ -1,21 +1,23 @@
 /**
  * Build Schedule - Convert BuilderProgramIR to CompiledProgramIR
  *
- * This is a simple transformation that takes the output of IRBuilder and converts
- * it into the executable CompiledProgramIR format with a basic execution schedule.
+ * Transforms the output of IRBuilder into an executable schedule.
  *
- * This is NOT the full pass9-codegen implementation - it's a minimal converter
- * that gets the IR pipeline working end-to-end.
- *
- * The schedule is simple:
+ * Current schedule structure:
  * 1. StepTimeDerive - derive time signals from tAbsMs
- * 2. StepBusEval - evaluate each bus (if any)
- * 3. StepMaterializeColor - materialize color fields to RGBA buffers
- * 4. StepMaterializeTestGeometry - populate test position/radius buffers (temporary)
+ * 2. StepSignalEval - evaluate signal outputs to slots
+ * 3. StepMaterialize* - materialize fields to buffers (color, geometry, paths)
+ * 4. StepInstances3DProjectTo2D - project 3D instances to 2D (optional)
  * 5. StepRenderAssemble - final render tree assembly
+ *
+ * KNOWN GAPS:
+ * - StepBusEval is NOT emitted (busRoots from pass7 not threaded through BuilderProgramIR)
+ * - StepMaterializeTestGeometry is still used as fallback for geometry
  *
  * References:
  * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md
+ * - design-docs/12-Compiler-Final/Compiler-Audit-RedFlags-Schedule-and-Runtime.md
+ * - design-docs/13-Renderer/07-3d-Canonical.md (§7.2 - 3D projection)
  */
 
 import type { BuilderProgramIR, RenderSinkIR } from "./builderTypes";
@@ -40,6 +42,7 @@ import type {
   PathBatch,
 } from "./index";
 import { randomUUID } from "../../crypto";
+import type { StepInstances3DProjectTo2D } from "../../runtime/executor/steps/executeInstances3DProject";
 
 /**
  * Debug configuration for schedule building.
@@ -217,8 +220,9 @@ interface BuildScheduleOptions {
  * 1. Time derivation
  * 2. Bus evaluation (if any)
  * 3. Field materialization (color, path, etc.)
- * 4. Geometry materialization (test data for now)
- * 5. Render assembly
+ * 4. 3D projection (instances3d sinks)
+ * 5. Geometry materialization (test data for now)
+ * 6. Render assembly
  *
  * Per design-docs/13-Renderer/12-ValueSlotPerNodeOutput.md:
  * - Lowering allocates all output slots (including time slots from TimeRoot)
@@ -383,6 +387,26 @@ function buildSchedule(
         ]);
       }
     }
+    if (sink.sinkType === "instances3d") {
+      const result = processInstances3DSink(
+        sink,
+        sinkIdx,
+        slots,
+        steps,
+        sigSlotToId,
+        fieldSlotToId,
+      );
+      instance2dBatches.push(result.batch);
+      materializeStepIds.push(...result.stepIds);
+
+      // In 'full' mode, add probes after projection step
+      if (probeMode === 'full') {
+        maybeInsertProbe('projection', result.stepIds[result.stepIds.length - 1], [
+          result.batch.posXYSlot,
+          result.batch.colorRGBASlot,
+        ]);
+      }
+    }
     if (sink.sinkType === "paths2d") {
       const result = processPaths2DSink(
         sink,
@@ -401,6 +425,13 @@ function buildSchedule(
   // Step 3: Render Assemble
   // Depends on all materialization steps
   // Batch lists are embedded directly in the step (compile-time config)
+  //
+  // LIMITATION: Dependencies are based on step IDs, not slot-level analysis.
+  // This is correct as long as steps are added in the order they are processed
+  // above. A more robust approach would track which slots each step produces
+  // and which slots renderAssemble consumes, then derive dependencies from
+  // the slot producer/consumer relationship.
+  // See: design-docs/12-Compiler-Final/Compiler-Audit-RedFlags-Schedule-and-Runtime.md
   const renderAssembleDeps = [
     "step-time-derive",
     ...(signalOutputs.length > 0 ? ["step-signal-eval"] : []),
@@ -670,6 +701,163 @@ function processInstances2DSink(
     posXYSlot,
     sizeSlot: sizeOutSlot,
     colorRGBASlot: colorOutSlot,
+    opacitySlot,
+  };
+
+  return { batch, stepIds };
+}
+
+/**
+ * Process an instances3d render sink.
+ * Allocates buffer slots, materializes color field as RGBA channels,
+ * and emits StepInstances3DProjectTo2D for 3D→2D projection.
+ *
+ * Per design-docs/13-Renderer/07-3d-Canonical.md:
+ * - Color field is split into separate R,G,B,A materialization slots
+ * - Projection step transforms 3D positions to 2D screen space
+ * - Output is Instance2DBufferRef (same as instances2d for rendering)
+ *
+ * @returns Batch descriptor (pointing to projection output) and step IDs for dependencies
+ */
+function processInstances3DSink(
+  sink: RenderSinkIR,
+  sinkIdx: number,
+  slots: SlotAllocator,
+  steps: StepIR[],
+  sigSlotToId: Map<ValueSlot, number>,
+  fieldSlotToId: Map<ValueSlot, number>,
+): { batch: Instance2DBatch; stepIds: string[] } {
+  const stepIds: string[] = [];
+
+  // Get input slots from sink
+  const domainSlot = sink.inputs.domain;
+  const positions3dSlot = sink.inputs.positions3d;
+  const colorSlot = sink.inputs.color;
+  const radiusSlot = sink.inputs.radius;
+  const opacitySlot = sink.inputs.opacity;
+  const cameraSlot = sink.inputs.camera; // May be undefined (default camera injection by pass8)
+
+  if (opacitySlot === undefined) {
+    throw new Error("processInstances3DSink: missing opacity input");
+  }
+
+  // Validate positions3d field
+  const positions3dFieldId = fieldSlotToId.get(positions3dSlot);
+  if (positions3dFieldId === undefined) {
+    throw new Error(`processInstances3DSink: positions3d slot ${positions3dSlot} has no field expression`);
+  }
+
+  // Validate color field
+  const colorFieldId = fieldSlotToId.get(colorSlot);
+  if (colorFieldId === undefined) {
+    throw new Error(`processInstances3DSink: color slot ${colorSlot} has no field expression`);
+  }
+
+  // Validate radius (field or signal)
+  const radiusSigId = sigSlotToId.get(radiusSlot);
+  const radiusFieldId = fieldSlotToId.get(radiusSlot);
+  if (radiusSigId === undefined && radiusFieldId === undefined) {
+    throw new Error(`processInstances3DSink: radius slot ${radiusSlot} has no signal or field expression`);
+  }
+
+  // Materialize 3D positions (vec3f32)
+  const pos3dSlot = slots.alloc();
+  const pos3dStepId = `step-mat-pos3d-${sinkIdx}`;
+  steps.push({
+    kind: "materialize",
+    id: pos3dStepId,
+    deps: ["step-time-derive"],
+    label: `Materialize 3D positions for sink ${sinkIdx}`,
+    materialization: {
+      id: `mat-pos3d-${sinkIdx}`,
+      fieldExprId: String(positions3dFieldId),
+      domainSlot,
+      outBufferSlot: pos3dSlot,
+      format: { components: 3, elementType: "f32" },
+      policy: "perFrame",
+    },
+  });
+  stepIds.push(pos3dStepId);
+
+  // Materialize color as separate RGBA channels (Field<color> → 4 Float32Array buffers)
+  // One step emits all 4 channels
+  const colorRSlot = slots.alloc();
+  const colorGSlot = slots.alloc();
+  const colorBSlot = slots.alloc();
+  const colorASlot = slots.alloc();
+  const colorStepId = `step-mat-color-${sinkIdx}`;
+  steps.push({
+    kind: "materializeColor",
+    id: colorStepId,
+    deps: ["step-time-derive"],
+    label: `Materialize color channels for sink ${sinkIdx}`,
+    domainSlot,
+    colorExprSlot: colorSlot,
+    outRSlot: colorRSlot,
+    outGSlot: colorGSlot,
+    outBSlot: colorBSlot,
+    outASlot: colorASlot,
+  });
+  stepIds.push(colorStepId);
+
+  // Materialize radius if it's a field (if signal, use slot directly)
+  const radiusOutSlot = radiusFieldId !== undefined ? slots.alloc() : radiusSlot;
+  if (radiusFieldId !== undefined) {
+    const radiusStepId = `step-mat-radius-${sinkIdx}`;
+    steps.push({
+      kind: "materialize",
+      id: radiusStepId,
+      deps: ["step-time-derive"],
+      label: `Materialize radius for sink ${sinkIdx}`,
+      materialization: {
+        id: `mat-radius-${sinkIdx}`,
+        fieldExprId: String(radiusFieldId),
+        domainSlot,
+        outBufferSlot: radiusOutSlot,
+        format: { components: 1, elementType: "f32" },
+        policy: "perFrame",
+      },
+    });
+    stepIds.push(radiusStepId);
+  }
+
+  // Allocate output slot for Instance2DBufferRef (projection result)
+  const projectionOutSlot = slots.alloc();
+
+  // Emit StepInstances3DProjectTo2D
+  const projectionStepId = `step-project3d-${sinkIdx}`;
+  const projectionStep: StepInstances3DProjectTo2D = {
+    kind: "Instances3DProjectTo2D",
+    id: projectionStepId,
+    deps: stepIds, // Depends on all materialization steps
+    label: `Project 3D instances to 2D for sink ${sinkIdx}`,
+    domainSlot,
+    cameraEvalSlot: cameraSlot ?? 0 as ValueSlot, // TODO: Pass8 should inject default camera slot
+    positionSlot: pos3dSlot,
+    colorRSlot,
+    colorGSlot,
+    colorBSlot,
+    colorASlot,
+    radiusSlot: radiusOutSlot,
+    zSort: true,
+    cullMode: "frustum",
+    clipMode: "discard",
+    sizeSpace: "px",
+    outSlot: projectionOutSlot,
+  };
+  steps.push(projectionStep);
+  stepIds.push(projectionStepId);
+
+  // Create batch descriptor pointing to projection output
+  // The projection step produces an Instance2DBufferRef with x,y,r,g,b,a,s,z,alive arrays
+  // We reference the output slot as the posXY slot (it contains the full Instance2DBufferRef)
+  const batch: Instance2DBatch = {
+    kind: "instance2d",
+    count: 0, // Will be determined at runtime from domain
+    domainSlot,
+    posXYSlot: projectionOutSlot, // Projection output (Instance2DBufferRef)
+    sizeSlot: projectionOutSlot,  // Same ref (contains size data)
+    colorRGBASlot: projectionOutSlot, // Same ref (contains color data)
     opacitySlot,
   };
 
