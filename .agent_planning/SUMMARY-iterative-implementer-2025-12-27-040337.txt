@@ -1,0 +1,74 @@
+Agent: iterative-implementer | 2025-12-27-040337
+Mode: tdd
+Completed: Deliverable 2 - KERNEL_PRIMITIVES Allowlist and Validation | Files: 4 | Commits: 1
+Tests: 16 passing, 0 failing (TDD mode)
+Cache invalidated: None (no stale entries related to block definitions)
+Status: complete
+
+## Summary
+
+Implemented Deliverable 2 from the Primitives sprint: KERNEL_PRIMITIVES allowlist and validation.
+
+## Files Created
+
+1. src/editor/blocks/kernel-primitives.ts (102 lines)
+   - Frozen allowlist of 12 kernel primitives
+   - Helper functions: isKernelPrimitive(), getKernelCapability(), getKernelPrimitivesForCapability()
+   - Type-safe mapping using KernelId union type
+
+2. src/editor/blocks/registry-validation.ts (147 lines)
+   - validateBlockDefinition(): Single block validation
+   - validateBlockDefinitions(): Batch validation with error accumulation
+   - BlockDefinitionValidationError: Custom error class
+   - getKernelPrimitivesSummary(): Debug utility
+
+3. src/editor/blocks/__tests__/registry-validation.test.ts (384 lines)
+   - 16 comprehensive unit tests
+   - Tests valid and invalid cases
+   - Tests error accumulation and helpful error messages
+
+## Files Modified
+
+1. src/editor/blocks/registry.ts
+   - Added validation on module load (fail-fast)
+   - Validates all block definitions before constructing BLOCK_DEFS_BY_TYPE
+
+## Validation Rules Enforced
+
+1. Composites and macros must always be pure
+2. Pure primitives are always valid
+3. Non-pure capability must be in KERNEL_PRIMITIVES
+4. Capability must match KERNEL_PRIMITIVES entry
+5. KernelId must match block type
+
+## Test Results
+
+All 16 tests passing:
+- 6 tests for valid definitions (kernel primitives, pure primitives, composites, macros)
+- 5 tests for invalid definitions (unauthorized primitives, capability mismatch, etc.)
+- 3 tests for batch validation
+- 2 tests for kernel primitives summary utility
+
+## TypeScript Compilation
+
+Success - no errors
+
+## Application Startup
+
+Application starts successfully with current block set (no violations detected)
+
+## Note on Primitive Count
+
+The DOD stated "11 entries" but the breakdown was "(3 time, 2 identity, 2 state, 3 render, 2 io)"
+which equals 12. This was a typo in the DOD. The correct count is 12 primitives.
+
+## Commits
+
+- 4ab7296 feat(primitives): Add KERNEL_PRIMITIVES allowlist and validation
+
+## Next Steps
+
+Deliverable 3: Add Pure Block Compilation Enforcement
+- Create pure-operator-ast.ts with SignalExpr and FieldExpr definitions
+- Create pure-block-validator.ts with validatePureBlockOutput()
+- Integrate validation into block compilation
