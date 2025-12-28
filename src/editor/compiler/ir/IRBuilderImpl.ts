@@ -21,9 +21,8 @@ import type {
 } from "./types";
 import type { SignalExprIR, StatefulSignalOp, EventExprIR, EventCombineMode } from "./signalExpr";
 import type { FieldExprIR } from "./fieldExpr";
-import type { TransformStepIR } from "./transforms";
+import type { TransformStepIR, PureFnRef } from "./transforms";
 import type {
-  PureFnRef,
   ReduceFn,
   StateLayoutEntry,
   BuilderTransformChain,
@@ -78,9 +77,9 @@ export class IRBuilderImpl implements IRBuilder {
   // Time slots - set by TimeRoot lowering
   private timeSlots: TimeSlots | undefined;
 
-
   // Time model - set by pass6 from Pass 3 output
   private timeModel: TimeModelIR | undefined;
+
   // =============================================================================
   // Debug Index Tracking (Phase 7)
   // =============================================================================
@@ -106,7 +105,7 @@ export class IRBuilderImpl implements IRBuilder {
    *
    * @param blockId - The ID of the block being lowered
    */
-  setCurrentBlockId(blockId: string): void {
+  setCurrentBlockId(blockId: string | undefined): void {
     this.currentBlockId = blockId;
   }
 
@@ -148,32 +147,50 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   // =============================================================================
-  // Slot Management
+  // ID Allocation
   // =============================================================================
 
-  allocValueSlot(type: TypeDesc, debugName?: string): ValueSlot {
+  allocSigExprId(): SigExprId {
+    return this.sigExprs.length as SigExprId;
+  }
+
+  allocFieldExprId(): FieldExprId {
+    return this.fieldExprs.length as FieldExprId;
+  }
+
+  allocStateId(type: TypeDesc, initial?: unknown, debugName?: string): StateId {
+    return this.allocState(type, initial, debugName);
+  }
+
+  allocConstId(value: unknown): number {
+    return this.addConst(value);
+  }
+
+  allocValueSlot(type?: TypeDesc, debugName?: string): ValueSlot {
     const slot = this.nextValueSlot++;
 
-    // Register slot metadata
-    const storage = inferStorage(type);
-    this.slotMetaEntries.push({
-      slot,
-      storage,
-      type,
-      debugName,
-    });
+    // Register slot metadata if type provided
+    if (type) {
+      const storage = inferStorage(type);
+      this.slotMetaEntries.push({
+        slot,
+        storage,
+        type,
+        debugName,
+      });
+    }
 
     return slot;
   }
 
-  registerSigValueSlot(sigId: SigExprId, slot: ValueSlot): void {
+  registerSigSlot(sigId: SigExprId, slot: ValueSlot): void {
     while (this.sigValueSlots.length <= sigId) {
       this.sigValueSlots.push(undefined);
     }
     this.sigValueSlots[sigId] = slot;
   }
 
-  registerFieldValueSlot(fieldId: FieldExprId, slot: ValueSlot): void {
+  registerFieldSlot(fieldId: FieldExprId, slot: ValueSlot): void {
     while (this.fieldValueSlots.length <= fieldId) {
       this.fieldValueSlots.push(undefined);
     }
@@ -181,8 +198,12 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   // =============================================================================
-  // Time Slots (from TimeRoot lowering)
+  // Time Model and Slots
   // =============================================================================
+
+  setTimeModel(timeModel: TimeModelIR): void {
+    this.timeModel = timeModel;
+  }
 
   setTimeSlots(slots: TimeSlots): void {
     this.timeSlots = slots;
@@ -196,7 +217,7 @@ export class IRBuilderImpl implements IRBuilder {
   // Constant Pool
   // =============================================================================
 
-  addConst(value: unknown): number {
+  private addConst(value: unknown): number {
     const key = JSON.stringify(value);
     const existing = this.constMap.get(key);
     if (existing !== undefined) {
@@ -265,77 +286,93 @@ export class IRBuilderImpl implements IRBuilder {
     return id;
   }
 
-  sigBusRead(busIndex: BusIndex, type: TypeDesc): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
-    this.sigExprs.push({
-      kind: "busRead",
-      busIndex,
-      type,
-    });
-    this.trackSigExprSource(id);
-    return id;
-  }
-
-  sigMap(inputId: SigExprId, fn: PureFnRef): SigExprId {
+  sigMap(src: SigExprId, fn: PureFnRef, outputType: TypeDesc): SigExprId {
     const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "map",
-      inputId,
+      src,
       fn,
-      type: fn.outputType,
+      type: outputType,
     });
     this.trackSigExprSource(id);
     return id;
   }
 
-  sigZip(inputIds: readonly SigExprId[], fn: PureFnRef): SigExprId {
+  sigZip(a: SigExprId, b: SigExprId, fn: PureFnRef, outputType: TypeDesc): SigExprId {
     const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "zip",
-      inputIds: [...inputIds],
+      a,
+      b,
       fn,
-      type: fn.outputType,
+      type: outputType,
+    });
+    this.trackSigExprSource(id);
+    return id;
+  }
+
+  sigSelect(cond: SigExprId, t: SigExprId, f: SigExprId, outputType: TypeDesc): SigExprId {
+    const id = this.sigExprs.length as SigExprId;
+    this.sigExprs.push({
+      kind: "select",
+      cond,
+      t,
+      f,
+      type: outputType,
+    });
+    this.trackSigExprSource(id);
+    return id;
+  }
+
+  sigTransform(src: SigExprId, chain: TransformChainId): SigExprId {
+    const id = this.sigExprs.length as SigExprId;
+    const chainDef = this.transformChains[chain];
+    if (!chainDef) {
+      throw new Error(`Transform chain ${chain} not found`);
+    }
+    this.sigExprs.push({
+      kind: "transform",
+      src,
+      chain,
+      type: chainDef.outputType,
+    });
+    this.trackSigExprSource(id);
+    return id;
+  }
+
+  sigCombine(
+    busIndex: BusIndex,
+    terms: readonly SigExprId[],
+    mode: "sum" | "average" | "max" | "min" | "last",
+    outputType: TypeDesc
+  ): SigExprId {
+    const id = this.sigExprs.length as SigExprId;
+    this.sigExprs.push({
+      kind: "busCombine",
+      busIndex,
+      terms: [...terms],
+      combine: { mode },
+      type: outputType,
     });
     this.trackSigExprSource(id);
     return id;
   }
 
   sigStateful(
-    inputIds: readonly SigExprId[],
-    stateId: StateId,
     op: StatefulSignalOp,
-    type: TypeDesc
+    input: SigExprId,
+    stateId: StateId,
+    outputType: TypeDesc,
+    params?: Record<string, number>
   ): SigExprId {
     const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "stateful",
-      inputIds: [...inputIds],
-      stateId,
       op,
-      type,
-    });
-    this.trackSigExprSource(id);
-    return id;
-  }
-
-  sigReduce(fieldId: FieldExprId, fn: ReduceFn): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
-    this.sigExprs.push({
-      kind: "reduce",
-      fieldId,
-      fn,
-      type: fn.outputType,
-    });
-    this.trackSigExprSource(id);
-    return id;
-  }
-
-  sigSlot(slot: ValueSlot, type: TypeDesc): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
-    this.sigExprs.push({
-      kind: "slot",
-      slot,
-      type,
+      input,
+      stateId,
+      type: outputType,
+      params,
     });
     this.trackSigExprSource(id);
     return id;
@@ -357,77 +394,103 @@ export class IRBuilderImpl implements IRBuilder {
     return id;
   }
 
-  fieldLift(sigId: SigExprId, type: TypeDesc): FieldExprId {
+  broadcastSigToField(sig: SigExprId, domainSlot: ValueSlot, outputType: TypeDesc): FieldExprId {
     const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
-      kind: "lift",
-      sigId,
-      type,
+      kind: "broadcastSig",
+      sig,
+      domainSlot,
+      type: outputType,
     });
     this.trackFieldExprSource(id);
     return id;
   }
 
-  fieldMap(inputId: FieldExprId, fn: PureFnRef): FieldExprId {
+  fieldMap(src: FieldExprId, fn: PureFnRef, outputType: TypeDesc): FieldExprId {
     const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
       kind: "map",
-      inputId,
+      src,
       fn,
-      type: fn.outputType,
+      type: outputType,
     });
     this.trackFieldExprSource(id);
     return id;
   }
 
-  fieldZip(inputIds: readonly FieldExprId[], fn: PureFnRef): FieldExprId {
+  fieldZip(a: FieldExprId, b: FieldExprId, fn: PureFnRef, outputType: TypeDesc): FieldExprId {
     const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
       kind: "zip",
-      inputIds: [...inputIds],
+      a,
+      b,
       fn,
-      type: fn.outputType,
+      type: outputType,
     });
     this.trackFieldExprSource(id);
     return id;
   }
 
-  fieldTransform(inputId: FieldExprId, chainId: TransformChainId, type: TypeDesc): FieldExprId {
+  fieldSelect(cond: FieldExprId, t: FieldExprId, f: FieldExprId, outputType: TypeDesc): FieldExprId {
     const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
-      kind: "transform",
-      inputId,
-      chainId,
-      type,
+      kind: "select",
+      cond,
+      t,
+      f,
+      type: outputType,
     });
     this.trackFieldExprSource(id);
     return id;
   }
 
-  fieldSample(
-    domainSlot: ValueSlot,
-    channelId: FieldExprId,
-    type: TypeDesc
+  fieldTransform(src: FieldExprId, chain: TransformChainId): FieldExprId {
+    const id = this.fieldExprs.length as FieldExprId;
+    const chainDef = this.transformChains[chain];
+    if (!chainDef) {
+      throw new Error(`Transform chain ${chain} not found`);
+    }
+    this.fieldExprs.push({
+      kind: "transform",
+      src,
+      chain,
+      type: chainDef.outputType,
+    });
+    this.trackFieldExprSource(id);
+    return id;
+  }
+
+  fieldCombine(
+    busIndex: BusIndex,
+    terms: readonly FieldExprId[],
+    mode: "sum" | "average" | "max" | "min" | "last" | "product",
+    outputType: TypeDesc
   ): FieldExprId {
     const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
-      kind: "sample",
-      domainSlot,
-      channelId,
-      type,
+      kind: "busCombine",
+      busIndex,
+      terms: [...terms],
+      combine: { mode },
+      type: outputType,
     });
     this.trackFieldExprSource(id);
     return id;
   }
 
-  fieldSlot(slot: ValueSlot, type: TypeDesc): FieldExprId {
-    const id = this.fieldExprs.length as FieldExprId;
-    this.fieldExprs.push({
-      kind: "slot",
-      slot,
-      type,
+  reduceFieldToSig(field: FieldExprId, fn: ReduceFn): SigExprId {
+    // Field-to-signal reduction is implemented as a signal expression
+    // that references the field (this will be handled in the runtime)
+    const id = this.sigExprs.length as SigExprId;
+    // TEMPORARY: Use closureBridge until proper reduce node is added
+    // This is a placeholder that will need proper implementation
+    this.sigExprs.push({
+      kind: "closureBridge",
+      type: fn.outputType,
+      closureId: `reduce_${field}`,
+      inputSlots: [],
     });
-    this.trackFieldExprSource(id);
+    this.trackSigExprSource(id);
     return id;
   }
 
@@ -535,7 +598,7 @@ export class IRBuilderImpl implements IRBuilder {
   // State Management
   // =============================================================================
 
-  allocState(type: TypeDesc, initial?: unknown, debugName?: string): StateId {
+  private allocState(type: TypeDesc, initial?: unknown, debugName?: string): StateId {
     const stateId = `state_${this.stateLayout.length}`;
     this.stateLayout.push({
       stateId,
@@ -550,7 +613,7 @@ export class IRBuilderImpl implements IRBuilder {
   // Transform Chains
   // =============================================================================
 
-  createTransformChain(steps: readonly TransformStepIR[], outputType: TypeDesc): TransformChainId {
+  transformChain(steps: readonly TransformStepIR[], outputType: TypeDesc): TransformChainId {
     const chainId = this.transformChains.length as TransformChainId;
     this.transformChains.push({
       steps: [...steps],
@@ -563,7 +626,7 @@ export class IRBuilderImpl implements IRBuilder {
   // Render Sinks
   // =============================================================================
 
-  addRenderSink(sinkType: string, inputs: Record<string, ValueSlot>): void {
+  renderSink(sinkType: string, inputs: Record<string, ValueSlot>): void {
     this.renderSinks.push({
       sinkType,
       inputs,
@@ -574,12 +637,26 @@ export class IRBuilderImpl implements IRBuilder {
   // Domains
   // =============================================================================
 
-  addDomain(slot: ValueSlot, count: number, svgPath?: string): void {
+  domainFromN(n: number): ValueSlot {
+    const slot = this.allocValueSlot({ world: "scalar", domain: "domain" }, `domain_n${n}`);
     this.domains.push({
       slot,
-      count,
-      svgPath,
+      count: n,
     });
+    return slot;
+  }
+
+  domainFromSVG(svgRef: string, sampleCount: number): ValueSlot {
+    const slot = this.allocValueSlot(
+      { world: "scalar", domain: "domain" },
+      `domain_svg_${svgRef}`
+    );
+    this.domains.push({
+      slot,
+      count: sampleCount,
+      svgPath: svgRef,
+    });
+    return slot;
   }
 
   // =============================================================================
@@ -598,6 +675,30 @@ export class IRBuilderImpl implements IRBuilder {
 
   getConstPool(): readonly unknown[] {
     return this.constPool;
+  }
+
+  // =============================================================================
+  // Internal Methods (used by old code, will be removed)
+  // =============================================================================
+
+  /** @deprecated Use registerSigSlot instead */
+  registerSigValueSlot(sigId: SigExprId, slot: ValueSlot): void {
+    this.registerSigSlot(sigId, slot);
+  }
+
+  /** @deprecated Use registerFieldSlot instead */
+  registerFieldValueSlot(fieldId: FieldExprId, slot: ValueSlot): void {
+    this.registerFieldSlot(fieldId, slot);
+  }
+
+  /** @deprecated Use renderSink instead */
+  addRenderSink(sinkType: string, inputs: Record<string, ValueSlot>): void {
+    this.renderSink(sinkType, inputs);
+  }
+
+  /** @deprecated Use transformChain instead */
+  createTransformChain(steps: readonly TransformStepIR[], outputType: TypeDesc): TransformChainId {
+    return this.transformChain(steps, outputType);
   }
 
   // =============================================================================

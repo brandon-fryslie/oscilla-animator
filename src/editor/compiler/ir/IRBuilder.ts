@@ -8,7 +8,7 @@
  * ```typescript
  * const builder = new IRBuilderImpl();
  * const timeSignal = builder.sigTimeAbsMs();
- * const scaledTime = builder.sigMap(timeSignal, { kind: 'opcode', opcode: OpCode.Mul });
+ * const scaledTime = builder.sigMap(timeSignal, { kind: 'opcode', opcode: OpCode.Mul }, outputType);
  * const ir = builder.build();
  * ```
  *
@@ -28,10 +28,10 @@ import type {
   BusIndex,
 } from "./types";
 import type { EventCombineMode } from "./signalExpr";
-import type { TransformStepIR } from "./transforms";
+import type { TransformStepIR, PureFnRef } from "./transforms";
 import type { TimeModelIR } from "./schedule";
 import type { StatefulSignalOp } from "./signalExpr";
-import type { PureFnRef, ReduceFn, BuilderProgramIR, TimeSlots } from "./builderTypes";
+import type { ReduceFn, BuilderProgramIR, TimeSlots } from "./builderTypes";
 import type { CameraIR } from "./types3d";
 
 /**
@@ -101,14 +101,6 @@ export interface IRBuilder {
    * Set time slots allocated by TimeRoot during lowering.
    * Schedule will reference these rather than allocating its own.
    */
-
-  /**
-   * Set the time model for this patch.
-   * Called by pass6 from Pass 3 output.
-   *
-   * @param timeModel - The time model from Pass 3
-   */
-  setTimeModel(timeModel: TimeModelIR): void;
   setTimeSlots(slots: TimeSlots): void;
 
   /**
@@ -151,12 +143,12 @@ export interface IRBuilder {
   /**
    * Map a signal through a pure function.
    */
-  sigMap(src: SigExprId, fn: PureFnRef): SigExprId;
+  sigMap(src: SigExprId, fn: PureFnRef, outputType: TypeDesc): SigExprId;
 
   /**
    * Zip two signals together with a binary function.
    */
-  sigZip(a: SigExprId, b: SigExprId, fn: PureFnRef): SigExprId;
+  sigZip(a: SigExprId, b: SigExprId, fn: PureFnRef, outputType: TypeDesc): SigExprId;
 
   /**
    * Select between two signals based on a condition signal.
@@ -201,12 +193,12 @@ export interface IRBuilder {
   /**
    * Map a field through a pure function.
    */
-  fieldMap(src: FieldExprId, fn: PureFnRef): FieldExprId;
+  fieldMap(src: FieldExprId, fn: PureFnRef, outputType: TypeDesc): FieldExprId;
 
   /**
    * Zip two fields together.
    */
-  fieldZip(a: FieldExprId, b: FieldExprId, fn: PureFnRef): FieldExprId;
+  fieldZip(a: FieldExprId, b: FieldExprId, fn: PureFnRef, outputType: TypeDesc): FieldExprId;
 
   /**
    * Select between two fields based on a condition field.
@@ -224,7 +216,7 @@ export interface IRBuilder {
   fieldCombine(
     busIndex: BusIndex,
     terms: readonly FieldExprId[],
-    mode: "sum" | "average" | "max" | "min" | "last" | "layer",
+    mode: "sum" | "average" | "max" | "min" | "last" | "product",
     outputType: TypeDesc
   ): FieldExprId;
 

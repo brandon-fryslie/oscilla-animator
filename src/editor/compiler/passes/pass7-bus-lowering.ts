@@ -237,9 +237,9 @@ function lowerBusToCombineNode(
       return createDefaultBusValue(bus, builder);
     }
 
-    const mode = bus.combineMode as "sum" | "average" | "max" | "min" | "last" | "layer";
-    const validModes = ["sum", "average", "max", "min", "last", "layer"];
-    const safeMode = validModes.includes(mode) ? mode : "layer";
+    const mode = bus.combineMode as "sum" | "average" | "max" | "min" | "last" | "product";
+    const validModes = ["sum", "average", "max", "min", "last", "product"];
+    const safeMode = validModes.includes(mode) ? mode : "product";
 
     const fieldId = builder.fieldCombine(busIndex, fieldTerms, safeMode, irType);
     const slot = builder.allocValueSlot();
