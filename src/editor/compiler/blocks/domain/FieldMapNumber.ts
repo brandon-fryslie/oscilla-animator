@@ -90,20 +90,12 @@ const lowerFieldMapNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
   const outType = { world: 'field' as const, domain: 'number' as const };
   const opcode = getOpCode(fn);
 
-  // Build the function reference
+  // Build the function reference using PureFnRef union types
   const fnRef = opcode
-    ? {
-        fnId: fn,
-        opcode,
-        outputType: outType,
-        params: { k, a, b },
-      }
-    : {
-        kind: 'kernel', kernelId: `map_${fn}`,
-        params: { k, a, b },
-      };
+    ? { kind: 'opcode' as const, opcode }
+    : { kind: 'kernel' as const, kernelId: `map_${fn}` };
 
-  const fieldId = ctx.b.fieldMap(x.id, fnRef, outType, fnRef.kind === 'kernel' ? { k, a, b } : undefined);
+  const fieldId = ctx.b.fieldMap(x.id, fnRef, outType, { k, a, b });
 
   const slot = ctx.b.allocValueSlot();
   return { outputs: [{ k: 'field', id: fieldId, slot }] };

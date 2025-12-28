@@ -161,12 +161,17 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   // Cycle index: floor(systemTime / period)
   const periodConst = ctx.b.sigConst(periodMs, { world: 'signal', domain: 'number' });
-  const cyclesId = ctx.b.sigZip(systemTimeId, periodConst, { kind: 'opcode', opcode: 102, // OpCode.Div
-    outputType: { world: 'signal', domain: 'number' },
-  });
-  const cycleIndexId = ctx.b.sigMap(cyclesId, { kind: 'opcode', opcode: 121, // OpCode.Floor
-    outputType: { world: 'signal', domain: 'number' },
-  });
+  const cyclesId = ctx.b.sigZip(
+    systemTimeId,
+    periodConst,
+    { kind: 'opcode', opcode: 102 }, // OpCode.Div
+    { world: 'signal', domain: 'number' }
+  );
+  const cycleIndexId = ctx.b.sigMap(
+    cyclesId,
+    { kind: 'opcode', opcode: 121 }, // OpCode.Floor
+    { world: 'signal', domain: 'number' }
+  );
 
   // Energy: constant 1.0
   const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'number' });

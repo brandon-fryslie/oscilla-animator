@@ -88,11 +88,8 @@ const lowerFieldZipSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
   const domainSlot = ctx.b.allocValueSlot();
   const broadcastField = ctx.b.broadcastSigToField(signal.id, domainSlot, outType);
 
-  const fieldId = ctx.b.fieldZip(field.id, broadcastField, {
-    fnId: fn,
-    opcode,
-    
-  });
+  const fnRef = { kind: 'opcode' as const, opcode };
+  const fieldId = ctx.b.fieldZip(field.id, broadcastField, fnRef, outType);
 
   const slot = ctx.b.allocValueSlot();
   return { outputs: [{ k: 'field', id: fieldId, slot }] };

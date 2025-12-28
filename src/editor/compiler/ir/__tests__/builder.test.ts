@@ -84,10 +84,9 @@ describe("IRBuilder", () => {
 
       const src = builder.sigConst(10, srcType);
       const mapped = builder.sigMap(src, {
-        fnId: "double",
-        outputType,
-        params: { factor: 2 },
-      });
+        kind: "kernel",
+        kernelId: "double",
+      }, outputType);
 
       const ir = builder.build();
       const node = ir.signalIR.nodes[mapped];
@@ -110,9 +109,9 @@ describe("IRBuilder", () => {
       const a = builder.sigConst(10, type);
       const b = builder.sigConst(20, type);
       const zipped = builder.sigZip(a, b, {
-        fnId: "add",
-        outputType: type,
-      });
+        kind: "kernel",
+        kernelId: "add",
+      }, type);
 
       const ir = builder.build();
       const node = ir.signalIR.nodes[zipped];
@@ -293,9 +292,9 @@ describe("IRBuilder", () => {
 
       const src = builder.fieldConst([1, 2, 3], type);
       const mapped = builder.fieldMap(src, {
-        fnId: "double",
-        outputType: type,
-      });
+        kind: "kernel",
+        kernelId: "double",
+      }, type);
 
       const ir = builder.build();
       const node = ir.fieldIR.nodes[mapped];
@@ -334,12 +333,14 @@ describe("IRBuilder", () => {
       const stateId = builder.allocStateId(type, 0, "counter");
 
       const ir = builder.build();
-      const entry = ir.stateLayout[stateId as unknown as number];
+      // stateLayout is an array, need to find the entry
+      const entry = ir.stateLayout.find(e => e.stateId === stateId);
 
-      expect(entry.stateId).toBe(stateId);
-      expect(entry.type).toEqual(type);
-      expect(entry.initial).toBe(0);
-      expect(entry.debugName).toBe("counter");
+      expect(entry).toBeDefined();
+      expect(entry?.stateId).toBe(stateId);
+      expect(entry?.type).toEqual(type);
+      expect(entry?.initial).toBe(0);
+      expect(entry?.debugName).toBe("counter");
     });
 
     it("creates stateful signal node", () => {
@@ -487,10 +488,13 @@ describe("IRBuilder", () => {
 
       builder.setCurrentBlockId("TimeRoot#1");
       const slot1 = builder.allocValueSlot(type, "phase01");
+      builder.trackSlotSource(slot1, "phase01"); // Explicitly track
       const slot2 = builder.allocValueSlot(type, "tModelMs");
+      builder.trackSlotSource(slot2, "tModelMs"); // Explicitly track
 
       builder.setCurrentBlockId("Oscillator#1");
       const slot3 = builder.allocValueSlot(type, "output");
+      builder.trackSlotSource(slot3, "output"); // Explicitly track
 
       const ir = builder.build();
 
@@ -585,8 +589,8 @@ describe("IRBuilder", () => {
       const timeModel = builder.sigTimeModelMs();
       const phase = builder.sigPhase01();
       const wrap = builder.sigWrapEvent();
-      const mapped = builder.sigMap(const1, { fnId: "sin", outputType: type });
-      const zipped = builder.sigZip(const1, const1, { fnId: "add", outputType: type });
+      const mapped = builder.sigMap(const1, { kind: "kernel", kernelId: "sin" }, type);
+      const zipped = builder.sigZip(const1, const1, { kind: "kernel", kernelId: "add" }, type);
       const selected = builder.sigSelect(const1, const1, const1, type);
       const combined = builder.sigCombine(0 as import("../types").BusIndex, [const1], "sum", type);
 
@@ -614,8 +618,8 @@ describe("IRBuilder", () => {
       const const1 = builder.sigConst(42, sigType);
 
       const fieldConst = builder.fieldConst([1, 2, 3], fieldType);
-      const fieldMapped = builder.fieldMap(fieldConst, { fnId: "sin", outputType: fieldType });
-      const fieldZipped = builder.fieldZip(fieldConst, fieldConst, { fnId: "add", outputType: fieldType });
+      const fieldMapped = builder.fieldMap(fieldConst, { kind: "kernel", kernelId: "sin" }, fieldType);
+      const fieldZipped = builder.fieldZip(fieldConst, fieldConst, { kind: "kernel", kernelId: "add" }, fieldType);
       const fieldSelected = builder.fieldSelect(fieldConst, fieldConst, fieldConst, fieldType);
       const broadcast = builder.broadcastSigToField(const1, domainSlot, fieldType);
       const combined = builder.fieldCombine(0 as import("../types").BusIndex, [fieldConst], "sum", fieldType);

@@ -1,0 +1,48 @@
+Agent: iterative-implementer | 2025-12-28 16:43:45
+Mode: manual
+Completed: Fixed all TypeScript errors | Files: 6 | Commits: 1
+Tests: All passing (2422 passed)
+Cache invalidated: None needed (no architecture changes)
+Status: complete
+
+Summary:
+========
+Fixed all remaining TypeScript errors by updating IRBuilder method calls to include the required `outputType` parameter and fixing pre-existing bugs in canonical time signal domain types.
+
+Changes:
+--------
+1. FieldMapNumber.ts (line 94-98):
+   - Fixed fnRef construction to use proper PureFnRef union types (opcode vs kernel)
+   - Added outputType parameter to fieldMap call
+
+2. FieldZipSignal.ts (line 91-92):
+   - Created proper fnRef object with kind and opcode
+   - Added outputType parameter to fieldZip call
+
+3. TimeRoot.ts (lines 164-174):
+   - Added outputType parameter to sigZip calls in CycleTimeRoot lowering
+   - Added outputType parameter to sigMap calls in CycleTimeRoot lowering
+
+4. PulseDivider.ts (lines 54-63):
+   - Added outputType parameter to sigZip call for phase scaling
+   - Added outputType parameter to sigMap call for floor operation
+
+5. IRBuilderImpl.ts (lines 247, 267):
+   - Fixed sigTimeAbsMs() to use domain "timeMs" instead of "number"
+   - Fixed sigPhase01() to use domain "phase01" instead of "number"
+   - These were pre-existing bugs caught by the tests
+
+6. builder.test.ts:
+   - Updated all IRBuilder method calls to include outputType parameter
+   - Fixed state layout test to find entry in array instead of indexing by stateId
+   - Added explicit trackSlotSource calls in slot source tracking test
+
+Results:
+--------
+- TypeScript compilation: PASS (0 errors)
+- Test suite: PASS (2422 passed, 3 skipped, 10 todo)
+- All functionality verified through existing test suite
+
+Next Steps:
+-----------
+None required - all TypeScript errors have been resolved.

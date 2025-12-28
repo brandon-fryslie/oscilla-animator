@@ -51,10 +51,17 @@ const lowerPulseDivider: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // Calculate subPhase = floor(phase * divisions)
   const divisionsSig = ctx.b.sigConst(divisions, numberType);
-  const scaled = ctx.b.sigZip(phase.id, divisionsSig, { kind: 'opcode', opcode: 100, // OpCode.Mul
-    outputType: numberType, });
-  const subPhase = ctx.b.sigMap(scaled, { kind: 'opcode', opcode: 121, // OpCode.Floor
-    outputType: numberType, });
+  const scaled = ctx.b.sigZip(
+    phase.id,
+    divisionsSig,
+    { kind: 'opcode', opcode: 100 }, // OpCode.Mul
+    numberType
+  );
+  const subPhase = ctx.b.sigMap(
+    scaled,
+    { kind: 'opcode', opcode: 121 }, // OpCode.Floor
+    numberType
+  );
 
   // Use stateful operation for edge detection
   // The evaluator will handle: if (subPhase !== state) { state = subPhase; return 1 } else return 0
