@@ -186,6 +186,24 @@ export interface TimeSlots {
 }
 
 // =============================================================================
+// Signal and Field IR Tables
+// =============================================================================
+
+/**
+ * Signal IR table (for re-export compatibility).
+ */
+export interface SignalIRTable {
+  nodes: readonly SignalExprIR[];
+}
+
+/**
+ * Field IR table (for re-export compatibility).
+ */
+export interface FieldIRTable {
+  nodes: readonly FieldExprIR[];
+}
+
+// =============================================================================
 // Builder Program IR
 // =============================================================================
 
@@ -221,14 +239,10 @@ export interface EventIRTable {
  */
 export interface BuilderProgramIR {
   /** Signal expression table */
-  signalIR: {
-    nodes: readonly SignalExprIR[];
-  };
+  signalIR: SignalIRTable;
 
   /** Field expression table */
-  fieldIR: {
-    nodes: readonly FieldExprIR[];
-  };
+  fieldIR: FieldIRTable;
 
   /** Event expression graph */
   eventIR: EventIRTable;

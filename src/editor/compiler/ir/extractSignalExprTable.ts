@@ -47,9 +47,9 @@ export function extractSignalExprTable(
     // Build the IR to get the final program structure
     const programIR = ir.builder.build();
 
-    // Extract signal expressions
+    // Extract signal expressions (convert readonly to mutable for SignalExprTable)
     const signalTable: SignalExprTable = {
-      nodes: programIR.signalIR.nodes,
+      nodes: Array.from(programIR.signalIR.nodes),
     };
 
     // Extract constant pool

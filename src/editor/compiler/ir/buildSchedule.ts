@@ -148,8 +148,8 @@ export function buildCompiledProgram(
   const emptyBusTable: BusTable = { buses: [] };
   const emptyLensTable: LensTable = { lenses: [] };
   const emptyAdapterTable: AdapterTable = { adapters: [] };
-  const fieldExprTable: FieldExprTable = { nodes: builderIR.fieldIR.nodes };
-  const signalTable = { nodes: builderIR.signalIR.nodes };
+  const fieldExprTable: FieldExprTable = { nodes: Array.from(builderIR.fieldIR.nodes) };
+  const signalTable = { nodes: Array.from(builderIR.signalIR.nodes) };
 
   // Convert constants from simple array to packed format
   const constPool: ConstPool = {
@@ -274,6 +274,54 @@ interface BuildScheduleOptions {
 }
 
 /**
+ * Compute the next available value slot from BuilderProgramIR.
+ * Scans all allocated slots to find the maximum + 1.
+ */
+function computeNextValueSlot(builderIR: BuilderProgramIR): number {
+  let maxSlot = -1;
+
+  // Check signal value slots
+  for (const slot of builderIR.sigValueSlots) {
+    if (slot !== undefined && slot > maxSlot) {
+      maxSlot = slot;
+    }
+  }
+
+  // Check field value slots
+  for (const slot of builderIR.fieldValueSlots) {
+    if (slot !== undefined && slot > maxSlot) {
+      maxSlot = slot;
+    }
+  }
+
+  // Check time slots
+  if (builderIR.timeSlots) {
+    const timeSlotValues = [
+      builderIR.timeSlots.systemTime,
+      builderIR.timeSlots.tAbsMs,
+      builderIR.timeSlots.tModelMs,
+      builderIR.timeSlots.phase01,
+      builderIR.timeSlots.progress01,
+      builderIR.timeSlots.wrapEvent,
+    ];
+    for (const slot of timeSlotValues) {
+      if (slot !== undefined && slot > maxSlot) {
+        maxSlot = slot;
+      }
+    }
+  }
+
+  // Check domain slots
+  for (const domain of builderIR.domains) {
+    if (domain.slot > maxSlot) {
+      maxSlot = domain.slot;
+    }
+  }
+
+  return maxSlot + 1;
+}
+
+/**
  * Build a basic execution schedule.
  *
  * The schedule is minimal but follows the correct evaluation order:
@@ -303,7 +351,7 @@ function buildSchedule(
   options?: BuildScheduleOptions,
 ): BuildScheduleResult {
   const steps: StepIR[] = [];
-  const slots = new SlotAllocator(builderIR.nextValueSlot ?? 0);
+  const slots = new SlotAllocator(computeNextValueSlot(builderIR));
   const probeMode = options?.debugConfig?.probeMode ?? 'off';
   let probeCounter = 0;
   const initialSlotValues: Record<number, unknown> = {};
@@ -357,14 +405,15 @@ function buildSchedule(
   // If no TimeRoot was lowered, we fall back to local allocation
   const timeSlots = builderIR.timeSlots ?? {
     // Fallback for patches without TimeRoot (allocate locally)
+    systemTime: slots.alloc(),
     tAbsMs: slots.alloc(),
     tModelMs: slots.alloc(),
     progress01: slots.alloc(),
   };
 
-  const SLOT_T_ABS_MS = timeSlots.tAbsMs;
-  const SLOT_T_MODEL_MS = timeSlots.tModelMs;
-  const SLOT_PROGRESS_01 = timeSlots.progress01 ?? timeSlots.tModelMs;
+  const SLOT_T_ABS_MS = timeSlots.tAbsMs ?? timeSlots.systemTime;
+  const SLOT_T_MODEL_MS = timeSlots.tModelMs ?? timeSlots.systemTime;
+  const SLOT_PROGRESS_01 = timeSlots.progress01 ?? timeSlots.tModelMs ?? timeSlots.systemTime;
 
   // Allocate frame output slot
   // Per 12-ValueSlotPerNodeOutput.md: schedule allocates only:
@@ -385,8 +434,8 @@ function buildSchedule(
     out: {
       tModelMs: SLOT_T_MODEL_MS,
       progress01: SLOT_PROGRESS_01,
-      phase01: timeSlots.phase01,
-      wrapEvent: timeSlots.wrapEvent,
+      phase01: timeSlots.phase01 ?? SLOT_PROGRESS_01,
+      wrapEvent: timeSlots.wrapEvent ?? SLOT_PROGRESS_01,
     },
   });
 

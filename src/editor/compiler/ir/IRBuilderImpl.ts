@@ -104,475 +104,330 @@ export class IRBuilderImpl implements IRBuilder {
    * Set the current block ID for debug tracking.
    * Called by the compiler before lowering each block.
    *
-   * @param blockId - Block instance ID
+   * @param blockId - The ID of the block being lowered
    */
-  setCurrentBlockId(blockId: string | undefined): void {
+  setCurrentBlockId(blockId: string): void {
     this.currentBlockId = blockId;
   }
 
   /**
-   * Set the time model for this patch.
-   * Called by pass6 before block lowering begins.
+   * Track that a signal expression originated from a specific block.
    *
-   * @param timeModel - The time model from Pass 3
+   * @param sigId - Signal expression ID
    */
-  setTimeModel(timeModel: TimeModelIR): void {
-    this.timeModel = timeModel;
+  private trackSigExprSource(sigId: SigExprId): void {
+    if (this.currentBlockId !== undefined) {
+      this.sigExprSourceMap.set(sigId, this.currentBlockId);
+    }
+  }
+
+  /**
+   * Track that a field expression originated from a specific block.
+   *
+   * @param fieldId - Field expression ID
+   */
+  private trackFieldExprSource(fieldId: FieldExprId): void {
+    if (this.currentBlockId !== undefined) {
+      this.fieldExprSourceMap.set(fieldId, this.currentBlockId);
+    }
+  }
+
+  /**
+   * Track that a value slot originated from a specific block port.
+   *
+   * @param slot - Value slot
+   * @param slotId - Port ID (e.g., 'output', 'value')
+   */
+  trackSlotSource(slot: ValueSlot, slotId: string): void {
+    if (this.currentBlockId !== undefined) {
+      this.slotSourceMap.set(slot, {
+        blockId: this.currentBlockId,
+        slotId,
+      });
+    }
   }
 
   // =============================================================================
-  // ID Allocation
+  // Slot Management
   // =============================================================================
 
-  allocSigExprId(): SigExprId {
-    return this.sigExprs.length;
-  }
+  allocValueSlot(type: TypeDesc, debugName?: string): ValueSlot {
+    const slot = this.nextValueSlot++;
 
-  allocFieldExprId(): FieldExprId {
-    return this.fieldExprs.length;
-  }
-
-  allocStateId(type: TypeDesc, initial?: unknown, debugName?: string): StateId {
-    const stateId = this.stateLayout.length as unknown as StateId;
-    this.stateLayout.push({
-      stateId,
+    // Register slot metadata
+    const storage = inferStorage(type);
+    this.slotMetaEntries.push({
+      slot,
+      storage,
       type,
-      initial,
       debugName,
     });
-    return stateId;
+
+    return slot;
   }
 
-  allocConstId(value: unknown): number {
-    // Create a stable key for deduplication
-    const key = JSON.stringify(value);
+  registerSigValueSlot(sigId: SigExprId, slot: ValueSlot): void {
+    while (this.sigValueSlots.length <= sigId) {
+      this.sigValueSlots.push(undefined);
+    }
+    this.sigValueSlots[sigId] = slot;
+  }
 
-    // Check if we already have this constant
+  registerFieldValueSlot(fieldId: FieldExprId, slot: ValueSlot): void {
+    while (this.fieldValueSlots.length <= fieldId) {
+      this.fieldValueSlots.push(undefined);
+    }
+    this.fieldValueSlots[fieldId] = slot;
+  }
+
+  // =============================================================================
+  // Time Slots (from TimeRoot lowering)
+  // =============================================================================
+
+  setTimeSlots(slots: TimeSlots): void {
+    this.timeSlots = slots;
+  }
+
+  getTimeSlots(): TimeSlots | undefined {
+    return this.timeSlots;
+  }
+
+  // =============================================================================
+  // Constant Pool
+  // =============================================================================
+
+  addConst(value: unknown): number {
+    const key = JSON.stringify(value);
     const existing = this.constMap.get(key);
     if (existing !== undefined) {
       return existing;
     }
 
-    // Allocate new constant
-    const constId = this.constPool.length;
+    const index = this.constPool.length;
     this.constPool.push(value);
-    this.constMap.set(key, constId);
-    return constId;
-  }
-
-  allocValueSlot(type?: TypeDesc, debugName?: string): ValueSlot {
-    const slot = this.nextValueSlot++;
-
-    // Track metadata if type is provided
-    if (type) {
-      this.slotMetaEntries.push({
-        slot,
-        storage: inferStorage(type),
-        type,
-        debugName,
-      });
-    }
-
-    // Track slot source for debug index (if current block is set)
-    if (this.currentBlockId && debugName) {
-      this.slotSourceMap.set(slot, {
-        blockId: this.currentBlockId,
-        slotId: debugName,
-      });
-    }
-
-    return slot;
-  }
-
-  registerSigSlot(sigId: SigExprId, slot: ValueSlot): void {
-    this.sigValueSlots[sigId] = slot;
-  }
-
-  registerFieldSlot(fieldId: FieldExprId, slot: ValueSlot): void {
-    this.fieldValueSlots[fieldId] = slot;
-  }
-
-  /**
-   * Set time slots allocated by TimeRoot during lowering.
-   * Schedule will reference these rather than allocating its own.
-   */
-  setTimeSlots(slots: TimeSlots): void {
-    this.timeSlots = slots;
+    this.constMap.set(key, index);
+    return index;
   }
 
   // =============================================================================
-  // Signal Expressions
+  // Signal Expression Builders
   // =============================================================================
 
   sigConst(value: number, type: TypeDesc): SigExprId {
-    const constId = this.allocConstId(value);
-    const id = this.allocSigExprId();
+    const constId = this.addConst(value);
+    const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "const",
-      type,
       constId,
+      type,
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackSigExprSource(id);
     return id;
   }
 
   sigTimeAbsMs(): SigExprId {
-    const id = this.allocSigExprId();
+    const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "timeAbsMs",
-      type: {
-        world: "signal",
-        domain: "timeMs",
-      },
+      type: { world: "signal", domain: "number" },
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackSigExprSource(id);
     return id;
   }
 
   sigTimeModelMs(): SigExprId {
-    const id = this.allocSigExprId();
+    const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "timeModelMs",
-      type: {
-        world: "signal",
-        domain: "timeMs",
-      },
+      type: { world: "signal", domain: "number" },
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackSigExprSource(id);
     return id;
   }
 
   sigPhase01(): SigExprId {
-    const id = this.allocSigExprId();
+    const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "phase01",
-      type: {
-        world: "signal",
-        domain: "phase01",
-      },
+      type: { world: "signal", domain: "number" },
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackSigExprSource(id);
     return id;
   }
 
   sigWrapEvent(): SigExprId {
-    const id = this.allocSigExprId();
+    const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "wrapEvent",
-      type: {
-        world: "event",
-        domain: "trigger",
-      },
+      type: { world: "event", domain: "trigger" },
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackSigExprSource(id);
     return id;
   }
 
-  sigMap(src: SigExprId, fn: PureFnRef): SigExprId {
-    const id = this.allocSigExprId();
+  sigBusRead(busIndex: BusIndex, type: TypeDesc): SigExprId {
+    const id = this.sigExprs.length as SigExprId;
+    this.sigExprs.push({
+      kind: "busRead",
+      busIndex,
+      type,
+    });
+    this.trackSigExprSource(id);
+    return id;
+  }
+
+  sigMap(inputId: SigExprId, fn: PureFnRef): SigExprId {
+    const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "map",
+      inputId,
+      fn,
       type: fn.outputType,
-      src,
-      fn: fn.opcode
-        ? { kind: "opcode", opcode: fn.opcode }
-        : { kind: "kernel", kernelId: fn.fnId },
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackSigExprSource(id);
     return id;
   }
 
-  sigZip(a: SigExprId, b: SigExprId, fn: PureFnRef): SigExprId {
-    const id = this.allocSigExprId();
+  sigZip(inputIds: readonly SigExprId[], fn: PureFnRef): SigExprId {
+    const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "zip",
+      inputIds: [...inputIds],
+      fn,
       type: fn.outputType,
-      a,
-      b,
-      fn: fn.opcode
-        ? { kind: "opcode", opcode: fn.opcode }
-        : { kind: "kernel", kernelId: fn.fnId },
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
-    return id;
-  }
-
-  sigSelect(cond: SigExprId, t: SigExprId, f: SigExprId, outputType: TypeDesc): SigExprId {
-    const id = this.allocSigExprId();
-    this.sigExprs.push({
-      kind: "select",
-      type: outputType,
-      cond,
-      t,
-      f,
-    });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
-    return id;
-  }
-
-  sigTransform(src: SigExprId, chain: TransformChainId): SigExprId {
-    const transformChain = this.transformChains[chain];
-    const id = this.allocSigExprId();
-    this.sigExprs.push({
-      kind: "transform",
-      type: transformChain.outputType,
-      src,
-      chain,
-    });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
-    return id;
-  }
-
-  sigCombine(
-    busIndex: BusIndex,
-    terms: readonly SigExprId[],
-    mode: "sum" | "average" | "max" | "min" | "last",
-    outputType: TypeDesc
-  ): SigExprId {
-    const id = this.allocSigExprId();
-    this.sigExprs.push({
-      kind: "busCombine",
-      type: outputType,
-      busIndex,
-      terms: [...terms],
-      combine: { mode },
-    });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackSigExprSource(id);
     return id;
   }
 
   sigStateful(
-    op: StatefulSignalOp,
-    input: SigExprId,
+    inputIds: readonly SigExprId[],
     stateId: StateId,
-    outputType: TypeDesc,
-    params?: Record<string, number>
+    op: StatefulSignalOp,
+    type: TypeDesc
   ): SigExprId {
-    const id = this.allocSigExprId();
+    const id = this.sigExprs.length as SigExprId;
     this.sigExprs.push({
       kind: "stateful",
-      type: outputType,
-      op,
-      input,
+      inputIds: [...inputIds],
       stateId,
-      params,
+      op,
+      type,
     });
+    this.trackSigExprSource(id);
+    return id;
+  }
 
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
+  sigReduce(fieldId: FieldExprId, fn: ReduceFn): SigExprId {
+    const id = this.sigExprs.length as SigExprId;
+    this.sigExprs.push({
+      kind: "reduce",
+      fieldId,
+      fn,
+      type: fn.outputType,
+    });
+    this.trackSigExprSource(id);
+    return id;
+  }
 
+  sigSlot(slot: ValueSlot, type: TypeDesc): SigExprId {
+    const id = this.sigExprs.length as SigExprId;
+    this.sigExprs.push({
+      kind: "slot",
+      slot,
+      type,
+    });
+    this.trackSigExprSource(id);
     return id;
   }
 
   // =============================================================================
-  // Field Expressions
+  // Field Expression Builders
   // =============================================================================
 
   fieldConst(value: unknown, type: TypeDesc): FieldExprId {
-    const constId = this.allocConstId(value);
-    const id = this.allocFieldExprId();
+    const constId = this.addConst(value);
+    const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
       kind: "const",
-      type,
       constId,
+      type,
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.fieldExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackFieldExprSource(id);
     return id;
   }
 
-  fieldMap(src: FieldExprId, fn: PureFnRef): FieldExprId {
-    const id = this.allocFieldExprId();
+  fieldLift(sigId: SigExprId, type: TypeDesc): FieldExprId {
+    const id = this.fieldExprs.length as FieldExprId;
+    this.fieldExprs.push({
+      kind: "lift",
+      sigId,
+      type,
+    });
+    this.trackFieldExprSource(id);
+    return id;
+  }
+
+  fieldMap(inputId: FieldExprId, fn: PureFnRef): FieldExprId {
+    const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
       kind: "map",
+      inputId,
+      fn,
       type: fn.outputType,
-      src,
-      fn: fn.opcode
-        ? { kind: "opcode", opcode: fn.opcode }
-        : { kind: "kernel", kernelId: fn.fnId },
-      params: fn.params,
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.fieldExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackFieldExprSource(id);
     return id;
   }
 
-  fieldZip(a: FieldExprId, b: FieldExprId, fn: PureFnRef): FieldExprId {
-    const id = this.allocFieldExprId();
+  fieldZip(inputIds: readonly FieldExprId[], fn: PureFnRef): FieldExprId {
+    const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
       kind: "zip",
+      inputIds: [...inputIds],
+      fn,
       type: fn.outputType,
-      a,
-      b,
-      fn: fn.opcode
-        ? { kind: "opcode", opcode: fn.opcode }
-        : { kind: "kernel", kernelId: fn.fnId },
-      params: fn.params,
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.fieldExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackFieldExprSource(id);
     return id;
   }
 
-  fieldSelect(cond: FieldExprId, t: FieldExprId, f: FieldExprId, outputType: TypeDesc): FieldExprId {
-    const id = this.allocFieldExprId();
-    this.fieldExprs.push({
-      kind: "select",
-      type: outputType,
-      cond,
-      t,
-      f,
-    });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.fieldExprSourceMap.set(id, this.currentBlockId);
-    }
-
-    return id;
-  }
-
-  fieldTransform(src: FieldExprId, chain: TransformChainId): FieldExprId {
-    const transformChain = this.transformChains[chain];
-    const id = this.allocFieldExprId();
+  fieldTransform(inputId: FieldExprId, chainId: TransformChainId, type: TypeDesc): FieldExprId {
+    const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
       kind: "transform",
-      type: transformChain.outputType,
-      src,
-      chain,
+      inputId,
+      chainId,
+      type,
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.fieldExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackFieldExprSource(id);
     return id;
   }
 
-  fieldCombine(
-    busIndex: BusIndex,
-    terms: readonly FieldExprId[],
-    mode: "sum" | "average" | "max" | "min" | "last" | "layer",
-    outputType: TypeDesc
+  fieldSample(
+    domainSlot: ValueSlot,
+    channelId: FieldExprId,
+    type: TypeDesc
   ): FieldExprId {
-    const id = this.allocFieldExprId();
+    const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
-      kind: "busCombine",
-      type: outputType,
-      busIndex,
-      terms: [...terms],
-      combine: { mode: mode === "layer" ? "last" : mode },
-    });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.fieldExprSourceMap.set(id, this.currentBlockId);
-    }
-
-    return id;
-  }
-
-  broadcastSigToField(sig: SigExprId, domainSlot: ValueSlot, outputType: TypeDesc): FieldExprId {
-    const id = this.allocFieldExprId();
-    this.fieldExprs.push({
-      kind: "broadcastSig",
-      type: outputType,
-      sig,
+      kind: "sample",
       domainSlot,
+      channelId,
+      type,
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.fieldExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackFieldExprSource(id);
     return id;
   }
 
-  reduceFieldToSig(_field: FieldExprId, fn: ReduceFn): SigExprId {
-    // For now, we'll create a map node as a placeholder
-    // This will be properly implemented in a future sprint
-    const id = this.allocSigExprId();
-    this.sigExprs.push({
-      kind: "map",
-      type: fn.outputType,
-      src: 0 as SigExprId, // Placeholder - will be properly linked
-      fn: {
-        kind: "kernel",
-        kernelId: `reduce_${fn.reducerId}`,
-      },
+  fieldSlot(slot: ValueSlot, type: TypeDesc): FieldExprId {
+    const id = this.fieldExprs.length as FieldExprId;
+    this.fieldExprs.push({
+      kind: "slot",
+      slot,
+      type,
     });
-
-    // Track source block for debug index
-    if (this.currentBlockId) {
-      this.sigExprSourceMap.set(id, this.currentBlockId);
-    }
-
+    this.trackFieldExprSource(id);
     return id;
   }
 
@@ -677,49 +532,38 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   // =============================================================================
-  // Domain
+  // State Management
   // =============================================================================
 
-  domainFromN(n: number): ValueSlot {
-    // Allocate a value slot for the domain
-    const slot = this.allocValueSlot();
-
-    // Track the domain definition for runtime initialization
-    this.domains.push({ slot, count: n });
-
-    return slot;
+  allocState(type: TypeDesc, initial?: unknown, debugName?: string): StateId {
+    const stateId = `state_${this.stateLayout.length}`;
+    this.stateLayout.push({
+      stateId,
+      type,
+      initial,
+      debugName,
+    });
+    return stateId;
   }
 
-  domainFromSVG(svgPath: string, sampleCount: number): ValueSlot {
-    // Allocate a value slot for the domain
-    const slot = this.allocValueSlot();
-
-    // Track the domain definition for runtime initialization
-    // Include svgPath so the runtime can sample the SVG
-    this.domains.push({ slot, count: sampleCount, svgPath });
-
-    return slot;
-  }
-
-
   // =============================================================================
-  // Transforms
+  // Transform Chains
   // =============================================================================
 
-  transformChain(steps: readonly TransformStepIR[], outputType: TypeDesc): TransformChainId {
-    const id = this.transformChains.length;
+  createTransformChain(steps: readonly TransformStepIR[], outputType: TypeDesc): TransformChainId {
+    const chainId = this.transformChains.length as TransformChainId;
     this.transformChains.push({
-      steps,
+      steps: [...steps],
       outputType,
     });
-    return id;
+    return chainId;
   }
 
   // =============================================================================
   // Render Sinks
   // =============================================================================
 
-  renderSink(sinkType: string, inputs: Record<string, ValueSlot>): void {
+  addRenderSink(sinkType: string, inputs: Record<string, ValueSlot>): void {
     this.renderSinks.push({
       sinkType,
       inputs,
@@ -727,7 +571,19 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   // =============================================================================
-  // Camera Support (3D)
+  // Domains
+  // =============================================================================
+
+  addDomain(slot: ValueSlot, count: number, svgPath?: string): void {
+    this.domains.push({
+      slot,
+      count,
+      svgPath,
+    });
+  }
+
+  // =============================================================================
+  // Cameras (3D)
   // =============================================================================
 
   addCamera(camera: CameraIR): number {

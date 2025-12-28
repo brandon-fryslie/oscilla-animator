@@ -84,7 +84,6 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   // Register time slots so schedule can reference them
   ctx.b.setTimeSlots({
-    systemTime: tAbsMsSlot,
     tAbsMs: tAbsMsSlot,
     tModelMs: tModelMsSlot,
     phase01: phase01Slot,
@@ -146,7 +145,6 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   // Register time slots so schedule can reference them
   ctx.b.setTimeSlots({
-    systemTime: tAbsMsSlot,
     tAbsMs: tAbsMsSlot,
     tModelMs: tModelMsSlot,
     phase01: phase01Slot,
@@ -221,7 +219,6 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   // Register time slots so schedule can reference them
   // Note: InfiniteTimeRoot has no model time - tAbsMs is used directly
   ctx.b.setTimeSlots({
-    systemTime: tAbsMsSlot,
     tAbsMs: tAbsMsSlot,
     tModelMs: tAbsMsSlot, // For infinite, model time = absolute time
     phase01: phase01Slot,
