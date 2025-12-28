@@ -2,39 +2,47 @@
 
 **Status:** These documents are HISTORICAL REFERENCE ONLY.
 
-The **authoritative** specification is: `design-docs/final-Synthesized-v2/`
+The **authoritative** specification is: `design-docs/spec/`
 
 ---
 
 ## Contents
 
-### `1-Full-System-Design/`
-Original design documents from early project development. These established the foundational vision but have been superseded by the synthesized spec.
+### Superseded Specs
+- `final-Synthesized-v2/` - Previous authoritative spec (consolidated into `spec/`)
+- `final-System-Invariants/` - Previous invariants (consolidated into `spec/00-invariants.md`)
+- `3-Synthesized/` - First synthesis (superseded by final-Synthesized-v2)
+- `1-Full-System-Design/` - Original design documents
 
-### `3-Synthesized/`
-First synthesis of design documents. Superseded by `final-Synthesized-v2/` which incorporates all resolved decisions and removes inconsistencies.
+### Work Packages (Development History)
+- `2-TimeRoot/` - TimeRoot development
+- `4-Event-System/` - Event system design
+- `6-Transactions/` - Transaction system
+- `7-Primitives/` - Primitive blocks
+- `8-UI-Redesign/`, `8.5-Modulation-Table/`, `9-UIReDesign-Real/` - UI iterations
+- `10-Refactor-for-UI-prep/` - UI refactoring work
 
-### `00-Organized-By-Topic-verbatim.md`
-A verbatim compilation of all topic documents. Contains unresolved inconsistencies (CycleTimeRoot, PhaseClock, pulseA/pulseB references). Moved here 2025-12-28 after topic files were updated.
+### Other
+- `00-Organized-By-Topic-verbatim.md` - Large compilation with old content
 
 ---
 
-## Why These Are Historical
+## Why Historical
 
-As the project evolved, inconsistencies emerged between documents:
-- CycleTimeRoot was defined in some docs, removed in others
+As the project evolved, inconsistencies emerged:
+- CycleTimeRoot was defined then removed
 - Rails vs buses had conflicting definitions
-- TimeModel had 2 vs 3 variants in different places
+- TimeModel had 2 vs 3 variants
 - Scrubbing was both "deferred" and "required"
 
-The `final-Synthesized-v2/` directory resolves all these inconsistencies based on explicit decisions documented in `.agent_planning/PLANNING-DOCS-INCONSISTENCY-REPORT.md`.
+These are resolved in `design-docs/spec/`.
 
 ---
 
-## When to Reference These
+## When to Reference
 
-- To understand the evolution of design decisions
-- To trace the origin of specific architectural choices
-- For historical context on why certain approaches were adopted or rejected
+- To understand design evolution
+- To trace architectural decisions
+- For historical context
 
-**Do NOT use these for implementation guidance.** Use `final-Synthesized-v2/` instead.
+**Do NOT use for implementation guidance.**

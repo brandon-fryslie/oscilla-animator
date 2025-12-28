@@ -26,7 +26,7 @@ just lint-fix     # Lint with auto-fix
 
 **CRITICAL: Adding new blocks is strictly NOT ALLOWED unless the user explicitly asks and confirms. Use existing blocks, composites, defaultSource, and adapters instead.**
 
-**If code conflicts with spec, the spec is authoritative.** Design docs: `design-docs/final-Synthesized-v2/`
+**If code conflicts with spec, the spec is authoritative.** Design docs: `design-docs/spec/`
 
 **Tests are NOT a reliable indicator.** Use Chrome DevTools MCP to verify behavior.
 
@@ -99,4 +99,4 @@ Quick reference (non-authoritative) in `claude_memory/`:
 - `06-invariants.md` - Non-negotiable rules, pitfalls
 - `07-golden-patch.md` - "Breathing Constellation" reference
 
-**Note:** `claude_memory/` is quick reference only. The **authoritative** spec is `design-docs/final-Synthesized-v2/`.
+**Note:** `claude_memory/` is quick reference only. The **authoritative** spec is `design-docs/spec/`.
