@@ -93,7 +93,7 @@ export interface RenderSinkIR {
 
 /**
  * Domain definition for IR.
- * Tracks the slot and count for each domain created.
+ * Tracks the slot and metadata for each domain created.
  */
 export interface DomainDefIR {
   /** Value slot where domain handle is stored */
@@ -101,6 +101,9 @@ export interface DomainDefIR {
 
   /** Number of elements in the domain */
   count: number;
+
+  /** Optional SVG path data for SVG-sampled domains */
+  svgPath?: string;
 }
 
 // =============================================================================
@@ -146,40 +149,44 @@ export interface SlotMetaEntry {
   debugName?: string;
 }
 
+// =============================================================================
+// Time Slots (from TimeRoot lowering)
+// =============================================================================
+
 /**
- * Time-related slots allocated by TimeRoot during lowering.
- * Schedule references these rather than allocating its own.
+ * Time slots emitted by TimeRoot lowering.
+ * Stores the slots for canonical time signals.
+ *
+ * Different TimeRoot types emit different subsets:
+ * - Finite: systemTime, progress, tAbsMs, tModelMs, phase01, progress01, wrapEvent
+ * - Infinite: systemTime, tAbsMs
+ * - Cycle: systemTime, phase, tAbsMs, tModelMs, phase01, progress01, wrapEvent
  */
 export interface TimeSlots {
-  /** Slot for absolute time in ms (input from runtime) */
-  tAbsMs: ValueSlot;
+  /** Absolute system time in milliseconds (always present) */
+  systemTime: ValueSlot;
 
-  /** Slot for model-adjusted time in ms */
-  tModelMs: ValueSlot;
+  /** Progress value for finite/cyclic time models [0,1] (optional) */
+  progress?: ValueSlot;
 
-  /** Slot for phase [0,1] */
+  /** Absolute time signal (tAbsMs) */
+  tAbsMs?: ValueSlot;
+
+  /** Model time signal (tModelMs) */
+  tModelMs?: ValueSlot;
+
+  /** Phase signal [0,1] (phase01) */
   phase01?: ValueSlot;
 
-  /** Slot for progress [0,1] */
+  /** Progress signal [0,1] (progress01) - same as progress */
   progress01?: ValueSlot;
 
-  /** Slot for wrap event trigger */
+  /** Wrap/end event signal */
   wrapEvent?: ValueSlot;
 }
 
 // =============================================================================
-// Signal IR Table
-// =============================================================================
-
-/**
- * Signal IR table.
- */
-export interface SignalIRTable {
-  nodes: SignalExprIR[];
-}
-
-// =============================================================================
-// Field IR Table
+// Builder Program IR
 // =============================================================================
 
 /**
@@ -209,21 +216,27 @@ export interface EventIRTable {
  *
  * This is a simplified version of CompiledProgramIR focused on what the builder produces.
  * Later compilation passes will transform this into the full CompiledProgramIR.
+ * Intermediate IR representation built by IRBuilder.
+ * This is the output of the builder, consumed by later compiler phases.
  */
 export interface BuilderProgramIR {
-  /** Signal expression graph */
-  signalIR: SignalIRTable;
+  /** Signal expression table */
+  signalIR: {
+    nodes: readonly SignalExprIR[];
+  };
 
-  /** Field expression graph */
-  fieldIR: FieldIRTable;
+  /** Field expression table */
+  fieldIR: {
+    nodes: readonly FieldExprIR[];
+  };
 
   /** Event expression graph */
   eventIR: EventIRTable;
 
-  /** Constant pool (deduplicated values) */
+  /** Constant pool */
   constants: readonly unknown[];
 
-  /** State layout for stateful blocks */
+  /** State layout entries */
   stateLayout: readonly StateLayoutEntry[];
 
   /** Transform chains */
@@ -232,35 +245,26 @@ export interface BuilderProgramIR {
   /** Render sinks */
   renderSinks: readonly RenderSinkIR[];
 
-  /** Domain definitions (for initializing domain slots at runtime) */
+  /** Domain definitions */
   domains: readonly DomainDefIR[];
 
-  /** Camera definitions (3D support) */
+  /** Cameras (3D) */
   cameras: readonly CameraIR[];
 
-  /** Debug index for error reporting */
+  /** Debug index for provenance tracking */
   debugIndex: BuilderDebugIndex;
 
-  /** Time model (placeholder until time topology pass) */
+  /** Time model from TimeRoot */
   timeModel: TimeModelIR;
 
-  /**
-   * Slot metadata - canonical source for all allocated slots.
-   * Emitted during lowering, used by RuntimeState.
-   */
+  /** Slot metadata */
   slotMeta: readonly SlotMetaEntry[];
 
-  /**
-   * Mapping from SigExprId to output slot.
-   * Indexed by SigExprId; entries may be undefined if unused.
-   */
-  sigValueSlots: readonly (ValueSlot | undefined)[];
+  /** Signal value slots registration */
+  sigValueSlots: ReadonlyArray<ValueSlot | undefined>;
 
-  /**
-   * Mapping from FieldExprId to output slot.
-   * Indexed by FieldExprId; entries may be undefined if unused.
-   */
-  fieldValueSlots: readonly (ValueSlot | undefined)[];
+  /** Field value slots registration */
+  fieldValueSlots: ReadonlyArray<ValueSlot | undefined>;
 
   /**
    * Mapping from EventExprId to output slot.
@@ -278,5 +282,6 @@ export interface BuilderProgramIR {
    * Time-related slots allocated by TimeRoot during lowering.
    * Schedule references these rather than allocating new ones.
    */
+  /** Time slots (from TimeRoot) */
   timeSlots?: TimeSlots;
 }

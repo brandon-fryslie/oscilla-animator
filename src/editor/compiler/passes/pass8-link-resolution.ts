@@ -20,6 +20,7 @@ import type { IRWithBusRoots, ValueRefPacked } from "./pass7-bus-lowering";
 import type { CompilerConnection, CompileError } from "../types";
 import { getBlockType } from "../ir/lowerTypes";
 import type { LowerCtx } from "../ir/lowerTypes";
+import type { TypeDesc } from "../ir/types";
 
 // =============================================================================
 // Types
@@ -105,6 +106,7 @@ export function pass8LinkResolution(
     listeners,
     busRoots,
     blockOutputs,
+    builder,
     errors
   );
 
@@ -130,6 +132,11 @@ function registerFieldSlots(
   }
 }
 
+/**
+ * Create a ValueRef from a defaultSource value.
+ *
+ * Handles signal and field worlds by creating appropriate IR constants.
+ */
 function applyRenderLowering(
   builder: IRBuilder,
   blocks: readonly Block[],
@@ -145,37 +152,49 @@ function applyRenderLowering(
    * - field/* → fieldConst
    * - scalar/* → scalarConst (stored in constant pool)
    */
-  function createDefaultRef(
-    type: import("../ir/types").TypeDesc,
-    defaultValue: unknown
-  ): ValueRefPacked | null {
-    if (type.world === "signal") {
-      if (typeof defaultValue !== "number") {
+function createDefaultRef(
+  builder: IRBuilder,
+  type: TypeDesc,
+  defaultValue: unknown
+): ValueRefPacked | null {
+  if (type.world === "signal") {
+    // Signal constants can be numbers (for numeric signals) or other values (like strings for colors)
+    // The IRBuilder.sigConst accepts numbers, but for other types (like color strings),
+    // we may need special handling in the future. For now, only handle numeric signals.
+    if (typeof defaultValue !== "number") {
+      // Non-numeric signal defaults (like colors) aren't yet supported in IR
+      return null;
         // Non-number signal values (vec3, color) → use constant pool
         const constId = builder.allocConstId(defaultValue);
         return { k: "scalarConst", constId };
-      }
-      const sigId = builder.sigConst(defaultValue, type);
-      const slot = builder.allocValueSlot(type);
-      builder.registerSigSlot(sigId, slot);
-      return { k: "sig", id: sigId, slot };
     }
+    const sigId = builder.sigConst(defaultValue, type);
+    const slot = builder.allocValueSlot(type);
+    builder.registerSigSlot(sigId, slot);
+    return { k: "sig", id: sigId, slot };
+  }
 
-    if (type.world === "field") {
-      const fieldId = builder.fieldConst(defaultValue, type);
-      const slot = builder.allocValueSlot(type);
-      builder.registerFieldSlot(fieldId, slot);
-      return { k: "field", id: fieldId, slot };
-    }
+  if (type.world === "field") {
+    const fieldId = builder.fieldConst(defaultValue, type);
+    const slot = builder.allocValueSlot(type);
+    builder.registerFieldSlot(fieldId, slot);
+    return { k: "field", id: fieldId, slot };
+  }
 
     if (type.world === "scalar") {
       const constId = builder.allocConstId(defaultValue);
       return { k: "scalarConst", constId };
     }
 
-    return null;
-  }
+  return null;
+}
 
+function applyRenderLowering(
+  builder: IRBuilder,
+  blocks: readonly Block[],
+  blockInputRoots: BlockInputRootIR,
+  errors: CompileError[],
+): void {
   // Phase 1: Process Camera blocks (produce Special<cameraRef> outputs)
   // These must run before render blocks so camera outputs are available
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
@@ -283,7 +302,7 @@ function applyRenderLowering(
         const input = block.inputs[portIdx];
         const defaultSource = input.defaultSource;
         if (defaultSource) {
-          const defaultRef = createDefaultRef(inputDecl.type, defaultSource.value);
+          const defaultRef = createDefaultRef(builder, inputDecl.type, defaultSource.value);
           if (defaultRef) {
             inputs.push(defaultRef);
             continue;
@@ -363,7 +382,9 @@ function buildBlockOutputRoots(
  * Resolution priority:
  * 1. Wire connection (direct block-to-block)
  * 2. Bus listener (bus → input)
- * 3. Default source (fallback - for Sprint 2, we'll use placeholder)
+ * 3. Default source (fallback constant from slot definition)
+ *
+ * If no source is found and input has no defaultSource, it's an error.
  */
 function buildBlockInputRoots(
   blocks: readonly Block[],
@@ -371,6 +392,7 @@ function buildBlockInputRoots(
   listeners: readonly Listener[],
   busRoots: Map<BusIndex, ValueRefPacked>,
   blockOutputs: Map<number, Map<string, ValueRefPacked>>,
+  builder: IRBuilder,
   errors: CompileError[]
 ): BlockInputRootIR {
   const refs: ValueRefPacked[] = [];
@@ -395,9 +417,13 @@ function buildBlockInputRoots(
     }
   });
 
+  // Get block type declarations for type information
+  const blockDecls = blocks.map((block) => getBlockType(block.type));
+
   // Process each block's inputs
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx];
+    const blockDecl = blockDecls[blockIdx];
 
     for (let portIdx = 0; portIdx < block.inputs.length; portIdx++) {
       const input = block.inputs[portIdx];
@@ -494,12 +520,21 @@ function buildBlockInputRoots(
       }
 
       // Priority 3: Default source
-      // For Sprint 2, we'll create a placeholder constant
-      // In Phase 4, this will use the DefaultSourceAttachment from Pass 1
-      //
-      // For now, if we reach here, the input is unresolved
-      // This is acceptable for Sprint 2 - we're creating structural IR
-      // Unresolved ports are not errors - they're just optional inputs without sources
+      // Use the defaultSource from the input slot if available
+      if (input.defaultSource && blockDecl) {
+        // Find the port declaration to get the type
+        const portDecl = blockDecl.inputs.find((p) => p.portId === input.id);
+        if (portDecl) {
+          const defaultRef = createDefaultRef(builder, portDecl.type, input.defaultSource.value);
+          if (defaultRef) {
+            refs[flatIdx] = defaultRef;
+            continue; // Successfully resolved via default source
+          }
+        }
+      }
+
+      // No source found - check if this is an error
+      // Only report error if there's no defaultSource
       if (!input.defaultSource) {
         errors.push({
           code: "MissingInput",

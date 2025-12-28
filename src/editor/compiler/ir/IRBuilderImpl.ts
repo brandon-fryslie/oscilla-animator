@@ -690,11 +690,17 @@ export class IRBuilderImpl implements IRBuilder {
     return slot;
   }
 
-  domainFromSVG(_svgRef: string, _sampleCount: number): ValueSlot {
+  domainFromSVG(svgPath: string, sampleCount: number): ValueSlot {
     // Allocate a value slot for the domain
-    // The actual SVG sampling will be handled by the runtime
-    return this.allocValueSlot();
+    const slot = this.allocValueSlot();
+
+    // Track the domain definition for runtime initialization
+    // Include svgPath so the runtime can sample the SVG
+    this.domains.push({ slot, count: sampleCount, svgPath });
+
+    return slot;
   }
+
 
   // =============================================================================
   // Transforms
