@@ -37,20 +37,21 @@ export function executeSignalEval(
   runtime: RuntimeState,
   effectiveTime: { tAbsMs: number; tModelMs?: number; phase01?: number; wrapEvent?: number },
 ): void {
-  const signalTable = program.signalTable?.nodes;
-  if (!signalTable) {
-    // No signal table - skip evaluation gracefully.
-    // This can happen when IR extraction is disabled or the patch has no signal expressions.
-    // The step outputs will remain uninitialized, which downstream steps should handle.
+  // VALIDATION: Hard-fail if signalTable is missing but step has outputs
+  // This prevents silent failures where slots remain uninitialized
+  if (!program.signalTable || !program.signalTable.nodes) {
     if (step.outputs.length > 0) {
-      console.warn(
-        `executeSignalEval: program.signalTable is missing but step has ${step.outputs.length} outputs. ` +
-        `Outputs will remain uninitialized.`
+      throw new Error(
+        `executeSignalEval: signalTable is required when step has outputs. ` +
+        `Step has ${step.outputs.length} outputs but program.signalTable is missing. ` +
+        `Ensure compiler emits signalTable for patches with signal expressions.`
       );
     }
+    // No outputs and no signalTable - this is valid (noop step)
     return;
   }
 
+  const signalTable = program.signalTable.nodes;
   const constPool = program.constants?.json ?? [];
   const numbers = constPool.map((value) => (typeof value === "number" ? value : NaN));
 

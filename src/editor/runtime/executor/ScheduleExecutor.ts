@@ -85,12 +85,12 @@ export class ScheduleExecutor {
    * Frame lifecycle:
    * 1. Start new frame (increment frameId, invalidate per-frame caches)
    * 2. Clear ValueStore (reset slot writes)
-   * 3. Resolve effective time
+   * 3. Resolve effective time (with wrap detection using timeState)
    * 4. Execute each step in schedule order
    * 5. Extract render output
    *
    * @param program - Compiled program IR
-   * @param runtime - Runtime state (values, state, caches)
+   * @param runtime - Runtime state (values, state, caches, timeState)
    * @param tMs - Absolute time in milliseconds
    * @returns RenderFrameIR for this frame
    */
@@ -104,8 +104,8 @@ export class ScheduleExecutor {
     runtime.values.clear();
     runtime.frameId++;
 
-    // 2. Compute effective time
-    const effectiveTime = resolveTime(tMs, program.timeModel);
+    // 2. Compute effective time (pass timeState for wrap detection)
+    const effectiveTime = resolveTime(tMs, program.timeModel, runtime.timeState);
 
     // 3. Execute each step in schedule order
     for (const step of program.schedule.steps) {
@@ -130,6 +130,7 @@ export class ScheduleExecutor {
    * Time Continuity:
    * - frameId preserved (not reset)
    * - FrameCache.frameId preserved
+   * - timeState preserved (for wrap detection)
    *
    * Cache Policy:
    * - Per-frame caches invalidated

@@ -8,6 +8,7 @@
  * - StateBuffer: cross-frame persistent state
  * - FrameCache: memoization cache with signal/field caches
  * - frameId: monotonic frame counter
+ * - timeState: persistent time state for wrap detection
  * - 3D stores: CameraStore, MeshStore
  * - viewport: ViewportInfo for 3D projection
  *
@@ -30,6 +31,7 @@ import { preserveState } from "./StateSwap";
 import { CameraStore } from "../camera/CameraStore";
 import { MeshStore } from "../mesh/MeshStore";
 import type { ViewportInfo } from "../camera/evaluateCamera";
+import { createTimeState, type TimeState } from "./timeResolution";
 
 // ============================================================================
 // RuntimeState Interface
@@ -58,6 +60,9 @@ export interface RuntimeState {
   /** Monotonic frame counter */
   frameId: number;
 
+  /** Time state for wrap detection (persistent across frames) */
+  timeState: TimeState;
+
   /** Camera evaluation cache (3D rendering) */
   cameraStore: CameraStore;
 
@@ -83,6 +88,7 @@ export interface RuntimeState {
    * Time Continuity:
    * - frameId preserved (not reset to 0)
    * - FrameCache.frameId preserved
+   * - timeState preserved (for wrap detection continuity)
    *
    * Cache Policy:
    * - Per-frame caches invalidated (stamps zeroed, buffer pool cleared)
@@ -254,20 +260,72 @@ export function createFrameCache(
 // ============================================================================
 
 /**
+ * Check if schedule has any steps that read/write slots.
+ *
+ * @param program - Compiled program
+ * @returns true if schedule contains slot operations
+ */
+function scheduleHasSlotOperations(program: CompiledProgramIR): boolean {
+  if (!program.schedule || !program.schedule.steps) {
+    return false;
+  }
+
+  // Check if any step reads or writes slots
+  for (const step of program.schedule.steps) {
+    switch (step.kind) {
+      case "timeDerive":
+      case "signalEval":
+      case "nodeEval":
+      case "busEval":
+      case "eventBusEval":
+      case "materialize":
+      case "materializeColor":
+      case "materializePath":
+      case "materializeTestGeometry":
+      case "renderAssemble":
+      case "CameraEval":
+      case "MeshMaterialize":
+      case "Instances3DProjectTo2D":
+        return true;
+      case "debugProbe":
+        // DebugProbe reads slots but doesn't affect correctness
+        continue;
+      default:
+        continue;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Extract slot metadata from program.
  *
  * Per design-docs/13-Renderer/12-ValueSlotPerNodeOutput.md:
  * - Prefer compiler-emitted slotMeta when available
  * - Fall back to inferring from schedule only when slotMeta is missing
  *
+ * VALIDATION: If slotMeta is empty AND schedule has slot operations, throw error.
+ * This prevents silent runtime failures when the compiler failed to emit metadata.
+ *
  * @param program - Compiled program
  * @returns Slot metadata array
+ * @throws Error if slotMeta required but missing
  */
 function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
   const compilerMeta = program.slotMeta && program.slotMeta.length > 0
     ? [...program.slotMeta]
     : [];
   const inferred = inferSlotMetaFromSchedule(program);
+
+  // VALIDATION: Fail fast if slotMeta is required but missing
+  if (compilerMeta.length === 0 && inferred.length === 0 && scheduleHasSlotOperations(program)) {
+    throw new Error(
+      `RuntimeState: program.slotMeta is required for IR execution but is empty/undefined. ` +
+      `Schedule contains ${program.schedule.steps.length} steps that require slot operations. ` +
+      `Ensure compiler emits slotMeta or schedule is empty.`
+    );
+  }
 
   if (compilerMeta.length === 0) {
     return inferred;
@@ -551,6 +609,9 @@ export function createRuntimeState(
   const fieldCapacity = 512; // Default field cache capacity
   const frameCache = createFrameCache(sigCapacity, fieldCapacity);
 
+  // Create time state for wrap detection
+  const timeState = createTimeState();
+
   // Create 3D stores
   const cameraStore = new CameraStore();
   const meshStore = new MeshStore();
@@ -575,6 +636,7 @@ export function createRuntimeState(
     state,
     frameCache,
     frameId: 0,
+    timeState,
     cameraStore,
     meshStore,
     viewport: defaultViewport,
@@ -590,6 +652,7 @@ export function createRuntimeState(
       // Preserve time continuity
       newRuntime.frameId = this.frameId;
       newRuntime.frameCache.frameId = this.frameCache.frameId;
+      newRuntime.timeState.prevTModelMs = this.timeState.prevTModelMs;
 
       // Invalidate caches (preserving frameId)
       newRuntime.frameCache.invalidate();

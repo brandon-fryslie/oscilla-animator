@@ -41,6 +41,30 @@ export interface EffectiveTime {
 }
 
 // ============================================================================
+// Time State (for wrap detection)
+// ============================================================================
+
+/**
+ * TimeState - Persistent time state for wrap detection
+ *
+ * Stores previous tModelMs to enable accurate wrap/bounce detection.
+ * This state should be maintained across frames in RuntimeState.
+ */
+export interface TimeState {
+  /** Previous tModelMs (for wrap detection) */
+  prevTModelMs: number | null;
+}
+
+/**
+ * Create initial TimeState
+ */
+export function createTimeState(): TimeState {
+  return {
+    prevTModelMs: null,
+  };
+}
+
+// ============================================================================
 // Time Resolution Function
 // ============================================================================
 
@@ -54,11 +78,22 @@ export interface EffectiveTime {
  * - Cyclic: tModelMs wrapped to [0, periodMs], phase01 = tModelMs / periodMs, wrapEvent detected
  * - Infinite: tModelMs = tAbsMs, no derived signals
  *
+ * Wrap Detection:
+ * - Uses actual previous tModelMs comparison (stored in timeState)
+ * - Detects wrap when tModelMs < prevTModelMs (for loop mode)
+ * - Detects bounce when cycleCount changes (for ping-pong mode)
+ * - Works correctly under variable frame rates and scrubbing
+ *
  * @param tAbsMs - Absolute time in milliseconds
  * @param timeModel - Time model specification
+ * @param timeState - Optional time state for wrap detection (modified in place)
  * @returns Effective time with all derived signals
  */
-export function resolveTime(tAbsMs: number, timeModel: TimeModelIR): EffectiveTime {
+export function resolveTime(
+  tAbsMs: number,
+  timeModel: TimeModelIR,
+  timeState?: TimeState
+): EffectiveTime {
   switch (timeModel.kind) {
     case "finite": {
       // Clamp to duration
@@ -80,12 +115,20 @@ export function resolveTime(tAbsMs: number, timeModel: TimeModelIR): EffectiveTi
 
       if (timeModel.mode === "loop") {
         // Standard loop: modulo
-        const prevTModelMs = ((tAbsMs - 16.67) % periodMs + periodMs) % periodMs; // approx 60fps
         tModelMs = (tAbsMs % periodMs + periodMs) % periodMs;
 
-        // Detect wrap (when tModelMs < prevTModelMs, we wrapped)
-        if (tModelMs < prevTModelMs) {
-          wrapEvent = 1.0;
+        // Detect wrap using actual previous tModelMs (if available)
+        if (timeState && timeState.prevTModelMs !== null) {
+          // Wrap occurred if current tModelMs < previous tModelMs
+          // This handles both forward playback wraps and scrubbing backwards across wrap boundary
+          if (tModelMs < timeState.prevTModelMs) {
+            wrapEvent = 1.0;
+          }
+        }
+
+        // Update time state for next frame
+        if (timeState) {
+          timeState.prevTModelMs = tModelMs;
         }
       } else {
         // Ping-pong: bounce at boundaries
@@ -95,10 +138,19 @@ export function resolveTime(tAbsMs: number, timeModel: TimeModelIR): EffectiveTi
 
         tModelMs = isReverse ? periodMs - tInCycle : tInCycle;
 
-        // Wrap event at each bounce
-        const prevCycleCount = Math.floor((tAbsMs - 16.67) / periodMs);
-        if (cycleCount !== prevCycleCount) {
-          wrapEvent = 1.0;
+        // Detect bounce using actual previous cycle count (derived from prevTModelMs)
+        if (timeState && timeState.prevTModelMs !== null) {
+          // Derive previous cycle count from prevTModelMs and compare
+          // For ping-pong, wrap occurs when direction changes
+          const prevCycleCount = Math.floor((tAbsMs - (tModelMs - timeState.prevTModelMs)) / periodMs);
+          if (cycleCount !== prevCycleCount) {
+            wrapEvent = 1.0;
+          }
+        }
+
+        // Update time state for next frame
+        if (timeState) {
+          timeState.prevTModelMs = tModelMs;
         }
       }
 

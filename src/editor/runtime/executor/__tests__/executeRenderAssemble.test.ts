@@ -97,7 +97,8 @@ describe("executeRenderAssemble - Core Functionality", () => {
 
     const frame = runtime.values.read(100) as any;
     expect(frame.clear).toBeDefined();
-    expect(frame.clear.mode).toBe("none");
+    expect(frame.clear.mode).toBe("color");
+    expect(frame.clear.colorRGBA).toBe(0x000000FF); // Black background
   });
 });
 

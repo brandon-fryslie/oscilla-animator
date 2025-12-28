@@ -4,18 +4,24 @@ This file audits bus-related compilation/runtime logic. Items are ordered by sev
 
 ## Critical
 
-- ~~**Event buses are not lowered to IR**~~
+- **Event buses are now fully supported in IR**
   - **Status:** RESOLVED (2025-12-28)
-  - **Location:** `src/editor/compiler/passes/pass7-bus-lowering.ts:161-166`
-  - **Resolution:** Event buses are now skipped silently (return null, no bus root)
-  - **Rationale:** Event buses like 'pulse' are handled through a different runtime path and don't need IR representation
+  - **Resolution:** Full IR implementation for event buses:
+    - `EventExprId` type added to IR types
+    - Event expression IR nodes: `EventExprEmpty`, `EventExprWrap`, `EventExprInputSlot`, `EventExprMerge`, `EventExprBusCombine`
+    - IRBuilder methods: `eventEmpty`, `eventWrap`, `eventInputSlot`, `eventMerge`, `eventCombine`
+    - `pass7-bus-lowering.ts` now handles `world: "event"` buses
+    - `StepEventBusEval` schedule step with combine modes: `merge`, `first`, `last`
+    - `executeEventBusEval` runtime executor
+    - ValueStore supports event streams as object slots
 
-- **Bus evaluation in runtime only supports numeric signals**
-  - **Status:** DOCUMENTED LIMITATION
-  - **Location:** `src/editor/runtime/executor/steps/executeBusEval.ts:24`
-  - **Detail:** `executeBusEval` reads `number` values and combines them as scalars. It does not handle vec2, color, or field buses.
-  - **Impact:** Non-numeric domains compile successfully but may produce incorrect results in busEval steps
-  - **Note:** Comment added in pass7-bus-lowering.ts (AC2) documenting this limitation
+- **Bus evaluation in runtime now supports event streams**
+  - **Status:** RESOLVED (2025-12-28)
+  - **Location:** `src/editor/runtime/executor/steps/executeEventBusEval.ts`
+  - **Resolution:** New `executeEventBusEval` function:
+    - Reads event streams from publisher slots
+    - Combines using mode: `merge` (union of all events), `first`, or `last`
+    - Writes combined event stream to output slot
 
 ## High
 
@@ -59,17 +65,24 @@ This file audits bus-related compilation/runtime logic. Items are ordered by sev
 
 ## Summary of Changes (2025-12-28)
 
-**Approach:** Make IR lowering more permissive (skip/coerce rather than error) to maintain compatibility with existing patches.
+**Approach:** Full IR implementation for event buses. Make field bus lowering permissive (skip/coerce rather than error) to maintain compatibility with existing patches.
 
-**Resolved:**
-- [x] AC1: Event buses skipped silently in IR (not compile-time error)
+**Resolved - Event Buses (FULL IMPLEMENTATION):**
+- [x] EventExprId type added to IR
+- [x] Event expression IR nodes implemented (EventExprEmpty, EventExprWrap, EventExprInputSlot, EventExprMerge, EventExprBusCombine)
+- [x] IRBuilder event methods implemented
+- [x] pass7-bus-lowering handles event buses with proper IR lowering
+- [x] StepEventBusEval schedule step added
+- [x] executeEventBusEval runtime executor implemented
+- [x] ValueStore handles event streams as objects
+
+**Resolved - Other Items:**
 - [x] AC4: busCompilation feature flag removed entirely
 - [x] AC5: 'layer' mode mapped to 'last' for field buses (not rejected)
 - [x] AC6: Non-numeric defaults coerced to 0 (not rejected)
 
 **Documented Limitations:**
-- [x] AC2: Non-numeric domains accepted at compile time (runtime limitation documented)
-- [x] AC3: busContracts unchanged - appropriately permissive
 - [x] AC7: Publisher transforms documented as TODO
+- [x] Field bus runtime limitation for non-numeric types documented
 
-All critical items are now resolved or documented. The bus system prioritizes backward compatibility over strict validation.
+All critical items are now resolved. Event buses have FULL IR support end-to-end.
