@@ -11,11 +11,11 @@
  * - HANDOFF.md Topic 1: SignalExpr Schema
  */
 
-import type { TypeDesc, ValueSlot, BusIndex, StateId, TransformChainId, SigExprId } from "./types";
+import type { TypeDesc, ValueSlot, BusIndex, StateId, TransformChainId, SigExprId, EventExprId } from "./types";
 import type { PureFnRef } from "./transforms";
 
-// Re-export SigExprId for convenience
-export type { SigExprId } from "./types";
+// Re-export expression IDs for convenience
+export type { SigExprId, EventExprId } from "./types";
 
 // =============================================================================
 // Signal Expression Combine Types
@@ -243,3 +243,120 @@ export type StatefulSignalOp =
   | "edgeDetectWrap" // phase01 -> trigger (wrap detection)
   | "pulseDivider" // phase01 -> trigger (pulse division)
   | "envelopeAD"; // trigger -> number (envelope generator)
+
+// =============================================================================
+// Event Expression Types
+// =============================================================================
+
+/**
+ * Combine mode for event bus aggregation.
+ *
+ * Defines how multiple event streams are combined:
+ * - `merge`: Union of all event occurrences (sorted by time)
+ * - `first`: Events from first publisher only (by sortKey)
+ * - `last`: Events from last publisher only (by sortKey)
+ */
+export type EventCombineMode = "merge" | "first" | "last";
+
+/**
+ * Combine specification for event bus combine nodes.
+ */
+export interface EventCombineSpec {
+  /** Combine mode */
+  mode: EventCombineMode;
+}
+
+/**
+ * Event expression table - dense array of event nodes.
+ * Index = EventExprId for O(1) lookup.
+ */
+export interface EventExprTable {
+  /** Dense array of event expressions */
+  nodes: EventExprIR[];
+}
+
+/**
+ * Event expression IR - discriminated union of all event node kinds.
+ *
+ * Key invariants:
+ * - Every node has explicit type: TypeDesc (world: "event")
+ * - Event streams are objects, not numeric values
+ * - Bus combine terms are pre-sorted (runtime never re-sorts)
+ */
+export type EventExprIR =
+  // Empty event stream (no events)
+  | EventExprEmpty
+
+  // Wrap event from cyclic time model
+  | EventExprWrap
+
+  // Reference another node's output slot
+  | EventExprInputSlot
+
+  // Map event values through a pure function
+  | EventExprMap
+
+  // Filter events by predicate
+  | EventExprFilter
+
+  // Merge multiple event streams
+  | EventExprMerge
+
+  // Bus combine
+  | EventExprBusCombine;
+
+// -----------------------------------------------------------------------------
+// Individual Event Expression Kinds
+// -----------------------------------------------------------------------------
+
+/** Empty event stream (produces no events) */
+export interface EventExprEmpty {
+  kind: "eventEmpty";
+  type: TypeDesc;
+}
+
+/** Wrap event from cyclic time model - fires when phase wraps from 1 to 0 */
+export interface EventExprWrap {
+  kind: "eventWrap";
+  type: TypeDesc;
+}
+
+/** Reference to a value slot containing an event stream */
+export interface EventExprInputSlot {
+  kind: "eventInputSlot";
+  type: TypeDesc;
+  slot: ValueSlot;
+}
+
+/** Map event values through a pure function */
+export interface EventExprMap {
+  kind: "eventMap";
+  type: TypeDesc;
+  src: EventExprId;
+  fn: PureFnRef;
+}
+
+/** Filter events by predicate (keep events where predicate returns true) */
+export interface EventExprFilter {
+  kind: "eventFilter";
+  type: TypeDesc;
+  src: EventExprId;
+  predicate: PureFnRef;
+}
+
+/** Merge multiple event streams (union, sorted by time) */
+export interface EventExprMerge {
+  kind: "eventMerge";
+  type: TypeDesc;
+  sources: EventExprId[];
+}
+
+/** Event bus combine - aggregate multiple publishers */
+export interface EventExprBusCombine {
+  kind: "eventBusCombine";
+  type: TypeDesc;
+  busIndex: BusIndex;
+  /** Pre-sorted by compiler - runtime never re-sorts */
+  terms: EventExprId[];
+  combine: EventCombineSpec;
+}

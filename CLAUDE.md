@@ -1,34 +1,42 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Philosophy
 
 > **Animations are not timelines. They are living systems observed over time.**
 
-Oscilla treats animation as signal flow, not keyframe manipulation. The looping system is not a feature—it is the organizing principle.
+Oscilla treats animation as signal flow, not keyframe manipulation. Looping is the organizing principle, not a feature.
 
 ## Commands
 
 All commands via `just` (not pnpm/npm directly):
 
 ```bash
-just dev          # Start dev server (http://localhost:5173)
+just dev          # Dev server (http://localhost:5173)
 just build        # Production build
 just check        # Full check: typecheck + lint + test
 just typecheck    # TypeScript only
 just test         # Run tests (vitest)
-just test-file <path>  # Run single test file
+just test-file <path>  # Single test file
 just lint-fix     # Lint with auto-fix
 ```
 
 ## Critical Rules
 
-**CRITICAL: Adding new blocks is strictly NOT ALLOWED unless the user explicitly asks and confirms. Use existing blocks, composites, defaultSource, and adapters instead.**
+1. **No new blocks** unless explicitly requested. Use composites, defaultSource, or adapters.
+2. **Spec is authoritative.** If code conflicts with `design-docs/spec/`, the spec wins.
+3. **Tests lie.** Verify behavior with Chrome DevTools MCP, not just passing tests.
 
-**If code conflicts with spec, the spec is authoritative.** Design docs: `design-docs/spec/`
+## Fixing Bugs
 
-**Tests are NOT a reliable indicator.** Use Chrome DevTools MCP to verify behavior.
+When fixing bugs or "red flags":
+
+1. **Fix means it works correctly**—not that errors are suppressed
+2. **Silent failures are worse than loud ones**—emit compile-time errors with clear messages
+3. **"Documented limitation" is not a fix**—a TODO comment does not resolve a bug
+4. **Don't paper over problems**—coercing invalid values to defaults hides bugs
+5. **Fail fast**—reject invalid configurations early with actionable errors
+
+If you cannot actually fix something, say so and stop. Do not pretend the problem is solved by making it fail quietly.
 
 ## Type Hierarchy
 
@@ -39,25 +47,13 @@ just lint-fix     # Lint with auto-fix
 | **Field** | Per-element lazy expressions | At render sinks only |
 | **Event** | Discrete triggers | Edge detection |
 
-## Time System
-
-TimeRoot blocks declare time topology. The player observes—never controls—the time axis.
-
-| TimeRoot | Output | Use Case |
-|----------|--------|----------|
-| Finite | `systemTime`, `progress` | One-shot animations |
-| Infinite | `systemTime` | Generative installations |
-
-**Note:** There is NO CycleTimeRoot. Cycles (phase/pulse/energy) are produced by the **Time Console** as Global Rails, not by TimeRoot blocks. TimeRoot publishes only the reserved `time` bus.
-
 ## Non-Negotiable Invariants
 
-- **No `Math.random()` at runtime**—breaks scrubbing/replay. All randomness seeded at compile-time.
+- **No `Math.random()` at runtime**—breaks scrubbing/replay. Seed randomness at compile-time.
 - **Player time is unbounded**—never wrap `t`. Looping is topological, not temporal.
 - **Fields are lazy**—evaluate only at render sinks, never prematerialize.
 - **World/domain mismatches are compile errors**—not runtime.
 - **Exactly one TimeRoot per patch**—compile error otherwise.
-- **Scrubbing never resets state**—only adjusts view transforms.
 
 ## Architecture
 
@@ -65,38 +61,24 @@ TimeRoot blocks declare time topology. The player observes—never controls—th
 src/
   core/           # Animation kernel (Signal, Field, Event types)
   editor/
-    stores/       # MobX state (RootStore, PatchStore, BusStore, UIStateStore)
+    stores/       # MobX state (RootStore, PatchStore, BusStore)
     blocks/       # Block definitions and registry
-    compiler/     # Patch → IR → Schedule compilation
-      ir/         # Intermediate representation builder
-      passes/     # Compiler passes (block lowering, bus lowering, link resolution)
+    compiler/     # Patch → IR → Schedule
+      ir/         # Intermediate representation
+      passes/     # Compiler passes
     runtime/      # Player, executor, field materialization
-      executor/   # ScheduleExecutor, step dispatch
-      field/      # FieldHandle, BufferPool, Materializer
     components/   # React UI
 ```
 
 ## Extending the System
 
-### Composites (Black-box single unit)
-Define in `src/editor/composites.ts`, import in `composite-bridge.ts`.
+| Extension | Location |
+|-----------|----------|
+| Composites | `src/editor/composites.ts` → import in `composite-bridge.ts` |
+| Macros | `src/editor/blocks/macros.ts` + `src/editor/macros.ts` MACRO_REGISTRY |
+| Block compilers | `src/editor/compiler/blocks/<category>/<Name>.ts` |
 
-### Macros (Expands to visible editable blocks)
-Two parts: BlockDefinition in `src/editor/blocks/legacy/macros.ts` + expansion template in `src/editor/macros.ts` MACRO_REGISTRY.
+## Reference
 
-### Block Compilers
-Add to `src/editor/compiler/blocks/<category>/<Name>.ts`, register in block registry.
-
-## Memory Files
-
-Quick reference (non-authoritative) in `claude_memory/`:
-- `00-essentials.md` - Commands, design doc refs
-- `01-architecture.md` - Directory structure, MobX stores
-- `02-type-system.md` - Signal, Field, TypeDesc, BufferDesc
-- `03-time-architecture.md` - TimeRoot, TimeModel, Player
-- `04-buses.md` - Canonical rails, production rules
-- `05-blocks.md` - Creating blocks, composites, macros
-- `06-invariants.md` - Non-negotiable rules, pitfalls
-- `07-golden-patch.md` - "Breathing Constellation" reference
-
-**Note:** `claude_memory/` is quick reference only. The **authoritative** spec is `design-docs/spec/`.
+- **Authoritative spec:** `design-docs/spec/`
+- **Quick reference:** `claude_memory/` (non-authoritative)

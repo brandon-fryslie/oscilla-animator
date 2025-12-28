@@ -101,7 +101,7 @@ export function topoSortBlocks(
   patch: CompilerPatch,
   errors: CompileError[]
 ): readonly BlockId[] {
-  const ids = Array.from(patch.blocks.keys());
+  const ids = patch.blocks.map(b => b.id);
 
   // Build adjacency + indegree
   const adj = new Map<BlockId, Set<BlockId>>();

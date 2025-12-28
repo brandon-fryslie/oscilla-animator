@@ -8,8 +8,8 @@
  * - HANDOFF.md Topic 1: IRBuilder API
  */
 
-import type { TypeDesc, StateId, ValueSlot, SigExprId, FieldExprId } from "./types";
-import type { SignalExprIR } from "./signalExpr";
+import type { TypeDesc, StateId, ValueSlot, SigExprId, FieldExprId, EventExprId } from "./types";
+import type { SignalExprIR, EventExprIR } from "./signalExpr";
 import type { FieldExprIR } from "./fieldExpr";
 import type { TransformStepIR } from "./transforms";
 import type { TimeModelIR } from "./schedule";
@@ -117,6 +117,9 @@ export interface BuilderDebugIndex {
   /** Map field expression IDs to source block */
   fieldExprSource: Map<FieldExprId, string>;
 
+  /** Map event expression IDs to source block */
+  eventExprSource: Map<EventExprId, string>;
+
   /** Map value slots to source port */
   slotSource: Map<ValueSlot, { blockId: string; slotId: string }>;
 }
@@ -187,6 +190,17 @@ export interface FieldIRTable {
 }
 
 // =============================================================================
+// Event IR Table
+// =============================================================================
+
+/**
+ * Event IR table.
+ */
+export interface EventIRTable {
+  nodes: EventExprIR[];
+}
+
+// =============================================================================
 // Builder Program IR Output
 // =============================================================================
 
@@ -202,6 +216,9 @@ export interface BuilderProgramIR {
 
   /** Field expression graph */
   fieldIR: FieldIRTable;
+
+  /** Event expression graph */
+  eventIR: EventIRTable;
 
   /** Constant pool (deduplicated values) */
   constants: readonly unknown[];
@@ -244,6 +261,12 @@ export interface BuilderProgramIR {
    * Indexed by FieldExprId; entries may be undefined if unused.
    */
   fieldValueSlots: readonly (ValueSlot | undefined)[];
+
+  /**
+   * Mapping from EventExprId to output slot.
+   * Indexed by EventExprId; entries may be undefined if unused.
+   */
+  eventValueSlots: readonly (ValueSlot | undefined)[];
 
   /**
    * Next available value slot after lowering.

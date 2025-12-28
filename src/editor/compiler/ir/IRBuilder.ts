@@ -21,11 +21,13 @@ import type {
   TypeDesc,
   SigExprId,
   FieldExprId,
+  EventExprId,
   ValueSlot,
   StateId,
   TransformChainId,
   BusIndex,
 } from "./types";
+import type { EventCombineMode } from "./signalExpr";
 import type { TransformStepIR } from "./transforms";
 import type { StatefulSignalOp } from "./signalExpr";
 import type { PureFnRef, ReduceFn, BuilderProgramIR, TimeSlots } from "./builderTypes";
@@ -218,6 +220,52 @@ export interface IRBuilder {
    * Reduce a field to a signal.
    */
   reduceFieldToSig(field: FieldExprId, fn: ReduceFn): SigExprId;
+
+  // =============================================================================
+  // Event Expressions
+  // =============================================================================
+
+  /**
+   * Allocate a new event expression ID.
+   * IDs are sequential starting from 0.
+   */
+  allocEventExprId(): EventExprId;
+
+  /**
+   * Register a ValueSlot for an event expression output.
+   */
+  registerEventSlot(eventId: EventExprId, slot: ValueSlot): void;
+
+  /**
+   * Create an empty event stream (no events).
+   */
+  eventEmpty(type: TypeDesc): EventExprId;
+
+  /**
+   * Create a wrap event from cyclic time model.
+   * Fires when phase wraps from 1 to 0.
+   */
+  eventWrap(): EventExprId;
+
+  /**
+   * Reference an event stream from a value slot.
+   */
+  eventInputSlot(slot: ValueSlot, type: TypeDesc): EventExprId;
+
+  /**
+   * Merge multiple event streams (union, sorted by time).
+   */
+  eventMerge(sources: readonly EventExprId[], outputType: TypeDesc): EventExprId;
+
+  /**
+   * Combine multiple event streams using a bus combine mode.
+   */
+  eventCombine(
+    busIndex: BusIndex,
+    terms: readonly EventExprId[],
+    mode: EventCombineMode,
+    outputType: TypeDesc
+  ): EventExprId;
 
   // =============================================================================
   // Domain

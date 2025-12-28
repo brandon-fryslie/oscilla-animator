@@ -182,11 +182,10 @@ describe('PatchStore - Wire Events', () => {
   });
 
   describe('WireRemoved - cascade deletion on block removal', () => {
-    // NOTE: Cascade deletion via removeBlockCascade() is "silent" - it removes
-    // connections without emitting individual WireRemoved events. Only BlockRemoved
-    // and GraphCommitted are emitted. This is by design for transaction atomicity.
+    // NOTE: When a block is removed, all its connections are also removed and
+    // WireRemoved events are emitted for each. BlockRemoved is also emitted.
 
-    it('removes connections when block removed (cascade is silent)', () => {
+    it('emits WireRemoved for each connection when block removed', () => {
       const wireRemovedListener = vi.fn();
       const blockRemovedListener = vi.fn();
       root.events.on('WireRemoved', wireRemovedListener);
@@ -208,9 +207,9 @@ describe('PatchStore - Wire Events', () => {
       // Remove block2
       root.patchStore.removeBlock(block2);
 
-      // Cascade deletion is silent - no individual WireRemoved events
-      // Only BlockRemoved is emitted for block lifecycle
-      expect(wireRemovedListener).toHaveBeenCalledTimes(0);
+      // Cascade deletion emits WireRemoved for each removed connection
+      // 2 connections involve block2: (block1->block2) and (block2->block3)
+      expect(wireRemovedListener).toHaveBeenCalledTimes(2);
       expect(blockRemovedListener).toHaveBeenCalledTimes(1);
 
       // But connections ARE actually removed
@@ -218,7 +217,7 @@ describe('PatchStore - Wire Events', () => {
       expect(root.patchStore.connections.length).toBe(1);
     });
 
-    it('removes all connections for complex block (cascade is silent)', () => {
+    it('emits correct number of WireRemoved events for complex block', () => {
       // Use blocks with multiple inputs to avoid triggering disconnectInputPort
       const block1 = root.patchStore.addBlock('Oscillator');  // out output
       const block2 = root.patchStore.addBlock('AddSignal');   // a, b inputs
@@ -238,8 +237,8 @@ describe('PatchStore - Wire Events', () => {
       // Remove block2 (has 3 connections)
       root.patchStore.removeBlock(block2);
 
-      // Cascade deletion is silent - no WireRemoved events
-      expect(wireRemovedListener).toHaveBeenCalledTimes(0);
+      // Cascade deletion emits WireRemoved for each removed connection
+      expect(wireRemovedListener).toHaveBeenCalledTimes(3);
 
       // But connections ARE removed (all involved block2)
       expect(root.patchStore.connections.length).toBe(0);

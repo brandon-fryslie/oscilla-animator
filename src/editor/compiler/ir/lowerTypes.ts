@@ -79,6 +79,7 @@ export interface BlockPortDecl {
 export type ValueRefPacked =
   | { k: "sig"; id: SigExprId; slot: ValueSlot }
   | { k: "field"; id: FieldExprId; slot: ValueSlot }
+  | { k: "event"; id: EventExprId; slot: ValueSlot }
   | { k: "scalarConst"; constId: number }
   | { k: "special"; tag: string; id: number };
 

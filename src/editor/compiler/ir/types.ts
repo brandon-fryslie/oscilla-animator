@@ -168,6 +168,15 @@ export type SigExprId = number;
 export type FieldExprId = number;
 
 /**
+ * Event expression ID - dense array index for runtime performance.
+ * Changes on recompile.
+ *
+ * Event expressions represent discrete event streams (not continuous signals).
+ * Used for pulse buses, triggers, and discrete occurrences.
+ */
+export type EventExprId = number;
+
+/**
  * Transform chain ID - dense array index.
  */
 export type TransformChainId = number;

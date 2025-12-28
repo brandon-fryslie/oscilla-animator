@@ -13,12 +13,13 @@ import type {
   TypeDesc,
   SigExprId,
   FieldExprId,
+  EventExprId,
   ValueSlot,
   StateId,
   TransformChainId,
   BusIndex,
 } from "./types";
-import type { SignalExprIR, StatefulSignalOp } from "./signalExpr";
+import type { SignalExprIR, StatefulSignalOp, EventExprIR, EventCombineMode } from "./signalExpr";
 import type { FieldExprIR } from "./fieldExpr";
 import type { TransformStepIR } from "./transforms";
 import type {
@@ -53,6 +54,7 @@ export class IRBuilderImpl implements IRBuilder {
   // Tables for IR nodes
   private sigExprs: SignalExprIR[] = [];
   private fieldExprs: FieldExprIR[] = [];
+  private eventExprs: EventExprIR[] = [];
   private stateLayout: StateLayoutEntry[] = [];
   private transformChains: BuilderTransformChain[] = [];
   private renderSinks: RenderSinkIR[] = [];
@@ -67,6 +69,7 @@ export class IRBuilderImpl implements IRBuilder {
   private nextValueSlot = 0;
   private sigValueSlots: Array<ValueSlot | undefined> = [];
   private fieldValueSlots: Array<ValueSlot | undefined> = [];
+  private eventValueSlots: Array<ValueSlot | undefined> = [];
 
   // Slot metadata - emitted during lowering
   private slotMetaEntries: SlotMetaEntry[] = [];
@@ -86,6 +89,9 @@ export class IRBuilderImpl implements IRBuilder {
 
   /** Map field expression IDs to source block */
   private fieldExprSourceMap: Map<FieldExprId, string> = new Map();
+
+  /** Map event expression IDs to source block */
+  private eventExprSourceMap: Map<EventExprId, string> = new Map();
 
   /** Map value slots to source port */
   private slotSourceMap: Map<ValueSlot, { blockId: string; slotId: string }> = new Map();
@@ -557,6 +563,106 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   // =============================================================================
+  // Event Expressions
+  // =============================================================================
+
+  allocEventExprId(): EventExprId {
+    return this.eventExprs.length;
+  }
+
+  registerEventSlot(eventId: EventExprId, slot: ValueSlot): void {
+    this.eventValueSlots[eventId] = slot;
+  }
+
+  eventEmpty(type: TypeDesc): EventExprId {
+    const id = this.allocEventExprId();
+    this.eventExprs.push({
+      kind: "eventEmpty",
+      type,
+    });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.eventExprSourceMap.set(id, this.currentBlockId);
+    }
+
+    return id;
+  }
+
+  eventWrap(): EventExprId {
+    const id = this.allocEventExprId();
+    this.eventExprs.push({
+      kind: "eventWrap",
+      type: {
+        world: "event",
+        domain: "trigger",
+      },
+    });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.eventExprSourceMap.set(id, this.currentBlockId);
+    }
+
+    return id;
+  }
+
+  eventInputSlot(slot: ValueSlot, type: TypeDesc): EventExprId {
+    const id = this.allocEventExprId();
+    this.eventExprs.push({
+      kind: "eventInputSlot",
+      type,
+      slot,
+    });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.eventExprSourceMap.set(id, this.currentBlockId);
+    }
+
+    return id;
+  }
+
+  eventMerge(sources: readonly EventExprId[], outputType: TypeDesc): EventExprId {
+    const id = this.allocEventExprId();
+    this.eventExprs.push({
+      kind: "eventMerge",
+      type: outputType,
+      sources: [...sources],
+    });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.eventExprSourceMap.set(id, this.currentBlockId);
+    }
+
+    return id;
+  }
+
+  eventCombine(
+    busIndex: BusIndex,
+    terms: readonly EventExprId[],
+    mode: EventCombineMode,
+    outputType: TypeDesc
+  ): EventExprId {
+    const id = this.allocEventExprId();
+    this.eventExprs.push({
+      kind: "eventBusCombine",
+      type: outputType,
+      busIndex,
+      terms: [...terms],
+      combine: { mode },
+    });
+
+    // Track source block for debug index
+    if (this.currentBlockId) {
+      this.eventExprSourceMap.set(id, this.currentBlockId);
+    }
+
+    return id;
+  }
+
+  // =============================================================================
   // Domain
   // =============================================================================
 
@@ -630,6 +736,9 @@ export class IRBuilderImpl implements IRBuilder {
       fieldIR: {
         nodes: this.fieldExprs,
       },
+      eventIR: {
+        nodes: this.eventExprs,
+      },
       constants: this.constPool,
       stateLayout: this.stateLayout,
       transformChains: this.transformChains,
@@ -639,6 +748,7 @@ export class IRBuilderImpl implements IRBuilder {
       debugIndex: {
         sigExprSource: this.sigExprSourceMap,
         fieldExprSource: this.fieldExprSourceMap,
+        eventExprSource: this.eventExprSourceMap,
         slotSource: this.slotSourceMap,
       },
       timeModel: {
@@ -648,6 +758,7 @@ export class IRBuilderImpl implements IRBuilder {
       slotMeta: this.slotMetaEntries,
       sigValueSlots: this.sigValueSlots,
       fieldValueSlots: this.fieldValueSlots,
+      eventValueSlots: this.eventValueSlots,
       nextValueSlot: this.nextValueSlot,
       timeSlots: this.timeSlots,
     };
