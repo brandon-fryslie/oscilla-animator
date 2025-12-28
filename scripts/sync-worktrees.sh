@@ -20,11 +20,12 @@ fi
 for worktree in "$WORKTREES_DIR"/*/; do
     # Skip if not a directory or is .agent_logs
     [[ -d "$worktree" ]] || continue
-    [[ "$(basename "$worktree")" == ".agent_logs" ]] && continue
 
     name="$(basename "$worktree")"
     echo "Resetting $name..."
-    echo git -C "$worktree" reset --hard "$TARGET_COMMIT" 2>&1 | sed 's/^/  /'
+    set -x
+    git -C "$worktree" reset --hard "$TARGET_COMMIT" 2>&1 | sed 's/^/  /'
+    set +x
 done
 
 echo "Done."
