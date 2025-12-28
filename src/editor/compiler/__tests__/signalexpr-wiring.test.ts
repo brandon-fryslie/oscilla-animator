@@ -36,7 +36,7 @@ describe("SignalExprTable Wiring", () => {
       publishers: [],
       listeners: [],
       defaultSources: {},
-      output: { blockId: "timeroot", port: "systemTime" },
+      output: { blockId: "timeroot", slotId: "systemTime", direction: "output" },
     };
 
     const registry = createBlockRegistry();
@@ -71,7 +71,7 @@ describe("SignalExprTable Wiring", () => {
       publishers: [],
       listeners: [],
       defaultSources: {},
-      output: { blockId: "timeroot", port: "systemTime" },
+      output: { blockId: "timeroot", slotId: "systemTime", direction: "output" },
     };
 
     const registry = createBlockRegistry();
