@@ -154,13 +154,23 @@ describe('Bus Contracts', () => {
       expect(validateCombineModeCompatibility('unknownDomain', 'sum')).toBeNull();
     });
 
-    it('should handle field domains correctly', () => {
+    it('should handle field domains correctly (AC3: layer mode removed)', () => {
+      // AC3: Field domains now only support 'last' (no 'layer' support in runtime)
+      // Runtime constraints:
+      // - busSemantics.ts line 210-230: 'layer' NOT implemented for fields
+      // - Materializer.ts line 1214: only Field<number> supported
       expect(validateCombineModeCompatibility('vec2', 'last')).toBeNull();
-      expect(validateCombineModeCompatibility('vec2', 'layer')).toBeNull();
 
-      const error = validateCombineModeCompatibility('vec2', 'sum');
-      expect(error).not.toBeNull();
-      expect(error!.expected).toEqual(['last', 'layer']);
+      // AC3: 'layer' mode now rejected (was previously in compatibility matrix but not supported by runtime)
+      const layerError = validateCombineModeCompatibility('vec2', 'layer');
+      expect(layerError).not.toBeNull();
+      expect(layerError!.code).toBe('E_BUS_COMBINE_MODE_INCOMPATIBLE');
+      expect(layerError!.expected).toEqual(['last']);
+
+      // 'sum' still rejected (vec2 is non-numeric, would fail AC2 compile-time check anyway)
+      const sumError = validateCombineModeCompatibility('vec2', 'sum');
+      expect(sumError).not.toBeNull();
+      expect(sumError!.expected).toEqual(['last']);
     });
   });
 });

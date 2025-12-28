@@ -111,28 +111,40 @@ export const RESERVED_BUS_NAMES = new Set(Object.keys(RESERVED_BUS_CONTRACTS));
  * Combine mode compatibility matrix.
  * Maps TypeDesc domains to allowed combine modes.
  *
+ * AC3: This matrix now reflects ACTUAL runtime support, not theoretical possibilities.
+ * Runtime constraints:
+ * - executeBusEval.ts only handles numeric values (AC2)
+ * - Materializer.ts fillBufferCombine only handles Field<number> (AC2)
+ * - busSemantics.ts does NOT support 'layer' for fields (AC5)
+ *
  * This defines the semantic meaning of combine operations per domain.
  * For example: 'phase' signals can only use 'last' because phases
  * represent positions in a cycle, not additive values.
  */
 export const COMBINE_MODE_COMPATIBILITY: Record<string, BusCombineMode[]> = {
-  // Signal domains
+  // Signal domains - numeric only (runtime constraint: executeBusEval.ts line 58-64)
   'number': ['sum', 'average', 'max', 'min', 'last'],
   'phase': ['last'],  // Phases are positions, only last-writer wins
-  'color': ['last', 'layer'], // Colors can be layered
   'phase01': ['last'],  // Phase01 values (0..1) are positions, only last-writer wins
   'boolean': ['last'], // Boolean values use last writer
   'time': ['last'],     // Time values are authoritative
   'rate': ['last'],     // Rates are authoritative
+  'duration': ['sum', 'last'],  // Durations can be added
   'trigger': ['last'],  // Trigger events use last writer
 
-  // Field domains (per-element values)
-  'vec2': ['last', 'layer'],
-  'vec3': ['last', 'layer'],
-  'vec4': ['last', 'layer'],
-  'point': ['last', 'layer'],
-  'duration': ['sum', 'last'],  // Durations can be added
-  'hsl': ['last', 'layer'],
+  // Field domains - numeric only, NO layer support
+  // Runtime constraints:
+  // - Materializer.ts line 1214: only Field<number> supported
+  // - busSemantics.ts line 210-230: 'layer' mode NOT implemented for fields
+  // AC3: Removed 'layer' from vec2/vec3/vec4/color/hsl to match runtime
+  'vec2': ['last'],  // REMOVED: 'layer' - not supported by runtime
+  'vec3': ['last'],  // REMOVED: 'layer' - not supported by runtime
+  'vec4': ['last'],  // REMOVED: 'layer' - not supported by runtime
+  'color': ['last'], // REMOVED: 'layer' - not supported by runtime (also non-numeric, would fail AC2)
+  'point': ['last'], // REMOVED: 'layer' - not supported by runtime (also non-numeric, would fail AC2)
+  'hsl': ['last'],   // REMOVED: 'layer' - not supported by runtime (also non-numeric, would fail AC2)
+
+  // Complex types - only last-writer semantics
   'path': ['last'],
   'wobble': ['last'],
   'spiral': ['last'],
@@ -232,6 +244,10 @@ export function validateReservedBus(
 
 /**
  * Validate combine mode compatibility with TypeDesc domain.
+ *
+ * AC3: This validation now enforces ACTUAL runtime support.
+ * Modes allowed by this check WILL work at runtime.
+ * Modes NOT allowed by this check WILL fail at runtime.
  *
  * @param domain - The TypeDesc domain of the bus
  * @param combineMode - The combine mode to validate
