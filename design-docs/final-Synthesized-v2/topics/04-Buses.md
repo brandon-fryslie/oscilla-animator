@@ -21,9 +21,14 @@ When multiple publishers contribute to a bus, values are combined:
 
 | Mode | Behavior | Use Case |
 |------|----------|----------|
-| `last` | Last publisher wins (by sortKey) | phaseA, palette, progress |
 | `sum` | Values are summed | energy |
-| `or` | Events are merged | pulse |
+| `average` | Values are averaged | blended signals |
+| `max` | Maximum value wins | intensity peaks |
+| `min` | Minimum value wins | constraints |
+| `last` | Last publisher wins (by sortKey) | phaseA, palette, progress |
+| `layer` | Layered composition | visual stacking |
+
+**Note:** `or` and `mix` are NOT valid combine modes.
 
 ## Canonical Bus Set
 
@@ -31,7 +36,7 @@ These buses are reserved names with reserved semantics. The UI and default macro
 
 ### Required Buses by TimeRoot Kind
 
-> **⚠️ PROVISIONAL (2025-12-23):** The unified auto-publication across all TimeRoot types is under evaluation. This provides API consistency but the original spec had minimal publications per TimeRoot type. FiniteTimeRoot originally only published `progress`; InfiniteTimeRoot originally published nothing (phase/pulse came from explicit PhaseClock blocks).
+> **RESOLVED (2025-12-28):** FiniteTimeRoot publishes to `progress` and `time`. InfiniteTimeRoot publishes only to `time`. Phase/pulse/energy come from the Time Console Modulation Rack, not from TimeRoot.
 
 All TimeRoot types auto-publish to the standard buses for unified API.
 
@@ -41,15 +46,9 @@ All TimeRoot types auto-publish to the standard buses for unified API.
 - `pulse` (Event) - **auto-published** *(provisional)* (end event)
 - `energy` (Signal) - **auto-published** *(provisional)* (1.0 while running, 0 when complete)
 
-**CycleTimeRoot:**
-- `phaseA` (Signal) - **auto-published** (primary phase)
-- `pulse` (Event) - **auto-published** (wrap event)
-- `energy` (Signal) - **auto-published** (constant 1.0)
-
 **InfiniteTimeRoot:**
-- `phaseA` (Signal) - **auto-published** *(provisional)* (ambient cycle based on periodMs)
-- `pulse` (Event) - **auto-published** *(provisional)* (ambient cycle boundary)
-- `energy` (Signal) - **auto-published** *(provisional)* (constant 1.0)
+- Publishes only to `time` bus (monotonic time)
+- Phase/pulse/energy come from Time Console rails, not TimeRoot
 
 ### Canonical Bus Type Contracts
 
@@ -74,7 +73,7 @@ TypeDesc: { world: 'special', domain: 'event', semantics: 'pulse' }
 ```
 - Musically useful trigger stream
 - Wrap ticks, beat divisions, envelope triggers
-- Combine: `or`
+- Combine: `last`
 
 **energy**
 ```typescript
@@ -95,34 +94,26 @@ TypeDesc: { world: 'signal', domain: 'unit', semantics: 'progress' }
 
 ### TimeRoot Publishing
 
-All TimeRoot blocks auto-publish to the canonical buses for unified API:
-
-**CycleTimeRoot publishes:**
-- `phaseA` <- TimeRoot.phase
-- `pulse` <- TimeRoot.wrap
-- `energy` <- TimeRoot.energy
+TimeRoot blocks publish ONLY the reserved `time` bus:
 
 **FiniteTimeRoot publishes:**
-- `progress` <- TimeRoot.progress
-- `phaseA` <- TimeRoot.phase *(provisional)*
-- `pulse` <- TimeRoot.end *(provisional)*
-- `energy` <- TimeRoot.energy *(provisional)*
+- `time` <- TimeRoot.systemTime (monotonic, unbounded)
 
-**InfiniteTimeRoot publishes:** *(all provisional)*
-- `phaseA` <- TimeRoot.phase (ambient cycle)
-- `pulse` <- TimeRoot.pulse (ambient cycle boundary)
-- `energy` <- TimeRoot.energy
+**InfiniteTimeRoot publishes:**
+- `time` <- TimeRoot.systemTime (monotonic, unbounded)
 
-This is automatic - the compiler ensures these are published.
+**Note:** Phase/pulse/energy/palette are produced by the **Time Console** (Modulation Rack) and routed via Global Rails. TimeRoot does NOT auto-publish to these rails.
 
-### Secondary Clock Publishing
+### Secondary Phase Publishing (via Time Console)
 
-PhaseClock typically publishes:
-- `phaseB` <- PhaseClock.phase
-- `pulse` <- PhaseClock.wrap (optional merge)
-- `energy` <- envelope(phaseB) (if used as LFO)
+**Note:** PhaseClock is removed. Phase/pulse rails are produced by the **Time Console** Modulation Rack.
 
-These are authored by the patch or templates.
+Time Console Cycle B lane typically publishes:
+- `phaseB` <- Cycle B phase
+- `pulse` <- Cycle B wrap events (merged with Cycle A)
+- `energy` <- envelope driven by phaseB (if energy lane enabled)
+
+These are authored in the Time Console Modulation Rack, not via canvas blocks.
 
 ## UI Integration
 

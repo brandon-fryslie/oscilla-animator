@@ -8,11 +8,12 @@
 
 This patch serves as the canonical reference for:
 - TimeRoot / TimeModel correctness
+- Time Console Modulation Rack for cycle authoring
 - Bus-first authoring (no wires required)
 - Lazy Field evaluation
 - No-jank live edits
 - Musically-legible ambient loop
-- Export sanity (cycle-accurate, phase-driven sampling)
+- Export sanity (phase-driven sampling via Time Console rails)
 
 It's deliberately small enough to implement now, but rich enough to stay relevant as the system grows.
 
@@ -23,19 +24,27 @@ A loopable ambient system: a grid of dots that "breathes" (radius), slowly drift
 ## Patch Contract
 
 ### Time Topology
-- **TimeRoot:** CycleTimeRoot(period = 8.0s, mode = loop)
-- **Compiled TimeModel:** `{ kind: 'cyclic', periodMs: 8000 }`
-- **Required UI buses present:** phaseA, pulse, energy, palette
+- **TimeRoot:** InfiniteTimeRoot
+- **Compiled TimeModel:** `{ kind: 'infinite' }`
+- **Time Console Modulation Rack:**
+  - Cycle A lane: period = 8.0s, mode = loop → produces phaseA, pulse
+  - Cycle B lane: period = 32s, mode = loop → produces phaseB
+- **Required Global Rails:** time, phaseA, phaseB, pulse, energy, palette
 
-### Canonical Buses
+**Note:** There is NO CycleTimeRoot. Cycles are authored via Time Console Modulation Rack, not as TimeRoot selection.
+
+### Canonical Buses (Global Rails)
 
 | Bus | Type | Combine | Silent Value |
 |-----|------|---------|--------------|
+| time | Signal<time> | last | 0 |
 | phaseA | Signal<phase> | last | 0 |
-| pulse | Event | or | never fires |
+| phaseB | Signal<phase> | last | 0 |
+| pulse | Event | last | never fires |
 | energy | Signal<number> | sum | 0 |
 | palette | Signal<color> | last | #0b1020 |
-| phaseB | Signal<phase> | last | 0 |
+
+**Note:** `or` is NOT a valid combine mode. Events use `last`.
 
 ---
 
@@ -43,28 +52,32 @@ A loopable ambient system: a grid of dots that "breathes" (radius), slowly drift
 
 ### A) Time Topology Block
 
-**CycleTimeRoot**
-- Params: period = 8s, mode = loop
-- Publishes:
-  - `phaseA` <- phase (primary)
-  - `pulse` <- wrap
+**InfiniteTimeRoot**
+- Publishes: `time` rail only
+- All other rails (phaseA, phaseB, pulse) come from Time Console
 
-### B) Domain + Arrangement
+### B) Time Console Modulation Rack
+
+**Cycle A Lane**
+- Params: period = 8s, mode = loop
+- Produces:
+  - `phaseA` rail (primary cycle phase)
+  - `pulse` rail (wrap events)
+
+**Cycle B Lane**
+- Params: period = 32s, mode = loop
+- Produces:
+  - `phaseB` rail (secondary/phrase phase)
+
+This gives multi-scale looping (8s loop + 32s phrase) without any CycleTimeRoot or PhaseClock blocks.
+
+### C) Domain + Arrangement
 
 **GridDomain**
 - Params: rows = 20, cols = 20, spacing = 22, center = viewport center
 - Outputs:
   - domain (element identity + count)
   - pos0: Field<vec2> (base positions)
-
-### C) Global Rhythmic Structure
-
-**PhaseClock** (secondary phrase)
-- Inputs: tIn <- TimeRoot.t
-- Params: period = 32s, mode = loop
-- Publishes: phaseB <- its phase
-
-This gives multi-scale looping (8s loop + 32s phrase).
 
 ### D) Energy Generation
 
@@ -76,7 +89,7 @@ This gives multi-scale looping (8s loop + 32s phrase).
 **PulseDivider**
 - Subscribes: phaseA
 - Params: divisions = 8
-- Publishes: pulse OR= subPulse
+- Publishes: pulse <- subPulse (adds to rail)
 
 **AccentEnvelope**
 - Subscribes: pulse
@@ -88,7 +101,7 @@ Result: meaningful "intensity" signal with smooth breathing and rhythmic accents
 ### E) Palette
 
 **PaletteLFO**
-- Subscribes: phaseB (slow phrase)
+- Subscribes: phaseB (slow phrase from Time Console)
 - Computes: hue rotate slowly across 32s
 - Publishes: palette = color
 
@@ -103,7 +116,7 @@ Result: meaningful "intensity" signal with smooth breathing and rhythmic accents
 - Output: idRand: Field<number> in [0,1)
 
 **FieldMap** ("SpreadPhase")
-- Inputs: phaseA (Signal), idRand (Field)
+- Inputs: phaseA (Signal from Time Console), idRand (Field)
 - Output: phasePer = frac(phaseA + idRand * 0.35)
 
 Coherent motion with per-element phase offsets.
@@ -123,7 +136,7 @@ This is the heart of the "breathing dots."
 ### C) Position Drift
 
 **JitterField**
-- Inputs: idRand (Field), phaseB (Signal)
+- Inputs: idRand (Field), phaseB (Signal from Time Console)
 - Output: drift: Field<vec2> (±2 px)
 
 **AddFieldVec2**
@@ -150,9 +163,10 @@ No compositors required. Should look alive immediately.
 ## UI Behavior Requirements
 
 ### Time Console
-- Must show CYCLE badge
-- Must show Phase Ring bound to phaseA
-- Must show pulse indicator ticking (wrap + subdivisions)
+- Must show INFINITE badge (TimeModel is infinite)
+- Must show Phase Ring for phaseA lane in Modulation Rack
+- Must show pulse indicator ticking (from Cycle A wrap + subdivisions)
+- Modulation Rack shows all active lanes
 
 ### Bus Board
 - phaseA row shows phase scope/ring
@@ -166,33 +180,35 @@ While RUNNING:
 |--------|-------|----------|
 | GridDomain rows/cols | C | Requires explicit apply boundary |
 | Breath amplitude | A | Instant swap next frame |
-| CycleTimeRoot period | C | Offers apply on next pulse |
+| Time Console Cycle A period | C | Offers apply on next pulse |
 
 ---
 
 ## Export Expectations
 
-If exported as a loopable clip:
-- Phase-driven sampling must produce exact loop closure
+If exported as a loopable clip using Time Console phase-driven export:
+- Phase-driven sampling (via Time Console rails) produces exact loop closure
 - Frame 0 and Frame N should match visually (within tolerance)
 
-This patch is the canary for cycle export correctness.
+This patch is the canary for phase-driven export correctness.
 
 ---
 
 ## Acceptance Tests
 
 ### 1. Time Correctness
-- Changing player loop mode should not exist / do nothing
-- `t` never wraps; only phase does
+- TimeModel is `{ kind: 'infinite' }`
+- Cycles come from Time Console Modulation Rack, not TimeRoot
+- `t` never wraps; only phase rails do
 
 ### 2. UI Correctness
-- Cycle UI appears only because TimeModel is cyclic
-- Infinite UI never appears for this patch
+- INFINITE badge appears (TimeModel is infinite)
+- Time Console Modulation Rack shows Cycle lanes for phaseA/phaseB
+- No CycleTimeRoot or PhaseClock blocks in the patch
 
 ### 3. No-Jank
 - Param tweak on breath amplitude changes visuals with no flicker
-- Period change can be scheduled at next pulse and swaps cleanly
+- Period change in Time Console can be scheduled at next pulse and swaps cleanly
 
 ### 4. Determinism
 - Same seed -> identical motion every reload
@@ -207,9 +223,9 @@ This patch is the canary for cycle export correctness.
 ## Why This Is The Golden Patch
 
 It exercises exactly what has been hard:
-- Single authoritative CycleTimeRoot
-- PhaseClock used correctly as secondary
-- Buses as glue (phaseA, pulse, energy, palette)
+- InfiniteTimeRoot with Time Console Modulation Rack for cycles
+- Multi-scale phasing (8s + 32s) via Time Console lanes
+- Buses as glue (phaseA, phaseB, pulse, energy, palette)
 - Lazy Fields that must not explode performance
 - Stable element identity (domain + StableIdHash)
 - Renderer consuming many fields and one domain

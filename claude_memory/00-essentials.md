@@ -15,22 +15,23 @@ just check        # Full check: typecheck + lint + test
 
 ## Canonical Design Docs
 
-**Authoritative specs live in `design-docs/3-Synthesized/`:**
+**Authoritative specs live in `design-docs/final-Synthesized-v2/`:**
 
 | Doc | Purpose |
 |-----|---------|
-| `00-Vision.md` | Core philosophy |
-| `01-Core-Concepts.md` | Signals, Fields, Domains, type hierarchy |
-| `02-Time-Architecture.md` | TimeRoot, TimeModel, PhaseClock (keystone) |
-| `03-Buses.md` | Bus system, canonical buses |
-| `04-Adapters.md` | Lens/adapter system |
-| `05-Compilation.md` | Compiler pipeline, validation |
-| `06-Runtime.md` | Hot swap, state preservation |
-| `07-UI-Spec.md` | Time Console, Bus Board |
-| `08-Export.md` | Phase-driven sampling, determinism |
-| `09-Blocks.md` | Complete block registry |
-| `10-Golden-Patch.md` | "Breathing Constellation" reference |
-| `11-Roadmap.md` | WP0-WP9 work packages |
+| `01-Clarifying-Questions.md` | Resolved inconsistencies |
+| `topics/01-Vision.md` | Core philosophy |
+| `topics/02-Core-Concepts-and-Type-System.md` | Signals, Fields, Domains, type hierarchy |
+| `topics/03-Time-Architecture.md` | TimeRoot, TimeModel, Global Rails (keystone) |
+| `topics/04-Buses.md` | Bus system, canonical rails |
+| `topics/05-Adapters.md` | Lens/adapter system |
+| `topics/06-Compilation.md` | Compiler pipeline, validation |
+| `topics/07-Runtime.md` | Hot swap, state preservation |
+| `topics/08-UI-Spec.md` | Time Console, Bus Board |
+| `topics/09-Export.md` | Phase-driven sampling, determinism |
+| `topics/10-Blocks.md` | Complete block registry |
+| `topics/11-Golden-Patch.md` | "Breathing Constellation" reference |
+| `topics/12-Roadmap.md` | WP0-WP9 work packages |
 
 **If code conflicts with spec, the spec is authoritative.**
 

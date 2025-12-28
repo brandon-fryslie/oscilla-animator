@@ -1,37 +1,65 @@
-# Clarifying Questions (Contradictions / Ambiguities)
+# Clarifying Questions — RESOLVED
 
-1) Is `CycleTimeRoot` a valid TimeRoot type? `02.1-TimeConsole-UI.md` says “There is no CycleTimeRoot,” while `07-UI-Spec.md`, `09-Blocks.md`, `10-Golden-Patch.md`, `05-Compilation.md`, and `08-Export.md` all reference Cycle/Cyclic/CycleTimeRoot.
+**Status:** All questions resolved as of 2025-12-27. See `.agent_planning/PLANNING-DOCS-INCONSISTENCY-REPORT.md` for full resolution details.
 
-2) What are the authoritative `TimeModel` variants? `00-Vision.md` and `01-Core-Concepts.md` define only `{ kind: 'finite' | 'infinite' }`, `02-Time-Architecture.md` defines finite/infinite with `windowMs`, `05-Compilation.md` and `10-Golden-Patch.md` include `cyclic`, and `08-Export.md` expects `cyclic` in `ExportTimePlan`.
+---
 
-3) Is `TimeModel` determined solely by TimeRoot, or can other graph properties (e.g., feedback loops) force `infinite`? `02-Time-Architecture.md` says topology is defined solely by TimeRoot, while `05-Compilation.md` infers `infinite` from feedback loops.
+## Summary of Resolutions
 
-4) Should the finite TimeRoot allow view-looping modes in the Time Console? `02.1-TimeConsole-UI.md` lists Once/Loop/Ping-pong for finite view policy, while `07-UI-Spec.md` says “No ‘Loop View’ option - if user wants looping, use CycleTimeRoot.”
+| # | Question | Resolution |
+|---|----------|------------|
+| 1 | CycleTimeRoot existence | **REMOVED** - Only FiniteTimeRoot and InfiniteTimeRoot exist |
+| 2 | TimeModel variants | **2 variants only**: `finite` and `infinite` (no `cyclic`) |
+| 3 | TimeModel determination | **TimeRoot only** - Graph properties never change TimeModel |
+| 4 | Finite view-looping | **Allowed** - View looping is a transport/player behavior |
+| 5 | Rails vs buses | **Rails = reserved buses** - Same machinery, `origin: 'built-in'` constraint |
+| 6 | pulse naming | **Single `pulse` rail** - No pulseA/pulseB |
+| 7 | palette as rail/bus | **Rail (reserved bus)** - Part of canonical Global Rails |
+| 8 | TimeRoot auto-publish | **TimeRoot publishes only `time`** - Other rails from Time Console |
+| 9 | Reserved `time` bus | **Yes** - Always present, published only by TimeRoot |
+| 10 | InfiniteTimeRoot outputs | **Minimal** - Only `systemTime`, no periodMs/phase/pulse/energy |
+| 11 | Cycle A/B as blocks | **No** - Cycles are Time Console overlay, not blocks |
+| 12 | Rail source selector UI | **Required** - Normalled/Patched/Mixed with bus binding |
+| 13 | Rail read timing | **Frame-latched** - Reads see previous frame values |
+| 14 | Overlay cycle materialization | **Deferred** - Not in v1 scope |
+| 15 | Scrubbing | **Required** - Not deferred |
+| 16 | Rail combine rules | **Time Console only** - Separate from generic bus UI |
+| 17 | CYCLE UI mode | **Removed** - No CYCLE badge; cycles are rails, not TimeModel |
+| 18 | Cyclic export | **Derived** - Export uses Time Console rail periods, not CycleTimeRoot |
 
-5) Are global rails always present and distinct from buses, or are they just reserved buses? `02-Time-Architecture.md` and `02.2-Time-and-Rails.md` describe fixed Global Rails with optional bus mirroring, while `03-Buses.md` treats phaseA/pulse/energy/progress as canonical buses and does not mention mirroring.
+---
 
-6) Are `pulseA`/`pulseB` distinct rails, or is there a single `pulse` bus? `02-Time-Architecture.md` and `02.2-Time-and-Rails.md` list `pulseA`/`pulseB` rails, while `03-Buses.md` and `10-Golden-Patch.md` use a single `pulse` bus.
+## Canonical Decisions
 
-7) Is `palette` a canonical bus or only a rail? `02-Time-Architecture.md` and `02.2-Time-and-Rails.md` include a `palette` rail, `10-Golden-Patch.md` lists `palette` as canonical bus, while `03-Buses.md` does not list `palette` in the canonical bus set.
+### Time Architecture
+- **TimeModel**: `{ kind: 'finite', durationMs }` or `{ kind: 'infinite' }`
+- **TimeRoot types**: FiniteTimeRoot, InfiniteTimeRoot (no CycleTimeRoot)
+- **TimeRoot publishes**: Only `time` bus
+- **Scrubbing**: Required (finite: absolute time, infinite: view window offset)
 
-8) Should TimeRoot auto-publish phase/pulse/energy/progress to buses, or should only the Modulation Rack drive rails and optionally mirror to buses? `02-Time-Architecture.md` says TimeRoot publishes only reserved `time`, `03-Buses.md` and `09-Blocks.md` say TimeRoot auto-publishes phase/pulse/energy/progress (some provisional).
+### Global Rails
+Canonical set (reserved buses):
+- `time` : Signal<time> (monotonic)
+- `phaseA` : Signal<number> [0,1)
+- `phaseB` : Signal<number> [0,1)
+- `pulse` : Event<trigger>
+- `energy` : Signal<number> [0,1]
+- `palette` : Signal<number> [0,1]
 
-9) Is the reserved bus `time` always present and only published by TimeRoot? This is specified in `02-Time-Architecture.md` and `02.2-Time-and-Rails.md`, but not reflected in `03-Buses.md`.
+### Combine Modes
+Valid modes: `sum | average | max | min | last | layer`
+Invalid: `or`, `mix`
 
-10) Is `InfiniteTimeRoot` allowed to have a `periodMs` input and ambient `phase/pulse/energy` outputs? `02-Time-Architecture.md` says no required inputs and publishes only `time`, while `09-Blocks.md` adds `periodMs` and ambient phase/pulse/energy (provisional).
+### Rail Semantics
+- **Frame-latched**: Rail reads observe previous frame snapshot
+- **Drive policy**: Normalled (default), Patched, or Mixed
+- **Source**: Time Console (Modulation Rack) or user bus binding
 
-11) Are Cycle A/B lanes part of Time Console overlay only, or do they correspond to concrete block types? `02.1-TimeConsole-UI.md` and `02.2-Time-and-Rails.md` treat them as hidden operators, while `09-Blocks.md` emphasizes CycleTimeRoot as a block and `10-Golden-Patch.md` uses CycleTimeRoot directly.
+### Type System
+- **TypeDesc is authoritative** - ValueKind deprecated
+- **Field = FieldExpr<T>** - Lazy expression, materialized at sinks
 
-12) Are rail drive policies Normalled/Patched/Mixed intended to allow “rail driven by bus” (source selector) as mandatory UI? `02.3-Rails-More.md` says this is required, while `02-Time-Architecture.md` and `02.2-Time-and-Rails.md` discuss optional bus mirroring without a mandatory bus source selector.
-
-13) Are rail reads frame-latched (t-1) or same-frame? `02.3-Rails-More.md` presents two options and recommends frame-latched; no other doc locks this down.
-
-14) Are overlay cycles editable only in Time Console, or can they be materialized into blocks? `02-Time-Architecture.md` and `02.99-Time-DEFERRED-WORK.md` mention materialization, but the UI spec does not explicitly include a control path.
-
-15) Should Time Console scrubbing exist now or be deferred? `02.1-TimeConsole-UI.md` says scrubbing has been DEFERRED, while `02-Time-Architecture.md` and `07-UI-Spec.md` specify scrubbing behavior in all modes.
-
-16) Are bus combine rules for rails editable only in the Time Console, and if so are they separate from bus combine rules? This is stated in `02-Time-Architecture.md`/`02.2-Time-and-Rails.md`, but `03-Buses.md` implies bus combine is the only combine system.
-
-17) Does UI mode include CYCLE as a first-class TimeModel kind, or is CYCLE just a view mode for finite? `07-UI-Spec.md` includes a CYCLE badge and TimeRoot picker option; `02.1-TimeConsole-UI.md` says only Finite/Infinite TimeRoots exist.
-
-18) For export: if the system ends up with no CycleTimeRoot but only derived cycles, how does cyclic export work? `08-Export.md` is written around CycleTimeRoot (phase override), while `02-Time-Architecture.md` says cycles are derived operators.
+### Blocks
+- **PhaseClock removed** - Phase comes from rails
+- **CycleTimeRoot removed** - Cycles are rails, not topology
+- **Domain and position mapping separate** - DomainN + PositionMap* blocks

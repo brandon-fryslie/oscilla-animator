@@ -71,12 +71,12 @@ Reference: `design-docs/12-Compiler-Final/`
 **Implementation:** `src/editor/compiler/ir/program.ts`, `src/editor/compiler/ir/schedule.ts`
 
 #### timemodel-ir [COMPLETED]
-**Description:** Define `TimeModelIR` (finite/cyclic/infinite), canonical time signals (`tAbsMs`, `tModelMs`, `phase01`, `wrapEvent`). Lock time topology contract.
+**Description:** Define `TimeModelIR` (finite/infinite ONLY - no cyclic), canonical time signals (`tAbsMs`, `tModelMs`). Lock time topology contract. Note: Cycles are produced by Time Console rails, not TimeModel variants.
 **Spec:** 02-IR-Schema (§4)
 **Dependencies:** ir-core-types
 **Labels:** architecture, time, foundation
 **Test Strategy:** Unit tests for time model derivation
-**Implementation:** `src/editor/compiler/ir/schedule.ts` - TimeModelIR, TimeModelFinite, TimeModelCyclic, TimeModelInfinite
+**Implementation:** `src/editor/compiler/ir/schedule.ts` - TimeModelIR, TimeModelFinite, TimeModelInfinite (TimeModelCyclic removed per spec alignment 2025-12-27)
 
 ---
 

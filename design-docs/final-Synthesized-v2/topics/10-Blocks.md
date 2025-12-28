@@ -25,28 +25,7 @@ Pre-built combinations of primitives for common patterns.
 
 ## Time/Topology Primitives
 
-> **⚠️ PROVISIONAL (2025-12-23):** The unified output set across all TimeRoot types (phase, pulse, energy auto-publication) is under evaluation. This design provides API consistency but may be revised based on user feedback. Original spec had more minimal outputs per TimeRoot type.
-
-### CycleTimeRoot
-**Role:** TimeRoot
-
-**Inputs:**
-| Port | Type | Description |
-|------|------|-------------|
-| periodMs | Scalar<duration> | Cycle period (default 3000ms) |
-| mode | Scalar<enum> | 'loop' or 'pingpong' |
-
-**Outputs:**
-| Port | Type | Description |
-|------|------|-------------|
-| systemTime | Signal<time> | Monotonic time in ms |
-| cycleT | Signal<time> | Time within current cycle (0..period) |
-| phase | Signal<phase> | 0..1 wrapped at period |
-| wrap | Event | Fires on cycle boundary |
-| cycleIndex | Signal<number> | Number of completed cycles |
-| energy | Signal<number> | Constant 1.0 baseline |
-
-**Auto-publishes:** `phase` -> `phaseA`, `wrap` -> `pulse`, `energy` -> `energy`
+**Note:** CycleTimeRoot does NOT exist. Time topology is defined only by FiniteTimeRoot or InfiniteTimeRoot. Cycles are produced by the Time Console as Global Rails, not by topology blocks.
 
 ### FiniteTimeRoot
 **Role:** TimeRoot
@@ -61,61 +40,37 @@ Pre-built combinations of primitives for common patterns.
 |------|------|-------------|
 | systemTime | Signal<time> | Monotonic time in ms |
 | progress | Signal<unit> | 0..1 clamped progress |
-| phase | Signal<phase> | Same as progress (0..1 clamped) *(provisional)* |
-| end | Event | Fires once when progress reaches 1 *(provisional)* |
-| energy | Signal<number> | 1.0 while animating, 0 when complete *(provisional)* |
 
-**Auto-publishes:** `progress` -> `progress`, `phase` -> `phaseA` *(provisional)*, `end` -> `pulse` *(provisional)*, `energy` -> `energy` *(provisional)*
+**Auto-publishes:** `systemTime` -> `time` (reserved bus only)
 
-> *Provisional outputs added for API consistency with CycleTimeRoot. Original spec only required `systemTime`, `localT`, `progress`.*
+**Note:** Phase/pulse/energy come from Time Console rails, not from TimeRoot outputs.
 
 ### InfiniteTimeRoot
 **Role:** TimeRoot
 
-Ambient, unbounded time with an optional repeating cycle for bus publications.
+Ambient, unbounded time. Minimal outputs only.
 
 **Inputs:**
-| Port | Type | Description |
-|------|------|-------------|
-| periodMs | Scalar<duration> | Ambient cycle period (default 10000ms) *(provisional)* |
+*(No required inputs)*
 
 **Outputs:**
 | Port | Type | Description |
 |------|------|-------------|
 | systemTime | Signal<time> | Monotonic time in ms |
-| phase | Signal<phase> | Ambient 0..1 cycle based on periodMs *(provisional)* |
-| pulse | Event | Fires on ambient cycle boundary *(provisional)* |
-| energy | Signal<number> | Constant 1.0 *(provisional)* |
 
-**Auto-publishes:** `phase` -> `phaseA` *(provisional)*, `pulse` -> `pulse` *(provisional)*, `energy` -> `energy` *(provisional)*
+**Auto-publishes:** `systemTime` -> `time` (reserved bus only)
 
-> *Provisional outputs added for API consistency. Original spec only required `systemTime` - phase/pulse should come from explicit PhaseClock blocks in generative patches. The `periodMs` input provides convenience but may encourage over-reliance on the ambient cycle.*
+**Note:** Cycles/phase/pulse/energy are produced by Time Console rails, not TimeRoot outputs. This keeps InfiniteTimeRoot minimal and focused on establishing `TimeModel = { kind: 'infinite' }`.
 
 ---
 
 ## Signal Primitives
 
-### PhaseClock
-Secondary clock (derived, not topology).
+### PhaseClock (REMOVED)
 
-**Inputs (one required):**
-| Port | Type | Description |
-|------|------|-------------|
-| tIn | Signal<time> | Time input |
-| phaseIn | Signal<phase> | OR phase input |
-| period | Scalar<duration> | Clock period |
-| mode | Scalar<enum> | loop/pingpong/once |
-| rate | Signal<number> | Speed multiplier |
-| phaseOffset | Signal<phase> | Phase offset |
-| reset | Event | Reset trigger |
+**Note:** PhaseClock is removed from the primitive block set. Phase signals are produced by the **Time Console** Global Rails (phaseA, phaseB), not by topology blocks on the canvas.
 
-**Outputs:**
-| Port | Type | Description |
-|------|------|-------------|
-| phase | Signal<phase> | Output phase |
-| u | Signal<unit> | Clamped [0,1] |
-| wrap | Event | Wrap event |
-| cycleIndex | Signal<number> | Cycle count |
+If additional phase generators are needed beyond the curated rails, use explicit operators in the patch routed via user buses. The rail set stays small to keep the UI legible; expressiveness comes from composition.
 
 ### Oscillator
 
@@ -342,10 +297,9 @@ Standard per-element operations for position, color, and opacity.
 
 ## Composite Library
 
-### AmbientLoopRoot
-Wraps CycleTimeRoot with bus publishing.
+### AmbientLoopRoot (REMOVED)
 
-**Exposes:** period, mode
+**Note:** This composite is removed. CycleTimeRoot does not exist. Use FiniteTimeRoot or InfiniteTimeRoot with Time Console rails for looping behavior.
 
 ### BreathEnergy
 Oscillator + Shaper publishing to energy bus.

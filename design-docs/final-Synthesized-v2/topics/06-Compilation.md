@@ -47,10 +47,12 @@ interface CompiledProgram {
 The compiler analyzes the patch graph and infers the time model.
 
 **Rules (deterministic):**
-1. If any CycleTimeRoot exists -> cyclic
-2. If any feedback loop crosses memory blocks without full cycle closure -> infinite
-3. If only FiniteTimeRoot exists -> finite
-4. If conflicting models exist -> error (patch invalid)
+1. If FiniteTimeRoot exists -> finite
+2. If InfiniteTimeRoot exists -> infinite
+3. If conflicting models exist -> error (patch invalid)
+4. If zero TimeRoots -> error (patch invalid)
+
+**Note:** There is NO `cyclic` TimeModel. Cycles are produced by Time Console Global Rails, not by time topology.
 
 **There is no fallback.**
 
@@ -120,18 +122,10 @@ type ErrorLocation =
 
 | Code | Title | Condition |
 |------|-------|-----------|
-| TM-101 | Missing primary phase | CycleTimeRoot no phase output |
-| TM-102 | Missing cycle pulse | CycleTimeRoot no wrap output |
 | TM-103 | Reserved bus has wrong type | Type mismatch on reserved bus |
 | TM-104 | Missing required system bus | Required bus not bound |
 
-### PhaseClock Errors (PC-xxx)
-
-| Code | Title | Condition |
-|------|-------|-----------|
-| PC-201 | PhaseClock needs time input | Neither tIn nor phaseIn connected |
-| PC-202 | Ambiguous PhaseClock input | Both tIn and phaseIn connected |
-| PC-203 | Invalid clock period | period <= 0 |
+**Note:** CycleTimeRoot and PhaseClock errors (TM-101, TM-102, PC-xxx) are removed. These blocks no longer exist. Phase/pulse come from Time Console rails.
 
 ### Feedback Errors (FB-xxx)
 

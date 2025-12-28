@@ -61,7 +61,7 @@ No structural changes.
 **Examples:**
 - Adding/removing a stateless block
 - Rewiring stateless parts of graph
-- Adding a PhaseClock (secondary)
+- Adding Time Console Modulation Rack lanes
 - Changing bus subscriptions (non-critical)
 
 **Guarantee:**
@@ -73,7 +73,7 @@ No structural changes.
 
 **Examples:**
 - Changing TimeRoot kind
-- Changing CycleTimeRoot period discontinuously
+- Changing Time Console Cycle lane period discontinuously
 - Changing Domain count or element identity
 - Editing memory blocks in feedback loops
 - Changes that modify SCC structure
@@ -138,20 +138,26 @@ If Class B change results in partial state loss:
 - If RUNNING: swap at frame boundary only if mapping can stay continuous
 - Keep current progress constant, recompute localT mapping
 
-**CycleTimeRoot.period:**
+**InfiniteTimeRoot:**
+- Minimal parameters - always safe, frame-boundary swap
+
+### Time Console Modulation Rack Changes
+
+**Cycle Lane Period:**
 - If RUNNING: schedule swap on pulse boundary
-- If no pulse bus: require freeze
+- If no pulse rail: require freeze
 - Reason: changing period mid-cycle causes phase discontinuity
 
-**InfiniteTimeRoot.window:**
-- Always safe - frame-boundary swap, no state reset
+**Adding/Removing Cycle Lanes:**
+- Class B if lane is new (no existing state)
+- Class C if removing lane with active listeners
 
 ### Changing TimeRoot Kind
 This is **always Class C**.
 
 UI requires explicit choice:
 - Apply now (resets topology + view transforms)
-- Apply on boundary (if going to Cycle and pulse exists)
+- Apply on boundary (if pulse exists)
 - Apply when frozen (always available)
 
 ## Domain Identity (Element-Level No-Jank)

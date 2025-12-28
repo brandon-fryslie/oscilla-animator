@@ -85,8 +85,10 @@ interface BusBinding {
 
 1. `Signal<T>` -> `Field<T>` (broadcast)
 2. `Field<phase>` wrapping semantics (wrap/pingpong)
-3. `Event` merge (or) - bus combine
+3. `Event` bus combination (uses `last` combine mode)
 4. `Signal<number>` shaping/clamp
+
+**Note:** `or` is NOT a valid combine mode. Events use `last`.
 
 ## UI for Adapters
 

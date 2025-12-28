@@ -1,0 +1,26 @@
+Agent: status-planner | 2025-12-28-122341
+Topic: compiler-audit-redflag
+Sprint: Sprint 1 - Core IR Execution
+Files: PLAN-2025-12-28-122341-SPRINT1.md, DOD-2025-12-28-122341-SPRINT1.md
+Items: 3 (P0: 3, P1: 0, P2: 0)
+Duration: 1 week (3-4 days)
+Prerequisites: Sprint 0 complete (registry fix, IR mandatory)
+
+Deliverables:
+  P0-1: TimeModel threading (Pass 3 → schedule) - 2 days
+  P0-2: timeDerive writes tAbsMs slot - 1 day
+  P0-3: Feature flag parsing fix - 1 hour
+
+Success Metrics:
+  - IR mode executes with correct time topology
+  - Finite/cyclic/infinite patches behave distinctly
+  - Absolute time flows to signal nodes
+  - Compiler can be explicitly disabled
+
+Deferred to Sprint 2:
+  - Block lowering (Pass 6 placeholders)
+  - Default source lowering
+  - ColorLFO, SVGSampleDomain fixes
+
+Status: Ready for implementation
+Blockers: None

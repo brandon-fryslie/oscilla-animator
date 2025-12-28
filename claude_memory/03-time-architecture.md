@@ -1,37 +1,91 @@
-# Oscilla Animator - Time Architecture
+# Time Architecture — Quick Reference
 
-**CRITICAL: Read `design-docs/3-Synthesized/02-Time-Architecture.md` before modifying time-related code.**
+**Note:** This is quick reference. Authoritative spec: `design-docs/final-Synthesized-v2/topics/03-Time-Architecture.md`
 
-## The Core Rule
+---
+
+## Fundamental Principle
 
 **There is exactly ONE time system. The patch defines time topology. The player does not.**
 
+The player never decides: Duration, Looping, Ping-pong, Infinity.
+The player: Hosts, Observes, Controls rate, Controls freeze/run.
+
+---
+
 ## TimeRoot Types
 
-| Type | Output | Use Case |
-|------|--------|----------|
-| `FiniteTimeRoot` | `progress: Signal<unit>` | Logo stingers, one-shot animations |
-| `CycleTimeRoot` | `phase: Signal<phase>`, `wrap: Event` | Ambient loops, music viz |
-| `InfiniteTimeRoot` | `t: Signal<time>` | Generative, evolving installations |
+| Type | Description | Output |
+|------|-------------|--------|
+| `FiniteTimeRoot` | Finite performance with known duration | `systemTime`, `progress` |
+| `InfiniteTimeRoot` | Runs unbounded, no privileged cycle | `systemTime` |
 
-## TimeModel (Compiler Output)
+**Note:** There is NO `CycleTimeRoot`. Cycles are produced by the Time Console as Global Rails.
+
+### Constraints
+- Exactly one TimeRoot per patch (compile error if 0 or >1)
+- TimeRoot cannot have upstream dependencies
+- TimeRoot cannot exist inside composite definitions
+- TimeRoot publishes ONLY the reserved `time` bus
+
+---
+
+## TimeModel
 
 ```typescript
 type TimeModel =
-  | { kind: 'finite'; durationMs: number }
-  | { kind: 'cyclic'; periodMs: number }
-  | { kind: 'infinite'; windowMs: number }
+  | { kind: 'finite', durationMs: number }
+  | { kind: 'infinite' }
 ```
 
-## Player Invariants
+**Note:** No `cyclic` variant. TimeModel is determined ONLY by TimeRoot, never by graph properties.
 
-1. **Player time is unbounded - NEVER wraps t**
-2. Player receives TimeModel from compiler
-3. Player configures UI based on TimeModel (not the reverse)
-4. Scrubbing sets phase offset, never resets state
+---
 
-## Time Invariants (Non-Negotiable)
+## Global Rails
 
-- **Player time is unbounded** - Never wrap t
-- **TimeRoot defines topology** - Player only observes
-- **Scrubbing never resets state** - Only adjusts view transforms
+Canonical set (reserved buses):
+- `time` : Signal<time> — monotonic, published only by TimeRoot
+- `phaseA` : Signal<number> [0,1) — primary phase modulation
+- `phaseB` : Signal<number> [0,1) — secondary phase modulation
+- `pulse` : Event<trigger> — discrete time boundary events
+- `energy` : Signal<number> [0,1] — intensity/activity level
+- `palette` : Signal<number> [0,1] — palette position
+
+Rails are produced by the **Time Console** (Modulation Rack), not by TimeRoot.
+
+### Rail Drive Policy
+- **Normalled**: Modulation Rack drives the rail (default)
+- **Patched**: Modulation Rack disconnected; only user publishers
+- **Mixed**: Both rack and user publishers; combine rule applies
+
+### Rail Semantics
+- **Frame-latched**: Rail reads observe previous frame snapshot
+- Updates become visible on the next frame
+- Required for determinism, cacheability, and stable debugging
+
+---
+
+## Scrubbing
+
+**Scrubbing is REQUIRED** (not deferred).
+
+| TimeModel | Scrub Behavior |
+|-----------|----------------|
+| Finite | Sets absolute time `t` in [0..durationMs] |
+| Infinite | Offsets view window origin |
+
+**Scrubbing never resets state.** Only adjusts view transforms.
+
+---
+
+## Player Playback Policy
+
+For **finite** patches, view-time mapping modes:
+- `once`: play from 0 to duration without looping
+- `loop`: repeat playback continuously
+- `pingpong`: play forward then backward repeatedly
+
+These affect only view-time (`tView`), never the underlying monotonic time `t`.
+
+For **infinite** patches: monotonic sliding window, no looping or wrapping.

@@ -136,7 +136,7 @@ These rails are conceptually distinct from user-created buses. Rails are curated
 
 These overlay cycles:
 - Are compiled as hidden PhaseFromTime operators
-- Publish to reserved rails (phaseA, phaseB, pulseA, pulseB, energy, palette)
+- Publish to reserved rails (phaseA, phaseB, pulse, energy, palette)
 - Are part of the patch’s time semantics, not user graph topology
 
 The overlay exists so that:
@@ -166,12 +166,12 @@ Oscilla distinguishes:
 
 The following rails always exist in a patch:
 
-- `phaseA` (Signal<phase>)
-- `phaseB` (Signal<phase>)
-- `pulseA` (Event or Signal<Unit> with edge semantics)
-- `pulseB` (Event or Signal<Unit> with edge semantics)
-- `energy` (Signal<number>)
-- `palette` (Signal<color> or palette-domain signal)
+- `time` (Signal<time>) — reserved, always present, published only by TimeRoot
+- `phaseA` (Signal<phase>) — primary phase modulation
+- `phaseB` (Signal<phase>) — secondary phase modulation
+- `pulse` (Event) — discrete time boundary events
+- `energy` (Signal<number>) — intensity/activity level
+- `palette` (Signal<number>) — palette position [0,1]
 
 Rails:
 - cannot be deleted
@@ -192,7 +192,7 @@ No hidden precedence is allowed. Publishing into a Normalled rail MUST surface a
 
 A rail MAY be mirrored into the user bus fabric only when explicitly enabled. Mirrored rail buses:
 
-- have locked names matching the rail (`phaseA`, `phaseB`, `pulseA`, `pulseB`, `energy`, `palette`)
+- have locked names matching the rail (`phaseA`, `phaseB`, `pulse`, `pulse`, `energy`, `palette`)
 - cannot be deleted or renamed
 - exist solely as an interoperability bridge for the bus system
 
@@ -201,9 +201,9 @@ A rail MAY be mirrored into the user bus fabric only when explicitly enabled. Mi
 Combine rules apply only when a rail is in **Mixed** policy or when mirrored values are combined with user publishers. Defaults:
 
 - `phaseA`, `phaseB`: last
-- `pulseA`, `pulseB`: or
+- `pulse`: last
 - `energy`: sum
-- `palette`: mix
+- `palette`: last
 
 These defaults are editable only in the Time Console (not in generic bus UI).
 
@@ -453,8 +453,8 @@ The root time signal always increases monotonically.
 
 When a new patch is created, the Modulation Rack is provisioned so the preview animates immediately:
 
-- **Cycle A** is enabled with period = 2.0s, mode = loop, feeding **phaseA** and **pulseA** rails.
-- **Cycle B** is disabled by default (but present) with period = 3.125s, mode = loop, feeding **phaseB** and **pulseB** rails when enabled.
+- **Cycle A** is enabled with period = 2.0s, mode = loop, feeding **phaseA** and **pulse** rails.
+- **Cycle B** is disabled by default (but present) with period = 3.125s, mode = loop, feeding **phaseB** and **pulse** rails when enabled.
 - **Energy** and **Palette** lanes are enabled with default generators.
 
 Rails always exist; lane enablement controls whether the rack actively drives them.
@@ -473,8 +473,8 @@ The patch has a fixed set of cycle lanes:
 
 | Lane     | Default | Outputs                                  |
 |----------|---------|------------------------------------------|
-| Cycle A  | On      | phaseA (rail), pulseA (rail), cycleIndexA (internal)               |
-| Cycle B  | Off     | phaseB (rail), pulseB (rail), cycleIndexB (internal)               |
+| Cycle A  | On      | phaseA (rail), pulse (rail), cycleIndexA (internal)               |
+| Cycle B  | Off     | phaseB (rail), pulse (rail), cycleIndexB (internal)               |
 | Energy   | On      | energy (rail)                                    |
 | Palette  | On      | palette (rail)                                   |
 
@@ -493,12 +493,12 @@ Each cycle lane exposes:
 
 Example:
 - phaseA → rail `phaseA`
-- pulseA → rail `pulseA`
+- pulse → rail `pulse`
 - energy → rail `energy`
 - palette → rail `palette`
 
 Defaults on new patch:
-- Cycle A enabled, publishing phaseA + pulseA
+- Cycle A enabled, publishing phaseA + pulse
 - Energy + Palette enabled
 - Cycle B disabled
 
@@ -555,11 +555,11 @@ The Player UI is limited to:
 - TimeModel badge (Finite / Infinite)
 - View playback mode for finite patches (Once / Loop / Ping‑pong)
 - speed, and run/freeze
-- Note: Scrubbing has been DEFERRED
+- Scrubbing is REQUIRED (finite: absolute time, infinite: view window offset)
 
 The Player MUST NOT contain any cycle, phase, or period editing UI.
 
-Rail rows (phaseA, phaseB, pulseA, pulseB, energy, palette) MUST include a shortcut to open the Time Console to the corresponding Modulation Rack lane. These rails MAY be rendered in the Bus Board as a pinned “Global Rails” group, but they are not treated as ordinary user buses.
+Rail rows (phaseA, phaseB, pulse, energy, palette) MUST include a shortcut to open the Time Console to the corresponding Modulation Rack lane. These rails MAY be rendered in the Bus Board as a pinned “Global Rails” group, but they are not treated as ordinary user buses.
 
 ---
 
@@ -605,8 +605,8 @@ Cycles are not topology. They are derived operators that transform the root time
 
 When a new patch is created, the Modulation Rack is provisioned so the preview animates immediately:
 
-- **Cycle A** is enabled with period = 2.0s, mode = loop, feeding **phaseA** and **pulseA** rails.
-- **Cycle B** is disabled by default (but present) with period = 3.125s, mode = loop, feeding **phaseB** and **pulseB** rails when enabled.
+- **Cycle A** is enabled with period = 2.0s, mode = loop, feeding **phaseA** and **pulse** rails.
+- **Cycle B** is disabled by default (but present) with period = 3.125s, mode = loop, feeding **phaseB** and **pulse** rails when enabled.
 - **Energy** and **Palette** lanes are enabled with default generators.
 
 Rails always exist; lane enablement controls whether the rack actively drives them.
@@ -621,8 +621,8 @@ It is authored in the Time Console and compiled as hidden operators. These opera
 
 | Cycle   | Description              | Outputs                                      |
 |---------|--------------------------|----------------------------------------------|
-| Cycle A | Primary cycle lane       | `phaseA` (rail), `pulseA` (rail), `cycleIndexA` (internal) |
-| Cycle B | Secondary cycle lane     | `phaseB` (rail), `pulseB` (rail), `cycleIndexB` (internal) |
+| Cycle A | Primary cycle lane       | `phaseA` (rail), `pulse` (rail), `cycleIndexA` (internal) |
+| Cycle B | Secondary cycle lane     | `phaseB` (rail), `pulse` (rail), `cycleIndexB` (internal) |
 | Energy  | Energy envelope lane     | `energy` (rail)                              |
 | Palette | Palette modulation lane  | `palette` (rail)                             |
 
@@ -669,7 +669,7 @@ origin = 'timeOverlay'
 
 ### 8.1 Cycle UI Placement
 
-Rail rows (phaseA, phaseB, pulseA, pulseB, energy, palette) MUST include a shortcut to open the Time Console to the corresponding Modulation Rack lane. These rails MAY be rendered in the Bus Board as a pinned “Global Rails” group, but they are not treated as ordinary user buses.
+Rail rows (phaseA, phaseB, pulse, energy, palette) MUST include a shortcut to open the Time Console to the corresponding Modulation Rack lane. These rails MAY be rendered in the Bus Board as a pinned “Global Rails” group, but they are not treated as ordinary user buses.
 
 ...
 
@@ -693,12 +693,12 @@ Oscilla distinguishes:
 
 The following rails always exist in a patch:
 
-- `phaseA` (Signal<phase>)
-- `phaseB` (Signal<phase>)
-- `pulseA` (Event or Signal<Unit> with edge semantics)
-- `pulseB` (Event or Signal<Unit> with edge semantics)
-- `energy` (Signal<number>)
-- `palette` (Signal<color> or palette-domain signal)
+- `time` (Signal<time>) — reserved, always present, published only by TimeRoot
+- `phaseA` (Signal<phase>) — primary phase modulation
+- `phaseB` (Signal<phase>) — secondary phase modulation
+- `pulse` (Event) — discrete time boundary events
+- `energy` (Signal<number>) — intensity/activity level
+- `palette` (Signal<number>) — palette position [0,1]
 
 Rails:
 - cannot be deleted
@@ -719,7 +719,7 @@ No hidden precedence is allowed. Publishing into a Normalled rail MUST surface a
 
 A rail MAY be mirrored into the user bus fabric only when explicitly enabled. Mirrored rail buses:
 
-- have locked names matching the rail (`phaseA`, `phaseB`, `pulseA`, `pulseB`, `energy`, `palette`)
+- have locked names matching the rail (`phaseA`, `phaseB`, `pulse`, `pulse`, `energy`, `palette`)
 - cannot be deleted or renamed
 - exist solely as an interoperability bridge for the bus system
 
@@ -728,9 +728,9 @@ A rail MAY be mirrored into the user bus fabric only when explicitly enabled. Mi
 Combine rules apply only when a rail is in **Mixed** policy or when mirrored values are combined with user publishers. Defaults:
 
 - `phaseA`, `phaseB`: last
-- `pulseA`, `pulseB`: or
+- `pulse`: last
 - `energy`: sum
-- `palette`: mix
+- `palette`: last
 
 These defaults are editable only in the Time Console (not in generic bus UI).
 
@@ -968,7 +968,7 @@ Instead, treat Rails as:
 
 At runtime, Rails live in a dedicated store:
 
-type RailId = 'phaseA'|'phaseB'|'pulseA'|'pulseB'|'energy'|'palette'|...;
+type RailId = 'phaseA'|'phaseB'|'pulse'|'pulse'|'energy'|'palette'|...;
 
 interface RailStore {
   signal: Record<RailId, SignalExprId>; // or handles into value store

@@ -25,9 +25,10 @@ Export begins by deriving an ExportTimePlan from timeModel:
 ```typescript
 type ExportTimePlan =
   | { kind: 'finite'; durationMs: number; sample: SamplePlan }
-  | { kind: 'cyclic'; periodMs: number; loops: number; sample: SamplePlan }
   | { kind: 'infinite'; windowMs: number; durationMs: number; sample: SamplePlan }
 ```
+
+**Note:** There is NO `cyclic` ExportTimePlan kind. Cycles are authored in the Time Console Modulation Rack. For phase-driven export, use Time Console rails.
 
 **Key decision:** Even infinite exports become finite in exported media. Export chooses a finite capture duration by policy, not by hack.
 
@@ -47,7 +48,7 @@ Export evaluates the program at a set of times:
 - Video: `t_i = i * (1000/fps)` for `i = 0..N-1`
 - SVG: `t_i = i * (periodMs/steps)` for `i = 0..steps`
 
-**Critical:** `t` is monotonic and unbounded as always. Any phase wrapping is internal to CycleTimeRoot/PhaseClocks.
+**Critical:** `t` is monotonic and unbounded as always. Any phase wrapping is internal to Time Console rails (phaseA, phaseB).
 
 There is no "wrap maxTime."
 
@@ -67,21 +68,42 @@ There is no "wrap maxTime."
 
 No looping implied.
 
-### CycleTimeRoot Export (Seamless Loop)
+### InfiniteTimeRoot Export
 
-**Core rule: loop closure must be exact.**
+Infinite patches cannot be exported as "infinite." They must be captured.
 
-For loop mode:
-- Exported animation must satisfy: frame 0 == frame N (modulo tolerance)
-- Sampling must align exactly to the cycle
+**Video:**
+- User chooses capture duration (default: 30s)
+- Standard sampling
+
+**SVG/CSS - Option A "Looping excerpt":**
+- User chooses a cycle lens or capture-to-cycle process
+- Phase-lock a chosen phase bus (phaseA from Time Console), OR
+- Bake a segment and crossfade endpoints
+- Explicitly labeled as approximation
+
+**SVG/CSS - Option B "Finite excerpt":**
+- CSS iteration-count = 1
+- A "recording" of a window, not a loop
+
+UI must clearly indicate this is an excerpt, not a true loop.
+
+## Phase-Driven Export (via Time Console Rails)
+
+For patches that use Time Console Modulation Rack to produce cyclic motion:
+
+**Core rule: loop closure depends on Time Console configuration.**
+
+When the patch uses phaseA/phaseB rails from the Modulation Rack:
 
 **Video Export - Strategy A (exact-cycle frame count):**
+- Read the period from Time Console Cycle lane
 - Choose integer N such that N/fps == periodMs/1000 exactly
 - If period isn't representable: adjust fps or period to fit
 
-**Video Export - Strategy B (phase-driven sampling - required long-term):**
+**Video Export - Strategy B (phase-driven sampling - preferred):**
 - Sample phase directly: phase_i = i / N
-- Evaluate program with CycleRoot.phase = phase_i
+- Drive Time Console rails with phaseOverride
 - Decouples loop closure from fps
 - Guarantees loop closure across arbitrary cycle lengths
 
@@ -96,34 +118,10 @@ For loop mode:
   - k_i = phase_i
   - offset = i/N
 
-### InfiniteTimeRoot Export
+### Seamless Loop Export UI
 
-Infinite patches cannot be exported as "infinite." They must be captured.
-
-**Video:**
-- User chooses capture duration (default: 30s)
-- Standard sampling
-
-**SVG/CSS - Option A "Looping excerpt":**
-- User chooses a cycle lens or capture-to-cycle process
-- Phase-lock a chosen phase bus, OR
-- Bake a segment and crossfade endpoints
-- Explicitly labeled as approximation
-
-**SVG/CSS - Option B "Finite excerpt":**
-- CSS iteration-count = 1
-- A "recording" of a window, not a loop
-
-UI must not pretend infinite SVG is the same as cyclic SVG.
-
-## Export UI
-
-### Finite Export UI
-- Duration locked to TimeRoot.duration
-- Choose: fps, resolution, format
-
-### Cycle Export UI
-- Period locked to TimeRoot.period
+When Time Console has active cycle lanes:
+- Period shown from Time Console configuration
 - Controls:
   - "Export loopable clip"
   - "Frames per cycle" (explicit integer)
@@ -133,10 +131,17 @@ UI must not pretend infinite SVG is the same as cyclic SVG.
   - Green when closure exact
   - Amber when approximation
 
+## Export UI
+
+### Finite Export UI
+- Duration locked to TimeRoot.duration
+- Choose: fps, resolution, format
+
 ### Infinite Export UI
 - Capture duration slider (required)
 - "Export as excerpt" (finite)
 - Optional: "Attempt loopable excerpt" (marked as approximation)
+- If Time Console has cycle lanes: show phase-driven export options
 
 ## Technical Requirements
 
@@ -150,10 +155,10 @@ Export must use:
 - Compiled program + timeModel
 - Deterministic evaluation context
 
-### Phase-Driven Evaluation (Required for Cycle Export)
+### Phase-Driven Evaluation (For Loopable Export)
 To guarantee closure independent of fps:
-- Supply CycleRoot with phaseOverride
-- Or special export context where CycleTimeRoot.phase = requestedPhase
+- Supply Time Console with phaseOverride
+- Or special export context where phase rails = requestedPhase
 
 This is not a hack; it is the correct abstraction.
 
@@ -170,7 +175,7 @@ No hidden randomness, no wall-clock dependence.
 
 Export must fail with clear errors if:
 - TimeRoot missing/invalid
-- Cycle export requested but no CycleTimeRoot
+- Phase-driven evaluation requested but no Time Console cycle lanes
 - Phase-driven evaluation not possible due to illegal feedback
 - Non-exportable renderer feature used (SVG limitations)
 

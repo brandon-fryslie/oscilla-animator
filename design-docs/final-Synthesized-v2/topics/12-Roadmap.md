@@ -48,16 +48,17 @@ Patch loads, validates, and produces intelligible errors until time/runtime exis
 Make looping/finite/infinite a property of the patch, not the player.
 
 ### Must-Haves
-- Implement CycleTimeRoot fully
-- Compiler outputs TimeModel
+- Implement FiniteTimeRoot and InfiniteTimeRoot (NO CycleTimeRoot)
+- Compiler outputs TimeModel (`finite` or `infinite` only)
 - Player runs unbounded `t` and never wraps/clamps
 - Time Console UI driven by timeModel only
+- Time Console Modulation Rack produces Global Rails (phaseA, phaseB, pulse, energy, palette)
 
 ### Deliverables
-- CycleTimeRoot block compiler
-- Player transport rewrite (remove loopMode)
-- Time Console UI rework: CYCLE badge, phase ring, pulse indicator
-- Bus auto-publication from TimeRoot
+- FiniteTimeRoot and InfiniteTimeRoot block compilers
+- Player transport rewrite (remove loopMode from topology - keep as view-time policy)
+- Time Console UI: Modulation Rack for rails, view playback modes for finite
+- TimeRoot publishes only `time` bus; rails come from Time Console
 
 ### Golden Patch Checkpoint
 With dummy RenderTree: phase ring animating, pulse indicator ticking, no wrapping bugs.
@@ -72,7 +73,7 @@ Make bus routing real and deterministic.
 ### Must-Haves
 - Compiler graph includes: block outputs, bus value nodes, publisher/listener edges
 - Deterministic publisher ordering (sortKey)
-- Bus combination semantics: last, sum, or
+- Bus combination semantics: sum, average, max, min, last, layer
 - Hot-swap safe: old program runs until new compiles
 
 ### Deliverables
@@ -175,7 +176,7 @@ Turn the Golden Patch into a usable template and canonical learning artifact.
 ### Must-Haves
 - Composite instance system works with bus bindings
 - Composite editing/expansion consistent with bus routing and TimeRoot constraints
-- Composites: AmbientLoopRoot, BreathEnergy, PulseAccentEnergy, SlowPaletteDrift, BreathingDotsRenderer
+- Composites: BreathEnergy, PulseAccentEnergy, SlowPaletteDrift, BreathingDotsRenderer (NO AmbientLoopRoot - removed with CycleTimeRoot)
 
 ### Deliverables
 - Composite resolution strategy

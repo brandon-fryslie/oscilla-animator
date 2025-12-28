@@ -26,7 +26,7 @@ just lint-fix     # Lint with auto-fix
 
 **CRITICAL: Adding new blocks is strictly NOT ALLOWED unless the user explicitly asks and confirms. Use existing blocks, composites, defaultSource, and adapters instead.**
 
-**If code conflicts with spec, the spec is authoritative.** Design docs: `design-docs/3-Synthesized/`
+**If code conflicts with spec, the spec is authoritative.** Design docs: `design-docs/final-Synthesized-v2/`
 
 **Tests are NOT a reliable indicator.** Use Chrome DevTools MCP to verify behavior.
 
@@ -45,9 +45,10 @@ TimeRoot blocks declare time topology. The player observes—never controls—th
 
 | TimeRoot | Output | Use Case |
 |----------|--------|----------|
-| Finite | `progress: Signal<unit>` | One-shot animations |
-| Cycle | `phase: Signal<phase>`, `wrap: Event` | Loops, music viz |
-| Infinite | `t: Signal<time>` | Generative installations |
+| Finite | `systemTime`, `progress` | One-shot animations |
+| Infinite | `systemTime` | Generative installations |
+
+**Note:** There is NO CycleTimeRoot. Cycles (phase/pulse/energy) are produced by the **Time Console** as Global Rails, not by TimeRoot blocks. TimeRoot publishes only the reserved `time` bus.
 
 ## Non-Negotiable Invariants
 
@@ -88,12 +89,14 @@ Add to `src/editor/compiler/blocks/<category>/<Name>.ts`, register in block regi
 
 ## Memory Files
 
-Deep context in `claude_memory/`:
+Quick reference (non-authoritative) in `claude_memory/`:
 - `00-essentials.md` - Commands, design doc refs
 - `01-architecture.md` - Directory structure, MobX stores
 - `02-type-system.md` - Signal, Field, TypeDesc, BufferDesc
 - `03-time-architecture.md` - TimeRoot, TimeModel, Player
-- `04-buses.md` - Canonical buses, production rules
+- `04-buses.md` - Canonical rails, production rules
 - `05-blocks.md` - Creating blocks, composites, macros
 - `06-invariants.md` - Non-negotiable rules, pitfalls
 - `07-golden-patch.md` - "Breathing Constellation" reference
+
+**Note:** `claude_memory/` is quick reference only. The **authoritative** spec is `design-docs/final-Synthesized-v2/`.

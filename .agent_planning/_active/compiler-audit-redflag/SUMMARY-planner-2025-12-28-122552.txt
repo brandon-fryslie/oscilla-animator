@@ -1,0 +1,6 @@
+Agent: status-planner | 2025-12-28-122552
+Topic: Compiler Audit Red Flags - Sprint 1: Core IR Execution
+Files: PLAN-2025-12-28-122552.md, DOD-2025-12-28-122552.md
+Items: 2 (P0: 1, P1: 1)
+Source: STATUS-2025-12-28-sprint1.md
+Sprint Duration: 2 days (estimated)

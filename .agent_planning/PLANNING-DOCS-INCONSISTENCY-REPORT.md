@@ -339,7 +339,7 @@ See @design-docs/final-System-Invariants/Rail-Modulation-and-Feedback.md
 - Remove/stop extending the `ValueKind` string-union as an independent type system; keep it only as a transitional adapter if needed.
 - All slot typing, bus typing, and IR validation must reference `TypeDesc` directly.
 
-AUTHORITATIVE: Remove ValueKind immediately
+AUTHORITATIVE: Deprecate ValueKind and mark for removal.
 
 
 ---
@@ -353,15 +353,15 @@ AUTHORITATIVE: Remove ValueKind immediately
 | Directory | Description | Status |
 |-----------|-------------|--------|
 | `design-docs/1-Full-System-Design/` | Original design documents | Historical? |
-| `design-docs/3-Synthesized-v2/` | "Authoritative" synthesized docs | Current? |
+| `design-docs/final-Synthesized-v2/` | "Authoritative" synthesized docs | Current? |
 | `claude_memory/` | Quick reference memory files | Active |
 | `CLAUDE.md` | Points to `design-docs/3-Synthesized/` (doesn't exist) | Outdated reference |
 
 **Resolution Needed (Answered):**
-- `design-docs/3-Synthesized-v2/` is the **authoritative** spec set.
-- `design-docs/1-Full-System-Design/` is **historical reference only** and must be labeled as such.
-- `claude_memory/` is **non-authoritative notes** and must be regenerated from `3-Synthesized-v2` when changes land.
-- Update `CLAUDE.md` to point to `design-docs/3-Synthesized-v2/` (the existing `design-docs/3-Synthesized/` path is invalid and must be removed).
+- `design-docs/final-Synthesized-v2/` is the **authoritative** spec set.
+- ALL others are **historical reference only** and must be labeled as such.
+- `claude_memory/` is **non-authoritative notes** and must be regenerated from `final-Synthesized-v2` when changes land.
+- Update `CLAUDE.md` to point to `design-docs/final-Synthesized-v2/` (the existing `design-docs/3-Synthesized/` path is invalid and must be removed).
 
 ---
 
@@ -372,7 +372,7 @@ AUTHORITATIVE: Remove ValueKind immediately
 **Resolution Needed:** What is the process for promoting provisional items to authoritative?
 
 **Answer:** Promotion process:
-1) Spec change lands in `design-docs/3-Synthesized-v2/` with a clear decision statement.
+1) Spec change lands in `design-docs/final-Synthesized-v2/` with a clear decision statement.
 2) Implementation lands behind feature flags only if needed for migration; otherwise ship directly.
 3) Remove "PROVISIONAL" markers in the source doc and update this inconsistency report.
 4) Add/adjust compiler/runtime constraints to enforce the decision.
@@ -476,7 +476,7 @@ No direct "function returns array" Field type in the canonical model.
 | Document | Name |
 |----------|------|
 | `1-Full-System-Design/` | "Loom" |
-| `3-Synthesized-v2/` | "Oscilla" |
+| `final-Synthesized-v2/` | "Oscilla" |
 | `CLAUDE.md` | "Oscilla" |
 
 **Resolution Needed:** Confirm app name is "Oscilla" and update all references.
@@ -525,8 +525,8 @@ No direct "function returns array" Field type in the canonical model.
 ## Appendix: Document Index
 
 ### Primary Sources (appear most authoritative)
-- `design-docs/3-Synthesized-v2/` - Topic-organized synthesized docs
-- `design-docs/3-Synthesized-v2/01-Clarifying-Questions.md` - Lists 18 known inconsistencies
+- `design-docs/final-Synthesized-v2/` - Topic-organized synthesized docs
+- `design-docs/final-Synthesized-v2/01-Clarifying-Questions.md` - Lists 18 known inconsistencies
 
 ### Reference Memory Files
 - `claude_memory/00-essentials.md` through `07-golden-patch.md`

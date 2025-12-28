@@ -38,8 +38,9 @@ The current timeline player is replaced with a **Time Console**: a single area t
 ### Mode Badge (Time Topology)
 Prominent badge reflecting the TimeRoot:
 - `FINITE`
-- `CYCLE`
 - `INFINITE`
+
+**Note:** There is NO `CYCLE` badge. CycleTimeRoot does not exist. Cycles are produced by Time Console Global Rails. View looping for finite patches is a transport policy, not a topology.
 
 This is the user's "what kind of thing am I building?" anchor.
 
@@ -62,50 +63,46 @@ This is the user's "what kind of thing am I building?" anchor.
 - If RUN and reaches end: holds at end, shows `ENDED`
 - FREEZE freezes at current local time
 
+### View Playback Policy
+For finite patches, transport supports:
+- **Once**: play from 0 to duration without looping
+- **Loop**: repeat playback continuously (view-time only)
+- **Ping-pong**: play forward then backward repeatedly
+
+These affect only view-time mapping, never the underlying monotonic time.
+
 ### Not Shown
 - No infinity symbol
 - No phase ring
 - No wrap indicators
 - No "cycle" labeling
-- No "Loop View" option - if user wants looping, use CycleTimeRoot
 
-## CYCLE Mode UI
+## Time Console (Modulation Rack)
 
-### Visual Form: Phase Ring
-Cycle mode is not a timeline. It is a phase instrument.
+**Note:** CYCLE mode UI is removed. There is no CycleTimeRoot.
 
-**Primary visualization: a phase ring (circular scrubber)**
+Cycles are authored in the **Time Console** (Modulation Rack), which produces Global Rails:
 
-Elements:
-- Circular ring with moving indicator dot
-- Wrap seam visible but subtle (tick mark at top)
-- Displays `Period: 4.50s`
-- Shows `Mode: Loop` or `Mode: Pingpong`
+### Modulation Rack Lanes
+- **Cycle A**: period, mode (loop/pingpong/once), phase offset, rate → phaseA, pulse rails
+- **Cycle B**: same → phaseB rail
+- **Energy**: envelope generator → energy rail
+- **Palette**: palette modulator → palette rail
 
-The circle prevents the "start/end" mental model.
+### Rail Drive Policy UI
+For each rail, show source selector:
+- **Internal**: Modulation Rack drives the rail (default)
+- **Bus**: External bus drives the rail
+- **Both**: Combined with rail combine rule
 
-### Primary Controls
-- **Phase Scrub**: dragging around ring sets phaseOffset (does not reset state)
-- **Period editor**: `Period 4.50s` (click to edit)
-- **Mode toggle**: Loop/Pingpong (structural change; may require confirmation)
+### Phase Ring (in Time Console)
+When editing Cycle lanes:
+- Circular ring with moving indicator
+- Period editor
+- Mode toggle
+- Phase offset scrub
 
-### Secondary Phase Lanes (Optional)
-Below the main ring, optional mini-strips for:
-- Phase B (if present/published)
-- Other declared phases
-
-These are read-only unless explicitly designated as scrubbable.
-
-### Readouts
-- `Phase A: 0.37`
-- `Cycle #: 128`
-- Wrap indicator flashes on wrap event
-
-### Not Shown
-- No "end"
-- No "duration"
-- No time range slider
-- No global loop toggle (looping is inherent)
+This is **authoring** UI, not player topology.
 
 ## INFINITE Mode UI
 
@@ -157,15 +154,16 @@ Modal choice:
 
 No silent application.
 
-### Player Never Loops Time
-No `loopMode` in player UI anymore.
+### Player Never Loops Topology Time
+No `loopMode` that changes topology.
 
 Player only:
 - Advances system time
 - Freezes system time
 - Scales dt
+- View-time mapping for finite patches (once/loop/pingpong as transport policy)
 
-Looping lives entirely in CycleTimeRoot/phases.
+Cycles are produced by Time Console rails, not by TimeRoot or player.
 
 ## TimeRoot Picker
 
@@ -174,9 +172,10 @@ TimeRoot is first-class in the editor header:
 ```
 Time Topology
   ○ Finite
-  ● Cycle
-  ○ Infinite
+  ● Infinite
 ```
+
+**Note:** No Cycle option. Cycles are authored in Time Console, not by TimeRoot selection.
 
 Selecting changes which TimeRoot block exists (single instance).
 
@@ -216,7 +215,7 @@ Shows:
   - "On freeze" (always)
 
 Defaults:
-- Cycle patches: "On next pulse"
+- Patches with active pulse rail: "On next pulse"
 - Infinite patches: "Apply now"
 
 ### Class C Changes
@@ -239,10 +238,10 @@ No hidden "don't show again."
 
 ## Acceptance Criteria
 
-1. Player never shows linear timeline in Cycle or Infinite
-2. Looping is visually obvious in Cycle mode without words
+1. Player never shows linear timeline in Infinite mode
+2. Cycles are authored in Time Console, not as TimeRoot selection
 3. Infinite mode never implies repetition
 4. Scrubbing never causes a reset
 5. UI state is derived from timeModel only
-6. No "loop toggle" anywhere in player
-7. PhaseClock looping does not change player UI mode
+6. No topology loop toggle in player (view-time loop for finite is OK)
+7. Time Console Modulation Rack is the only place to author cycles

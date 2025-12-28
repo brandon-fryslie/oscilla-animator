@@ -1,64 +1,150 @@
-# Plan: Remove `busEligible` (Junior Engineer Guide)
+# Plan: Remove `busEligible` + Remove `last` Combine Mode (Junior Engineer Guide)
 
-Goal: Remove the `busEligible` flag from the type system and shift bus validation to combine-mode semantics.
+Goal: Remove `busEligible` from the type system and eliminate the `last` combine mode, replacing all validation with explicit combine‑mode compatibility checks. Keep UX unchanged.
 
-## Scope
-- Remove `busEligible` from type definitions and derived tables.
-- Remove all eligibility checks based on `busEligible`.
-- Replace with a combine‑mode compatibility check (type + combine mode) so any type can connect to a bus, but multi‑publisher buses must use a valid combine mode.
+Constraints
+- No internal fallbacks on blocks.
+- Default sources must exist for every input; missing defaults are compile errors.
+- All work targets the NEW IR compiler + renderer only.
 
-## Workstream 1: Type System Cleanup
-1. **Remove `busEligible` from type definitions**
-   - `src/editor/types.ts` (TypeDesc interface)
-   - `src/editor/ir/types/TypeDesc.ts`
-2. **Remove `busEligible` from type maps**
-   - `src/editor/types.ts` `SLOT_TYPE_TO_TYPE_DESC`
-   - `src/editor/semantic/index.ts` type descriptor table
-3. **Remove `isBusEligible` helpers**
-   - `src/editor/types.ts`
-   - `src/editor/semantic/index.ts`
-   - `src/editor/ir/types/TypeDesc.ts`
+Deliverables
+- `busEligible` removed everywhere (types, UI, compiler, tests).
+- `last` removed from combine semantics and from any reserved bus definitions.
+- A single shared “combine compatibility” utility used by compiler + UI.
+- Updated tests covering multi‑publisher behavior.
 
-## Workstream 2: Compiler Validation Changes
-1. **Replace bus eligibility checks in the compiler**
-   - `src/editor/compiler/passes/pass2-types.ts` currently rejects bus types via `isBusEligible`.
-   - Replace with a new function: `isCombineModeAllowed(typeDesc, combineMode)`.
-2. **Define combine‑mode rules**
-   - Implement a central compatibility table (recommended location: `src/editor/semantic/busSemantics.ts` or new `busCombineRules.ts`).
-   - Rules: single publisher is always valid; multiple publishers require a defined combine mode.
-3. **Update reserved bus validation**
-   - `src/editor/semantic/busContracts.ts`: remove the `busEligible` comparisons.
-   - Ensure reserved bus types still validate against type/world/domain and combine mode only.
+---
 
-## Workstream 3: Editor/UI + Stores
-1. **Remove UI gating that checks `busEligible`**
-   - `src/editor/modulation-table/ModulationTableStore.ts`
-   - Any logic that hides bus options based on `busEligible` should be replaced with combine‑mode compatibility checks (or removed if buses are always allowed).
-2. **Update DefaultSourceStore usage**
-   - `src/editor/stores/DefaultSourceStore.ts` uses `busEligible` in a derived type; remove it.
-3. **Update tests in UI/store layers**
-   - Update any tests that assert `busEligible` presence or behavior.
+## Workstream A: Type System Cleanup (remove `busEligible`)
 
-## Workstream 4: Tests + Diagnostics
-1. **Update unit tests**
-   - `src/editor/compiler/passes/__tests__/pass2-types.test.ts`
-   - `src/editor/semantic/__tests__/busContracts.test.ts`
-   - `src/editor/ir/types/__tests__/TypeDesc.test.ts`
-   - Any tests asserting `busEligible` fields must be revised or removed.
-2. **Add tests for combine‑mode compatibility**
-   - Validate that multiple publishers on unsupported combine modes produce a compile error.
-   - Validate that single‑publisher buses always compile.
+1) Remove `busEligible` from TypeDesc types
+- Files:
+  - `src/editor/types.ts` (TypeDesc interface)
+  - `src/editor/ir/types/TypeDesc.ts`
+- Actions:
+  - Delete `busEligible?: boolean` or `busEligible: boolean`.
+  - Fix all TypeDesc construction sites by removing the field.
+  - Update any “shape” tests in `src/editor/ir/types/__tests__/TypeDesc.test.ts`.
 
-## Implementation Notes
-- This change is *behavioral*: bus gating shifts from “type eligibility” to “combine compatibility.”
-- Start by removing `busEligible` from types, then fix compile errors.
-- Introduce a single source of truth for combine compatibility so UI and compiler can share the same logic.
-- Do NOT change UX: only underlying validation and typing.
+2) Remove `busEligible` from derived tables
+- Files:
+  - `src/editor/types.ts` (SLOT_TYPE_TO_TYPE_DESC)
+  - `src/editor/semantic/index.ts` (type descriptor table)
+  - Any other static TypeDesc maps
+- Actions:
+  - Delete `busEligible` entries.
+  - Ensure TypeDesc maps still compile.
+
+3) Remove helpers that reference `busEligible`
+- Files:
+  - `src/editor/types.ts` (e.g., `isBusEligible`)
+  - `src/editor/semantic/index.ts`
+  - `src/editor/ir/types/TypeDesc.ts`
+- Actions:
+  - Delete helpers and references.
+  - Use new combine‑compatibility logic in Workstream B.
+
+---
+
+## Workstream B: Combine‑Mode Compatibility (replace eligibility)
+
+1) Define a single combine compatibility module
+- Create a new helper:
+  - `src/editor/semantic/busCombineRules.ts` (recommended)
+- API (example):
+  - `isCombineAllowed(typeDesc: TypeDesc, combine: CombineMode, publisherCount: number): boolean`
+  - `explainCombineError(typeDesc, combine, publisherCount): string`
+- Rules:
+  - Single publisher: always valid (any combine mode acceptable).
+  - Multiple publishers: only allow combine modes explicitly designed for that type.
+  - `last` mode should be removed completely (see Workstream C).
+
+2) Replace compiler eligibility checks with combine compatibility
+- Files:
+  - `src/editor/compiler/passes/pass2-types.ts`
+  - `src/editor/semantic/busContracts.ts`
+- Actions:
+  - Remove any `isBusEligible` gating.
+  - Use `isCombineAllowed` + `publisherCount` instead.
+  - Ensure reserved bus checks still validate `world/domain/category`.
+
+3) Update UI + stores to use combine compatibility
+- Files:
+  - `src/editor/modulation-table/ModulationTableStore.ts`
+  - `src/editor/stores/DefaultSourceStore.ts`
+  - Any bus‑related UI gating
+- Actions:
+  - Remove `busEligible` checks.
+  - If the UI filters bus options, filter by combine compatibility instead.
+  - If there’s no UI filtering, remove gating entirely.
+
+---
+
+## Workstream C: Remove `last` Combine Mode
+
+1) Remove `last` from combine definitions
+- Files:
+  - `src/editor/semantic/busContracts.ts` (reserved bus definitions)
+  - Combine mode enums/types (search `CombineMode`, `combine:`)
+  - Any schema files defining combine modes
+- Actions:
+  - Delete `last` from enums or union types.
+  - Update any defaults or factories that set `last`.
+
+2) Update any existing bus definitions or defaults using `last`
+- Files:
+  - `src/editor/stores/BusStore.ts` (default buses)
+  - `src/editor/semantic/busContracts.ts`
+  - Any bus seeding logic (search `combine: 'last'`)
+- Actions:
+  - Replace with another combine mode (likely `sum` or `or`) only if it preserves intended semantics.
+  - If unclear, leave combine undefined but fail compile when multiple publishers exist.
+
+3) Update error messages / diagnostics
+- Files:
+  - Any compiler errors referencing `last`
+- Actions:
+  - Ensure errors explain: “Multiple publishers require a combine mode compatible with this type.”
+
+---
+
+## Workstream D: Tests + Verification
+
+1) Update tests that reference `busEligible`
+- Files:
+  - `src/editor/compiler/passes/__tests__/pass2-types.test.ts`
+  - `src/editor/semantic/__tests__/busContracts.test.ts`
+  - `src/editor/ir/types/__tests__/TypeDesc.test.ts`
+- Actions:
+  - Remove `busEligible` assertions.
+  - Add combine‑compatibility tests.
+
+2) Add tests for combine compatibility
+- Suggested cases:
+  - Single publisher on any type: OK.
+  - Multiple publishers with compatible combine mode: OK.
+  - Multiple publishers with incompatible combine mode: compile error.
+  - Reserved bus type mismatch: compile error (still enforced).
+
+3) Manual validation (DevTools only)
+- Use DevTools console to compile a patch with:
+  - Two publishers on a bus with a valid combine mode (success).
+  - Two publishers on a bus with no combine mode (error).
+  - Reserved bus type mismatch (error).
+
+---
+
+## Implementation Order (Suggested)
+1) Workstream A (remove `busEligible`) to unblock build.
+2) Workstream C (remove `last`) so combine rules are final.
+3) Workstream B (combine compatibility) to enforce new rules.
+4) Workstream D (tests + diagnostics).
+
+---
 
 ## Acceptance Checklist
-- No references to `busEligible` remain in the codebase.
-- Compiler allows any type to connect to a bus.
-- Compiler rejects only invalid combine mode usage (multi‑publisher + unsupported combine mode).
-- Reserved bus contracts still enforce correct type and combine mode.
-- All tests updated or replaced accordingly.
-
+- `rg "busEligible"` returns no hits.
+- `rg "last" src/editor` has no combine mode references.
+- Compiler error for multi‑publisher buses without a compatible combine mode.
+- Reserved bus types enforced without `busEligible`.
+- Tests updated and pass (use DevTools to validate if tests are unreliable).
