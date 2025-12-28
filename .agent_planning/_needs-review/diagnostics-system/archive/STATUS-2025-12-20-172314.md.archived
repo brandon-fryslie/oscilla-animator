@@ -1,0 +1,203 @@
+# Diagnostics System - Current State Assessment
+
+**Generated:** 2025-12-20-172314
+**Topic:** Diagnostics System Implementation
+**Evaluator:** status-planner
+
+---
+
+## Executive Summary
+
+The Oscilla Animator project currently has **NO diagnostics infrastructure**. The design docs specify a comprehensive diagnostics system (see `design-docs/4-Event-System/3-Diagnostics.md`, `5-DiagnosticPayloadSpec.md`, `6-DiagnosticsPolish.md`), but **none of the core types, hub, store, or integration points exist** in the codebase.
+
+**Current State:** Not Started (0% complete)
+**Blockers:** None - greenfield implementation
+**Dependencies:** Existing event system (14 event types defined, EventDispatcher operational)
+
+---
+
+## What Exists Today
+
+### Event System Infrastructure (Operational)
+- **EventDispatcher** (`src/editor/events/EventDispatcher.ts`): Synchronous, type-safe event dispatcher
+- **14 Event Types** defined in `src/editor/events/types.ts`:
+  - MacroExpanded, PatchLoaded, PatchCleared
+  - CompileSucceeded, CompileFailed
+  - BlockAdded, BlockRemoved, BlockReplaced
+  - WireAdded, WireRemoved
+  - BindingAdded, BindingRemoved
+  - BusCreated, BusDeleted
+- **EventDispatcher integration** in RootStore (line 30): `this.events = new EventDispatcher()`
+- **Event-based coordination** patterns established in `RootStore.setupEventListeners()`
+
+### LogStore (Legacy, Needs Replacement)
+- **LogStore** (`src/editor/logStore.ts`): Observable MobX store for logging
+- **Usage in compiler**: `src/editor/compiler/integration.ts` uses `logStore.warn()`, `logStore.error()`
+- **Limitations**:
+  - String-based messages (not structured)
+  - Not target-addressable (can't point to blocks/ports/buses)
+  - Not dedupable (no stable IDs)
+  - Not actionable (no FixActions)
+  - Not integrated with event system
+
+### Store Architecture (Ready for Extension)
+- **RootStore pattern**: Established hierarchy (PatchStore, BusStore, UIStateStore, CompositeStore)
+- **MobX observables**: All stores use MobX `makeObservable()` pattern
+- **Cross-store coordination**: Event-based (not direct dependencies)
+
+---
+
+## What Does NOT Exist
+
+### Core Diagnostic Types (0% complete)
+- [ ] `Diagnostic` record type
+- [ ] `TargetRef` union type (block, port, bus, binding, composite, timeRoot, graphSpan)
+- [ ] `DiagnosticCode` enum (E_TIME_ROOT_MISSING, E_TYPE_MISMATCH, etc.)
+- [ ] `Severity` enum (hint, info, warn, error, fatal)
+- [ ] `Domain` enum (authoring, compile, runtime, export, perf)
+- [ ] `FixAction` type (FocusTarget, InsertBlock, CreateTimeRoot, etc.)
+- [ ] Structured payload types per diagnostic code
+
+### DiagnosticHub (0% complete)
+- [ ] Class definition
+- [ ] `add(diagnostic)` method with dedupe logic
+- [ ] `resolve(diagnosticId)` method
+- [ ] `clear(scope?)` method (compile/runtime/authoring/export namespaces)
+- [ ] `get(diagnosticId)` method
+- [ ] `getAll(filters?)` method
+- [ ] Stable ID generation (`hash(code + primaryTarget + signature)`)
+- [ ] Namespace separation (compile snapshot, runtime rolling window, authoring, export)
+
+### DiagnosticStore (0% complete)
+- [ ] MobX observable store
+- [ ] Integration with RootStore
+- [ ] Computed properties (active diagnostics, error count, warning count)
+- [ ] Actions (addDiagnostic, resolveDiagnostic, clearDiagnostics)
+
+### Diagnostic Events (0% complete)
+- [ ] `DiagnosticAdded` event type
+- [ ] `DiagnosticResolved` event type
+- [ ] `DiagnosticCleared` event type
+- [ ] Integration with EventDispatcher
+
+### Compiler Integration (0% complete)
+- [ ] Replace `logStore.warn()` / `logStore.error()` calls with diagnostic emission
+- [ ] Emit diagnostics for:
+  - Missing TimeRoot (E_TIME_ROOT_MISSING)
+  - Multiple TimeRoots (E_TIME_ROOT_MULTIPLE)
+  - Type mismatches (E_TYPE_MISMATCH)
+  - Empty buses (W_BUS_EMPTY)
+  - Unused outputs (W_GRAPH_UNUSED_OUTPUT)
+- [ ] Emit `CompileFailed` event with diagnostic count
+
+### Runtime Integration (Future - not Phase 1)
+- [ ] Runtime monitors for NaN/Infinity (E_RUNTIME_NAN, E_RUNTIME_INF)
+- [ ] Performance monitors (P_FRAME_BUDGET_EXCEEDED)
+- [ ] Field materialization warnings (W_FIELD_MATERIALIZATION_LARGE)
+
+### UI Components (Future - not Phase 1)
+- [ ] Diagnostic console panel
+- [ ] Block/port/bus badges
+- [ ] FixAction buttons
+
+---
+
+## Gap Analysis
+
+### Foundation Gaps (Critical - P0)
+1. **No diagnostic type definitions** - Core types (Diagnostic, TargetRef, DiagnosticCode, etc.) do not exist
+2. **No DiagnosticHub** - Deduplication, stable ID generation, namespace management logic missing
+3. **No DiagnosticStore** - Observable store for UI consumption missing
+4. **No diagnostic events** - Event types not added to event system
+5. **LogStore dependency** - Compiler still uses legacy string-based logging
+
+### Integration Gaps (High - P1)
+1. **Compiler diagnostics** - Integration points identified but not implemented
+2. **Event emission** - Compiler doesn't emit DiagnosticAdded events
+3. **RootStore wiring** - DiagnosticStore not created or wired into RootStore
+
+### Polish Gaps (Medium - P2, Future)
+1. **FixAction system** - Action execution logic not designed
+2. **Semantic addressing** - Path-based target resolution for composite resilience
+3. **Diagnostic grouping** - Coalescing/grouping logic for UI
+4. **Diagnostic console UI** - User-facing component
+
+---
+
+## Design Doc Compliance
+
+### Fully Specified (Ready to Implement)
+- **Diagnostic schema** (design-docs/4-Event-System/5-DiagnosticPayloadSpec.md §1)
+- **Stable ID spec** (§2)
+- **TargetRef types** (§3): block, port, bus, binding, composite, timeRoot, graphSpan
+- **FixAction spec** (§4)
+- **Canonical diagnostic codes** (§6): 30+ codes defined
+- **Structured payload schemas** (§7): Per-code data shapes specified
+
+### Needs Clarification
+- **Priority of Phase 2 features** (runtime diagnostics, FixAction execution, UI)
+- **LogStore migration strategy** (deprecate immediately vs. gradual transition)
+
+---
+
+## Quantitative Metrics
+
+| Category | Count | Status |
+|----------|-------|--------|
+| Core types defined | 0 / 7 | Not started |
+| DiagnosticHub methods | 0 / 6 | Not started |
+| DiagnosticStore actions | 0 / 3 | Not started |
+| Diagnostic event types | 0 / 3 | Not started |
+| Compiler integration points | 0 / 5 | Not started |
+| Canonical diagnostic codes | 0 / 30+ | Not started |
+| Test files | 0 / 3 | Not started |
+
+---
+
+## Dependencies and Blockers
+
+### Dependencies (Available)
+- MobX (installed, operational in all stores)
+- EventDispatcher (operational, 14 event types registered)
+- RootStore pattern (established, ready for DiagnosticStore)
+- Compiler infrastructure (identified integration points in `compiler/integration.ts`)
+
+### Blockers
+- **None** - All dependencies satisfied, greenfield implementation
+
+---
+
+## Recommended Sprint Scope (Phase 1)
+
+**Focus:** Foundation types, hub, store, events, and one integration point (compiler)
+
+**In Scope:**
+1. Core types (Diagnostic, TargetRef, DiagnosticCode, Severity, Domain)
+2. DiagnosticHub class (add, resolve, clear, stable ID generation)
+3. DiagnosticStore (MobX observable, integrated into RootStore)
+4. Diagnostic events (DiagnosticAdded, DiagnosticResolved, DiagnosticCleared)
+5. Compiler integration (emit 5 starter diagnostic codes)
+6. Unit tests (DiagnosticHub, DiagnosticStore, compiler integration)
+
+**Out of Scope (Future):**
+- Runtime diagnostics (NaN detection, performance monitors)
+- FixAction execution system
+- UI components (diagnostic console, badges)
+- Advanced polish (semantic addressing, grouping)
+
+---
+
+## Next Steps
+
+1. Define core types in `src/editor/diagnostics/types.ts`
+2. Implement DiagnosticHub in `src/editor/diagnostics/DiagnosticHub.ts`
+3. Create DiagnosticStore in `src/editor/stores/DiagnosticStore.ts`
+4. Add diagnostic event types to `src/editor/events/types.ts`
+5. Replace compiler logStore calls with diagnostic emission
+6. Write tests for each component
+
+---
+
+**Status:** Ready for implementation
+**Risk Level:** Low (greenfield, well-specified)
+**Estimated Complexity:** Medium (7-10 complexity points, not time-based)

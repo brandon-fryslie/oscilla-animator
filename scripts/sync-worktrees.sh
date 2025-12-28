@@ -24,7 +24,7 @@ for worktree in "$WORKTREES_DIR"/*/; do
 
     name="$(basename "$worktree")"
     echo "Resetting $name..."
-    git -C "$worktree" reset --hard "$TARGET_COMMIT" 2>&1 | sed 's/^/  /'
+    echo git -C "$worktree" reset --hard "$TARGET_COMMIT" 2>&1 | sed 's/^/  /'
 done
 
 echo "Done."
