@@ -15,7 +15,6 @@ import type {
   LensInstance,
 } from '../types';
 import type { RootStore } from './RootStore';
-import { getSortedPublishers } from '../semantic/busSemantics';
 import { createLensInstanceFromDefinition } from '../lenses/lensInstances';
 import { runTx } from '../transactions/TxBuilder';
 
@@ -54,6 +53,22 @@ export class BusStore {
    */
   getBusById(id: string): Bus | null {
     return this.buses.find((b) => b.id === id) ?? null;
+  }
+
+  /**
+   * Get all publishers for a specific bus, sorted by sortKey.
+   */
+  getPublishersByBus(busId: string): Publisher[] {
+    return this.publishers
+      .filter((p) => p.busId === busId)
+      .sort((a, b) => a.sortKey - b.sortKey);
+  }
+
+  /**
+   * Get all listeners for a specific bus.
+   */
+  getListenersByBus(busId: string): Listener[] {
+    return this.listeners.filter((l) => l.busId === busId);
   }
 
   // =============================================================================
