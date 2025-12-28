@@ -52,6 +52,7 @@ function createGraph(
       graph: { nodes: [], edges: [] },
       sccs,
       errors: [],
+      timeModel: { kind: "infinite", windowMs: 30000 },
     },
     blocks,
   };

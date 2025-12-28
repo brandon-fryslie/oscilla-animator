@@ -201,13 +201,13 @@ describe("Pipeline Integration - Minimal Patch", () => {
     expect(timeResolved.timeRootIndex).toBe(0);
 
     // Run Pass 4: Dependency Graph
-    const depGraph = pass4DepGraph(timeResolved);
-    expect(depGraph.nodes).toHaveLength(1); // Only the TimeRoot block
-    expect(depGraph.edges).toHaveLength(0); // No connections
+    const depGraphWithTime = pass4DepGraph(timeResolved);
+    expect(depGraphWithTime.graph.nodes).toHaveLength(1); // Only the TimeRoot block
+    expect(depGraphWithTime.graph.edges).toHaveLength(0); // No connections
 
     // Run Pass 5: Cycle Validation
     const sortedBlocks = getSortedBlocksForPass5(timeResolved);
-    const validated = pass5CycleValidation(depGraph, sortedBlocks);
+    const validated = pass5CycleValidation(depGraphWithTime, sortedBlocks);
     expect(validated.errors).toHaveLength(0); // No cycles
     expect(validated.sccs).toHaveLength(1); // One trivial SCC (the TimeRoot)
   });
@@ -234,16 +234,16 @@ describe("Pipeline Integration - Minimal Patch", () => {
     const normalized = pass1Normalize(patch);
     const typed = pass2TypeGraph(normalized);
     const timeResolved = pass3TimeTopology(typed);
-    const depGraph = pass4DepGraph(timeResolved);
+    const depGraphWithTime = pass4DepGraph(timeResolved);
     const sortedBlocks = getSortedBlocksForPass5(timeResolved);
-    const validated = pass5CycleValidation(depGraph, sortedBlocks);
+    const validated = pass5CycleValidation(depGraphWithTime, sortedBlocks);
 
     // Validate results
     expect(normalized.blockIndexMap.size).toBe(2);
     expect(typed.conversionPaths.size).toBe(0); // No type conversion needed
     expect(timeResolved.timeModel.kind).toBe("cyclic");
-    expect(depGraph.nodes).toHaveLength(2); // Two blocks
-    expect(depGraph.edges).toHaveLength(1); // One wire edge
+    expect(depGraphWithTime.graph.nodes).toHaveLength(2); // Two blocks
+    expect(depGraphWithTime.graph.edges).toHaveLength(1); // One wire edge
     expect(validated.errors).toHaveLength(0); // No illegal cycles
   });
 
@@ -280,9 +280,9 @@ describe("Pipeline Integration - Minimal Patch", () => {
     const normalized = pass1Normalize(patch);
     const typed = pass2TypeGraph(normalized);
     const timeResolved = pass3TimeTopology(typed);
-    const depGraph = pass4DepGraph(timeResolved);
+    const depGraphWithTime = pass4DepGraph(timeResolved);
     const sortedBlocks = getSortedBlocksForPass5(timeResolved);
-    const validated = pass5CycleValidation(depGraph, sortedBlocks);
+    const validated = pass5CycleValidation(depGraphWithTime, sortedBlocks);
 
     // Validate results
     expect(normalized.blockIndexMap.size).toBe(3);
@@ -292,8 +292,8 @@ describe("Pipeline Integration - Minimal Patch", () => {
       world: "signal",
       domain: "number",
     });
-    expect(depGraph.nodes).toHaveLength(4); // 3 blocks + 1 bus
-    expect(depGraph.edges).toHaveLength(3); // 1 wire + 1 publisher + 1 listener
+    expect(depGraphWithTime.graph.nodes).toHaveLength(4); // 3 blocks + 1 bus
+    expect(depGraphWithTime.graph.edges).toHaveLength(3); // 1 wire + 1 publisher + 1 listener
     expect(validated.errors).toHaveLength(0);
   });
 });
@@ -418,11 +418,11 @@ describe("Pipeline Integration - Error Cases", () => {
     const normalized = pass1Normalize(patch);
     const typed = pass2TypeGraph(normalized);
     const timeResolved = pass3TimeTopology(typed);
-    const depGraph = pass4DepGraph(timeResolved);
+    const depGraphWithTime = pass4DepGraph(timeResolved);
     const sortedBlocks = getSortedBlocksForPass5(timeResolved);
 
     // Pass 5 should detect illegal cycle
-    const validated = pass5CycleValidation(depGraph, sortedBlocks);
+    const validated = pass5CycleValidation(depGraphWithTime, sortedBlocks);
     expect(validated.errors).toHaveLength(1);
     expect(validated.errors[0].kind).toBe("IllegalCycle");
   });
@@ -459,11 +459,11 @@ describe("Pipeline Integration - Error Cases", () => {
     const normalized = pass1Normalize(patch);
     const typed = pass2TypeGraph(normalized);
     const timeResolved = pass3TimeTopology(typed);
-    const depGraph = pass4DepGraph(timeResolved);
+    const depGraphWithTime = pass4DepGraph(timeResolved);
     const sortedBlocks = getSortedBlocksForPass5(timeResolved);
 
     // Pass 5 should accept this cycle
-    const validated = pass5CycleValidation(depGraph, sortedBlocks);
+    const validated = pass5CycleValidation(depGraphWithTime, sortedBlocks);
     expect(validated.errors).toHaveLength(0); // Legal cycle with state boundary
   });
 });
@@ -500,8 +500,8 @@ describe("Pipeline Integration - Invariants", () => {
     const timeResolved = pass3TimeTopology(typed);
     expect(timeResolved.blocks).toHaveLength(2);
 
-    const depGraph = pass4DepGraph(timeResolved);
-    expect(depGraph.nodes.filter((n) => n.kind === "BlockEval")).toHaveLength(2);
+    const depGraphWithTime = pass4DepGraph(timeResolved);
+    expect(depGraphWithTime.graph.nodes.filter((n) => n.kind === "BlockEval")).toHaveLength(2);
   });
 
   it("should maintain blockIndexMap stability", () => {

@@ -139,11 +139,11 @@ describe("pass4DepGraph", () => {
         blockIndexMap,
       });
 
-      const graph = pass4DepGraph(patch);
+      const result = pass4DepGraph(patch);
 
-      expect(graph.nodes).toHaveLength(2);
-      expect(graph.nodes[0]).toEqual({ kind: "BlockEval", blockIndex: 0 });
-      expect(graph.nodes[1]).toEqual({ kind: "BlockEval", blockIndex: 1 });
+      expect(result.graph.nodes).toHaveLength(2);
+      expect(result.graph.nodes[0]).toEqual({ kind: "BlockEval", blockIndex: 0 });
+      expect(result.graph.nodes[1]).toEqual({ kind: "BlockEval", blockIndex: 1 });
     });
 
     it("creates BusValue nodes for all buses", () => {
@@ -153,11 +153,11 @@ describe("pass4DepGraph", () => {
         blockIndexMap,
       });
 
-      const graph = pass4DepGraph(patch);
+      const result = pass4DepGraph(patch);
 
-      expect(graph.nodes).toHaveLength(2);
-      expect(graph.nodes[0]).toEqual({ kind: "BusValue", busIndex: 0 });
-      expect(graph.nodes[1]).toEqual({ kind: "BusValue", busIndex: 1 });
+      expect(result.graph.nodes).toHaveLength(2);
+      expect(result.graph.nodes[0]).toEqual({ kind: "BusValue", busIndex: 0 });
+      expect(result.graph.nodes[1]).toEqual({ kind: "BusValue", busIndex: 1 });
     });
 
     it("creates both BlockEval and BusValue nodes", () => {
@@ -171,11 +171,11 @@ describe("pass4DepGraph", () => {
         blockIndexMap,
       });
 
-      const graph = pass4DepGraph(patch);
+      const result = pass4DepGraph(patch);
 
-      expect(graph.nodes).toHaveLength(2);
-      expect(graph.nodes[0].kind).toBe("BlockEval");
-      expect(graph.nodes[1].kind).toBe("BusValue");
+      expect(result.graph.nodes).toHaveLength(2);
+      expect(result.graph.nodes[0].kind).toBe("BlockEval");
+      expect(result.graph.nodes[1].kind).toBe("BusValue");
     });
   });
 
@@ -195,10 +195,10 @@ describe("pass4DepGraph", () => {
         blockIndexMap,
       });
 
-      const graph = pass4DepGraph(patch);
+      const result = pass4DepGraph(patch);
 
-      expect(graph.edges).toHaveLength(1);
-      expect(graph.edges[0]).toEqual({
+      expect(result.graph.edges).toHaveLength(1);
+      expect(result.graph.edges[0]).toEqual({
         from: { kind: "BlockEval", blockIndex: 0 },
         to: { kind: "BlockEval", blockIndex: 1 },
       });
@@ -222,9 +222,9 @@ describe("pass4DepGraph", () => {
         blockIndexMap,
       });
 
-      const graph = pass4DepGraph(patch);
+      const result = pass4DepGraph(patch);
 
-      expect(graph.edges).toHaveLength(2);
+      expect(result.graph.edges).toHaveLength(2);
     });
 
     it("throws DanglingConnection error for missing source block", () => {
@@ -287,13 +287,13 @@ describe("pass4DepGraph", () => {
         blockIndexMap,
       });
 
-      const graph = pass4DepGraph(patch);
+      const result = pass4DepGraph(patch);
 
       // Nodes: 1 BlockEval + 1 BusValue = 2
       // Edges: 1 Publisher = 1
-      expect(graph.nodes).toHaveLength(2);
-      expect(graph.edges).toHaveLength(1);
-      expect(graph.edges[0]).toEqual({
+      expect(result.graph.nodes).toHaveLength(2);
+      expect(result.graph.edges).toHaveLength(1);
+      expect(result.graph.edges[0]).toEqual({
         from: { kind: "BlockEval", blockIndex: 0 },
         to: { kind: "BusValue", busIndex: 0 },
       });
@@ -347,11 +347,11 @@ describe("pass4DepGraph", () => {
         blockIndexMap,
       });
 
-      const graph = pass4DepGraph(patch);
+      const result = pass4DepGraph(patch);
 
-      expect(graph.nodes).toHaveLength(2);
-      expect(graph.edges).toHaveLength(1);
-      expect(graph.edges[0]).toEqual({
+      expect(result.graph.nodes).toHaveLength(2);
+      expect(result.graph.edges).toHaveLength(1);
+      expect(result.graph.edges[0]).toEqual({
         from: { kind: "BusValue", busIndex: 0 },
         to: { kind: "BlockEval", blockIndex: 0 },
       });
@@ -413,22 +413,22 @@ describe("pass4DepGraph", () => {
         blockIndexMap,
       });
 
-      const graph = pass4DepGraph(patch);
+      const result = pass4DepGraph(patch);
 
       // Nodes: 3 BlockEval + 1 BusValue = 4
-      expect(graph.nodes).toHaveLength(4);
+      expect(result.graph.nodes).toHaveLength(4);
 
       // Edges: 1 Wire + 1 Publisher + 1 Listener = 3
-      expect(graph.edges).toHaveLength(3);
+      expect(result.graph.edges).toHaveLength(3);
 
       // Verify edge types
-      const wireEdges = graph.edges.filter(
+      const wireEdges = result.graph.edges.filter(
         (e) => e.from.kind === "BlockEval" && e.to.kind === "BlockEval"
       );
-      const publisherEdges = graph.edges.filter(
+      const publisherEdges = result.graph.edges.filter(
         (e) => e.from.kind === "BlockEval" && e.to.kind === "BusValue"
       );
-      const listenerEdges = graph.edges.filter(
+      const listenerEdges = result.graph.edges.filter(
         (e) => e.from.kind === "BusValue" && e.to.kind === "BlockEval"
       );
 

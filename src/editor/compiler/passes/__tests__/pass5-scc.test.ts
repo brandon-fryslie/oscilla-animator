@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from "vitest";
 import { pass5CycleValidation } from "../pass5-scc";
+import type { DepGraphWithTimeModel } from "../pass4-depgraph";
 import type { Block } from "../../../types";
 import type { DepGraph, DepNode, DepEdge, BlockIndex } from "../../ir";
 
@@ -38,6 +39,14 @@ function edge(from: DepNode, to: DepNode): DepEdge {
   return { from, to };
 }
 
+// Helper to wrap DepGraph with TimeModel for pass5
+function wrapWithTimeModel(graph: DepGraph): DepGraphWithTimeModel {
+  return {
+    graph,
+    timeModel: { kind: "infinite", windowMs: 30000 },
+  };
+}
+
 describe("pass5CycleValidation", () => {
   describe("Trivial SCCs", () => {
     it("accepts single node with no self-loop (trivial SCC)", () => {
@@ -47,7 +56,7 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1")];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(0);
       expect(result.sccs).toHaveLength(1);
@@ -66,7 +75,7 @@ describe("pass5CycleValidation", () => {
         createBlock("b2"),
         createBlock("b3"),
       ];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(0);
       expect(result.sccs).toHaveLength(3);
@@ -83,7 +92,7 @@ describe("pass5CycleValidation", () => {
         createBlock("b2"),
         createBlock("b3"),
       ];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(0);
     });
@@ -97,7 +106,7 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1", "PureBlock")];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].kind).toBe("IllegalCycle");
@@ -111,7 +120,7 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1", "SampleDelay")];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(0);
       expect(result.sccs[0].hasStateBoundary).toBe(true);
@@ -126,7 +135,7 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1"), createBlock("b2")];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].kind).toBe("IllegalCycle");
@@ -143,7 +152,7 @@ describe("pass5CycleValidation", () => {
         createBlock("b1", "Integrator"),
         createBlock("b2", "Multiply"),
       ];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(0);
     });
@@ -158,7 +167,7 @@ describe("pass5CycleValidation", () => {
         createBlock("b1", "Multiply"),
         createBlock("b2", "FeedbackBuffer"),
       ];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(0);
     });
@@ -178,7 +187,7 @@ describe("pass5CycleValidation", () => {
         createBlock("b2"),
         createBlock("b3"),
       ];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].nodes).toHaveLength(3);
@@ -199,7 +208,7 @@ describe("pass5CycleValidation", () => {
         createBlock("b2", "SampleAndHold"),
         createBlock("b3", "Multiply"),
       ];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(0);
     });
@@ -225,7 +234,7 @@ describe("pass5CycleValidation", () => {
         createBlock("b4", "Sin"),
       ];
 
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       // First cycle has state, second doesn't
       expect(result.errors).toHaveLength(1);
@@ -250,7 +259,7 @@ describe("pass5CycleValidation", () => {
         createBlock("b4", "Add"),
       ];
 
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(0);
       expect(result.sccs).toHaveLength(2);
@@ -274,7 +283,7 @@ describe("pass5CycleValidation", () => {
         createBlock("b2", "Multiply"),
       ];
 
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       // Cycle without state boundary should error
       expect(result.errors).toHaveLength(1);
@@ -295,7 +304,7 @@ describe("pass5CycleValidation", () => {
         createBlock("b2", "Multiply"),
       ];
 
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.errors).toHaveLength(0);
     });
@@ -309,7 +318,7 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1", "SampleDelay")];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.sccs[0].hasStateBoundary).toBe(true);
     });
@@ -321,7 +330,7 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1", "IntegratorBlock")];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.sccs[0].hasStateBoundary).toBe(true);
     });
@@ -333,7 +342,7 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1", "FeedbackBuffer")];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.sccs[0].hasStateBoundary).toBe(true);
     });
@@ -345,7 +354,7 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1", "SampleAndHold")];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.sccs[0].hasStateBoundary).toBe(true);
     });
@@ -357,7 +366,7 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1", "Multiply")];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.sccs[0].hasStateBoundary).toBe(false);
       expect(result.errors).toHaveLength(1);
@@ -372,7 +381,7 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1"), createBlock("b2")];
-      const result = pass5CycleValidation(graph, blocks);
+      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
 
       expect(result.sccs.length).toBeGreaterThan(0);
       result.sccs.forEach((scc) => {
@@ -389,9 +398,10 @@ describe("pass5CycleValidation", () => {
       };
 
       const blocks = [createBlock("b1")];
-      const result = pass5CycleValidation(graph, blocks);
+      const depGraphWithTime = wrapWithTimeModel(graph);
+      const result = pass5CycleValidation(depGraphWithTime, blocks);
 
-      expect(result.graph).toBe(graph);
+      expect(result.graph).toBe(depGraphWithTime.graph);
     });
   });
 });
