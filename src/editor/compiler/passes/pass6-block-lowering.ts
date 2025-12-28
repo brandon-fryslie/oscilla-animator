@@ -21,7 +21,8 @@ import type { IRBuilder } from "../ir/IRBuilder";
 import { IRBuilderImpl } from "../ir/IRBuilderImpl";
 import type { TypeDesc } from "../ir/types";
 import type { CompileError } from "../types";
-import type { ValueRefPacked } from "../ir/lowerTypes";
+import type { ValueRefPacked, LowerCtx } from "../ir/lowerTypes";
+import { getBlockType } from "../ir/lowerTypes";
 import type { Domain } from "../unified/Domain";
 import { BLOCK_DEFS_BY_TYPE } from "../../blocks/registry";
 import { validatePureBlockOutput } from "../pure-block-validator";
@@ -111,7 +112,7 @@ function artifactKindToTypeDesc(kind: string): TypeDesc {
 }
 
 // =============================================================================
-// Artifact-to-IR Translation
+// Artifact-to-IR Translation (Fallback for blocks without lowering functions)
 // =============================================================================
 
 /**
@@ -227,6 +228,132 @@ function artifactToValueRef(
 }
 
 // =============================================================================
+// Block Lowering with Registered Functions
+// =============================================================================
+
+/**
+ * Lower a block instance using its registered lowering function.
+ *
+ * If the block has a registered lowering function, use it.
+ * Otherwise, fall back to artifactToValueRef for each output.
+ */
+function lowerBlockInstance(
+  block: Block,
+  blockIndex: BlockIndex,
+  compiledPortMap: Map<string, Artifact>,
+  builder: IRBuilder,
+  errors: CompileError[]
+): Map<string, ValueRefPacked> {
+  const outputRefs = new Map<string, ValueRefPacked>();
+
+  // Check if block has registered lowering function
+  const blockType = getBlockType(block.type);
+
+  if (blockType) {
+    // Use registered lowering function
+    try {
+      // Collect input ValueRefs (need to resolve from wires/buses)
+      // For now, we'll collect placeholder inputs since wires aren't resolved yet
+      const inputs: ValueRefPacked[] = block.inputs.map((inputPort) => {
+        const portKey = `${block.id}:${inputPort.id}`;
+        const artifact = compiledPortMap.get(portKey);
+
+        if (artifact) {
+          const ref = artifactToValueRef(artifact, builder, block.id, inputPort.id);
+          if (ref) {
+            return ref;
+          }
+        }
+
+        // Default placeholder for missing input
+        const type: TypeDesc = { world: "signal", domain: "number" };
+        const sigId = builder.sigConst(0, type);
+        const slot = builder.allocValueSlot(type);
+        builder.registerSigSlot(sigId, slot);
+        return { k: "sig", id: sigId, slot } as ValueRefPacked;
+      });
+
+      // Build lowering context
+      const ctx: LowerCtx = {
+        blockIdx: blockIndex,
+        blockType: block.type,
+        instanceId: block.id,
+        label: block.label,
+        inTypes: blockType.inputs.map((port) => port.type),
+        outTypes: blockType.outputs.map((port) => port.type),
+        b: builder,
+        seedConstId: 0, // TODO: Proper seed management
+      };
+
+      // Call lowering function
+      const result = blockType.lower({ ctx, inputs });
+
+      // Map outputs to port IDs
+      result.outputs.forEach((ref, index) => {
+        if (index < block.outputs.length) {
+          outputRefs.set(block.outputs[index].id, ref);
+        }
+      });
+
+    } catch (error) {
+      // Lowering failed - record error and fall back
+      errors.push({
+        code: "NotImplemented",
+        message: `Block lowering failed for "${block.type}": ${error instanceof Error ? error.message : String(error)}`,
+        where: { blockId: block.id },
+      });
+
+      // Fall back to artifact lowering
+      for (const output of block.outputs) {
+        const portKey = `${block.id}:${output.id}`;
+        const artifact = compiledPortMap.get(portKey);
+
+        if (!artifact) {
+          continue;
+        }
+
+        const valueRef = artifactToValueRef(
+          artifact,
+          builder,
+          block.id,
+          output.id
+        );
+
+        if (valueRef) {
+          outputRefs.set(output.id, valueRef);
+        }
+      }
+    }
+  } else {
+    // No lowering function - fall back to artifact-based lowering
+    for (const output of block.outputs) {
+      const portKey = `${block.id}:${output.id}`;
+      const artifact = compiledPortMap.get(portKey);
+
+      if (!artifact) {
+        // Output not in compiled map - might be unused or error
+        // Don't fail here - downstream passes will catch missing inputs
+        continue;
+      }
+
+      // Translate artifact to IR
+      const valueRef = artifactToValueRef(
+        artifact,
+        builder,
+        block.id,
+        output.id
+      );
+
+      if (valueRef) {
+        outputRefs.set(output.id, valueRef);
+      }
+    }
+  }
+
+  return outputRefs;
+}
+
+// =============================================================================
 // Pass 6 Implementation
 // =============================================================================
 
@@ -275,33 +402,22 @@ export function pass6BlockLowering(
       // Set current block ID for debug index tracking (Phase 7)
       builder.setCurrentBlockId(block.id);
 
-      // Collect output port artifacts for this block (keyed by port ID)
-      const outputRefs = new Map<string, ValueRefPacked>();
-      const blockArtifacts = new Map<string, Artifact>();
+      // Lower this block instance
+      const outputRefs = lowerBlockInstance(
+        block,
+        blockIndex,
+        compiledPortMap,
+        builder,
+        errors
+      );
 
+      // Collect block artifacts for pure block validation
+      const blockArtifacts = new Map<string, Artifact>();
       for (const output of block.outputs) {
         const portKey = `${block.id}:${output.id}`;
         const artifact = compiledPortMap.get(portKey);
-
-        if (!artifact) {
-          // Output not in compiled map - might be unused or error
-          // Don't fail here - downstream passes will catch missing inputs
-          continue;
-        }
-
-        // Store artifact for validation
-        blockArtifacts.set(output.id, artifact);
-
-        // Translate artifact to IR
-        const valueRef = artifactToValueRef(
-          artifact,
-          builder,
-          block.id,
-          output.id
-        );
-
-        if (valueRef) {
-          outputRefs.set(output.id, valueRef);
+        if (artifact) {
+          blockArtifacts.set(output.id, artifact);
         }
       }
 
