@@ -1,0 +1,70 @@
+Agent: iterative-implementer | 1766858970
+Mode: manual
+Completed: Kernel integration foundation | Files: 3 | Commits: 1
+Cache invalidated: None (no eval cache modified)
+Status: in_progress (foundation complete, integration pending)
+
+===== DELIVERABLE 3: Wire PatchStore to Kernel Transactions =====
+
+PROGRESS: 40% Complete (Foundation Done, Method Migration Pending)
+
+COMPLETED WORK:
+1. Added PatchKernel instance to RootStore
+   - Initialized with empty patch in constructor
+   - Reinitialized on loadPatch() and clearPatch()
+
+2. Created syncFromKernel() helper method
+   - Syncs blocks, connections, buses, publishers, listeners from kernel to MobX
+   - Uses runInAction() for proper MobX reactivity
+   - Handles type casting from PatchDocument to Patch
+
+3. Created integration test infrastructure
+   - src/editor/stores/__tests__/PatchStore.kernel.test.ts
+   - Tests for transaction isolation, MobX reactivity, undo/redo, cascade operations
+   - Tests serve as acceptance criteria
+
+FILES MODIFIED:
+- src/editor/stores/RootStore.ts (added kernel, syncFromKernel method)
+
+FILES CREATED:
+- src/editor/stores/__tests__/PatchStore.kernel.test.ts (test infrastructure)
+- .agent_planning/ui-prep-refactor/DELIVERABLE-3-PROGRESS.md (detailed progress report)
+
+COMMITS:
+- 55bf837: feat(kernel): Add PatchKernel integration foundation to RootStore
+
+REMAINING WORK (Estimated 5-8 days):
+1. Create transaction wrapper helper in PatchStore (withTransaction method)
+2. Migrate simple methods to use kernel transactions:
+   - updateBlockParams, setConnectionEnabled, updateConnection
+3. Migrate medium complexity methods:
+   - connect, disconnect, addConnection, removeConnection
+4. Migrate complex methods (needs careful orchestration):
+   - addBlock (with macro detection, auto-bus, default sources)
+   - removeBlock (with cascade delete)
+   - replaceBlock, expandMacro
+5. Handle event emission after kernel commits
+6. Update and verify all tests pass
+
+ARCHITECTURAL FINDINGS:
+- Kernel manages core graph (blocks, connections, buses, bindings)
+- PatchStore orchestrates higher-level concerns (lanes, default sources, macros)
+- MobX sync must happen after every successful transaction
+- Type mismatch between PatchDocument (minimal) and Patch (full) - safe to cast
+
+BLOCKERS: None
+RISKS:
+- Breaking existing functionality during migration (mitigate: incremental migration)
+- MobX reaction loops (mitigate: ensure syncFromKernel is pure)
+- Event timing issues (mitigate: clear ordering: tx → sync → emit)
+
+VALIDATION:
+- just typecheck: PASS
+- just test: NOT RUN (tests expect integration not yet implemented)
+- Manual smoke test: NOT NEEDED (no user-facing changes yet)
+
+RECOMMENDATION:
+Complete MVP proof of concept by migrating ONE method (updateBlockParams)
+to validate the pattern, then plan remaining migration as follow-on work.
+
+Detailed progress report: .agent_planning/ui-prep-refactor/DELIVERABLE-3-PROGRESS.md
