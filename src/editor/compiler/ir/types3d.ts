@@ -117,6 +117,36 @@ export interface CameraTable {
   cameraIdToIndex: Record<CameraId, number>;
 }
 
+/**
+ * Default camera injected when patch has 0 camera blocks.
+ *
+ * Position: (0, 0, 100) looking at origin (0, 0, 0) with Y-up.
+ * The identity quaternion (0, 0, 0, 1) corresponds to this view
+ * since the camera looks down -Z by convention.
+ */
+export const DEFAULT_CAMERA_IR: CameraIR = {
+  id: "__default__",
+  handedness: "right",
+  forwardAxis: "-Z",
+  upAxis: "+Y",
+  projection: {
+    kind: "perspective",
+    near: 0.1,
+    far: 1000,
+    fovYRad: Math.PI / 3, // 60 degrees
+    orthoHeight: 10,
+  },
+  pose: {
+    position: { x: 0, y: 0, z: 100 },
+    // Identity quaternion: camera looks down -Z, Y is up
+    orientation: { x: 0, y: 0, z: 0, w: 1 },
+  },
+  ndcToScreen: {
+    origin: "center",
+    yAxis: "down",
+  },
+};
+
 // ============================================================================
 // Mesh IR (07-3d-Canonical.md §3)
 // ============================================================================

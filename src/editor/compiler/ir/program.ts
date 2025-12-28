@@ -18,7 +18,7 @@ import type { TimeModelIR, ScheduleIR } from "./schedule";
 import type { StateLayout } from "./stores";
 import type { SignalExprTable } from "./signalExpr";
 import type { FieldExprIR } from "./fieldExpr";
-import type { CameraTable, MeshTable } from "./types3d";
+import type { CameraTable, MeshTable, CameraId } from "./types3d";
 
 // ============================================================================
 // Top-Level Compiled Program (02-IR-Schema.md §3)
@@ -126,6 +126,16 @@ export interface CompiledProgramIR {
    * See design-docs/13-Renderer/06-3d-IR-Deltas.md §1
    */
   cameras?: CameraTable;
+
+  /**
+   * Default camera ID - always present when cameras are defined.
+   *
+   * Camera selection semantics:
+   * - 0 cameras → '__default__' (implicit camera injected)
+   * - 1 camera → that camera's ID
+   * - N cameras → first by creation order (deterministic)
+   */
+  defaultCameraId?: CameraId;
 
   /**
    * Mesh table (optional)

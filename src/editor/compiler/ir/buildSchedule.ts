@@ -43,6 +43,8 @@ import type {
 } from "./index";
 import { randomUUID } from "../../crypto";
 import type { StepInstances3DProjectTo2D } from "../../runtime/executor/steps/executeInstances3DProject";
+import type { CameraTable, CameraId, CameraIR } from "./types3d";
+import { DEFAULT_CAMERA_IR } from "./types3d";
 
 /**
  * Debug configuration for schedule building.
@@ -72,6 +74,59 @@ interface DomainHandle {
 // Note: Instance2DBatchDescriptor, Instance2DBatchList, PathBatchList, and
 // PathBatchDescriptor were moved to compile-time config embedded in the step,
 // not slot values. See 12-ValueSlotPerNodeOutput.md
+
+// ============================================================================
+// Camera Selection (design-docs/13-Renderer/07-3d-Canonical.md)
+// ============================================================================
+
+/**
+ * Result of camera selection logic.
+ */
+interface CameraSelectionResult {
+  /** Camera table for the compiled program */
+  cameraTable: CameraTable;
+  /** Default camera ID (always present) */
+  defaultCameraId: CameraId;
+}
+
+/**
+ * Build camera table with selection semantics.
+ *
+ * Camera selection rules:
+ * - 0 cameras → inject implicit '__default__' camera
+ * - 1 camera → that camera is the default
+ * - N cameras → first by creation order is default
+ */
+function buildCameraSelection(cameras: readonly CameraIR[]): CameraSelectionResult {
+  // Case 1: No cameras - inject implicit default
+  if (cameras.length === 0) {
+    const implicitCamera: CameraIR = {
+      ...DEFAULT_CAMERA_IR,
+      id: "__default__",
+    };
+    return {
+      cameraTable: {
+        cameras: [implicitCamera],
+        cameraIdToIndex: { "__default__": 0 },
+      },
+      defaultCameraId: "__default__",
+    };
+  }
+
+  // Case 2+: Use first camera as default
+  const cameraIdToIndex: Record<CameraId, number> = {};
+  for (let i = 0; i < cameras.length; i++) {
+    cameraIdToIndex[cameras[i].id] = i;
+  }
+
+  return {
+    cameraTable: {
+      cameras: [...cameras],
+      cameraIdToIndex,
+    },
+    defaultCameraId: cameras[0].id,
+  };
+}
 
 /**
  * Convert BuilderProgramIR to CompiledProgramIR.
@@ -125,6 +180,9 @@ export function buildCompiledProgram(
   // Build schedule (now processes render sinks)
   const { schedule, frameOutSlot } = buildSchedule(builderIR, { debugConfig });
 
+  // Build camera table with selection semantics
+  const { cameraTable, defaultCameraId } = buildCameraSelection(builderIR.cameras);
+
   // Create outputs that reference the frame output slot
   const outputs: OutputSpec[] = frameOutSlot !== undefined
     ? [{
@@ -172,6 +230,8 @@ export function buildCompiledProgram(
     constants: constPool,
     stateLayout,
     slotMeta,
+    cameras: cameraTable,
+    defaultCameraId,
     schedule,
     outputs,
     meta,

@@ -29,6 +29,7 @@ import type {
 import type { TransformStepIR } from "./transforms";
 import type { StatefulSignalOp } from "./signalExpr";
 import type { PureFnRef, ReduceFn, BuilderProgramIR, TimeSlots } from "./builderTypes";
+import type { CameraIR } from "./types3d";
 
 /**
  * IRBuilder interface for constructing Intermediate Representation.
@@ -249,6 +250,25 @@ export interface IRBuilder {
    * Register a render sink.
    */
   renderSink(sinkType: string, inputs: Record<string, ValueSlot>): void;
+
+  // =============================================================================
+  // Camera Support (3D)
+  // =============================================================================
+
+  /**
+   * Add a camera to the program's camera table.
+   *
+   * @param camera - CameraIR definition
+   * @returns Camera index in the cameras array
+   */
+  addCamera(camera: CameraIR): number;
+
+  /**
+   * Get all cameras added to the builder.
+   *
+   * @returns Array of CameraIR definitions
+   */
+  getCameras(): readonly CameraIR[];
 
   // =============================================================================
   // Finalization

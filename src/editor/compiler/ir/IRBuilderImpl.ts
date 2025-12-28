@@ -32,6 +32,7 @@ import type {
   SlotMetaEntry,
   TimeSlots,
 } from "./builderTypes";
+import type { CameraIR } from "./types3d";
 
 /**
  * Infer storage type from TypeDesc.
@@ -56,6 +57,7 @@ export class IRBuilderImpl implements IRBuilder {
   private transformChains: BuilderTransformChain[] = [];
   private renderSinks: RenderSinkIR[] = [];
   private domains: DomainDefIR[] = [];
+  private cameras: CameraIR[] = [];
 
   // Constant pool with deduplication
   private constPool: unknown[] = [];
@@ -599,6 +601,20 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   // =============================================================================
+  // Camera Support (3D)
+  // =============================================================================
+
+  addCamera(camera: CameraIR): number {
+    const index = this.cameras.length;
+    this.cameras.push(camera);
+    return index;
+  }
+
+  getCameras(): readonly CameraIR[] {
+    return this.cameras;
+  }
+
+  // =============================================================================
   // Finalization
   // =============================================================================
 
@@ -615,6 +631,7 @@ export class IRBuilderImpl implements IRBuilder {
       transformChains: this.transformChains,
       renderSinks: this.renderSinks,
       domains: this.domains,
+      cameras: this.cameras,
       debugIndex: {
         sigExprSource: this.sigExprSourceMap,
         fieldExprSource: this.fieldExprSourceMap,

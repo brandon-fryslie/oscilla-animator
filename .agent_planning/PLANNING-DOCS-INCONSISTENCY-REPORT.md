@@ -40,7 +40,9 @@
 
 **Resolution Needed:** Is there a CycleTimeRoot block, or are cycles only derived via the Modulation Rack from Finite/Infinite roots?
 
-CycleTimeRoot - Removed from spec.  Remove it entirely. Only two time modes, finite and infinite.
+**Answer:** `CycleTimeRoot` does **not** exist. Remove it from all specs and code.
+- Time topology is defined only by `FiniteTimeRoot` or `InfiniteTimeRoot`.
+- Cycles are produced by the **Time Console** as **Global Rails** (see §2/§5). They are not blocks.
 
 ---
 
@@ -59,7 +61,10 @@ CycleTimeRoot - Removed from spec.  Remove it entirely. Only two time modes, fin
 
 **Resolution Needed:** Is TimeModel a 2-variant or 3-variant enum?
 
-2-variant, finite & infinite
+**Answer:** TimeModel is **2 variants only**:
+- `{ kind: 'finite', durationMs }`
+- `{ kind: 'infinite' }`
+No `cyclic` variant.
 
 ---
 
@@ -74,17 +79,9 @@ CycleTimeRoot - Removed from spec.  Remove it entirely. Only two time modes, fin
 
 **Resolution Needed:** Can graph properties (like feedback loops) change the TimeModel, or is it purely determined by the TimeRoot?
 
-The TimeModel is determined only by the TimeRoot.
-Graph structure is never allowed to redefine time.
-
-If feedback loops, buses, or clever block wiring could change the TimeModel, then:
-•	Two patches with identical TimeRoots could run at different speeds
-•	A patch edit could retroactively change playback duration
-•	Hot-swap would be impossible without visual jumps
-•	Debug traces would lie
-•	Transport (play, loop, scrub) would become nondeterministic
-
-Time must have exactly one authority, TimeRoot.
+**Answer:** TimeModel is determined **only** by the TimeRoot.
+- Graph structure (feedback loops, buses, memory blocks) must never change time topology.
+- If the graph violates time assumptions, it is a **compile error**, not an implicit time-mode change.
 
 ---
 
@@ -103,6 +100,11 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** Are rails a separate concept from buses, or are they just reserved buses with special behavior?
 
+**Answer:** Rails are implemented as **reserved buses**.
+- **Rails**: fixed, built-in channels (non-deletable, locked type, fixed combine semantics).
+- **User buses**: user-created routing channels (fully configurable, deletable).
+- In code, both use the same Bus/Publisher/Listener machinery; Rails are distinguished by `origin: 'built-in'` + locked constraints.
+
 ---
 
 ### Issue 2.2: pulse vs pulseA/pulseB
@@ -118,6 +120,56 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** Is there one `pulse` bus or two (`pulseA`/`pulseB`)?
 
+**Answer:** One rail named `pulse`.
+- `pulseA`/`pulseB` do not exist.
+- If multiple pulse streams are needed later, use user buses or additional named rails explicitly added by spec.
+
+Pulse: The canonical stream of time boundary crossings emitted by the TimeRoot.
+
+It is the only thing allowed to cause discrete state changes in the patch.
+
+Everything else is continuous math.
+
+Why pulse is not redundant
+
+If you remove pulse and rely on “frames”, you lose:
+•	frame-rate independence
+•	offline rendering correctness
+•	deterministic replay
+•	time-stretching
+•	multi-client sync
+•	debugging causality
+
+If you remove pulse and rely on phase deltas, you lose:
+•	exact wrap detection
+•	event alignment
+•	envelope triggering
+•	quantization
+•	beat locking
+
+Pulse exists because events are not values.
+
+They are edges in time.
+
+###### How pulse is generated:
+
+pulse is emitted by the TimeRoot as a function of sim time t (monotonic, never loops). It’s a discrete edge stream derived from one or more quantizers.
+
+Canonical generator:
+•	Maintain tPrev (last evaluated sim time) and tNow.
+•	For each quantizer Q with step size ΔQ (seconds), compute integer step indices:
+
+```
+kPrev = floor(tPrev / ΔQ)
+kNow  = floor(tNow  / ΔQ)
+```
+
+If kNow > kPrev, emit N pulses for each crossed boundary (for deterministic catch-up):
+
+For i in (kPrev+1 .. kNow):
+•	boundary time tb = i * ΔQ
+•	emit pulse event with payload { time: tb, count: i, dt: tb - lastBoundaryTime }
+
 ---
 
 ### Issue 2.3: palette as Rail or Bus
@@ -132,6 +184,11 @@ Time must have exactly one authority, TimeRoot.
 | `10-Golden-Patch.md` | Lists `palette` as canonical bus |
 
 **Resolution Needed:** Is `palette` a canonical bus, a rail, or both?
+
+**Answer:** `palette` is a **Rail** (reserved bus).
+- It may be *mirrored* to a user bus only via an explicit binding (see §5), but it is not itself a user bus.
+
+Rails ARE 'canonical buses'.  Bus = flexible, configurable, can go anywhere.  Rail = still moves stuff but fixed and you've got what you've got
 
 ---
 
@@ -149,6 +206,10 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** Is scrubbing implemented in v1 or deferred?
 
+**Answer:** Scrubbing is **required** (not deferred).
+- Finite: scrub in `[0..durationMs]`.
+- Infinite: scrub controls **view window origin** (time offset) but does not redefine time topology.
+
 ---
 
 ### Issue 3.2: View Looping for Finite Patches
@@ -161,6 +222,14 @@ Time must have exactly one authority, TimeRoot.
 | `07-UI-Spec.md` | "No 'Loop View' option - if user wants looping, use CycleTimeRoot" |
 
 **Resolution Needed:** Can finite patches have view-looping modes, or must users switch to CycleTimeRoot for looping?
+
+**Answer:** Finite patches support **view looping** as a *transport policy*.
+- Looping is a **player/view** behavior for finite time; it does not require any special block.
+- CycleTimeRoot is removed; cycles are authored in Time Console rails and can be used in both finite and infinite time.
+
+The player has a playback mode that allows finite animations to loop.  This does not require any changes to the patch or 
+violate any time constraints.  This is ONLY available in finite mode and is identical to moving the play head to the first frame and playing the animation 
+again (no feedback or other 'infinite' looping semantics).  This is a UX affordance.
 
 ---
 
@@ -179,6 +248,17 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** What is the definitive canonical bus set?
 
+**Answer:** Definitive **Global Rails** (reserved buses) are:
+- `time` : `signal<time>` (monotonic time)
+- `phaseA` : `signal<number>` in `[0..1)`
+- `phaseB` : `signal<number>` in `[0..1)`
+- `pulse` : `event<trigger>` (wrap/beat events)
+- `energy` : `signal<number>` in `[0..1]`
+- `palette` : `signal<number>` in `[0..1]` (palette index/position; palette asset chosen in Time Console)
+No other canonical buses.
+
+A global, time-derived, deterministic modulation signal that exists whether or not the patch references it.
+
 ---
 
 ### Issue 4.2: Reserved `time` Bus
@@ -192,6 +272,10 @@ Time must have exactly one authority, TimeRoot.
 | `03-Buses.md` | No mention of reserved `time` bus |
 
 **Resolution Needed:** Is there a reserved `time` bus that TimeRoot publishes to?
+
+**Answer:** Yes — `time` is a **Rail** (reserved bus).
+- It is always present.
+- It is written only by the runtime transport / TimeRoot authority.
 
 ---
 
@@ -209,6 +293,12 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** Does TimeRoot only publish `time`, or does it also publish phase/pulse/energy?
 
+**Answer:** TimeRoot publishes only `time`.
+- `phaseA/phaseB/pulse/energy/palette` are authored by the **Time Console** and evaluated as rails.
+- Rails may optionally be **bound** from user buses (explicit mapping), but that does not change TimeRoot.
+
+See @design-docs/final-System-Invariants/Rail-Modulation-and-Feedback.md
+
 ---
 
 ### Issue 5.2: InfiniteTimeRoot Outputs
@@ -221,6 +311,10 @@ Time must have exactly one authority, TimeRoot.
 | `09-Blocks.md` | Has `periodMs` input, outputs phase/pulse/energy (all marked provisional) |
 
 **Resolution Needed:** Does InfiniteTimeRoot have minimal outputs or full outputs like CycleTimeRoot?
+
+**Answer:** `InfiniteTimeRoot` is minimal.
+- It establishes `TimeModel = { kind: 'infinite' }` and provides monotonic `time` only.
+- Cycles/phase/pulse/energy are rail outputs from Time Console, not TimeRoot outputs.
 
 ---
 
@@ -240,6 +334,14 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** Complete the type unification described in HANDOFF-IR-COMPILER.md
 
+**Answer:** Unify types by making `TypeDesc` the single source of truth.
+- Compiler IR uses canonical `TypeDesc` (world/domain/category/busEligible).
+- Remove/stop extending the `ValueKind` string-union as an independent type system; keep it only as a transitional adapter if needed.
+- All slot typing, bus typing, and IR validation must reference `TypeDesc` directly.
+
+AUTHORITATIVE: Remove ValueKind immediately
+
+
 ---
 
 ## 7. Document Authority and Version Confusion
@@ -255,10 +357,11 @@ Time must have exactly one authority, TimeRoot.
 | `claude_memory/` | Quick reference memory files | Active |
 | `CLAUDE.md` | Points to `design-docs/3-Synthesized/` (doesn't exist) | Outdated reference |
 
-**Resolution Needed:**
-- Is `3-Synthesized-v2` the current authoritative source?
-- The path `design-docs/3-Synthesized/` referenced in multiple places doesn't exist
-- What is the status of `1-Full-System-Design` docs?
+**Resolution Needed (Answered):**
+- `design-docs/3-Synthesized-v2/` is the **authoritative** spec set.
+- `design-docs/1-Full-System-Design/` is **historical reference only** and must be labeled as such.
+- `claude_memory/` is **non-authoritative notes** and must be regenerated from `3-Synthesized-v2` when changes land.
+- Update `CLAUDE.md` to point to `design-docs/3-Synthesized-v2/` (the existing `design-docs/3-Synthesized/` path is invalid and must be removed).
 
 ---
 
@@ -267,6 +370,12 @@ Time must have exactly one authority, TimeRoot.
 **Observation:** Many features in `03-Buses.md` and `09-Blocks.md` are marked "PROVISIONAL (2025-12-23)".
 
 **Resolution Needed:** What is the process for promoting provisional items to authoritative?
+
+**Answer:** Promotion process:
+1) Spec change lands in `design-docs/3-Synthesized-v2/` with a clear decision statement.
+2) Implementation lands behind feature flags only if needed for migration; otherwise ship directly.
+3) Remove "PROVISIONAL" markers in the source doc and update this inconsistency report.
+4) Add/adjust compiler/runtime constraints to enforce the decision.
 
 ---
 
@@ -283,6 +392,11 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** Lock down whether rail reads see current or previous frame values.
 
+**Answer:** Rails are **frame-latched**.
+- Within a rendered frame, all rail reads observe a single coherent snapshot.
+- Updates become visible on the next frame.
+This is required for determinism, cacheability, and stable debugging.
+
 ---
 
 ## 9. Compilation and Runtime Model
@@ -295,6 +409,10 @@ Time must have exactly one authority, TimeRoot.
 - Some documents assume old model, some assume new
 
 **Resolution Needed:** Clarify which documents describe the current state vs target state.
+
+**Answer:** Canonical target is **IR-based compilation + scheduled runtime**.
+- Closure-based compiler/runtime docs are historical and must be labeled "Legacy/Archived".
+- Any document describing closures as the runtime model must be moved to a historical section or updated.
 
 ---
 
@@ -310,6 +428,10 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** Standardize block naming.
 
+**Answer:** `PhaseClock` is removed.
+- Phase is produced by **Rails** (Time Console), not a topology block.
+- Any remaining references must use rail terminology (e.g., `phaseA` rail) rather than a block name.
+
 ---
 
 ### Issue 10.2: Position Mapper Block Names
@@ -320,6 +442,11 @@ Time must have exactly one authority, TimeRoot.
 | `09-Blocks.md` | `GridDomain` (combined domain + positions) |
 
 **Resolution Needed:** Are domain and position mapping separate blocks or combined?
+
+**Answer:** Separate concerns.
+- Identity authority: `DomainN` (and other Domain producers).
+- Mapping: separate operator/composite blocks such as `PositionMapGrid`, `PositionMapCircle`, etc.
+- `GridDomain` may exist only as a **composite convenience**, not as a primitive authority.
 
 ---
 
@@ -335,6 +462,11 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** Lock down canonical Field type signature.
 
+**Answer:** Field is a lazy expression in IR:
+- `Field<T> := FieldExpr<T>`
+- Evaluated by materialization steps against a `Domain` into typed buffers (`Float32Array`, etc.).
+No direct "function returns array" Field type in the canonical model.
+
 ---
 
 ## 12. Terminology Drift
@@ -349,6 +481,9 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** Confirm app name is "Oscilla" and update all references.
 
+**Answer:** App name is **Oscilla**.
+- Update historical docs only if they are still used as references; otherwise label them historical.
+
 ---
 
 ### Issue 12.2: Combine Modes
@@ -361,20 +496,19 @@ Time must have exactly one authority, TimeRoot.
 
 **Resolution Needed:** Standardize terminology and confirm whether `mix` is a valid combine mode.
 
+**Answer:** Standardize on "combine mode".
+- Allowed combine modes: `sum | average | max | min | last | layer`.
+- `mix` and `or` are not valid modes in the canonical spec.
+
 ---
 
 ## Summary of Critical Decisions Needed
 
-1. **CycleTimeRoot existence** - Does this block exist, or are cycles only derived?
-2. **TimeModel variants** - 2 or 3 kinds?
-3. **Rails vs Buses** - Separate concepts or merged?
-4. **Canonical bus set** - Definitive list needed
-5. **TimeRoot auto-publication** - What exactly gets auto-published?
-6. **Scrubbing status** - Implemented or deferred?
-7. **View looping for finite** - Allowed or must use CycleTimeRoot?
-8. **Rail read timing** - Same-frame or frame-latched?
-9. **Document authority** - Which docs are current?
-10. **Block naming** - PhaseClock vs PhaseFromTime, etc.
+1. Rails vs Buses implementation details (constraints + binding UI)
+2. Canonical rails type/semantics enforcement in compiler/runtime
+3. Scrubbing UI specifics for finite vs infinite
+4. Type-system unification execution plan (remove ValueKind drift)
+5. Document authority hygiene (archiving + regeneration of notes)
 
 ---
 

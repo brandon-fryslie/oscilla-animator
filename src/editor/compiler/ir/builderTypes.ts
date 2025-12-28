@@ -14,6 +14,7 @@ import type { FieldExprIR } from "./fieldExpr";
 import type { TransformStepIR } from "./transforms";
 import type { TimeModelIR } from "./schedule";
 import type { OpCode } from "./opcodes";
+import type { CameraIR } from "./types3d";
 
 // =============================================================================
 // Pure Function Reference
@@ -216,6 +217,9 @@ export interface BuilderProgramIR {
 
   /** Domain definitions (for initializing domain slots at runtime) */
   domains: readonly DomainDefIR[];
+
+  /** Camera definitions (3D support) */
+  cameras: readonly CameraIR[];
 
   /** Debug index for error reporting */
   debugIndex: BuilderDebugIndex;
