@@ -99,12 +99,11 @@ const lowerFieldMapNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
         params: { k, a, b },
       }
     : {
-        fnId: `map_${fn}`,
-        outputType: outType,
+        kind: 'kernel', kernelId: `map_${fn}`,
         params: { k, a, b },
       };
 
-  const fieldId = ctx.b.fieldMap(x.id, fnRef);
+  const fieldId = ctx.b.fieldMap(x.id, fnRef, outType, fnRef.kind === 'kernel' ? { k, a, b } : undefined);
 
   const slot = ctx.b.allocValueSlot();
   return { outputs: [{ k: 'field', id: fieldId, slot }] };

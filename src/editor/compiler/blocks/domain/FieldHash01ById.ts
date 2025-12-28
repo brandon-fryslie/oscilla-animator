@@ -52,12 +52,9 @@ const lowerFieldHash01ById: BlockLowerFn = ({ ctx, inputs, config }) => {
   const fieldId = ctx.b.fieldMap(
     // Start with a placeholder constant field that will be overridden by the kernel
     ctx.b.fieldConst(0, outType),
-    {
-      fnId: 'hash01ById',
-      opcode: OpCode.Hash01ById,
-      outputType: outType,
-      params: { seed: blockSeed },
-    }
+    { kind: 'opcode', opcode: OpCode.Hash01ById },
+    outType,
+    { seed: blockSeed }
   );
 
   const slot = ctx.b.allocValueSlot();

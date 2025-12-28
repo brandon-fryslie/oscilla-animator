@@ -24,10 +24,9 @@ const lowerAddSignal: BlockLowerFn = ({ ctx, inputs }) => {
 
   const outType = { world: 'signal' as const, domain: 'number' as const };
   const sigId = ctx.b.sigZip(a.id, b.id, {
-    fnId: 'add',
+    kind: 'opcode',
     opcode: OpCode.Add,
-    outputType: outType,
-  });
+  }, outType);
 
   const slot = ctx.b.allocValueSlot();
   return { outputs: [{ k: 'sig', id: sigId, slot }] };

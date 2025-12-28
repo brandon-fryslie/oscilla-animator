@@ -34,17 +34,9 @@ const lowerClampSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
   const maxConstId = ctx.b.sigConst(maxValue, outType);
 
   // clamp(v, min, max) = min(max(v, min), max)
-  const maxed = ctx.b.sigZip(value.id, minConstId, {
-    fnId: 'max',
-    opcode: OpCode.Max,
-    outputType: outType,
-  });
+  const maxed = ctx.b.sigZip(value.id, minConstId, { kind: 'opcode', opcode: OpCode.Max }, outType,);
 
-  const clamped = ctx.b.sigZip(maxed, maxConstId, {
-    fnId: 'min',
-    opcode: OpCode.Min,
-    outputType: outType,
-  });
+  const clamped = ctx.b.sigZip(maxed, maxConstId, { kind: 'opcode', opcode: OpCode.Min }, outType,);
 
   const slot = ctx.b.allocValueSlot();
   return { outputs: [{ k: 'sig', id: clamped, slot }] };

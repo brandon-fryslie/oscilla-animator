@@ -22,11 +22,7 @@ const lowerMaxSignal: BlockLowerFn = ({ ctx, inputs }) => {
   }
 
   const outType = { world: 'signal' as const, domain: 'number' as const };
-  const sigId = ctx.b.sigZip(a.id, b.id, {
-    fnId: 'max',
-    opcode: OpCode.Max,
-    outputType: outType,
-  });
+  const sigId = ctx.b.sigZip(a.id, b.id, { kind: 'opcode', opcode: OpCode.Max }, outType,);
 
   const slot = ctx.b.allocValueSlot();
   return { outputs: [{ k: 'sig', id: sigId, slot }] };

@@ -192,13 +192,15 @@ export interface IRBuilder {
 
   /**
    * Map a field through a pure function.
+   * @param params - Optional parameters for parameterized functions
    */
-  fieldMap(src: FieldExprId, fn: PureFnRef, outputType: TypeDesc): FieldExprId;
+  fieldMap(src: FieldExprId, fn: PureFnRef, outputType: TypeDesc, params?: Record<string, unknown>): FieldExprId;
 
   /**
    * Zip two fields together.
+   * @param params - Optional parameters for parameterized functions
    */
-  fieldZip(a: FieldExprId, b: FieldExprId, fn: PureFnRef, outputType: TypeDesc): FieldExprId;
+  fieldZip(a: FieldExprId, b: FieldExprId, fn: PureFnRef, outputType: TypeDesc, params?: Record<string, unknown>): FieldExprId;
 
   /**
    * Select between two fields based on a condition field.

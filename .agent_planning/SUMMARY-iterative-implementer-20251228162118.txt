@@ -1,0 +1,49 @@
+Agent: iterative-implementer | 2025-12-28 16:15:00
+Mode: manual
+Completed: Fixed all Sprint 2 TypeScript compilation errors
+Files: 5 modified
+Commits: 1 (dede63d)
+Cache invalidated: N/A (no eval cache affected)
+Status: complete
+
+## Summary
+
+Fixed all TypeScript compilation errors introduced in Sprint 2 IR compiler changes:
+
+### Fixes Applied:
+
+1. **builderTypes.ts** - Added missing type exports
+   - Added `SignalIRTable` interface
+   - Added `FieldIRTable` interface  
+   - Updated `BuilderProgramIR` to use these types
+
+2. **buildSchedule.ts** - Fixed readonly array and TimeSlots issues
+   - Converted readonly arrays to mutable using `Array.from()`
+   - Added `computeNextValueSlot()` function to calculate next slot from IR
+   - Added fallback handling for optional TimeSlots properties (phase01, wrapEvent, etc.)
+
+3. **extractSignalExprTable.ts** - Fixed readonly array assignment
+   - Used `Array.from()` to convert readonly to mutable arrays
+
+4. **IRBuilderImpl.ts** - Removed invalid property from build output
+   - Removed `nextValueSlot` from `BuilderProgramIR` return value
+   - This is now computed dynamically in buildSchedule.ts instead
+
+5. **TimeRoot.ts** - Added systemTime to all TimeRoot lowering functions
+   - Added `systemTime` property to setTimeSlots() calls in:
+     - lowerFiniteTimeRoot
+     - lowerCycleTimeRoot
+     - lowerInfiniteTimeRoot
+
+### Verification:
+
+All original Sprint 2 errors resolved:
+- ✓ buildSchedule.ts TimeSlots property errors fixed
+- ✓ extractSignalExprTable.ts readonly array error fixed  
+- ✓ index.ts missing export errors fixed
+- ✓ IRBuilderImpl.ts nextValueSlot error fixed
+- ✓ TimeRoot.ts systemTime errors fixed
+
+### Notes:
+
+Pre-existing errors in IRBuilderImpl.ts and test files remain but are not related to Sprint 2 changes. These were present before Sprint 2 and should be addressed separately.

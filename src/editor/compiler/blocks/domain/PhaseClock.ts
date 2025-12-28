@@ -52,11 +52,7 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // Calculate raw phase: t / period
   const periodConst = ctx.b.sigConst(periodMs, numberType);
-  const rawPhaseId = ctx.b.sigZip(tIn.id, periodConst, {
-    fnId: 'div',
-    opcode: OpCode.Div,
-    outputType: numberType,
-  });
+  const rawPhaseId = ctx.b.sigZip(tIn.id, periodConst, { kind: 'opcode', opcode: OpCode.Div }, numberType,);
 
   let phaseId: number;
   let uId: number;
@@ -67,16 +63,8 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
     const oneConst = ctx.b.sigConst(1, numberType);
     phaseId = ctx.b.sigZip(
       rawPhaseId,
-      ctx.b.sigZip(zeroConst, oneConst, {
-        fnId: 'clamp',
-        opcode: OpCode.Clamp,
-        outputType: phaseType,
-      }),
-      {
-        fnId: 'clamp',
-        opcode: OpCode.Clamp,
-        outputType: phaseType,
-      }
+      ctx.b.sigZip(zeroConst, oneConst, { kind: 'opcode', opcode: OpCode.Clamp }, phaseType,),
+      { kind: 'opcode', opcode: OpCode.Clamp }, phaseType,
     );
 
     // For once mode, u is same as phase
@@ -86,41 +74,21 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
     // phase = abs((raw % 2) - 1)
     // This creates: 0→1→0→1...
     const twoConst = ctx.b.sigConst(2, numberType);
-    const modTwoId = ctx.b.sigZip(rawPhaseId, twoConst, {
-      fnId: 'mod',
-      opcode: OpCode.Mod,
-      outputType: numberType,
-    });
+    const modTwoId = ctx.b.sigZip(rawPhaseId, twoConst, { kind: 'opcode', opcode: OpCode.Mod }, numberType,);
 
     const oneConst = ctx.b.sigConst(1, numberType);
-    const minus1Id = ctx.b.sigZip(modTwoId, oneConst, {
-      fnId: 'sub',
-      opcode: OpCode.Sub,
-      outputType: numberType,
-    });
+    const minus1Id = ctx.b.sigZip(modTwoId, oneConst, { kind: 'opcode', opcode: OpCode.Sub }, numberType,);
 
-    phaseId = ctx.b.sigMap(minus1Id, {
-      fnId: 'abs',
-      opcode: OpCode.Abs,
-      outputType: phaseType,
-    });
+    phaseId = ctx.b.sigMap(minus1Id, { kind: 'opcode', opcode: OpCode.Abs }, phaseType,);
 
     // For pingpong, u is the same as phase (wraps 0→1→0→1)
     uId = phaseId;
   } else {
     // Loop mode: sawtooth wave
     // phase = fract(raw) = raw - floor(raw)
-    const floorId = ctx.b.sigMap(rawPhaseId, {
-      fnId: 'floor',
-      opcode: OpCode.Floor,
-      outputType: numberType,
-    });
+    const floorId = ctx.b.sigMap(rawPhaseId, { kind: 'opcode', opcode: OpCode.Floor }, numberType,);
 
-    phaseId = ctx.b.sigZip(rawPhaseId, floorId, {
-      fnId: 'sub',
-      opcode: OpCode.Sub,
-      outputType: phaseType,
-    });
+    phaseId = ctx.b.sigZip(rawPhaseId, floorId, { kind: 'opcode', opcode: OpCode.Sub }, phaseType,);
 
     // For loop mode, u is same as phase
     uId = phaseId;

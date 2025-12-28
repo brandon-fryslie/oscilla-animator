@@ -71,31 +71,15 @@ const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
       // tanh(x * amount)
       {
         const amountSig = ctx.b.sigConst(amount, numberType);
-        const scaled = ctx.b.sigZip(input.id, amountSig, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
+        const scaled = ctx.b.sigZip(input.id, amountSig, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
         // Note: tanh not in OpCode registry, would need to be added
         // For now, use a series expansion or fallback
         // tanh(x) ≈ x for small x, saturates to ±1 for large x
         // Simple approximation: x / (1 + |x|)
         const one = ctx.b.sigConst(1, numberType);
-        const abs_val = ctx.b.sigMap(scaled, {
-          fnId: 'abs',
-          opcode: OpCode.Abs,
-          outputType: numberType,
-        });
-        const denom = ctx.b.sigZip(one, abs_val, {
-          fnId: 'add',
-          opcode: OpCode.Add,
-          outputType: numberType,
-        });
-        outputId = ctx.b.sigZip(scaled, denom, {
-          fnId: 'div',
-          opcode: OpCode.Div,
-          outputType: numberType,
-        });
+        const abs_val = ctx.b.sigMap(scaled, { kind: 'opcode', opcode: OpCode.Abs }, numberType,);
+        const denom = ctx.b.sigZip(one, abs_val, { kind: 'opcode', opcode: OpCode.Add }, numberType,);
+        outputId = ctx.b.sigZip(scaled, denom, { kind: 'opcode', opcode: OpCode.Div }, numberType,);
       }
       break;
 
@@ -103,27 +87,11 @@ const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
       // x / (1 + |x * amount|)
       {
         const amountSig = ctx.b.sigConst(amount, numberType);
-        const scaled = ctx.b.sigZip(input.id, amountSig, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
+        const scaled = ctx.b.sigZip(input.id, amountSig, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
         const one = ctx.b.sigConst(1, numberType);
-        const abs_val = ctx.b.sigMap(scaled, {
-          fnId: 'abs',
-          opcode: OpCode.Abs,
-          outputType: numberType,
-        });
-        const denom = ctx.b.sigZip(one, abs_val, {
-          fnId: 'add',
-          opcode: OpCode.Add,
-          outputType: numberType,
-        });
-        outputId = ctx.b.sigZip(input.id, denom, {
-          fnId: 'div',
-          opcode: OpCode.Div,
-          outputType: numberType,
-        });
+        const abs_val = ctx.b.sigMap(scaled, { kind: 'opcode', opcode: OpCode.Abs }, numberType,);
+        const denom = ctx.b.sigZip(one, abs_val, { kind: 'opcode', opcode: OpCode.Add }, numberType,);
+        outputId = ctx.b.sigZip(input.id, denom, { kind: 'opcode', opcode: OpCode.Div }, numberType,);
       }
       break;
 
@@ -131,35 +99,15 @@ const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
       // 1 / (1 + exp(-x * amount))
       {
         const amountSig = ctx.b.sigConst(amount, numberType);
-        const scaled = ctx.b.sigZip(input.id, amountSig, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
+        const scaled = ctx.b.sigZip(input.id, amountSig, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
         const neg_one = ctx.b.sigConst(-1, numberType);
-        const negated = ctx.b.sigZip(scaled, neg_one, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
+        const negated = ctx.b.sigZip(scaled, neg_one, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
         // exp not in OpCode registry - would need to add
         // For now, approximate with tanh-like behavior
         const one = ctx.b.sigConst(1, numberType);
-        const abs_val = ctx.b.sigMap(negated, {
-          fnId: 'abs',
-          opcode: OpCode.Abs,
-          outputType: numberType,
-        });
-        const denom = ctx.b.sigZip(one, abs_val, {
-          fnId: 'add',
-          opcode: OpCode.Add,
-          outputType: numberType,
-        });
-        const inv_denom = ctx.b.sigZip(one, denom, {
-          fnId: 'div',
-          opcode: OpCode.Div,
-          outputType: numberType,
-        });
+        const abs_val = ctx.b.sigMap(negated, { kind: 'opcode', opcode: OpCode.Abs }, numberType,);
+        const denom = ctx.b.sigZip(one, abs_val, { kind: 'opcode', opcode: OpCode.Add }, numberType,);
+        const inv_denom = ctx.b.sigZip(one, denom, { kind: 'opcode', opcode: OpCode.Div }, numberType,);
         outputId = inv_denom;
       }
       break;
@@ -173,44 +121,20 @@ const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
         const three = ctx.b.sigConst(3, numberType);
 
         // clamp(x, 0, 1)
-        const max_zero = ctx.b.sigZip(input.id, zero, {
-          fnId: 'max',
-          opcode: OpCode.Max,
-          outputType: numberType,
-        });
-        const t = ctx.b.sigZip(max_zero, one, {
-          fnId: 'min',
-          opcode: OpCode.Min,
-          outputType: numberType,
-        });
+        const max_zero = ctx.b.sigZip(input.id, zero, { kind: 'opcode', opcode: OpCode.Max }, numberType,);
+        const t = ctx.b.sigZip(max_zero, one, { kind: 'opcode', opcode: OpCode.Min }, numberType,);
 
         // t * t
-        const t_squared = ctx.b.sigZip(t, t, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
+        const t_squared = ctx.b.sigZip(t, t, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
 
         // 2 * t
-        const two_t = ctx.b.sigZip(two, t, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
+        const two_t = ctx.b.sigZip(two, t, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
 
         // 3 - 2 * t
-        const three_minus_two_t = ctx.b.sigZip(three, two_t, {
-          fnId: 'sub',
-          opcode: OpCode.Sub,
-          outputType: numberType,
-        });
+        const three_minus_two_t = ctx.b.sigZip(three, two_t, { kind: 'opcode', opcode: OpCode.Sub }, numberType,);
 
         // t * t * (3 - 2 * t)
-        outputId = ctx.b.sigZip(t_squared, three_minus_two_t, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
+        outputId = ctx.b.sigZip(t_squared, three_minus_two_t, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
       }
       break;
 
@@ -218,26 +142,10 @@ const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
       // sign(x) * pow(abs(x), amount)
       {
         const amountSig = ctx.b.sigConst(amount, numberType);
-        const sign_x = ctx.b.sigMap(input.id, {
-          fnId: 'sign',
-          opcode: OpCode.Sign,
-          outputType: numberType,
-        });
-        const abs_x = ctx.b.sigMap(input.id, {
-          fnId: 'abs',
-          opcode: OpCode.Abs,
-          outputType: numberType,
-        });
-        const pow_val = ctx.b.sigZip(abs_x, amountSig, {
-          fnId: 'pow',
-          opcode: OpCode.Pow,
-          outputType: numberType,
-        });
-        outputId = ctx.b.sigZip(sign_x, pow_val, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
+        const sign_x = ctx.b.sigMap(input.id, { kind: 'opcode', opcode: OpCode.Sign }, numberType,);
+        const abs_x = ctx.b.sigMap(input.id, { kind: 'opcode', opcode: OpCode.Abs }, numberType,);
+        const pow_val = ctx.b.sigZip(abs_x, amountSig, { kind: 'opcode', opcode: OpCode.Pow }, numberType,);
+        outputId = ctx.b.sigZip(sign_x, pow_val, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
       }
       break;
 

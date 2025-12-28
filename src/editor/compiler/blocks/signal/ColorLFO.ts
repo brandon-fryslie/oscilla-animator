@@ -120,19 +120,11 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // Calculate hue shift: phase * hueSpan
   const hueSpanSig = ctx.b.sigConst(hueSpan, numberType);
-  const hueShiftSig = ctx.b.sigZip(phase.id, hueSpanSig, {
-    fnId: 'mul',
-    opcode: OpCode.Mul,
-    outputType: numberType,
-  });
+  const hueShiftSig = ctx.b.sigZip(phase.id, hueSpanSig, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
 
   // Use ColorShiftHue to shift base color's hue by (phase * hueSpan)
   const baseColorSig = ctx.b.sigConst(base, colorType);
-  const colorSig = ctx.b.sigZip(baseColorSig, hueShiftSig, {
-    fnId: 'colorShiftHue',
-    opcode: OpCode.ColorShiftHue,
-    outputType: colorType,
-  });
+  const colorSig = ctx.b.sigZip(baseColorSig, hueShiftSig, { kind: 'opcode', opcode: OpCode.ColorShiftHue }, colorType,);
 
   const slot = ctx.b.allocValueSlot();
   return { outputs: [{ k: 'sig', id: colorSig, slot }] };

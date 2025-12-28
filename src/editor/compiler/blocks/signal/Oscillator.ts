@@ -59,16 +59,8 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, config }) => {
       // sine(phase * 2π)
       {
         const twoPI_id = ctx.b.sigConst(2 * Math.PI, numberType);
-        const radians = ctx.b.sigZip(phase.id, twoPI_id, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
-        waveformId = ctx.b.sigMap(radians, {
-          fnId: 'sin',
-          opcode: OpCode.Sin,
-          outputType: numberType,
-        });
+        const radians = ctx.b.sigZip(phase.id, twoPI_id, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
+        waveformId = ctx.b.sigMap(radians, { kind: 'opcode', opcode: OpCode.Sin }, numberType,);
       }
       break;
 
@@ -76,16 +68,8 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, config }) => {
       // cosine(phase * 2π)
       {
         const twoPI_id = ctx.b.sigConst(2 * Math.PI, numberType);
-        const radians = ctx.b.sigZip(phase.id, twoPI_id, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
-        waveformId = ctx.b.sigMap(radians, {
-          fnId: 'cos',
-          opcode: OpCode.Cos,
-          outputType: numberType,
-        });
+        const radians = ctx.b.sigZip(phase.id, twoPI_id, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
+        waveformId = ctx.b.sigMap(radians, { kind: 'opcode', opcode: OpCode.Cos }, numberType,);
       }
       break;
 
@@ -97,39 +81,19 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, config }) => {
         const four = ctx.b.sigConst(4, numberType);
 
         // phase % 1 (fract)
-        const fract_phase = ctx.b.sigMap(phase.id, {
-          fnId: 'fract',
-          opcode: OpCode.Fract,
-          outputType: numberType,
-        });
+        const fract_phase = ctx.b.sigMap(phase.id, { kind: 'opcode', opcode: OpCode.Fract }, numberType,);
 
         // (phase % 1) - 0.5
-        const shifted = ctx.b.sigZip(fract_phase, half, {
-          fnId: 'sub',
-          opcode: OpCode.Sub,
-          outputType: numberType,
-        });
+        const shifted = ctx.b.sigZip(fract_phase, half, { kind: 'opcode', opcode: OpCode.Sub }, numberType,);
 
         // abs((phase % 1) - 0.5)
-        const abs_val = ctx.b.sigMap(shifted, {
-          fnId: 'abs',
-          opcode: OpCode.Abs,
-          outputType: numberType,
-        });
+        const abs_val = ctx.b.sigMap(shifted, { kind: 'opcode', opcode: OpCode.Abs }, numberType,);
 
         // 4 * abs(...)
-        const scaled = ctx.b.sigZip(four, abs_val, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
+        const scaled = ctx.b.sigZip(four, abs_val, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
 
         // 1 - (4 * abs(...))
-        waveformId = ctx.b.sigZip(one, scaled, {
-          fnId: 'sub',
-          opcode: OpCode.Sub,
-          outputType: numberType,
-        });
+        waveformId = ctx.b.sigZip(one, scaled, { kind: 'opcode', opcode: OpCode.Sub }, numberType,);
       }
       break;
 
@@ -140,25 +104,13 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, config }) => {
         const one = ctx.b.sigConst(1, numberType);
 
         // phase % 1 (fract)
-        const fract_phase = ctx.b.sigMap(phase.id, {
-          fnId: 'fract',
-          opcode: OpCode.Fract,
-          outputType: numberType,
-        });
+        const fract_phase = ctx.b.sigMap(phase.id, { kind: 'opcode', opcode: OpCode.Fract }, numberType,);
 
         // 2 * (phase % 1)
-        const scaled = ctx.b.sigZip(two, fract_phase, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
+        const scaled = ctx.b.sigZip(two, fract_phase, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
 
         // 2 * (phase % 1) - 1
-        waveformId = ctx.b.sigZip(scaled, one, {
-          fnId: 'sub',
-          opcode: OpCode.Sub,
-          outputType: numberType,
-        });
+        waveformId = ctx.b.sigZip(scaled, one, { kind: 'opcode', opcode: OpCode.Sub }, numberType,);
       }
       break;
 
@@ -166,32 +118,16 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, config }) => {
       // Default to sine
       {
         const twoPI_id = ctx.b.sigConst(2 * Math.PI, numberType);
-        const radians = ctx.b.sigZip(phase.id, twoPI_id, {
-          fnId: 'mul',
-          opcode: OpCode.Mul,
-          outputType: numberType,
-        });
-        waveformId = ctx.b.sigMap(radians, {
-          fnId: 'sin',
-          opcode: OpCode.Sin,
-          outputType: numberType,
-        });
+        const radians = ctx.b.sigZip(phase.id, twoPI_id, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
+        waveformId = ctx.b.sigMap(radians, { kind: 'opcode', opcode: OpCode.Sin }, numberType,);
       }
   }
 
   // Apply amplitude: waveform * amplitude
-  const scaled = ctx.b.sigZip(waveformId, amplitude.id, {
-    fnId: 'mul',
-    opcode: OpCode.Mul,
-    outputType: numberType,
-  });
+  const scaled = ctx.b.sigZip(waveformId, amplitude.id, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
 
   // Apply bias: (waveform * amplitude) + bias
-  const output = ctx.b.sigZip(scaled, bias.id, {
-    fnId: 'add',
-    opcode: OpCode.Add,
-    outputType: ctx.outTypes[0],
-  });
+  const output = ctx.b.sigZip(scaled, bias.id, { kind: 'opcode', opcode: OpCode.Add }, ctx.outTypes[0],);
 
   const slot = ctx.b.allocValueSlot();
   return {

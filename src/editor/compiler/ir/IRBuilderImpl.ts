@@ -406,25 +406,27 @@ export class IRBuilderImpl implements IRBuilder {
     return id;
   }
 
-  fieldMap(src: FieldExprId, fn: PureFnRef, outputType: TypeDesc): FieldExprId {
+  fieldMap(src: FieldExprId, fn: PureFnRef, outputType: TypeDesc, params?: Record<string, unknown>): FieldExprId {
     const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
       kind: "map",
       src,
       fn,
+      params,
       type: outputType,
     });
     this.trackFieldExprSource(id);
     return id;
   }
 
-  fieldZip(a: FieldExprId, b: FieldExprId, fn: PureFnRef, outputType: TypeDesc): FieldExprId {
+  fieldZip(a: FieldExprId, b: FieldExprId, fn: PureFnRef, outputType: TypeDesc, params?: Record<string, unknown>): FieldExprId {
     const id = this.fieldExprs.length as FieldExprId;
     this.fieldExprs.push({
       kind: "zip",
       a,
       b,
       fn,
+      params,
       type: outputType,
     });
     this.trackFieldExprSource(id);

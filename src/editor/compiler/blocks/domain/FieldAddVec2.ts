@@ -22,11 +22,7 @@ const lowerFieldAddVec2: BlockLowerFn = ({ ctx, inputs }) => {
   }
 
   const outType = { world: 'field' as const, domain: 'vec2' as const };
-  const fieldId = ctx.b.fieldZip(a.id, b.id, {
-    fnId: 'vec2Add',
-    opcode: OpCode.Vec2Add,
-    outputType: outType,
-  });
+  const fieldId = ctx.b.fieldZip(a.id, b.id, { kind: 'opcode', opcode: OpCode.Vec2Add }, outType,);
 
   const slot = ctx.b.allocValueSlot();
   return { outputs: [{ k: 'field', id: fieldId, slot }] };

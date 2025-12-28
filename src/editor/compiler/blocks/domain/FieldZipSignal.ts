@@ -91,7 +91,7 @@ const lowerFieldZipSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
   const fieldId = ctx.b.fieldZip(field.id, broadcastField, {
     fnId: fn,
     opcode,
-    outputType: outType,
+    
   });
 
   const slot = ctx.b.allocValueSlot();
