@@ -29,35 +29,41 @@ export const KERNEL_PRIMITIVES = {
   'InfiniteTimeRoot': 'time',
 
   // ========================================================================
-  // Identity Authority (2)
+  // Identity Authority (3)
   // ========================================================================
   // These blocks create domains (per-element identity spaces).
   'DomainN': 'identity',
   'SVGSampleDomain': 'identity',
+  'GridDomain': 'identity',
 
   // ========================================================================
-  // State Authority (2)
+  // State Authority (5)
   // ========================================================================
   // These blocks allocate and manage mutable state.
-  // NOTE: IntegrateBlock and HistoryBlock currently exist as compiler-internal
-  // classes only. User-facing BlockDefinitions will be added in Phase 2.
   'IntegrateBlock': 'state',
   'HistoryBlock': 'state',
+  'TriggerOnWrap': 'state',
+  'PulseDivider': 'state',
+  'EnvelopeAD': 'state',
 
   // ========================================================================
-  // Render Authority (3, some future)
+  // Render Authority (6)
   // ========================================================================
   // These blocks emit render trees (final visual output).
   'RenderInstances': 'render',
-  'RenderStrokes': 'render',      // Future slot (reserved)
-  'RenderProgramStack': 'render', // Future slot (reserved)
+  'RenderStrokes': 'render',
+  'RenderProgramStack': 'render',
+  'RenderInstances2D': 'render',
+  'RenderPaths2D': 'render',
+  'Render2dCanvas': 'render',
 
   // ========================================================================
-  // External IO Authority (2, future)
+  // External IO Authority (3)
   // ========================================================================
-  // These blocks load external resources (text files, images).
-  'TextSource': 'io',  // Future slot (reserved)
-  'ImageSource': 'io', // Future slot (reserved)
+  // These blocks load external resources or have side effects.
+  'TextSource': 'io',
+  'ImageSource': 'io',
+  'DebugDisplay': 'io',
 } as const satisfies Record<KernelId, KernelCapability>;
 
 /**

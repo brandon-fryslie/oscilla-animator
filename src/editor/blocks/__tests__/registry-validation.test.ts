@@ -358,26 +358,34 @@ describe('registry-validation', () => {
 
       expect(summary.identity).toContain('DomainN');
       expect(summary.identity).toContain('SVGSampleDomain');
-      expect(summary.identity).toHaveLength(2);
+      expect(summary.identity).toContain('GridDomain');
+      expect(summary.identity).toHaveLength(3);
 
       expect(summary.state).toContain('IntegrateBlock');
       expect(summary.state).toContain('HistoryBlock');
-      expect(summary.state).toHaveLength(2);
+      expect(summary.state).toContain('TriggerOnWrap');
+      expect(summary.state).toContain('PulseDivider');
+      expect(summary.state).toContain('EnvelopeAD');
+      expect(summary.state).toHaveLength(5);
 
       expect(summary.render).toContain('RenderInstances');
       expect(summary.render).toContain('RenderStrokes');
       expect(summary.render).toContain('RenderProgramStack');
-      expect(summary.render).toHaveLength(3);
+      expect(summary.render).toContain('RenderInstances2D');
+      expect(summary.render).toContain('RenderPaths2D');
+      expect(summary.render).toContain('Render2dCanvas');
+      expect(summary.render).toHaveLength(6);
 
       expect(summary.io).toContain('TextSource');
       expect(summary.io).toContain('ImageSource');
-      expect(summary.io).toHaveLength(2);
+      expect(summary.io).toContain('DebugDisplay');
+      expect(summary.io).toHaveLength(3);
     });
 
-    it('has exactly 12 total primitives (3 time + 2 identity + 2 state + 3 render + 2 io)', () => {
+    it('has exactly 20 total primitives (3 time + 3 identity + 5 state + 6 render + 3 io)', () => {
       const summary = getKernelPrimitivesSummary();
       const total = Object.values(summary).flat().length;
-      expect(total).toBe(12);
+      expect(total).toBe(20);
     });
   });
 });

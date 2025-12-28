@@ -303,18 +303,18 @@ function buildBlockInputRoots(
 
       // Priority 1: Check for wire connection
       const wire = wires.find(
-        (w) => w.to.blockId === block.id && w.to.port === input.id
+        (w) => w.to.block === block.id && w.to.port === input.id
       );
 
       if (wire) {
         // Resolve upstream block output
-        const upstreamBlockIdx = blockIdToIndex.get(wire.from.blockId);
+        const upstreamBlockIdx = blockIdToIndex.get(wire.from.block);
 
         if (upstreamBlockIdx === undefined) {
           // Upstream block wasn't processed - this is a real error
           errors.push({
             code: "DanglingConnection",
-            message: `Wire to ${block.id}:${input.id} from unknown block ${wire.from.blockId}`,
+            message: `Wire to ${block.id}:${input.id} from unknown block ${wire.from.block}`,
           });
           continue;
         }

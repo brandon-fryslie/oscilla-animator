@@ -124,9 +124,8 @@ describe("Pass 8: Link Resolution", () => {
 
       const wires: CompilerConnection[] = [
         {
-          id: "wire1",
-          from: { blockId: "b1", port: "out0" },
-          to: { blockId: "b2", port: "in0" },
+          from: { block: "b1", port: "out0" },
+          to: { block: "b2", port: "in0" },
         },
       ];
 
@@ -148,9 +147,8 @@ describe("Pass 8: Link Resolution", () => {
 
       const wires: CompilerConnection[] = [
         {
-          id: "wire1",
-          from: { blockId: "nonexistent", port: "out0" },
-          to: { blockId: "b1", port: "in0" },
+          from: { block: "nonexistent", port: "out0" },
+          to: { block: "b1", port: "in0" },
         },
       ];
 

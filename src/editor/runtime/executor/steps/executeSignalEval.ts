@@ -9,7 +9,6 @@ import type { RuntimeState } from "../RuntimeState";
 import type { SigFrameCache } from "../../signal-expr/SigFrameCache";
 import { evalSig } from "../../signal-expr/SigEvaluator";
 import { createSigEnv } from "../../signal-expr/SigEnv";
-import type { SignalExprIR } from "../../../compiler/ir/signalExpr";
 import type { SlotValueReader } from "../../signal-expr/SlotValueReader";
 
 function buildSlotReader(runtime: RuntimeState): SlotValueReader {

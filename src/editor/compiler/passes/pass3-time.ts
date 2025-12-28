@@ -25,7 +25,6 @@ import type {
   TypedPatch,
   TimeResolvedPatch,
   TimeSignals,
-  BlockIndex,
 } from "../ir";
 import type { TimeModelIR } from "../ir/schedule";
 import { IRBuilderImpl } from "../ir/IRBuilderImpl";

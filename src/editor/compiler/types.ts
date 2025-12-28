@@ -324,8 +324,16 @@ import type { Domain } from './unified/Domain';
 export type { Domain };
 
 export interface CompilerConnection {
+  /** Optional unique ID (from store Connection) */
+  id?: string;
   from: { block: BlockId; port: string };
   to: { block: BlockId; port: string };
+  /** Optional lens stack for value transformation (applied after adapters) */
+  lensStack?: LensInstance[];
+  /** Optional adapter chain for type conversion (applied before lenses) */
+  adapterChain?: AdapterStep[];
+  /** Whether this connection is enabled (default: true) */
+  enabled?: boolean;
 }
 
 /**
@@ -395,7 +403,7 @@ export type Artifact =
   | { kind: 'ExternalAsset'; value: unknown }
 
   // Error artifact (returned by block compilers on validation failure)
-  | { kind: 'Error'; message: string; value?: undefined };
+  | { kind: 'Error'; message: string; value?: undefined; where?: { blockId?: string; port?: string } };
 
 export type CompiledOutputs = Record<string, Artifact>;
 
@@ -418,6 +426,21 @@ export interface BlockCompiler {
     inputs: Record<string, Artifact>;
     ctx: CompileCtx;
   }): CompiledOutputs;
+}
+
+/**
+ * Registry mapping block type names to their compilers.
+ */
+export type BlockRegistry = Record<string, BlockCompiler>;
+
+/**
+ * Auto-publication from TimeRoot blocks.
+ * Used to automatically inject system bus publishers.
+ */
+export interface AutoPublication {
+  busName: string;
+  artifactKey: string;
+  sortKey: number;
 }
 
 // =============================================================================
@@ -493,6 +516,14 @@ export interface CompileResult {
   programIR?: CompiledProgramIR;
   /** Debug index mapping IR nodes to source blocks */
   debugIndex?: DebugIndex;
+
+  // Legacy bus-aware compiler compatibility
+  /** Warnings from IR generation (legacy) */
+  irWarnings?: CompileError[];
+  /** Compiled IR (legacy - use programIR instead) */
+  compiledIR?: unknown;
+  /** Compiled port map (legacy) */
+  compiledPortMap?: Map<string, Artifact>;
 }
 
 /**
@@ -504,4 +535,10 @@ export interface CompilerPatch {
   buses: readonly Bus[];
   listeners: readonly Listener[];
   publishers: readonly Publisher[];
+  /** Default sources keyed by "blockId:slotId" */
+  defaultSources?: Record<string, unknown>;
+  /** Default source values keyed by "blockId:slotId" */
+  defaultSourceValues?: Record<string, unknown>;
+  /** Output port reference (legacy) */
+  output?: import('../types').PortRef;
 }

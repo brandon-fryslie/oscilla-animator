@@ -28,7 +28,6 @@ import type {
   DepNode,
   DepEdge,
 } from "../ir";
-import type { BusIndex } from "../ir/types";
 
 /**
  * Error types emitted by Pass 4.

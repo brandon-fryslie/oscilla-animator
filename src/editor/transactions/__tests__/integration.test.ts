@@ -24,8 +24,8 @@ describe('Undo/Redo Integration', () => {
     id,
     type,
     label: `Test ${type}`,
-    inputs: [{ id: 'in', type: 'signal:number', label: 'Input' }],
-    outputs: [{ id: 'out', type: 'signal:number', label: 'Output' }],
+    inputs: [{ id: 'in', type: 'Signal<number>', label: 'Input', direction: 'input' as const }],
+    outputs: [{ id: 'out', type: 'Signal<number>', label: 'Output', direction: 'output' as const }],
     params: { value: 1 },
     category: 'Other',
   });

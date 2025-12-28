@@ -12,7 +12,6 @@
 
 import type { SignalExprIR } from './signalExpr';
 import type { StateLayoutEntry } from './builderTypes';
-import type { StateId } from './types';
 
 /**
  * Compute state layout from SignalExpr IR nodes.

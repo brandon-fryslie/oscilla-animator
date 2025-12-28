@@ -113,8 +113,8 @@ export function topoSortBlocks(
   }
 
   for (const c of patch.connections) {
-    const a = c.from.blockId;
-    const b = c.to.blockId;
+    const a = c.from.block;
+    const b = c.to.block;
     if (!adj.has(a) || !adj.has(b)) {
       // Connection references non-existent block
       errors.push({

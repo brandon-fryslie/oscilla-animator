@@ -192,12 +192,12 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
 
         // === IR PATH (NEW COMPILER) ===
         if (useIR) {
-          if (result.compiledIR) {
+          if (result.programIR) {
             // IR compilation succeeded - use IR path
             // Pure IR mode: schedule produces RenderFrameIR directly, no legacy closure fallback
             // This forces the IR pipeline to handle all rendering
             const isFirstProgram = irAdapterRef.current === null && lastGoodProgramRef.current === null;
-            const adapter = new IRRuntimeAdapter(result.compiledIR);
+            const adapter = new IRRuntimeAdapter(result.programIR);
 
             // Store adapter for direct frame access in render loop
             irAdapterRef.current = adapter;
@@ -208,10 +208,10 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
 
             setActiveRenderer('canvas');
             player.setFactory(() => EMPTY_PROGRAM); // Time tracking only
-            player.applyTimeModel(result.compiledIR.timeModel);
-            setTimeModel(result.compiledIR.timeModel);
+            player.applyTimeModel(result.programIR.timeModel);
+            setTimeModel(result.programIR.timeModel);
             setHasCompiledProgram(true);
-            logStore.debug('renderer', `Hot swapped to IR program (pure IR mode, timeModel: ${result.compiledIR.timeModel.kind})`);
+            logStore.debug('renderer', `Hot swapped to IR program (pure IR mode, timeModel: ${result.programIR.timeModel.kind})`);
 
             // Set debug index for trace infrastructure
             if (result.debugIndex) {

@@ -139,11 +139,11 @@ function createTestRegistry(): BlockRegistry {
 
 describe('Bus Compilation - Happy Path', () => {
   it('compiles single Signal<number> bus with one publisher and one listener', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'NumberSource', params: { value: 42 } }],
-      ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'NumberSource', params: { value: 42 } },
+      { id: 'sink1', type: 'NumberSink', params: {} },
+    ];
 
     const bus: Bus = {
       id: 'bus1',
@@ -174,7 +174,7 @@ describe('Bus Compilation - Happy Path', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), bus],
@@ -191,10 +191,10 @@ describe('Bus Compilation - Happy Path', () => {
   });
 
   it('returns default value when bus has no publishers', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'sink1', type: 'NumberSink', params: {} },
+    ];
 
     const bus: Bus = {
       id: 'bus1',
@@ -215,7 +215,7 @@ describe('Bus Compilation - Happy Path', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), bus],
@@ -235,13 +235,13 @@ describe('Bus Compilation - Happy Path', () => {
   });
 
   it('combines multiple publishers with "last" mode - highest sortKey wins', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'NumberSource', params: { value: 10 } }],
-      ['source2', { id: 'source2', type: 'NumberSource', params: { value: 20 } }],
-      ['source3', { id: 'source3', type: 'NumberSource', params: { value: 30 } }],
-      ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'NumberSource', params: { value: 10 } },
+      { id: 'source2', type: 'NumberSource', params: { value: 20 } },
+      { id: 'source3', type: 'NumberSource', params: { value: 30 } },
+      { id: 'sink1', type: 'NumberSink', params: {} },
+    ];
 
     const bus: Bus = {
       id: 'bus1',
@@ -263,7 +263,7 @@ describe('Bus Compilation - Happy Path', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), bus],
@@ -283,13 +283,13 @@ describe('Bus Compilation - Happy Path', () => {
   });
 
   it('combines multiple publishers with "sum" mode', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'NumberSource', params: { value: 10 } }],
-      ['source2', { id: 'source2', type: 'NumberSource', params: { value: 20 } }],
-      ['source3', { id: 'source3', type: 'NumberSource', params: { value: 30 } }],
-      ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'NumberSource', params: { value: 10 } },
+      { id: 'source2', type: 'NumberSource', params: { value: 20 } },
+      { id: 'source3', type: 'NumberSource', params: { value: 30 } },
+      { id: 'sink1', type: 'NumberSink', params: {} },
+    ];
 
     const bus: Bus = {
       id: 'bus1',
@@ -311,7 +311,7 @@ describe('Bus Compilation - Happy Path', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), bus],
@@ -337,12 +337,12 @@ describe('Bus Compilation - Happy Path', () => {
 
 describe('Bus Compilation - sortKey Determinism', () => {
   it('stable results with same sortKeys using id tie-breaker', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'NumberSource', params: { value: 100 } }],
-      ['source2', { id: 'source2', type: 'NumberSource', params: { value: 200 } }],
-      ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'NumberSource', params: { value: 100 } },
+      { id: 'source2', type: 'NumberSource', params: { value: 200 } },
+      { id: 'sink1', type: 'NumberSink', params: {} },
+    ];
 
     const bus: Bus = {
       id: 'bus1',
@@ -364,7 +364,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), bus],
@@ -384,12 +384,12 @@ describe('Bus Compilation - sortKey Determinism', () => {
   });
 
   it('result changes when sortKeys swap', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'NumberSource', params: { value: 100 } }],
-      ['source2', { id: 'source2', type: 'NumberSource', params: { value: 200 } }],
-      ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'NumberSource', params: { value: 100 } },
+      { id: 'source2', type: 'NumberSource', params: { value: 200 } },
+      { id: 'sink1', type: 'NumberSink', params: {} },
+    ];
 
     const bus: Bus = {
       id: 'bus1',
@@ -411,6 +411,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
     ];
 
     const patch1: CompilerPatch = {
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), bus],
@@ -436,6 +437,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
     ];
 
     const patch2: CompilerPatch = {
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), bus],
@@ -465,10 +467,10 @@ describe('Bus Compilation - Error Handling', () => {
   // The old "rejects Field bus" test was removed as Field buses now work.
 
   it('rejects unsupported combine mode for Signal bus', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['sink1', { id: 'sink1', type: 'NumberSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'sink1', type: 'NumberSink', params: {} },
+    ];
 
     const bus: Bus = {
       id: 'bus1',
@@ -480,7 +482,7 @@ describe('Bus Compilation - Error Handling', () => {
     };
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), bus],

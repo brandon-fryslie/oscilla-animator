@@ -203,11 +203,11 @@ function createFieldTestRegistry(): BlockRegistry {
 
 describe('Field Bus Compilation', () => {
   it('compiles single Field<number> bus with one publisher and one listener', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } }],
-      ['sink1', { id: 'sink1', type: 'FieldSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } },
+      { id: 'sink1', type: 'FieldSink', params: {} },
+    ];
 
     const fieldBus: Bus = {
       id: 'fieldBus1',
@@ -238,7 +238,7 @@ describe('Field Bus Compilation', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), fieldBus],
@@ -264,12 +264,12 @@ describe('Field Bus Compilation', () => {
   });
 
   it('combines multiple Field publishers with "sum" mode', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } }],
-      ['source2', { id: 'source2', type: 'FieldNumberSource', params: { value: 100 } }],
-      ['sink1', { id: 'sink1', type: 'FieldSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } },
+      { id: 'source2', type: 'FieldNumberSource', params: { value: 100 } },
+      { id: 'sink1', type: 'FieldSink', params: {} },
+    ];
 
     const fieldBus: Bus = {
       id: 'fieldBus1',
@@ -290,7 +290,7 @@ describe('Field Bus Compilation', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), fieldBus],
@@ -313,12 +313,12 @@ describe('Field Bus Compilation', () => {
   });
 
   it('combines multiple Field publishers with "last" mode - highest sortKey wins', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } }],
-      ['source2', { id: 'source2', type: 'FieldNumberSource', params: { value: 100 } }],
-      ['sink1', { id: 'sink1', type: 'FieldSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } },
+      { id: 'source2', type: 'FieldNumberSource', params: { value: 100 } },
+      { id: 'sink1', type: 'FieldSink', params: {} },
+    ];
 
     const fieldBus: Bus = {
       id: 'fieldBus1',
@@ -339,7 +339,7 @@ describe('Field Bus Compilation', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), fieldBus],
@@ -360,10 +360,10 @@ describe('Field Bus Compilation', () => {
   });
 
   it('returns default field when bus has no publishers', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['sink1', { id: 'sink1', type: 'FieldSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'sink1', type: 'FieldSink', params: {} },
+    ];
 
     const fieldBus: Bus = {
       id: 'fieldBus1',
@@ -379,7 +379,7 @@ describe('Field Bus Compilation', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), fieldBus],
@@ -400,12 +400,12 @@ describe('Field Bus Compilation', () => {
   });
 
   it('supports "average" combine mode for Field buses', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'FieldNumberSource', params: { value: 0 } }],
-      ['source2', { id: 'source2', type: 'FieldNumberSource', params: { value: 10 } }],
-      ['sink1', { id: 'sink1', type: 'FieldSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'FieldNumberSource', params: { value: 0 } },
+      { id: 'source2', type: 'FieldNumberSource', params: { value: 10 } },
+      { id: 'sink1', type: 'FieldSink', params: {} },
+    ];
 
     const fieldBus: Bus = {
       id: 'fieldBus1',
@@ -426,7 +426,7 @@ describe('Field Bus Compilation', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), fieldBus],
@@ -449,12 +449,12 @@ describe('Field Bus Compilation', () => {
   });
 
   it('supports "max" combine mode for Field buses', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'FieldNumberSource', params: { value: 5 } }],
-      ['source2', { id: 'source2', type: 'FieldNumberSource', params: { value: 0 } }],
-      ['sink1', { id: 'sink1', type: 'FieldSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'FieldNumberSource', params: { value: 5 } },
+      { id: 'source2', type: 'FieldNumberSource', params: { value: 0 } },
+      { id: 'sink1', type: 'FieldSink', params: {} },
+    ];
 
     const fieldBus: Bus = {
       id: 'fieldBus1',
@@ -475,7 +475,7 @@ describe('Field Bus Compilation', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), fieldBus],
@@ -498,12 +498,12 @@ describe('Field Bus Compilation', () => {
   });
 
   it('supports "min" combine mode for Field buses', () => {
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['source1', { id: 'source1', type: 'FieldNumberSource', params: { value: 5 } }],
-      ['source2', { id: 'source2', type: 'FieldNumberSource', params: { value: 0 } }],
-      ['sink1', { id: 'sink1', type: 'FieldSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'source1', type: 'FieldNumberSource', params: { value: 5 } },
+      { id: 'source2', type: 'FieldNumberSource', params: { value: 0 } },
+      { id: 'sink1', type: 'FieldSink', params: {} },
+    ];
 
     const fieldBus: Bus = {
       id: 'fieldBus1',
@@ -524,7 +524,7 @@ describe('Field Bus Compilation', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), fieldBus],
@@ -569,12 +569,12 @@ describe('Mixed Signal and Field Buses', () => {
       },
     };
 
-    const blocks = new Map([
-      ['timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } }],
-      ['phaseSource', { id: 'phaseSource', type: 'PhaseSource', params: {} }],
-      ['fieldSource', { id: 'fieldSource', type: 'FieldNumberSource', params: { value: 10 } }],
-      ['sink1', { id: 'sink1', type: 'FieldSink', params: {} }],
-    ]);
+    const blocks = [
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'phaseSource', type: 'PhaseSource', params: {} },
+      { id: 'fieldSource', type: 'FieldNumberSource', params: { value: 10 } },
+      { id: 'sink1', type: 'FieldSink', params: {} },
+    ];
 
     const phaseBus: Bus = {
       id: 'phaseA',
@@ -605,7 +605,7 @@ describe('Mixed Signal and Field Buses', () => {
     ];
 
     const patch: CompilerPatch = {
-      output: { blockId: 'sink1', port: 'program' },
+      output: { blockId: 'sink1', slotId: 'program', direction: 'output' },
       blocks,
       connections: [],
       buses: [...createCanonicalBuses(), phaseBus, positionBus],

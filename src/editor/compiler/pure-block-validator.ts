@@ -144,7 +144,7 @@ export function validatePureBlockOutput(
       throw {
         blockType,
         portId,
-        message: `Pure block "${blockType}" cannot emit artifact kind "${artifact.kind}" (requires kernel capability). Pure blocks can only emit: ${Array.from(ALLOWED_PURE_ARTIFACT_KINDS).join(", ")}`,
+        message: `Pure block "${blockType}" cannot emit artifact kind "${artifact.kind}" on port "${portId}" (requires kernel capability). Pure blocks can only emit: ${Array.from(ALLOWED_PURE_ARTIFACT_KINDS).join(", ")}`,
         code: "FORBIDDEN_ARTIFACT",
       } as PureBlockValidationError;
     }

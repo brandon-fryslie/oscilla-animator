@@ -8,13 +8,19 @@
  * - Wire-level errors (mismatch on that connection)
  */
 
-import type { CompileError, PortRef } from './types';
+import type { CompileError } from './types';
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type Severity = 'error' | 'warning';
+
+/** Wire endpoint (matches CompilerConnection.from/to) */
+export interface WireEndpoint {
+  block: string;
+  port: string;
+}
 
 export interface BlockDecoration {
   blockId: string;
@@ -30,8 +36,8 @@ export interface PortDecoration {
 }
 
 export interface WireDecoration {
-  from: PortRef;
-  to: PortRef;
+  from: WireEndpoint;
+  to: WireEndpoint;
   severity: Severity;
   messages: string[];
 }
@@ -92,7 +98,7 @@ export function buildDecorations(errors: readonly CompileError[]): DecorationSet
       });
 
       // Also mark the destination port
-      addPort(w.connection.to.blockId, w.connection.to.port, err.message, 'error');
+      addPort(w.connection.to.block, w.connection.to.port, err.message, 'error');
       continue;
     }
 
@@ -146,9 +152,9 @@ export function hasWireError(
 ): boolean {
   return decorations.wires.some(
     (w) =>
-      w.from.blockId === fromBlockId &&
+      w.from.block === fromBlockId &&
       w.from.port === fromPort &&
-      w.to.blockId === toBlockId &&
+      w.to.block === toBlockId &&
       w.to.port === toPort
   );
 }

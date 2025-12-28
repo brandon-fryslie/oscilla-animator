@@ -134,7 +134,7 @@ describe("validatePureBlockOutput", () => {
         "out",
         {
           kind: "CanvasRender",
-          value: () => ({ kind: "group" as const, id: "root", children: [] }),
+          value: () => ({ cmds: [] }),
         },
       ],
     ]);

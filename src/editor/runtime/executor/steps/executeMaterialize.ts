@@ -35,7 +35,6 @@ import { FieldBufferPool } from "../../field/BufferPool";
 import { createSigEnv } from "../../signal-expr/SigEnv";
 import type { SigFrameCache } from "../../signal-expr/SigFrameCache";
 import type { SlotValueReader } from "../../signal-expr/SlotValueReader";
-import type { SignalExprIR } from "../../../compiler/ir/signalExpr";
 import type { FieldExprIR as CompilerFieldExprIR } from "../../../compiler/ir/fieldExpr";
 import type { FieldExprIR as RuntimeFieldExprIR } from "../../field/types";
 import { compilerToRuntimeType } from "../../integration/typeAdapter";

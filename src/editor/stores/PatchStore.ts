@@ -12,8 +12,6 @@ import type {
   BlockSubcategory,
   BlockType,
   LensInstance,
-  Publisher,
-  Listener,
 } from '../types';
 import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import { getBlockDefinition } from '../blocks';

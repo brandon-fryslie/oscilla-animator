@@ -53,19 +53,27 @@ export type KernelId =
   | 'FiniteTimeRoot'
   | 'CycleTimeRoot'
   | 'InfiniteTimeRoot'
-  // Identity Authority (2)
+  // Identity Authority (3)
   | 'DomainN'
   | 'SVGSampleDomain'
-  // State Authority (2)
+  | 'GridDomain'
+  // State Authority (5)
   | 'IntegrateBlock'
   | 'HistoryBlock'
-  // Render Authority (3, some future)
+  | 'TriggerOnWrap'
+  | 'PulseDivider'
+  | 'EnvelopeAD'
+  // Render Authority (6)
   | 'RenderInstances'
   | 'RenderStrokes'
   | 'RenderProgramStack'
-  // External IO Authority (2, future)
+  | 'RenderInstances2D'
+  | 'RenderPaths2D'
+  | 'Render2dCanvas'
+  // External IO Authority (3)
   | 'TextSource'
-  | 'ImageSource';
+  | 'ImageSource'
+  | 'DebugDisplay';
 
 /**
  * Compile kind for pure blocks - determines what AST they can produce.
