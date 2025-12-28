@@ -15,6 +15,7 @@
 
 import type { StepPerfCounters, MeshBufferRef } from '../../../compiler/ir/types3d';
 import type { ValueSlot } from '../../../compiler/ir';
+import type { StepBase } from '../../../compiler/ir/schedule';
 import type { MeshStore } from '../../mesh/MeshStore';
 
 // ============================================================================
@@ -26,7 +27,7 @@ import type { MeshStore } from '../../mesh/MeshStore';
  *
  * This step generates geometry from a procedural mesh recipe.
  */
-export interface StepMeshMaterialize {
+export interface StepMeshMaterialize extends StepBase {
   /** Step kind identifier */
   kind: 'MeshMaterialize';
 
@@ -115,7 +116,7 @@ export function executeMeshMaterialize(
   }
 
   const perf: StepPerfCounters = {
-    stepId: `meshMaterialize:${step.meshId}`,
+    stepId: step.id,
     cpuMs,
     cacheHit,
     bytesWritten,

@@ -19,6 +19,7 @@
 
 import type { StepPerfCounters } from '../../../compiler/ir/types3d';
 import type { ValueSlot } from '../../../compiler/ir/types';
+import type { StepBase } from '../../../compiler/ir/schedule';
 import type { CameraStore } from '../../camera/CameraStore';
 import type { ViewportInfo } from '../../camera/evaluateCamera';
 
@@ -29,20 +30,14 @@ import type { ViewportInfo } from '../../camera/evaluateCamera';
 /**
  * CameraEval Step - Evaluate camera to matrices
  */
-export interface StepCameraEval {
+export interface StepCameraEval extends StepBase {
   kind: 'CameraEval';
-
-  /** Step identifier */
-  id: string;
 
   /** Camera ID (constant for now, could be slot in future) */
   cameraId: string;
 
   /** Output slot for CameraEval handle */
   outSlot: ValueSlot;
-
-  /** Optional debug label */
-  label?: string;
 }
 
 // =============================================================================

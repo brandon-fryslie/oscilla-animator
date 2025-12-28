@@ -45,6 +45,8 @@ describe('executeMeshMaterialize', () => {
   it('should execute mesh materialization', () => {
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'test-mesh',
       outSlot: 42,
     };
@@ -60,13 +62,15 @@ describe('executeMeshMaterialize', () => {
   it('should emit performance counters', () => {
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'test-mesh',
       outSlot: 42,
     };
 
     const { perf } = executeMeshMaterialize(step, meshStore);
 
-    expect(perf.stepId).toBe('meshMaterialize:test-mesh');
+    expect(perf.stepId).toBe('step-1');
     expect(perf.cpuMs).toBeGreaterThanOrEqual(0);
     expect(perf.cacheHit).toBe(false); // First access is miss
     expect(perf.bytesWritten).toBeGreaterThan(0);
@@ -79,6 +83,8 @@ describe('executeMeshMaterialize', () => {
   it('should report cache hit on second access', () => {
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'test-mesh',
       outSlot: 42,
     };
@@ -98,6 +104,8 @@ describe('executeMeshMaterialize', () => {
   it('should return same buffer on cache hit', () => {
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'test-mesh',
       outSlot: 42,
     };
@@ -111,6 +119,8 @@ describe('executeMeshMaterialize', () => {
   it('should count vertices correctly', () => {
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'test-mesh',
       outSlot: 42,
     };
@@ -124,6 +134,8 @@ describe('executeMeshMaterialize', () => {
   it('should count triangles correctly', () => {
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'test-mesh',
       outSlot: 42,
     };
@@ -137,6 +149,8 @@ describe('executeMeshMaterialize', () => {
   it('should calculate bytes written correctly', () => {
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'test-mesh',
       outSlot: 42,
     };
@@ -175,6 +189,8 @@ describe('executeMeshMaterialize', () => {
 
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'nan-mesh',
       outSlot: 43,
     };
@@ -188,6 +204,8 @@ describe('executeMeshMaterialize', () => {
   it('should measure CPU time', () => {
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'test-mesh',
       outSlot: 42,
     };
@@ -220,6 +238,8 @@ describe('executeMeshMaterialize', () => {
 
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'no-normals',
       outSlot: 43,
     };
@@ -254,6 +274,8 @@ describe('executeMeshMaterialize', () => {
 
     const step: StepMeshMaterialize = {
       kind: 'MeshMaterialize',
+      id: 'step-1',
+      deps: [],
       meshId: 'no-uvs',
       outSlot: 43,
     };

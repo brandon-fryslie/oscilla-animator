@@ -29,6 +29,7 @@
  */
 
 import type { ValueSlot } from "../../../compiler/ir/types";
+import type { StepBase } from "../../../compiler/ir/schedule";
 import type {
   Instance2DBufferRef,
   StepPerfCounters,
@@ -60,11 +61,8 @@ export type SizeSpace = "px" | "world";
  *
  * Projects 3D instances through camera to 2D for canvas rendering.
  */
-export interface StepInstances3DProjectTo2D {
+export interface StepInstances3DProjectTo2D extends StepBase {
   kind: "Instances3DProjectTo2D";
-
-  /** Step identifier */
-  id: string;
 
   // Required inputs
   /** Domain slot (provides element count) */

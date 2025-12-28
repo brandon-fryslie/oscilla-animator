@@ -148,6 +148,7 @@ describe("executeInstances3DProject - basic projection", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -226,6 +227,7 @@ describe("executeInstances3DProject - basic projection", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -278,6 +280,7 @@ describe("executeInstances3DProject - basic projection", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -341,6 +344,7 @@ describe("executeInstances3DProject - culling", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -391,6 +395,7 @@ describe("executeInstances3DProject - culling", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -437,6 +442,7 @@ describe("executeInstances3DProject - culling", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -496,6 +502,7 @@ describe("executeInstances3DProject - NaN/Inf handling", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -542,6 +549,7 @@ describe("executeInstances3DProject - NaN/Inf handling", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -602,6 +610,7 @@ describe("executeInstances3DProject - depth sorting", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -658,6 +667,7 @@ describe("executeInstances3DProject - depth sorting", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -720,6 +730,7 @@ describe("executeInstances3DProject - color quantization", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
@@ -765,6 +776,7 @@ describe("executeInstances3DProject - color quantization", () => {
     const step: StepInstances3DProjectTo2D = {
       kind: "Instances3DProjectTo2D",
       id: "test-step",
+      deps: [],
       domainSlot: 0,
       cameraEvalSlot: 1,
       positionSlot: 2,
