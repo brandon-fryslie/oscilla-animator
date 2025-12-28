@@ -147,8 +147,31 @@ export function getBlocksForPalette(
 }
 
 /**
- * Get block definition by type
+ * Get block definition by type.
+ *
+ * First checks the static map (which is built at module load time).
+ * If not found and the type is a composite, dynamically checks the
+ * composite registry. This handles cases where composites are registered
+ * after the static map is created (e.g., in test environments with module
+ * isolation).
  */
 export function getBlockDefinition(type: string): BlockDefinition | undefined {
-  return BLOCK_DEFS_BY_TYPE.get(type);
+  // First, check static map
+  const fromMap = BLOCK_DEFS_BY_TYPE.get(type);
+  if (fromMap !== undefined) {
+    return fromMap;
+  }
+
+  // If it's a composite type and not in map, check dynamically
+  if (type.startsWith('composite:')) {
+    const composites = getCompositeBlockDefinitions();
+    const found = composites.find(def => def.type === type);
+    if (found !== undefined) {
+      // Cache it for future lookups
+      BLOCK_DEFS_BY_TYPE.set(type, normalizeDefinition(found));
+      return BLOCK_DEFS_BY_TYPE.get(type);
+    }
+  }
+
+  return undefined;
 }

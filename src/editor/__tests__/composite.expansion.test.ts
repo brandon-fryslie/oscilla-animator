@@ -194,8 +194,8 @@ describe('RewriteMap correctness (Test Matrix Section A)', () => {
 
     // Verify that the composite blocks exist before expansion
     const patch = editorToPatch(store);
-    const originalBlocks = Array.from(patch.blocks.keys());
-    expect(originalBlocks).toContain(renderId); // Before expansion
+    const originalBlockIds = patch.blocks.map(b => b.id);
+    expect(originalBlockIds).toContain(renderId); // Before expansion
 
     // The program should work at runtime
     if (result.program) {
