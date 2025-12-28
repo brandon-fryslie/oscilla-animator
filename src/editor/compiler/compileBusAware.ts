@@ -763,7 +763,11 @@ export function compileBusAwarePatch(
 
 
 /**
- * Helper to attach IR to a successful compile result if emitIR is enabled.
+ * Helper to attach IR to a successful compile result.
+ *
+ * IMPORTANT: When emitIR is true, IR compilation is MANDATORY.
+ * Failures throw errors instead of returning warnings.
+ * This ensures IR bugs are surfaced immediately, not masked by legacy fallback.
  */
 function attachIR(
   result: CompileResult,
@@ -775,33 +779,39 @@ function attachIR(
   seed: number
 ): CompileResult {
   if (!emitIR) {
-    console.log('[IR Debug] emitIR is false, skipping IR compilation');
+    // IR not requested - return legacy-only result
+    // This is the only valid path for skipping IR
+    console.log('[IR] IR compilation not enabled, using legacy-only mode');
     return result;
   }
 
-  console.log('[IR Debug] Running IR compilation...');
+  // IR is MANDATORY when enabled - failures are fatal errors
+  console.log('[IR] Running MANDATORY IR compilation...');
   const ir = compileIR(patch, compiledPortMap);
+
   if (ir === undefined) {
-    // IR compilation failed - add warning but keep closure success
-    console.warn('[IR Debug] compileIR returned undefined');
+    // IR compilation failed - this is now a FATAL error
+    const error: CompileError = {
+      code: 'IRValidationFailed',
+      message: 'IR compilation failed: compileIR returned undefined. IR is mandatory when enabled.',
+    };
+    console.error('[IR] FATAL: IR compilation failed (IR is mandatory)');
     return {
-      ...result,
-      irWarnings: [
-        {
-          code: 'IRValidationFailed',
-          message: 'IR compilation failed (see console for details)',
-        },
-      ],
+      ok: false,
+      errors: [error],
     };
   }
 
-  // Check for IR errors
+  // Check for IR errors - these are now FATAL
   if (ir.errors && ir.errors.length > 0) {
-    console.warn('[IR Debug] IR has errors, not building CompiledProgramIR:', ir.errors);
+    console.error('[IR] FATAL: IR has errors (IR is mandatory):', ir.errors);
+    const errors: CompileError[] = ir.errors.map(e => ({
+      code: 'IRValidationFailed',
+      message: `IR error: ${e.message || e.code}`,
+    }));
     return {
-      ...result,
-      ir,
-      irWarnings: ir.errors,
+      ok: false,
+      errors,
     };
   }
 
