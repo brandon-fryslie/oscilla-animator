@@ -3,17 +3,10 @@
  * @description Controls which compiler and features are active.
  *
  * Feature flags allow gradual rollout of the unified architecture
- * while maintaining backward compatibility with the legacy compiler.
+ * while maintaining backward compatibility.
  */
 
 export interface CompilerFeatureFlags {
-  /**
-   * Use unified compiler instead of legacy compiler.
-   * When true, uses UnifiedCompiler for patch compilation.
-   * When false, uses legacy compiler/integration.ts.
-   */
-  useUnifiedCompiler: boolean;
-
   /**
    * Enable strict state boundary validation.
    * When true, compiler rejects patches with implicit state.
@@ -36,10 +29,9 @@ export interface CompilerFeatureFlags {
 
 /**
  * Default feature flags.
- * Legacy compiler is the default until IR rendering is fully implemented.
+ * Unified compiler is now always used.
  */
 const DEFAULT_FLAGS: CompilerFeatureFlags = {
-  useUnifiedCompiler: true,
   strictStateValidation: true,
   timeCtxPropagation: true,
   requireTimeRoot: true,
@@ -75,11 +67,10 @@ export function resetFeatureFlags(): void {
 
 /**
  * Enable unified architecture features.
- * Convenience function for turning on all new features.
+ * Convenience function for turning on all features.
  */
 export function enableUnifiedArchitecture(): void {
   currentFlags = {
-    useUnifiedCompiler: true,
     strictStateValidation: true,
     timeCtxPropagation: true,
     requireTimeRoot: true,
@@ -110,9 +101,6 @@ export function initializeFeatureFlags(): void {
   if (typeof import.meta !== 'undefined' && import.meta.env) {
     const env = import.meta.env;
 
-    if (env.VITE_USE_UNIFIED_COMPILER !== undefined) {
-      currentFlags.useUnifiedCompiler = true;
-    }
     if (env.VITE_STRICT_STATE_VALIDATION !== undefined) {
       currentFlags.strictStateValidation = env.VITE_STRICT_STATE_VALIDATION === 'true';
     }
