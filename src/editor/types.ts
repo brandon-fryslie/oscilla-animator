@@ -403,7 +403,8 @@ export type UIControlHint =
   | { readonly kind: 'color' }
   | { readonly kind: 'boolean' }
   | { readonly kind: 'text' }
-  | { readonly kind: 'xy' };
+  | { readonly kind: 'xy' }
+  | { readonly kind: 'vec3' };
 
 /**
  * Default Source definition for an input slot.

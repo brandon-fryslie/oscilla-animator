@@ -1,0 +1,32 @@
+Agent: project-evaluator | 2025-12-28-154700
+Scope: project/full (compiler IR-only blockers)
+Completion: 0% (blocked) | Gaps: 43 documented issues + 1 critical blocker
+Reused: 0 findings | Fresh: 44 findings (43 red flags + 1 infrastructure)
+Cache updated: None (waiting for test fix to baseline)
+Ambiguities: 4 found | Workflow: PAUSE
+
+CRITICAL BLOCKER: Test suite broken - 27 test files fail at module load due to block registry validation. Must fix before evaluating IR red flags.
+
+Summary of Red Flags:
+- 16 CRITICAL issues (fundamentally break IR-only mode)
+- 17 HIGH issues (cause incorrect behavior)
+- 10 MEDIUM issues (inconsistencies/tech debt)
+- Total: 43 documented issues across 7 categories
+
+Key Findings:
+1. Test infrastructure broken - blocks all runtime verification
+2. IR compilation is optional and can fail silently to legacy mode
+3. Pass 6 emits placeholder IR (not real semantics)
+4. TimeModel hardcoded to infinite (breaks finite/cyclic patches)
+5. Bus evaluation missing from schedule
+6. Event buses have no IR representation
+7. Type conversions unimplemented
+
+Recommended Sprint Scope:
+- Sprint 0 (1 day): Fix block registry validation
+- Sprint 1 (1 week): Make IR mandatory, thread TimeModel, fix timeDerive
+- Sprint 2 (2 weeks): Core block lowering
+- Sprint 3 (2 weeks): Bus system
+- Sprint 4 (2 weeks): Type system & transforms
+
+Next: Fix src/editor/blocks/registry-validation.ts capability propagation issue

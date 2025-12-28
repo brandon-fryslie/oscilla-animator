@@ -1251,6 +1251,17 @@ code.wiring-info-value {
   flex: 1;
 }
 
+/* Vec3 control (xyz inputs) */
+.param-vec3 {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.param-vec3 .param-input {
+  flex: 1;
+}
+
 /* Bus connections */
 .bus-group {
   display: flex;

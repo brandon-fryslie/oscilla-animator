@@ -1139,6 +1139,77 @@ const DefaultSourceControl = observer(function DefaultSourceControl({
       </div>
     );
   }
+  // Vec3 control (xyz inputs) - P0-1
+  if (uiHint?.kind === 'vec3') {
+    const value = ds.value as { x?: number; y?: number; z?: number } | undefined;
+    const x = value?.x ?? 0;
+    const y = value?.y ?? 0;
+    const z = value?.z ?? 0;
+
+    // Handle paste events for JSON or comma-separated values
+    const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+      const text = e.clipboardData.getData('text').trim();
+
+      // Try JSON parse first
+      try {
+        const parsed = JSON.parse(text);
+        if (typeof parsed === 'object' && parsed !== null && 'x' in parsed && 'y' in parsed && 'z' in parsed) {
+          onChange({ x: Number(parsed.x) || 0, y: Number(parsed.y) || 0, z: Number(parsed.z) || 0 });
+          e.preventDefault();
+          return;
+        }
+      } catch {
+        // Not JSON, try comma-separated
+      }
+
+      // Try comma-separated values
+      const parts = text.split(',').map(s => s.trim());
+      if (parts.length === 3) {
+        const [xStr, yStr, zStr] = parts;
+        const xVal = parseFloat(xStr);
+        const yVal = parseFloat(yStr);
+        const zVal = parseFloat(zStr);
+        if (!isNaN(xVal) && !isNaN(yVal) && !isNaN(zVal)) {
+          onChange({ x: xVal, y: yVal, z: zVal });
+          e.preventDefault();
+          return;
+        }
+      }
+    };
+
+    return (
+      <div className="param-vec3" onPaste={handlePaste}>
+        <input
+          type="number"
+          className="param-input"
+          placeholder="x"
+          value={x}
+          disabled={isDriven}
+          step={0.1}
+          onChange={(e) => onChange({ x: parseFloat(e.target.value) || 0, y, z })}
+        />
+        <input
+          type="number"
+          className="param-input"
+          placeholder="y"
+          value={y}
+          disabled={isDriven}
+          step={0.1}
+          onChange={(e) => onChange({ x, y: parseFloat(e.target.value) || 0, z })}
+        />
+        <input
+          type="number"
+          className="param-input"
+          placeholder="z"
+          value={z}
+          disabled={isDriven}
+          step={0.1}
+          onChange={(e) => onChange({ x, y, z: parseFloat(e.target.value) || 0 })}
+        />
+      </div>
+    );
+  }
+
 
   // Text fallback
   return (
