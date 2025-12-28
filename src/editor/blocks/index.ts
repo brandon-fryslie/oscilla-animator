@@ -25,3 +25,6 @@ export * from './macros';
 export * from './registry';
 
 // Re-export registry helpers
+
+// Re-export scene blocks (3D camera, etc.)
+export * from './scene/camera';

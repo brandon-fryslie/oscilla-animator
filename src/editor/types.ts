@@ -90,6 +90,7 @@ export type PureCompileKind = 'operator' | 'composite' | 'spec';
 export type CoreDomain =
   | 'number'   // Numeric values
   | 'vec2'     // 2D positions/vectors
+  | 'vec3'     // 3D positions/vectors
   | 'color'    // Color values
   | 'boolean'  // True/false values
   | 'time'     // Time values (always in seconds)
@@ -123,7 +124,8 @@ export type InternalDomain =
   | 'string'       // String values (labels, etc.)
   | 'bounds'       // Bounding box / bounds
   | 'spec'         // Spec types (config that compiles to programs)
-  | 'canvasRender'; // Canvas 2D render commands
+  | 'canvasRender'  // Canvas 2D render commands
+  | 'cameraRef';   // Camera resource reference (for 3D rendering)
 
 /**
  * All domains (core + internal).
@@ -345,6 +347,9 @@ export type SlotType =
   | 'Signal<color>'     // Time-varying color
   | 'Signal<string>'    // Time-varying string (config enums, etc.)
   | 'Field<path>'       // Per-element path expressions
+  | 'Signal<vec3>'      // 3D position/vector
+  | 'Scalar:string'     // Compile-time constant string
+  | 'Special:cameraRef'  // Camera resource reference (3D)
 
   | 'Signal<PhaseSample>' // Phase machine output
   | 'Event<string>'     // Discrete text events (typewriter)
@@ -972,6 +977,8 @@ export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc> = {
   'Signal<phase>': { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'unit(0..1)' },
   'Signal<color>': { world: 'signal', domain: 'color', category: 'core', busEligible: true },
   'Signal<string>': { world: 'signal', domain: 'string', category: 'core', busEligible: false, semantics: 'config-enum' },
+  'Signal<vec3>': { world: 'signal', domain: 'vec3', category: 'core', busEligible: true, semantics: 'position3d' },
+  'Scalar:string': { world: 'scalar', domain: 'string', category: 'core', busEligible: false, semantics: 'config-enum' },
   'Signal<PhaseSample>': { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'sample' },
   'Event<string>': { world: 'signal', domain: 'trigger', category: 'core', busEligible: true, semantics: 'string' },
   'Event<any>': { world: 'signal', domain: 'trigger', category: 'core', busEligible: true },
@@ -992,6 +999,7 @@ export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc> = {
   'Scene': { world: 'field', domain: 'scene', category: 'internal', busEligible: false },
   'SceneTargets': { world: 'field', domain: 'sceneTargets', category: 'internal', busEligible: false },
   'SceneStrokes': { world: 'field', domain: 'sceneStrokes', category: 'internal', busEligible: false },
+  'Special:cameraRef': { world: 'field', domain: 'cameraRef', category: 'internal', busEligible: false, semantics: 'resource-ref' },
   'CanvasRender': { world: 'field', domain: 'canvasRender', category: 'internal', busEligible: false },
 };
 
@@ -1001,6 +1009,7 @@ export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc> = {
 export const CORE_DOMAIN_DEFAULTS: Record<CoreDomain, unknown> = {
   number: 0,
   vec2: { x: 0, y: 0 },
+  vec3: { x: 0, y: 0, z: 0 },
   color: '#000000',
   boolean: false,
   time: 0.0, // Always seconds!

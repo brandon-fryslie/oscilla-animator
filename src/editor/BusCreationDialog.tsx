@@ -42,6 +42,7 @@ interface BusCreationDialogProps {
 const DEFAULT_BUS_NAMES: Record<CoreDomain, string> = {
   number: 'energy',
   vec2: 'position',
+  vec3: 'cam',
   color: 'palette',
   phase: 'phaseA',
   phase01: 'phaseA',
@@ -57,6 +58,7 @@ const DEFAULT_BUS_NAMES: Record<CoreDomain, string> = {
 const DEFAULT_COMBINE_MODES: Record<CoreDomain, BusCombineMode> = {
   number: 'sum',
   vec2: 'sum',
+  vec3: 'last',
   color: 'layer',
   phase01: 'last',
   phase: 'last',
@@ -73,6 +75,7 @@ function getCombineModeOptions(domain: CoreDomain): BusCombineMode[] {
   const options: Record<CoreDomain, BusCombineMode[]> = {
     number: ['sum', 'average', 'max', 'min', 'last'],
     vec2: ['sum', 'average', 'last'],
+    vec3: ['sum', 'average', 'last'],
     phase01: ['last'],
     color: ['layer', 'last'],
     phase: ['last'],

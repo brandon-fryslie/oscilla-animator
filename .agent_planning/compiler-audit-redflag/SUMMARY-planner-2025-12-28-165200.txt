@@ -1,0 +1,11 @@
+Agent: status-planner | 2025-12-28-165200
+Topic: compiler-audit-redflag
+Files: PLAN-2025-12-28-165200.md, DOD-2025-12-28-165200.md
+Items: 2 (P0: 2, P1: 0, P2: 0)
+Sprint: 0 (Unblock Critical Path)
+Deliverables:
+  1. Fix block registry capability propagation (4-6h)
+  2. Make IR compilation mandatory (2-4h)
+Deferred: 34 issues (TimeModel, bus lowering, block lowering, type conversions, etc.)
+Timeline: 8-12 hours (1-1.5 days)
+Ready: Yes - all blockers identified, scope ruthlessly limited
