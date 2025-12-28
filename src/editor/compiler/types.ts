@@ -392,7 +392,10 @@ export type Artifact =
   | { kind: 'CanvasRender'; value: (tMs: number, ctx: RuntimeCtx) => import('../runtime/renderCmd').RenderTree }
 
   // Phase 2: ExternalAsset (future - IO capability)
-  | { kind: 'ExternalAsset'; value: unknown };
+  | { kind: 'ExternalAsset'; value: unknown }
+
+  // Error artifact (returned by block compilers on validation failure)
+  | { kind: 'Error'; message: string; value?: undefined };
 
 export type CompiledOutputs = Record<string, Artifact>;
 
