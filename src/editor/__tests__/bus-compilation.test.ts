@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { compilePatch } from '../compiler/compile';
-import type { CompilerPatch, BlockRegistry, CompileCtx, Seed, RuntimeCtx } from '../compiler/types';
+import type { CompilerPatch, BlockRegistry, CompileCtx, Seed, RuntimeCtx, Artifact } from '../compiler/types';
 import type { Bus, Publisher, Listener } from '../types';
 
 // =============================================================================
@@ -77,7 +77,7 @@ function createTestRegistry(): BlockRegistry {
         { name: 'cycleIndex', type: { kind: 'Signal:number' }, required: true },
         { name: 'energy', type: { kind: 'Signal:number' }, required: true },
       ],
-      compile: ({ params }) => {
+      compile: ({ params }: { params: Record<string, unknown> }) => {
         const periodMs = (params.periodMs as number) ?? 3000;
         return {
           systemTime: { kind: 'Signal:Time', value: (t: number) => t },
@@ -95,7 +95,7 @@ function createTestRegistry(): BlockRegistry {
       type: 'NumberSource',
       inputs: [],
       outputs: [{ name: 'value', type: { kind: 'Signal:number' }, required: true }],
-      compile: ({ params }) => ({
+      compile: ({ params }: { params: Record<string, unknown> }) => ({
         value: { kind: 'Signal:number', value: () => (params.value as number) ?? 0 },
       }),
     },
@@ -104,7 +104,7 @@ function createTestRegistry(): BlockRegistry {
       type: 'NumberSink',
       inputs: [{ name: 'input', type: { kind: 'Signal:number' }, required: true }],
       outputs: [{ name: 'program', type: { kind: 'RenderTreeProgram' }, required: true }],
-      compile: ({ inputs }) => {
+      compile: ({ inputs }: { inputs: Record<string, Artifact> }) => {
         const input = inputs.input;
         if (input?.kind !== 'Signal:number') {
           return {

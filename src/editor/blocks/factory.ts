@@ -60,6 +60,7 @@ export function createBlock(
     defaultParams: {},
     color: '#CCCCCC',
     laneKind: 'Program' as const, // Default lane kind
+    capability: 'pure' as const, // Default capability for all blocks created via factory
     ...definition,
   };
 

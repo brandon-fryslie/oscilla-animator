@@ -1,0 +1,38 @@
+Agent: iterative-implementer | 2025-12-27 20:04:45
+Mode: manual
+Completed: Fixed paramSchema type issues in block definitions | Files: 2 | Commits: 1
+Cache invalidated: None (type-only change, no eval cache impact)
+Status: complete
+
+## What was done
+
+Fixed type compilation errors in `src/editor/blocks/__tests__/registry-validation.test.ts` where tests were creating block definitions with a `paramSchema` property that didn't exist on the type definitions.
+
+## Root cause
+
+The `ParamSchema` types were defined at the end of `src/editor/blocks/types.ts` but were not included as a field in `BlockDefinitionBase`. This was legacy code still used by:
+- registry-validation tests
+- composite-bridge.ts
+- composite-utils.ts  
+- domain.ts blocks
+
+## Solution
+
+1. **Moved ParamSchema type definitions** to the top of the file (before BlockDefinitionBase)
+2. **Added optional paramSchema field** to BlockDefinitionBase with @deprecated tag
+3. **Added import** in factory.ts to reference ParamSchema type
+
+## Validation
+
+- Registry validation tests now pass: 16/16 tests passing
+- No new type errors introduced in files using paramSchema
+- Properly marked as @deprecated to indicate migration path to defaultSource
+
+## Files modified
+
+- `/Users/bmf/code/oscilla-animator_codex/src/editor/blocks/types.ts`
+- `/Users/bmf/code/oscilla-animator_codex/src/editor/blocks/factory.ts`
+
+## Commit
+
+700e001 - fix(blocks): Add paramSchema to BlockDefinitionBase for backward compatibility

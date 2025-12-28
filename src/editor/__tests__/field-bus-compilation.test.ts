@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { compilePatch } from '../compiler/compile';
-import type { CompilerPatch, BlockRegistry, CompileCtx, Seed, Field } from '../compiler/types';
+import type { CompilerPatch, BlockRegistry, CompileCtx, Seed, Field, Artifact } from '../compiler/types';
 import type { Bus, Publisher, Listener } from '../types';
 
 // =============================================================================
@@ -74,7 +74,7 @@ function createFieldTestRegistry(): BlockRegistry {
         { name: 'cycleIndex', type: { kind: 'Signal:number' }, required: true },
         { name: 'energy', type: { kind: 'Signal:number' }, required: true },
       ],
-      compile: ({ params }) => {
+      compile: ({ params }: { params: Record<string, unknown> }) => {
         const periodMs = (params.periodMs as number) ?? 3000;
         return {
           systemTime: { kind: 'Signal:Time', value: (t: number) => t },
@@ -92,7 +92,7 @@ function createFieldTestRegistry(): BlockRegistry {
       type: 'FieldNumberSource',
       inputs: [],
       outputs: [{ name: 'field', type: { kind: 'Field:number' }, required: true }],
-      compile: ({ params }) => {
+      compile: ({ params }: { params: Record<string, unknown> }) => {
         const baseValue = (params.value as number) ?? 0;
         // Field is bulk form: (seed, n, ctx) => readonly number[]
         const field: Field<number> = (_seed, n, _ctx) => {
@@ -113,7 +113,7 @@ function createFieldTestRegistry(): BlockRegistry {
       type: 'FieldSink',
       inputs: [{ name: 'field', type: { kind: 'Field:number' }, required: true }],
       outputs: [{ name: 'program', type: { kind: 'RenderTreeProgram' }, required: true }],
-      compile: ({ inputs }) => {
+      compile: ({ inputs }: { inputs: Record<string, Artifact> }) => {
         const fieldArtifact = inputs.field;
         if (fieldArtifact?.kind !== 'Field:number') {
           return {
@@ -157,7 +157,7 @@ function createFieldTestRegistry(): BlockRegistry {
         { name: 'b', type: { kind: 'Field:number' }, required: true },
       ],
       outputs: [{ name: 'out', type: { kind: 'Field:number' }, required: true }],
-      compile: ({ inputs }) => {
+      compile: ({ inputs }: { inputs: Record<string, Artifact> }) => {
         const aArtifact = inputs.a;
         const bArtifact = inputs.b;
 

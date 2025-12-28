@@ -1,0 +1,18 @@
+Agent: iterative-implementer | 2025-12-27 20:20:00
+Mode: manual
+Completed: Fixed TypeScript errors for StepIR missing id property | Files: 5 | Commits: 1
+Tests: All StepIR id errors resolved
+Cache invalidated: None (no cache entries exist yet)
+Status: complete
+
+Summary:
+Fixed TypeScript errors where code tried to access `id` property on StepIR union type members.
+The issue was that the 3D step types (StepCameraEval, StepMeshMaterialize, StepInstances3DProjectTo2D)
+were defined in runtime executor files and did not extend StepBase, while all other step types did.
+
+Solution:
+1. Made all 3D step types extend StepBase (which provides id, kind, deps, etc.)
+2. Imported StepBase type from schedule.ts
+3. Updated test files to include required deps property
+
+All StepIR-related TypeScript errors are now resolved.

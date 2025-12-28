@@ -49,7 +49,7 @@ export function compilePatch(
 function findTimeRootBlocks(patch: CompilerPatch): BlockInstance[] {
   const timeRootBlocks: BlockInstance[] = [];
 
-  for (const block of patch.blocks) {
+  for (const block of patch.blocks.values()) {
     const blockDef = getBlockDefinition(block.type);
     if (blockDef?.subcategory === 'TimeRoot') {
       timeRootBlocks.push(block);
@@ -101,7 +101,7 @@ export function topoSortBlocks(
   patch: CompilerPatch,
   errors: CompileError[]
 ): readonly BlockId[] {
-  const ids = patch.blocks.map(b => b.id);
+  const ids = Array.from(patch.blocks.keys());
 
   // Build adjacency + indegree
   const adj = new Map<BlockId, Set<BlockId>>();

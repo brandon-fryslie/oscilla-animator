@@ -1,6 +1,6 @@
 # Project Roadmap: IR Compiler Migration
 
-Last updated: 2025-12-25-160000
+Last updated: 2025-12-27-200000
 
 > **Migration Strategy:** "Strangle Pattern" - New IR wraps existing closures, gradually replacing them while keeping the app running at every step.
 
@@ -678,24 +678,28 @@ Reference: `design-docs/12-Compiler-Final/`
 
 ### Foundation (do first)
 
-#### undo-redo [PROPOSED]
-**Description:** Command-based undo/redo system. Every patch mutation (add block, delete block, connect, disconnect, change param) becomes an undoable command. Users can experiment freely knowing Cmd+Z will save them.
+#### undo-redo [PLANNING]
+**Description:** Transaction-based undo/redo system. Every patch mutation flows through runTx(), generating forward and inverse ops. Full branching history with revision tree.
 
-**Implementation approach:**
-- Command pattern: each action creates a Command object with execute() and undo()
-- CommandHistory stack with undo/redo pointers
-- Integrate with MobX stores (PatchStore, ConnectionStore, etc.)
-- Keyboard shortcuts: Cmd+Z (undo), Cmd+Shift+Z (redo)
-- Visual indicator showing undo stack depth
+**Architecture:**
+- Op-based transactions: Add, Remove, Update, SetTimeRoot, Many (compound)
+- TxBuilder with runTx() as single mutation entry point
+- HistoryStore with revision tree (branching, never truncates)
+- Cascade helpers: removeBlockCascade(), removeBusCascade()
+- Deep clone for proper inverse computation
 
-**Commands to implement:**
-- AddBlock / RemoveBlock
-- AddConnection / RemoveConnection
-- SetBlockParam / SetDefaultSource
-- AddBus / RemoveBus
-- AddPublisher / RemovePublisher
-- AddListener / RemoveListener
-- BatchCommand (for compound operations)
+**Phases Planned:**
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1 | ✅ COMPLETE | Op types, TxBuilder, HistoryStore, basic UI (87 tests) |
+| Phase 2 | ✅ COMPLETE | PatchStore + BusStore migration |
+| Phase 3 | PLANNED | replaceBlock, lens operations, suppressGraphCommitted removal |
+| Phase 4A | PLANNED | IndexedDB persistence |
+| Phase 4B | PLANNED | History UI polish (variations, bookmarks) |
+| Phase 4C | PLANNED | Gesture buffer + block position undo |
+| Phase 4D | SKIPPED | expandMacro undo (LOW value, VERY HIGH complexity) |
+
+**Planning Directory:** `.agent_planning/undo-redo/`
 
 **Dependencies:** None
 **Labels:** ux, editor, foundation, reliability

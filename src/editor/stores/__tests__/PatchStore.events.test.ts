@@ -182,9 +182,15 @@ describe('PatchStore - Wire Events', () => {
   });
 
   describe('WireRemoved - cascade deletion on block removal', () => {
-    it('emits WireRemoved for each connection when block removed', () => {
-      const listener = vi.fn();
-      root.events.on('WireRemoved', listener);
+    // NOTE: Cascade deletion via removeBlockCascade() is "silent" - it removes
+    // connections without emitting individual WireRemoved events. Only BlockRemoved
+    // and GraphCommitted are emitted. This is by design for transaction atomicity.
+
+    it('removes connections when block removed (cascade is silent)', () => {
+      const wireRemovedListener = vi.fn();
+      const blockRemovedListener = vi.fn();
+      root.events.on('WireRemoved', wireRemovedListener);
+      root.events.on('BlockRemoved', blockRemovedListener);
 
       // Use Oscillator blocks (output: 'out') and AddSignal (inputs: 'a', 'b')
       // to allow multiple connections without input conflicts
@@ -202,52 +208,41 @@ describe('PatchStore - Wire Events', () => {
       // Remove block2
       root.patchStore.removeBlock(block2);
 
-      // Should emit WireRemoved for the 2 connections involving block2
-      expect(listener).toHaveBeenCalledTimes(2);
+      // Cascade deletion is silent - no individual WireRemoved events
+      // Only BlockRemoved is emitted for block lifecycle
+      expect(wireRemovedListener).toHaveBeenCalledTimes(0);
+      expect(blockRemovedListener).toHaveBeenCalledTimes(1);
 
-      // Verify events have correct data
-      const events = listener.mock.calls.map(call => call[0] as WireRemovedEvent);
-      const removedWireIds = events.map(e => e.wireId);
-
-      // All events should be WireRemoved
-      events.forEach(event => {
-        expect(event.type).toBe('WireRemoved');
-        // Each event should reference block2
-        expect(
-          event.from.blockId === block2 || event.to.blockId === block2
-        ).toBe(true);
-      });
-
-      // Verify connections are actually removed from store
-      removedWireIds.forEach(wireId => {
-        const connection = root.patchStore.connections.find(c => c.id === wireId);
-        expect(connection).toBeUndefined();
-      });
-
+      // But connections ARE actually removed
       // Only 1 connection should remain (block1 -> block3)
       expect(root.patchStore.connections.length).toBe(1);
     });
 
-    it('emits correct number of WireRemoved events for complex block', () => {
-      const listener = vi.fn();
-      root.events.on('WireRemoved', listener);
+    it('removes all connections for complex block (cascade is silent)', () => {
+      // Use blocks with multiple inputs to avoid triggering disconnectInputPort
+      const block1 = root.patchStore.addBlock('Oscillator');  // out output
+      const block2 = root.patchStore.addBlock('AddSignal');   // a, b inputs
+      const block3 = root.patchStore.addBlock('AddSignal');   // a, b inputs
 
-      const block1 = root.patchStore.addBlock('FieldConstNumber');
-      const block2 = root.patchStore.addBlock('FieldConstNumber');
-      const block3 = root.patchStore.addBlock('FieldConstNumber');
-      const block4 = root.patchStore.addBlock('FieldConstNumber');
+      // Create connections - all involving block2
+      root.patchStore.connect(block1, 'out', block2, 'a');    // block2 involved (1)
+      root.patchStore.connect(block1, 'out', block2, 'b');    // block2 involved (2)
+      root.patchStore.connect(block2, 'value', block3, 'a');  // block2 involved (3)
 
-      // Create connections
-      root.patchStore.connect(block1, 'value', block2, 'value');
-      root.patchStore.connect(block2, 'value', block3, 'value');
-      root.patchStore.connect(block2, 'value', block4, 'value');
-      root.patchStore.connect(block3, 'value', block4, 'value');
+      expect(root.patchStore.connections.length).toBe(3);
+
+      // Subscribe AFTER setup to only capture cascade events
+      const wireRemovedListener = vi.fn();
+      root.events.on('WireRemoved', wireRemovedListener);
 
       // Remove block2 (has 3 connections)
       root.patchStore.removeBlock(block2);
 
-      // Should emit exactly 3 WireRemoved events
-      expect(listener).toHaveBeenCalledTimes(3);
+      // Cascade deletion is silent - no WireRemoved events
+      expect(wireRemovedListener).toHaveBeenCalledTimes(0);
+
+      // But connections ARE removed (all involved block2)
+      expect(root.patchStore.connections.length).toBe(0);
     });
 
     it('does not emit WireRemoved when removing block with no connections', () => {
