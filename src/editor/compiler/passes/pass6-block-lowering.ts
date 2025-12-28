@@ -250,6 +250,9 @@ export function pass6BlockLowering(
   const blockOutputs = new Map<BlockIndex, Map<string, ValueRefPacked>>();
   const errors: CompileError[] = [];
 
+  // Set time model from Pass 3 (threaded through Pass 4 and 5)
+  builder.setTimeModel(validated.timeModel);
+
   // Process blocks in dependency order (already sorted by Pass 4)
   // For each block, translate its output artifacts to IR nodes
   for (const scc of validated.sccs) {

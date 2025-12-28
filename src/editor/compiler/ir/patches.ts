@@ -216,6 +216,9 @@ export interface AcyclicOrLegalGraph {
   readonly graph: DepGraph;
   readonly sccs: readonly SCC[];
   readonly errors: readonly IllegalCycleError[];
+
+  /** Time model from Pass 3, threaded through for Pass 6 */
+  readonly timeModel: TimeModelIR;
 }
 
 // =============================================================================

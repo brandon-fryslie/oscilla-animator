@@ -34,6 +34,7 @@ import type {
   TimeSlots,
 } from "./builderTypes";
 import type { CameraIR } from "./types3d";
+import type { TimeModelIR } from "./schedule";
 
 /**
  * Infer storage type from TypeDesc.
@@ -77,6 +78,9 @@ export class IRBuilderImpl implements IRBuilder {
   // Time slots - set by TimeRoot lowering
   private timeSlots: TimeSlots | undefined;
 
+
+  // Time model - set by pass6 from Pass 3 output
+  private timeModel: TimeModelIR | undefined;
   // =============================================================================
   // Debug Index Tracking (Phase 7)
   // =============================================================================
@@ -104,6 +108,16 @@ export class IRBuilderImpl implements IRBuilder {
    */
   setCurrentBlockId(blockId: string | undefined): void {
     this.currentBlockId = blockId;
+  }
+
+  /**
+   * Set the time model for this patch.
+   * Called by pass6 before block lowering begins.
+   *
+   * @param timeModel - The time model from Pass 3
+   */
+  setTimeModel(timeModel: TimeModelIR): void {
+    this.timeModel = timeModel;
   }
 
   // =============================================================================
@@ -751,7 +765,7 @@ export class IRBuilderImpl implements IRBuilder {
         eventExprSource: this.eventExprSourceMap,
         slotSource: this.slotSourceMap,
       },
-      timeModel: {
+      timeModel: this.timeModel ?? {
         kind: "infinite",
         windowMs: 30000,
       },

@@ -21,6 +21,7 @@ export type { TimeResolvedPatch } from "../ir/patches";
 
 // Pass 4: Dependency Graph
 export { pass4DepGraph } from "./pass4-depgraph";
+export type { DepGraphWithTimeModel } from "./pass4-depgraph";
 export type { DepGraph } from "../ir/patches";
 
 // Pass 5: SCC Validation

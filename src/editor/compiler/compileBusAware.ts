@@ -327,8 +327,8 @@ function compileIR(
     const normalized = pass1Normalize(patchForIR);
     const typed = pass2TypeGraph(normalized);
     const timeResolved = pass3TimeTopology(typed);
-    const depGraph = pass4DepGraph(timeResolved);
-    const validated = pass5CycleValidation(depGraph, patchForIR.blocks);
+    const depGraphWithTime = pass4DepGraph(timeResolved);
+    const validated = pass5CycleValidation(depGraphWithTime, patchForIR.blocks);
 
     // Run Passes 6-8: Block Lowering → Bus Lowering → Link Resolution
     const unlinked = pass6BlockLowering(validated, patchForIR.blocks, compiledPortMap);

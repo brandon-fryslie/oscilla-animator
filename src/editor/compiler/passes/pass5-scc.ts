@@ -13,6 +13,7 @@
  * - https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
  */
 
+import type { DepGraphWithTimeModel } from "./pass4-depgraph";
 import type { Block } from "../../types";
 import type {
   DepGraph,
@@ -232,18 +233,18 @@ function tarjanSCC(graph: DepGraph, blocks: readonly Block[]): SCC[] {
  * @returns A validated graph with SCC information
  */
 export function pass5CycleValidation(
-  depGraph: DepGraph,
+  depGraphWithTime: DepGraphWithTimeModel,
   blocks: readonly Block[]
 ): AcyclicOrLegalGraph {
   const errors: IllegalCycleError[] = [];
 
   // Step 1: Run Tarjan's SCC algorithm
-  const sccs = tarjanSCC(depGraph, blocks);
+  const sccs = tarjanSCC(depGraphWithTime.graph, blocks);
 
   // Step 2: Validate non-trivial SCCs have state boundaries
   for (const scc of sccs) {
     // Skip trivial SCCs (size 1, no self-loop)
-    if (scc.nodes.length === 1 && !hasSelfLoop(depGraph, scc.nodes[0])) {
+    if (scc.nodes.length === 1 && !hasSelfLoop(depGraphWithTime.graph, scc.nodes[0])) {
       continue;
     }
 
@@ -265,7 +266,8 @@ export function pass5CycleValidation(
 
   // Return validated graph with SCC information
   return {
-    graph: depGraph,
+    graph: depGraphWithTime.graph,
+    timeModel: depGraphWithTime.timeModel,
     sccs,
     errors,
   };

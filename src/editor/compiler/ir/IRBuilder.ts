@@ -29,6 +29,7 @@ import type {
 } from "./types";
 import type { EventCombineMode } from "./signalExpr";
 import type { TransformStepIR } from "./transforms";
+import type { TimeModelIR } from "./schedule";
 import type { StatefulSignalOp } from "./signalExpr";
 import type { PureFnRef, ReduceFn, BuilderProgramIR, TimeSlots } from "./builderTypes";
 import type { CameraIR } from "./types3d";
@@ -100,7 +101,23 @@ export interface IRBuilder {
    * Set time slots allocated by TimeRoot during lowering.
    * Schedule will reference these rather than allocating its own.
    */
+
+  /**
+   * Set the time model for this patch.
+   * Called by pass6 from Pass 3 output.
+   *
+   * @param timeModel - The time model from Pass 3
+   */
+  setTimeModel(timeModel: TimeModelIR): void;
   setTimeSlots(slots: TimeSlots): void;
+
+  /**
+   * Set the time model for this patch.
+   * Called by pass6 from Pass 3 output.
+   *
+   * @param timeModel - The time model from Pass 3
+   */
+  setTimeModel(timeModel: TimeModelIR): void;
 
   // =============================================================================
   // Signal Expressions

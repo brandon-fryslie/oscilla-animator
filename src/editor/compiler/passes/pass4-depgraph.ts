@@ -27,6 +27,7 @@ import type {
   DepGraph,
   DepNode,
   DepEdge,
+  TimeModelIR,
 } from "../ir";
 
 /**
@@ -53,6 +54,14 @@ export type Pass4Error =
   | DanglingBindingEndpointError;
 
 /**
+ * Output of Pass 4: DepGraph with timeModel threaded through.
+ */
+export interface DepGraphWithTimeModel {
+  readonly graph: DepGraph;
+  readonly timeModel: TimeModelIR;
+}
+
+/**
  * Pass 4: Dependency Graph Construction
  *
  * Builds a unified dependency graph with BlockEval and BusValue nodes,
@@ -69,7 +78,7 @@ export function pass4DepGraph(
     Listener,
     Bus
   >
-): DepGraph {
+): DepGraphWithTimeModel {
   const errors: Pass4Error[] = [];
   const nodes: DepNode[] = [];
   const edges: DepEdge[] = [];
@@ -206,9 +215,12 @@ export function pass4DepGraph(
     );
   }
 
-  // Return dependency graph
+  // Return dependency graph with timeModel threaded through
   return {
-    nodes,
-    edges,
+    graph: {
+      nodes,
+      edges,
+    },
+    timeModel: timeResolved.timeModel,
   };
 }
