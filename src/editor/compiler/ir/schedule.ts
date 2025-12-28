@@ -122,6 +122,7 @@ export type StepIR =
   | StepSignalEval
   | StepNodeEval
   | StepBusEval
+  | StepEventBusEval
   | StepMaterialize
   | StepMaterializeColor
   | StepMaterializePath
@@ -322,6 +323,52 @@ export interface SilentValueSpec {
 
   /** Optional constant ID (for kind: "const") */
   constId?: number;
+}
+
+// ============================================================================
+// Step 3b: Event Bus Evaluation
+// ============================================================================
+
+/**
+ * Event Bus Eval Step
+ *
+ * Combines event streams from multiple publishers into a single event stream.
+ *
+ * Semantics:
+ * - Publishers are processed in deterministic order (sortKey ascending, then publisherId)
+ * - For each enabled publisher: read srcSlot (event stream)
+ * - Combine event streams based on combine mode:
+ *   - merge: Union of all events, sorted by time
+ *   - first: Events from first publisher only
+ *   - last: Events from last publisher only
+ * - If zero enabled publishers: return empty event stream
+ * - Write result to outSlot
+ *
+ * Event streams are arrays of { time: number, value: unknown } sorted by time.
+ */
+export interface StepEventBusEval extends StepBase {
+  kind: "eventBusEval";
+
+  /** Index of the bus being evaluated */
+  busIndex: BusIndex;
+
+  /** Output slot for the combined event stream */
+  outSlot: ValueSlot;
+
+  /** Publishers in deterministic order */
+  publishers: PublisherIR[];
+
+  /** Event combine specification */
+  combine: EventCombineSpec;
+
+  /** Bus type (for type safety) */
+  busType: import("./types").TypeDesc;
+}
+
+/** Combine specification for event bus aggregation */
+export interface EventCombineSpec {
+  /** Combine mode for events */
+  mode: "merge" | "first" | "last";
 }
 
 // ============================================================================

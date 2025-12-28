@@ -304,11 +304,12 @@ export function renderInstances2DPass(
     // Read required posXY buffer
     const posXY = readBuffer(pass.buffers.posXY, valueStore) as Float32Array;
 
-    // Resolve optional attribute buffers/scalars
-    const size = requireAttribute(pass.buffers.size, valueStore);
-    const colorRGBA = requireAttribute(pass.buffers.colorRGBA, valueStore);
-    const opacity = requireAttribute(pass.buffers.opacity, valueStore);
-    const shapeId = requireAttribute(pass.buffers.shapeId, valueStore);
+    // Resolve optional attribute buffers/scalars with sensible defaults
+    // Per InstanceBufferSetIR, these are all optional
+    const size = optionalAttribute(pass.buffers.size, valueStore, 10); // 10px default radius
+    const colorRGBA = optionalAttribute(pass.buffers.colorRGBA, valueStore, 0xFFFFFFFF); // white
+    const opacity = optionalAttribute(pass.buffers.opacity, valueStore, 1.0); // fully opaque
+    const shapeId = optionalAttribute(pass.buffers.shapeId, valueStore, 0); // circle
     const rot = optionalAttribute(pass.buffers.rot, valueStore, 0);
     const strokeWidth = optionalAttribute(pass.buffers.strokeWidth, valueStore, 0);
     const strokeColorRGBA = optionalAttribute(pass.buffers.strokeColorRGBA, valueStore, 0);

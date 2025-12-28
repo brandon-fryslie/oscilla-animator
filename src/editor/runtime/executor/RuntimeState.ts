@@ -336,6 +336,14 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
         }
         break;
 
+      case "eventBusEval":
+        // Event streams are objects (arrays of EventOccurrence), not numeric values
+        objectSlots.add(step.outSlot);
+        for (const pub of step.publishers) {
+          objectSlots.add(pub.srcSlot);
+        }
+        break;
+
       case "materialize":
         numericSlots.add(step.materialization.domainSlot);
         // Buffer slots hold objects, not numbers

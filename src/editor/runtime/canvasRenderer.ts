@@ -178,8 +178,9 @@ export class Canvas2DRenderer {
    *
    * Algorithm:
    * 1. Clear canvas based on clear spec
-   * 2. Execute each render pass in order
-   * 3. Execute optional overlay passes
+   * 2. Sort passes by header.z (back-to-front)
+   * 3. Execute each render pass in z-order
+   * 4. Execute optional overlay passes
    *
    * @param frame - RenderFrameIR from executeRenderAssemble
    * @param valueStore - ValueStore containing buffers referenced by BufferRefIR
@@ -213,12 +214,15 @@ export class Canvas2DRenderer {
       }
     }
 
-    // 2. Execute render passes
-    for (const pass of frame.passes) {
+    // 2. Sort passes by z-order (back-to-front)
+    const sortedPasses = [...frame.passes].sort((a, b) => a.header.z - b.header.z);
+
+    // 3. Execute render passes in z-order
+    for (const pass of sortedPasses) {
       this.renderPass(pass, valueStore);
     }
 
-    // 3. Execute overlay passes (if any)
+    // 4. Execute overlay passes (if any)
     if (frame.overlays) {
       for (const overlay of frame.overlays) {
         this.renderPass(overlay, valueStore);

@@ -9,7 +9,7 @@
  * - PLAN-2025-12-26-030000.md § P0-1, P0-2, P0-3
  */
 
-import type { TypeDesc, SigExprId, FieldExprId, ValueSlot } from "./types";
+import type { TypeDesc, SigExprId, FieldExprId, EventExprId, ValueSlot } from "./types";
 import type { IRBuilder } from "./IRBuilder";
 import type { TimeModel } from "../types";
 import type { BlockIndex } from "./patches";

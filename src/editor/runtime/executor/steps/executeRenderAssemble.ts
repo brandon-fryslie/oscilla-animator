@@ -360,10 +360,10 @@ export function executeRenderAssemble(
     }
   }
 
-  // 3. Create RenderFrameIR
+  // 3. Create RenderFrameIR with black background clear
   const frame: RenderFrameIR = {
     version: 1,
-    clear: { mode: "none" },
+    clear: { mode: "color", colorRGBA: 0x000000FF }, // Black background
     passes,
   };
 

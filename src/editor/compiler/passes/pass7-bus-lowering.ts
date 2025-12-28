@@ -16,10 +16,11 @@
  */
 
 import type { Bus, Publisher, Block } from "../../types";
-import type { BusIndex, TypeDesc } from "../ir/types";
+import type { BusIndex, TypeDesc, EventExprId } from "../ir/types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
 import type { CompileError } from "../types";
+import type { EventCombineMode } from "../ir/signalExpr";
 import { getSortedPublishers } from "../../semantic/busSemantics";
 
 // Re-export ValueRefPacked for downstream consumers
@@ -175,9 +176,10 @@ function lowerBusToCombineNode(
 ): ValueRefPacked | null {
   const irType = toIRTypeDesc(bus.type);
 
-  // Collect terms (publisher outputs)
+  // Collect terms (publisher outputs) by world type
   const sigTerms: number[] = [];
   const fieldTerms: number[] = [];
+  const eventTerms: EventExprId[] = [];
 
   for (const pub of publishers) {
     const blockIdx = blockIdToIndex.get(pub.from.blockId);
@@ -188,8 +190,7 @@ function lowerBusToCombineNode(
     const ref = outputs?.get(pub.from.slotId);
 
     if (!ref) {
-      // This is expected for Event ports which don't have IR representation
-      // Only warn if the port exists but has no ref (might be a real issue)
+      // Port may not have IR representation yet - this is OK during migration
       continue;
     }
 
@@ -201,6 +202,8 @@ function lowerBusToCombineNode(
       sigTerms.push(ref.id);
     } else if (ref.k === "field") {
       fieldTerms.push(ref.id);
+    } else if (ref.k === "event") {
+      eventTerms.push(ref.id);
     }
   }
 
@@ -244,6 +247,31 @@ function lowerBusToCombineNode(
     return { k: "field", id: fieldId, slot };
   }
 
+  // Handle Event Bus
+  if (irType.world === "event") {
+    if (eventTerms.length === 0) {
+      return createDefaultBusValue(bus, builder);
+    }
+
+    // Map bus combineMode to event combine semantics
+    // For events: 'merge' combines all event streams, 'last' takes only last publisher's events
+    const mode = bus.combineMode as string;
+    let eventMode: EventCombineMode;
+    if (mode === "sum" || mode === "merge") {
+      eventMode = "merge";
+    } else if (mode === "first") {
+      eventMode = "first";
+    } else {
+      // Default to 'last' for any other mode
+      eventMode = "last";
+    }
+
+    const eventId = builder.eventCombine(busIndex, eventTerms, eventMode, irType);
+    const slot = builder.allocValueSlot();
+    builder.registerEventSlot(eventId, slot);
+    return { k: "event", id: eventId, slot };
+  }
+
   return null;
 }
 
@@ -270,6 +298,14 @@ function createDefaultBusValue(bus: Bus, builder: IRBuilder): ValueRefPacked | n
     const slot = builder.allocValueSlot();
     builder.registerFieldSlot(fieldId, slot);
     return { k: "field", id: fieldId, slot };
+  }
+
+  if (type.world === "event") {
+    // Create empty event stream (no events)
+    const eventId = builder.eventEmpty(type);
+    const slot = builder.allocValueSlot();
+    builder.registerEventSlot(eventId, slot);
+    return { k: "event", id: eventId, slot };
   }
 
   // Unknown world - skip
