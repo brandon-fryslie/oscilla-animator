@@ -11,6 +11,10 @@ import { CompositeStore } from './CompositeStore';
 import { DefaultSourceStore } from './DefaultSourceStore';
 import { DiagnosticStore } from './DiagnosticStore';
 import { HistoryStore } from './HistoryStore';
+import { NavigationStore } from './NavigationStore';
+import { ViewportStore } from './ViewportStore';
+import { EmphasisStore } from './EmphasisStore';
+import { SelectionStore } from './SelectionStore';
 import { LogStore } from '../logStore';
 import { EventDispatcher } from '../events';
 import { DiagnosticHub } from '../diagnostics/DiagnosticHub';
@@ -37,6 +41,12 @@ export class RootStore {
   defaultSourceStore: DefaultSourceStore;
   logStore: LogStore;
   historyStore: HistoryStore;
+
+  // UI Redesign Stores (Phase 1)
+  navigationStore: NavigationStore;
+  viewportStore: ViewportStore;
+  emphasisStore: EmphasisStore;
+  selectionStore: SelectionStore;
 
   // Diagnostics
   diagnosticHub: DiagnosticHub;
@@ -95,6 +105,12 @@ export class RootStore {
 
     // Create history store (after domain stores, before transaction usage)
     this.historyStore = new HistoryStore(this);
+
+    // Create UI Redesign stores (Phase 1)
+    this.navigationStore = new NavigationStore(this);
+    this.viewportStore = new ViewportStore(this);
+    this.emphasisStore = new EmphasisStore(this);
+    this.selectionStore = new SelectionStore(this);
 
     // Create diagnostic infrastructure (after patchStore)
     this.diagnosticHub = new DiagnosticHub(this.events, this.patchStore);
