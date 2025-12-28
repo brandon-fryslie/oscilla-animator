@@ -18,6 +18,8 @@ import type { CompileCtx, RuntimeCtx } from '../../../types';
 // Test Helpers
 // =============================================================================
 
+type Event = (tMs: number, lastTMs: number, ctx: RuntimeCtx) => boolean;
+
 function createTestContext(): CompileCtx & RuntimeCtx {
   return {
     env: {},
@@ -88,7 +90,7 @@ describe('FiniteTimeRootBlock', () => {
 
     // Test end event
     if (result.end?.kind === 'Event') {
-      const endEvent = result.end.value;
+      const endEvent = result.end.value as Event;
       expect(endEvent(4999, 4000, ctx)).toBe(false); // Before end
       expect(endEvent(5000, 4000, ctx)).toBe(true); // At end
       expect(endEvent(5001, 5000, ctx)).toBe(false); // After end (not edge)
@@ -174,7 +176,7 @@ describe('CycleTimeRootBlock', () => {
 
     // Test wrap event
     if (result.wrap?.kind === 'Event') {
-      const wrap = result.wrap.value;
+      const wrap = result.wrap.value as Event;
       expect(wrap(2999, 2000, ctx)).toBe(false); // Before wrap
       expect(wrap(3000, 2000, ctx)).toBe(true); // At wrap boundary
       expect(wrap(3001, 3000, ctx)).toBe(false); // After wrap
