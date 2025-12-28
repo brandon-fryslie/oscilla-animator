@@ -711,7 +711,7 @@ function evalSampleHold(
   if (triggerSigId === undefined) {
     throw new Error("sampleHold requires trigger signal in params.trigger");
   }
-  const trigger = evalSig(triggerSigId as SigExprId, env, nodes);
+  const trigger = evalSig(triggerSigId, env, nodes);
 
   const heldValue = env.state.f64[stateOffset];
   const lastTrigger = env.state.f64[stateOffset + 1];

@@ -193,7 +193,7 @@ export class TutorialStore {
   /** Label to block ID mapping */
   labelToBlockId = new Map<string, string>();
 
-  private root: RootStore;
+  private readonly root: RootStore;
   private unsubscribers: Array<() => void> = [];
 
   constructor(root: RootStore) {

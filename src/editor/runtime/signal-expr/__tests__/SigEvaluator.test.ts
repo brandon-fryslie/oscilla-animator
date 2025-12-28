@@ -1294,7 +1294,7 @@ describe("evalSig - busCombine nodes", () => {
     });
 
     it("does not call debug sink when disabled", () => {
-      let called = false;
+      const called = false;
       const debug: DebugSink = {
         // traceBusCombine is undefined - should not be called
       };

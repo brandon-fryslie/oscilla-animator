@@ -219,7 +219,7 @@ export function pass3TimeTopology(
   return {
     ...typed,
     timeModel,
-    timeRootIndex: timeRootIndex as BlockIndex,
+    timeRootIndex: timeRootIndex,
     timeSignals,
   };
 }

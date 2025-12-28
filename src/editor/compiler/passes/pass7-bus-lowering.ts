@@ -111,7 +111,7 @@ export function pass7BusLowering(
       const busRef = lowerBusToCombineNode(
         bus,
         busPublishers,
-        busIdx as BusIndex,
+        busIdx,
         builder,
         blockOutputs,
         blockIdToIndex,
@@ -119,7 +119,7 @@ export function pass7BusLowering(
       );
 
       if (busRef) {
-        busRoots.set(busIdx as BusIndex, busRef);
+        busRoots.set(busIdx, busRef);
       }
     } catch (error) {
       errors.push({

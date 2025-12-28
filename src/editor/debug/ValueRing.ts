@@ -95,7 +95,7 @@ export class ValueRing {
 
     const physicalIdx = idx % this.capacity;
     // ValueRecord32 fields - tag requires type assertion from number
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+     
     const tagValue = this.tag[physicalIdx] as ValueTag;
     return {
       tag: tagValue,

@@ -903,7 +903,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
               <>
                 <button
                   onClick={() => {
-                    store.setFocusedBlock(contextMenu.blockId!);
+                    store.setFocusedBlock(contextMenu.blockId);
                     closeContextMenu();
                   }}
                 >

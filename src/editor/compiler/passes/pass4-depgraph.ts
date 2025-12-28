@@ -95,7 +95,7 @@ export function pass4DepGraph(
   for (let busIdx = 0; busIdx < timeResolved.buses.length; busIdx++) {
     nodes.push({
       kind: "BusValue",
-      busIndex: busIdx as BusIndex,
+      busIndex: busIdx,
     });
   }
 
@@ -159,7 +159,7 @@ export function pass4DepGraph(
 
     edges.push({
       from: { kind: "BlockEval", blockIndex: fromBlockIndex },
-      to: { kind: "BusValue", busIndex: busIdx as BusIndex },
+      to: { kind: "BusValue", busIndex: busIdx },
     });
   }
 
@@ -192,7 +192,7 @@ export function pass4DepGraph(
     }
 
     edges.push({
-      from: { kind: "BusValue", busIndex: busIdx as BusIndex },
+      from: { kind: "BusValue", busIndex: busIdx },
       to: { kind: "BlockEval", blockIndex: toBlockIndex },
     });
   }

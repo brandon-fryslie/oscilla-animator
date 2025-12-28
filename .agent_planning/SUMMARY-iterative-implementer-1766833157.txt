@@ -1,0 +1,109 @@
+Agent: iterative-implementer | 2025-12-27 | Timestamp: 1766833157
+Mode: manual
+Completed: Parameter forwarding integration | Files: 3 | Commits: 1
+Cache invalidated: None (no eval-cache exists yet)
+Status: complete
+
+DELIVERABLE 3: Parameter Forwarding UI - COMPLETE
+
+## What Was Implemented
+
+### 1. Extended CompositeDefinition with exposedParams
+File: src/editor/composites.ts
+- Added optional `exposedParams` field to CompositeDefinition interface
+- Imported ExposedParam type from types.ts
+- No changes to validation logic needed
+
+### 2. Updated BlockContextMenu to Pass ExposedParams
+File: src/editor/BlockContextMenu.tsx
+- Modified handleSaveComposite to include exposedParams in CompositeDefinition
+- Fixed type safety by properly casting subcategory to BlockSubcategory
+- Removed unsafe 'any' cast
+
+### 3. Implemented Parameter Schema Generation
+File: src/editor/composite-bridge.ts
+- Added generateParamSchema() function that:
+  - Takes exposedParams from CompositeDefinition
+  - Looks up each internal block's definition
+  - Extracts the ParamSchema for each exposed parameter
+  - Creates new ParamSchema entries with exposed labels
+  - Uses exposedParam.id as the key (for composite instance params)
+
+- Modified compositeToBlockDefinition() to:
+  - Call generateParamSchema() to build paramSchema
+  - Generate defaultParams from the paramSchema
+  - Pass both to the BlockDefinition
+
+### 4. Applied __fromParam Mechanism
+File: src/editor/composite-bridge.ts
+- Modified compositeToPrimitiveGraph() to:
+  - Build a map of (blockId:paramKey) -> exposedParamId
+  - Transform node params to replace exposed params with { __fromParam: id }
+  - Return transformed graph with parameter forwarding directives
+
+### 5. TypeScript Compliance
+- All changes pass TypeScript strict mode
+- Removed unused imports (CompositeGraph)
+- Fixed unused variable warnings (paramValue)
+
+## How It Works
+
+The complete flow:
+
+1. **Dialog Phase** (SaveCompositeDialog.tsx - already implemented):
+   - User selects internal block parameters to expose
+   - Custom labels can be assigned
+   - Builds ExposedParam[] array with { id, label, blockId, paramKey }
+
+2. **Registration Phase** (BlockContextMenu.tsx):
+   - Composite with exposedParams is saved to CompositeStore
+   - CompositeDefinition created with exposedParams included
+   - Registered in composite registry
+
+3. **Conversion Phase** (composite-bridge.ts):
+   - compositeToBlockDefinition() converts to BlockDefinition
+   - generateParamSchema() looks up internal param definitions
+   - Creates paramSchema entries using exposed IDs and labels
+   - Generates defaultParams from schema
+
+4. **Graph Transformation** (composite-bridge.ts):
+   - compositeToPrimitiveGraph() applies __fromParam
+   - Maps internal block params to composite-level params
+   - Compiler will resolve these during expansion
+
+5. **Inspector Display** (automatic):
+   - BlockDefinition has paramSchema
+   - Inspector automatically renders controls
+   - Values are stored on composite instance
+
+6. **Runtime** (compiler expansion - existing):
+   - Composite expands to internal blocks
+   - __fromParam directives pull values from composite instance params
+   - Internal blocks receive the forwarded values
+
+## Remaining Work
+
+The integration is functionally complete. However, manual testing is required:
+
+1. Start dev server: `just dev`
+2. Create a composite with exposed parameters
+3. Instantiate the composite in a patch
+4. Verify Inspector shows the exposed parameters
+5. Verify changing params affects the internal blocks
+6. Verify compilation and rendering works
+
+## Files Modified
+- src/editor/composites.ts (added exposedParams field)
+- src/editor/BlockContextMenu.tsx (pass exposedParams to definition)
+- src/editor/composite-bridge.ts (generate paramSchema, apply __fromParam)
+
+## Testing Strategy
+- TypeScript: PASS (just typecheck)
+- Manual testing: Required (see above)
+- Integration with existing composites: Should be backward compatible (exposedParams is optional)
+
+## Notes
+- The system is backward compatible - existing composites without exposedParams continue to work
+- The __fromParam mechanism already exists in the compiler
+- Parameter forwarding only activates when exposedParams are defined
+- Default values come from the internal block's parameter definitions

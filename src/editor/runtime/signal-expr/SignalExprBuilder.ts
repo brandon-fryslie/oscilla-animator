@@ -21,7 +21,7 @@
 import type { SignalExprIR } from "../../compiler/ir/signalExpr";
 import type { SigExprId, TypeDesc } from "../../compiler/ir/types";
 import type { PureFnRef } from "../../compiler/ir/transforms";
-import { OpCode } from "../../compiler/ir/opcodes";
+import type { OpCode } from "../../compiler/ir/opcodes";
 
 /**
  * Constant pool - stores deduplicated constant values.

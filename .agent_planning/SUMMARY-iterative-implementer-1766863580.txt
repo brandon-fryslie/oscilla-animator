@@ -1,0 +1,133 @@
+Agent: iterative-implementer | 2025-12-27-04:07:00
+Mode: manual
+Completed: P0.1 Save to File, P0.2 Load from File, P1.1 Keyboard Shortcuts, P1.2 Error Messages | Files: 2 | Commits: 1
+Tests: N/A (manual testing mode)
+Cache invalidated: None (no cached entries for SettingsToolbar)
+Status: complete
+
+## Summary
+
+Successfully implemented complete patch persistence system with save/load functionality.
+
+## Deliverables Completed
+
+### P0.1: Save to File
+- Enabled Save button in SettingsToolbar (removed disabled attribute)
+- File download triggers with current patch data from RootStore.toJSON()
+- Filename format: patch-YYYY-MM-DD-HH-mm-ss.oscilla.json (ISO timestamp)
+- JSON pretty-printed with indentation for human readability
+- Proper cleanup of object URLs after download
+- Error handling with user-friendly toast messages
+- Tooltip updated: "Save patch (Cmd/Ctrl+S)"
+
+### P0.2: Load from File
+- Enabled Load button (removed disabled attribute)
+- Hidden file input accepts .json and .oscilla.json files
+- File picker opens on button click
+- Confirmation dialog before loading: "Load this patch? Current patch will be replaced. Unsaved changes will be lost."
+- Validates patch structure:
+  * Checks for object type
+  * Validates version field (must be 2)
+  * Validates blocks array exists
+  * Validates connections array exists
+- Loads patch via RootStore.loadPatch()
+- Resets file input value after load (allows reloading same file)
+- Error handling for:
+  * File read failures
+  * JSON parse errors
+  * Invalid patch structure
+  * Missing required fields
+  * Unsupported versions
+- Tooltip updated: "Load patch (Cmd/Ctrl+O)"
+
+### P1.1: Keyboard Shortcuts
+- Cmd/Ctrl+S triggers save operation
+- Cmd/Ctrl+O triggers load operation
+- Platform detection (IS_MAC) for correct modifier key
+- Input blocking: shortcuts don't fire when typing in INPUT, TEXTAREA, or contenteditable elements
+- Tooltips include keyboard shortcuts
+- Event listeners properly cleaned up on component unmount
+
+### P1.2: Error Messages
+- ErrorToast component with:
+  * Auto-dismiss after 5 seconds
+  * Manual dismiss via close button (×)
+  * Smooth animation (error-toast-appear)
+  * Fixed positioning (top: 60px, centered)
+  * Accessible styling (red theme, high contrast)
+- Comprehensive error messages:
+  * "Failed to save patch. Please check the console for details."
+  * "Invalid JSON file. Please check the file format."
+  * "Invalid patch file. Missing required field: [field]"
+  * "Unsupported patch version: X. This file may have been created by a newer version."
+  * "Failed to read file. Please try again."
+- All errors logged to console with full details
+
+## Technical Implementation
+
+### Files Modified
+1. src/editor/SettingsToolbar.tsx (266 lines added)
+   - Added imports: useCallback, type Patch
+   - Added ErrorToast component
+   - Added generatePatchFilename() helper
+   - Added validatePatchStructure() helper
+   - Added IS_MAC platform detection
+   - Added handleSavePatch(), handleLoadPatch(), handleFileChange()
+   - Added keyboard shortcut useEffect
+   - Added hidden file input element
+   - Added error toast rendering
+   - Removed disabled attributes from Save/Load buttons
+   - Updated tooltips with keyboard shortcuts
+
+2. src/editor/SettingsToolbar.css (62 lines added)
+   - Added position: relative to .settings-toolbar
+   - Added .error-toast styles
+   - Added @keyframes error-toast-appear
+   - Added .error-toast-message styles
+   - Added .error-toast-close styles with hover state
+
+### Code Quality
+- TypeScript: No new errors introduced
+- Linting: Only 1 pre-existing warning (line 220 in getStartupMacro)
+- React hooks: Proper use of useCallback with correct dependencies
+- Error handling: Try/catch blocks around all file operations
+- Memory management: Proper cleanup of event listeners and object URLs
+- Accessibility: Error toast has close button and auto-dismiss
+
+### Pattern Consistency
+Followed existing patterns from:
+- PathManagerModal.tsx for file download (lines 295-308)
+- PathManagerModal.tsx for file upload (lines 83-106)
+- RootStore.ts for serialization (toJSON/loadPatch)
+
+## Validation
+
+### Manual Testing Required
+- [ ] Save button downloads valid JSON file
+- [ ] Load button opens file picker
+- [ ] Load with valid file restores patch correctly
+- [ ] Load with invalid file shows error toast
+- [ ] Cmd/Ctrl+S shortcut saves patch
+- [ ] Cmd/Ctrl+O shortcut loads patch
+- [ ] Shortcuts don't fire when typing in input fields
+- [ ] Error toast auto-dismisses after 5 seconds
+- [ ] Error toast close button works
+- [ ] Round-trip test: Save → Load → State matches
+
+### Deferred to Sprint 2
+- localStorage auto-save/recovery
+- Automated unit tests
+- E2E tests
+
+## Next Steps
+
+1. Manual testing in browser to verify all acceptance criteria
+2. If testing reveals issues, fix and commit incrementally
+3. Consider Sprint 2: localStorage auto-save (P2.1, P2.2)
+4. Consider Sprint 3: Automated tests (P3.1, P3.2)
+
+## References
+
+- DOD: .agent_planning/persistence/DOD-2025-12-27-032100.md
+- Plan: .agent_planning/persistence/PLAN-2025-12-27-032100.md
+- Commit: dcac21f

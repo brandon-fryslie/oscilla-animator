@@ -338,7 +338,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         if (renderTree) {
           // Cast needed: IR path may return DrawNode, legacy returns RenderTree with cmds
           // Both are handled by Canvas2DRenderer at runtime
-          canvasRenderer.render(renderTree as Parameters<typeof canvasRenderer.render>[0]);
+          canvasRenderer.render(renderTree);
         }
       }
 

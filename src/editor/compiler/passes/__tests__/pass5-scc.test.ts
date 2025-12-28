@@ -31,7 +31,7 @@ function blockNode(index: number): DepNode {
 
 // Helper to create a BusValue node
 function busNode(index: number): DepNode {
-  return { kind: "BusValue", busIndex: index as BusIndex };
+  return { kind: "BusValue", busIndex: index };
 }
 
 // Helper to create an edge

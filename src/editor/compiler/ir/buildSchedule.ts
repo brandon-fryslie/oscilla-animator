@@ -186,7 +186,7 @@ class SlotAllocator {
   }
 
   alloc(): ValueSlot {
-    return this.nextSlot++ as ValueSlot;
+    return this.nextSlot++;
   }
 
   peek(): number {
@@ -575,14 +575,14 @@ function processInstances2DSink(
   const stepIds: string[] = [];
 
   // Get input slots from sink
-  const domainSlot = sink.inputs.domain as ValueSlot;
-  const colorSlot = sink.inputs.color as ValueSlot;
-  const positionsSlot = sink.inputs.positions as ValueSlot;
-  const radiusSlot = sink.inputs.radius as ValueSlot;
+  const domainSlot = sink.inputs.domain;
+  const colorSlot = sink.inputs.color;
+  const positionsSlot = sink.inputs.positions;
+  const radiusSlot = sink.inputs.radius;
   if (sink.inputs.opacity === undefined) {
     throw new Error("processInstances2DSink: missing opacity input");
   }
-  const opacitySlot = sink.inputs.opacity as ValueSlot;
+  const opacitySlot = sink.inputs.opacity;
 
   const positionsFieldId = fieldSlotToId.get(positionsSlot);
   if (positionsFieldId === undefined) {

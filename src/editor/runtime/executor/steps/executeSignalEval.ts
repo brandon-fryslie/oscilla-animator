@@ -38,7 +38,7 @@ export function executeSignalEval(
   runtime: RuntimeState,
   effectiveTime: { tAbsMs: number; tModelMs?: number; phase01?: number; wrapEvent?: number },
 ): void {
-  const signalTable = program.signalTable?.nodes as SignalExprIR[] | undefined;
+  const signalTable = program.signalTable?.nodes;
   if (!signalTable) {
     throw new Error("executeSignalEval: program.signalTable is missing");
   }

@@ -303,7 +303,7 @@ const lowerSVGSampleDomain: BlockLowerFn = ({ ctx, config }) => {
 
   const asset = typeof configData?.asset === 'string' ? configData.asset : '';
   const sampleCount = Math.max(1, Math.floor(Number(configData?.sampleCount ?? 100)));
-  const distribution = (configData?.distribution ?? 'even') as 'even' | 'parametric';
+  const distribution = (configData?.distribution ?? 'even');
 
   // Create domain value slot
   const domainSlot = ctx.b.domainFromSVG(asset, sampleCount);

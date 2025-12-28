@@ -77,7 +77,7 @@ export function computeStateLayout(nodes: SignalExprIR[]): StateLayoutEntry[] {
 
       // Add to layout
       layout.push({
-        stateId: stateId as StateId,
+        stateId: stateId,
         type,
         initial,
         debugName: `${node.op}_${stateId}`,

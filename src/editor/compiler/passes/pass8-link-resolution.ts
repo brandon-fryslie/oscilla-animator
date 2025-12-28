@@ -289,7 +289,7 @@ function buildBlockInputRoots(
   listeners.forEach((listener) => {
     if (!busIdToIndex.has(listener.busId)) {
       // Assign sequential bus indices
-      busIdToIndex.set(listener.busId, busIdToIndex.size as BusIndex);
+      busIdToIndex.set(listener.busId, busIdToIndex.size);
     }
   });
 

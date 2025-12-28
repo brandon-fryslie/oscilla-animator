@@ -97,7 +97,7 @@ export class SpanRing {
 
     const physicalIdx = idx % this.capacity;
     // SpanData fields - kind and flags require type assertion from number
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+     
     const kindValue = this.kind[physicalIdx] as SpanKind;
     return {
       frameId: this.frameId[physicalIdx],

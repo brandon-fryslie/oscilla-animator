@@ -185,7 +185,7 @@ describe("Step Dispatch", () => {
       // Verify buffer handle was written
       const bufferHandle = runtime.values.read(1);
       expect(bufferHandle).toBeDefined();
-      expect((bufferHandle as unknown as { kind: string }).kind).toBe("buffer");
+      expect((bufferHandle as { kind: string }).kind).toBe("buffer");
     });
   });
 

@@ -103,11 +103,11 @@ export class IRBuilderImpl implements IRBuilder {
   // =============================================================================
 
   allocSigExprId(): SigExprId {
-    return this.sigExprs.length as SigExprId;
+    return this.sigExprs.length;
   }
 
   allocFieldExprId(): FieldExprId {
-    return this.fieldExprs.length as FieldExprId;
+    return this.fieldExprs.length;
   }
 
   allocStateId(type: TypeDesc, initial?: unknown, debugName?: string): StateId {
@@ -139,7 +139,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   allocValueSlot(type?: TypeDesc, debugName?: string): ValueSlot {
-    const slot = this.nextValueSlot++ as ValueSlot;
+    const slot = this.nextValueSlot++;
 
     // Track metadata if type is provided
     if (type) {
@@ -579,7 +579,7 @@ export class IRBuilderImpl implements IRBuilder {
   // =============================================================================
 
   transformChain(steps: readonly TransformStepIR[], outputType: TypeDesc): TransformChainId {
-    const id = this.transformChains.length as TransformChainId;
+    const id = this.transformChains.length;
     this.transformChains.push({
       steps,
       outputType,
