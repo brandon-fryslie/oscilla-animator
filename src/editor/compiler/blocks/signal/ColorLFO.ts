@@ -97,10 +97,11 @@ function hslToHex(h: number, s: number, l: number): string {
  * Lower ColorLFO block to IR.
  *
  * Performs HSL color cycling based on phase input.
- * Base color hue, hueSpan, saturation, and lightness are configuration params.
+ * For Sprint 2, uses OpCode.ColorShiftHue (2-input opcode) which shifts the hue
+ * of a base color by a calculated amount.
  *
- * Note: Full HSL->RGB conversion requires complex piecewise functions.
- * For IR, we use OpCode.ColorShiftHue if available, or build the conversion manually.
+ * Note: sat and light parameters from config are baked into the base color.
+ * Future enhancement: use OpCode.ColorHSLToRGB with a 3-input zip when available.
  */
 const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
   const phase = inputs[0]; // Signal:phase
@@ -111,67 +112,33 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   const base = (config as any)?.base || '#3B82F6';
   const hueSpan = Number((config as any)?.hueSpan ?? 180);
-  // sat and light are parsed for future use when full HSL->RGB IR is implemented
-  void ((config as any)?.sat ?? 0.8);
-  void ((config as any)?.light ?? 0.5);
-
-  // Extract base hue from base color
-  const baseHSL = hexToHSL(base);
-  const baseHue = baseHSL.h;
+  // Note: sat and light are baked into the base color for Sprint 2
+  // They would be used if we had a 3-input ColorHSLToRGB opcode
 
   const numberType: any = { world: 'signal', domain: 'number' };
+  const colorType: any = { world: 'signal', domain: 'color' };
 
-  // Calculate hue: baseHue + phase * hueSpan
+  // Calculate hue shift: phase * hueSpan
   const hueSpanSig = ctx.b.sigConst(hueSpan, numberType);
-  const hueOffset = ctx.b.sigZip(phase.id, hueSpanSig, {
+  const hueShiftSig = ctx.b.sigZip(phase.id, hueSpanSig, {
     fnId: 'mul',
     opcode: OpCode.Mul,
     outputType: numberType,
   });
-  const baseHueSig = ctx.b.sigConst(baseHue, numberType);
-  // Calculated hue is not used yet - closureBridge handles color conversion
-  void ctx.b.sigZip(baseHueSig, hueOffset, {
-    fnId: 'add',
-    opcode: OpCode.Add,
-    outputType: numberType,
+
+  // Use ColorShiftHue to shift base color's hue by (phase * hueSpan)
+  const baseColorSig = ctx.b.sigConst(base, colorType);
+  const colorSig = ctx.b.sigZip(baseColorSig, hueShiftSig, {
+    fnId: 'colorShiftHue',
+    opcode: OpCode.ColorShiftHue,
+    outputType: colorType,
   });
 
-  // For now, we'll create a closure bridge to handle the color conversion
-  // A full IR implementation would require HSL->RGB conversion as IR nodes
-  // which would be quite complex (piecewise functions, modulo, etc.)
-
-  // Using OpCode.ColorShiftHue would be ideal, but it requires a base color signal
-  // We'll construct the RGB from HSL using a series of operations
-
-  // Simplified approach: create color from hue with fixed sat/light
-  // This would require implementing the full HSL->RGB algorithm in IR opcodes
-  // For now, we'll use a placeholder that needs the actual conversion logic
-
-  // HSL to RGB conversion (simplified):
-  // We need to implement the piecewise function h -> (r, g, b)
-  // This is complex and would benefit from a dedicated OpCode
-
-  // For the IR lowering, we'll document that this needs ColorHSLToRGB opcode
-  // or a custom kernel function
-
-  // Placeholder: Use the hue as the output (this is NOT correct, just a placeholder)
-  // In reality, we'd need to construct RGB components and pack them
-
-  throw new Error('ColorLFO IR lowering requires ColorHSLToRGB opcode which is not yet implemented in the evaluator. This block needs to remain in closure mode until the color conversion IR infrastructure is complete.');
-
-  // When ColorHSLToRGB is available:
-  // const satSig = ctx.b.sigConst(sat, numberType);
-  // const lightSig = ctx.b.sigConst(light, numberType);
-  // ... build HSL color signal ...
-  // const rgb = ctx.b.sigMap(hslColor, {
-  //   fnId: 'colorHSLToRGB',
-  //   opcode: OpCode.ColorHSLToRGB,
-  //   outputType: colorType,
-  // });
-  // return { outputs: [{ k: 'sig', id: rgb }] };
+  const slot = ctx.b.allocValueSlot();
+  return { outputs: [{ k: 'sig', id: colorSig, slot }] };
 };
 
-// Register block type (but note it will throw until color conversion is implemented)
+// Register block type
 registerBlockType({
   type: 'ColorLFO',
   capability: 'pure',

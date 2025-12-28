@@ -1,0 +1,6 @@
+Agent: status-planner | 2025-12-28-152613
+Topic: compiler-audit-redflag/Sprint-2-Block-Lowering-Foundation
+Files: PLAN-2025-12-28-152613-SPRINT2.md, DOD-2025-12-28-152613-SPRINT2.md
+Items: 5 (P0: 2, P1: 2, P2: 1)
+Sprint: 2 weeks
+Source: STATUS-2025-12-28-sprint1.md

@@ -15,6 +15,7 @@ import { OpCode } from "../../../compiler/ir/opcodes";
 import { Vec2 } from "../../../../core/types";
 import type { RuntimeState } from "../RuntimeState";
 import type { NodeIR, CompiledProgramIR } from "../../../compiler/ir/program";
+import { colorHSLToRGB, colorShiftHue, colorLerp, colorScaleSat, colorScaleLight } from "../kernels/color";
 
 // ============================================================================
 // Types
@@ -253,6 +254,48 @@ export function evaluateOp(
     case OpCode.Vec2Angle: {
       const v = inputs[0] as Vec2;
       return [Math.atan2(v.y, v.x)];
+    }
+
+    // ========================================================================
+    // Color Operations (300-319)
+    // ========================================================================
+    case OpCode.ColorHSLToRGB: {
+      // Convert HSL to RGB hex color
+      // Input: [h: number (0-360), s: number (0-1), l: number (0-1)]
+      // Output: color hex string '#RRGGBB'
+      const h = Number(inputs[0]);
+      const s = Number(inputs[1]);
+      const l = Number(inputs[2]);
+      return [colorHSLToRGB(h, s, l)];
+    }
+    case OpCode.ColorShiftHue: {
+      // Shift hue of a color
+      // Input: [color: string, hueShift: number (degrees)]
+      const color = String(inputs[0]);
+      const hueShift = Number(inputs[1]);
+      return [colorShiftHue(color, hueShift)];
+    }
+    case OpCode.ColorLerp: {
+      // Interpolate between two colors
+      // Input: [color1: string, color2: string, t: number (0-1)]
+      const color1 = String(inputs[0]);
+      const color2 = String(inputs[1]);
+      const t = Number(inputs[2]);
+      return [colorLerp(color1, color2, t)];
+    }
+    case OpCode.ColorScaleSat: {
+      // Scale saturation of a color
+      // Input: [color: string, scale: number]
+      const color = String(inputs[0]);
+      const scale = Number(inputs[1]);
+      return [colorScaleSat(color, scale)];
+    }
+    case OpCode.ColorScaleLight: {
+      // Scale lightness of a color
+      // Input: [color: string, scale: number]
+      const color = String(inputs[0]);
+      const scale = Number(inputs[1]);
+      return [colorScaleLight(color, scale)];
     }
 
     // ========================================================================

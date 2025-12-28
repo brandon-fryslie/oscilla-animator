@@ -708,10 +708,10 @@ export const OPCODE_REGISTRY: Record<OpCode, OpCodeMeta> = {
     opcode: OpCode.ColorHSLToRGB,
     name: "colorHSLToRGB",
     category: "color",
-    inputTypes: [colorSignal],
+    inputTypes: [numberSignal, numberSignal, numberSignal],
     outputType: colorSignal,
     purity: "pure",
-    description: "Convert HSL to RGB",
+    description: "Convert HSL (h: 0-360, s: 0-1, l: 0-1) to RGB hex color",
   },
 
   [OpCode.ColorRGBToHSL]: {
