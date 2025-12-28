@@ -270,6 +270,16 @@ export interface IRBuilder {
    */
   getCameras(): readonly CameraIR[];
 
+  /**
+   * Get the constant pool.
+   *
+   * Used by block lowering to access constant values for compile-time evaluation.
+   * For example, Camera blocks use this to read vec3 position/target/up values.
+   *
+   * @returns Array of constant values indexed by constId
+   */
+  getConstPool(): readonly unknown[];
+
   // =============================================================================
   // Finalization
   // =============================================================================

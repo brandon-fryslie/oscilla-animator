@@ -614,6 +614,10 @@ export class IRBuilderImpl implements IRBuilder {
     return this.cameras;
   }
 
+  getConstPool(): readonly unknown[] {
+    return this.constPool;
+  }
+
   // =============================================================================
   // Finalization
   // =============================================================================

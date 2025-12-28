@@ -28,4 +28,6 @@ for worktree in "$WORKTREES_DIR"/*/; do
     set +x
 done
 
+
+
 echo "Done."

@@ -108,7 +108,7 @@ export function pass8LinkResolution(
     errors
   );
 
-  applyRenderLowering(builder, blocks, blockInputRoots, errors);
+  applyRenderLowering(builder, blocks, blockInputRoots, blockOutputRoots, errors);
 
   return {
     builder,
@@ -134,15 +134,26 @@ function applyRenderLowering(
   builder: IRBuilder,
   blocks: readonly Block[],
   blockInputRoots: BlockInputRootIR,
+  blockOutputRoots: BlockOutputRootIR,
   errors: CompileError[],
 ): void {
+  /**
+   * Create a ValueRefPacked from a default source value.
+   *
+   * Supports:
+   * - signal/number → sigConst
+   * - field/* → fieldConst
+   * - scalar/* → scalarConst (stored in constant pool)
+   */
   function createDefaultRef(
     type: import("../ir/types").TypeDesc,
     defaultValue: unknown
   ): ValueRefPacked | null {
     if (type.world === "signal") {
       if (typeof defaultValue !== "number") {
-        return null;
+        // Non-number signal values (vec3, color) → use constant pool
+        const constId = builder.allocConstId(defaultValue);
+        return { k: "scalarConst", constId };
       }
       const sigId = builder.sigConst(defaultValue, type);
       const slot = builder.allocValueSlot(type);
@@ -157,9 +168,100 @@ function applyRenderLowering(
       return { k: "field", id: fieldId, slot };
     }
 
+    if (type.world === "scalar") {
+      const constId = builder.allocConstId(defaultValue);
+      return { k: "scalarConst", constId };
+    }
+
     return null;
   }
 
+  // Phase 1: Process Camera blocks (produce Special<cameraRef> outputs)
+  // These must run before render blocks so camera outputs are available
+  for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
+    const block = blocks[blockIdx];
+    if (block.type !== "Camera") {
+      continue;
+    }
+
+    const decl = getBlockType(block.type);
+    if (!decl) {
+      continue;
+    }
+
+    const inputs: ValueRefPacked[] = [];
+    let missingInput = false;
+
+    for (const inputDecl of decl.inputs) {
+      const portIdx = block.inputs.findIndex((p) => p.id === inputDecl.portId);
+      if (portIdx < 0) {
+        // Check if port is optional
+        if (inputDecl.optional) {
+          continue;
+        }
+        missingInput = true;
+        break;
+      }
+      const ref = blockInputRoots.refs[blockInputRoots.indexOf(blockIdx as BlockIndex, portIdx)];
+      if (!ref) {
+        const input = block.inputs[portIdx];
+        const defaultSource = input.defaultSource;
+        if (defaultSource) {
+          const defaultRef = createDefaultRef(inputDecl.type, defaultSource.value);
+          if (defaultRef) {
+            inputs.push(defaultRef);
+            continue;
+          }
+        }
+        if (inputDecl.optional) {
+          continue;
+        }
+        errors.push({
+          code: "MissingInput",
+          message: `Missing required input for ${block.type}.${inputDecl.portId} (no defaultSource).`,
+          where: { blockId: block.id, port: inputDecl.portId },
+        });
+        missingInput = true;
+        break;
+      }
+      inputs.push(ref);
+    }
+
+    if (missingInput) {
+      continue;
+    }
+
+    const ctx: LowerCtx = {
+      blockIdx: blockIdx as BlockIndex,
+      blockType: block.type,
+      instanceId: block.id,
+      label: block.label,
+      inTypes: decl.inputs.map((input) => input.type),
+      outTypes: decl.outputs.map((output) => output.type),
+      b: builder,
+      seedConstId: builder.allocConstId(0),
+    };
+
+    const result = decl.lower({
+      ctx,
+      inputs,
+      config: block.params,
+    });
+
+    // Store Camera outputs in blockOutputRoots for downstream blocks to reference
+    if (result.outputs.length > 0) {
+      for (let outIdx = 0; outIdx < result.outputs.length; outIdx++) {
+        const output = result.outputs[outIdx];
+        const outputDecl = decl.outputs[outIdx];
+        if (outputDecl) {
+          const idx = blockOutputRoots.indexOf(blockIdx as BlockIndex, outIdx);
+          blockOutputRoots.refs[idx] = output;
+        }
+      }
+    }
+  }
+
+  // Phase 2: Process render blocks
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx];
     const decl = getBlockType(block.type);

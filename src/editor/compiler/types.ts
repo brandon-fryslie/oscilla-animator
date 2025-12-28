@@ -468,6 +468,10 @@ export type CompileErrorCode =
   | 'BusEvaluationError'
   | 'FieldBusNotSupported'
   | 'UnsupportedCombineMode'
+  | 'EventBusNotSupported'
+  | 'UnsupportedBusType'
+  | 'InvalidDefaultValue'
+  | 'UnknownBusWorld'
   // Phase 3: TimeRoot additions
   | 'MissingTimeRoot'
   | 'MultipleTimeRoots'

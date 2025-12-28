@@ -21,12 +21,6 @@ export interface CompilerFeatureFlags {
   strictStateValidation: boolean;
 
   /**
-   * Enable bus compilation to Signal evaluators.
-   * When false, buses use legacy runtime wiring.
-   */
-  busCompilation: boolean;
-
-  /**
    * Enable TimeCtx propagation through all evaluators.
    * When false, uses legacy time management.
    */
@@ -47,7 +41,6 @@ export interface CompilerFeatureFlags {
 const DEFAULT_FLAGS: CompilerFeatureFlags = {
   useUnifiedCompiler: true,
   strictStateValidation: true,
-  busCompilation: true,
   timeCtxPropagation: true,
   requireTimeRoot: true,
 };
@@ -88,9 +81,8 @@ export function enableUnifiedArchitecture(): void {
   currentFlags = {
     useUnifiedCompiler: true,
     strictStateValidation: true,
-    busCompilation: true,
     timeCtxPropagation: true,
-    requireTimeRoot: true, // Enforce TimeRoot in unified mode
+    requireTimeRoot: true,
   };
 }
 
@@ -123,9 +115,6 @@ export function initializeFeatureFlags(): void {
     }
     if (env.VITE_STRICT_STATE_VALIDATION !== undefined) {
       currentFlags.strictStateValidation = env.VITE_STRICT_STATE_VALIDATION === 'true';
-    }
-    if (env.VITE_BUS_COMPILATION !== undefined) {
-      currentFlags.busCompilation = env.VITE_BUS_COMPILATION === 'true';
     }
     if (env.VITE_TIMECTX_PROPAGATION !== undefined) {
       currentFlags.timeCtxPropagation = env.VITE_TIMECTX_PROPAGATION === 'true';

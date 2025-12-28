@@ -37,11 +37,6 @@ describe("Feature Flags", () => {
       expect(flags.strictStateValidation).toBe(true);
     });
 
-    it("should have busCompilation defaulting to true", () => {
-      const flags = getFeatureFlags();
-      expect(flags.busCompilation).toBe(true);
-    });
-
     it("should have timeCtxPropagation defaulting to true", () => {
       const flags = getFeatureFlags();
       expect(flags.timeCtxPropagation).toBe(true);
@@ -75,7 +70,6 @@ describe("Feature Flags", () => {
       const flags = getFeatureFlags();
       expect(flags.useUnifiedCompiler).toBe(false);
       expect(flags.strictStateValidation).toBe(true);
-      expect(flags.busCompilation).toBe(true);
       expect(flags.timeCtxPropagation).toBe(true);
       expect(flags.requireTimeRoot).toBe(true);
     });
@@ -89,14 +83,12 @@ describe("Feature Flags", () => {
       const flags = getFeatureFlags();
       expect(flags.useUnifiedCompiler).toBe(false);
       expect(flags.strictStateValidation).toBe(false);
-      expect(flags.busCompilation).toBe(true);
     });
 
     it("should reset all flags to defaults", () => {
       setFeatureFlags({
         useUnifiedCompiler: false,
         strictStateValidation: false,
-        busCompilation: false,
       });
 
       resetFeatureFlags();
@@ -104,7 +96,6 @@ describe("Feature Flags", () => {
       const flags = getFeatureFlags();
       expect(flags.useUnifiedCompiler).toBe(true);
       expect(flags.strictStateValidation).toBe(true);
-      expect(flags.busCompilation).toBe(true);
       expect(flags.requireTimeRoot).toBe(true);
     });
   });
@@ -112,14 +103,13 @@ describe("Feature Flags", () => {
   describe("enableUnifiedArchitecture()", () => {
     it("should enable all unified architecture flags", () => {
       // First disable some flags
-      setFeatureFlags({ useUnifiedCompiler: false, busCompilation: false });
+      setFeatureFlags({ useUnifiedCompiler: false, strictStateValidation: false });
 
       enableUnifiedArchitecture();
 
       const flags = getFeatureFlags();
       expect(flags.useUnifiedCompiler).toBe(true);
       expect(flags.strictStateValidation).toBe(true);
-      expect(flags.busCompilation).toBe(true);
       expect(flags.timeCtxPropagation).toBe(true);
       expect(flags.requireTimeRoot).toBe(true);
     });
@@ -191,14 +181,14 @@ describe("Feature Flags", () => {
         strictStateValidation: false,
       });
 
-      // Partial update - only change busCompilation
-      setFeatureFlags({ busCompilation: false });
+      // Partial update - only change timeCtxPropagation
+      setFeatureFlags({ timeCtxPropagation: false });
 
       const flags = getFeatureFlags();
       expect(flags.useUnifiedCompiler).toBe(false);
       expect(flags.strictStateValidation).toBe(false);
-      expect(flags.busCompilation).toBe(false);
-      expect(flags.timeCtxPropagation).toBe(true); // Unchanged from default
+      expect(flags.timeCtxPropagation).toBe(false);
+      expect(flags.requireTimeRoot).toBe(true); // Unchanged from default
     });
 
     it("should handle empty partial updates", () => {
