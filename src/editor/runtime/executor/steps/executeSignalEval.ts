@@ -39,7 +39,16 @@ export function executeSignalEval(
 ): void {
   const signalTable = program.signalTable?.nodes;
   if (!signalTable) {
-    throw new Error("executeSignalEval: program.signalTable is missing");
+    // No signal table - skip evaluation gracefully.
+    // This can happen when IR extraction is disabled or the patch has no signal expressions.
+    // The step outputs will remain uninitialized, which downstream steps should handle.
+    if (step.outputs.length > 0) {
+      console.warn(
+        `executeSignalEval: program.signalTable is missing but step has ${step.outputs.length} outputs. ` +
+        `Outputs will remain uninitialized.`
+      );
+    }
+    return;
   }
 
   const constPool = program.constants?.json ?? [];

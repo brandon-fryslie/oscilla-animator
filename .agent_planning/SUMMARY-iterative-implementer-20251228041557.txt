@@ -1,0 +1,68 @@
+Agent: iterative-implementer | 2025-12-28T04:30:00
+Mode: manual
+Completed: P0-3, P1-1, P1-2 (partial P1-3) | Files: 3 | Commits: 1
+Tests: Not run (compilation work, no tests for these specific changes yet)
+Cache: Not applicable (no evaluation cache for compiler changes)
+Status: in_progress (P1-3 needs completion)
+
+=== Work Summary ===
+
+COMPLETED:
+- P0-3: DEFAULT_CAMERA_IR constant already exported from types3d.ts ✓
+- P1-1: Camera block lowering fully implemented in Camera.ts ✓
+  - Extract constant inputs (position, target, up, projection params)
+  - LookAt → quaternion conversion
+  - Validation with epsilon (CAMERA_EPSILON = 1e-6)
+  - Calls ctx.b.addCamera(cameraIR)
+  - Emits cameraRef output
+- P1-2: Validation with 6 epsilon rules ✓
+  - CAMERA_INVALID_NEAR: near ≤ 0
+  - CAMERA_INVALID_FAR: far ≤ near
+  - CAMERA_DEGENERATE_LOOKAT: distance(position, target) < ε
+  - CAMERA_DEGENERATE_UP: |cross(viewDir, up)| < ε
+  - CAMERA_INVALID_FOV: fovYDeg ≤ 1 or ≥ 179
+  - CAMERA_INVALID_PROJECTION: kind not in {perspective, orthographic}
+- P1-3 (partial): defaultCameraId added to CompiledProgramIR schema ✓
+  - Commit 863339b added defaultCameraId field to program.ts
+  - Added CameraId import
+  - Documented selection rules in field comment
+
+IN PROGRESS:
+- P1-3 (remaining): Camera selection logic in buildSchedule.ts
+  - buildCameraSelection function needs to be added
+  - Function needs to be called in buildCompiledProgram
+  - cameras and defaultCameraId need to be added to return statement
+  - WARNING: Found buildCameraSelection implementation in earlier session but not committed
+
+NEXT STEPS:
+1. Add camera selection logic to buildSchedule.ts:
+   - Add imports: CameraTable, CameraId, CameraIR, DEFAULT_CAMERA_IR, CompileWarningIR
+   - Add buildCameraSelection function (implements 0/1/N camera selection)
+   - Call buildCameraSelection(builderIR.cameras) in buildCompiledProgram
+   - Include cameras and defaultCameraId in return
+   - Update meta to include camera warnings
+2. Run typecheck to verify
+3. Commit camera selection implementation
+4. Run full test suite
+
+COMMITS:
+- 863339b: feat(3d-camera): Add defaultCameraId to CompiledProgramIR (P1-3)
+
+FILES MODIFIED:
+- src/editor/compiler/ir/program.ts (committed)
+- src/editor/compiler/ir/IRBuilder.ts (getConst/addCamera already present)
+- src/editor/compiler/blocks/scene/Camera.ts (lowering complete)
+- src/editor/blocks/scene/camera.ts (block definition - cameraRef output type)
+
+ARCHITECTURE NOTES:
+- Camera block outputs Special:cameraRef (SlotType) in block definition
+- Compiler lowering uses domain: 'camera' (TypeDomain) in IR registration
+- IRBuilder.getConst() added to extract constant values during lowering
+- IRBuilder.addCamera() adds cameras to BuilderProgramIR
+- buildCameraSelection() will handle 0/1/N camera cases during final compilation
+- defaultCameraId always present when cameras exist, never null
+
+VALIDATION MODE: manual
+- Typecheck passing for Camera.ts and program.ts
+- Full test suite not yet run
+- Manual verification of camera lowering logic complete

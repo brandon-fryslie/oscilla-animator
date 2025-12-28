@@ -231,13 +231,15 @@ export class BusStore {
 
   /**
    * Add a publisher from an output to a bus.
+   * @param options.suppressGraphCommitted - Suppress GraphCommitted event (for compound operations)
    */
   addPublisher(
     busId: string,
     blockId: BlockId,
     slotId: string,
     adapterChain?: AdapterStep[],
-    lensStack?: LensInstance[]
+    lensStack?: LensInstance[],
+    options?: { suppressGraphCommitted?: boolean }
   ): string {
     const bus = this.buses.find(b => b.id === busId);
     if (bus === null || bus === undefined) {
@@ -260,7 +262,7 @@ export class BusStore {
     };
 
     // Use transaction system for undo/redo
-    runTx(this.root, { label: 'Add Publisher' }, tx => {
+    runTx(this.root, { label: 'Add Publisher', suppressGraphCommitted: options?.suppressGraphCommitted }, tx => {
       tx.add('publishers', publisher);
     });
 
@@ -333,7 +335,8 @@ export class BusStore {
     blockId: BlockId,
     slotId: string,
     adapterChain?: AdapterStep[],
-    lensOrStack?: LensDefinition | LensDefinition[] | LensInstance[]
+    lensOrStack?: LensDefinition | LensDefinition[] | LensInstance[],
+    options?: { suppressGraphCommitted?: boolean }
   ): string {
     const bus = this.buses.find(b => b.id === busId);
     if (bus === null || bus === undefined) {
@@ -373,7 +376,7 @@ export class BusStore {
     };
 
     // Use transaction system for undo/redo
-    runTx(this.root, { label: 'Add Listener' }, tx => {
+    runTx(this.root, { label: 'Add Listener', suppressGraphCommitted: options?.suppressGraphCommitted }, tx => {
       tx.add('listeners', listener);
     });
 
@@ -490,8 +493,11 @@ export class BusStore {
 
   /**
    * Remove a listener.
+   * @param listenerId - Listener ID
+   * @param options - Optional settings
+   * @param options.suppressGraphCommitted - If true, suppress GraphCommitted event (for internal use)
    */
-  removeListener(listenerId: string): void {
+  removeListener(listenerId: string, options?: { suppressGraphCommitted?: boolean }): void {
     // Get listener data before removal (for event)
     const listener = this.listeners.find(l => l.id === listenerId);
     if (listener === null || listener === undefined) {
@@ -499,7 +505,7 @@ export class BusStore {
     }
 
     // Use transaction system for undo/redo
-    runTx(this.root, { label: 'Remove Listener' }, tx => {
+    runTx(this.root, { label: 'Remove Listener', suppressGraphCommitted: options?.suppressGraphCommitted }, tx => {
       tx.remove('listeners', listenerId);
     });
 

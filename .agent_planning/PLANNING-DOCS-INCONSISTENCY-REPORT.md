@@ -40,6 +40,8 @@
 
 **Resolution Needed:** Is there a CycleTimeRoot block, or are cycles only derived via the Modulation Rack from Finite/Infinite roots?
 
+CycleTimeRoot - Removed from spec.  Remove it entirely. Only two time modes, finite and infinite.
+
 ---
 
 ### Issue 1.2: TimeModel Variants
@@ -57,6 +59,8 @@
 
 **Resolution Needed:** Is TimeModel a 2-variant or 3-variant enum?
 
+2-variant, finite & infinite
+
 ---
 
 ### Issue 1.3: TimeModel Determination
@@ -69,6 +73,18 @@
 | `05-Compilation.md` | Infers `infinite` from feedback loops crossing memory blocks |
 
 **Resolution Needed:** Can graph properties (like feedback loops) change the TimeModel, or is it purely determined by the TimeRoot?
+
+The TimeModel is determined only by the TimeRoot.
+Graph structure is never allowed to redefine time.
+
+If feedback loops, buses, or clever block wiring could change the TimeModel, then:
+•	Two patches with identical TimeRoots could run at different speeds
+•	A patch edit could retroactively change playback duration
+•	Hot-swap would be impossible without visual jumps
+•	Debug traces would lie
+•	Transport (play, loop, scrub) would become nondeterministic
+
+Time must have exactly one authority, TimeRoot.
 
 ---
 

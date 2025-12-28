@@ -38,6 +38,10 @@ export function executeTimeDerive(
   runtime: RuntimeState,
   time: EffectiveTime,
 ): void {
+  // Write tAbsMs to its slot so downstream nodes can read it
+  // This is the input slot that the runtime provides
+  runtime.values.write(step.tAbsMsSlot, time.tAbsMs);
+
   // Write tModelMs (always present)
   runtime.values.write(step.out.tModelMs, time.tModelMs);
 

@@ -13,6 +13,18 @@
  * 4. Write channel values to separate buffers
  * 5. Store buffers in outRSlot, outGSlot, outBSlot, outASlot
  *
+ * OUTPUT FORMAT:
+ * - Produces 4 separate Float32Array (one per channel: R, G, B, A)
+ * - Each array has length = instanceCount
+ * - Values are in [0..1] range (not quantized to u8)
+ *
+ * NOTE: assembleInstanceBuffers.ts expects a SINGLE Uint8Array with interleaved
+ * u8x4 RGBA values. This step produces a DIFFERENT format (4 separate Float32
+ * channels). The two are not directly compatible - use executeMaterialize for
+ * the interleaved u8 format needed by Instances2D rendering.
+ *
+ * See: design-docs/12-Compiler-Final/Compiler-Audit-RedFlags-Schedule-and-Runtime.md
+ *
  * References:
  * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md §B3
  * - design-docs/13-Renderer/09-Materialization-Steps.md
@@ -171,8 +183,17 @@ export function executeMaterializeColor(
       aBuffer[i] = c.a;
     }
   } else if (isFieldExprHandle(colorValue)) {
+    // KNOWN GAP: Field expression evaluation requires RuntimeState to include
+    // field evaluation machinery (FieldEnv, field nodes, etc.).
+    // See: design-docs/12-Compiler-Final/Compiler-Audit-RedFlags-Schedule-and-Runtime.md
+    //
+    // Workaround: Pre-materialize field expressions before this step runs,
+    // storing Color[] in the colorExprSlot instead of a FieldExprHandle.
     throw new Error(
-      `executeMaterializeColor: fieldExpr evaluation not implemented for colorExprSlot ${step.colorExprSlot}.`
+      `executeMaterializeColor: fieldExpr handle detected in colorExprSlot ${step.colorExprSlot}. ` +
+      `Field expression evaluation is not yet implemented. ` +
+      `Ensure color fields are pre-materialized to Color[] before this step runs. ` +
+      `ExprId: ${colorValue.exprId}`
     );
   } else if (colorValue === undefined || colorValue === null) {
     throw new Error(

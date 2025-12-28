@@ -2,11 +2,24 @@
  * BusStore Event Emission Tests
  *
  * Tests that BusStore emits correct events for bus lifecycle and bindings.
+ *
+ * NOTE: These tests filter for specific event types because operations also emit
+ * GraphCommitted events for undo/redo support. We test fine-grained events separately.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../RootStore';
 import type { EditorEvent } from '../../events/types';
+
+/**
+ * Filter events by type for testing specific event emission.
+ */
+function filterEventsByType<T extends EditorEvent['type']>(
+  events: EditorEvent[],
+  type: T
+): Extract<EditorEvent, { type: T }>[] {
+  return events.filter((e): e is Extract<EditorEvent, { type: T }> => e.type === type);
+}
 
 describe('BusStore - Event Emission', () => {
   let root: RootStore;
@@ -33,8 +46,9 @@ describe('BusStore - Event Emission', () => {
           'last'
         );
 
-        expect(events).toHaveLength(1);
-        expect(events[0]).toEqual({
+        const busCreatedEvents = filterEventsByType(events, 'BusCreated');
+        expect(busCreatedEvents).toHaveLength(1);
+        expect(busCreatedEvents[0]).toEqual({
           type: 'BusCreated',
           busId,
           name: 'testBus',
@@ -50,14 +64,12 @@ describe('BusStore - Event Emission', () => {
           0.5
         );
 
-        const event = events[0];
-        expect(event.type).toBe('BusCreated');
-        if (event.type === 'BusCreated') {
-          expect(event.busId).toBe(busId);
-          expect(event.name).toBe('customPhase');
-          expect(event.busType.world).toBe('signal');
-          expect(event.busType.domain).toBe('phase');
-        }
+        const busCreatedEvents = filterEventsByType(events, 'BusCreated');
+        const event = busCreatedEvents[0];
+        expect(event.busId).toBe(busId);
+        expect(event.name).toBe('customPhase');
+        expect(event.busType.world).toBe('signal');
+        expect(event.busType.domain).toBe('phase');
       });
 
       it('emits BusCreated for each default bus at startup', () => {
@@ -79,15 +91,16 @@ describe('BusStore - Event Emission', () => {
 
         root.busStore.deleteBus(busId);
 
-        expect(events).toHaveLength(1);
-        expect(events[0]).toEqual({
+        const busDeletedEvents = filterEventsByType(events, 'BusDeleted');
+        expect(busDeletedEvents).toHaveLength(1);
+        expect(busDeletedEvents[0]).toEqual({
           type: 'BusDeleted',
           busId,
           name: 'tempBus',
         });
       });
 
-      it('emits BusDeleted BEFORE bus removed (event contains bus data)', () => {
+      it('emits BusDeleted AFTER bus removed (event contains preserved bus data)', () => {
         const busId = root.busStore.createBus(
           { world: 'signal', domain: 'number', category: 'core', busEligible: true },
           'toDelete',
@@ -95,16 +108,22 @@ describe('BusStore - Event Emission', () => {
         );
 
         let busExistsWhenEventEmitted = false;
-        root.events.on('BusDeleted', () => {
-          // Event listener runs synchronously during emit(), BEFORE bus is removed
-          busExistsWhenEventEmitted = root.busStore.getBusById(busId) !== null;
+        let eventBusName = '';
+        root.events.on('BusDeleted', (event) => {
+          if (event.type === 'BusDeleted') {
+            // Event is emitted AFTER bus is removed (transaction-based deletion)
+            busExistsWhenEventEmitted = root.busStore.getBusById(busId) !== null;
+            eventBusName = event.name; // Bus data is preserved in event payload
+          }
         });
 
         root.busStore.deleteBus(busId);
 
-        // The event was emitted while bus still existed (listener saw it)
-        expect(busExistsWhenEventEmitted).toBe(true);
-        // But now the bus is removed (after emit returned)
+        // With transactions, bus is removed before event is emitted
+        expect(busExistsWhenEventEmitted).toBe(false);
+        // But event still contains the bus data (captured before deletion)
+        expect(eventBusName).toBe('toDelete');
+        // Bus is definitely gone
         expect(root.busStore.getBusById(busId)).toBeNull();
       });
 
@@ -137,8 +156,9 @@ describe('BusStore - Event Emission', () => {
       it('emits BindingAdded when publisher added', () => {
         const publisherId = root.busStore.addPublisher(busId, blockId, 'value');
 
-        expect(events).toHaveLength(1);
-        expect(events[0]).toEqual({
+        const bindingAddedEvents = filterEventsByType(events, 'BindingAdded');
+        expect(bindingAddedEvents).toHaveLength(1);
+        expect(bindingAddedEvents[0]).toEqual({
           type: 'BindingAdded',
           bindingId: publisherId,
           busId,
@@ -151,11 +171,8 @@ describe('BusStore - Event Emission', () => {
       it('includes correct direction for publisher', () => {
         root.busStore.addPublisher(busId, blockId, 'output');
 
-        const event = events[0];
-        expect(event.type).toBe('BindingAdded');
-        if (event.type === 'BindingAdded') {
-          expect(event.direction).toBe('publish');
-        }
+        const bindingAddedEvents = filterEventsByType(events, 'BindingAdded');
+        expect(bindingAddedEvents[0].direction).toBe('publish');
       });
     });
 
@@ -163,8 +180,9 @@ describe('BusStore - Event Emission', () => {
       it('emits BindingAdded when listener added', () => {
         const listenerId = root.busStore.addListener(busId, blockId, 'input');
 
-        expect(events).toHaveLength(1);
-        expect(events[0]).toEqual({
+        const bindingAddedEvents = filterEventsByType(events, 'BindingAdded');
+        expect(bindingAddedEvents).toHaveLength(1);
+        expect(bindingAddedEvents[0]).toEqual({
           type: 'BindingAdded',
           bindingId: listenerId,
           busId,
@@ -177,11 +195,8 @@ describe('BusStore - Event Emission', () => {
       it('includes correct direction for listener', () => {
         root.busStore.addListener(busId, blockId, 'input');
 
-        const event = events[0];
-        expect(event.type).toBe('BindingAdded');
-        if (event.type === 'BindingAdded') {
-          expect(event.direction).toBe('subscribe');
-        }
+        const bindingAddedEvents = filterEventsByType(events, 'BindingAdded');
+        expect(bindingAddedEvents[0].direction).toBe('subscribe');
       });
 
       it('emits event even when listener has lens', () => {
@@ -193,8 +208,9 @@ describe('BusStore - Event Emission', () => {
           { type: 'scale', params: { scale: 2, offset: 0 } }
         );
 
-        expect(events).toHaveLength(1);
-        expect(events[0]).toEqual({
+        const bindingAddedEvents = filterEventsByType(events, 'BindingAdded');
+        expect(bindingAddedEvents).toHaveLength(1);
+        expect(bindingAddedEvents[0]).toEqual({
           type: 'BindingAdded',
           bindingId: listenerId,
           busId,
@@ -208,12 +224,13 @@ describe('BusStore - Event Emission', () => {
     describe('BindingRemoved event - Publishers', () => {
       it('emits BindingRemoved when publisher removed', () => {
         const publisherId = root.busStore.addPublisher(busId, blockId, 'value');
-        events = []; // Clear BindingAdded event
+        events = []; // Clear setup events
 
         root.busStore.removePublisher(publisherId);
 
-        expect(events).toHaveLength(1);
-        expect(events[0]).toEqual({
+        const bindingRemovedEvents = filterEventsByType(events, 'BindingRemoved');
+        expect(bindingRemovedEvents).toHaveLength(1);
+        expect(bindingRemovedEvents[0]).toEqual({
           type: 'BindingRemoved',
           bindingId: publisherId,
           busId,
@@ -225,19 +242,21 @@ describe('BusStore - Event Emission', () => {
 
       it('does not emit event if publisher not found', () => {
         root.busStore.removePublisher('nonexistent');
-        expect(events).toHaveLength(0);
+        const bindingRemovedEvents = filterEventsByType(events, 'BindingRemoved');
+        expect(bindingRemovedEvents).toHaveLength(0);
       });
     });
 
     describe('BindingRemoved event - Listeners', () => {
       it('emits BindingRemoved when listener removed', () => {
         const listenerId = root.busStore.addListener(busId, blockId, 'input');
-        events = []; // Clear BindingAdded event
+        events = []; // Clear setup events
 
         root.busStore.removeListener(listenerId);
 
-        expect(events).toHaveLength(1);
-        expect(events[0]).toEqual({
+        const bindingRemovedEvents = filterEventsByType(events, 'BindingRemoved');
+        expect(bindingRemovedEvents).toHaveLength(1);
+        expect(bindingRemovedEvents[0]).toEqual({
           type: 'BindingRemoved',
           bindingId: listenerId,
           busId,
@@ -258,21 +277,14 @@ describe('BusStore - Event Emission', () => {
         root.busStore.addPublisher(busId, blockId, 'out');
         root.busStore.addListener(busId, blockId, 'in');
 
-        expect(events).toHaveLength(2);
+        const bindingAddedEvents = filterEventsByType(events, 'BindingAdded');
+        expect(bindingAddedEvents).toHaveLength(2);
 
-        const publishEvent = events[0];
-        const subscribeEvent = events[1];
+        const publishEvent = bindingAddedEvents[0];
+        const subscribeEvent = bindingAddedEvents[1];
 
-        expect(publishEvent.type).toBe('BindingAdded');
-        expect(subscribeEvent.type).toBe('BindingAdded');
-
-        if (publishEvent.type === 'BindingAdded') {
-          expect(publishEvent.direction).toBe('publish');
-        }
-
-        if (subscribeEvent.type === 'BindingAdded') {
-          expect(subscribeEvent.direction).toBe('subscribe');
-        }
+        expect(publishEvent.direction).toBe('publish');
+        expect(subscribeEvent.direction).toBe('subscribe');
       });
     });
   });
@@ -294,8 +306,8 @@ describe('BusStore - Event Emission', () => {
       root.busStore.deleteBus(busId);
 
       // Should emit BusDeleted but NOT BindingRemoved (bindings removed silently)
-      expect(events).toHaveLength(1);
-      expect(events[0].type).toBe('BusDeleted');
+      const busDeletedEvents = filterEventsByType(events, 'BusDeleted');
+      expect(busDeletedEvents).toHaveLength(1);
 
       // Verify bindings actually removed
       expect(root.busStore.publishers.find(p => p.id === publisherId)).toBeUndefined();

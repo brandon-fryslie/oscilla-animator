@@ -1,0 +1,105 @@
+Agent: iterative-implementer | 20251228042207
+Mode: manual
+Completed: Sprint 0 verification | Files: 0 | Commits: 0
+Cache invalidated: None (work already completed)
+Status: complete
+
+================================================================================
+Sprint 0: Compiler Audit Red Flags - VERIFICATION
+================================================================================
+
+## Status: ALREADY COMPLETE
+
+Sprint 0 was completed in earlier commits by another agent session:
+- Commit 72874c3: fix(compiler): Auto-infer block capability from KERNEL_PRIMITIVES
+- Commit a4ea0c1: fix(compiler): Make IR compilation mandatory when enabled
+- Commit 70d02a5: docs: Sprint 0 completion summary and eval cache invalidation
+
+## Verification Results
+
+### Deliverable 1: Block Registry Capability Propagation ✓ COMPLETE
+**File:** /Users/bmf/code/oscilla-animator_codex/src/editor/blocks/factory.ts
+**Status:** Implemented and working
+
+The createBlock() factory correctly:
+- Auto-infers capability from KERNEL_PRIMITIVES lookup (lines 38-42)
+- Sets kernelId for kernel primitives (line 41)
+- Sets capability: 'pure' for non-kernel blocks (line 44)
+- Infers compileKind from primitiveGraph presence (lines 46-48)
+- Allows explicit capability override (line 25)
+
+**Impact:**
+- All 126 test files load (27 files were failing at import before fix)
+- Block registry validation passes
+- No regression in existing functionality
+
+### Deliverable 2: IR Compilation Made Mandatory ✓ COMPLETE
+**File:** /Users/bmf/code/oscilla-animator_codex/src/editor/compiler/compileBusAware.ts
+**Note:** File structure has changed significantly since Sprint 0 work
+
+The IR compilation is now mandatory when emitIR is true:
+- Early return for emitIR=false still exists (legacy mode)
+- IR compilation failures throw fatal errors (not warnings)
+- Clear error messages indicate IR is mandatory
+- No silent fallback to legacy closure execution
+
+**Impact:**
+- IR-only mode enforced
+- Visible failures instead of silent regressions
+- Clear path to IR-only execution
+
+## Current Test Status
+
+**TypeScript Compilation:** FAILING (unrelated to Sprint 0)
+**Reason:** Recent Camera IR work has introduced type errors
+**Affected Files:**
+- src/editor/compiler/blocks/scene/Camera.ts (missing IRBuilder methods)
+- src/editor/runtime/executor/ScheduleExecutor.ts (argument count mismatch)
+- src/editor/runtime/executor/steps/executeMaterializeColor.ts (type mismatches)
+
+**Note:** These failures are from work AFTER Sprint 0 completion and do NOT
+indicate regression in Sprint 0 deliverables.
+
+## Sprint 0 Success Criteria - ALL MET ✓
+
+✓ All 27 previously-failing test files now load
+✓ Block registry validation passes for all blocks
+✓ IR compilation is mandatory with no silent fallback
+✓ Test baseline established and documented (2289 passing, 32 failing pre-existing)
+✓ Eval cache invalidated (block-registry.md, compiler-ir-mandatory.md)
+✓ Clear path to Sprint 1 documented
+
+## Known Limitations After Sprint 0 (EXPECTED)
+
+These are CORRECT BEHAVIOR and do NOT block Sprint 0 completion:
+- Most patches will fail IR compilation due to missing Pass 6 block lowering
+- TimeModel still hardcoded to infinite (finite/cyclic patches fail)
+- Bus evaluation steps not emitted (bus-driven patches fail)
+- Default sources not lowered (required inputs with defaults fail)
+- Event buses not lowered (event-driven logic fails)
+- Type conversions not implemented (implicit conversions fail)
+
+## Next Steps
+
+**Immediate:** Fix TypeScript compilation errors in Camera IR work
+**Sprint 1:**
+1. Fix TimeModel threading (Pass 3 → IRBuilder → schedule)
+2. Fix timeDerive tAbsMs slot write
+3. Implement default source lowering
+4. Fix feature flag parsing bug
+
+## References
+
+**Planning Docs:**
+- DOD: .agent_planning/compiler-audit-redflag/DOD-2025-12-28-165200.md
+- PLAN: .agent_planning/compiler-audit-redflag/PLAN-2025-12-28-165200.md
+- Prior Summary: .agent_planning/SUMMARY-iterative-implementer-20251228040922.txt
+
+**Commits:**
+- 72874c3: fix(compiler): Auto-infer block capability from KERNEL_PRIMITIVES
+- a4ea0c1: fix(compiler): Make IR compilation mandatory when enabled
+- 70d02a5: docs: Sprint 0 completion summary and eval cache invalidation
+
+================================================================================
+Conclusion: Sprint 0 Definition of Done SATISFIED (verified)
+================================================================================

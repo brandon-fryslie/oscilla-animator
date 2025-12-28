@@ -45,6 +45,13 @@ export interface TxSpec {
 
   /** Origin of this transaction (for debugging/logging) */
   readonly origin?: 'ui' | 'import' | 'migration' | 'system' | 'remote';
+
+  /**
+   * Suppress GraphCommitted event emission.
+   * Used when a higher-level operation will emit its own consolidated event.
+   * @internal
+   */
+  readonly suppressGraphCommitted?: boolean;
 }
 
 /**
@@ -499,18 +506,22 @@ export function runTx(
       spec.label ?? 'Edit'
     );
 
-    // Increment patch revision
-    store.patchStore.patchRevision++;
-
-    // Emit GraphCommitted event
-    store.events.emit({
-      type: 'GraphCommitted',
-      patchId: store.patchStore.patchId,
-      patchRevision: store.patchStore.patchRevision,
-      reason: 'userEdit',
-      label: spec.label,
-      diffSummary: computeDiffSummary(result.ops),
-    });
+    // Emit GraphCommitted event and increment patch revision (unless suppressed)
+    // When suppressed, the caller is responsible for emitting their own GraphCommitted
+    // with the appropriate revision after completing their compound operation.
+    if (!spec.suppressGraphCommitted) {
+      store.patchStore.patchRevision++;
+      const affectedBlockIds = extractAffectedBlockIds(result.ops);
+      store.events.emit({
+        type: 'GraphCommitted',
+        patchId: store.patchStore.patchId,
+        patchRevision: store.patchStore.patchRevision,
+        reason: 'userEdit',
+        label: spec.label,
+        diffSummary: computeDiffSummary(result.ops),
+        affectedBlockIds: affectedBlockIds.length > 0 ? affectedBlockIds : undefined,
+      });
+    }
 
     return result;
   } catch (error) {
@@ -518,6 +529,22 @@ export function runTx(
     console.error('Transaction failed:', error);
     throw error;
   }
+}
+
+/**
+ * TimeRoot block types for detecting timeRootChanged in diff summary.
+ */
+const TIME_ROOT_BLOCK_TYPES = new Set([
+  'FiniteTimeRoot',
+  'CycleTimeRoot',
+  'InfiniteTimeRoot',
+]);
+
+/**
+ * Check if a block type is a TimeRoot block.
+ */
+function isTimeRootBlockType(blockType: string): boolean {
+  return TIME_ROOT_BLOCK_TYPES.has(blockType);
 }
 
 /**
@@ -534,14 +561,28 @@ function computeDiffSummary(ops: Op[]): GraphDiffSummary {
   const countOp = (op: Op): void => {
     switch (op.type) {
       case 'Add':
-        if (op.table === 'blocks') blocksAdded++;
+        if (op.table === 'blocks') {
+          blocksAdded++;
+          // Check if added block is a TimeRoot
+          const block = op.entity as { type?: string };
+          if (block?.type && isTimeRootBlockType(block.type)) {
+            timeRootChanged = true;
+          }
+        }
         if (op.table === 'buses') busesAdded++;
         if (op.table === 'connections' || op.table === 'publishers' || op.table === 'listeners') {
           bindingsChanged++;
         }
         break;
       case 'Remove':
-        if (op.table === 'blocks') blocksRemoved++;
+        if (op.table === 'blocks') {
+          blocksRemoved++;
+          // Check if removed block is a TimeRoot
+          const removedBlock = op.removed as { type?: string };
+          if (removedBlock?.type && isTimeRootBlockType(removedBlock.type)) {
+            timeRootChanged = true;
+          }
+        }
         if (op.table === 'buses') busesRemoved++;
         if (op.table === 'connections' || op.table === 'publishers' || op.table === 'listeners') {
           bindingsChanged++;
@@ -566,4 +607,62 @@ function computeDiffSummary(ops: Op[]): GraphDiffSummary {
     bindingsChanged,
     timeRootChanged,
   };
+}
+
+/**
+ * Extract affected block IDs from ops.
+ */
+function extractAffectedBlockIds(ops: Op[]): string[] {
+  const blockIds = new Set<string>();
+
+  const extractFromOp = (op: Op): void => {
+    switch (op.type) {
+      case 'Add':
+        if (op.table === 'blocks' && op.entity && typeof op.entity === 'object' && 'id' in op.entity) {
+          blockIds.add(op.entity.id as string);
+        }
+        // For connections, add both source and target block IDs
+        if (op.table === 'connections' && op.entity && typeof op.entity === 'object') {
+          const conn = op.entity as { from?: { blockId?: string }; to?: { blockId?: string } };
+          if (conn.from?.blockId) blockIds.add(conn.from.blockId);
+          if (conn.to?.blockId) blockIds.add(conn.to.blockId);
+        }
+        // For publishers/listeners, add the block ID
+        if ((op.table === 'publishers' || op.table === 'listeners') && op.entity && typeof op.entity === 'object') {
+          const binding = op.entity as { from?: { blockId?: string }; to?: { blockId?: string } };
+          if (binding.from?.blockId) blockIds.add(binding.from.blockId);
+          if (binding.to?.blockId) blockIds.add(binding.to.blockId);
+        }
+        break;
+      case 'Remove':
+        if (op.table === 'blocks') {
+          blockIds.add(op.id);
+        }
+        // For connections, add both source and target block IDs from removed entity
+        if (op.table === 'connections' && op.removed && typeof op.removed === 'object') {
+          const conn = op.removed as { from?: { blockId?: string }; to?: { blockId?: string } };
+          if (conn.from?.blockId) blockIds.add(conn.from.blockId);
+          if (conn.to?.blockId) blockIds.add(conn.to.blockId);
+        }
+        break;
+      case 'Update':
+        if (op.table === 'blocks') {
+          blockIds.add(op.id);
+        }
+        break;
+      case 'SetBlockPosition':
+        blockIds.add(op.blockId);
+        break;
+      case 'SetTimeRoot':
+        if (op.next) blockIds.add(op.next);
+        if (op.prev) blockIds.add(op.prev);
+        break;
+      case 'Many':
+        op.ops.forEach(extractFromOp);
+        break;
+    }
+  };
+
+  ops.forEach(extractFromOp);
+  return Array.from(blockIds);
 }

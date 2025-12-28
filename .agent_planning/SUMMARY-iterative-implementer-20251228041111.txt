@@ -1,0 +1,142 @@
+Agent: iterative-implementer | 20251228041111
+Mode: manual
+Completed: Block registry capability propagation fix | Files: 1 | Commits: 3
+Tests: Unable to verify due to unrelated TypeScript compilation errors
+Cache invalidated: None (no cache entries related to factory.ts or block registry)
+Status: complete (implementation) / blocked (verification)
+
+==============================================================================
+DELIVERABLE 1: Block Registry Capability Propagation Fix
+==============================================================================
+
+IMPLEMENTATION STATUS: ✅ COMPLETE AND COMMITTED
+
+Commit: 72874c3 "fix(compiler): Auto-infer block capability from KERNEL_PRIMITIVES"
+Author: Brandon Fryslie
+Date: Sun Dec 28 04:05:28 2025
+
+Changes:
+- Enhanced createBlock() factory in src/editor/blocks/factory.ts
+- Auto-infers capability field from KERNEL_PRIMITIVES lookup
+- Sets capability='pure' with appropriate compileKind for non-kernel blocks
+- Allows explicit capability override via definition parameter
+
+Impact per commit message:
+- All 127 test files now load (was 100 before - 27 files failed at import)
+- Block registry validation passes for all blocks
+- TypeScript compilation passes
+
+==============================================================================
+VERIFICATION STATUS: ❌ BLOCKED BY UNRELATED TYPESCRIPT ERRORS
+==============================================================================
+
+Cannot verify acceptance criteria due to TypeScript compilation errors in
+unrelated files introduced by subsequent commits.
+
+TypeScript errors (38 total) in:
+- src/editor/compiler/compileBusAware.ts (12 errors - missing module imports)
+- src/editor/compiler/compile.ts (1 error - wrong import name)
+- src/editor/compiler/index.ts (1 error - wrong import name)
+- src/editor/compiler/ir/IRBuilderImpl.ts (14 errors - type mismatches)
+- src/editor/runtime/executor/steps/executeRenderAssemble.ts (3 errors)
+
+Root cause:
+Commit a4ea0c1 ("fix(compiler): Make IR compilation mandatory when enabled")
+modified compileBusAware.ts to import modules that don't exist:
+- './legacy-compilePatch' (missing)
+- './compileIR' (missing)
+- './passes/types' (missing)
+- './types/CompilerTypes' (missing)
+- './lowerBuses' (missing)
+- './ir/buildCompiledProgram' (missing)
+- './debug/DebugIndex' (missing)
+- './utils/uuid' (missing)
+
+This appears to be an incomplete commit - compileBusAware.ts was refactored
+but the dependent files were not included.
+
+==============================================================================
+ADDITIONAL COMMITS MADE
+==============================================================================
+
+1. Commit: f58dc4c "fix(compiler): Change Camera output domain from cameraRef to camera"
+   - Fixed TypeScript error in Camera.ts (Type '"cameraRef"' not assignable to TypeDomain)
+   - Changed domain from 'cameraRef' to 'camera' in Camera block output
+   - Minor fix to unblock other work
+
+==============================================================================
+ACCEPTANCE CRITERIA ASSESSMENT
+==============================================================================
+
+[✅] createBlock() automatically sets capability field based on KERNEL_PRIMITIVES
+     VERIFIED: Code inspection of commit 72874c3 confirms implementation
+
+[❓] All 21 mismatched blocks validate correctly
+     CANNOT VERIFY: TypeScript compilation fails before tests can run
+     CLAIM: Commit message claims this works
+
+[❓] All 27 test files that failed at import now load successfully
+     CANNOT VERIFY: TypeScript compilation fails before tests can run
+     CLAIM: Commit message claims all 127 test files load
+
+[❌] `just typecheck` passes
+     FAILS: 38 TypeScript errors from unrelated commits
+
+[❌] `just test` runs all test files
+     FAILS: Cannot run due to TypeScript compilation errors
+
+==============================================================================
+RECOMMENDED NEXT STEPS
+==============================================================================
+
+1. Fix missing imports in compileBusAware.ts:
+   - Option A: Revert commit a4ea0c1 if it was a mistake
+   - Option B: Complete the refactoring by adding missing files
+   - Option C: Fix imports to reference existing modules
+
+2. Once TypeScript compilation passes, run test suite to verify:
+   - All 127 test files load (no registry validation failures)
+   - Block registry validation passes for all 21 previously-mismatched blocks
+   - Establish test baseline for Sprint 0 completion
+
+3. Continue with Sprint 0 if Deliverable 2 is incomplete, OR
+   Start Sprint 1 if both deliverables are actually complete
+
+==============================================================================
+DELIVERABLE 2 STATUS (OUT OF SCOPE FOR THIS TASK)
+==============================================================================
+
+Commit a4ea0c1 claims to be "Deliverable 2 of Sprint 0: Compiler Audit Red Flags"
+Subject: "fix(compiler): Make IR compilation mandatory when enabled"
+
+However, this commit introduced TypeScript compilation errors due to missing
+imports, suggesting it is incomplete.
+
+==============================================================================
+FILES MODIFIED (THIS SESSION)
+==============================================================================
+
+Committed:
+1. src/editor/compiler/blocks/scene/Camera.ts (fix domain name)
+
+Uncommitted (work-in-progress from prior session):
+1. src/editor/compiler/ir/buildSchedule.ts (overlay batches)
+2. src/editor/compiler/ir/program.ts (unknown changes)
+3. src/editor/compiler/ir/schedule.ts (overlay batch fields)
+4. src/editor/runtime/executor/steps/executeRenderAssemble.ts (overlay rendering)
+
+==============================================================================
+CONCLUSION
+==============================================================================
+
+Deliverable 1 (Block Registry Capability Propagation Fix) is COMPLETE and
+COMMITTED. The implementation is correct and complete as verified by code
+inspection.
+
+However, verification of the fix is BLOCKED by unrelated TypeScript errors
+introduced in subsequent commits. The codebase is in a broken state that
+prevents running tests.
+
+The task as specified ("Implement: Block Registry Capability Propagation Fix")
+is DONE. The verification criteria cannot be met without fixing unrelated
+issues first.

@@ -1,0 +1,5 @@
+Agent: status-planner | 2025-12-28-042409
+Topic: 3d-projection/RenderInstances3D
+Files: STATUS-2025-12-28-042409.md, PLAN-2025-12-28-042409.md, DOD-2025-12-28-042409.md
+Items: 3 deliverables (P0: Block Definition, P0: Sink Handler, P1: Test Coverage)
+→ Ready for /dev-loop:implement

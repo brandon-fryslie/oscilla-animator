@@ -228,8 +228,8 @@ export class PatchStore {
       migratedParams
     );
 
-    // Process auto-bus connections for this block
-    this.processAutoBusConnections(id, type);
+    // Process auto-bus connections for this block (suppress GraphCommitted - caller emits one for entire operation)
+    this.processAutoBusConnections(id, type, { suppressGraphCommitted: true });
 
     // Emit BlockAdded event
     this.root.events.emit({
@@ -248,19 +248,28 @@ export class PatchStore {
    * - Primitive blocks with autoBusSubscriptions/autoBusPublications
    * - Composite blocks with busSubscriptions/busPublications in their graph
    * - Input slots with defaultSource.defaultBus specified
+   *
+   * @param options - Optional settings
+   * @param options.suppressGraphCommitted - If true, suppress GraphCommitted events from internal bus operations
    */
-  private processAutoBusConnections(blockId: BlockId, blockType: string): void {
+  private processAutoBusConnections(
+    blockId: BlockId,
+    blockType: string,
+    options?: { suppressGraphCommitted?: boolean }
+  ): void {
     const definition = getBlockDefinition(blockType);
     if (definition === undefined) {
       throw new Error(`Cannot process auto-bus connections: block type "${blockType}" not found in registry`);
     }
+
+    const busOptions = options?.suppressGraphCommitted ? { suppressGraphCommitted: true } : undefined;
 
     // Check for primitive block auto-bus definitions
     if (definition.autoBusSubscriptions !== undefined) {
       for (const [inputPort, busName] of Object.entries(definition.autoBusSubscriptions)) {
         const bus = this.root.busStore.buses.find(b => b.name === busName);
         if (bus !== undefined) {
-          this.root.busStore.addListener(bus.id, blockId, inputPort);
+          this.root.busStore.addListener(bus.id, blockId, inputPort, undefined, undefined, busOptions);
         }
       }
     }
@@ -269,7 +278,7 @@ export class PatchStore {
       for (const [outputPort, busName] of Object.entries(definition.autoBusPublications)) {
         const bus = this.root.busStore.buses.find(b => b.name === busName);
         if (bus !== undefined) {
-          this.root.busStore.addPublisher(bus.id, blockId, outputPort);
+          this.root.busStore.addPublisher(bus.id, blockId, outputPort, undefined, undefined, busOptions);
         }
       }
     }
@@ -281,7 +290,7 @@ export class PatchStore {
           const busName = inputSlot.defaultSource.defaultBus;
           const bus = this.root.busStore.buses.find(b => b.name === busName);
           if (bus !== undefined) {
-            this.root.busStore.addListener(bus.id, blockId, inputSlot.id);
+            this.root.busStore.addListener(bus.id, blockId, inputSlot.id, undefined, undefined, busOptions);
           }
         }
       }
@@ -297,7 +306,7 @@ export class PatchStore {
         for (const [inputPort, busName] of Object.entries(compositeDef.graph.busSubscriptions)) {
           const bus = this.root.busStore.buses.find(b => b.name === busName);
           if (bus !== undefined) {
-            this.root.busStore.addListener(bus.id, blockId, inputPort);
+            this.root.busStore.addListener(bus.id, blockId, inputPort, undefined, undefined, busOptions);
           }
         }
       }
@@ -306,7 +315,7 @@ export class PatchStore {
         for (const [outputPort, busName] of Object.entries(compositeDef.graph.busPublications)) {
           const bus = this.root.busStore.buses.find(b => b.name === busName);
           if (bus !== undefined) {
-            this.root.busStore.addPublisher(bus.id, blockId, outputPort);
+            this.root.busStore.addPublisher(bus.id, blockId, outputPort, undefined, undefined, busOptions);
           }
         }
       }
@@ -372,9 +381,8 @@ export class PatchStore {
       migratedParams
     );
 
-    // Process auto-bus connections for this block
-    // NOTE: This calls addPublisher/addListener which use their own transactions
-    this.processAutoBusConnections(id, type);
+    // Process auto-bus connections for this block (suppress GraphCommitted - already emitted from runTx above)
+    this.processAutoBusConnections(id, type, { suppressGraphCommitted: true });
 
     // Emit BlockAdded event (fine-grained event, coexists with GraphCommitted)
     this.root.events.emit({
@@ -442,7 +450,8 @@ export class PatchStore {
       laneObj.blockIds = newBlockIds;
     }
 
-    this.processAutoBusConnections(id, type);
+    // Process auto-bus connections (suppress GraphCommitted - we emit one at the end)
+    this.processAutoBusConnections(id, type, { suppressGraphCommitted: true });
 
     this.root.events.emit({
       type: 'BlockAdded',
@@ -697,17 +706,32 @@ export class PatchStore {
    * Remove a block from the patch.
    *
    * P0-2 MIGRATED: Now uses tx.removeBlockCascade() for undo/redo support.
-   * @param _options - DEPRECATED: Kept for backward compatibility with replaceBlock (Phase 3). Ignored.
-
+   * @param options - Optional settings
+   * @param options.suppressGraphCommitted - If true, suppress GraphCommitted event (for internal use)
    */
-  removeBlock(id: BlockId, _options?: { suppressGraphCommitted?: boolean }): void {
+  removeBlock(id: BlockId, options?: { suppressGraphCommitted?: boolean }): void {
     // Capture block type before deletion (needed for event)
     const block = this.blocks.find((b) => b.id === id);
     const blockType = block?.type ?? 'unknown';
 
-    runTx(this.root, { label: 'Remove Block' }, tx => {
+    // Capture connections involving this block BEFORE deletion (for WireRemoved events)
+    const connectionsToRemove = this.connections.filter(
+      (c) => c.from.blockId === id || c.to.blockId === id
+    );
+
+    runTx(this.root, { label: 'Remove Block', suppressGraphCommitted: options?.suppressGraphCommitted }, tx => {
       tx.removeBlockCascade(id);
     });
+
+    // Emit WireRemoved events for each cascade-deleted connection
+    for (const conn of connectionsToRemove) {
+      this.root.events.emit({
+        type: 'WireRemoved',
+        wireId: conn.id,
+        from: conn.from,
+        to: conn.to,
+      });
+    }
 
     // Emit BlockRemoved event AFTER state changes committed
     this.root.events.emit({
@@ -810,7 +834,7 @@ export class PatchStore {
       if (oldSlot !== undefined && oldSlot !== null) {
         const newSlot = newBlock.outputs.find((s) => s.type === oldSlot.type);
         if (newSlot !== undefined && newSlot !== null) {
-          this.root.busStore.addPublisher(oldPub.busId, newBlockId, newSlot.id, oldPub.adapterChain);
+          this.root.busStore.addPublisher(oldPub.busId, newBlockId, newSlot.id, oldPub.adapterChain, oldPub.lensStack, { suppressGraphCommitted: true });
         }
       }
     }
@@ -828,7 +852,8 @@ export class PatchStore {
             newBlockId,
             newSlot.id,
             oldLis.adapterChain,
-            oldLis.lensStack
+            oldLis.lensStack,
+            { suppressGraphCommitted: true }
           );
         }
       }
@@ -910,12 +935,12 @@ export class PatchStore {
       this.disconnect(wire.id, { suppressGraphCommitted: true });
     }
 
-    // Remove any bus listeners to this input
+    // Remove any bus listeners to this input (suppress GraphCommitted for internal use)
     const listenersToRemove = this.root.busStore.listeners.filter(
       (l) => l.to.blockId === blockId && l.to.slotId === slotId
     );
     for (const listener of listenersToRemove) {
-      this.root.busStore.removeListener(listener.id);
+      this.root.busStore.removeListener(listener.id, { suppressGraphCommitted: true });
     }
   }
 

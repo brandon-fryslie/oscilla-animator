@@ -1,0 +1,97 @@
+Agent: iterative-implementer | 2025-12-28T16:30:00
+Mode: manual (no tests due to unrelated TS errors)
+Status: in_progress
+
+## Completed Work
+
+### Investigation
+- Read all relevant files:
+  - executeTimeDerive.ts
+  - executeSignalEval.ts  
+  - executeMaterializeColor.ts
+  - executeBusEval.ts
+  - buildSchedule.ts
+  - Compiler audit document
+
+### Fixes Attempted (repeatedly auto-reverted by linter/file watcher)
+
+1. CRITICAL #1: executeTimeDerive.ts - Add tAbsMs write
+   - Location: Line 42 (after tModelMs write)
+   - Fix: Add `runtime.values.write(step.tAbsMsSlot, time.tAbsMs);`
+   - Impact: Downstream signal nodes can now read tAbsMs from slot
+
+2. HIGH #2: executeSignalEval.ts - Graceful signalTable handling
+   - Location: Lines 40-43
+   - Fix: Replace throw with console.warn + early return
+   - Impact: Programs without signal tables won't crash
+
+3. CRITICAL #3: executeMaterializeColor.ts - Handle fieldExpr
+   - Location: Lines 236-239  
+   - Fix: Delegate to FieldRuntime materialize() instead of throwing
+   - Impact: Color fields can be evaluated via field expressions
+
+## Remaining Work
+
+### Files That Need Manual Editing
+
+Since Write operations are being auto-reverted, these files need manual fixes:
+
+1. **src/editor/runtime/executor/steps/executeTimeDerive.ts:42**
+   ```typescript
+   // Add this line after line 41:
+   runtime.values.write(step.tAbsMsSlot, time.tAbsMs);
+   ```
+
+2. **src/editor/runtime/executor/steps/executeSignalEval.ts:40-50**
+   ```typescript
+   // Replace lines 40-43 with:
+   const signalTable = program.signalTable?.nodes;
+   
+   // Gracefully handle missing signal table
+   if (!signalTable) {
+     console.warn(
+       "executeSignalEval: program.signalTable is missing. " +
+       "Signal evaluation skipped. This may occur if IR extraction is disabled " +
+       "or if the compiled program has no signal expressions."
+     );
+     return;
+   }
+   ```
+
+3. **src/editor/runtime/executor/steps/executeMaterializeColor.ts**
+   - Add imports at top (after line 21):
+     ```typescript
+     import { materialize } from "../../field/Materializer";
+     import { createSigEnv } from "../../signal-expr/SigEnv";
+     import type { SigFrameCache } from "../../signal-expr/SigFrameCache";
+     import type { SlotValueReader } from "../../signal-expr/SlotValueReader";
+     import type { FieldExprIR as CompilerFieldExprIR } from "../../../compiler/ir/fieldExpr";
+     import type { FieldExprIR as RuntimeFieldExprIR } from "../../field/types";
+     import { compilerToRuntimeType } from "../../integration/typeAdapter";
+     import { OpCode } from "../../../compiler/ir/opcodes";
+     ```
+   - Add helper functions (before executeMaterializeColor)
+   - Replace fieldExpr handler at line 236-239 with full implementation (see my previous Write attempt)
+   - Add NOTE to header about Float32 vs u8 format
+
+4. **src/editor/compiler/ir/buildSchedule.ts**
+   - Update header comments (lines 1-18) to reflect actual state
+   - Add busEval TODO comment in buildSchedule() around line 360
+   - Add dependency tracking documentation to buildSchedule() docstring
+
+## Cache Invalidation
+
+No cache files needed invalidation (no files modified that would affect eval-cache).
+
+## Next Steps
+
+1. Manually apply the 3 critical executor fixes above
+2. Update buildSchedule.ts header and add TODO for busEval
+3. Test with a simple patch to verify fixes work
+4. Commit changes
+
+## Blockers
+
+- File watcher / linter auto-reverting Write operations
+- Cannot run tests due to unrelated TypeScript errors (vec3 missing from CoreDomain)
+
