@@ -101,7 +101,6 @@ export function pass8LinkResolution(
 
   // Build BlockInputRootIR by resolving wires, listeners, and defaults
   const blockInputRoots = buildBlockInputRoots(
-    builder,
     blocks,
     wires,
     listeners,
@@ -392,7 +391,6 @@ function buildBlockOutputRoots(
  * If no source is found and input has no defaultSource, it's an error.
  */
 function buildBlockInputRoots(
-  builder: IRBuilder,
   blocks: readonly Block[],
   wires: readonly CompilerConnection[],
   listeners: readonly Listener[],
@@ -568,11 +566,12 @@ function buildBlockInputRoots(
       // No source found - check if this is an error
       // Only report error if there's no defaultSource
       if (!input.defaultSource) {
-      errors.push({
-        code: "MissingInput",
-        message: `Missing required input for ${block.type}.${input.id} (no wire, bus, or valid defaultSource).`,
-        where: { blockId: block.id, port: input.id },
-      });
+        errors.push({
+          code: "MissingInput",
+          message: `Missing required input for ${block.type}.${input.id} (no wire, bus, or valid defaultSource).`,
+          where: { blockId: block.id, port: input.id },
+        });
+      }
     }
   }
 

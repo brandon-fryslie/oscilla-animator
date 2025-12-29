@@ -66,7 +66,7 @@ export class DebugUIStore {
   timeModelKind: 'finite' | 'cyclic' | 'infinite' = 'infinite';
 
   /** Reference to root store */
-  private root: RootStore;
+  private readonly root: RootStore;
 
   /** Probe card dismiss timer */
   private probeCardDismissTimer: number | null = null;

@@ -76,6 +76,10 @@ const COMPATIBLE_DOMAIN_SETS: ReadonlyArray<ReadonlyArray<string>> = [
   // Numeric signals - Unit is a constrained number, but compatible
   ['number', 'unit'],
 
+  // Phase types - phase01 and phase are semantically identical
+  // phase01 is an alias for phase used by some blocks
+  ['phase01', 'phase'],
+
   // Render types - all render outputs are composable
   ['renderTree', 'renderNode', 'render'],
 ];

@@ -101,7 +101,7 @@ export function computeLayout(graph: GraphData, uiState: UILayoutState): LayoutR
   });
 
   // Step 6: Initial grid placement
-  let { placements, columns } = placeBlocksInGrid(orderedBlocks, density);
+  const { placements, columns } = placeBlocksInGrid(orderedBlocks, density);
 
   // Step 7: Proximity enforcement (mutates placements)
   // Note: Unused currently but available for future optimization

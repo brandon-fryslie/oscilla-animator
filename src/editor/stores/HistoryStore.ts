@@ -95,7 +95,7 @@ export class HistoryStore {
   private nextRevisionId = 1;
 
   /** Reference to root store */
-  private rootStore: RootStore;
+  private readonly rootStore: RootStore;
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;

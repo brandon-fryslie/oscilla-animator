@@ -735,8 +735,8 @@ export class DebugStore {
       this.log('output', `  Patch ID: ${programIR.patchId}`);
       this.log('output', `  Seed: ${programIR.seed}`);
 
-      const nodeCount = Object.keys(programIR.nodes).length;
-      const busCount = Object.keys(programIR.buses).length;
+      const nodeCount = programIR.nodes?.nodes?.length ?? 0;
+      const busCount = programIR.buses?.buses?.length ?? 0;
 
       this.log('output', `  Node Count: ${nodeCount}`);
       this.log('output', `  Bus Count: ${busCount}`);
@@ -752,33 +752,31 @@ export class DebugStore {
 
     if (subCmd === 'nodes') {
       // List all nodes
-      const nodeEntries = Object.entries(programIR.nodes);
-      if (nodeEntries.length === 0) {
+      const nodes = programIR.nodes?.nodes ?? [];
+      if (nodes.length === 0) {
         this.log('output', 'No nodes in IR');
         return;
       }
 
-      this.log('output', `━━━ IR Nodes (${nodeEntries.length}) ━━━`);
-      for (const [nodeId, node] of nodeEntries) {
-        const nodeType = node.type || 'unknown';
-        this.log('output', `  ${nodeId}: ${nodeType}`);
+      this.log('output', `━━━ IR Nodes (${nodes.length}) ━━━`);
+      for (const node of nodes) {
+        this.log('output', `  ${node.id}: typeId=${node.typeId} (${node.inputCount} in, ${node.outputCount} out)`);
       }
       return;
     }
 
     if (subCmd === 'buses') {
       // List all buses
-      const busEntries = Object.entries(programIR.buses);
-      if (busEntries.length === 0) {
+      const buses = programIR.buses?.buses ?? [];
+      if (buses.length === 0) {
         this.log('output', 'No buses in IR');
         return;
       }
 
-      this.log('output', `━━━ IR Buses (${busEntries.length}) ━━━`);
-      for (const [busId, bus] of busEntries) {
-        const busName = bus.name || 'unnamed';
+      this.log('output', `━━━ IR Buses (${buses.length}) ━━━`);
+      for (const bus of buses) {
         const busType = bus.type ? JSON.stringify(bus.type) : 'unknown';
-        this.log('output', `  ${busId}: "${busName}" (${busType})`);
+        this.log('output', `  ${bus.id}: ${busType}`);
       }
       return;
     }
@@ -791,37 +789,18 @@ export class DebugStore {
         return;
       }
 
-      const node = programIR.nodes[nodeId];
+      const node = programIR.nodes.nodes.find((n) => n.id === nodeId);
       if (!node) {
         this.log('error', `IR node not found: ${nodeId}`);
         return;
       }
 
       this.log('output', `━━━ IR Node: ${nodeId} ━━━`);
-      this.log('output', `  Type: ${node.type || 'unknown'}`);
-
-      if (node.inputs && node.inputs.length > 0) {
-        this.log('output', `  Inputs (${node.inputs.length}):`);
-        for (const input of node.inputs) {
-          const inputStr = typeof input === 'object' ? JSON.stringify(input) : String(input);
-          this.log('output', `    ${inputStr}`);
-        }
-      }
-
-      if (node.outputs && node.outputs.length > 0) {
-        this.log('output', `  Outputs (${node.outputs.length}):`);
-        for (const output of node.outputs) {
-          const outputStr = typeof output === 'object' ? JSON.stringify(output) : String(output);
-          this.log('output', `    ${outputStr}`);
-        }
-      }
-
-      if (node.params && Object.keys(node.params).length > 0) {
-        this.log('output', '  Params:');
-        for (const [key, value] of Object.entries(node.params)) {
-          const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
-          this.log('output', `    ${key}: ${valueStr}`);
-        }
+      this.log('output', `  TypeId: ${node.typeId}`);
+      this.log('output', `  Inputs: ${node.inputCount}`);
+      this.log('output', `  Outputs: ${node.outputCount}`);
+      if (node.compilerTag !== undefined) {
+        this.log('output', `  CompilerTag: ${node.compilerTag}`);
       }
       return;
     }

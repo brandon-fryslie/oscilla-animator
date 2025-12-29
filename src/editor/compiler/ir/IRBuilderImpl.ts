@@ -151,11 +151,11 @@ export class IRBuilderImpl implements IRBuilder {
   // =============================================================================
 
   allocSigExprId(): SigExprId {
-    return this.sigExprs.length as SigExprId;
+    return this.sigExprs.length;
   }
 
   allocFieldExprId(): FieldExprId {
-    return this.fieldExprs.length as FieldExprId;
+    return this.fieldExprs.length;
   }
 
   allocStateId(type: TypeDesc, initial?: unknown, debugName?: string): StateId {
@@ -236,7 +236,7 @@ export class IRBuilderImpl implements IRBuilder {
 
   sigConst(value: number, type: TypeDesc): SigExprId {
     const constId = this.addConst(value);
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "const",
       constId,
@@ -247,7 +247,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   sigTimeAbsMs(): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "timeAbsMs",
       type: { world: "signal", domain: "timeMs" },
@@ -257,7 +257,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   sigTimeModelMs(): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "timeModelMs",
       type: { world: "signal", domain: "number" },
@@ -267,7 +267,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   sigPhase01(): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "phase01",
       type: { world: "signal", domain: "phase01" },
@@ -277,7 +277,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   sigWrapEvent(): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "wrapEvent",
       type: { world: "event", domain: "trigger" },
@@ -287,7 +287,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   sigMap(src: SigExprId, fn: PureFnRef, outputType: TypeDesc): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "map",
       src,
@@ -299,7 +299,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   sigZip(a: SigExprId, b: SigExprId, fn: PureFnRef, outputType: TypeDesc): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "zip",
       a,
@@ -312,7 +312,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   sigSelect(cond: SigExprId, t: SigExprId, f: SigExprId, outputType: TypeDesc): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "select",
       cond,
@@ -325,7 +325,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   sigTransform(src: SigExprId, chain: TransformChainId): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     const chainDef = this.transformChains[chain];
     if (!chainDef) {
       throw new Error(`Transform chain ${chain} not found`);
@@ -346,7 +346,7 @@ export class IRBuilderImpl implements IRBuilder {
     mode: "sum" | "average" | "max" | "min" | "last",
     outputType: TypeDesc
   ): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "busCombine",
       busIndex,
@@ -365,7 +365,7 @@ export class IRBuilderImpl implements IRBuilder {
     outputType: TypeDesc,
     params?: Record<string, number>
   ): SigExprId {
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "stateful",
       op,
@@ -384,7 +384,7 @@ export class IRBuilderImpl implements IRBuilder {
 
   fieldConst(value: unknown, type: TypeDesc): FieldExprId {
     const constId = this.addConst(value);
-    const id = this.fieldExprs.length as FieldExprId;
+    const id = this.fieldExprs.length;
     this.fieldExprs.push({
       kind: "const",
       constId,
@@ -395,7 +395,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   broadcastSigToField(sig: SigExprId, domainSlot: ValueSlot, outputType: TypeDesc): FieldExprId {
-    const id = this.fieldExprs.length as FieldExprId;
+    const id = this.fieldExprs.length;
     this.fieldExprs.push({
       kind: "broadcastSig",
       sig,
@@ -407,7 +407,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   fieldMap(src: FieldExprId, fn: PureFnRef, outputType: TypeDesc, params?: Record<string, unknown>): FieldExprId {
-    const id = this.fieldExprs.length as FieldExprId;
+    const id = this.fieldExprs.length;
     this.fieldExprs.push({
       kind: "map",
       src,
@@ -420,7 +420,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   fieldZip(a: FieldExprId, b: FieldExprId, fn: PureFnRef, outputType: TypeDesc, params?: Record<string, unknown>): FieldExprId {
-    const id = this.fieldExprs.length as FieldExprId;
+    const id = this.fieldExprs.length;
     this.fieldExprs.push({
       kind: "zip",
       a,
@@ -434,7 +434,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   fieldSelect(cond: FieldExprId, t: FieldExprId, f: FieldExprId, outputType: TypeDesc): FieldExprId {
-    const id = this.fieldExprs.length as FieldExprId;
+    const id = this.fieldExprs.length;
     this.fieldExprs.push({
       kind: "select",
       cond,
@@ -447,7 +447,7 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   fieldTransform(src: FieldExprId, chain: TransformChainId): FieldExprId {
-    const id = this.fieldExprs.length as FieldExprId;
+    const id = this.fieldExprs.length;
     const chainDef = this.transformChains[chain];
     if (!chainDef) {
       throw new Error(`Transform chain ${chain} not found`);
@@ -468,7 +468,7 @@ export class IRBuilderImpl implements IRBuilder {
     mode: "sum" | "average" | "max" | "min" | "last" | "product",
     outputType: TypeDesc
   ): FieldExprId {
-    const id = this.fieldExprs.length as FieldExprId;
+    const id = this.fieldExprs.length;
     this.fieldExprs.push({
       kind: "busCombine",
       busIndex,
@@ -483,7 +483,7 @@ export class IRBuilderImpl implements IRBuilder {
   reduceFieldToSig(field: FieldExprId, fn: ReduceFn): SigExprId {
     // Field-to-signal reduction is implemented as a signal expression
     // that references the field (this will be handled in the runtime)
-    const id = this.sigExprs.length as SigExprId;
+    const id = this.sigExprs.length;
     // TEMPORARY: Use closureBridge until proper reduce node is added
     // This is a placeholder that will need proper implementation
     this.sigExprs.push({
@@ -616,7 +616,7 @@ export class IRBuilderImpl implements IRBuilder {
   // =============================================================================
 
   transformChain(steps: readonly TransformStepIR[], outputType: TypeDesc): TransformChainId {
-    const chainId = this.transformChains.length as TransformChainId;
+    const chainId = this.transformChains.length;
     this.transformChains.push({
       steps: [...steps],
       outputType,

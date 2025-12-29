@@ -266,7 +266,7 @@ function isTypeCompatible(from: TypeDesc, to: TypeDesc): boolean {
 
   // Special case: renderTree and renderNode are compatible
   const renderDomains: TypeDomain[] = ["renderTree", "renderNode"];
-  if (renderDomains.includes(from.domain as TypeDomain) && renderDomains.includes(to.domain as TypeDomain)) {
+  if (renderDomains.includes(from.domain) && renderDomains.includes(to.domain)) {
     if (from.world === to.world) return true;
   }
 

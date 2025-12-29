@@ -619,7 +619,7 @@ function extractAffectedBlockIds(ops: Op[]): string[] {
     switch (op.type) {
       case 'Add':
         if (op.table === 'blocks' && op.entity && typeof op.entity === 'object' && 'id' in op.entity) {
-          blockIds.add(op.entity.id as string);
+          blockIds.add(op.entity.id);
         }
         // For connections, add both source and target block IDs
         if (op.table === 'connections' && op.entity && typeof op.entity === 'object') {

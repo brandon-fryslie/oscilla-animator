@@ -984,8 +984,8 @@ function processPaths2DSink(
 ): { batch: PathBatch; stepIds: string[] } {
   const stepIds: string[] = [];
 
-  const domainSlot = sink.inputs.domain as ValueSlot;
-  const pathSlot = sink.inputs.paths as ValueSlot;
+  const domainSlot = sink.inputs.domain;
+  const pathSlot = sink.inputs.paths;
   if (pathSlot === undefined) {
     throw new Error("processPaths2DSink: missing paths input");
   }
@@ -993,7 +993,7 @@ function processPaths2DSink(
   if (sink.inputs.opacity === undefined) {
     throw new Error("processPaths2DSink: missing opacity input");
   }
-  const opacitySlot = sink.inputs.opacity as ValueSlot;
+  const opacitySlot = sink.inputs.opacity;
 
   const pathFieldId = fieldSlotToId.get(pathSlot);
   if (pathFieldId === undefined) {

@@ -50,7 +50,7 @@ import type { RuntimeState } from "./RuntimeState";
  */
 export class IRRuntimeAdapter {
   private program: CompiledProgramIR;
-  private executor: ScheduleExecutor;
+  private readonly executor: ScheduleExecutor;
   private runtime: RuntimeState;
   private legacyRenderFn: ((tMs: number, ctx: RuntimeCtx) => RenderCmdTree | RenderTree) | null;
 

@@ -11,7 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { IRBuilderImpl } from "../../../ir/IRBuilderImpl";
 import { buildCompiledProgram } from "../../../ir/buildSchedule";
-import type { TypeDesc, ValueSlot } from "../../../ir/types";
+import type { TypeDesc } from "../../../ir/types";
 
 // Helper to create a TypeDesc
 function makeType(world: TypeDesc["world"], domain: string): TypeDesc {
@@ -208,7 +208,7 @@ describe("RenderInstances3D block lowering", () => {
       builder.registerSigSlot(opacitySigId, opacitySlot);
 
       // Allocate a camera slot (simulates Camera block output)
-      const cameraSlot = builder.allocValueSlot(makeType("special", "camera"), "camera") as ValueSlot;
+      const cameraSlot = builder.allocValueSlot(makeType("special", "camera"), "camera");
 
       builder.renderSink("instances3d", {
         domain: domainSlot,

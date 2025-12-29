@@ -53,8 +53,8 @@ export const IRTab = observer(function IRTab() {
     setExpandedSections(newExpanded);
   };
 
-  const nodeEntries = Object.entries(programIR.nodes);
-  const busEntries = Object.entries(programIR.buses);
+  const nodes = programIR.nodes?.nodes ?? [];
+  const buses = programIR.buses?.buses ?? [];
 
   return (
     <div className="ir-tab">
@@ -84,71 +84,40 @@ export const IRTab = observer(function IRTab() {
           <span className="ir-tab-section-icon">
             {expandedSections.has('nodes') ? '▼' : '▶'}
           </span>
-          <span className="ir-tab-section-title">Nodes ({nodeEntries.length})</span>
+          <span className="ir-tab-section-title">Nodes ({nodes.length})</span>
         </button>
 
         {expandedSections.has('nodes') && (
           <div className="ir-tab-section-content">
-            {nodeEntries.length === 0 ? (
+            {nodes.length === 0 ? (
               <div className="ir-tab-empty-section">No nodes</div>
             ) : (
               <div className="ir-tab-node-list">
-                {nodeEntries.map(([nodeId, node]) => (
-                  <div key={nodeId} className="ir-tab-node-item">
+                {nodes.map((node) => (
+                  <div key={node.id} className="ir-tab-node-item">
                     <button
-                      className={`ir-tab-node-button ${selectedNodeId === nodeId ? 'active' : ''}`}
-                      onClick={() => setSelectedNodeId(selectedNodeId === nodeId ? null : nodeId)}
+                      className={`ir-tab-node-button ${selectedNodeId === node.id ? 'active' : ''}`}
+                      onClick={() => setSelectedNodeId(selectedNodeId === node.id ? null : node.id)}
                       type="button"
                     >
-                      <span className="ir-tab-node-id">{nodeId}</span>
-                      <span className="ir-tab-node-type">{node.type || 'unknown'}</span>
+                      <span className="ir-tab-node-id">{node.id}</span>
+                      <span className="ir-tab-node-type">typeId={node.typeId}</span>
                     </button>
 
-                    {selectedNodeId === nodeId && (
+                    {selectedNodeId === node.id && (
                       <div className="ir-tab-node-details">
-                        {node.inputs && node.inputs.length > 0 && (
+                        <div className="ir-tab-node-detail-section">
+                          <div className="ir-tab-node-detail-label">Input Count:</div>
+                          <span>{node.inputCount}</span>
+                        </div>
+                        <div className="ir-tab-node-detail-section">
+                          <div className="ir-tab-node-detail-label">Output Count:</div>
+                          <span>{node.outputCount}</span>
+                        </div>
+                        {node.compilerTag !== undefined && (
                           <div className="ir-tab-node-detail-section">
-                            <div className="ir-tab-node-detail-label">Inputs:</div>
-                            <ul className="ir-tab-node-detail-list">
-                              {node.inputs.map((input: unknown, idx: number) => (
-                                <li key={idx}>
-                                  {typeof input === 'object' && input !== null
-                                    ? JSON.stringify(input)
-                                    : String(input)}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {node.outputs && node.outputs.length > 0 && (
-                          <div className="ir-tab-node-detail-section">
-                            <div className="ir-tab-node-detail-label">Outputs:</div>
-                            <ul className="ir-tab-node-detail-list">
-                              {node.outputs.map((output: unknown, idx: number) => (
-                                <li key={idx}>
-                                  {typeof output === 'object' && output !== null
-                                    ? JSON.stringify(output)
-                                    : String(output)}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {node.params && Object.keys(node.params).length > 0 && (
-                          <div className="ir-tab-node-detail-section">
-                            <div className="ir-tab-node-detail-label">Params:</div>
-                            <ul className="ir-tab-node-detail-list">
-                              {Object.entries(node.params).map(([key, value]) => (
-                                <li key={key}>
-                                  <span className="ir-tab-param-key">{key}:</span>{' '}
-                                  {typeof value === 'object' && value !== null
-                                    ? JSON.stringify(value)
-                                    : String(value)}
-                                </li>
-                              ))}
-                            </ul>
+                            <div className="ir-tab-node-detail-label">Compiler Tag:</div>
+                            <span>{node.compilerTag}</span>
                           </div>
                         )}
                       </div>
@@ -171,20 +140,19 @@ export const IRTab = observer(function IRTab() {
           <span className="ir-tab-section-icon">
             {expandedSections.has('buses') ? '▼' : '▶'}
           </span>
-          <span className="ir-tab-section-title">Buses ({busEntries.length})</span>
+          <span className="ir-tab-section-title">Buses ({buses.length})</span>
         </button>
 
         {expandedSections.has('buses') && (
           <div className="ir-tab-section-content">
-            {busEntries.length === 0 ? (
+            {buses.length === 0 ? (
               <div className="ir-tab-empty-section">No buses</div>
             ) : (
               <div className="ir-tab-bus-list">
-                {busEntries.map(([busId, bus]) => (
-                  <div key={busId} className="ir-tab-bus-item">
-                    <span className="ir-tab-bus-id">{busId}</span>
-                    {bus.name && <span className="ir-tab-bus-name">"{bus.name}"</span>}
-                    {bus.type && (
+                {buses.map((bus) => (
+                  <div key={bus.id} className="ir-tab-bus-item">
+                    <span className="ir-tab-bus-id">{bus.id}</span>
+                    {bus.type !== undefined && (
                       <span className="ir-tab-bus-type">
                         ({typeof bus.type === 'object' ? JSON.stringify(bus.type) : String(bus.type)})
                       </span>
