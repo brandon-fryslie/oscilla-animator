@@ -97,25 +97,27 @@ const lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
   );
 };
 
-registerBlockType({
-  type: 'FieldFromExpression',
-  capability: 'pure',
-  inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
-    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'phase01' }, optional: true, defaultSource: { value: 0 } },
-    {
-      portId: 'expression',
-      label: 'Expression',
-      dir: 'in',
-      type: { world: 'scalar', domain: 'string' },
-      defaultSource: { value: 'hsl(i / n * 360 + signal * 360, 80, 60)' },
-    },
-  ],
-  outputs: [
-    { portId: 'field', label: 'Field', dir: 'out', type: { world: 'field', domain: 'string' } },
-  ],
-  lower: lowerFieldFromExpression,
-});
+// NOTE: IR registration intentionally disabled. Keep this as the template
+// for the DSL block until the compiler supports expression lowering.
+// registerBlockType({
+//   type: 'FieldFromExpression',
+//   capability: 'pure',
+//   inputs: [
+//     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
+//     { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'phase01' }, optional: true, defaultSource: { value: 0 } },
+//     {
+//       portId: 'expression',
+//       label: 'Expression',
+//       dir: 'in',
+//       type: { world: 'scalar', domain: 'string' },
+//       defaultSource: { value: 'hsl(i / n * 360 + signal * 360, 80, 60)' },
+//     },
+//   ],
+//   outputs: [
+//     { portId: 'field', label: 'Field', dir: 'out', type: { world: 'field', domain: 'string' } },
+//   ],
+//   lower: lowerFieldFromExpression,
+// });
 
 // =============================================================================
 // Legacy Closure Compiler (Dual-Emit Mode)

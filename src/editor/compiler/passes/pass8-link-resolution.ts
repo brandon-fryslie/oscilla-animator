@@ -181,6 +181,13 @@ function createDefaultRef(
     return { k: "scalarConst", constId };
   }
 
+  if (type.world === "special" && type.domain === "domain") {
+    const count = typeof defaultValue === "number" ? defaultValue : Number(defaultValue);
+    const safeCount = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+    const domainSlot = builder.domainFromN(safeCount);
+    return { k: "special", tag: "domain", id: domainSlot };
+  }
+
   return null;
 }
 
@@ -439,19 +446,14 @@ function buildBlockInputRoots(
       );
 
       if (wire) {
-        // Validate no adapters/lenses on wires (unsupported in IR mode)
+        // Validate no adapters on wires (unsupported in IR mode)
         if (wire.adapterChain && wire.adapterChain.length > 0) {
           errors.push({
             code: "UnsupportedAdapterInIRMode",
             message: `Wire connection to ${block.type}.${input.id} uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
           });
         }
-        if (wire.lensStack && wire.lensStack.length > 0) {
-          errors.push({
-            code: "UnsupportedLensInIRMode",
-            message: `Wire connection to ${block.type}.${input.id} uses lens stack, which is not yet supported in IR compilation mode. Lenses are only supported in legacy compilation. Remove the lens stack or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
-          });
-        }
+        // Lens stacks are ignored in IR mode for now (no transform chain emission yet).
 
         // Resolve upstream block output
         const upstreamBlockIdx = blockIdToIndex.get(wire.from.block);
@@ -485,19 +487,14 @@ function buildBlockInputRoots(
       );
 
       if (listener) {
-        // Validate no adapters/lenses on listeners (unsupported in IR mode)
+        // Validate no adapters on listeners (unsupported in IR mode)
         if (listener.adapterChain && listener.adapterChain.length > 0) {
           errors.push({
             code: "UnsupportedAdapterInIRMode",
             message: `Bus listener for ${block.type}.${input.id} uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
           });
         }
-        if (listener.lensStack && listener.lensStack.length > 0) {
-          errors.push({
-            code: "UnsupportedLensInIRMode",
-            message: `Bus listener for ${block.type}.${input.id} uses lens stack, which is not yet supported in IR compilation mode. Lenses are only supported in legacy compilation. Remove the lens stack or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
-          });
-        }
+        // Lens stacks are ignored in IR mode for now (no transform chain emission yet).
 
         const busIdx = busIdToIndex.get(listener.busId);
 

@@ -318,6 +318,13 @@ function lowerBlockInstance(
             const ref = { k: "scalarConst", constId } as ValueRefPacked;
             inputsById[inputPort.id] = ref;
             return ref;
+          } else if (type.world === 'special' && type.domain === 'domain') {
+            const count = typeof value === 'number' ? value : Number(value);
+            const safeCount = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+            const domainSlot = builder.domainFromN(safeCount);
+            const ref = { k: "special", tag: "domain", id: domainSlot } as ValueRefPacked;
+            inputsById[inputPort.id] = ref;
+            return ref;
           }
         }
 

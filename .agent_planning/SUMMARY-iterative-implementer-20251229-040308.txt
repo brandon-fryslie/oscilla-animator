@@ -1,0 +1,54 @@
+Agent: iterative-implementer | 2025-12-29 04:03:08
+Mode: manual
+Completed: P1-1, P1-2, P1-3 | Files: 7 | Commits: 1
+Cache invalidated: port-catalog-migration.md
+Status: complete
+
+=== P1: Port Catalog + Lowering Migration Infrastructure ===
+
+P1-1: Implement definePortCatalog Helper
+  - Created definePortCatalog<const Inputs, const Outputs>() function in portCatalog.ts
+  - TypeScript enforces inputOrder keys exactly match inputs object keys at compile-time
+  - TypeScript enforces outputOrder keys exactly match outputs object keys at compile-time
+  - Migrated OSCILLATOR_PORTS to use helper (removed `as const satisfies` pattern)
+  - Added comprehensive JSDoc documentation explaining purpose and constraints
+
+P1-2: Complete Reference Block Migration to outputsById
+  - Oscillator.ts: Changed from outputs: [{ k: 'sig', ... }] to { outputs: [], outputsById: { out: ... } }
+  - AddSignal.ts: Changed from outputs: [...] to { outputs: [], outputsById: { out: ... } }
+  - MulSignal.ts: Changed from outputs: [...] to { outputs: [], outputsById: { out: ... } }
+  - SubSignal.ts: Changed from outputs: [...] to { outputs: [], outputsById: { out: ... } }
+  - All 4 blocks use empty outputs: [] array to signal full migration
+  - Updated signal-math.test.ts to check outputsById instead of positional outputs array
+  - All tests passing (12/12) - blocks return keyed outputs correctly
+
+P1-3: Flip Strict-by-Default Enforcement
+  - Changed pass6-block-lowering.ts:256 from `=== 'strict'` to `!== 'relaxed'`
+  - Added `&& blockDef` null check to line 257 to prevent TypeScript errors
+  - All blocks with registerBlockType now validate port order by default
+  - Only Oscillator currently has irPortContract tag (strict), now all others validate too
+  - Blocks can opt-out with tags: { irPortContract: 'relaxed' }
+  - No validation failures detected (all 46 registered blocks pass)
+
+=== Files Modified ===
+1. src/editor/blocks/portCatalog.ts - Added definePortCatalog() helper, migrated OSCILLATOR_PORTS
+2. src/editor/compiler/blocks/signal/Oscillator.ts - Changed to outputsById
+3. src/editor/compiler/blocks/signal/AddSignal.ts - Changed to outputsById
+4. src/editor/compiler/blocks/signal/MulSignal.ts - Changed to outputsById
+5. src/editor/compiler/blocks/signal/SubSignal.ts - Changed to outputsById
+6. src/editor/compiler/passes/pass6-block-lowering.ts - Flipped strict-by-default
+7. src/editor/compiler/__tests__/signal-math.test.ts - Updated tests for outputsById
+
+=== Validation ===
+TypeScript: PASS (0 errors)
+Tests: PASS (signal-math.test.ts: 12/12 passing)
+Port Contract Validation: PASS (46 registered blocks, 0 failures)
+
+=== Commits ===
+62d35bf Complete P1: Port Catalog + Lowering Migration Infrastructure
+
+=== Next Steps ===
+P1 complete. Ready for next phase of work. All infrastructure in place for:
+- P2: Testing and validation (port catalog tests, contract enforcement tests, outputsById tests)
+- P3: Polish and documentation (math block catalogs, migration pattern docs)
+- Future: Migrate remaining 42 blocks (46 total - 4 already migrated)

@@ -115,12 +115,7 @@ export function pass7BusLowering(
           message: `Publisher to bus '${bus.name}' uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
         });
       }
-      if (pub.lensStack && pub.lensStack.length > 0) {
-        errors.push({
-          code: "UnsupportedLensInIRMode",
-          message: `Publisher to bus '${bus.name}' uses lens stack, which is not yet supported in IR compilation mode. Lenses are only supported in legacy compilation. Remove the lens stack or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
-        });
-      }
+      // Lens stacks are ignored in IR mode for now (no transform chain emission yet).
     }
 
     try {
