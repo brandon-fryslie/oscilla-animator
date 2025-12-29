@@ -45,7 +45,8 @@ const lowerFieldReduce: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error('FieldReduce requires field input');
   }
 
-  const op = String((config as any)?.op ?? 'avg') as ReduceOp;
+  const cfg = config as { op?: string } | undefined;
+  const op = (cfg?.op ?? 'avg') as ReduceOp;
 
   // Map reduce operations to ReduceFn interface
   const reduceFn: ReduceFn = {

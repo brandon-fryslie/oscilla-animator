@@ -33,7 +33,9 @@ const lowerFieldMapVec2: BlockLowerFn = ({ inputs, config }) => {
   // All approaches require field-level vec2 operations that aren't yet implemented.
   // The current IRBuilder only has signal-level vec2 ops (Vec2Rotate, etc.)
 
-  const fn = (config as any)?.fn || 'rotate';
+  const fn = (config != null && typeof config === 'object' && 'fn' in config && typeof config.fn === 'string')
+    ? config.fn
+    : 'rotate';
 
   throw new Error(
     `FieldMapVec2 IR lowering requires field-level vec2 transformations (function: ${fn}). ` +
@@ -91,14 +93,24 @@ export const FieldMapVec2Block: BlockCompiler = {
 
     const vecField = vecArtifact.value as Vec2Field;
     // Read from inputs - values come from defaultSource or explicit connections
-    const fn = String((inputs.fn as any)?.value);
-    const angle = Number((inputs.angle as any)?.value);
-    const scaleX = Number((inputs.scaleX as any)?.value);
-    const scaleY = Number((inputs.scaleY as any)?.value);
-    const offsetX = Number((inputs.offsetX as any)?.value);
-    const offsetY = Number((inputs.offsetY as any)?.value);
-    const centerX = Number((inputs.centerX as any)?.value);
-    const centerY = Number((inputs.centerY as any)?.value);
+    const fnArtifact = inputs.fn;
+    const fn = fnArtifact !== undefined && 'value' in fnArtifact && typeof fnArtifact.value === 'string'
+      ? fnArtifact.value
+      : 'rotate';
+    const angleArtifact = inputs.angle;
+    const angle = angleArtifact !== undefined && 'value' in angleArtifact ? Number(angleArtifact.value) : 0;
+    const scaleXArtifact = inputs.scaleX;
+    const scaleX = scaleXArtifact !== undefined && 'value' in scaleXArtifact ? Number(scaleXArtifact.value) : 1;
+    const scaleYArtifact = inputs.scaleY;
+    const scaleY = scaleYArtifact !== undefined && 'value' in scaleYArtifact ? Number(scaleYArtifact.value) : 1;
+    const offsetXArtifact = inputs.offsetX;
+    const offsetX = offsetXArtifact !== undefined && 'value' in offsetXArtifact ? Number(offsetXArtifact.value) : 0;
+    const offsetYArtifact = inputs.offsetY;
+    const offsetY = offsetYArtifact !== undefined && 'value' in offsetYArtifact ? Number(offsetYArtifact.value) : 0;
+    const centerXArtifact = inputs.centerX;
+    const centerX = centerXArtifact !== undefined && 'value' in centerXArtifact ? Number(centerXArtifact.value) : 0;
+    const centerYArtifact = inputs.centerY;
+    const centerY = centerYArtifact !== undefined && 'value' in centerYArtifact ? Number(centerYArtifact.value) : 0;
 
     // Convert angle from degrees to radians
     const angleRad = (angle * Math.PI) / 180;

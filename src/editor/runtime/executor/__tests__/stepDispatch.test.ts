@@ -30,7 +30,7 @@ import { OpCode } from "../../../compiler/ir/opcodes";
  * Create minimal program IR for testing.
  * Includes all required tables (fields, signalTable, constants).
  */
-function createMinimalProgram(steps: any[] = []): CompiledProgramIR {
+function createMinimalProgram(steps: unknown[] = []): CompiledProgramIR {
   return {
     schedule: { steps },
     // Minimal field expression table - single const node
@@ -62,6 +62,9 @@ function createMinimalProgram(steps: any[] = []): CompiledProgramIR {
   } as unknown as CompiledProgramIR;
 }
 
+// Note: Test programs use type casting to CompiledProgramIR
+// This allows minimal test data while satisfying the type system
+
 describe("Step Dispatch", () => {
   describe("executeNodeEval", () => {
     it("does not throw when called", () => {
@@ -75,27 +78,30 @@ describe("Step Dispatch", () => {
         phase: "postBus",
       };
 
-      const program = createMinimalProgram([step]);
+      const baseProgram = createMinimalProgram([step]);
       // Override nodes to provide a stub node
-      (program as any).nodes = {
-        nodes: [
-          {
-            id: "stub-node-0",
-            typeId: 0,
-            inputCount: 0,
-            outputCount: 1,
-            opcodeId: OpCode.Const,
-            compilerTag: 0, // constId = 0 -> f64[0] = 42.0
-          },
-        ],
-      };
-      (program as any).constants = {
-        json: [42],
-        f64: new Float64Array([42.0]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([]),
-        constIndex: [{ k: "f64", idx: 0 }],
-      };
+      const program = {
+        ...baseProgram,
+        nodes: {
+          nodes: [
+            {
+              id: "stub-node-0",
+              typeId: 0,
+              inputCount: 0,
+              outputCount: 1,
+              opcodeId: OpCode.Const,
+              compilerTag: 0, // constId = 0 -> f64[0] = 42.0
+            },
+          ],
+        },
+        constants: {
+          json: [42],
+          f64: new Float64Array([42.0]),
+          f32: new Float32Array([]),
+          i32: new Int32Array([]),
+          constIndex: [{ k: "f64", idx: 0 }],
+        },
+      } as unknown as CompiledProgramIR;
 
       const runtime = createRuntimeState(program);
 
@@ -123,25 +129,28 @@ describe("Step Dispatch", () => {
         silent: { kind: "const", constId: 0 },
       };
 
-      const program = createMinimalProgram([step]);
+      const baseProgram = createMinimalProgram([step]);
       // Override buses to provide a stub bus
-      (program as any).buses = {
-        buses: [
-          {
-            id: "stub-bus-0",
-            typeId: 0,
-            inputCount: 0,
-          },
-        ],
-      };
-      // Ensure constants are present
-      (program as any).constants = {
-        json: [0],
-        f64: new Float64Array([0]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([]),
-        constIndex: [{ k: "f64", idx: 0 }],
-      };
+      const program = {
+        ...baseProgram,
+        buses: {
+          buses: [
+            {
+              id: "stub-bus-0",
+              typeId: 0,
+              inputCount: 0,
+            },
+          ],
+        },
+        // Ensure constants are present
+        constants: {
+          json: [0],
+          f64: new Float64Array([0]),
+          f32: new Float32Array([]),
+          i32: new Int32Array([]),
+          constIndex: [{ k: "f64", idx: 0 }],
+        },
+      } as unknown as CompiledProgramIR;
 
       const runtime = createRuntimeState(program);
 

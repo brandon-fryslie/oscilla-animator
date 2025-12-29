@@ -42,9 +42,10 @@ export const BoardScene = observer<BoardSceneProps>(function BoardScene({
   const { nodes } = layout;
 
   // Optionally filter to visible blocks (virtualization)
-  const visibleBlockIds = viewportRectWorld !== undefined
-    ? filterVisibleBlocks(nodes, viewportRectWorld)
-    : Object.keys(nodes);
+  const visibleBlockIds =
+    viewportRectWorld !== undefined
+      ? filterVisibleBlocks(nodes, viewportRectWorld)
+      : Object.keys(nodes);
 
   // Determine dimming: if something is focused, dim everything not highlighted
   const isDimmingActive = focusedBlockId !== null;

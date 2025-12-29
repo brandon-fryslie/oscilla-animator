@@ -14,7 +14,7 @@
  *   - render: RenderTree - SVG-compatible render tree with circles
  */
 
-import type { BlockCompiler, Field, RuntimeCtx, DrawNode } from '../../types';
+import type { BlockCompiler, Field, RuntimeCtx, DrawNode, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
@@ -243,20 +243,20 @@ export const RenderInstances2DBlock: BlockCompiler = {
 
     // Helper to extract numeric value from Scalar or Signal artifacts
     // Signal artifacts have .value as a function, Scalar artifacts have .value as a number
-    const extractNumber = (artifact: any, defaultValue: number): number => {
-      if (!artifact) return defaultValue;
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:number') return Number(artifact.value);
       if (artifact.kind === 'Signal:number') {
         // Signal artifacts have .value as a function - call with t=0 for compile-time value
         return Number(artifact.value(0, {}));
       }
       // Generic fallback for other artifact types that might have callable or direct values
-      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+      return typeof artifact.value === 'function' ? Number((artifact.value as (t: number, ctx: unknown) => unknown)(0, {})) : Number(artifact.value);
     };
 
     // Helper to extract boolean from Scalar or Signal artifacts
-    const extractBoolean = (artifact: any, defaultValue: boolean): boolean => {
-      if (!artifact) return defaultValue;
+    const extractBoolean = (artifact: Artifact | undefined, defaultValue: boolean): boolean => {
+      if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:boolean') return Boolean(artifact.value);
       // Config values come as strings like 'true'/'false'
       if (typeof artifact.value === 'string') return artifact.value === 'true';
@@ -264,9 +264,9 @@ export const RenderInstances2DBlock: BlockCompiler = {
     };
 
     // Read from inputs - values come from defaultSource or explicit connections
-    const opacity = extractNumber(inputs.opacity, (params as any)?.opacity ?? 1.0);
-    const glow = extractBoolean(inputs.glow, (params as any)?.glow ?? false);
-    const glowIntensity = extractNumber(inputs.glowIntensity, (params as any)?.glowIntensity ?? 0.5);
+    const opacity = extractNumber(inputs.opacity, (params as Record<string, unknown> | undefined)?.opacity as number | undefined ?? 1.0);
+    const glow = extractBoolean(inputs.glow, (params as Record<string, unknown> | undefined)?.glow as boolean | undefined ?? false);
+    const glowIntensity = extractNumber(inputs.glowIntensity, (params as Record<string, unknown> | undefined)?.glowIntensity as number | undefined ?? 0.5);
 
     // Create the render function - evaluates fields at render time
     const renderFn = (tMs: number, ctx: RuntimeCtx): DrawNode => {

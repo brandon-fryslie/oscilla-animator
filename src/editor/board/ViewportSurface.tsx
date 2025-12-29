@@ -48,7 +48,7 @@ export const ViewportSurface = observer<ViewportSurfaceProps>(function ViewportS
   // Mouse move - pan
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!isPanning) return;
+      if (isPanning === false) return;
 
       const panX = e.clientX - panStart.x;
       const panY = e.clientY - panStart.y;
@@ -69,7 +69,7 @@ export const ViewportSurface = observer<ViewportSurfaceProps>(function ViewportS
       e.preventDefault();
 
       const surface = surfaceRef.current;
-      if (!surface) return;
+      if (surface === null) return;
 
       // Get mouse position relative to surface
       const rect = surface.getBoundingClientRect();
@@ -138,7 +138,7 @@ export const ViewportSurface = observer<ViewportSurfaceProps>(function ViewportS
   // Set up event listeners
   useEffect(() => {
     const surface = surfaceRef.current;
-    if (!surface) return;
+    if (surface === null) return;
 
     // Mouse events
     document.addEventListener('mousemove', handleMouseMove);

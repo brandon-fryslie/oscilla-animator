@@ -149,15 +149,23 @@ export const FieldHueGradientBlock: BlockCompiler = {
     const phaseArtifact = inputs.phase;
 
     // Default values from inputs - values come from defaultSource or explicit connections
-    const defaultHueOffset = Number((inputs.hueOffset as any)?.value);
-    const defaultHueSpread = Number((inputs.hueSpread as any)?.value);
-    const defaultSaturation = Number((inputs.saturation as any)?.value);
-    const defaultLightness = Number((inputs.lightness as any)?.value);
+    const defaultHueOffset = hueOffsetArtifact !== undefined && 'value' in hueOffsetArtifact
+      ? Number(hueOffsetArtifact.value)
+      : 0;
+    const defaultHueSpread = hueSpreadArtifact !== undefined && 'value' in hueSpreadArtifact
+      ? Number(hueSpreadArtifact.value)
+      : 360;
+    const defaultSaturation = saturationArtifact !== undefined && 'value' in saturationArtifact
+      ? Number(saturationArtifact.value)
+      : 80;
+    const defaultLightness = lightnessArtifact !== undefined && 'value' in lightnessArtifact
+      ? Number(lightnessArtifact.value)
+      : 60;
 
     // Create the field function that evaluates signals at render time
     const field: Field<string> = (_seed, n, ctx) => {
       // Get runtime context for signal evaluation
-      const t = (ctx.env as { t?: number }).t || 0;
+      const t = (ctx.env as { t?: number }).t ?? 0;
       const runtimeCtx: RuntimeCtx = { viewport: { w: 0, h: 0, dpr: 1 } };
 
       // Evaluate signal inputs or use defaults
@@ -182,7 +190,7 @@ export const FieldHueGradientBlock: BlockCompiler = {
         : 0;
 
       // Generate colors for each element
-      const colors: string[] = new Array(n);
+      const colors: string[] = new Array<string>(n);
       for (let i = 0; i < n; i++) {
         // Calculate hue for this element
         // Spread the hue across elements and add phase for animation

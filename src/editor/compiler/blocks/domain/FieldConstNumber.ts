@@ -5,7 +5,7 @@
  * Takes a Domain and produces Field<number>.
  */
 
-import type { BlockCompiler, Field } from '../../types';
+import type { BlockCompiler, Field, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
@@ -81,14 +81,22 @@ export const FieldConstNumberBlock: BlockCompiler = {
     const domain = domainArtifact.value;
 
     // Helper to extract numeric value from artifact with default fallback
-    const extractNumber = (artifact: any, defaultValue: number): number => {
-      if (!artifact) return defaultValue;
-      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') return Number(artifact.value);
-      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
+      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
+        return Number(artifact.value);
+      }
+      if ('value' in artifact && artifact.value !== undefined) {
+        return typeof artifact.value === 'function'
+          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
+          : Number(artifact.value);
+      }
+      return defaultValue;
     };
 
     // Support both new (inputs) and old (params) parameter systems
-    const value = extractNumber(inputs.value, (params as any)?.value ?? 0);
+    const paramsObj = params as { value?: number } | undefined;
+    const value = extractNumber(inputs.value, paramsObj?.value ?? 0);
 
     // Create constant field that returns the same value for all elements
     const field: Field<number> = (_seed, n) => {

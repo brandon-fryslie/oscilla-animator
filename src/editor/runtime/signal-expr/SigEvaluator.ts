@@ -109,7 +109,7 @@ export function evalSig(
       break;
 
     case "wrapEvent":
-      result = env.wrapOccurred ? 1.0 : 0.0;
+      result = (env.wrapOccurred ?? false) ? 1.0 : 0.0;
       break;
 
     case "map":
@@ -372,7 +372,7 @@ function evalBusCombine(
   const result = applyCombine(combine.mode, values);
 
   // Optional debug tracing (zero overhead when disabled)
-  if (env.debug?.traceBusCombine) {
+  if (env.debug?.traceBusCombine !== null && env.debug?.traceBusCombine !== undefined) {
     env.debug.traceBusCombine({
       busIndex,
       termIds: terms,
@@ -453,7 +453,7 @@ function evalTransform(
     value = applyTransformStep(step, value, env);
 
     // Collect trace if debugging
-    if (env.debug?.traceTransform) {
+    if (env.debug?.traceTransform !== null && env.debug?.traceTransform !== undefined) {
       stepTraces.push({
         kind: step.kind,
         inputValue,
@@ -463,7 +463,7 @@ function evalTransform(
   }
 
   // Optional debug tracing (zero overhead when disabled)
-  if (env.debug?.traceTransform) {
+  if (env.debug?.traceTransform !== null && env.debug?.traceTransform !== undefined) {
     env.debug.traceTransform({
       srcValue,
       chainId: node.chain,
@@ -529,10 +529,10 @@ function evalStateful(
       return evalEnvelopeAD(node, stateOffset, env, nodes);
 
     default: {
-      // Exhaustiveness check
-      const _exhaustiveCheck: never = node.op;
-      void _exhaustiveCheck;
-      throw new Error(`Unknown stateful op: ${node.op}`);
+      // Exhaustiveness check - extract op as string to avoid 'never' type in template
+      const exhaustiveCheck: never = node.op;
+      const opStr = String(exhaustiveCheck);
+      throw new Error(`Unknown stateful op: ${opStr}`);
     }
   }
 }
@@ -597,11 +597,11 @@ function evalClosureBridge(
   nodes: SignalExprIR[]
 ): number {
   // Track execution time if debug tracing enabled
-  const startTime = env.debug?.traceClosureBridge ? performance.now() : 0;
+  const startTime = (env.debug?.traceClosureBridge !== null && env.debug?.traceClosureBridge !== undefined) ? performance.now() : 0;
 
   // Get closure from registry
   const closure = env.closureRegistry.get(node.closureId);
-  if (!closure) {
+  if (closure === null || closure === undefined) {
     throw new Error(
       `Missing closure: ${node.closureId}. Closure must be registered before evaluation.`
     );
@@ -622,7 +622,7 @@ function evalClosureBridge(
   const result = closure(env.tAbsMs, ctx);
 
   // Optional debug tracing (zero overhead when disabled)
-  if (env.debug?.traceClosureBridge) {
+  if (env.debug?.traceClosureBridge !== null && env.debug?.traceClosureBridge !== undefined) {
     const endTime = performance.now();
     env.debug.traceClosureBridge({
       closureId: node.closureId,
@@ -1129,7 +1129,7 @@ function applyTransformStep(
     case "ease": {
       // Apply easing curve (input clamped to [0,1] by applyEasing)
       const curves = env.easingCurves;
-      if (!curves) {
+      if (curves === null || curves === undefined) {
         throw new Error("Easing curves not available in environment");
       }
       return applyEasing(step.curveId, value, curves);
@@ -1209,10 +1209,10 @@ function applyCombine(
       return values[values.length - 1];
 
     default: {
-      // Exhaustiveness check
-      const _exhaustiveCheck: never = mode;
-      void _exhaustiveCheck;
-      throw new Error(`Unknown combine mode: ${mode}`);
+      // Exhaustiveness check - extract mode as string to avoid 'never' type in template
+      const exhaustiveCheck: never = mode;
+      const modeStr = String(exhaustiveCheck);
+      throw new Error(`Unknown combine mode: ${modeStr}`);
     }
   }
 }

@@ -135,7 +135,7 @@ export class DependencyGraph {
 
     // Bus depends on publisher
     const busNode = this.nodes.get(busId);
-    if (busNode) {
+    if (busNode != null) {
       busNode.deps.add(blockId);
     }
   }
@@ -304,12 +304,12 @@ export class DependencyGraph {
     const deps = new Set<string>();
     const visited = new Set<string>();
 
-    const traverse = (id: string) => {
+    const traverse = (id: string): void => {
       if (visited.has(id)) return;
       visited.add(id);
 
       const node = this.nodes.get(id);
-      if (!node) return;
+      if (node == null) return;
 
       for (const depId of node.deps) {
         deps.add(depId);

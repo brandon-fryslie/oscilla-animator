@@ -71,7 +71,7 @@ export const BoardHUD = observer<BoardHUDProps>(function BoardHUD({
         </div>
 
         {/* Optional: Density cycle button */}
-        {onDensityChange && (
+        {onDensityChange !== undefined && (
           <button
             className="hud-button"
             onClick={() => cycleDensity(density, onDensityChange)}

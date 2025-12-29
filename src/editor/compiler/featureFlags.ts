@@ -83,12 +83,13 @@ export function enableUnifiedArchitecture(): void {
  */
 export function initializeFeatureFlags(): void {
   // Check localStorage for developer overrides
-  if (typeof window !== 'undefined' && window.localStorage) {
+  if (typeof window !== 'undefined' && window.localStorage != null) {
     const stored = localStorage.getItem('compilerFeatureFlags');
-    if (stored) {
+    if (stored != null && stored !== '') {
       try {
-        const parsed = JSON.parse(stored);
-        currentFlags = { ...DEFAULT_FLAGS, ...parsed };
+        const parsed: unknown = JSON.parse(stored);
+        const parsedFlags = parsed as Partial<CompilerFeatureFlags>;
+        currentFlags = { ...DEFAULT_FLAGS, ...parsedFlags };
         console.log('[FeatureFlags] Loaded from localStorage:', currentFlags);
         return;
       } catch (e) {
@@ -98,8 +99,8 @@ export function initializeFeatureFlags(): void {
   }
 
   // Check environment variables (Vite import.meta.env)
-  if (typeof import.meta !== 'undefined' && import.meta.env) {
-    const env = import.meta.env;
+  if (typeof import.meta !== 'undefined' && import.meta.env != null) {
+    const env = import.meta.env as Record<string, unknown>;
 
     if (env.VITE_STRICT_STATE_VALIDATION !== undefined) {
       currentFlags.strictStateValidation = env.VITE_STRICT_STATE_VALIDATION === 'true';
@@ -117,7 +118,7 @@ export function initializeFeatureFlags(): void {
  * Useful for developer testing.
  */
 export function saveFeatureFlagsToLocalStorage(): void {
-  if (typeof window !== 'undefined' && window.localStorage) {
+  if (typeof window !== 'undefined' && window.localStorage != null) {
     localStorage.setItem('compilerFeatureFlags', JSON.stringify(currentFlags));
     console.log('[FeatureFlags] Saved to localStorage:', currentFlags);
   }

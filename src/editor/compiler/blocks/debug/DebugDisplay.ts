@@ -126,9 +126,12 @@ export const DebugDisplayBlock: BlockCompiler = {
 
   compile({ id, inputs }) {
     // Read from inputs - values come from defaultSource or explicit connections
-    const label = String((inputs.label as any)?.value);
-    const posX = Number((inputs.posX as any)?.value);
-    const posY = Number((inputs.posY as any)?.value);
+    const labelArtifact = inputs.label;
+    const label = labelArtifact !== undefined && 'value' in labelArtifact ? String(labelArtifact.value) : '';
+    const posXArtifact = inputs.posX;
+    const posX = posXArtifact !== undefined && 'value' in posXArtifact ? Number(posXArtifact.value) : 0;
+    const posYArtifact = inputs.posY;
+    const posY = posYArtifact !== undefined && 'value' in posYArtifact ? Number(posYArtifact.value) : 0;
 
     // Extract input artifacts
     const signalArtifact = inputs.signal;

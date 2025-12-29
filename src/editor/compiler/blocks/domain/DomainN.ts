@@ -96,7 +96,12 @@ export const DomainNBlock: BlockCompiler = {
       if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:number') return Number(artifact.value);
       // Generic fallback for other artifact types
-      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+      if ('value' in artifact && artifact.value !== undefined) {
+        return typeof artifact.value === 'function'
+          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
+          : Number(artifact.value);
+      }
+      return defaultValue;
     };
 
     // Support both new (inputs) and old (params) parameter systems

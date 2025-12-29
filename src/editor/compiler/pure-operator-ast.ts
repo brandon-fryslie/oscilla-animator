@@ -91,7 +91,7 @@ export type { PureFnRef, ReduceFn } from "./ir/builderTypes";
  * Check if a value is a SignalExpr AST node.
  */
 export function isSignalExpr(value: unknown): value is SignalExpr {
-  if (!value || typeof value !== "object") {
+  if (value == null || typeof value !== "object") {
     return false;
   }
 
@@ -121,7 +121,7 @@ export function isSignalExpr(value: unknown): value is SignalExpr {
  * Check if a value is a FieldExpr AST node.
  */
 export function isFieldExpr(value: unknown): value is FieldExpr {
-  if (!value || typeof value !== "object") {
+  if (value == null || typeof value !== "object") {
     return false;
   }
 
@@ -145,6 +145,6 @@ export function isFieldExpr(value: unknown): value is FieldExpr {
  * Check if a value is a closure (function).
  * Raw closures are NOT allowed in pure operator blocks.
  */
-export function isClosure(value: unknown): value is Function {
+export function isClosure(value: unknown): value is (...args: unknown[]) => unknown {
   return typeof value === "function";
 }

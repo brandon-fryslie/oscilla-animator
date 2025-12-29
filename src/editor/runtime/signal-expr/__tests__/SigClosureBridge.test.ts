@@ -23,7 +23,7 @@ import { evalSig } from "../SigEvaluator";
 import { createSigFrameCache, newFrame } from "../SigFrameCache";
 import { createSigEnv, createConstPool, type SigEnv } from "../SigEnv";
 import { createClosureRegistry, type ClosureRegistry } from "../ClosureRegistry";
-import { createLegacyContext, type LegacyClosure } from "../LegacyClosure";
+import { createLegacyContext, type LegacyClosure, type LegacyContext } from "../LegacyClosure";
 import { createRuntimeCtx } from "../RuntimeCtx";
 import {
   isMigrated,
@@ -265,7 +265,7 @@ describe("closureBridge nodes", () => {
   });
 
   it("passes correct context to closure", () => {
-    let capturedCtx: any = null;
+    let capturedCtx: LegacyContext | null = null;
     const registry = createClosureRegistry();
     registry.register("captureClosure", (_t, _ctx) => {
       capturedCtx = _ctx;
@@ -294,9 +294,10 @@ describe("closureBridge nodes", () => {
     evalSig(0, env, nodes);
 
     expect(capturedCtx).not.toBeNull();
-    expect(capturedCtx.deltaSec).toBe(0.016);
-    expect(capturedCtx.deltaMs).toBe(16);
-    expect(capturedCtx.frameIndex).toBe(42);
+    // Use non-null assertion after checking not null
+    expect(capturedCtx!.deltaSec).toBe(0.016);
+    expect(capturedCtx!.deltaMs).toBe(16);
+    expect(capturedCtx!.frameIndex).toBe(42);
   });
 
   it("works in DAG with IR nodes", () => {

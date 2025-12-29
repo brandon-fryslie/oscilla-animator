@@ -59,7 +59,7 @@ function createTestMaterializerEnv(opts?: {
 
   // Create signal bridge if signal values are provided
   let signalBridge: SignalBridge | undefined;
-  if (opts?.signalValues) {
+  if (opts?.signalValues !== undefined && opts.signalValues !== null) {
     signalBridge = new SignalBridge();
     for (const [sigIdStr, value] of Object.entries(opts.signalValues)) {
       const sigId = Number(sigIdStr);

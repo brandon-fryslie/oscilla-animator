@@ -80,7 +80,7 @@ export type Pass2Error =
 function slotTypeToTypeDesc(slotType: string): TypeDesc {
   // Pattern: Signal<domain>, Field<domain>, Event<domain>
   const worldMatch = slotType.match(/^(Signal|Field|Event)<(.+)>$/);
-  if (worldMatch) {
+  if (worldMatch !== null) {
     const world = worldMatch[1].toLowerCase();
     const domainStr = worldMatch[2];
 
@@ -95,7 +95,7 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
 
   // Pattern: Scalar:domain
   const scalarMatch = slotType.match(/^Scalar:(.+)$/);
-  if (scalarMatch) {
+  if (scalarMatch !== null) {
     const domainStr = scalarMatch[1];
     const domain = domainFromString(domainStr);
     return {
@@ -203,7 +203,7 @@ function validateReservedBus(
   busType: TypeDesc
 ): ReservedBusTypeViolationError | null {
   const constraint = RESERVED_BUS_CONSTRAINTS[busName];
-  if (!constraint) {
+  if (constraint === undefined) {
     return null; // Not a reserved bus
   }
 
@@ -357,7 +357,7 @@ export function pass2TypeGraph(
 
     // Validate reserved bus constraints
     const reservedError = validateReservedBus(bus.id, bus.name, busType);
-    if (reservedError) {
+    if (reservedError !== null) {
       errors.push(reservedError);
     }
 
@@ -391,7 +391,7 @@ export function pass2TypeGraph(
     );
     const toBlock = normalized.blocks.find((b: Block) => b.id === wire.to.blockId);
 
-    if (!fromBlock || !toBlock) {
+    if (fromBlock === undefined || toBlock === undefined) {
       // Dangling connection - will be caught by Pass 4
       continue;
     }
@@ -400,7 +400,7 @@ export function pass2TypeGraph(
     const fromSlot = fromBlock.outputs.find((s) => s.id === wire.from.slotId);
     const toSlot = toBlock.inputs.find((s) => s.id === wire.to.slotId);
 
-    if (!fromSlot || !toSlot) {
+    if (fromSlot === undefined || toSlot === undefined) {
       // Dangling slot reference - will be caught by Pass 4
       continue;
     }

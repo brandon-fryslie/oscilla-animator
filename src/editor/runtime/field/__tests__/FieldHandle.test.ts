@@ -184,8 +184,8 @@ describe('FieldHandle', () => {
   });
 
   it('throws on unknown field kind', () => {
-    const nodes: FieldExprIR[] = [
-      { kind: 'unknown' } as any,
+    const nodes = [
+      { kind: 'unknown' } as unknown as FieldExprIR,
     ];
     const env = createTestFieldEnv();
 

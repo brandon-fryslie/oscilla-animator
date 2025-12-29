@@ -56,7 +56,7 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
 
   const constPool = ctx.b.getConstPool();
   const shapeValue = constPool[shapeInput.constId];
-  const shape = typeof shapeValue === 'string' ? shapeValue : String(shapeValue ?? 'sine');
+  const shape = typeof shapeValue === 'string' ? shapeValue : 'sine';
 
   // Map phase to waveform using appropriate opcode
   let waveformId: number;
@@ -185,15 +185,25 @@ export const OscillatorBlock: BlockCompiler = {
     const phaseSignal = phaseArtifact.value as Signal<number>;
 
     // Read from inputs - values come from defaultSource or explicit connections
-    const shape = String((inputs.shape as any)?.value);
-    const shapeFn = SHAPES[shape] || SHAPES.sine;
+    const shapeArtifact = inputs.shape;
+    const shapeValue = shapeArtifact !== undefined && 'value' in shapeArtifact ? shapeArtifact.value : 'sine';
+    const shape = typeof shapeValue === 'string' ? shapeValue : 'sine';
+    const shapeFn: (phase: number) => number = SHAPES[shape] ?? SHAPES.sine;
 
-    const amplitudeSignal = inputs.amplitude?.kind === 'Signal:number'
-      ? (inputs.amplitude.value as Signal<number>)
-      : (): number => Number((inputs.amplitude as any)?.value);
-    const biasSignal = inputs.bias?.kind === 'Signal:number'
-      ? (inputs.bias.value as Signal<number>)
-      : (): number => Number((inputs.bias as any)?.value);
+    const amplitudeArtifact = inputs.amplitude;
+    const amplitudeSignal = amplitudeArtifact?.kind === 'Signal:number'
+      ? (amplitudeArtifact.value as Signal<number>)
+      : (): number => {
+          const val = amplitudeArtifact !== undefined && 'value' in amplitudeArtifact ? amplitudeArtifact.value : 1;
+          return Number(val);
+        };
+    const biasArtifact = inputs.bias;
+    const biasSignal = biasArtifact?.kind === 'Signal:number'
+      ? (biasArtifact.value as Signal<number>)
+      : (): number => {
+          const val = biasArtifact !== undefined && 'value' in biasArtifact ? biasArtifact.value : 0;
+          return Number(val);
+        };
 
     // Create output signal
     const signal: Signal<number> = (t: number, ctx: Readonly<RuntimeCtx>): number => {

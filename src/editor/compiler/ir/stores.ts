@@ -289,7 +289,7 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
 
     read(slot: ValueSlot): unknown {
       const meta = slotLookup.get(slot);
-      if (!meta) {
+      if (meta === undefined) {
         throw new Error(`ValueStore.read: slot ${slot} not found in slotMeta`);
       }
 
@@ -305,8 +305,10 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
           return u32[meta.offset];
         case "object":
           return objects[meta.offset];
-        default:
-          throw new Error(`ValueStore.read: unknown storage type ${meta.storage}`);
+        default: {
+          const exhaustiveCheck: never = meta.storage;
+          throw new Error(`ValueStore.read: unknown storage type ${String(exhaustiveCheck)}`);
+        }
       }
     },
 
@@ -318,7 +320,7 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
       writeLog.add(slot);
 
       const meta = slotLookup.get(slot);
-      if (!meta) {
+      if (meta === undefined) {
         throw new Error(`ValueStore.write: slot ${slot} not found in slotMeta`);
       }
 
@@ -339,8 +341,10 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
         case "object":
           objects[meta.offset] = value;
           break;
-        default:
-          throw new Error(`ValueStore.write: unknown storage type ${meta.storage}`);
+        default: {
+          const exhaustiveCheck: never = meta.storage;
+          throw new Error(`ValueStore.write: unknown storage type ${String(exhaustiveCheck)}`);
+        }
       }
     },
 
@@ -357,7 +361,7 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
       const meta = slotLookup.get(slot);
 
       // Try to reuse existing buffer if size matches
-      const existing = meta?.storage === "object"
+      const existing: unknown = meta?.storage === "object"
         ? objects[meta.offset]
         : objects[slot]; // Fallback to direct slot index if no metadata
 
@@ -369,7 +373,7 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
       const buffer = new Float32Array(length);
 
       // Store in object array
-      if (meta && meta.storage === "object") {
+      if (meta !== undefined && meta.storage === "object") {
         objects[meta.offset] = buffer;
       } else {
         // Ensure objects array is large enough
@@ -387,7 +391,7 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
       const meta = slotLookup.get(slot);
 
       // Try to reuse existing buffer if size matches
-      const existing = meta?.storage === "object"
+      const existing: unknown = meta?.storage === "object"
         ? objects[meta.offset]
         : objects[slot]; // Fallback to direct slot index if no metadata
 
@@ -399,7 +403,7 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
       const buffer = new Uint16Array(length);
 
       // Store in object array
-      if (meta && meta.storage === "object") {
+      if (meta !== undefined && meta.storage === "object") {
         objects[meta.offset] = buffer;
       } else {
         // Ensure objects array is large enough
@@ -415,7 +419,7 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
     ensureU32(slot: ValueSlot, length: number): Uint32Array {
       const meta = slotLookup.get(slot);
 
-      const existing = meta?.storage === "object"
+      const existing: unknown = meta?.storage === "object"
         ? objects[meta.offset]
         : objects[slot];
 
@@ -425,7 +429,7 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
 
       const buffer = new Uint32Array(length);
 
-      if (meta && meta.storage === "object") {
+      if (meta !== undefined && meta.storage === "object") {
         objects[meta.offset] = buffer;
       } else {
         while (objects.length <= slot) {
@@ -477,7 +481,7 @@ export function initializeState(
     if (cell.initialConstId !== undefined) {
       // Lookup value in const pool
       const constEntry = constPool.constIndex[cell.initialConstId];
-      if (!constEntry) {
+      if (constEntry === undefined) {
         throw new Error(
           `initializeState: constId ${cell.initialConstId} not found in constPool for state cell ${cell.stateId}`,
         );

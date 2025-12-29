@@ -235,8 +235,8 @@ function Port({
     isHovered ? 'hovered' : '',
     isSelected ? 'selected' : '',
     isCompatible ? 'compatible' : '',
-    hasPortError ? 'has-error' : '',
-    hasPortWarning ? 'has-warning' : '',
+    hasPortError === true ? 'has-error' : '',
+    hasPortWarning === true ? 'has-warning' : '',
   ].filter(Boolean).join(' ');
 
   // Build connection status text for tooltip
@@ -246,9 +246,9 @@ function Port({
     }
     const parts: string[] = [];
     if (connectionInfo.hasBlockConnection) {
-      parts.push(`Block${connectionInfo.connectedBlockLabel ? `: ${connectionInfo.connectedBlockLabel}` : ''}`);
+      parts.push(`Block${connectionInfo.connectedBlockLabel !== undefined ? `: ${connectionInfo.connectedBlockLabel}` : ''}`);
     }
-    if (connectionInfo.hasBusConnection && connectionInfo.busName) {
+    if (connectionInfo.hasBusConnection && connectionInfo.busName !== undefined) {
       parts.push(`Bus: ${connectionInfo.busName}`);
     }
     return parts.join(' + ');
@@ -275,19 +275,19 @@ function Port({
           <span className="port-tooltip-key">Domain</span>
           <span className="port-tooltip-value">{typeDescriptor.domain}</span>
         </div>
-        {connectionStatusText && (
+        {connectionStatusText !== null && (
           <div className={`port-tooltip-status connected ${connectionInfo.hasBusConnection ? 'has-bus' : ''}`}>
             ● {connectionStatusText}
           </div>
         )}
         {/* Default source info - shown when no connections but has default */}
-        {!connectionStatusText && defaultSourceInfo?.hasDefaultSource && (
+        {connectionStatusText === null && defaultSourceInfo?.hasDefaultSource === true && (
           <div className="port-tooltip-status default-source">
             ◆ Default: {formatDefaultValue(defaultSourceInfo.value)}
           </div>
         )}
         {/* Value source summary - always show where value comes from */}
-        {!connectionStatusText && !defaultSourceInfo?.hasDefaultSource && direction === 'input' && (
+        {connectionStatusText === null && defaultSourceInfo?.hasDefaultSource !== true && direction === 'input' && (
           <div className="port-tooltip-status unconnected">
             ○ No value source
           </div>
@@ -304,11 +304,18 @@ function Port({
     if (typeof value === 'string') return `"${value.slice(0, 20)}${value.length > 20 ? '...' : ''}"`;
     if (typeof value === 'object') {
       const obj = value as Record<string, unknown>;
-      if ('x' in obj && 'y' in obj) return `(${(obj.x as number)?.toFixed(1)}, ${(obj.y as number)?.toFixed(1)})`;
-      if ('r' in obj && 'g' in obj && 'b' in obj) return `rgb(${obj.r}, ${obj.g}, ${obj.b})`;
+      if ('x' in obj && 'y' in obj) {
+        const x = typeof obj.x === 'number' ? obj.x.toFixed(1) : '?';
+        const y = typeof obj.y === 'number' ? obj.y.toFixed(1) : '?';
+        return `(${x}, ${y})`;
+      }
+      if ('r' in obj && 'g' in obj && 'b' in obj) {
+        return `rgb(${String(obj.r)}, ${String(obj.g)}, ${String(obj.b)})`;
+      }
       return JSON.stringify(value).slice(0, 30);
     }
-    return String(value);
+    // Fallback for other primitive types (bigint, symbol, function)
+    return JSON.stringify(value) ?? '[unknown]';
   }
 
   return (
@@ -444,12 +451,12 @@ const DraggablePatchBlock = observer(({
         const ref = d.primaryTarget.portRef;
         return ref.blockId === block.id && ref.slotId === slotId && ref.direction === direction;
       }
-      return d.affectedTargets?.some(t =>
+      return (d.affectedTargets?.some(t =>
         t.kind === 'port' &&
         t.portRef.blockId === block.id &&
         t.portRef.slotId === slotId &&
         t.portRef.direction === direction
-      );
+      ) ?? false);
     });
   };
 
@@ -956,7 +963,7 @@ export const PatchBay = observer(() => {
           ) {
             // Extract block ID from the draggable ID
             const draggableId = (elem as HTMLElement).getAttribute('data-rbd-draggable-id');
-            if (draggableId) {
+            if (draggableId !== null) {
               const blockId = draggableId.replace('patch-block-', '');
               selectedIds.add(blockId);
             }

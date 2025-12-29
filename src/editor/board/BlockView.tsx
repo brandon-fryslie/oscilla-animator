@@ -78,14 +78,14 @@ export const BlockView = observer<BlockViewProps>(function BlockView({
     >
       {/* Header */}
       <div className="block-header">
-        <div className="block-name" title={block.label || blockDef.label}>
-          {block.label || blockDef.label}
+        <div className="block-name" title={block.label !== '' ? block.label : blockDef.label}>
+          {block.label !== '' ? block.label : blockDef.label}
         </div>
         <div className="block-role-badge">{roleLabel}</div>
       </div>
 
       {/* Collapsed summary */}
-      {paramSummary !== '' && <div className="block-summary">{paramSummary}</div>}
+      {paramSummary.length > 0 && <div className="block-summary">{paramSummary}</div>}
 
       {/* Port rails (visible on hover/focus) */}
       {(isHovered || isFocused) && (
@@ -191,12 +191,16 @@ function computeParamSummary(block: { type: string; params: Record<string, unkno
   };
 
   const keys = criticalParams[block.type];
-  if (keys === undefined || keys.length === 0) return '';
+  if (keys === undefined || keys.length === 0) {
+    return '';
+  }
 
   const parts = keys
     .map((key) => {
       const value = block.params[key];
-      if (value === undefined) return null;
+      if (value === undefined) {
+        return null;
+      }
       return `${key}=${formatParamValue(value)}`;
     })
     .filter((item): item is string => item !== null);

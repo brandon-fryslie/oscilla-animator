@@ -131,7 +131,7 @@ export interface PureBlockValidationError {
  * @param blockType - The block type (for error messages)
  * @param _compileKind - How this pure block compiles (reserved for future use)
  * @param outputs - Map of port ID to compiled artifact
- * @throws PureBlockValidationError if validation fails
+ * @throws Error (with PureBlockValidationError structure) if validation fails
  */
 export function validatePureBlockOutput(
   blockType: string,
@@ -141,12 +141,14 @@ export function validatePureBlockOutput(
   for (const [portId, artifact] of Array.from(outputs)) {
     // Check for forbidden artifact kinds
     if (FORBIDDEN_ARTIFACT_KINDS.has(artifact.kind)) {
-      throw {
+      const error: PureBlockValidationError = {
         blockType,
         portId,
         message: `Pure block "${blockType}" cannot emit artifact kind "${artifact.kind}" on port "${portId}" (requires kernel capability). Pure blocks can only emit: ${Array.from(ALLOWED_PURE_ARTIFACT_KINDS).join(", ")}`,
         code: "FORBIDDEN_ARTIFACT",
-      } as PureBlockValidationError;
+      };
+      // Throw Error object (ESLint only-throw-error rule)
+      throw new Error(error.message);
     }
 
     // Future: Once IR migration is complete, validate that operator blocks emit AST nodes

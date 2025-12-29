@@ -271,7 +271,7 @@ function compileIR(
     // Convert CompilerPatch to Patch format for Pass 1
     const blocksArray: import('../types').Block[] = Array.from(patch.blocks.values()).map((inst) => {
       const def = getBlockDefinition(inst.type);
-      if (!def) {
+      if (def == null) {
         throw new Error(`Block definition not found for type: ${inst.type}`);
       }
 
@@ -280,24 +280,24 @@ function compileIR(
         id: inst.id,
         type: inst.type,
         label: def.label,
-        inputs: (def.inputs || []) as any,
-        outputs: (def.outputs || []) as any,
+        inputs: def.inputs,
+        outputs: def.outputs,
         params: inst.params,
-        category: 'internal' as any,
+        category: 'Other',
         description: def.description,
       } as import('../types').Block;
     });
 
     // Convert to CompilerConnection format (uses 'port' not 'slotId')
     const connectionsArray: import('./types').CompilerConnection[] = patch.connections.map((conn) => ({
-      id: conn.id || `${conn.from.block}:${conn.from.port}->${conn.to.block}:${conn.to.port}`,
+      id: conn.id != null && conn.id !== "" ? conn.id : `${conn.from.block}:${conn.from.port}->${conn.to.block}:${conn.to.port}`,
       from: { block: conn.from.block, port: conn.from.port },
       to: { block: conn.to.block, port: conn.to.port },
     }));
 
     // Create Connection[] for Patch (passes 1-5)
     const patchConnections: import('../types').Connection[] = patch.connections.map((conn) => ({
-      id: conn.id || `${conn.from.block}:${conn.from.port}->${conn.to.block}:${conn.to.port}`,
+      id: conn.id != null && conn.id !== "" ? conn.id : `${conn.from.block}:${conn.from.port}->${conn.to.block}:${conn.to.port}`,
       from: { blockId: conn.from.block, slotId: conn.from.port, direction: 'output' as const },
       to: { blockId: conn.to.block, slotId: conn.to.port, direction: 'input' as const },
     }));
@@ -622,10 +622,10 @@ export function compileBusAwarePatch(
             };
           } else {
             // Apply adapter chain first, then lens stack (matching bus listener pattern)
-            if (wireConn.adapterChain && wireConn.adapterChain.length > 0) {
+            if (wireConn.adapterChain != null && wireConn.adapterChain.length > 0) {
               src = applyAdapterChain(src, wireConn.adapterChain, ctx, errors);
             }
-            if (wireConn.lensStack && wireConn.lensStack.length > 0) {
+            if (wireConn.lensStack != null && wireConn.lensStack.length > 0) {
               src = applyLensStack(
                 src,
                 wireConn.lensStack,
@@ -803,11 +803,11 @@ function attachIR(
   }
 
   // Check for IR errors - these are now FATAL
-  if (ir.errors && ir.errors.length > 0) {
+  if (ir.errors != null && ir.errors.length > 0) {
     console.error('[IR] FATAL: IR has errors (IR is mandatory):', ir.errors);
     const errors: CompileError[] = ir.errors.map(e => ({
       code: 'IRValidationFailed',
-      message: `IR error: ${e.message || e.code}`,
+      message: `IR error: ${e.message != null && e.message !== "" ? e.message : e.code}`,
     }));
     return {
       ok: false,
@@ -831,7 +831,7 @@ function attachIR(
   // This enables SigEvaluator to execute IR-based signals at runtime
   console.log('[IR Debug] Extracting SignalExprTable...');
   const extracted = extractSignalExprTable(ir);
-  console.log('[IR Debug] SignalExprTable extraction complete:', extracted ? 'success' : 'null');
+  console.log('[IR Debug] SignalExprTable extraction complete:', extracted != null ? 'success' : 'null');
 
   // Create and populate DebugIndex for debug infrastructure
   const debugIndex = createDebugIndex(randomUUID(), patchRevision);
@@ -860,7 +860,7 @@ function attachIR(
     compiledIR,             // Legacy alias
     debugIndex,
     // Attach SignalExpr data if extraction succeeded
-    ...(extracted && {
+    ...(extracted != null && {
       signalTable: extracted.signalTable,
       constPool: extracted.constPool,
       stateLayout: extracted.stateLayout,

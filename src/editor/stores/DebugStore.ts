@@ -138,7 +138,7 @@ export class DebugStore {
 
     // If already exists, just activate it
     const existing = this.probes.get(id);
-    if (existing) {
+    if (existing !== undefined) {
       existing.active = true;
       return existing;
     }
@@ -171,7 +171,7 @@ export class DebugStore {
    */
   removeProbe(id: string): void {
     const probe = this.probes.get(id);
-    if (probe) {
+    if (probe !== undefined) {
       this.probes.delete(id);
       this.log('info', `Stopped probing: ${probe.label}`);
       this.triggerRecompile();
@@ -188,10 +188,10 @@ export class DebugStore {
     } else {
       // Look up block info and add probe
       const block = this.findBlock(blockId);
-      if (block) {
+      if (block !== undefined) {
         this.addProbe(
           { kind: 'block', blockId },
-          block.label || block.type,
+          (block.label !== undefined && block.label.length > 0) ? block.label : block.type,
           'Signal:number', // Will be refined when we sample
           block.type
         );
@@ -232,7 +232,7 @@ export class DebugStore {
    */
   updateProbe(id: string, value: ValueSummary, tMs: number): void {
     const probe = this.probes.get(id);
-    if (!probe || !probe.active) return;
+    if (probe === undefined || !probe.active) return;
 
     const sample: Sample = {
       timestamp: Date.now(),
@@ -276,7 +276,7 @@ export class DebugStore {
     let timeMode: DebugOverview['timeMode'] = 'unknown';
     let period: number | undefined;
 
-    if (timeRoot) {
+    if (timeRoot !== undefined) {
       if (timeRoot.type === 'CycleTimeRoot') {
         timeMode = 'cyclic';
         period = Number(timeRoot.params?.periodMs ?? 3000);
@@ -332,7 +332,7 @@ export class DebugStore {
    */
   executeCommand(command: string): void {
     const trimmed = command.trim();
-    if (!trimmed) return;
+    if (trimmed.length === 0) return;
 
     // Add to history
     this.commandHistory.push(trimmed);
@@ -460,7 +460,7 @@ export class DebugStore {
     const overview = this.getOverview();
     this.log('output', '━━━ Patch Overview ━━━');
     this.log('output', `  Time Mode: ${overview.timeMode}`);
-    if (overview.period) {
+    if (overview.period !== undefined) {
       this.log('output', `  Period: ${overview.period}ms`);
     }
     this.log('output', `  Health: ${overview.health}`);
@@ -487,13 +487,13 @@ export class DebugStore {
   }
 
   inspectBlock(idOrLabel?: string): void {
-    if (!idOrLabel) {
+    if (idOrLabel === undefined) {
       this.log('error', 'Usage: block <id or label>');
       return;
     }
 
     const block = this.findBlock(idOrLabel);
-    if (!block) {
+    if (block === undefined) {
       this.log('error', `Block not found: ${idOrLabel}`);
       return;
     }
@@ -508,7 +508,7 @@ export class DebugStore {
     // Show probe status and current value
     const probeId = createProbeId({ kind: 'block', blockId: block.id });
     const probe = this.probes.get(probeId);
-    if (probe?.currentSample) {
+    if (probe !== undefined && probe.currentSample !== undefined) {
       const value = formatValueSummary(probe.currentSample.value);
       const age = Date.now() - probe.currentSample.timestamp;
       this.log('output', `  Current Value: ${value} (${age}ms ago)`);
@@ -518,12 +518,12 @@ export class DebugStore {
         const sparkline = this.generateSparkline(probe.history, 20);
         this.log('output', `  History: ${sparkline}`);
       }
-    } else if (probe) {
+    } else if (probe !== undefined) {
       this.log('output', '  Current Value: waiting for sample...');
     }
 
     // Show inputs
-    if (block.inputs && block.inputs.length > 0) {
+    if (block.inputs !== undefined && block.inputs.length > 0) {
       this.log('output', '  Inputs:');
       for (const input of block.inputs) {
         const typeStr = input.typeDesc?.type ?? 'any';
@@ -531,7 +531,7 @@ export class DebugStore {
         const conn = connections.find(
           (c) => c.toBlock === block.id && c.toSlot === input.id
         );
-        const connInfo = conn
+        const connInfo = conn !== undefined
           ? ` ← ${conn.fromBlock}.${conn.fromSlot}`
           : ' (unconnected)';
         this.log('output', `    ${input.id}: ${typeStr}${connInfo}`);
@@ -539,7 +539,7 @@ export class DebugStore {
     }
 
     // Show outputs
-    if (block.outputs && block.outputs.length > 0) {
+    if (block.outputs !== undefined && block.outputs.length > 0) {
       this.log('output', '  Outputs:');
       for (const output of block.outputs) {
         const typeStr = output.typeDesc?.type ?? 'any';
@@ -580,7 +580,7 @@ export class DebugStore {
       this.log('output', '  Parameters:');
       for (const key of paramKeys) {
         const value = block.params[key];
-        const valueStr = typeof value === 'object'
+        const valueStr = typeof value === 'object' && value !== null
           ? JSON.stringify(value)
           : String(value);
         this.log('output', `    ${key}: ${valueStr}`);
@@ -589,14 +589,14 @@ export class DebugStore {
   }
 
   private toggleProbeCommand(idOrLabel?: string): void {
-    if (!idOrLabel) {
+    if (idOrLabel === undefined) {
       // Show current probes
       this.listProbes();
       return;
     }
 
     const block = this.findBlock(idOrLabel);
-    if (!block) {
+    if (block === undefined) {
       this.log('error', `Block not found: ${idOrLabel}`);
       return;
     }
@@ -616,7 +616,7 @@ export class DebugStore {
       let value = '—';
       let age = '';
 
-      if (probe.currentSample) {
+      if (probe.currentSample !== undefined) {
         value = formatValueSummary(probe.currentSample.value);
         age = ` [${Date.now() - probe.currentSample.timestamp}ms ago]`;
       }
@@ -660,7 +660,7 @@ export class DebugStore {
   }
 
   private inspectBus(busId?: string): void {
-    if (!busId) {
+    if (busId === undefined) {
       this.log('error', 'Usage: bus <id>');
       return;
     }
@@ -671,7 +671,7 @@ export class DebugStore {
       (b) => b.id === busId || b.name.toLowerCase() === busId.toLowerCase()
     );
 
-    if (!bus) {
+    if (bus === undefined) {
       this.log('error', `Bus not found: ${busId}`);
       return;
     }
@@ -727,7 +727,7 @@ export class DebugStore {
 
     // Handle 'errors' subcommand - always show errors even if compilation failed
     if (subCmd === 'errors') {
-      if (!result) {
+      if (result == null) {
         this.log('error', 'No compile result available. Compile a patch first.');
         return;
       }
@@ -737,8 +737,8 @@ export class DebugStore {
       }
       this.log('output', `━━━ Compile Errors (${result.errors.length}) ━━━`);
       for (const err of result.errors) {
-        const location = err.where?.blockId
-          ? ` @ ${err.where.blockId}${err.where.port ? '.' + err.where.port : ''}`
+        const location = err.where?.blockId !== undefined
+          ? ` @ ${err.where.blockId}${err.where.port !== undefined ? '.' + err.where.port : ''}`
           : '';
         this.log('error', `  [${err.code}]${location}`);
         this.log('error', `    ${err.message}`);
@@ -747,12 +747,12 @@ export class DebugStore {
     }
 
     // If no programIR but we have errors, show the errors
-    if (!programIR) {
-      if (result && result.errors.length > 0) {
+    if (programIR == null) {
+      if (result != null && result.errors.length > 0) {
         this.log('error', `Compilation failed with ${result.errors.length} error(s):`);
         for (const err of result.errors) {
-          const location = err.where?.blockId
-            ? ` @ ${err.where.blockId}${err.where.port ? '.' + err.where.port : ''}`
+          const location = err.where?.blockId !== undefined
+            ? ` @ ${err.where.blockId}${err.where.port !== undefined ? '.' + err.where.port : ''}`
             : '';
           this.log('error', `  [${err.code}]${location}`);
           this.log('error', `    ${err.message}`);
@@ -764,10 +764,10 @@ export class DebugStore {
       return;
     }
 
-    if (!subCmd) {
+    if (subCmd === undefined) {
       // Show IR summary
       this.log('output', '━━━ IR Summary ━━━');
-      this.log('output', `  Status: ${result?.ok ? 'OK' : 'FAILED'}`);
+      this.log('output', `  Status: ${result?.ok === true ? 'OK' : 'FAILED'}`);
       this.log('output', `  IR Version: ${programIR.irVersion}`);
       this.log('output', `  Patch ID: ${programIR.patchId}`);
       this.log('output', `  Seed: ${programIR.seed}`);
@@ -812,7 +812,7 @@ export class DebugStore {
 
       this.log('output', `━━━ IR Buses (${buses.length}) ━━━`);
       for (const bus of buses) {
-        const busType = bus.type ? JSON.stringify(bus.type) : 'unknown';
+        const busType = bus.type !== undefined ? JSON.stringify(bus.type) : 'unknown';
         this.log('output', `  ${bus.id}: ${busType}`);
       }
       return;
@@ -821,13 +821,13 @@ export class DebugStore {
     if (subCmd === 'node') {
       // Inspect specific node
       const nodeId = args[1];
-      if (!nodeId) {
+      if (nodeId === undefined || nodeId.length === 0) {
         this.log('error', 'Usage: ir node <id>');
         return;
       }
 
       const node = programIR.nodes.nodes.find((n) => n.id === nodeId);
-      if (!node) {
+      if (node === undefined) {
         this.log('error', `IR node not found: ${nodeId}`);
         return;
       }
@@ -851,13 +851,13 @@ export class DebugStore {
    */
   private inspectSchedule(args: string[]): void {
     const programIR = this.getProgramIR();
-    if (!programIR) {
+    if (programIR == null) {
       this.log('error', 'No schedule available. Compile a patch first.');
       return;
     }
 
     const schedule = programIR.schedule;
-    if (!schedule || !schedule.steps) {
+    if (schedule == null || schedule.steps == null) {
       this.log('error', 'No schedule in IR');
       return;
     }
@@ -865,7 +865,7 @@ export class DebugStore {
     const steps = schedule.steps;
     const subCmd = args[0]?.toLowerCase();
 
-    if (!subCmd) {
+    if (subCmd === undefined) {
       // Show schedule overview
       this.log('output', '━━━ Schedule Overview ━━━');
       this.log('output', `  Step Count: ${steps.length}`);
@@ -874,7 +874,7 @@ export class DebugStore {
       // Count steps by kind
       const kindCounts: Record<string, number> = {};
       for (const step of steps) {
-        kindCounts[step.kind] = (kindCounts[step.kind] || 0) + 1;
+        kindCounts[step.kind] = (kindCounts[step.kind] ?? 0) + 1;
       }
 
       this.log('output', '  Step Kinds:');
@@ -887,7 +887,7 @@ export class DebugStore {
     if (subCmd === 'step') {
       // Inspect specific step
       const stepIndexStr = args[1];
-      if (!stepIndexStr) {
+      if (stepIndexStr === undefined || stepIndexStr.length === 0) {
         this.log('error', 'Usage: schedule step <index>');
         return;
       }
@@ -915,7 +915,7 @@ export class DebugStore {
   }
 
   private evalExpression(expr: string): void {
-    if (!expr) {
+    if (expr.length === 0) {
       this.log('error', 'Usage: eval <expression>');
       return;
     }
@@ -933,14 +933,17 @@ export class DebugStore {
       };
 
       // eslint-disable-next-line @typescript-eslint/no-implied-eval
-      const fn = new Function(...Object.keys(context), `return (${expr})`);
-      const result = fn(...Object.values(context));
+      const fn = new Function(...Object.keys(context), `return (${expr})`) as (...args: unknown[]) => unknown;
+      const result: unknown = fn(...Object.values(context));
 
       // Format result
       if (result === undefined) {
         this.log('output', 'undefined');
       } else if (result === null) {
         this.log('output', 'null');
+      } else if (typeof result === 'string' || typeof result === 'number' || typeof result === 'boolean' || typeof result === 'bigint' || typeof result === 'symbol') {
+        // Primitive types
+        this.log('output', String(result));
       } else if (typeof result === 'object') {
         try {
           const json = JSON.stringify(result, null, 2);
@@ -948,10 +951,12 @@ export class DebugStore {
             this.log('output', line);
           }
         } catch {
-          this.log('output', String(result));
+          // Object can't be stringified, use fallback
+          this.log('output', Object.prototype.toString.call(result));
         }
       } else {
-        this.log('output', String(result));
+        // Fallback for any other type (e.g., function)
+        this.log('output', Object.prototype.toString.call(result));
       }
     } catch (err) {
       this.log('error', `${err instanceof Error ? err.message : String(err)}`);
@@ -979,10 +984,10 @@ export class DebugStore {
       __compilerService?: { getLatestResult(): unknown }
     }).__compilerService;
 
-    if (!compilerService) return null;
+    if (compilerService === undefined) return null;
 
     const result = compilerService.getLatestResult();
-    if (!result || typeof result !== 'object') return null;
+    if (result === undefined || typeof result !== 'object' || result === null) return null;
 
     return result as {
       ok: boolean;
@@ -1036,7 +1041,7 @@ export class DebugStore {
 
     const min = Math.min(...values);
     const max = Math.max(...values);
-    const range = max - min || 1;
+    const range = (max - min !== 0) ? (max - min) : 1;
 
     const chars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
     const step = Math.max(1, Math.floor(values.length / width));
@@ -1088,7 +1093,7 @@ export class DebugStore {
     const probeId = createProbeId({ kind: 'block', blockId: entry.id });
     let probe = this.probes.get(probeId);
 
-    if (!probe) {
+    if (probe === undefined) {
       // Create probe if it doesn't exist
       probe = {
         id: probeId,

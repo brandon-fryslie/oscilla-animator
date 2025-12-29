@@ -35,7 +35,7 @@ describe("Pass 7: Bus Lowering", () => {
         category: "core",
         busEligible: true,
       },
-      combineMode: combineMode as any,
+      combineMode: combineMode as Bus["combineMode"],
       defaultValue,
       sortKey: 0,
     };

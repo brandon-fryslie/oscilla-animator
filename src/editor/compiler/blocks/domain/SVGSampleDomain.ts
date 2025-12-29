@@ -8,7 +8,7 @@
  * Sampled positions (pos0) are deterministic based on the SVG path and sample count.
  */
 
-import type { BlockCompiler, Vec2, Domain } from '../../types';
+import type { BlockCompiler, Vec2, Domain, Artifact } from '../../types';
 import { createDomain } from '../../unified/Domain';
 import { isDefined, isNonEmptyString } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
@@ -359,10 +359,17 @@ export const SVGSampleDomainBlock: BlockCompiler = {
 
   compile({ id, inputs }) {
     // Read from inputs - values come from defaultSource or explicit connections
-    const asset = String((inputs.asset as any)?.value);
-    const sampleCount = Math.max(1, Math.floor(Number((inputs.sampleCount as any)?.value)));
-    const seed = Number((inputs.seed as any)?.value);
-    const distribution = String((inputs.distribution as any)?.value) as 'even' | 'parametric';
+    const assetArtifact = inputs.asset as Artifact | undefined;
+    const asset = assetArtifact?.kind === 'Scalar:string' ? String(assetArtifact.value) : '';
+
+    const sampleCountArtifact = inputs.sampleCount as Artifact | undefined;
+    const sampleCount = Math.max(1, Math.floor(Number(sampleCountArtifact?.kind === 'Scalar:number' ? sampleCountArtifact.value : 100)));
+
+    const seedArtifact = inputs.seed as Artifact | undefined;
+    const seed = Number(seedArtifact?.kind === 'Scalar:number' ? seedArtifact.value : 0);
+
+    const distributionArtifact = inputs.distribution as Artifact | undefined;
+    const distribution = String(distributionArtifact?.kind === 'Scalar:string' ? distributionArtifact.value : 'even') as 'even' | 'parametric';
 
     // Create stable element IDs: "sample-N"
     const elementIds: string[] = [];

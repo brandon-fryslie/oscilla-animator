@@ -8,7 +8,7 @@
  * evaluates them at runtime when the field is materialized.
  */
 
-import type { BlockCompiler, Vec2, Field, CompileCtx, RuntimeCtx } from '../../types';
+import type { BlockCompiler, Vec2, Field, CompileCtx, RuntimeCtx, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
@@ -58,8 +58,9 @@ const lowerJitterFieldVec2: BlockLowerFn = ({ inputs, config }) => {
   // This is similar to how FieldHueGradient and FieldFromExpression work -
   // they all need to evaluate signals while iterating over field elements.
 
-  const amount = Number((config as any)?.amount ?? 10);
-  const frequency = Number((config as any)?.frequency ?? 1);
+  const cfg = config as { amount?: number; frequency?: number } | undefined;
+  const amount = cfg?.amount ?? 10;
+  const frequency = cfg?.frequency ?? 1;
 
   throw new Error(
     `JitterFieldVec2 IR lowering requires field-signal combination operations (amount: ${amount}, frequency: ${frequency}). ` +
@@ -125,9 +126,23 @@ export const JitterFieldVec2Block: BlockCompiler = {
 
     const idRandFn = idRandArtifact.value;
     const phaseFn = phaseArtifact.value;
-    // Read from inputs - values come from defaultSource or explicit connections
-    const amount = Number((inputs.amount as any)?.value);
-    const frequency = Number((inputs.frequency as any)?.value);
+
+    // Helper to extract numeric values from artifacts
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
+      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
+        return Number(artifact.value);
+      }
+      if ('value' in artifact && artifact.value !== undefined) {
+        return typeof artifact.value === 'function'
+          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
+          : Number(artifact.value);
+      }
+      return defaultValue;
+    };
+
+    const amount = extractNumber(inputs.amount, 10);
+    const frequency = extractNumber(inputs.frequency, 1);
 
     // Create drift field that combines per-element random with phase
     // The field function captures both the idRand field and phase signal.

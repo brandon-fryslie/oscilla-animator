@@ -9,7 +9,7 @@ import { DebugUIStore } from '../DebugUIStore';
 import type { RuntimeHealthSnapshotEvent } from '../../events/types';
 
 // Mock RootStore with minimal implementation
-function createMockRootStore() {
+function createMockRootStore(): import('../RootStore').RootStore {
   return {
     events: {
       on: vi.fn(),
@@ -54,7 +54,8 @@ describe('DebugUIStore', () => {
     });
 
     it('subscribes to RuntimeHealthSnapshot events', () => {
-      expect(mockRootStore.events.on).toHaveBeenCalledWith(
+      // Use bound method to avoid unbound-method error
+      expect(mockRootStore.events.on.bind(mockRootStore.events)).toHaveBeenCalledWith(
         'RuntimeHealthSnapshot',
         expect.any(Function)
       );

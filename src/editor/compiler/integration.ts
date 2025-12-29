@@ -169,7 +169,7 @@ function generateBusDiagnostics(
   const diagnostics: Diagnostic[] = [];
 
   // W_BUS_EMPTY: Buses with 0 listeners
-  if (patch.buses && patch.listeners) {
+  if (patch.buses.length > 0 && patch.listeners.length > 0) {
     const busListenerCounts = new Map<string, number>();
 
     // Count listeners per bus
@@ -218,7 +218,7 @@ function generateBusDiagnostics(
   }
 
   // Track published outputs
-  if (patch.publishers) {
+  if (patch.publishers.length > 0) {
     for (const pub of patch.publishers) {
       publishedOutputs.add(`${pub.from.blockId}.${pub.from.slotId}`);
     }
@@ -236,7 +236,7 @@ function generateBusDiagnostics(
     }
 
     const def = getBlockDefinition(block.type);
-    if (!def?.outputs) continue;
+    if (def == null || def.outputs == null || def.outputs.length === 0) continue;
 
     for (const output of def.outputs) {
       // Skip terminal outputs (render sinks) - they don't need connections
@@ -405,7 +405,7 @@ export function editorToPatch(store: RootStore): CompilerPatch {
   for (const block of store.patchStore.blocks) {
     for (const input of block.inputs) {
       const ds = store.defaultSourceStore.getDefaultSourceForInput(block.id, input.id);
-      if (ds) {
+      if (ds != null) {
         defaultSourceValues[`${block.id}:${input.id}`] = ds.value;
       }
     }

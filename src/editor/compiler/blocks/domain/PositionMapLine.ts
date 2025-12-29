@@ -5,7 +5,7 @@
  * Elements are distributed along the line segment.
  */
 
-import type { BlockCompiler, Vec2 } from '../../types';
+import type { BlockCompiler, Vec2, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
@@ -18,7 +18,7 @@ type PositionField = (seed: number, n: number) => readonly Vec2[];
 const lowerPositionMapLine: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Input[0]: domain
   const domainInput = inputs[0];
-  if (!domainInput || (domainInput.k !== 'special' || domainInput.tag !== 'domain')) {
+  if (domainInput === undefined || domainInput.k !== 'special' || domainInput.tag !== 'domain') {
     throw new Error('PositionMapLine requires Domain input');
   }
 
@@ -105,11 +105,20 @@ export const PositionMapLineBlock: BlockCompiler = {
     const domain = domainArtifact.value;
 
     // Read from inputs - values come from defaultSource or explicit connections
-    const ax = Number((inputs.ax as any)?.value);
-    const ay = Number((inputs.ay as any)?.value);
-    const bx = Number((inputs.bx as any)?.value);
-    const by = Number((inputs.by as any)?.value);
-    const distribution = String((inputs.distribution as any)?.value);
+    const axArtifact = inputs.ax as Artifact | undefined;
+    const ax = Number(axArtifact?.kind === 'Signal:number' || axArtifact?.kind === 'Scalar:number' ? axArtifact.value : 100);
+
+    const ayArtifact = inputs.ay as Artifact | undefined;
+    const ay = Number(ayArtifact?.kind === 'Signal:number' || ayArtifact?.kind === 'Scalar:number' ? ayArtifact.value : 200);
+
+    const bxArtifact = inputs.bx as Artifact | undefined;
+    const bx = Number(bxArtifact?.kind === 'Signal:number' || bxArtifact?.kind === 'Scalar:number' ? bxArtifact.value : 700);
+
+    const byArtifact = inputs.by as Artifact | undefined;
+    const by = Number(byArtifact?.kind === 'Signal:number' || byArtifact?.kind === 'Scalar:number' ? byArtifact.value : 200);
+
+    const distributionArtifact = inputs.distribution as Artifact | undefined;
+    const distribution = String(distributionArtifact?.kind === 'Scalar:string' ? distributionArtifact.value : 'even');
 
     // Create the position field based on domain element count
     const positionField: PositionField = (_seed, n) => {

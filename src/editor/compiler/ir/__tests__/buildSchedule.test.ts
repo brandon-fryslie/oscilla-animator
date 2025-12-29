@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest";
 import { IRBuilderImpl } from "../IRBuilderImpl";
 import { buildCompiledProgram } from "../buildSchedule";
 import type { TypeDesc } from "../types";
+import type { BuilderProgramIR } from "../builderTypes";
 
 // Helper to create a simple TypeDesc
 function makeType(world: "signal" | "field", domain: string): TypeDesc {
@@ -20,7 +21,7 @@ function makeType(world: "signal" | "field", domain: string): TypeDesc {
 /**
  * Create a minimal builder IR for testing.
  */
-function createMinimalBuilderIR() {
+function createMinimalBuilderIR(): BuilderProgramIR {
   const builder = new IRBuilderImpl();
   const type = makeType("signal", "number");
 
@@ -137,7 +138,7 @@ describe("buildSchedule", () => {
       );
 
       expect(timeProbe).toBeDefined();
-      if (timeProbe && timeProbe.kind === "debugProbe") {
+      if (timeProbe !== undefined && timeProbe.kind === "debugProbe") {
         // Should have at least 2 slots (tModelMs, progress01)
         expect(timeProbe.probe.slots.length).toBeGreaterThanOrEqual(2);
       }

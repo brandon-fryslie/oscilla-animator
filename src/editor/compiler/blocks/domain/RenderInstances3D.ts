@@ -65,7 +65,7 @@ const lowerRenderInstances3D: BlockLowerFn = ({ ctx, inputs }) => {
   }
 
   // Validate camera (optional)
-  if (camera && (camera.k !== 'special' || camera.tag !== 'camera')) {
+  if (camera !== undefined && (camera.k !== 'special' || camera.tag !== 'camera')) {
     throw new Error(`RenderInstances3D camera input must be Special<camera>, got ${camera.k}`);
   }
 

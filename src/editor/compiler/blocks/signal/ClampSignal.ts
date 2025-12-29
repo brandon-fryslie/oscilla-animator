@@ -85,8 +85,10 @@ export const ClampSignalBlock: BlockCompiler = {
 
     const inputSignal = inputArtifact.value as Signal<number>;
     // Read from inputs - values come from defaultSource or explicit connections
-    const min = Number((inputs.min as any)?.value);
-    const max = Number((inputs.max as any)?.value);
+    const minArtifact = inputs.min;
+    const min = Number(minArtifact !== undefined && 'value' in minArtifact ? minArtifact.value : 0);
+    const maxArtifact = inputs.max;
+    const max = Number(maxArtifact !== undefined && 'value' in maxArtifact ? maxArtifact.value : 1);
 
     // Create clamped signal
     const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {

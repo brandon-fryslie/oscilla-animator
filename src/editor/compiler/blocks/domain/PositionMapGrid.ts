@@ -5,7 +5,7 @@
  * Elements are laid out in rows and columns from the origin point.
  */
 
-import type { BlockCompiler, Vec2 } from '../../types';
+import type { BlockCompiler, Vec2, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
@@ -18,7 +18,7 @@ type PositionField = (seed: number, n: number) => readonly Vec2[];
 const lowerPositionMapGrid: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Input[0]: domain
   const domainInput = inputs[0];
-  if (!domainInput || (domainInput.k !== 'special' || domainInput.tag !== 'domain')) {
+  if (domainInput === undefined || domainInput.k !== 'special' || domainInput.tag !== 'domain') {
     throw new Error('PositionMapGrid requires Domain input');
   }
 
@@ -162,28 +162,29 @@ export const PositionMapGridBlock: BlockCompiler = {
     const domain = domainArtifact.value;
 
     // Helper to extract numeric value from artifact with default fallback
-    const extractNumber = (artifact: any, defaultValue: number): number => {
-      if (!artifact) return defaultValue;
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:number') return Number(artifact.value);
       if (artifact.kind === 'Signal:number') {
         return Number(artifact.value(0, {}));
       }
-      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+      // For other types, try to convert to number (fallback for any other artifact type)
+      return typeof artifact.value === 'function' ? Number((artifact.value as (t: number, ctx: unknown) => unknown)(0, {})) : Number(artifact.value);
     };
 
     // Helper to extract string value from artifact with default fallback
-    const extractString = (artifact: any, defaultValue: string): string => {
-      if (!artifact) return defaultValue;
+    const extractString = (artifact: Artifact | undefined, defaultValue: string): string => {
+      if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:string') return String(artifact.value);
-      return typeof artifact.value === 'function' ? String(artifact.value(0, {})) : String(artifact.value);
+      return typeof artifact.value === 'function' ? String((artifact.value as (t: number, ctx: unknown) => unknown)(0, {})) : String(artifact.value);
     };
 
     // Support both new (inputs) and old (params) parameter systems
-    const cols = extractNumber(inputs.cols, (params as any)?.cols ?? 10);
-    const spacing = extractNumber(inputs.spacing, (params as any)?.spacing ?? 20);
-    const originX = extractNumber(inputs.originX, (params as any)?.originX ?? 0);
-    const originY = extractNumber(inputs.originY, (params as any)?.originY ?? 0);
-    const order = extractString(inputs.order, (params as any)?.order ?? 'rowMajor');
+    const cols = extractNumber(inputs.cols, (params as Record<string, unknown> | undefined)?.cols as number | undefined ?? 10);
+    const spacing = extractNumber(inputs.spacing, (params as Record<string, unknown> | undefined)?.spacing as number | undefined ?? 20);
+    const originX = extractNumber(inputs.originX, (params as Record<string, unknown> | undefined)?.originX as number | undefined ?? 0);
+    const originY = extractNumber(inputs.originY, (params as Record<string, unknown> | undefined)?.originY as number | undefined ?? 0);
+    const order = extractString(inputs.order, (params as Record<string, unknown> | undefined)?.order as string | undefined ?? 'rowMajor');
 
     // Create the position field based on domain element count
     const positionField: PositionField = (_seed, n) => {

@@ -236,7 +236,7 @@ describe("pass6BlockLowering", () => {
                 id: "root",
                 children: [],
               }),
-              event: (_ev: any) => [],
+              event: (_ev: unknown) => [],
             },
           },
         ],

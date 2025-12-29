@@ -14,6 +14,21 @@ import { OpCode } from '../../ir/opcodes';
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
 /**
+ * Convert hex color string to packed RGBA u32 number.
+ * Used for color constants in IR.
+ */
+function hexToPackedRGBA(hex: string): number {
+  const cleaned = hex.replace(/^#/, '');
+  const num = parseInt(cleaned, 16);
+  const r = (num >> 16) & 0xff;
+  const g = (num >> 8) & 0xff;
+  const b = num & 0xff;
+  const a = 255; // Full alpha
+  // Pack as little-endian RGBA (matches runtime unpacking)
+  return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
+}
+
+/**
  * Parse hex color to HSL
  */
 function hexToHSL(hex: string): { h: number; s: number; l: number } {
@@ -111,8 +126,13 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error(`ColorLFO: expected sig input for phase, got ${phase.k}`);
   }
 
-  const base = (config as any)?.base || '#3B82F6';
-  const hueSpan = Number((config as any)?.hueSpan ?? 180);
+  const base = (config != null && typeof config === 'object' && 'base' in config && typeof config.base === 'string')
+    ? config.base
+    : '#3B82F6';
+  const hueSpanValue = (config != null && typeof config === 'object' && 'hueSpan' in config)
+    ? config.hueSpan
+    : 180;
+  const hueSpan = Number(hueSpanValue);
   // Note: sat and light are baked into the base color for Sprint 2
   // They would be used if we had a 3-input ColorHSLToRGB opcode
 
@@ -124,7 +144,7 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
   const hueShiftSig = ctx.b.sigZip(phase.id, hueSpanSig, { kind: 'opcode', opcode: OpCode.Mul }, numberType,);
 
   // Use ColorShiftHue to shift base color's hue by (phase * hueSpan)
-  const baseColorSig = ctx.b.sigConst(base, colorType);
+  const baseColorSig = ctx.b.sigConst(hexToPackedRGBA(base), colorType);
   const colorSig = ctx.b.sigZip(baseColorSig, hueShiftSig, { kind: 'opcode', opcode: OpCode.ColorShiftHue }, colorType,);
 
   const slot = ctx.b.allocValueSlot();
@@ -185,10 +205,16 @@ export const ColorLFOBlock: BlockCompiler = {
 
     const phaseSignal = phaseArtifact.value as Signal<number>;
     // Read from inputs - values come from defaultSource or explicit connections
-    const base = String((inputs.base as any)?.value);
-    const hueSpan = Number((inputs.hueSpan as any)?.value);
-    const sat = Number((inputs.sat as any)?.value);
-    const light = Number((inputs.light as any)?.value);
+    const baseArtifact = inputs.base;
+    const base = baseArtifact !== undefined && 'value' in baseArtifact && typeof baseArtifact.value === 'string'
+      ? baseArtifact.value
+      : '#3B82F6';
+    const hueSpanArtifact = inputs.hueSpan;
+    const hueSpan = Number(hueSpanArtifact !== undefined && 'value' in hueSpanArtifact ? hueSpanArtifact.value : 180);
+    const satArtifact = inputs.sat;
+    const sat = Number(satArtifact !== undefined && 'value' in satArtifact ? satArtifact.value : 80);
+    const lightArtifact = inputs.light;
+    const light = Number(lightArtifact !== undefined && 'value' in lightArtifact ? lightArtifact.value : 60);
 
     // Extract base hue from base color
     const baseHSL = hexToHSL(base);

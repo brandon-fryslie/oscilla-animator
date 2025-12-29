@@ -320,17 +320,19 @@ describe('validateOp', () => {
   });
 
   it('rejects Add op without entity id', () => {
+    const invalidEntity = {
+      type: 'test',
+      label: 'Test',
+      inputs: [],
+      outputs: [],
+      params: {},
+      category: 'Other',
+    } as unknown as Block;
+
     const op: Op = {
       type: 'Add',
       table: 'blocks',
-      entity: {
-        type: 'test',
-        label: 'Test',
-        inputs: [],
-        outputs: [],
-        params: {},
-        category: 'Other',
-      } as any,
+      entity: invalidEntity,
     };
 
     expect(() => validateOp(op)).toThrow('Add op missing entity id');
@@ -360,7 +362,7 @@ describe('validateOp', () => {
       type: 'Remove',
       table: 'blocks',
       id: 'block-1',
-      removed: undefined as any,
+      removed: undefined as unknown as Block,
     };
 
     expect(() => validateOp(op)).toThrow('Remove op missing removed entity');
@@ -399,10 +401,11 @@ describe('validateOp', () => {
   });
 
   it('rejects SetBlockPosition with invalid position', () => {
+    const invalidPosition = { x: 'invalid' as unknown as number, y: 200 };
     const op: Op = {
       type: 'SetBlockPosition',
       blockId: 'block-1',
-      prev: { x: 'invalid' as any, y: 200 },
+      prev: invalidPosition,
       next: { x: 150, y: 250 },
     };
 
@@ -432,13 +435,14 @@ describe('validateOp', () => {
   });
 
   it('rejects Many op with invalid nested op', () => {
+    const invalidEntity = { type: 'test' } as unknown as Block;
     const op: Op = {
       type: 'Many',
       ops: [
         {
           type: 'Add',
           table: 'blocks',
-          entity: { type: 'test' } as any, // Missing id
+          entity: invalidEntity, // Missing id
         },
       ],
     };

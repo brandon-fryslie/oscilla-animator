@@ -20,14 +20,24 @@ import { executeRenderAssemble } from "../steps/executeRenderAssemble";
 import { createRuntimeState } from "../RuntimeState";
 import type { StepRenderAssemble, CompiledProgramIR } from "../../../compiler/ir";
 
+interface TestContext {
+  program: CompiledProgramIR;
+  runtime: ReturnType<typeof createRuntimeState>;
+  step: StepRenderAssemble;
+}
+
+interface AnyObject {
+  [key: string]: unknown;
+}
+
 // Helper to create test program and runtime with pre-configured slots
-function createTestContext(outFrameSlot: number = 100) {
+function createTestContext(outFrameSlot: number = 100): TestContext {
   const renderAssembleStep: StepRenderAssemble = {
     kind: "renderAssemble",
-    id: "render-assemble" as any,
+    id: "render-assemble" as unknown as never,
     deps: [],
-    instance2dListSlot: 0 as any,
-    pathBatchListSlot: 1 as any,
+    instance2dListSlot: 0 as unknown as never,
+    pathBatchListSlot: 1 as unknown as never,
     outFrameSlot,
   };
 
@@ -71,10 +81,10 @@ describe("executeRenderAssemble - Core Functionality", () => {
     const { runtime, step } = createTestContext();
 
     // Execute assembly
-    executeRenderAssemble(step, {} as any, runtime);
+    executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
 
     // Verify assembled frame in output slot
-    const frame = runtime.values.read(100) as any;
+    const frame = runtime.values.read(100) as AnyObject;
     expect(frame).toBeDefined();
     expect(frame.version).toBe(1);
     expect(Array.isArray(frame.passes)).toBe(true);
@@ -84,21 +94,22 @@ describe("executeRenderAssemble - Core Functionality", () => {
     const { runtime, step } = createTestContext();
 
     // With no batches in step or slots, passes should be empty
-    executeRenderAssemble(step, {} as any, runtime);
+    executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
 
-    const frame = runtime.values.read(100) as any;
+    const frame = runtime.values.read(100) as AnyObject;
     expect(frame.passes).toEqual([]);
   });
 
   it("includes clear mode in assembled frame", () => {
     const { runtime, step } = createTestContext();
 
-    executeRenderAssemble(step, {} as any, runtime);
+    executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
 
-    const frame = runtime.values.read(100) as any;
+    const frame = runtime.values.read(100) as AnyObject;
     expect(frame.clear).toBeDefined();
-    expect(frame.clear.mode).toBe("color");
-    expect(frame.clear.colorRGBA).toBe(0x000000FF); // Black background
+    const clear = frame.clear as AnyObject;
+    expect(clear.mode).toBe("color");
+    expect(clear.colorRGBA).toBe(0x000000FF); // Black background
   });
 });
 
@@ -108,7 +119,7 @@ describe("executeRenderAssemble - Error Handling", () => {
 
     // No batches provided - should still execute successfully
     expect(() => {
-      executeRenderAssemble(step, {} as any, runtime);
+      executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
     }).not.toThrow();
 
     // Verify frame was assembled
@@ -153,16 +164,16 @@ describe("executeRenderAssemble - Error Handling", () => {
 
     const step: StepRenderAssemble = {
       kind: "renderAssemble",
-      id: "render-assemble" as any,
+      id: "render-assemble" as unknown as never,
       deps: [],
-      instance2dListSlot: 0 as any,
-      pathBatchListSlot: 1 as any,
+      instance2dListSlot: 0 as unknown as never,
+      pathBatchListSlot: 1 as unknown as never,
       outFrameSlot: 9999, // Not allocated
     };
 
     // ValueStore throws when slot not in slotMeta
     expect(() => {
-      executeRenderAssemble(step, {} as any, runtime);
+      executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
     }).toThrow(/slot.*not found/i);
   });
 });
@@ -172,9 +183,9 @@ describe("executeRenderAssemble - Integration", () => {
     const { runtime, step } = createTestContext();
 
     // Execute with no batches - should produce empty frame
-    executeRenderAssemble(step, {} as any, runtime);
+    executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
 
-    const frame = runtime.values.read(100) as any;
+    const frame = runtime.values.read(100) as AnyObject;
     expect(frame).toBeDefined();
     expect(frame.version).toBe(1);
     expect(frame.passes).toEqual([]);
@@ -184,23 +195,23 @@ describe("executeRenderAssemble - Integration", () => {
     const { runtime, step } = createTestContext();
 
     // Execute assembly
-    executeRenderAssemble(step, {} as any, runtime);
+    executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
 
     // Verify frame structure
-    const frame = runtime.values.read(100) as any;
+    const frame = runtime.values.read(100) as AnyObject;
     expect(frame).toMatchObject({
       version: 1,
-      clear: expect.anything(),
-      passes: expect.any(Array),
+      clear: expect.anything() as unknown,
+      passes: expect.any(Array) as unknown[],
     });
   });
 
   it("produces empty passes array by default", () => {
     const { runtime, step } = createTestContext();
 
-    executeRenderAssemble(step, {} as any, runtime);
+    executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
 
-    const frame = runtime.values.read(100) as any;
+    const frame = runtime.values.read(100) as AnyObject;
     expect(frame.passes).toEqual([]);
   });
 });
@@ -211,10 +222,10 @@ describe("executeRenderAssemble - Spec Compliance", () => {
 
     // Step should execute quickly - no heavy computation
     // It assembles passes from batch lists (which may be empty)
-    executeRenderAssemble(step, {} as any, runtime);
+    executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
 
     // Verify an assembled frame is written to output slot
-    const frame = runtime.values.read(100) as any;
+    const frame = runtime.values.read(100) as AnyObject;
     expect(frame).toBeDefined();
     expect(frame.version).toBe(1);
     expect(Array.isArray(frame.passes)).toBe(true);
@@ -224,7 +235,7 @@ describe("executeRenderAssemble - Spec Compliance", () => {
     const { runtime, step } = createTestContext();
 
     // The step provides a stable output slot for hot-swap
-    executeRenderAssemble(step, {} as any, runtime);
+    executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
 
     // Verify step writes to the expected output slot
     const frame = runtime.values.read(100);
@@ -236,14 +247,16 @@ describe("executeRenderAssemble - Spec Compliance", () => {
     const { runtime: runtime2, step: step2 } = createTestContext();
 
     // Execute with same inputs should produce same structure
-    executeRenderAssemble(step1, {} as any, runtime1);
-    executeRenderAssemble(step2, {} as any, runtime2);
+    executeRenderAssemble(step1, {} as unknown as CompiledProgramIR, runtime1);
+    executeRenderAssemble(step2, {} as unknown as CompiledProgramIR, runtime2);
 
-    const frame1 = runtime1.values.read(100) as any;
-    const frame2 = runtime2.values.read(100) as any;
+    const frame1 = runtime1.values.read(100) as AnyObject;
+    const frame2 = runtime2.values.read(100) as AnyObject;
 
     // Same structure (though not same reference)
     expect(frame1.version).toBe(frame2.version);
-    expect(frame1.passes.length).toBe(frame2.passes.length);
+    const passes1 = frame1.passes as unknown[];
+    const passes2 = frame2.passes as unknown[];
+    expect(passes1.length).toBe(passes2.length);
   });
 });

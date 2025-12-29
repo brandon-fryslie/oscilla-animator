@@ -225,14 +225,14 @@ describe("Type Adapter - Runtime to Compiler", () => {
 
   describe("Error handling", () => {
     it("should throw for unknown runtime type kind", () => {
-      const runtime = { kind: "unknown" } as any;
+      const runtime = { kind: "unknown" } as unknown as RuntimeTypeDesc;
       expect(() => runtimeToCompilerType(runtime)).toThrow(
         RuntimeTypeConversionError
       );
     });
 
     it("should include runtime type in error message", () => {
-      const runtime = { kind: "invalid" } as any;
+      const runtime = { kind: "invalid" } as unknown as RuntimeTypeDesc;
       try {
         runtimeToCompilerType(runtime);
         expect.fail("Should have thrown");

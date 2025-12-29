@@ -88,8 +88,9 @@ export class HistoryBlock implements StateBlock {
   }
 
   initState(frame: number): StateMemory {
+    const buffer: number[] = new Array(this.params.depth).fill(0) as number[];
     const state: HistoryState = {
-      buffer: new Array(this.params.depth).fill(0),
+      buffer,
       writeIndex: 0,
       frameCounter: 0,
     };

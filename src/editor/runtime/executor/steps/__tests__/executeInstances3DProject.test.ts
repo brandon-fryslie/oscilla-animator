@@ -60,14 +60,14 @@ function createPerspectiveViewProj(): Float32Array {
 /**
  * Create domain handle
  */
-function createDomain(count: number) {
+function createDomain(count: number): { kind: "domain"; count: number } {
   return { kind: "domain" as const, count };
 }
 
 /**
  * Create buffer handle
  */
-function createBufferHandle(data: ArrayBufferView) {
+function createBufferHandle(data: ArrayBufferView): { kind: "buffer"; data: ArrayBufferView } {
   return { kind: "buffer" as const, data };
 }
 

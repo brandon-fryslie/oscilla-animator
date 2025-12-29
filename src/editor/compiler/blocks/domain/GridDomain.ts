@@ -8,7 +8,7 @@
  * Base positions (pos0) are deterministic based on grid parameters.
  */
 
-import type { BlockCompiler, Vec2, Domain } from '../../types';
+import type { BlockCompiler, Vec2, Domain, Artifact, RuntimeCtx } from '../../types';
 import { createDomain } from '../../unified/Domain';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
@@ -135,24 +135,32 @@ export const GridDomainBlock: BlockCompiler = {
 
   compile({ id, inputs, params }) {
     // Helper to extract numeric value from Scalar or Signal artifacts, with default fallback
-    const extractNumber = (artifact: any, defaultValue: number): number => {
-      if (!artifact) return defaultValue;
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:number') return Number(artifact.value);
       if (artifact.kind === 'Signal:number') {
         // Signal artifacts have .value as a function - call with t=0 for compile-time value
-        return Number(artifact.value(0, {}));
+        const runtimeCtx: RuntimeCtx = { viewport: { w: 1920, h: 1080, dpr: 1 } };
+        return Number(artifact.value(0, runtimeCtx));
       }
       // Generic fallback for other artifact types that might have callable or direct values
-      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+      if ('value' in artifact && artifact.value !== undefined) {
+        const runtimeCtx: RuntimeCtx = { viewport: { w: 1920, h: 1080, dpr: 1 } };
+        return typeof artifact.value === 'function'
+          ? Number((artifact.value as (t: number, ctx: RuntimeCtx) => number)(0, runtimeCtx))
+          : Number(artifact.value);
+      }
+      return defaultValue;
     };
 
     // Read from inputs with defaults matching IR lowering
     // Support both new (inputs) and old (params) parameter systems
-    const rows = Math.max(1, Math.floor(extractNumber(inputs.rows, (params as any)?.rows ?? 10)));
-    const cols = Math.max(1, Math.floor(extractNumber(inputs.cols, (params as any)?.cols ?? 10)));
-    const spacing = extractNumber(inputs.spacing, (params as any)?.spacing ?? 20);
-    const originX = extractNumber(inputs.originX, (params as any)?.originX ?? 100);
-    const originY = extractNumber(inputs.originY, (params as any)?.originY ?? 100);
+    const paramsObj = params as { rows?: number; cols?: number; spacing?: number; originX?: number; originY?: number } | undefined;
+    const rows = Math.max(1, Math.floor(extractNumber(inputs.rows, paramsObj?.rows ?? 10)));
+    const cols = Math.max(1, Math.floor(extractNumber(inputs.cols, paramsObj?.cols ?? 10)));
+    const spacing = extractNumber(inputs.spacing, paramsObj?.spacing ?? 20);
+    const originX = extractNumber(inputs.originX, paramsObj?.originX ?? 100);
+    const originY = extractNumber(inputs.originY, paramsObj?.originY ?? 100);
 
     const elementCount = rows * cols;
 

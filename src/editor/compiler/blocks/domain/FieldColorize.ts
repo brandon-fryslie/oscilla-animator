@@ -82,7 +82,9 @@ const lowerFieldColorize: BlockLowerFn = ({ inputs, config }) => {
   // - Color constant support
   // - Color string encoding/decoding
 
-  const mode = (config as any)?.mode || 'lerp';
+  const mode = (config != null && typeof config === 'object' && 'mode' in config)
+    ? String(config.mode)
+    : 'lerp';
 
   throw new Error(
     `FieldColorize IR lowering requires field-level color operations (mode: ${mode}). ` +

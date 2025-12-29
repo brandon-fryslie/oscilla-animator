@@ -84,13 +84,13 @@ export class RuntimeAdapter {
     // Evaluate in dependency order
     for (const nodeId of this.compilation.evaluationOrder) {
       const block = this.compilation.blocks.find((b) => b.id === nodeId);
-      if (block) {
+      if (block != null) {
         this.evaluateBlock(block, ctx);
         continue;
       }
 
       const bus = this.compilation.buses.find((b) => b.id === nodeId);
-      if (bus) {
+      if (bus != null) {
         this.evaluateBus(bus, ctx);
       }
     }
@@ -129,7 +129,7 @@ export class RuntimeAdapter {
 
     for (const pub of bus.publishers) {
       const blockOutputs = this.blockOutputs.get(pub.blockId);
-      if (blockOutputs) {
+      if (blockOutputs != null) {
         const key = `${pub.blockId}.${pub.port}`;
         inputs[key] = blockOutputs[pub.port];
       }
@@ -156,7 +156,7 @@ export class RuntimeAdapter {
     for (const edge of edges) {
       if (edge.to === blockId && edge.type === 'connection') {
         const sourceOutputs = this.blockOutputs.get(edge.from);
-        if (sourceOutputs) {
+        if (sourceOutputs != null) {
           // For now, assume single output port or standard naming
           // In a full implementation, we'd track port names in edges
           Object.assign(inputs, sourceOutputs);
@@ -191,12 +191,12 @@ export class RuntimeAdapter {
       const nodeId = this.compilation.evaluationOrder[i];
       const outputs = this.blockOutputs.get(nodeId);
 
-      if (outputs) {
+      if (outputs != null) {
         // Try common output port names
         const tree =
           outputs.renderTree ?? outputs.output ?? outputs.tree ?? outputs.result;
 
-        if (tree && this.isRenderTree(tree)) {
+        if (tree != null && this.isRenderTree(tree)) {
           return tree as RenderTree;
         }
       }
@@ -214,8 +214,8 @@ export class RuntimeAdapter {
    * Type guard for RenderTree.
    */
   private isRenderTree(value: unknown): boolean {
-    if (!value || typeof value !== 'object') return false;
-    const node = value as any;
+    if (value == null || typeof value !== 'object') return false;
+    const node = value as Record<string, unknown>;
     return (
       (node.kind === 'group' || node.kind === 'shape' || node.kind === 'effect') &&
       typeof node.id === 'string'

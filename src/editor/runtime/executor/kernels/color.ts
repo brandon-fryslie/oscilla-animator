@@ -118,7 +118,7 @@ export function colorShiftHue(color: string, hueShift: number): string {
  */
 export function colorLerp(color1: string, color2: string, t: number): string {
   // Parse RGB components
-  const parseColor = (hex: string) => {
+  const parseColor = (hex: string): { r: number; g: number; b: number } => {
     const cleaned = hex.replace(/^#/, '');
     const num = parseInt(cleaned, 16);
     return {

@@ -295,7 +295,7 @@ function computeNextValueSlot(builderIR: BuilderProgramIR): number {
   }
 
   // Check time slots
-  if (builderIR.timeSlots) {
+  if (builderIR.timeSlots !== undefined) {
     const timeSlotValues = [
       builderIR.timeSlots.systemTime,
       builderIR.timeSlots.tAbsMs,

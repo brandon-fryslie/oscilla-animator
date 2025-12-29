@@ -9,7 +9,7 @@
  * - u: Signal<unit> clamped [0,1] progress for envelopes
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
+import type { BlockCompiler, RuntimeCtx, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 import { OpCode } from '../../ir/opcodes';
@@ -37,9 +37,9 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error(`PhaseClock: expected sig input for tIn, got ${tIn.k}`);
   }
 
-  const configData = (config as any) || {};
-  const periodSec = Number(configData.period);
-  const mode = String(configData.mode);
+  const cfg = config as { period?: number; mode?: string } | undefined;
+  const periodSec = cfg?.period ?? 1;
+  const mode = cfg?.mode ?? 'loop';
 
   if (periodSec <= 0) {
     throw new Error('PhaseClock: period must be > 0');
@@ -166,9 +166,42 @@ export const PhaseClockBlock: BlockCompiler = {
       };
     }
 
-    // Read from inputs - values come from defaultSource or explicit connections
-    const periodSec = Number((inputs.period as any)?.value);
-    const mode = String((inputs.mode as any)?.value);
+    // Helper to extract values from artifacts
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
+      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
+        return Number(artifact.value);
+      }
+      if ('value' in artifact && artifact.value !== undefined) {
+        return typeof artifact.value === 'function'
+          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
+          : Number(artifact.value);
+      }
+      return defaultValue;
+    };
+
+    const extractString = (artifact: Artifact | undefined, defaultValue: string): string => {
+      if (artifact === undefined) return defaultValue;
+      if (artifact.kind === 'Scalar:string') {
+        return String(artifact.value);
+      }
+      if ('value' in artifact && artifact.value !== undefined) {
+        const val = artifact.value;
+        if (typeof val === 'string') {
+          return val;
+        }
+        if (typeof val === 'function') {
+          return String((val as (t: number, ctx: object) => string)(0, {}));
+        }
+        if (typeof val === 'number' || typeof val === 'boolean') {
+          return String(val);
+        }
+      }
+      return defaultValue;
+    };
+
+    const periodSec = extractNumber(inputs.period, 1);
+    const mode = extractString(inputs.mode, 'loop');
 
     if (periodSec <= 0) {
       return {

@@ -22,7 +22,8 @@ const lowerFieldConstColor: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // Extract color from config (params are now passed as config)
   const configObj = config as { color?: unknown } | undefined;
-  const color = String(configObj?.color ?? '#000000');
+  const colorValue = configObj?.color;
+  const color = typeof colorValue === 'string' ? colorValue : '#000000';
 
   const outType = { world: 'field' as const, domain: 'color' as const };
   const fieldId = ctx.b.fieldConst(color, outType);
@@ -74,7 +75,9 @@ export const FieldConstColorBlock: BlockCompiler = {
     const domain = domainArtifact.value;
 
     // Read from inputs - values come from defaultSource or explicit connections
-    const color = String((inputs.color as any)?.value);
+    const colorArtifact = inputs.color;
+    const colorValue = colorArtifact !== undefined && 'value' in colorArtifact ? colorArtifact.value : '#000000';
+    const color = typeof colorValue === 'string' ? colorValue : String(colorValue);
 
     // Create constant field that returns the same color for all elements
     const field: Field<unknown> = (_seed, n) => {

@@ -43,7 +43,7 @@ export const ProbeCard = observer(function ProbeCard({ target, position }: Probe
 
   if (target.type === 'bus') {
     const bus = busStore.buses.find(b => b.id === target.busId);
-    if (!bus) {
+    if (bus === undefined) {
       return null;
     }
 
@@ -65,7 +65,7 @@ export const ProbeCard = observer(function ProbeCard({ target, position }: Probe
         <div className="probe-card-body">
           <div className="probe-card-row">
             <span className="probe-card-label">Type:</span>
-            <span className="probe-card-value">{bus.type?.domain || 'unknown'}</span>
+            <span className="probe-card-value">{bus.type?.domain ?? 'unknown'}</span>
           </div>
 
           <div className="probe-card-row">
@@ -78,13 +78,13 @@ export const ProbeCard = observer(function ProbeCard({ target, position }: Probe
             <span className="probe-card-value">{listenerCount}</span>
           </div>
 
-          {busValue && (
+          {busValue !== undefined && busValue !== null && (
             <div className="probe-card-meter">
-              <BusValueMeter value={busValue} busType={bus.type?.domain || 'number'} />
+              <BusValueMeter value={busValue} busType={bus.type?.domain ?? 'number'} />
             </div>
           )}
 
-          {!busValue && (
+          {(busValue === undefined || busValue === null) && (
             <div className="probe-card-no-value">
               No live value available
             </div>
@@ -96,7 +96,7 @@ export const ProbeCard = observer(function ProbeCard({ target, position }: Probe
 
   if (target.type === 'block') {
     const block = patchStore.blocks.find(b => b.id === target.blockId);
-    if (!block) {
+    if (block === undefined) {
       return null;
     }
 
@@ -104,7 +104,7 @@ export const ProbeCard = observer(function ProbeCard({ target, position }: Probe
       <div className="probe-card" style={style}>
         <div className="probe-card-header">
           <span className="probe-card-type">Block</span>
-          <span className="probe-card-name">{block.label || block.type}</span>
+          <span className="probe-card-name">{(block.label !== undefined && block.label.length > 0) ? block.label : block.type}</span>
         </div>
 
         <div className="probe-card-body">

@@ -104,7 +104,7 @@ export class MemoCache {
   /**
    * Get cached value.
    */
-  get(exprNodeId: string, elementId: ElementId, frame: number): unknown | undefined {
+  get(exprNodeId: string, elementId: ElementId, frame: number): unknown {
     const key = `${exprNodeId}:${elementId}:${frame}`;
     return this.cache.get(key);
   }
@@ -205,7 +205,7 @@ export function evaluateFieldExpr<T>(
     case 'source': {
       // Get source artifact (pre-computed array or FieldExpr)
       const artifact = evalCtx.artifacts.get(expr.sourceId);
-      if (!artifact) {
+      if (artifact == null) {
         throw new Error(`Source artifact not found: ${expr.sourceId}`);
       }
 
@@ -222,7 +222,7 @@ export function evaluateFieldExpr<T>(
     case 'map': {
       const srcValue = evaluateFieldExpr(expr.src, elementId, timeCtx, evalCtx);
       const fn = functionRegistry.get(expr.fnId);
-      if (!fn) {
+      if (fn == null) {
         throw new Error(`Function not found: ${expr.fnId}`);
       }
       result = fn(srcValue, expr.params ?? {}, elementId, timeCtx) as T;
@@ -233,7 +233,7 @@ export function evaluateFieldExpr<T>(
       const aValue = evaluateFieldExpr(expr.a, elementId, timeCtx, evalCtx);
       const bValue = evaluateFieldExpr(expr.b, elementId, timeCtx, evalCtx);
       const fn = functionRegistry.get(expr.fnId);
-      if (!fn) {
+      if (fn == null) {
         throw new Error(`Function not found: ${expr.fnId}`);
       }
       result = fn(aValue, bValue, elementId, timeCtx) as T;
@@ -254,7 +254,7 @@ export function evaluateFieldExpr<T>(
     case 'adapter': {
       const srcValue = evaluateFieldExpr(expr.src, elementId, timeCtx, evalCtx);
       const fn = functionRegistry.get(expr.fnId);
-      if (!fn) {
+      if (fn == null) {
         throw new Error(`Adapter function not found: ${expr.fnId}`);
       }
       result = fn(srcValue) as T;

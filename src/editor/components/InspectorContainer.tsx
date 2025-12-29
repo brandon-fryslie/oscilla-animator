@@ -8,7 +8,7 @@
  * - Consistent header/body structure
  */
 
-import type { ReactNode } from 'react';
+import type { ReactNode, JSX } from 'react';
 import './InspectorContainer.css';
 
 export interface InspectorContainerProps {
@@ -39,12 +39,12 @@ export function InspectorContainer({
   backLabel = 'Back',
   children,
   className = '',
-}: InspectorContainerProps) {
+}: InspectorContainerProps): JSX.Element {
   return (
     <div className={`inspector-container ${className}`}>
       <div className="inspector-container-header" style={{ borderLeftColor: color }}>
         <div className="inspector-header-top">
-          {onBack && (
+          {onBack !== undefined && (
             <button
               className="inspector-back-btn"
               onClick={onBack}
@@ -53,7 +53,7 @@ export function InspectorContainer({
               ← {backLabel}
             </button>
           )}
-          {onBack && (
+          {onBack !== undefined && (
             <button
               className="inspector-close-btn"
               onClick={onBack}
@@ -65,13 +65,13 @@ export function InspectorContainer({
         </div>
         <div className="inspector-title-row">
           <span className="inspector-title">{title}</span>
-          {category && (
+          {(category !== undefined && category !== '') && (
             <span className="inspector-category" style={{ background: color }}>
               {category}
             </span>
           )}
         </div>
-        {typeCode && <code className="inspector-type-code">{typeCode}</code>}
+        {(typeCode !== undefined && typeCode !== '') && <code className="inspector-type-code">{typeCode}</code>}
       </div>
       <div className="inspector-container-body">
         {children}

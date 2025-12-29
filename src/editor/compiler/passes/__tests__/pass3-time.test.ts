@@ -49,7 +49,7 @@ function createBlock(
     label: `Block ${id}`,
     inputs: [],
     outputs: [],
-    params: params || {},
+    params: params ?? {},
     category: "Other",
   };
 }
@@ -295,7 +295,7 @@ describe("pass3TimeTopology", () => {
       busTypes.set("bus1", { world: "signal", domain: "number" });
 
       const patch = createPatchWithTimeRoot("FiniteTimeRoot");
-      (patch as any).busTypes = busTypes;
+      Object.assign(patch, { busTypes });
 
       const timeResolved = pass3TimeTopology(patch);
 

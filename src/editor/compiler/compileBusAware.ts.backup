@@ -23,7 +23,6 @@ import type {
   CompilerConnection,
   CompilerPatch,
   DrawNode,
-  PortRef,
   Program,
   RenderTree,
   RuntimeCtx,
@@ -31,7 +30,7 @@ import type {
   TimeModel,
   Vec2,
 } from './types';
-import type { Bus, Publisher, Listener, LensInstance, AdapterStep, DefaultSourceState } from '../types';
+import type { Bus, Publisher, Listener, LensInstance, AdapterStep, DefaultSourceState, PortRef } from '../types';
 import { validateTimeRootConstraint } from './compile';
 import { extractTimeRootAutoPublications } from './blocks/domain/TimeRoot';
 // CRITICAL: Use busSemantics for ordering - single source of truth for UI and compiler
@@ -55,6 +54,15 @@ import {
   pass7BusLowering,
   pass8LinkResolution,
 } from './passes';
+// IR Schedule Builder - converts BuilderProgramIR to CompiledProgramIR
+import { buildCompiledProgram } from './ir/buildSchedule';
+// Phase 4, Sprint 8: SignalExpr Runtime Integration
+import { extractSignalExprTable } from './ir/extractSignalExprTable';
+// Debug Infrastructure
+import { createDebugIndex } from '../debug';
+import { randomUUID } from '../crypto';
+// Domain support for default sources
+import { createSimpleDomain } from './unified/Domain';
 
 
 // =============================================================================
@@ -116,7 +124,7 @@ function topoSortBlocksWithBuses(
   listeners: Listener[],
   errors: CompileError[]
 ): readonly BlockId[] {
-  const ids = Array.from(patch.blocks.keys());
+  const ids = patch.blocks.map(b => b.id);
 
   // Build adjacency + indegree
   const adj = new Map<BlockId, Set<BlockId>>();
@@ -129,8 +137,8 @@ function topoSortBlocksWithBuses(
 
   // Add edges from wire connections
   for (const c of patch.connections) {
-    const a = c.from.blockId;
-    const b = c.to.blockId;
+    const a = c.from.block;
+    const b = c.to.block;
     if (!adj.has(a) || !adj.has(b)) continue;
     if (!adj.get(a)!.has(b)) {
       adj.get(a)!.add(b);
@@ -214,7 +222,7 @@ function topoSortBlocksWithBuses(
 function validateReservedBuses(
   buses: Bus[],
   _publishers: Publisher[],
-  _blocks: Map<string, BlockInstance>
+  _blocks: readonly BlockInstance[]
 ): CompileError[] {
   const errors: CompileError[] = [];
 
@@ -266,7 +274,7 @@ function compileIR(
       if (!def) {
         throw new Error(`Block definition not found for type: ${inst.type}`);
       }
-      
+
       // Type assertion for IR compilation - structure is compatible enough for passes
       return {
         id: inst.id,
@@ -282,16 +290,16 @@ function compileIR(
 
     // Convert to CompilerConnection format (uses 'port' not 'slotId')
     const connectionsArray: import('./types').CompilerConnection[] = patch.connections.map((conn) => ({
-      id: conn.id || `${conn.from.blockId}:${conn.from.port}->${conn.to.blockId}:${conn.to.port}`,
-      from: { blockId: conn.from.blockId, port: conn.from.port },
-      to: { blockId: conn.to.blockId, port: conn.to.port },
+      id: conn.id || `${conn.from.block}:${conn.from.port}->${conn.to.block}:${conn.to.port}`,
+      from: { block: conn.from.block, port: conn.from.port },
+      to: { block: conn.to.block, port: conn.to.port },
     }));
 
     // Create Connection[] for Patch (passes 1-5)
     const patchConnections: import('../types').Connection[] = patch.connections.map((conn) => ({
-      id: conn.id || `${conn.from.blockId}:${conn.from.port}->${conn.to.blockId}:${conn.to.port}`,
-      from: { blockId: conn.from.blockId, slotId: conn.from.port, direction: 'output' as const },
-      to: { blockId: conn.to.blockId, slotId: conn.to.port, direction: 'input' as const },
+      id: conn.id || `${conn.from.block}:${conn.from.port}->${conn.to.block}:${conn.to.port}`,
+      from: { blockId: conn.from.block, slotId: conn.from.port, direction: 'output' as const },
+      to: { blockId: conn.to.block, slotId: conn.to.port, direction: 'input' as const },
     }));
 
     const patchForIR: import('../types').Patch = {
@@ -299,16 +307,19 @@ function compileIR(
       blocks: blocksArray,
       connections: patchConnections,
       lanes: [], // Not needed for IR passes
-      buses: patch.buses,
-      publishers: patch.publishers,
-      listeners: patch.listeners,
-      defaultSources: Object.entries(patch.defaultSources).map(([slotId, state]) => ({
-        id: slotId,
-        type: state.type,
-        value: state.value,
-        uiHint: state.uiHint,
-        rangeHint: state.rangeHint,
-      })),
+      buses: [...patch.buses],
+      publishers: [...patch.publishers],
+      listeners: [...patch.listeners],
+      defaultSources: Object.entries(patch.defaultSources ?? {}).map(([slotId, state]) => {
+        const s = state as { type?: unknown; value?: unknown; uiHint?: unknown; rangeHint?: unknown };
+        return {
+          id: slotId,
+          type: (s.type ?? { world: 'signal', domain: 'number', category: 'core' }) as import('../types').TypeDesc,
+          value: s.value,
+          uiHint: s.uiHint as import('../types').UIControlHint | undefined,
+          rangeHint: s.rangeHint as { min?: number; max?: number; step?: number; log?: boolean } | undefined,
+        };
+      }),
       settings: { seed: 0, speed: 1 },
     };
 
@@ -316,12 +327,12 @@ function compileIR(
     const normalized = pass1Normalize(patchForIR);
     const typed = pass2TypeGraph(normalized);
     const timeResolved = pass3TimeTopology(typed);
-    const depGraph = pass4DepGraph(timeResolved);
-    const validated = pass5CycleValidation(depGraph, patchForIR.blocks);
+    const depGraphWithTime = pass4DepGraph(timeResolved);
+    const validated = pass5CycleValidation(depGraphWithTime, patchForIR.blocks);
 
     // Run Passes 6-8: Block Lowering → Bus Lowering → Link Resolution
     const unlinked = pass6BlockLowering(validated, patchForIR.blocks, compiledPortMap);
-    const withBuses = pass7BusLowering(unlinked, patchForIR.buses, patchForIR.publishers);
+    const withBuses = pass7BusLowering(unlinked, patchForIR.buses, patchForIR.publishers, patchForIR.blocks);
     const linked = pass8LinkResolution(
       withBuses,
       patchForIR.blocks,
@@ -362,23 +373,23 @@ function compileIR(
 export function compileBusAwarePatch(
   patch: CompilerPatch,
   registry: BlockRegistry,
-  _seed: Seed,
+  seed: Seed,
   ctx: CompileCtx,
   options?: { emitIR?: boolean }
 ): CompileResult {
   const errors: CompileError[] = [];
-  const buses = patch.buses;
-  let publishers = patch.publishers;
-  const listeners = patch.listeners;
+  const buses = [...patch.buses];
+  let publishers = [...patch.publishers];
+  const listeners = [...patch.listeners];
   const defaultSources = new Map<string, DefaultSourceState>(
-    Object.entries(patch.defaultSources)
+    Object.entries(patch.defaultSources ?? {}) as [string, DefaultSourceState][]
   );
   const defaultSourceValues = patch.defaultSourceValues ?? {};
 
   // =============================================================================
   // 0. Empty patch check
   // =============================================================================
-  if (patch.blocks.size === 0 && buses.length === 0) {
+  if (patch.blocks.length === 0 && buses.length === 0) {
     return {
       ok: false,
       errors: [{ code: 'EmptyPatch', message: 'Patch is empty - add some blocks to compile.' }],
@@ -406,7 +417,8 @@ export function compileBusAwarePatch(
   // =============================================================================
   const autoPublications: Publisher[] = [];
 
-  for (const [blockId, block] of patch.blocks.entries()) {
+  for (const block of patch.blocks) {
+    const blockId = block.id;
     if (['FiniteTimeRoot', 'CycleTimeRoot', 'InfiniteTimeRoot'].includes(block.type)) {
       // Compile the TimeRoot block to get its outputs
       const compiler = registry[block.type];
@@ -486,12 +498,12 @@ export function compileBusAwarePatch(
   // =============================================================================
   // 4. Validate block types exist in registry
   // =============================================================================
-  for (const [id, b] of patch.blocks.entries()) {
+  for (const b of patch.blocks) {
     if (registry[b.type] === undefined) {
       errors.push({
         code: 'CompilerMissing',
         message: `No compiler registered for block type "${b.type}"`,
-        where: { blockId: id },
+        where: { blockId: b.id },
       });
     }
   }
@@ -519,7 +531,7 @@ export function compileBusAwarePatch(
   // =============================================================================
   // Validate wire connection source ports
   for (const conn of patch.connections) {
-    const fromBlock = patch.blocks.get(conn.from.blockId);
+    const fromBlock = patch.blocks.find(b => b.id === conn.from.block);
     if (fromBlock === undefined) continue; // Block existence already validated in step 2
 
     const compiler = registry[fromBlock.type];
@@ -529,15 +541,15 @@ export function compileBusAwarePatch(
     if (!portExists) {
       errors.push({
         code: 'PortMissing',
-        message: `Block ${conn.from.blockId} (${fromBlock.type}) does not have output port '${conn.from.port}' (referenced by wire connection)`,
-        where: { blockId: conn.from.blockId, port: conn.from.port },
+        message: `Block ${conn.from.block} (${fromBlock.type}) does not have output port '${conn.from.port}' (referenced by wire connection)`,
+        where: { blockId: conn.from.block, port: conn.from.port },
       });
     }
   }
 
   // Validate publisher source ports
   for (const pub of publishers) {
-    const fromBlock = patch.blocks.get(pub.from.blockId);
+    const fromBlock = patch.blocks.find(b => b.id === pub.from.blockId);
     if (fromBlock === undefined) continue; // Block existence already validated
 
     const compiler = registry[fromBlock.type];
@@ -567,7 +579,7 @@ export function compileBusAwarePatch(
   const compiledPortMap = new Map<string, Artifact>();
 
   for (const blockId of order) {
-    const block = patch.blocks.get(blockId);
+    const block = patch.blocks.find(b => b.id === blockId);
     if (block === undefined) {
       errors.push({
         code: 'BlockMissing',
@@ -596,15 +608,42 @@ export function compileBusAwarePatch(
 
       if (wireConn !== null && wireConn !== undefined) {
         // Wire takes precedence over bus
-        const srcKey = keyOf(wireConn.from.blockId, wireConn.from.port);
-        const src = compiledPortMap.get(srcKey);
-        const errorArtifact: Artifact = src ?? {
-          kind: 'Error',
-          message: `Missing upstream artifact for ${srcKey}`,
-          where: { blockId: wireConn.from.blockId, port: wireConn.from.port },
-        };
-        inputs[p.name] = errorArtifact;
-      } else {
+        // Skip disabled connections
+        if (wireConn.enabled === false) {
+          // Connection is disabled - treat as if no connection exists
+          // Fall through to check for bus listener or default source
+        } else {
+          const srcKey = keyOf(wireConn.from.block, wireConn.from.port);
+          let src = compiledPortMap.get(srcKey);
+          if (src === null || src === undefined) {
+            src = {
+              kind: 'Error',
+              message: `Missing upstream artifact for ${srcKey}`,
+            };
+          } else {
+            // Apply adapter chain first, then lens stack (matching bus listener pattern)
+            if (wireConn.adapterChain && wireConn.adapterChain.length > 0) {
+              src = applyAdapterChain(src, wireConn.adapterChain, ctx, errors);
+            }
+            if (wireConn.lensStack && wireConn.lensStack.length > 0) {
+              src = applyLensStack(
+                src,
+                wireConn.lensStack,
+                ctx,
+                defaultSources,
+                buses,
+                publishers,
+                compiledPortMap,
+                errors
+              );
+            }
+          }
+          inputs[p.name] = src;
+          continue; // Move to next input port
+        }
+      }
+      // No wire connection (or wire disabled) - check for bus listener
+      {
         // Check for bus listener
         const busListener = listeners.find(
           l => l.enabled && l.to.blockId === blockId && l.to.slotId === p.name
@@ -713,60 +752,128 @@ export function compileBusAwarePatch(
     return { ok: false, errors };
   }
 
-  const outArt = compiledPortMap.get(keyOf(outputRef.blockId, outputRef.port));
+  const outArt = compiledPortMap.get(keyOf(outputRef.blockId, outputRef.slotId));
   if (outArt === undefined || outArt === null) {
     errors.push({
       code: 'OutputMissing',
-      message: `Output artifact not found for ${outputRef.blockId}.${outputRef.port}`,
+      message: `Output artifact not found for ${outputRef.blockId}.${outputRef.slotId}`,
     });
     return { ok: false, errors };
   }
 
 
 /**
- * Helper to attach IR to a successful compile result if emitIR is enabled.
+ * Helper to attach IR to a successful compile result.
+ *
+ * IMPORTANT: When emitIR is true, IR compilation is MANDATORY.
+ * Failures throw errors instead of returning warnings.
+ * This ensures IR bugs are surfaced immediately, not masked by legacy fallback.
  */
 function attachIR(
   result: CompileResult,
   patch: CompilerPatch,
   compiledPortMap: Map<string, Artifact>,
-  emitIR: boolean
+  emitIR: boolean,
+  patchId: string,
+  patchRevision: number,
+  seed: number
 ): CompileResult {
   if (!emitIR) {
+    // IR not requested - return legacy-only result
+    // This is the only valid path for skipping IR
+    console.log('[IR] IR compilation not enabled, using legacy-only mode');
     return result;
   }
 
+  // IR is MANDATORY when enabled - failures are fatal errors
+  console.log('[IR] Running MANDATORY IR compilation...');
   const ir = compileIR(patch, compiledPortMap);
+
   if (ir === undefined) {
-    // IR compilation failed - add warning but keep closure success
+    // IR compilation failed - this is now a FATAL error
+    const error: CompileError = {
+      code: 'IRValidationFailed',
+      message: 'IR compilation failed: compileIR returned undefined. IR is mandatory when enabled.',
+    };
+    console.error('[IR] FATAL: IR compilation failed (IR is mandatory)');
     return {
-      ...result,
-      irWarnings: [
-        {
-          code: 'IRValidationFailed',
-          message: 'IR compilation failed (see console for details)',
-        },
-      ],
+      ok: false,
+      errors: [error],
     };
   }
 
-  // Check for IR errors
+  // Check for IR errors - these are now FATAL
   if (ir.errors && ir.errors.length > 0) {
+    console.error('[IR] FATAL: IR has errors (IR is mandatory):', ir.errors);
+    const errors: CompileError[] = ir.errors.map(e => ({
+      code: 'IRValidationFailed',
+      message: `IR error: ${e.message || e.code}`,
+    }));
     return {
-      ...result,
-      ir,
-      irWarnings: ir.errors,
+      ok: false,
+      errors,
     };
   }
+
+  // Build CompiledProgramIR from LinkedGraphIR
+  // Call builder.build() to get BuilderProgramIR, then convert to CompiledProgramIR
+  console.log('[IR Debug] Building CompiledProgramIR...');
+  const builderIR = ir.builder.build();
+  const compiledIR = buildCompiledProgram(
+    builderIR,
+    patchId,
+    patchRevision,
+    seed
+  );
+  console.log('[IR Debug] CompiledProgramIR built successfully');
+
+  // Phase 4, Sprint 8: Extract SignalExprTable from LinkedGraphIR
+  // This enables SigEvaluator to execute IR-based signals at runtime
+  console.log('[IR Debug] Extracting SignalExprTable...');
+  const extracted = extractSignalExprTable(ir);
+  console.log('[IR Debug] SignalExprTable extraction complete:', extracted ? 'success' : 'null');
+
+  // Create and populate DebugIndex for debug infrastructure
+  const debugIndex = createDebugIndex(randomUUID(), patchRevision);
+
+  // Intern all blocks
+  for (const block of patch.blocks) {
+    debugIndex.internBlock(block.id);
+  }
+
+  // Intern all buses
+  for (const bus of patch.buses) {
+    debugIndex.internBus(bus.id);
+  }
+
+  // Intern all port keys from compiled port map
+  for (const portKey of compiledPortMap.keys()) {
+    debugIndex.internPort(portKey);
+  }
+
+  console.log(`[DebugIndex] Interned ${debugIndex.blockCount()} blocks, ${debugIndex.busCount()} buses, ${debugIndex.portCount()} ports`);
 
   return {
     ...result,
     ir,
+    programIR: compiledIR,  // Primary field for IR runtime
+    compiledIR,             // Legacy alias
+    debugIndex,
+    // Attach SignalExpr data if extraction succeeded
+    ...(extracted && {
+      signalTable: extracted.signalTable,
+      constPool: extracted.constPool,
+      stateLayout: extracted.stateLayout,
+    }),
   };
 }
 
   // Infer TimeModel from the patch
   const timeModel = inferTimeModel(patch);
+
+  // Get patch metadata for IR
+  const patchId = "patch-" + Array.from(patch.blocks.keys()).sort().join('-');
+  const patchRevision = 1; // TODO: Get from patch store
 
   // Accept RenderTreeProgram, RenderTree, or CanvasRender as output
   if (outArt.kind === 'RenderTreeProgram') {
@@ -774,7 +881,10 @@ function attachIR(
       { ok: true, program: outArt.value, timeModel, errors: [], compiledPortMap },
       patch,
       compiledPortMap,
-      options?.emitIR === true
+      options?.emitIR === true,
+      patchId,
+      patchRevision,
+      seed
     );
   }
 
@@ -789,7 +899,10 @@ function attachIR(
       { ok: true, program, timeModel, errors: [], compiledPortMap },
       patch,
       compiledPortMap,
-      options?.emitIR === true
+      options?.emitIR === true,
+      patchId,
+      patchRevision,
+      seed
     );
   }
 
@@ -808,14 +921,17 @@ function attachIR(
       },
       patch,
       compiledPortMap,
-      options?.emitIR === true
+      options?.emitIR === true,
+      patchId,
+      patchRevision,
+      seed
     );
   }
 
   errors.push({
     code: 'OutputWrongType',
     message: `Patch output must be RenderTreeProgram, RenderTree, or CanvasRender, got ${outArt.kind}`,
-    where: { blockId: outputRef.blockId, port: outputRef.port },
+    where: { blockId: outputRef.blockId, port: outputRef.slotId },
   });
   return { ok: false, errors };
 }
@@ -1032,7 +1148,7 @@ function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx
       if (artifact.kind === 'Scalar:boolean') {
         return {
           kind: 'Field:boolean',
-          value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
+          value: (_seed, n) => Array.from({ length: n}, () => artifact.value),
         };
       }
       return { kind: 'Error', message: `BroadcastScalarToField unsupported for ${artifact.kind}` };
@@ -1211,7 +1327,7 @@ function indexIncoming(
 ): Map<string, CompilerConnection[]> {
   const m = new Map<string, CompilerConnection[]>();
   for (const c of conns) {
-    const k = keyOf(c.to.blockId, c.to.port);
+    const k = keyOf(c.to.block, c.to.port);
     const arr = m.get(k) ?? [];
     arr.push(c);
     m.set(k, arr);
@@ -1228,9 +1344,10 @@ function inferOutputPort(
 
   // Map of all ports that feed something
   const fed = new Set<string>();
-  for (const c of patch.connections) fed.add(keyOf(c.from.blockId, c.from.port));
+  for (const c of patch.connections) fed.add(keyOf(c.from.block, c.from.port));
 
-  for (const [blockId, block] of patch.blocks.entries()) {
+  for (const block of patch.blocks) {
+    const blockId = block.id;
     const comp = registry[block.type];
     if (comp === null || comp === undefined) continue;
     for (const out of comp.outputs) {
@@ -1240,7 +1357,7 @@ function inferOutputPort(
       const k = keyOf(blockId, out.name);
       if (!compiled.has(k)) continue;
       if (fed.has(k)) continue;
-      produced.push({ blockId, port: out.name });
+      produced.push({ blockId, slotId: out.name, direction: 'output' as const });
     }
   }
 
@@ -1308,6 +1425,12 @@ function createDefaultArtifact(value: unknown, kind: string): Artifact {
       // Broadcast vec2 to field
       const vec = (value as Vec2) ?? { x: 0, y: 0 };
       return { kind: 'Field:vec2', value: (_s: Seed, n: number) => Array.from({ length: n }, () => vec) };
+    }
+    case 'Domain': {
+      // Create a simple domain with N elements (default 30 if not specified)
+      const count = typeof value === 'number' ? value : 30;
+      const domainId = `default-domain-${randomUUID().slice(0, 8)}`;
+      return { kind: 'Domain', value: createSimpleDomain(domainId, count) };
     }
     default:
       return { kind: 'Error', message: `Default source not supported for ${kind}` };

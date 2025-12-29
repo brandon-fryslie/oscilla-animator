@@ -8,7 +8,7 @@
  * into a uniformly distributed number in [0, 1).
  */
 
-import type { BlockCompiler, Field } from '../../types';
+import type { BlockCompiler, Field, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
@@ -33,7 +33,7 @@ function stableHash(str: string): number {
 const lowerStableIdHash: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Input[0]: domain
   const domainInput = inputs[0];
-  if (!domainInput || (domainInput.k !== 'special' || domainInput.tag !== 'domain')) {
+  if (domainInput === undefined || domainInput.k !== 'special' || domainInput.tag !== 'domain') {
     throw new Error('StableIdHash requires Domain input');
   }
 
@@ -107,15 +107,15 @@ export const StableIdHashBlock: BlockCompiler = {
     const domain = domainArtifact.value;
 
     // Helper to extract numeric value from artifact with default fallback
-    const extractNumber = (artifact: any, defaultValue: number): number => {
-      if (!artifact) return defaultValue;
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:number') return Number(artifact.value);
       // Generic fallback for other artifact types
-      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+      return typeof artifact.value === 'function' ? Number((artifact.value as (t: number, ctx: unknown) => unknown)(0, {})) : Number(artifact.value);
     };
 
     // Support both new (inputs) and old (params) parameter systems
-    const salt = extractNumber(inputs.salt, (params as any)?.salt ?? 0);
+    const salt = extractNumber(inputs.salt, (params as Record<string, unknown> | undefined)?.salt as number | undefined ?? 0);
 
     // Create field that produces stable hash per element
     const field: Field<number> = (_seed, n) => {

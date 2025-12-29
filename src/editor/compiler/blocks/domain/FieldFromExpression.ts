@@ -45,7 +45,7 @@ function createExpressionEvaluator(
       'hsl',
       'rgb',
       `"use strict"; return (${expression});`
-    );
+    ) as (i: number, n: number, signal: number, mathObj: typeof Math, hslFn: (h: number, s: number, l: number) => string, rgbFn: (r: number, g: number, b: number) => string) => unknown;
     return (i: number, n: number, signal: number) => {
       try {
         const result = fn(i, n, signal, Math, hsl, rgb);
@@ -88,7 +88,9 @@ const _lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
   // This block MUST remain in closure mode permanently.
   // For IR, users should use primitive blocks composed together instead of expressions.
 
-  const expression = (config as any)?.expression ?? 'hsl(i / n * 360 + signal * 360, 80, 60)';
+  const expression = (config != null && typeof config === 'object' && 'expression' in config)
+    ? String(config.expression)
+    : 'hsl(i / n * 360 + signal * 360, 80, 60)';
 
   throw new Error(
     `FieldFromExpression cannot be lowered to IR (expression: "${expression}"). ` +
@@ -153,7 +155,11 @@ export const FieldFromExpressionBlock: BlockCompiler = {
 
     const domain = domainArtifact.value;
     // Read from inputs - values come from defaultSource or explicit connections
-    const expression = String((inputs.expression as any)?.value);
+    const expressionArtifact = inputs.expression;
+    const expressionValue = expressionArtifact !== undefined && 'value' in expressionArtifact
+      ? expressionArtifact.value
+      : 'hsl(i / n * 360, 80, 60)';
+    const expression = typeof expressionValue === 'string' ? expressionValue : String(expressionValue);
     const evaluator = createExpressionEvaluator(expression);
 
     // Accept Signal:phase or Signal:number (both are numeric)
@@ -167,7 +173,7 @@ export const FieldFromExpressionBlock: BlockCompiler = {
       const runtimeCtx = ctx as FieldEvalCtx;
       const signalValue = signalFn(runtimeCtx.t, runtimeCtx as unknown as RuntimeCtx);
 
-      const result: string[] = new Array(count);
+      const result: string[] = new Array<string>(count);
       for (let i = 0; i < count; i++) {
         result[i] = evaluator(i, count, signalValue);
       }

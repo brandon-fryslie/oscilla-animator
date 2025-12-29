@@ -194,7 +194,7 @@ export class IRRuntimeAdapter {
         (c) => c.nodeId === oldCell.nodeId && c.role === oldCell.role,
       );
 
-      if (newCell) {
+      if (newCell !== undefined) {
         // Copy state value from old to new
         if (newCell.storage === "f64") {
           newRuntime.state.f64[newCell.offset] = oldStateF64[oldCell.offset];

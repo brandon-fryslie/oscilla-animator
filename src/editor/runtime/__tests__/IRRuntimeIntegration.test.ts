@@ -109,8 +109,8 @@ describe("IRRuntimeIntegration", () => {
       const adapter = new IRRuntimeAdapter(program);
 
       expect(adapter).toBeDefined();
-      expect(adapter.createProgram).toBeInstanceOf(Function);
-      expect(adapter.swapProgram).toBeInstanceOf(Function);
+      expect(typeof adapter.createProgram).toBe('function');
+      expect(typeof adapter.swapProgram).toBe('function');
     });
 
     it("should create Player with IR program", () => {

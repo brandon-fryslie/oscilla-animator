@@ -30,10 +30,10 @@ export const BusesTab = observer(function BusesTab() {
         return (
           <div key={bus.id} className="bus-row">
             <div className="bus-row-name">{bus.name}</div>
-            <div className="bus-row-type">{bus.type?.domain || 'unknown'}</div>
+            <div className="bus-row-type">{bus.type?.domain ?? 'unknown'}</div>
             <div className="bus-row-meter">
-              {busValue ? (
-                <BusValueMeter value={busValue} busType={bus.type?.domain || 'number'} />
+              {busValue !== undefined && busValue !== null ? (
+                <BusValueMeter value={busValue} busType={bus.type?.domain ?? 'number'} />
               ) : (
                 <span style={{ color: '#666', fontStyle: 'italic' }}>No value</span>
               )}

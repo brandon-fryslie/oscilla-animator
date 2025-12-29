@@ -68,8 +68,8 @@ export function extractTimeRootAutoPublications(
  * - sigWrapEvent() for end event
  */
 const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
-  const configData = (config as any) || {};
-  const durationMs = Number(configData.durationMs);
+  const configData = (config != null && typeof config === 'object') ? config : {};
+  const durationMs = 'durationMs' in configData ? Number(configData.durationMs) : 1000;
 
   // Allocate time-related slots upfront
   const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
@@ -129,9 +129,9 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
  * - sigWrapEvent() for wrap
  */
 const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
-  const configData = (config as any) || {};
-  const periodMs = Number(configData.periodMs);
-  const mode = String(configData.mode);
+  const configData = (config != null && typeof config === 'object') ? config : {};
+  const periodMs = 'periodMs' in configData ? Number(configData.periodMs) : 1000;
+  const mode = 'mode' in configData && typeof configData.mode === 'string' ? configData.mode : 'loop';
 
   // Allocate time-related slots upfront
   const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
@@ -206,8 +206,8 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
  * - sigWrapEvent() for pulse
  */
 const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
-  const configData = (config as any) || {};
-  const periodMs = Number(configData.periodMs);
+  const configData = (config != null && typeof config === 'object') ? config : {};
+  const periodMs = 'periodMs' in configData ? Number(configData.periodMs) : 1000;
 
   // Allocate time-related slots upfront
   const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
@@ -412,7 +412,8 @@ export const CycleTimeRootBlock: BlockCompiler = {
   compile({ params }): CompiledOutputs {
     // Read from params - block configuration values
     const periodMs = Number(params.periodMs ?? 3000);
-    const mode = String(params.mode ?? 'loop');
+    const modeValue = params.mode ?? 'loop';
+    const mode = typeof modeValue === 'string' ? modeValue : 'loop';
 
     // System time is identity
     const systemTime: SignalNumber = (tMs) => tMs;

@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
 import { runTx } from '../TxBuilder';
-import type { Block, Bus } from '../../types';
+import type { Block, Bus, Connection } from '../../types';
 
 describe('TxBuilder', () => {
   let rootStore: RootStore;
@@ -67,7 +67,9 @@ describe('TxBuilder', () => {
     it('throws if entity has no id', () => {
       expect(() => {
         runTx(rootStore, { label: 'Add Invalid' }, tx => {
-          tx.add('blocks', { type: 'test' } as any);
+          // Intentionally invalid entity for testing (missing id)
+          const invalidEntity = { type: 'test' } as unknown as Block;
+          tx.add('blocks', invalidEntity);
         });
       }).toThrow('without id');
     });
@@ -239,7 +241,10 @@ describe('TxBuilder', () => {
       expect(rootStore.patchStore.blocks).toHaveLength(2);
       expect(result.ops).toHaveLength(1);
       expect(result.ops[0].type).toBe('Many');
-      expect((result.ops[0] as any).ops).toHaveLength(2);
+      const manyOp = result.ops[0];
+      if (manyOp.type === 'Many') {
+        expect(manyOp.ops).toHaveLength(2);
+      }
     });
   });
 
@@ -275,7 +280,11 @@ describe('TxBuilder', () => {
       expect(() => {
         runTx(rootStore, { label: 'Invalid Op' }, tx => {
           // Directly push an invalid op (bypass add() validation)
-          (tx as any).ops.push({
+          // Access private ops array for testing validation
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+          const txWithOps = tx as any;
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+          txWithOps.ops.push({
             type: 'Add',
             table: 'blocks',
             entity: { type: 'test' }, // Missing id
@@ -334,9 +343,18 @@ describe('TxBuilder', () => {
     });
 
     it('emits GraphCommitted event with correct diff summary', () => {
-      let emittedEvent: any;
+      interface GraphCommittedEvent {
+        type: string;
+        label?: string;
+        diffSummary: {
+          blocksAdded: number;
+          blocksRemoved: number;
+          bindingsChanged: number;
+        };
+      }
+      let emittedEvent: GraphCommittedEvent | undefined;
       rootStore.events.on('GraphCommitted', (event) => {
-        emittedEvent = event;
+        emittedEvent = event as GraphCommittedEvent;
       });
 
       runTx(rootStore, { label: 'Add Blocks' }, tx => {
@@ -361,16 +379,18 @@ describe('TxBuilder', () => {
       });
 
       expect(emittedEvent).toBeDefined();
-      expect(emittedEvent.type).toBe('GraphCommitted');
-      expect(emittedEvent.label).toBe('Add Blocks');
+      if (emittedEvent) {
+        expect(emittedEvent.type).toBe('GraphCommitted');
+        expect(emittedEvent.label).toBe('Add Blocks');
 
-      const diffSummary = emittedEvent.diffSummary;
-      expect(diffSummary).toMatchObject({
-        blocksAdded: 2,
-        blocksRemoved: 0,
-        // Uses bindingsChanged instead of separate connection counts
-        bindingsChanged: 0,
-      });
+        const diffSummary = emittedEvent.diffSummary;
+        expect(diffSummary).toMatchObject({
+          blocksAdded: 2,
+          blocksRemoved: 0,
+          // Uses bindingsChanged instead of separate connection counts
+          bindingsChanged: 0,
+        });
+      }
     });
 
     it('rolls back on error', () => {
@@ -428,12 +448,12 @@ describe('TxBuilder', () => {
         });
       });
 
-      let connections1: any[] = [];
-      let connections2: any[] = [];
+      let connections1: Connection[] = [];
+      let connections2: Connection[] = [];
 
       runTx(rootStore, { label: 'Query' }, tx => {
-        connections1 = (tx as any).getConnectionsForBlock('block-1');
-        connections2 = (tx as any).getConnectionsForBlock('block-2');
+        connections1 = tx.getConnectionsForBlock('block-1');
+        connections2 = tx.getConnectionsForBlock('block-2');
       });
 
       expect(connections1).toHaveLength(1);
@@ -536,8 +556,10 @@ describe('TxBuilder', () => {
         // Verify cascade generated Many op
         expect(result.ops).toHaveLength(1);
         expect(result.ops[0].type).toBe('Many');
-        const manyOp = result.ops[0] as any;
-        expect(manyOp.ops.length).toBeGreaterThan(1);
+        const manyOp = result.ops[0];
+        if (manyOp.type === 'Many') {
+          expect(manyOp.ops.length).toBeGreaterThan(1);
+        }
 
         // Verify inverse can recreate everything
         expect(result.inverseOps).toHaveLength(1);
@@ -636,8 +658,10 @@ describe('TxBuilder', () => {
         // Verify cascade generated Many op
         expect(result.ops).toHaveLength(1);
         expect(result.ops[0].type).toBe('Many');
-        const manyOp = result.ops[0] as any;
-        expect(manyOp.ops).toHaveLength(3); // 1 publisher + 1 listener + 1 bus
+        const manyOp = result.ops[0];
+        if (manyOp.type === 'Many') {
+          expect(manyOp.ops).toHaveLength(3); // 1 publisher + 1 listener + 1 bus
+        }
       });
 
       it('throws if bus does not exist', () => {

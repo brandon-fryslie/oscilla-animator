@@ -120,7 +120,7 @@ function extractParamValue(
   defaultValue: unknown
 ): unknown {
   // Check params object
-  if (block.params && paramName in block.params) {
+  if (block.params !== undefined && paramName in block.params) {
     return block.params[paramName];
   }
 

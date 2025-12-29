@@ -262,7 +262,7 @@ export class PatchStore {
       throw new Error(`Cannot process auto-bus connections: block type "${blockType}" not found in registry`);
     }
 
-    const busOptions = options?.suppressGraphCommitted ? { suppressGraphCommitted: true } : undefined;
+    const busOptions = options?.suppressGraphCommitted === true ? { suppressGraphCommitted: true } : undefined;
 
     // Check for primitive block auto-bus definitions
     if (definition.autoBusSubscriptions !== undefined) {
@@ -576,14 +576,14 @@ export class PatchStore {
         // Validate type compatibility between source slot and bus
         const sourceBlock = this.blocks.find((b) => b.id === blockId);
         const sourceSlot = sourceBlock?.outputs.find((s) => s.id === pub.fromSlot);
-        if (!sourceBlock || !sourceSlot) {
+        if (sourceBlock === undefined || sourceSlot === undefined) {
           console.warn(`[expandMacro] Skipping publisher: slot "${pub.fromSlot}" not found on block "${pub.fromRef}"`);
           continue;
         }
 
         // Get TypeDesc for the slot and check compatibility with bus type
         const slotTypeDesc = getTypeDesc(sourceSlot.type);
-        if (slotTypeDesc && bus.type && !isAssignable(slotTypeDesc, bus.type)) {
+        if (slotTypeDesc !== undefined && bus.type !== undefined && !isAssignable(slotTypeDesc, bus.type)) {
           console.warn(
             `[expandMacro] Skipping incompatible bus publisher: ${pub.fromRef}.${pub.fromSlot} (${sourceSlot.type}) → bus "${pub.busName}" (${bus.type.world}:${bus.type.domain})`
           );
@@ -614,14 +614,14 @@ export class PatchStore {
         // Validate type compatibility between bus and target slot
         const targetBlock = this.blocks.find((b) => b.id === blockId);
         const targetSlot = targetBlock?.inputs.find((s) => s.id === lis.toSlot);
-        if (!targetBlock || !targetSlot) {
+        if (targetBlock === undefined || targetSlot === undefined) {
           console.warn(`[expandMacro] Skipping listener: slot "${lis.toSlot}" not found on block "${lis.toRef}"`);
           continue;
         }
 
         // Get TypeDesc for the slot and check compatibility with bus type
         const slotTypeDesc = getTypeDesc(targetSlot.type);
-        if (slotTypeDesc && bus.type && !isAssignable(bus.type, slotTypeDesc)) {
+        if (slotTypeDesc !== undefined && bus.type !== undefined && !isAssignable(bus.type, slotTypeDesc)) {
           console.warn(
             `[expandMacro] Skipping incompatible bus listener: bus "${lis.busName}" (${bus.type.world}:${bus.type.domain}) → ${lis.toRef}.${lis.toSlot} (${targetSlot.type})`
           );
@@ -695,7 +695,7 @@ export class PatchStore {
   updateBlock(id: BlockId, updates: Partial<Block>): void {
     runTx(this.root, { label: 'Update Block' }, tx => {
       const block = this.root.patchStore.blocks.find(b => b.id === id);
-      if (!block) return; // Silently ignore if block not found
+      if (block === undefined) return; // Silently ignore if block not found
 
       const next = { ...block, ...updates };
       tx.replace('blocks', id, next);
@@ -907,7 +907,7 @@ export class PatchStore {
   updateBlockParams(blockId: BlockId, params: Record<string, unknown>): void {
     runTx(this.root, { label: 'Update Params' }, tx => {
       const block = this.root.patchStore.blocks.find(b => b.id === blockId);
-      if (!block) return; // Silently ignore if block not found
+      if (block === undefined) return; // Silently ignore if block not found
 
       const next = { ...block, params: { ...block.params, ...params } };
       tx.replace('blocks', blockId, next);
@@ -1145,7 +1145,7 @@ export class PatchStore {
    */
   addLensToConnection(connectionId: string, lens: LensInstance, index?: number): void {
     const connection = this.connections.find((c) => c.id === connectionId);
-    if (!connection) return;
+    if (connection === undefined) return;
 
     const currentStack = connection.lensStack ?? [];
     const newStack = [...currentStack];
@@ -1169,7 +1169,7 @@ export class PatchStore {
    */
   removeLensFromConnection(connectionId: string, index: number): void {
     const connection = this.connections.find((c) => c.id === connectionId);
-    if (!connection) return;
+    if (connection === undefined) return;
 
     const currentStack = connection.lensStack ?? [];
     if (index < 0 || index >= currentStack.length) return;
@@ -1196,7 +1196,7 @@ export class PatchStore {
     updates: Partial<Pick<LensInstance, 'params' | 'enabled'>>
   ): void {
     const connection = this.connections.find((c) => c.id === connectionId);
-    if (!connection) return;
+    if (connection === undefined) return;
 
     const currentStack = connection.lensStack ?? [];
     if (index < 0 || index >= currentStack.length) return;

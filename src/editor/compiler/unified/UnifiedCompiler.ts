@@ -16,7 +16,7 @@
 
 import { DependencyGraph } from './DependencyGraph';
 import { stateBlockRegistry } from './StateBlock';
-import type { StateMemory } from './StateBlock';
+import type { StateMemory, StateBlock } from './StateBlock';
 import type { TimeCtx } from './TimeCtx';
 
 /**
@@ -379,7 +379,7 @@ export class UnifiedCompiler {
   /**
    * Create evaluator for a state block.
    */
-  private createStateBlockEvaluator(stateBlock: any): Evaluator {
+  private createStateBlockEvaluator(stateBlock: StateBlock): Evaluator {
     return (inputs: Record<string, unknown>, state: StateMemory | null, ctx: TimeCtx) => {
       if (state == null) {
         throw new Error(`State block ${stateBlock.type} requires state memory`);

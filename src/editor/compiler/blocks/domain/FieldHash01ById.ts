@@ -7,7 +7,7 @@
  * Uses a simple hash function based on element ID and seed.
  */
 
-import type { BlockCompiler, Field } from '../../types';
+import type { BlockCompiler, Field, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 import { OpCode } from '../../ir/opcodes';
@@ -104,16 +104,21 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
     const domain = domainArtifact.value;
 
     // Extract seed with params fallback (for tests using old params system)
-    const extractNumber = (artifact: any, defaultValue: number): number => {
-      if (!artifact) return defaultValue;
-      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number')
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
+      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
         return Number(artifact.value);
-      return typeof artifact.value === 'function'
-        ? Number(artifact.value(0, {}))
-        : Number(artifact.value);
+      }
+      if ('value' in artifact && artifact.value !== undefined) {
+        return typeof artifact.value === 'function'
+          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
+          : Number(artifact.value);
+      }
+      return defaultValue;
     };
 
-    const blockSeed = extractNumber(inputs.seed, (params as any)?.seed ?? 0);
+    const paramsObj = params as { seed?: number } | undefined;
+    const blockSeed = extractNumber(inputs.seed, paramsObj?.seed ?? 0);
 
     // Create field that produces deterministic random per element
     const field: Field<number> = (seed, n) => {

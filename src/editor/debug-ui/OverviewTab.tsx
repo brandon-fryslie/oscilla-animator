@@ -34,12 +34,12 @@ export const OverviewTab = observer(function OverviewTab() {
   }
 
   // Check for NaN values
-  if (snapshot && snapshot.evalStats.nanCount > 0) {
+  if (snapshot !== null && snapshot !== undefined && snapshot.evalStats.nanCount > 0) {
     issues.push(`${snapshot.evalStats.nanCount} NaN value(s) detected`);
   }
 
   // Check for low FPS
-  if (snapshot && snapshot.frameBudget.fpsEstimate < 30 && snapshot.frameBudget.fpsEstimate > 0) {
+  if (snapshot !== null && snapshot !== undefined && snapshot.frameBudget.fpsEstimate < 30 && snapshot.frameBudget.fpsEstimate > 0) {
     issues.push(`FPS below 30 (${Math.round(snapshot.frameBudget.fpsEstimate)} fps)`);
   }
 

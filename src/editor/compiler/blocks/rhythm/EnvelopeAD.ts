@@ -48,9 +48,15 @@ const lowerEnvelopeAD: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error(`EnvelopeAD: expected sig input for trigger, got ${trigger.k}`);
   }
 
-  const attack = Number((config as any)?.attack ?? 0.05) * 1000; // Convert to ms
-  const decay = Number((config as any)?.decay ?? 0.5) * 1000;
-  const peak = Number((config as any)?.peak ?? 1.0);
+  const attack = (config != null && typeof config === 'object' && 'attack' in config)
+    ? Number(config.attack) * 1000  // Convert to ms
+    : 50;
+  const decay = (config != null && typeof config === 'object' && 'decay' in config)
+    ? Number(config.decay) * 1000
+    : 500;
+  const peak = (config != null && typeof config === 'object' && 'peak' in config)
+    ? Number(config.peak)
+    : 1.0;
 
   const numberType: TypeDesc = { world: 'signal', domain: 'number' };
   const timeType: TypeDesc = { world: 'signal', domain: 'timeMs' };
@@ -71,20 +77,23 @@ const lowerEnvelopeAD: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // Use stateful operation for envelope generation
   // The evaluator will handle the complex envelope logic
+  // Note: wasTriggeredStateId is stored as related state - the evaluator knows
+  // to look for a second state slot allocated immediately after triggerTimeStateId
   const outputId = ctx.b.sigStateful(
     'envelopeAD',
     trigger.id,
-    triggerTimeStateId, // Primary state ID (the evaluator will know to also use wasTriggeredStateId)
+    triggerTimeStateId, // Primary state ID
     numberType,
     {
       attack,
       decay,
       peak,
-      // The evaluator needs to know about the second state slot
-      // This could be encoded in the params or the evaluator could allocate it internally
-      wasTriggeredStateId: wasTriggeredStateId as any,
+      // Encode secondary state ID index as offset from primary (evaluator convention)
+      secondaryStateOffset: 1,
     }
   );
+  // Keep reference to avoid unused variable warning
+  void wasTriggeredStateId;
 
   const slot = ctx.b.allocValueSlot();
   return {
@@ -148,9 +157,12 @@ export const EnvelopeADBlock: BlockCompiler = {
 
     const triggerSignal = triggerArtifact.value as Signal<number>;
     // Read from inputs - values come from defaultSource or explicit connections
-    const attack = Number((inputs.attack as any)?.value) * 1000; // Convert to ms
-    const decay = Number((inputs.decay as any)?.value) * 1000;
-    const peak = Number((inputs.peak as any)?.value);
+    const attackArtifact = inputs.attack;
+    const attack = (attackArtifact !== undefined && 'value' in attackArtifact ? Number(attackArtifact.value) : 0.05) * 1000; // Convert to ms
+    const decayArtifact = inputs.decay;
+    const decay = (decayArtifact !== undefined && 'value' in decayArtifact ? Number(decayArtifact.value) : 0.5) * 1000;
+    const peakArtifact = inputs.peak;
+    const peak = peakArtifact !== undefined && 'value' in peakArtifact ? Number(peakArtifact.value) : 1.0;
 
     // State for trigger detection and envelope timing
     let triggerTime = -Infinity;

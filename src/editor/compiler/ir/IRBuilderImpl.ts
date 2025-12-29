@@ -170,7 +170,7 @@ export class IRBuilderImpl implements IRBuilder {
     const slot = this.nextValueSlot++;
 
     // Register slot metadata if type provided
-    if (type) {
+    if (type !== undefined) {
       const storage = inferStorage(type);
       this.slotMetaEntries.push({
         slot,
@@ -327,7 +327,7 @@ export class IRBuilderImpl implements IRBuilder {
   sigTransform(src: SigExprId, chain: TransformChainId): SigExprId {
     const id = this.sigExprs.length;
     const chainDef = this.transformChains[chain];
-    if (!chainDef) {
+    if (chainDef === undefined) {
       throw new Error(`Transform chain ${chain} not found`);
     }
     this.sigExprs.push({
@@ -449,7 +449,7 @@ export class IRBuilderImpl implements IRBuilder {
   fieldTransform(src: FieldExprId, chain: TransformChainId): FieldExprId {
     const id = this.fieldExprs.length;
     const chainDef = this.transformChains[chain];
-    if (!chainDef) {
+    if (chainDef === undefined) {
       throw new Error(`Transform chain ${chain} not found`);
     }
     this.fieldExprs.push({
@@ -516,7 +516,7 @@ export class IRBuilderImpl implements IRBuilder {
     });
 
     // Track source block for debug index
-    if (this.currentBlockId) {
+    if (this.currentBlockId !== undefined) {
       this.eventExprSourceMap.set(id, this.currentBlockId);
     }
 
@@ -534,7 +534,7 @@ export class IRBuilderImpl implements IRBuilder {
     });
 
     // Track source block for debug index
-    if (this.currentBlockId) {
+    if (this.currentBlockId !== undefined) {
       this.eventExprSourceMap.set(id, this.currentBlockId);
     }
 
@@ -550,7 +550,7 @@ export class IRBuilderImpl implements IRBuilder {
     });
 
     // Track source block for debug index
-    if (this.currentBlockId) {
+    if (this.currentBlockId !== undefined) {
       this.eventExprSourceMap.set(id, this.currentBlockId);
     }
 
@@ -566,7 +566,7 @@ export class IRBuilderImpl implements IRBuilder {
     });
 
     // Track source block for debug index
-    if (this.currentBlockId) {
+    if (this.currentBlockId !== undefined) {
       this.eventExprSourceMap.set(id, this.currentBlockId);
     }
 
@@ -589,7 +589,7 @@ export class IRBuilderImpl implements IRBuilder {
     });
 
     // Track source block for debug index
-    if (this.currentBlockId) {
+    if (this.currentBlockId !== undefined) {
       this.eventExprSourceMap.set(id, this.currentBlockId);
     }
 

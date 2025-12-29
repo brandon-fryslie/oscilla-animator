@@ -5,7 +5,7 @@
  * Takes Field<number> and produces Field<number> clamped to [min, max] with optional curve.
  */
 
-import type { BlockCompiler, Field } from '../../types';
+import type { BlockCompiler, Field, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
@@ -39,9 +39,10 @@ const lowerFieldOpacity: BlockLowerFn = ({ inputs, config }) => {
     throw new Error('FieldOpacity requires field input');
   }
 
-  const min = Number((config as any)?.min ?? 0);
-  const max = Number((config as any)?.max ?? 1);
-  const curve = String((config as any)?.curve ?? 'linear');
+  const cfg = config as { min?: number; max?: number; curve?: string } | undefined;
+  const min = cfg?.min ?? 0;
+  const max = cfg?.max ?? 1;
+  const curve = cfg?.curve ?? 'linear';
 
   // For linear curve with no clamping (min=0, max=1), we can pass through
   if (curve === 'linear' && min === 0 && max === 1) {
@@ -114,10 +115,44 @@ export const FieldOpacityBlock: BlockCompiler = {
     }
 
     const valuesFn = valuesArtifact.value;
-    // Read from inputs - values come from defaultSource or explicit connections
-    const min = Number((inputs.min as any)?.value);
-    const max = Number((inputs.max as any)?.value);
-    const curve = String((inputs.curve as any)?.value);
+
+    // Helper to extract numeric/string values from artifacts
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
+      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
+        return Number(artifact.value);
+      }
+      if ('value' in artifact && artifact.value !== undefined) {
+        return typeof artifact.value === 'function'
+          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
+          : Number(artifact.value);
+      }
+      return defaultValue;
+    };
+
+    const extractString = (artifact: Artifact | undefined, defaultValue: string): string => {
+      if (artifact === undefined) return defaultValue;
+      if (artifact.kind === 'Scalar:string') {
+        return String(artifact.value);
+      }
+      if ('value' in artifact && artifact.value !== undefined) {
+        const val = artifact.value;
+        if (typeof val === 'string') {
+          return val;
+        }
+        if (typeof val === 'function') {
+          return String((val as (t: number, ctx: object) => string)(0, {}));
+        }
+        if (typeof val === 'number' || typeof val === 'boolean') {
+          return String(val);
+        }
+      }
+      return defaultValue;
+    };
+
+    const min = extractNumber(inputs.min, 0);
+    const max = extractNumber(inputs.max, 1);
+    const curve = extractString(inputs.curve, 'linear');
 
     // Create opacity field
     const field: Field<number> = (seed, n, ctx) => {

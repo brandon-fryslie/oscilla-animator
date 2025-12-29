@@ -68,7 +68,7 @@ export const GraphWorkspace = observer<GraphWorkspaceProps>(function GraphWorksp
         return {
           id: block.id,
           type: block.type,
-          label: block.label || (blockDef?.label ?? 'Unknown'),
+          label: block.label.length > 0 ? block.label : blockDef?.label ?? 'Unknown',
           role: inferBlockRole(block.type),
           inputs: (blockDef?.inputs ?? []).map((input: { id: string; label: string }) => ({
             id: input.id,

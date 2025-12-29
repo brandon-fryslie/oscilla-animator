@@ -5,7 +5,7 @@
  * Supports various math functions and transformations.
  */
 
-import type { BlockCompiler, Field } from '../../types';
+import type { BlockCompiler, Field, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 import { OpCode } from '../../ir/opcodes';
@@ -83,15 +83,18 @@ const lowerFieldMapNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Extract params from config
   const configObj = config as { fn?: string; k?: unknown; a?: unknown; b?: unknown } | undefined;
   const fn = configObj?.fn ?? 'sin';
-  const k = Number(configObj?.k ?? 1);
-  const a = Number(configObj?.a ?? 0);
-  const b = Number(configObj?.b ?? 1);
+  const kRaw = Number(configObj?.k);
+  const k = !isNaN(kRaw) && kRaw !== 0 ? kRaw : 1;
+  const aRaw = Number(configObj?.a);
+  const a = !isNaN(aRaw) ? aRaw : 0;
+  const bRaw = Number(configObj?.b);
+  const b = !isNaN(bRaw) ? bRaw : 1;
 
   const outType = { world: 'field' as const, domain: 'number' as const };
   const opcode = getOpCode(fn);
 
   // Build the function reference using PureFnRef union types
-  const fnRef = opcode
+  const fnRef = opcode !== undefined
     ? { kind: 'opcode' as const, opcode }
     : { kind: 'kernel' as const, kernelId: `map_${fn}` };
 
@@ -145,28 +148,45 @@ export const FieldMapNumberBlock: BlockCompiler = {
     }
 
     // Extract parameters with params fallback (for tests using old params system)
-    const extractNumber = (artifact: any, defaultValue: number): number => {
-      if (!artifact) return defaultValue;
-      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number')
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
+      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
         return Number(artifact.value);
-      return typeof artifact.value === 'function'
-        ? Number(artifact.value(0, {}))
-        : Number(artifact.value);
+      }
+      if ('value' in artifact && artifact.value !== undefined) {
+        return typeof artifact.value === 'function'
+          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
+          : Number(artifact.value);
+      }
+      return defaultValue;
     };
 
-    const extractString = (artifact: any, defaultValue: string): string => {
-      if (!artifact) return defaultValue;
-      if (artifact.kind === 'Scalar:string' || artifact.kind === 'Signal:string')
+    const extractString = (artifact: Artifact | undefined, defaultValue: string): string => {
+      if (artifact === undefined) return defaultValue;
+      if (artifact.kind === 'Scalar:string') {
         return String(artifact.value);
-      return typeof artifact.value === 'function'
-        ? String(artifact.value(0, {}))
-        : String(artifact.value);
+      }
+      if ('value' in artifact && artifact.value !== undefined) {
+        const val = artifact.value;
+        if (typeof val === 'string') {
+          return val;
+        }
+        if (typeof val === 'function') {
+          return String((val as (t: number, ctx: object) => string)(0, {}));
+        }
+        // For non-string primitives (number, boolean), convert to string
+        if (typeof val === 'number' || typeof val === 'boolean') {
+          return String(val);
+        }
+      }
+      return defaultValue;
     };
 
-    const fn = extractString(inputs.fn, (params as any)?.fn ?? 'sin');
-    const k = extractNumber(inputs.k, (params as any)?.k ?? 1);
-    const a = extractNumber(inputs.a, (params as any)?.a ?? 0);
-    const b = extractNumber(inputs.b, (params as any)?.b ?? 1);
+    const paramsObj = params as { fn?: string; k?: number; a?: number; b?: number } | undefined;
+    const fn = extractString(inputs.fn, paramsObj?.fn ?? 'sin');
+    const k = extractNumber(inputs.k, paramsObj?.k ?? 1);
+    const a = extractNumber(inputs.a, paramsObj?.a ?? 0);
+    const b = extractNumber(inputs.b, paramsObj?.b ?? 1);
 
     const inputFieldFn = inputField.value;
     const mapFn = getMapFunction(fn, k, a, b);

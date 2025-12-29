@@ -630,13 +630,13 @@ describe('Undo/Redo Integration', () => {
   // =============================================================================
 
   describe('Edge Cases', () => {
-    it('handles undo at root gracefully', async () => {
+    it('handles undo at root gracefully', () => {
       const result = rootStore.historyStore.undo();
       expect(result).toBe(false);
       expect(rootStore.patchStore.blocks.length).toBe(0);
     });
 
-    it('handles redo at leaf gracefully', async () => {
+    it('handles redo at leaf gracefully', () => {
       const result = rootStore.historyStore.redo();
       expect(result).toBe(false);
     });

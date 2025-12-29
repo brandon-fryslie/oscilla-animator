@@ -38,7 +38,9 @@ const lowerPulseDivider: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error(`PulseDivider: expected sig input for phase, got ${phase.k}`);
   }
 
-  const divisions = Number((config as any)?.divisions ?? 4);
+  const divisions = (config != null && typeof config === 'object' && 'divisions' in config)
+    ? Number(config.divisions)
+    : 4;
 
   const numberType: TypeDesc = { world: 'signal', domain: 'number' };
   const triggerType: TypeDesc = { world: 'signal', domain: 'trigger' };
@@ -134,7 +136,10 @@ export const PulseDividerBlock: BlockCompiler = {
 
     const phaseSignal = phaseArtifact.value as Signal<number>;
     // Read from inputs - values come from defaultSource or explicit connections
-    const divisions = Number((inputs.divisions as any)?.value);
+    const divisionsArtifact = inputs.divisions;
+    const divisions = divisionsArtifact !== undefined && 'value' in divisionsArtifact
+      ? Number(divisionsArtifact.value)
+      : 4;
 
     // State for edge detection
     let lastSubPhase = -1;

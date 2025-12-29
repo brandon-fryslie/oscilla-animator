@@ -23,6 +23,7 @@ import type {
   FieldHandle,
   FieldEnv,
   SigExprId,
+  SlotHandles,
 } from "../../field/types";
 import { numberType } from "../../field/types";
 
@@ -110,9 +111,10 @@ describe("Integration: Type Adapter + SignalBridge", () => {
         fieldEnv: {
           cache: fieldCache,
           domainId: 0,
+           
           slotHandles: {
-            read: () => handle,
-          } as any,
+            read: (_slot: unknown): FieldHandle => handle,
+          } satisfies SlotHandles,
         } as FieldEnv,
         fieldNodes,
         sigEnv: {
@@ -178,9 +180,10 @@ describe("Integration: Type Adapter + SignalBridge", () => {
         fieldEnv: {
           cache: fieldCache,
           domainId: 0,
+           
           slotHandles: {
-            read: () => handle,
-          } as any,
+            read: (_slot: unknown): FieldHandle => handle,
+          } satisfies SlotHandles,
         } as FieldEnv,
         fieldNodes,
         sigEnv: {
@@ -256,9 +259,10 @@ describe("Integration: Type Adapter + SignalBridge", () => {
         fieldEnv: {
           cache: fieldCache,
           domainId: 0,
+           
           slotHandles: {
-            read: () => (fieldId === 0 ? handle1 : handle2),
-          } as any,
+            read: (_slot: unknown): FieldHandle => (fieldId === 0 ? handle1 : handle2),
+          } satisfies SlotHandles,
         } as FieldEnv,
         fieldNodes,
         sigEnv: {
@@ -342,9 +346,10 @@ describe("Integration: Type Adapter + SignalBridge", () => {
         fieldEnv: {
           cache: fieldCache,
           domainId: 0,
+           
           slotHandles: {
-            read: () => handle,
-          } as any,
+            read: (_slot: unknown): FieldHandle => handle,
+          } satisfies SlotHandles,
         } as FieldEnv,
         fieldNodes,
         sigEnv: {
@@ -419,9 +424,10 @@ describe("Integration: Type Adapter + SignalBridge", () => {
         fieldEnv: {
           cache: fieldCache,
           domainId: 0,
+           
           slotHandles: {
-            read: () => handle,
-          } as any,
+            read: (_slot: unknown): FieldHandle => handle,
+          } satisfies SlotHandles,
         } as FieldEnv,
         fieldNodes,
         sigEnv: {
@@ -527,9 +533,10 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
         fieldEnv: {
           cache: fieldCache,
           domainId: 0,
+           
           slotHandles: {
-            read: () => handle,
-          } as any,
+            read: (_slot: unknown): FieldHandle => handle,
+          } satisfies SlotHandles,
         } as FieldEnv,
         fieldNodes,
         sigEnv: {
@@ -621,9 +628,10 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
         fieldEnv: {
           cache: fieldCache,
           domainId: 0,
+           
           slotHandles: {
-            read: () => handle,
-          } as any,
+            read: (_slot: unknown): FieldHandle => handle,
+          } satisfies SlotHandles,
         } as FieldEnv,
         fieldNodes,
         sigEnv: {
@@ -702,9 +710,10 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
         fieldEnv: {
           cache: fieldCache,
           domainId: 0,
+           
           slotHandles: {
-            read: () => handle,
-          } as any,
+            read: (_slot: unknown): FieldHandle => handle,
+          } satisfies SlotHandles,
         } as FieldEnv,
         fieldNodes,
         sigEnv: {

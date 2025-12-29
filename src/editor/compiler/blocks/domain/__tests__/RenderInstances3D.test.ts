@@ -24,7 +24,14 @@ function makeType(world: TypeDesc["world"], domain: string): TypeDesc {
 /**
  * Create a test scenario with RenderInstances3D sink.
  */
-function createRenderInstances3DSinkScenario() {
+function createRenderInstances3DSinkScenario(): {
+  builder: IRBuilderImpl;
+  domainSlot: number;
+  positions3dSlot: number;
+  colorSlot: number;
+  radiusSlot: number;
+  opacitySlot: number;
+} {
   const builder = new IRBuilderImpl();
 
   // Allocate domain
@@ -79,7 +86,7 @@ describe("RenderInstances3D block lowering", () => {
 
       // Should have a materialize step for positions (vec3)
       const matSteps = compiled.schedule.steps.filter(s =>
-        s.kind === "materialize" && s.label?.includes("3D positions")
+        s.kind === "materialize" && (s.label?.includes("3D positions") ?? false)
       );
       expect(matSteps.length).toBeGreaterThan(0);
     });
@@ -139,7 +146,7 @@ describe("RenderInstances3D block lowering", () => {
       const assembleStep = assembleSteps[0];
       if (assembleStep.kind === "renderAssemble") {
         expect(assembleStep.instance2dBatches).toBeDefined();
-        if (assembleStep.instance2dBatches) {
+        if (assembleStep.instance2dBatches !== null && assembleStep.instance2dBatches !== undefined) {
           expect(assembleStep.instance2dBatches.length).toBeGreaterThan(0);
 
           // The batch should reference the projection output slot
@@ -269,7 +276,7 @@ describe("RenderInstances3D block lowering", () => {
 
       // Should have a materialize step for radius
       const radiusMatSteps = compiled.schedule.steps.filter(s =>
-        s.kind === "materialize" && s.label?.includes("radius")
+        s.kind === "materialize" && (s.label?.includes("radius") ?? false)
       );
       expect(radiusMatSteps.length).toBeGreaterThan(0);
     });

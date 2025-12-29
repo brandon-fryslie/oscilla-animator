@@ -5,7 +5,7 @@
  * Supports even distribution and golden angle spiral patterns.
  */
 
-import type { BlockCompiler, Vec2 } from '../../types';
+import type { BlockCompiler, Vec2, Artifact } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
@@ -21,7 +21,7 @@ const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 const lowerPositionMapCircle: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Input[0]: domain
   const domainInput = inputs[0];
-  if (!domainInput || (domainInput.k !== 'special' || domainInput.tag !== 'domain')) {
+  if (domainInput === undefined || (domainInput.k !== 'special' || domainInput.tag !== 'domain')) {
     throw new Error('PositionMapCircle requires Domain input');
   }
 
@@ -164,26 +164,51 @@ export const PositionMapCircleBlock: BlockCompiler = {
     const domain = domainArtifact.value;
 
     // Helper to extract numeric value from artifact with default fallback
-    const extractNumber = (artifact: any, defaultValue: number): number => {
-      if (!artifact) return defaultValue;
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') return Number(artifact.value);
-      return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
+      if ('value' in artifact && artifact.value !== undefined) {
+        return typeof artifact.value === 'function'
+          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
+          : Number(artifact.value);
+      }
+      return defaultValue;
     };
 
     // Helper to extract string value from artifact with default fallback
-    const extractString = (artifact: any, defaultValue: string): string => {
-      if (!artifact) return defaultValue;
+    const extractString = (artifact: Artifact | undefined, defaultValue: string): string => {
+      if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:string') return String(artifact.value);
-      return typeof artifact.value === 'function' ? String(artifact.value(0, {})) : String(artifact.value);
+      if ('value' in artifact && artifact.value !== undefined) {
+        const val = artifact.value;
+        if (typeof val === 'string') {
+          return val;
+        }
+        if (typeof val === 'function') {
+          return String((val as (t: number, ctx: object) => string)(0, {}));
+        }
+        if (typeof val === 'number' || typeof val === 'boolean') {
+          return String(val);
+        }
+      }
+      return defaultValue;
     };
 
     // Support both new (inputs) and old (params) parameter systems
-    const centerX = extractNumber(inputs.centerX, (params as any)?.centerX ?? 400);
-    const centerY = extractNumber(inputs.centerY, (params as any)?.centerY ?? 300);
-    const radius = extractNumber(inputs.radius, (params as any)?.radius ?? 150);
-    const startAngle = extractNumber(inputs.startAngle, (params as any)?.startAngle ?? 0);
-    const winding = extractNumber(inputs.winding, (params as any)?.winding ?? 1);
-    const distribution = extractString(inputs.distribution, (params as any)?.distribution ?? 'even');
+    const paramsObj = params as {
+      centerX?: number;
+      centerY?: number;
+      radius?: number;
+      startAngle?: number;
+      winding?: number;
+      distribution?: string;
+    } | undefined;
+    const centerX = extractNumber(inputs.centerX, paramsObj?.centerX ?? 400);
+    const centerY = extractNumber(inputs.centerY, paramsObj?.centerY ?? 300);
+    const radius = extractNumber(inputs.radius, paramsObj?.radius ?? 150);
+    const startAngle = extractNumber(inputs.startAngle, paramsObj?.startAngle ?? 0);
+    const winding = extractNumber(inputs.winding, paramsObj?.winding ?? 1);
+    const distribution = extractString(inputs.distribution, paramsObj?.distribution ?? 'even');
 
     // Convert degrees to radians
     const startAngleRad = (startAngle * Math.PI) / 180;
