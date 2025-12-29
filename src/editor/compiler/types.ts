@@ -486,7 +486,10 @@ export type CompileErrorCode =
   // Sprint 2: Missing required inputs
   | 'MissingInput'
   // Primitives: Pure block validation (Deliverable 3)
-  | 'PureBlockViolation';
+  | 'PureBlockViolation'
+  // Type system red flag fixes
+  | 'UnsupportedAdapterInIRMode'
+  | 'UnsupportedLensInIRMode';
 
 export interface CompileError {
   code: CompileErrorCode;

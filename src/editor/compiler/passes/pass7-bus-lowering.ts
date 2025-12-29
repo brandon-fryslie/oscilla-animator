@@ -7,7 +7,7 @@
  * Key responsibilities:
  * - Collect sorted publishers using busSemantics.getSortedPublishers
  * - Create sigCombine/fieldCombine nodes based on bus type
- * - Apply publisher transform chains (adapters/lenses)
+ * - Detect unsupported adapters/lenses and emit compile-time errors
  * - Handle empty buses with default values
  *
  * References:
@@ -78,8 +78,8 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
  *
  * For each bus:
  * 1. Collect sorted publishers using getSortedPublishers()
- * 2. Resolve publisher source ValueRefs from blockOutputs
- * 3. Apply transform chains (if present)
+ * 2. Validate that no adapters/lenses are used (unsupported in IR mode)
+ * 3. Resolve publisher source ValueRefs from blockOutputs
  * 4. Create combine node (sigCombine/fieldCombine)
  * 5. Handle empty buses with default values
  */
@@ -105,6 +105,22 @@ export function pass7BusLowering(
 
     // Get sorted publishers for this bus (enabled only)
     const busPublishers = getSortedPublishers(bus.id, publishers as Publisher[], false);
+
+    // Validate no adapters/lenses are used (not yet supported in IR mode)
+    for (const pub of busPublishers) {
+      if (pub.adapterChain && pub.adapterChain.length > 0) {
+        errors.push({
+          code: "UnsupportedAdapterInIRMode",
+          message: `Publisher to bus '${bus.name}' uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
+        });
+      }
+      if (pub.lensStack && pub.lensStack.length > 0) {
+        errors.push({
+          code: "UnsupportedLensInIRMode",
+          message: `Publisher to bus '${bus.name}' uses lens stack, which is not yet supported in IR compilation mode. Lenses are only supported in legacy compilation. Remove the lens stack or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
+        });
+      }
+    }
 
     try {
       // Create bus combine node
@@ -144,6 +160,9 @@ export function pass7BusLowering(
  * - No publishers → use default value as constant
  * - One publisher → use publisher output directly (no combine needed)
  * - Multiple publishers → create combine node with sorted publishers
+ *
+ * Note: Adapters and lenses are validated in the main pass7BusLowering function.
+ * If present, they will have already emitted errors.
  */
 function lowerBusToCombineNode(
   bus: Bus,
@@ -174,8 +193,9 @@ function lowerBusToCombineNode(
       continue;
     }
 
-    // TODO: Apply publisher transform chain (adapter/lens) here
-    // For now, assume 1:1 mapping
+    // Publisher transform chains (adapters/lenses) are detected and emit errors
+    // in pass7BusLowering before this function is called.
+    // Here we assume 1:1 mapping (no transforms).
 
     if (ref.k === "sig") {
       sigTerms.push(ref.id);
@@ -197,7 +217,7 @@ function lowerBusToCombineNode(
     // Wait, sigCombine interface requires mode.
     // Supported modes for signals: 'sum', 'last' (and potentially 'average', 'max', 'min' if supported)
     const mode = bus.combineMode as "sum" | "average" | "max" | "min" | "last";
-    
+
     // Safety check for mode
     const validModes = ["sum", "average", "max", "min", "last"];
     const safeMode = validModes.includes(mode) ? mode : "last";

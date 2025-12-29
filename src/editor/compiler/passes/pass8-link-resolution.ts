@@ -409,6 +409,20 @@ function buildBlockInputRoots(
       );
 
       if (wire) {
+        // Validate no adapters/lenses on wires (unsupported in IR mode)
+        if (wire.adapterChain && wire.adapterChain.length > 0) {
+          errors.push({
+            code: "UnsupportedAdapterInIRMode",
+            message: `Wire connection to ${block.type}.${input.id} uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
+          });
+        }
+        if (wire.lensStack && wire.lensStack.length > 0) {
+          errors.push({
+            code: "UnsupportedLensInIRMode",
+            message: `Wire connection to ${block.type}.${input.id} uses lens stack, which is not yet supported in IR compilation mode. Lenses are only supported in legacy compilation. Remove the lens stack or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
+          });
+        }
+
         // Resolve upstream block output
         const upstreamBlockIdx = blockIdToIndex.get(wire.from.block);
 
@@ -441,6 +455,20 @@ function buildBlockInputRoots(
       );
 
       if (listener) {
+        // Validate no adapters/lenses on listeners (unsupported in IR mode)
+        if (listener.adapterChain && listener.adapterChain.length > 0) {
+          errors.push({
+            code: "UnsupportedAdapterInIRMode",
+            message: `Bus listener for ${block.type}.${input.id} uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
+          });
+        }
+        if (listener.lensStack && listener.lensStack.length > 0) {
+          errors.push({
+            code: "UnsupportedLensInIRMode",
+            message: `Bus listener for ${block.type}.${input.id} uses lens stack, which is not yet supported in IR compilation mode. Lenses are only supported in legacy compilation. Remove the lens stack or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
+          });
+        }
+
         const busIdx = busIdToIndex.get(listener.busId);
 
         if (busIdx === undefined) {
@@ -455,7 +483,7 @@ function buildBlockInputRoots(
         const busRef = busRoots.get(busIdx);
 
         if (busRef) {
-          // TODO (Phase 4): Apply listener transform chain if present
+          // Adapters/lenses validated above - assume 1:1 mapping
           refs[flatIdx] = busRef;
           continue; // Successfully resolved via bus
         }
