@@ -20,14 +20,6 @@
    - Validates reserved bus types and combine modes
    - Enforces contract constraints for canonical buses
 
-4. **TimeRoot Output Implementation**
-   - CycleTimeRoot: 6 outputs (systemTime, cycleT, phase, wrap, cycleIndex, energy)
-   - FiniteTimeRoot: 4 outputs (systemTime, progress, end, energy)  
-   - InfiniteTimeRoot: 2 outputs (systemTime, energy)
-   - Energy signal: constant 1.0 baseline
-   - Wrap events: fire at period boundaries
-   - End events: fire once at duration completion
-
 5. **Legacy Code Removal**
    - PhaseMachine TimeModel inference removed
    - PhaseClock TimeModel inference removed

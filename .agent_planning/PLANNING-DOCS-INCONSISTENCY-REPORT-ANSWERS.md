@@ -4,8 +4,8 @@ Below are proposed resolutions to the questions in `.agent_planning/PLANNING-DOC
 
 ## 1. TimeRoot and TimeModel
 
-### 1.1 CycleTimeRoot existence
-- Remove CycleTimeRoot entirely. Only Finite and Infinite TimeRoots exist.
+
+
 
 ### 1.2 TimeModel variants
 - Two variants only: `finite` and `infinite`.
@@ -30,7 +30,7 @@ Below are proposed resolutions to the questions in `.agent_planning/PLANNING-DOC
 - Scrubbing is implemented and canonical. It must not reset state.
 
 ### 3.2 Finite view looping
-- No finite loop modes in player UI. If looping is desired, it requires a cyclic topology (which is not supported if CycleTimeRoot is removed).
+
 
 ## 4. Canonical Bus Set
 

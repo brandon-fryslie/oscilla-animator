@@ -81,7 +81,7 @@ case 'cyclic':
 
 **File**: `src/editor/compiler/blocks/domain/TimeRoot.ts`
 
-**CycleTimeRoot (lines 74-88)**:
+
 ```typescript
 const phase: SignalNumber = (tMs) => {
   if (tMs < 0) return 0;
@@ -193,7 +193,7 @@ export const DEFAULT_FLAGS: FeatureFlags = {
 | TimeModel → Player | applyTimeModel() sets maxTime | ✅ | player.ts:406-429 |
 | | maxTime used for UI framing only (cyclic) | ✅ | player.ts:522-530 |
 | Player → Signals | tMs monotonic, passed to program.signal() | ✅ | player.ts:595, tick() doesn't wrap |
-| Signals → Phase | CycleTimeRoot derives via modulo | ✅ | TimeRoot.ts:74-88 |
+
 | Phase → Render | Phase drives animation (0..1) | ✅ | Architectural contract holds |
 
 **Finding**: Data flow is correct when TimeRoot exists. Fallback paths violate architecture.
@@ -205,7 +205,7 @@ export const DEFAULT_FLAGS: FeatureFlags = {
 ### 1. Runtime Verification: Monotonic Time Advancement
 
 **Check**: `scripts/verify-monotonic-time.sh` or `just verify:time`
-- Start player with CycleTimeRoot (period 3000ms)
+
 - Play for 10 seconds
 - Assert: `player.getTime() > 10000` (proves no wrapping)
 - Assert: Phase ring animated 3+ cycles visually
@@ -289,7 +289,7 @@ test('patch without TimeRoot fails compilation when flag enabled', () => {
 
 ### 3. NEXT SPRINT: Auto-Insert TimeRoot on Patch Creation
 - **File**: `src/editor/stores/PatchStore.ts` or initialization
-- **Behavior**: New patches get default CycleTimeRoot automatically
+
 - **Reason**: Prevents "TimeRoot required" errors for new users
 
 ### 4. FUTURE: Remove loopMode from Player UI

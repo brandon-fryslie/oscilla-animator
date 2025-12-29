@@ -158,7 +158,7 @@ private runAuthoringValidators(patchRevision: number): Diagnostic[] {
   const timeRootBlocks = this.patchStore.blocks.filter(
     (block) =>
       block.type === 'FiniteTimeRoot' ||
-      block.type === 'CycleTimeRoot' ||
+
       block.type === 'InfiniteTimeRoot'
   );
 

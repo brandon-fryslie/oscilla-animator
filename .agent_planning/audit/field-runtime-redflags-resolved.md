@@ -36,7 +36,7 @@ This document summarizes the field runtime red flags that were identified and re
    - Skip scalar types (compile-time config, not runtime IR)
    - Create proper IR refs for signal and field types with default values
 3. Updated IR registrations for all blocks to include defaultSource on inputs:
-   - `CycleTimeRoot` (periodMs, mode)
+
    - `GridDomain` (rows, cols, spacing, originX, originY)
    - `RenderInstances2D` (radius, color, opacity, glow, glowIntensity)
    - `FieldConstNumber` (value)

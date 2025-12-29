@@ -40,7 +40,7 @@
 ### 1. src/editor/compiler/blocks/domain/__tests__/TimeRoot-WP1.test.ts (15 failures)
 **Impact**: CRITICAL - TimeRoot is the keystone of the architecture
 
-#### Test: "CycleTimeRoot returns correct auto-publications"
+
 - **Error**: Expected 3 publications, got 4 (extra `start` event -> `pulse`)
   ```
   + { artifactKey: "start", busName: "pulse", sortKey: 0 }
@@ -103,7 +103,7 @@
 - **Fix Strategy**: Update expected outputs to include `phase`
 - **Complexity**: Trivial
 
-#### Tests: CycleTimeRootBlock and InfiniteTimeRootBlock output validation (2 failures each)
+
 - **Error**: Similar - expected outputs don't match implementation
 - **Root Cause**: Test expectations not updated after TimeRoot refactoring
 - **Fix Strategy**: Update all TimeRoot output expectations
@@ -279,7 +279,7 @@
 | TimeRoot Type | Spec Outputs | Implementation Outputs | Violation |
 |---------------|--------------|------------------------|-----------|
 | **FiniteTimeRoot** | `systemTime`, `localT`, `progress` | `systemTime`, `progress`, `phase`, `end`, `energy` | ❌ Extra: `phase`, `end`, `energy`<br>Missing: `localT` |
-| **CycleTimeRoot** | `t`, `cycleT`, `phase`, `wrap`, `cycleIndex` | `systemTime`, `cycleT`, `phase`, `wrap`, `cycleIndex`, `energy` | ⚠️ Renamed `t` → `systemTime`<br>Extra: `energy` |
+
 | **InfiniteTimeRoot** | `systemTime` (ONLY) | `systemTime`, `phase`, `pulse`, `energy` | ❌ Extra: `phase`, `pulse`, `energy` |
 
 **Auto-Publications Spec vs Implementation**:
@@ -287,7 +287,7 @@
 | TimeRoot Type | Spec Auto-Pubs | Implementation Auto-Pubs | Violation |
 |---------------|----------------|--------------------------|-----------|
 | **FiniteTimeRoot** | `progress` → `progress` | `progress` → `progress`<br>`phase` → `phaseA`<br>`end` → `pulse` | ❌ Extra publications from non-spec outputs |
-| **CycleTimeRoot** | `phase` → `phaseA`<br>`wrap` → `pulse` | `phase` → `phaseA`<br>`wrap` → `pulse`<br>`start` → `pulse` | ⚠️ Extra `start` event |
+
 | **InfiniteTimeRoot** | NONE (energy encouraged but not auto-pub) | `phase` → `phaseA`<br>`pulse` → `pulse`<br>`energy` → `energy` | ❌ Should not auto-publish ANY outputs |
 
 **From `03-Buses.md` line 41-44**:

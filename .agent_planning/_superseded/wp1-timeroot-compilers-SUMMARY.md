@@ -21,12 +21,12 @@ According to STATUS-20251221-133500.md:
 
 ## What's Missing ❌ (High Priority)
 
-1. **Missing Output Ports on CycleTimeRoot**:
+
    - Missing: `cycleT`, `wrap`, `cycleIndex`
    - Impact: Cannot detect wrap events, breaks bus auto-publication
 
 2. **Missing Bus Auto-Publication**:
-   - CycleTimeRoot should auto-publish: `phase -> phaseA`, `wrap -> pulse`
+
    - Currently users must manually wire these connections
 
 3. **Missing Input Ports**:

@@ -28,7 +28,6 @@
 | Type | Outputs | TimeModel | Use Case |
 |------|---------|-----------|----------|
 | FiniteTimeRoot | systemTime, progress | `{ kind: 'finite', durationMs }` | Logo stingers, one-shots |
-| CycleTimeRoot | systemTime, phase | `{ kind: 'cyclic', periodMs, mode }` | Ambient loops, music viz |
 | InfiniteTimeRoot | systemTime | `{ kind: 'infinite', windowMs }` | Generative, evolving |
 
 **Files**:
@@ -87,31 +86,6 @@ if (this.timeModel) {
 ```
 
 **Key Invariant**: For cyclic/infinite, `this.tMs` NEVER wraps. It advances unbounded.
-
----
-
-## Phase Derivation (TimeRoot Compilers)
-
-**CycleTimeRoot Phase Output**:
-```typescript
-const phase: SignalNumber = (tMs) => {
-  if (tMs < 0) return 0;
-  const cycles = tMs / periodMs;
-  const phaseValue = cycles - Math.floor(cycles); // 0..1
-  if (mode === 'pingpong') {
-    const cycleNum = Math.floor(cycles);
-    return (cycleNum % 2 === 0) ? phaseValue : (1 - phaseValue);
-  }
-  return phaseValue; // Loop mode
-};
-```
-
-**Mathematical Correctness**: Modulo arithmetic applied to MONOTONIC tMs produces correct wrapped phase.
-
-**Why This Works**:
-- Player provides: tMs = 0, 1000, 2000, 3000, 4000, 5000, ... (unbounded)
-- CycleTimeRoot (period=3000) derives: phase = 0, 0.33, 0.67, 0, 0.33, 0.67, ... (wrapped)
-- No player wrapping needed
 
 ---
 

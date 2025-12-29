@@ -15,7 +15,7 @@
 
 The "quick fix" sprint successfully completed all three goals:
 1. ✅ BindingEndpoint migration (70+ usages updated from `.port` to `.slotId + .dir`)
-2. ✅ CycleTimeRoot port rename (`phaseA` → `phase`, aligns with spec and macros)
+
 3. ✅ Port validation added to compileBusAware (fail-fast with clear errors)
 
 However, **subsequent work (Semantic Validator, commit e4f3ee7) broke 18 tests** in the PatchStore wire event system. These failures are NOT regressions from the port identity work—they are caused by overly strict preflight validation blocking valid test connections.
@@ -78,7 +78,7 @@ type PortRef = {
   - `just typecheck` passes cleanly
 - **What it fixed**: Type consistency—all bus bindings now use `{ blockId, slotId, dir }`
 
-**P0: CycleTimeRoot Port Rename** (Commit 2b2d19d)
+
 - **Status**: COMPLETE
 - **Evidence**:
   - `src/editor/blocks/time-root.ts:66` → `output('phase', 'Phase', 'Signal<phase>')`
@@ -360,7 +360,7 @@ it('compilation does not mutate patch document', () => {
 
 ### Implementation
 - `src/editor/types.ts:168-177` (BindingEndpoint definition)
-- `src/editor/blocks/time-root.ts:66` (CycleTimeRoot output)
+
 - `src/editor/compiler/blocks/domain/TimeRoot.ts:92` (compiler output)
 - `src/editor/compiler/compileBusAware.ts:527-565` (port validation)
 

@@ -32,14 +32,14 @@
 ### Phase 1: TimeRoot Output Definitions
 - [ ] `TimeRoot.test.ts` - All 3 TimeRoot block output tests pass
 - [ ] FiniteTimeRootBlock.outputs includes 5 outputs (added `phase`)
-- [ ] CycleTimeRootBlock.outputs validated (if test exists)
+
 - [ ] InfiniteTimeRootBlock.outputs validated (if test exists)
 
 ### Phase 2: TimeRoot Auto-Publications
 - [ ] `TimeRoot-WP1.test.ts` - Auto-publication tests pass (3 tests)
 - [ ] FiniteTimeRoot returns 4 auto-publications (includes phase→phaseA)
 - [ ] InfiniteTimeRoot returns 3 auto-publications (includes phase→phaseA, pulse→pulse)
-- [ ] CycleTimeRoot auto-publications validated
+
 
 ### Phase 3: Default Bus Count
 - [ ] `BusStore.events.test.ts` - Bus creation event test passes

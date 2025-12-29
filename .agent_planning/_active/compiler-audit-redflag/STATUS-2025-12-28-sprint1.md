@@ -279,7 +279,7 @@ if (env.VITE_USE_UNIFIED_COMPILER !== undefined) {
 
 2. **Cyclic Patch Test:**
    ```typescript
-   // Patch with CycleTimeRoot(periodMs: 1000)
+
    // Should:
    // - Compile to IR with timeModel.kind === 'cyclic'
    // - Runtime emits wrap events

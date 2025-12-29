@@ -1,0 +1,31 @@
+Agent: project-evaluator | 2025-12-28-225500
+Scope: field-runtime-redflag (P0, P0.5, P1, P2, P3)
+Completion: P0+P0.5+P1 COMPLETE (75%) | P2+P3 NOT STARTED (25%)
+Test Status: 2430/2455 passing (99.0%)
+Reused: STATUS-2025-12-28.md findings (RECENT)
+Fresh: Code inspection + test run validation
+Ambiguities: 2 found (domain inputs, params model)
+Workflow: PAUSE (need user decisions before proceeding)
+
+Key Findings:
+- P0 (Hard error on signal fallback): ✅ COMPLETE - evalSig() throws with clear message
+- P0.5 (No silent default fallback): ✅ COMPLETE - compiler throws on missing inputs
+- P1 (Params propagation): ✅ COMPLETE - params flow from IR nodes to FieldHandle (uncommitted)
+- P2 (Remove legacy params): ❌ NOT STARTED - implementation strategy changed, may not be needed
+- P3 (Update audit doc): ❌ NOT STARTED - waiting on strategy decision
+
+Test Failures:
+- 12 failures across 3 test files
+- All same root cause: 7 blocks missing defaultSource declarations
+- NOT a runtime bug - expected behavior under new strict compilation
+- Blocks: CycleTimeRoot, GridDomain, DomainN, RenderInstances2D, FieldConstNumber, PositionMapGrid, PositionMapCircle
+
+Uncommitted Changes (correct, ready to commit):
+- src/editor/runtime/field/FieldHandle.ts - params propagation
+- src/editor/runtime/field/types.ts - params in IR types
+
+Decisions Needed:
+1. Domain inputs - defaultSource, must-wire, or fix tests?
+2. Params - official (compiler-populated) or deprecated (remove)?
+
+Next: Wait for user clarification, then either commit or revise.

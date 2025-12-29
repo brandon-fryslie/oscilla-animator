@@ -12,7 +12,7 @@
 **Critical Finding**: The codebase is in a **broken transitional state**. The `BindingEndpoint` interface was changed from `port: string` to `slotId: string` + `dir: 'input'|'output'`, but 70+ usages were not updated. This causes:
 
 1. **Immediate**: TypeScript compilation fails (tests won't run)
-2. **Root cause**: Macros reference `fromSlot: 'phase'` but CycleTimeRoot outputs `phaseA`
+
 3. **Architectural**: Port matching uses string names instead of type matching (violates spec)
 
 **Verdict**: PAUSE - Must fix incomplete migration before addressing architectural issues.
@@ -78,7 +78,7 @@ UpstreamError: Missing upstream artifact for block-88:phase [block-89.phase]
 { fromRef: 'time', fromSlot: 'phase', busName: 'phaseA' }
 ```
 
-**2. CycleTimeRoot block definition outputs `phaseA`**:
+
 ```typescript
 // src/editor/blocks/time-root.ts:66
 outputs: [
@@ -192,14 +192,14 @@ The issue isn't that macros use `phase` - it's that the compiler requires exact 
 
 **Two approaches, pick one:**
 
-#### Approach 2A: Rename CycleTimeRoot output `phaseA` → `phase`
+
 
 **Rationale**: Match the spec. TimeRoot should output canonical `phase`.
 
 **Files to change**:
 - `src/editor/blocks/time-root.ts:66` - Change output name
 - `src/editor/compiler/blocks/domain/TimeRoot.ts:63` - Change output name
-- Any direct references to `CycleTimeRoot.phaseA` (search codebase)
+
 
 **Pros**:
 - Aligns with spec exactly
@@ -391,14 +391,14 @@ These questions should be clarified before Fix 3:
    - Run tests to verify no regressions
    - Priority: CRITICAL (build is broken)
 
-2. **Fix 2A: Rename CycleTimeRoot output** (1 day)
+
    - Change `phaseA` → `phase` in block definition + compiler
    - Add backward compat for existing patches (map old `phaseA` wires to new `phase`)
    - Update macros if needed (most already use `phase`)
    - Priority: HIGH (unblocks macros)
 
 3. **Add missing outputs to TimeRoot** (1 day)
-   - CycleTimeRoot should output: `systemTime`, `phase`, `wrap` (Event)
+
    - Spec also mentions: `cycleT`, `cycleIndex` (defer if not needed yet)
    - Priority: MEDIUM (required for complete spec compliance)
 
@@ -434,7 +434,7 @@ These questions should be clarified before Fix 3:
 
 ### Clarify with user:
 
-**Q1**: Should we rename `CycleTimeRoot.phaseA` → `phase` (aligns with spec) or rename macro references to `phaseA` (preserves current behavior)?
+
 
 **Q2**: For the 70+ BindingEndpoint usages - are there existing patches in production that would break, or is this a development-only system?
 
@@ -455,7 +455,7 @@ These questions should be clarified before Fix 3:
 - `design-docs/10-Refactor-for-UI-prep/2-PortIdentity.md` - Full port identity spec
 - `design-docs/10-Refactor-for-UI-prep/3.5-PhaseClock-Fix.md` - TimeRoot should output `phase`
 - `src/editor/macros.ts` - 24 occurrences of `fromSlot: 'phase'`
-- `src/editor/blocks/time-root.ts` - CycleTimeRoot outputs `phaseA` (line 66)
+
 - `src/editor/compiler/blocks/domain/TimeRoot.ts` - Compiler outputs `phaseA` (line 63)
 - `src/editor/types.ts` - BindingEndpoint already changed to slotId + dir
 - `src/editor/compiler/compileBusAware.ts` - String-based port lookup (line 567)

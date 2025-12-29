@@ -221,13 +221,13 @@ expect(labels).toContain('positions');  // lowercase
 
 **Problem**: Test creates 2 compile diagnostics BUT also gets 1 authoring diagnostic (missing TimeRoot), so total = 3 diagnostics. When muting 1, still have 2 active.
 
-**Solution**: Mock patchStore with a CycleTimeRoot block to prevent authoring diagnostic.
+
 
 **Action**: Find the test setup around line 451. Ensure the mock patchStore includes a TimeRoot block:
 ```typescript
 // Before the test starts
 patchStore = createMockPatchStore([
-  { id: 'time-root', type: 'CycleTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' }
+
 ]);
 hub = new DiagnosticHub(events, patchStore);
 ```
@@ -269,7 +269,7 @@ expect(authoring).toEqual([]);
 ```typescript
 // Around line 427 - when creating hub2
 patchStore = createMockPatchStore([
-  { id: 'time-root', type: 'CycleTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' }
+
 ]);
 hub2 = new DiagnosticHub(events, patchStore);
 ```
@@ -319,7 +319,7 @@ hub2 = new DiagnosticHub(events, patchStore);
 - Bus compilation implementation changed (unlikely per user guidance)
 - Test registry incomplete (missing required compiler functions)
 
-**Investigation needed**: Check if test patches include TimeRoot. See line 98 in bus-compilation.test.ts - the test creates a CycleTimeRoot block, so TimeRoot exists.
+
 
 **Likely cause**: Test compiler registry is incomplete or compiler expectations changed.
 

@@ -454,7 +454,7 @@ interface ActionsAPI {
    - Current: No enforcement
 
 4. **TimeRoot Auto-publication**
-   - Spec requires: CycleTimeRoot.phase auto-publishes to phaseA
+
    - Current: Not validated (BusStore handles this manually)
 
 5. **Publisher SortKey Ordering**

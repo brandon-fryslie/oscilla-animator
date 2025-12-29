@@ -24,23 +24,23 @@
 
 ## 1. TimeRoot and TimeModel
 
-### Issue 1.1: Does CycleTimeRoot Exist?
+
 
 **Conflict:**
 
 | Document | Position |
 |----------|----------|
-| `02.1-TimeConsole-UI.md` | "There is no CycleTimeRoot" - only FiniteTimeRoot and InfiniteTimeRoot exist |
+
 | `07-UI-Spec.md` | References CYCLE mode with TimeRoot picker showing "Cycle" option |
-| `09-Blocks.md` | Defines `CycleTimeRoot` as a full block with inputs/outputs |
-| `10-Golden-Patch.md` | Uses `CycleTimeRoot(period = 8.0s, mode = loop)` |
-| `05-Compilation.md` | Uses `CycleTimeRoot` in TimeModel inference rules |
-| `08-Export.md` | Expects `cyclic` TimeModel from CycleTimeRoot |
-| `claude_memory/03-time-architecture.md` | Lists `CycleTimeRoot` as one of three TimeRoot types |
 
-**Resolution Needed:** Is there a CycleTimeRoot block, or are cycles only derived via the Modulation Rack from Finite/Infinite roots?
 
-**Answer:** `CycleTimeRoot` does **not** exist. Remove it from all specs and code.
+
+
+
+
+
+
+
 - Time topology is defined only by `FiniteTimeRoot` or `InfiniteTimeRoot`.
 - Cycles are produced by the **Time Console** as **Global Rails** (see §2/§5). They are not blocks.
 
@@ -54,7 +54,7 @@
 |----------|---------------------|
 | `01-Vision.md` | `{ kind: 'finite' \| 'infinite' }` - TWO kinds only |
 | `02-Time-Architecture.md` | `finite(durationMs)` or `infinite(windowMs)` - TWO kinds |
-| `05-Compilation.md` | Includes `cyclic` as a third kind derived from CycleTimeRoot |
+
 | `08-Export.md` | `ExportTimePlan` has `finite`, `cyclic`, `infinite` - THREE kinds |
 | `10-Golden-Patch.md` | Uses `{ kind: 'cyclic', periodMs: 8000 }` |
 | `claude_memory/03-time-architecture.md` | `finite`, `cyclic`, `infinite` - THREE kinds |
@@ -219,13 +219,13 @@ Rails ARE 'canonical buses'.  Bus = flexible, configurable, can go anywhere.  Ra
 | Document | Position |
 |----------|----------|
 | `02.1-TimeConsole-UI.md` | Finite mode has playback policy: Once/Loop/Ping-pong |
-| `07-UI-Spec.md` | "No 'Loop View' option - if user wants looping, use CycleTimeRoot" |
 
-**Resolution Needed:** Can finite patches have view-looping modes, or must users switch to CycleTimeRoot for looping?
+
+
 
 **Answer:** Finite patches support **view looping** as a *transport policy*.
 - Looping is a **player/view** behavior for finite time; it does not require any special block.
-- CycleTimeRoot is removed; cycles are authored in Time Console rails and can be used in both finite and infinite time.
+
 
 The player has a playback mode that allows finite animations to loop.  This does not require any changes to the patch or 
 violate any time constraints.  This is ONLY available in finite mode and is identical to moving the play head to the first frame and playing the animation 
@@ -289,7 +289,7 @@ A global, time-derived, deterministic modulation signal that exists whether or n
 |----------|---------------------|
 | `02-Time-Architecture.md` | TimeRoot publishes only to reserved `time` bus |
 | `03-Buses.md` | All TimeRoots auto-publish phase/pulse/energy (marked provisional) |
-| `09-Blocks.md` | CycleTimeRoot auto-publishes phase->phaseA, wrap->pulse, energy->energy |
+
 
 **Resolution Needed:** Does TimeRoot only publish `time`, or does it also publish phase/pulse/energy?
 
@@ -310,7 +310,7 @@ See @design-docs/final-System-Invariants/Rail-Modulation-and-Feedback.md
 | `02-Time-Architecture.md` | Only `systemTime`, no required inputs, no ambient phase/pulse/energy |
 | `09-Blocks.md` | Has `periodMs` input, outputs phase/pulse/energy (all marked provisional) |
 
-**Resolution Needed:** Does InfiniteTimeRoot have minimal outputs or full outputs like CycleTimeRoot?
+
 
 **Answer:** `InfiniteTimeRoot` is minimal.
 - It establishes `TimeModel = { kind: 'infinite' }` and provides monotonic `time` only.
