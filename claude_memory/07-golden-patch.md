@@ -6,7 +6,7 @@ See `design-docs/3-Synthesized/10-Golden-Patch.md` for full specification.
 
 ## "Breathing Constellation" Summary
 
-- CycleTimeRoot (8s period)
+
 - GridDomain (20x20)
 - Buses: phaseA, pulse, energy, palette
 - Per-element phase offset via StableIdHash

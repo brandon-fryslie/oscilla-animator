@@ -203,8 +203,6 @@ Here's the full expansion for reference (`src/editor/macros.ts:906-999`):
 'macro:foreverYours': {
   blocks: [
     // Time - 6 second cycle
-    { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Heartbeat Time',
-      params: { periodMs: 6000 } },
 
     // Heartbeat rhythm
     { ref: 'heartbeat', type: 'PulseDivider', laneKind: 'Phase', label: 'Heartbeat',
@@ -333,8 +331,6 @@ To isolate the SVGSampleDomain issue, try creating a minimal test macro:
 ```typescript
 'macro:heartTest': {
   blocks: [
-    { ref: 'time', type: 'CycleTimeRoot', laneKind: 'Phase', label: 'Time',
-      params: { periodMs: 3000 } },
     { ref: 'heart', type: 'SVGSampleDomain', laneKind: 'Scene', label: 'Heart',
       params: { asset: 'builtin:heart', sampleCount: 100, seed: 0, distribution: 'even' } },
     { ref: 'render', type: 'RenderInstances2D', laneKind: 'Program', label: 'Render',

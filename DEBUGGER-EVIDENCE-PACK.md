@@ -39,41 +39,7 @@ The `renderFn` is itself a closure produced by `RenderInstances2D` (the render s
 - Field closures for positions, colors, radii
 - Signal closures for animated values
 
-### Concrete Block Compiler Outputs
-
-**CycleTimeRoot produces closures that close over params (TimeRoot.ts:143-206):**
-
-```typescript
-compile({ params }): CompiledOutputs {
-  const periodMs = Number(params.periodMs ?? 3000);
-  const mode = typeof params.mode === 'string' ? params.mode : 'loop';
-
-  // Each output is a closure capturing periodMs and mode
-  const phase: SignalNumber = (tMs) => {
-    if (tMs < 0) return 0;
-    const cycles = tMs / periodMs;
-    const phaseValue = cycles - Math.floor(cycles);
-    if (mode === 'pingpong') {
-      const cycleNum = Math.floor(cycles);
-      return (cycleNum % 2 === 0) ? phaseValue : (1 - phaseValue);
-    }
-    return phaseValue;
-  };
-
-  const wrap: Event = (tMs, lastTMs) => {
-    const currCycle = Math.floor(tMs / periodMs);
-    const lastCycle = Math.floor(lastTMs / periodMs);
-    return currCycle > lastCycle;
-  };
-
-  return {
-    phase: { kind: 'Signal:phase', value: phase },    // <- closure
-    wrap: { kind: 'Event', value: wrap },              // <- closure
-    energy: { kind: 'Signal:number', value: () => 1.0 },
-    // ...
-  };
-}
-```
+###
 
 **Oscillator composes upstream closures (Oscillator.ts:36-69):**
 

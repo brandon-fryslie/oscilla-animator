@@ -495,7 +495,7 @@ describe('rust portability', () => {
 
 ### Export Determinism
 - [ ] Same patch + same settings = identical bytes
-- [ ] Phase-driven evaluation for CycleTimeRoot
+
 - [ ] Deterministic RNG with seed
 - [ ] Export manifest includes reproducibility data
 - [ ] Loop closure verified for cyclic exports

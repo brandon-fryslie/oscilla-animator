@@ -138,7 +138,7 @@ interface TypeDesc {
 | Type | Output | Use Case |
 |------|--------|----------|
 | `FiniteTimeRoot` | `progress: Signal<unit>` | Logo stingers, one-shot animations |
-| `CycleTimeRoot` | `phase: Signal<phase>`, `wrap: Event` | Ambient loops, music viz |
+
 | `InfiniteTimeRoot` | `t: Signal<time>` | Generative, evolving installations |
 
 ### TimeModel (Compiler Output)
@@ -167,7 +167,7 @@ type TimeModel =
 
 | Bus | Type | Combine | Purpose |
 |-----|------|---------|---------|
-| `phaseA` | Signal<phase> | last | Primary phase from CycleTimeRoot |
+
 | `pulse` | Event | or | Wrap events, beat triggers |
 | `energy` | Signal<number> | sum | Intensity, envelope contributions |
 | `palette` | Signal<color> | last | Color theming |
@@ -175,7 +175,7 @@ type TimeModel =
 
 ### Bus Production Rules
 
-- CycleTimeRoot auto-publishes: `phase` -> `phaseA`, `wrap` -> `pulse`
+
 - FiniteTimeRoot auto-publishes: `progress` -> `progress`
 - Reserved bus types are enforced at compile time
 
@@ -352,7 +352,7 @@ Partially implemented:
 - [ ] TimeRoot upstream dependency validation
 
 **WP1: TimeRoot + TimeModel + Player Rewrite**
-- [ ] CycleTimeRoot compiler implementation
+
 - [ ] Player transport rewrite (remove loopMode)
 - [ ] Time Console UI driven by TimeModel
 - [ ] Bus auto-publication from TimeRoot
@@ -395,7 +395,7 @@ Partially implemented:
 See `design-docs/3-Synthesized/10-Golden-Patch.md` for full specification.
 
 ### Quick Summary
-- CycleTimeRoot (8s period)
+
 - GridDomain (20x20)
 - Buses: phaseA, pulse, energy, palette
 - Per-element phase offset via StableIdHash

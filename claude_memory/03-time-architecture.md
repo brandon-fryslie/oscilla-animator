@@ -20,7 +20,7 @@ The player: Hosts, Observes, Controls rate, Controls freeze/run.
 | `FiniteTimeRoot` | Finite performance with known duration | `systemTime`, `progress` |
 | `InfiniteTimeRoot` | Runs unbounded, no privileged cycle | `systemTime` |
 
-**Note:** There is NO `CycleTimeRoot`. Cycles are produced by the Time Console as Global Rails.
+
 
 ### Constraints
 - Exactly one TimeRoot per patch (compile error if 0 or >1)
