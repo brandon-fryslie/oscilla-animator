@@ -114,7 +114,7 @@ export function applyLens(input: Artifact, lens: LensDefinition): Artifact {
     return { kind: 'Error', message: `Unknown lens type: ${lens.type}` };
   }
 
-  const params = lens.params || {};
+  const params = lens.params ?? {};
 
   switch (lens.type) {
     case 'ease':
@@ -153,8 +153,12 @@ function applyEaseLens(input: Artifact, params: Record<string, unknown>): Artifa
     return { kind: 'Error', message: 'Ease lens requires Signal input' };
   }
 
-  const easingName = (params.easing as string) || 'easeInOutSine';
-  const easingFn = easingFunctions[easingName] || easingFunctions.easeInOutSine;
+  const easingName = (typeof params.easing === 'string' && params.easing.length > 0)
+    ? params.easing
+    : 'easeInOutSine';
+  const easingFn = (easingName in easingFunctions)
+    ? easingFunctions[easingName]
+    : easingFunctions.easeInOutSine;
   const sig = input.value;
 
   return {
@@ -265,12 +269,12 @@ function applyBroadcastLens(input: Artifact, _params: Record<string, unknown>): 
 
   return {
     kind: 'Field:number',
-    value: (_seed: number, n: number, _ctx: unknown) => {
+    value: (_seed: number, n: number, _ctx: unknown): number[] => {
       // Broadcast the signal value to all elements
       // Note: We evaluate at t=0 since Field is compile-time
       const ctx: RuntimeCtx = { viewport: { w: 800, h: 600, dpr: 1 } };
       const v = sig(0, ctx);
-      return Array(n).fill(v);
+      return Array(n).fill(v) as number[];
     },
   };
 }
@@ -285,7 +289,7 @@ function applyPerElementOffsetLens(input: Artifact, params: Record<string, unkno
 
   return {
     kind: 'Field:number',
-    value: (seed: number, n: number, _ctx: unknown) => {
+    value: (seed: number, n: number, _ctx: unknown): number[] => {
       const ctx: RuntimeCtx = { viewport: { w: 800, h: 600, dpr: 1 } };
       const baseValue = sig(0, ctx);
       return Array.from({ length: n }, (_, i) => {
