@@ -333,7 +333,7 @@ Standard per-element operations for position, color, and opacity.
 ## Composite Library
 
 ### AmbientLoopRoot
-Wraps CycleTimeRoot with bus publishing.
+
 
 **Exposes:** period, mode
 

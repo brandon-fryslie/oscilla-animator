@@ -30,7 +30,7 @@ The **authoritative** specification is: `design-docs/spec/`
 ## Why Historical
 
 As the project evolved, inconsistencies emerged:
-- CycleTimeRoot was defined then removed
+
 - Rails vs buses had conflicting definitions
 - TimeModel had 2 vs 3 variants
 - Scrubbing was both "deferred" and "required"

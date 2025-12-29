@@ -28,7 +28,7 @@ Declare the time contract for the patch.
 - TimeRoot has no upstream dependencies
 - No TimeRoot inside composites
 
-**Note:** CycleTimeRoot and PhaseClock do NOT exist. Phase comes from Time Console.
+
 
 ### Domain Generators
 Produce stable element identity.

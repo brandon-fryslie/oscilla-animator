@@ -31,7 +31,7 @@ A loopable ambient system: a grid of dots that "breathes" (radius), slowly drift
   - Cycle B lane: period = 32s, mode = loop → produces phaseB
 - **Required Global Rails:** time, phaseA, phaseB, pulse, energy, palette
 
-**Note:** There is NO CycleTimeRoot. Cycles are authored via Time Console Modulation Rack, not as TimeRoot selection.
+
 
 ### Canonical Buses (Global Rails)
 
@@ -69,7 +69,7 @@ A loopable ambient system: a grid of dots that "breathes" (radius), slowly drift
 - Produces:
   - `phaseB` rail (secondary/phrase phase)
 
-This gives multi-scale looping (8s loop + 32s phrase) without any CycleTimeRoot or PhaseClock blocks.
+
 
 ### C) Domain + Arrangement
 
@@ -204,7 +204,7 @@ This patch is the canary for phase-driven export correctness.
 ### 2. UI Correctness
 - INFINITE badge appears (TimeModel is infinite)
 - Time Console Modulation Rack shows Cycle lanes for phaseA/phaseB
-- No CycleTimeRoot or PhaseClock blocks in the patch
+
 
 ### 3. No-Jank
 - Param tweak on breath amplitude changes visuals with no flicker

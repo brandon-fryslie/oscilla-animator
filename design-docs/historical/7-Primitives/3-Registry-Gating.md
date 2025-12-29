@@ -33,7 +33,7 @@ export type Capability = KernelCapability | 'pure';
 export type KernelId =
   // Time Authority
   | 'FiniteTimeRoot'
-  | 'CycleTimeRoot'
+
   | 'InfiniteTimeRoot'
   // Identity Authority
   | 'DomainN'
@@ -120,7 +120,7 @@ This is the **only** place where non-pure capabilities are allowed:
 export const KERNEL_PRIMITIVES = {
   // Time Authority (exactly 3)
   'FiniteTimeRoot': 'time',
-  'CycleTimeRoot': 'time',
+
   'InfiniteTimeRoot': 'time',
 
   // Identity Authority (exactly 2)

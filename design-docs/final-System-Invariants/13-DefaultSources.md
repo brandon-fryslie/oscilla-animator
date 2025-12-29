@@ -1,3 +1,7 @@
+**Accepted as Final System Invariant**
+
+**Needs Rewrite.  techical detail IS accurate**
+
 This is a good moment to be very deliberate about naming, because this concept will quietly become one of the most important pieces of the mental model. The name needs to be:
 	•	technically honest
 	•	non-magical
@@ -102,7 +106,7 @@ Any user-created block or bus that feeds an input.
 
 3. Source Replacement Rule
 
-When an explicit source is connected, the Default Source for that input is removed. When it is disconnected, the Default Source is reinstated.
+When an explicit source is connected, the Default Source for that input is disconnected. When it is disconnected, the Default Source is reconnected.
 
 This gives you a very crisp invariant:
 
@@ -137,10 +141,8 @@ Compiler / runtime
 	•	replaceDefaultSource(input, explicitSource)
 
 UI copy (minimal, factual)
-	•	Inspector label: Default value
+	•	Inspector label: Default source
 	•	Tooltip (optional): Used when no input is connected
-
-No metaphors. No marketing language.
 
 ⸻
 
@@ -169,8 +171,11 @@ Default Sources
 
 If you adopt that term consistently, a lot of other design decisions will suddenly feel simpler and more inevitable.
 
+---
 
-Me: 'Default Source' it is.  Is this a good idea?  It feels necessary to avoid the patch breaking whenever I add anything with an input 
+Question: 'Default Source' it is.  Is this a good idea?  It feels necessary to avoid the patch breaking whenever I add anything with an input 
+
+---
 
 Yes — it’s a good idea, and it’s one of the few “fallback” mechanisms that actually reduces complexity instead of hiding it, as long as you make it explicit in the semantics and predictable in the UI.
 
@@ -180,7 +185,7 @@ Why it’s good (for this project specifically)
 	•	Discoverability improves: users can add a block and immediately see it “do something” because defaults produce a meaningful baseline.
 	•	You can enforce invariants like “exactly one effective source per input” (wire OR bus-listener OR Default Source), which makes the system easier to reason about and debug.
 
-The main risk
+## The main risk
 
 It can become “magic” if users can’t tell where a value is coming from.
 
@@ -194,7 +199,7 @@ If you do that, it won’t feel like a hack; it will feel like the system has a 
 Two design constraints to keep it “honest”
 	1.	Never silently choose a non-neutral default unless the type explicitly defines a neutral element / identity.
 Example: number→0 is safe, color→transparent/black is OK, vec2→(0,0) is OK. But “duration” defaults need care.
-	2.	Defaults must be stable and deterministic (no randomness, no time dependence unless the type is inherently time-based and you’re explicit about it).
+	2.	Defaults must be stable and deterministic (no randomness).
 
 One key clarification
 
@@ -203,6 +208,6 @@ That’s correct in spirit, but operationally it should be:
 	•	Default Source outputs the neutral value for its domain (the identity element of the bus combiner if applicable, otherwise a type-defined neutral)
 	•	If the input represents a transform (e.g. “scale”), the neutral is the identity transform (scale=1), not always 0.
 
-So the neutral is sometimes per-port semantic, not just per-type. You can handle that with “default hints” on the port definition (recommended).
+**Critical detail:**  neutral is sometimes per-port semantic, not just per-type. We handle that with “default hints” on the port definition.
 
 Bottom line: it’s not just necessary to avoid breakage — it’s a foundational rule that makes the whole “playable, no-jank, always-live” philosophy actually implementable.

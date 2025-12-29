@@ -40,7 +40,7 @@ Prominent badge reflecting the TimeRoot:
 - `FINITE`
 - `INFINITE`
 
-**Note:** There is NO `CYCLE` badge. CycleTimeRoot does not exist. Cycles are produced by Time Console Global Rails. View looping for finite patches is a transport policy, not a topology.
+
 
 This is the user's "what kind of thing am I building?" anchor.
 
@@ -79,7 +79,7 @@ These affect only view-time mapping, never the underlying monotonic time.
 
 ## Time Console (Modulation Rack)
 
-**Note:** CYCLE mode UI is removed. There is no CycleTimeRoot.
+
 
 Cycles are authored in the **Time Console** (Modulation Rack), which produces Global Rails:
 

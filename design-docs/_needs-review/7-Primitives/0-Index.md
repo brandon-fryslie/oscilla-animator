@@ -23,7 +23,7 @@ This directory defines the **closed primitive set** for Oscilla and the enforcem
 
 | Capability | Authority | Primitives |
 |------------|-----------|------------|
-| `time` | Time topology | FiniteTimeRoot, CycleTimeRoot, InfiniteTimeRoot |
+| `time` | Time topology | FiniteTimeRoot, InfiniteTimeRoot |
 | `identity` | Element creation | DomainN, SVGSampleDomain |
 | `state` | Frame-to-frame memory | IntegrateBlock, HistoryBlock |
 | `render` | RenderTree emission | RenderInstances, RenderStrokes*, RenderProgramStack* |

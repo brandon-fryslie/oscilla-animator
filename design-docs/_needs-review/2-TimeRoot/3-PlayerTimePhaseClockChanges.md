@@ -23,7 +23,7 @@ It may:
 
 But it does so by transforming an input time or phase, never by implying “this patch loops.”
 
-Rule: A patch loops only if it has a CycleTimeRoot.
+
 
 ⸻
 
@@ -158,25 +158,25 @@ This is how you create:
 
 5) Relationship to TimeRoot (Hard Rules)
 
-5.1 CycleTimeRoot requirement for “primary looping”
 
-Only CycleTimeRoot can define patch looping.
+
+
 
 Therefore:
 	•	If a patch uses FiniteTimeRoot or InfiniteTimeRoot, PhaseClock may still be in loop mode, but the patch is not considered cyclic. It is:
 	•	finite with internal periodic motion, or
 	•	infinite with local oscillators
 
-5.2 Primary Phase is owned by CycleTimeRoot
 
-CycleTimeRoot outputs:
+
+
 	•	phase with semantics primary
 
 PhaseClock outputs:
 	•	phase with semantics secondary (optional semantics tag)
 
 If you have buses phaseA, phaseB, the canonical binding is:
-	•	phaseA comes from CycleTimeRoot phase
+
 	•	phaseB often comes from a PhaseClock
 
 But the system does not infer this. The UI encourages it.

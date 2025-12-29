@@ -49,7 +49,7 @@ TR-001: Missing TimeRoot
 	•	Message: This patch has no TimeRoot. Choose Finite, Cycle, or Infinite.
 	•	Locations: none (global)
 	•	Help actions:
-	•	“Insert CycleTimeRoot”
+
 	•	“Insert FiniteTimeRoot”
 	•	“Insert InfiniteTimeRoot”
 
@@ -80,19 +80,19 @@ TR-004: TimeRoot inside composite definition
 
 These ensure TimeRoot kind matches required canonical buses / signals.
 
-TM-101: CycleTimeRoot missing required phase output
-	•	Condition: CycleTimeRoot does not expose phase output or it fails typing
-	•	Title: Missing primary phase
-	•	Message: CycleTimeRoot must output a primary phase signal.
-	•	Locations: CycleTimeRoot block
-	•	Details: expected port type: Signal
-	•	Help: “Fix CycleTimeRoot definition”
 
-TM-102: CycleTimeRoot missing required pulse output
+
+	•	Title: Missing primary phase
+
+
+	•	Details: expected port type: Signal
+
+
+
 	•	Condition: no wrap/pulse event output (or wrong type)
 	•	Title: Missing cycle pulse
-	•	Message: CycleTimeRoot must output a wrap/endpoints pulse event.
-	•	Locations: CycleTimeRoot block
+
+
 
 TM-103: Reserved bus mismatch (phaseA/pulse/progress)
 	•	Condition: a reserved bus exists but has wrong TypeDesc
@@ -103,7 +103,7 @@ TM-103: Reserved bus mismatch (phaseA/pulse/progress)
 	•	Help: “Rename bus” or “Fix bus type”
 
 TM-104: Required reserved bus missing (when required)
-	•	Condition: CycleTimeRoot but no UI binding for phaseA or pulse
+
 	•	Title: Missing required system bus
 	•	Message: Cycle patches must provide phaseA and pulse buses.
 	•	Locations: TimeRoot block + bus board area

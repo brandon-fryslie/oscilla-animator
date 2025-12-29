@@ -80,11 +80,11 @@ Controls:
 
 2.5 Optional “Loop View” is forbidden
 
-Finite is finite. If the user wants looping, they must choose CycleTimeRoot.
+
 
 ⸻
 
-3) CYCLE Mode UI (CycleTimeRoot)
+
 
 3.1 Visual Form: Phase Ring + Period
 
@@ -102,12 +102,12 @@ The circle is not decoration: it prevents the “start/end” mental model.
 
 3.2 Primary Controls
 	•	Phase Scrub (dragging around ring)
-	•	sets phaseOffset (or equivalent view offset) on CycleTimeRoot
+
 	•	does not reset state
 	•	Period editor:
 	•	Period 4.50s (click to edit)
 	•	Mode toggle (Loop/Pingpong):
-	•	edits CycleTimeRoot config (structural change; may require confirmation)
+
 
 3.3 Secondary Phase Lanes (Optional)
 
@@ -171,7 +171,7 @@ Elements:
 4.5 Optional “Cycles Detected” are forbidden
 
 Infinite mode does not infer cycles from PhaseClocks.
-If users want cycle-centric control, they choose CycleTimeRoot.
+
 
 However, you may show published phase buses as read-only scopes in a “Signals” panel (separate from Time Console).
 
@@ -212,7 +212,7 @@ The player only:
 	•	freezes system time
 	•	scales dt
 
-Looping lives entirely in CycleTimeRoot / phases.
+
 
 ⸻
 

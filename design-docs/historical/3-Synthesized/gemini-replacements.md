@@ -29,7 +29,7 @@ Every patch must contain exactly one **TimeRoot** block.
 | `FiniteTimeRoot` | Finite performance with known duration | Logo stingers, intro/outro animations |
 | `InfiniteTimeRoot` | Runs unbounded, generative time | Installations, VJ loops, screensavers |
 
-> **Note:** There is no `CycleTimeRoot`. Cyclic animations are built using `InfiniteTimeRoot` combined with the **Modulation Rack** to create phase loops.
+
 
 ### Constraints
 - Exactly one TimeRoot per patch (compile error if 0 or >1)

@@ -25,7 +25,7 @@ Pre-built combinations of primitives for common patterns.
 
 ## Time/Topology Primitives
 
-**Note:** CycleTimeRoot does NOT exist. Time topology is defined only by FiniteTimeRoot or InfiniteTimeRoot. Cycles are produced by the Time Console as Global Rails, not by topology blocks.
+
 
 ### FiniteTimeRoot
 **Role:** TimeRoot
@@ -299,7 +299,7 @@ Standard per-element operations for position, color, and opacity.
 
 ### AmbientLoopRoot (REMOVED)
 
-**Note:** This composite is removed. CycleTimeRoot does not exist. Use FiniteTimeRoot or InfiniteTimeRoot with Time Console rails for looping behavior.
+
 
 ### BreathEnergy
 Oscillator + Shaper publishing to energy bus.

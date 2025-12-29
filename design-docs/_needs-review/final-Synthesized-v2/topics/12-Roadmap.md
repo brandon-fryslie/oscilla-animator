@@ -48,7 +48,7 @@ Patch loads, validates, and produces intelligible errors until time/runtime exis
 Make looping/finite/infinite a property of the patch, not the player.
 
 ### Must-Haves
-- Implement FiniteTimeRoot and InfiniteTimeRoot (NO CycleTimeRoot)
+
 - Compiler outputs TimeModel (`finite` or `infinite` only)
 - Player runs unbounded `t` and never wraps/clamps
 - Time Console UI driven by timeModel only
@@ -176,7 +176,7 @@ Turn the Golden Patch into a usable template and canonical learning artifact.
 ### Must-Haves
 - Composite instance system works with bus bindings
 - Composite editing/expansion consistent with bus routing and TimeRoot constraints
-- Composites: BreathEnergy, PulseAccentEnergy, SlowPaletteDrift, BreathingDotsRenderer (NO AmbientLoopRoot - removed with CycleTimeRoot)
+
 
 ### Deliverables
 - Composite resolution strategy

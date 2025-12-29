@@ -8,7 +8,7 @@
 
 | # | Question | Resolution |
 |---|----------|------------|
-| 1 | CycleTimeRoot existence | **REMOVED** - Only FiniteTimeRoot and InfiniteTimeRoot exist |
+
 | 2 | TimeModel variants | **2 variants only**: `finite` and `infinite` (no `cyclic`) |
 | 3 | TimeModel determination | **TimeRoot only** - Graph properties never change TimeModel |
 | 4 | Finite view-looping | **Allowed** - View looping is a transport/player behavior |
@@ -25,7 +25,7 @@
 | 15 | Scrubbing | **Required** - Not deferred |
 | 16 | Rail combine rules | **Time Console only** - Separate from generic bus UI |
 | 17 | CYCLE UI mode | **Removed** - No CYCLE badge; cycles are rails, not TimeModel |
-| 18 | Cyclic export | **Derived** - Export uses Time Console rail periods, not CycleTimeRoot |
+
 
 ---
 
@@ -33,7 +33,7 @@
 
 ### Time Architecture
 - **TimeModel**: `{ kind: 'finite', durationMs }` or `{ kind: 'infinite' }`
-- **TimeRoot types**: FiniteTimeRoot, InfiniteTimeRoot (no CycleTimeRoot)
+
 - **TimeRoot publishes**: Only `time` bus
 - **Scrubbing**: Required (finite: absolute time, infinite: view window offset)
 
@@ -61,5 +61,5 @@ Invalid: `or`, `mix`
 
 ### Blocks
 - **PhaseClock removed** - Phase comes from rails
-- **CycleTimeRoot removed** - Cycles are rails, not topology
+
 - **Domain and position mapping separate** - DomainN + PositionMap* blocks

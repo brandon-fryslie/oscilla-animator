@@ -43,7 +43,7 @@ Export evaluates the program at a set of times:
 - Video: `t_i = i * (1000/fps)` for `i = 0..N-1`
 - SVG: `t_i = i * (periodMs/steps)` for `i = 0..steps`
 
-**Critical:** `t` is monotonic and unbounded as always. Any phase wrapping is internal to CycleTimeRoot/PhaseClocks.
+
 
 There is no "wrap maxTime."
 
@@ -63,7 +63,7 @@ There is no "wrap maxTime."
 
 No looping implied.
 
-### CycleTimeRoot Export (Seamless Loop)
+
 
 **Core rule: loop closure must be exact.**
 
@@ -149,7 +149,7 @@ Export must use:
 ### Phase-Driven Evaluation (Required for Cycle Export)
 To guarantee closure independent of fps:
 - Supply CycleRoot with phaseOverride
-- Or special export context where CycleTimeRoot.phase = requestedPhase
+
 
 This is not a hack; it is the correct abstraction.
 
@@ -166,7 +166,7 @@ No hidden randomness, no wall-clock dependence.
 
 Export must fail with clear errors if:
 - TimeRoot missing/invalid
-- Cycle export requested but no CycleTimeRoot
+
 - Phase-driven evaluation not possible due to illegal feedback
 - Non-exportable renderer feature used (SVG limitations)
 

@@ -40,13 +40,13 @@ Goal
 Make looping/finite/infinite be a property of the patch, not the player.
 
 Must-haves
-	•	Implement CycleTimeRoot fully with the ports described earlier.
+
 	•	Compiler must output timeModel + UiSignalBindings.
 	•	Player runs unbounded t and never wraps/clamps it.
 	•	Time Console UI is driven by timeModel only (Finite vs Cycle vs Infinite layout).
 
 Deliverables
-	•	CycleTimeRoot block compiler
+
 	•	Player transport rewrite (remove loopMode)
 	•	Time Console UI rework:
 	•	CYCLE badge
@@ -207,7 +207,7 @@ Must-haves
 	•	Change classification (Param / Structural / Topology)
 	•	Program swap scheduling:
 	•	frame boundary
-	•	pulse boundary (for CycleTimeRoot)
+
 	•	freeze boundary
 	•	State preservation:
 	•	stateful node registry (Delay/Integrate/etc, later)

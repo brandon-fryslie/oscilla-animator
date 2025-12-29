@@ -21,7 +21,7 @@ Where needed, I specify exact port types and key semantics.
 
 These are non-negotiable for your “looping is real” architecture.
 
-1.1 CycleTimeRoot (primitive, role=TimeRoot)
+
 
 Inputs
 	•	period: Scalar<duration>
@@ -366,7 +366,7 @@ The golden patch is not just a test. It must be a user-facing starting point. Th
 Wraps the topology and bus publishing.
 
 Contains:
-	•	CycleTimeRoot
+
 	•	publishes phaseA + pulse
 Exposes:
 	•	period
@@ -462,7 +462,7 @@ These are not “nice to have.” Without them, this patch will not be stable.
 Complete Block List (flat, for copy/paste into your tracker)
 
 Time/Topology
-	•	CycleTimeRoot
+
 	•	FiniteTimeRoot
 	•	InfiniteTimeRoot
 

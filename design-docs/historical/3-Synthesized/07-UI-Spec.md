@@ -64,7 +64,7 @@ This is the user's "what kind of thing am I building?" anchor.
 - No phase ring
 - No wrap indicators
 - No "cycle" labeling
-- No "Loop View" option - if user wants looping, use CycleTimeRoot
+
 
 ## CYCLE Mode UI
 

@@ -68,7 +68,7 @@ Do NOT use for implementation. Reference for design evolution only.
 
 These are resolved and final:
 
-- **CycleTimeRoot**: REMOVED - Only FiniteTimeRoot and InfiniteTimeRoot exist
+
 - **PhaseClock**: REMOVED - Phase comes from Time Console rails
 - **TimeModel**: 2 variants only (`finite`, `infinite`)
 - **Global Rails**: time, phaseA, phaseB, pulse, energy, palette

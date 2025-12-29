@@ -426,7 +426,7 @@ FiniteTimeRoot
 InfiniteTimeRoot
 ```
 
-There is no CycleTimeRoot.
+
 
 ### 3.2 FiniteTimeRoot UI
 

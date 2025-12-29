@@ -19,7 +19,7 @@ A loopable ambient system: a grid of dots that "breathes" (radius), slowly drift
 ## Patch Contract
 
 ### Time Topology
-- **TimeRoot:** CycleTimeRoot(period = 8.0s, mode = loop)
+
 - **Compiled TimeModel:** `{ kind: 'cyclic', periodMs: 8000 }`
 - **Required UI buses present:** phaseA, pulse, energy, palette
 
@@ -39,7 +39,7 @@ A loopable ambient system: a grid of dots that "breathes" (radius), slowly drift
 
 ### A) Time Topology Block
 
-**CycleTimeRoot**
+
 - Params: period = 8s, mode = loop
 - Publishes:
   - `phaseA` <- phase (primary)
@@ -201,7 +201,7 @@ While RUNNING:
 |--------|-------|----------|
 | GridDomain rows/cols | C | Requires explicit apply boundary |
 | Breath amplitude | A | Instant swap next frame |
-| CycleTimeRoot period | C | Offers apply on next pulse |
+
 
 ---
 
@@ -242,7 +242,7 @@ This patch is the canary for cycle export correctness.
 ## Why This Is The Golden Patch
 
 It exercises exactly what has been hard:
-- Single authoritative CycleTimeRoot
+
 - PhaseClock used correctly as secondary
 - Buses as glue (phaseA, pulse, energy, palette)
 - Lazy Fields that must not explode performance

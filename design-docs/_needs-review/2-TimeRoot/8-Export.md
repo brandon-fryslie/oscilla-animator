@@ -53,7 +53,7 @@ Export evaluates the program at a set of times:
 
 Crucially:
 	•	t is monotonic and unbounded as always.
-	•	Any phase wrapping is internal to CycleTimeRoot/PhaseClocks.
+
 
 There is no “wrap maxTime”.
 
@@ -80,7 +80,7 @@ No looping implied.
 
 ⸻
 
-4.2 CycleTimeRoot export (seamless loop is mandatory)
+
 
 Cycle exports are the most important because your tool is about loops.
 
@@ -205,7 +205,7 @@ To guarantee closure independent of fps, export must support evaluating the prog
 
 This requires:
 	•	a way to supply CycleRoot with phaseOverride / phaseOffset and freeze internal dt
-	•	or a special export context where CycleTimeRoot.phase = requestedPhase
+
 
 This is not a hack; it is the correct abstraction.
 
@@ -226,7 +226,7 @@ No hidden randomness, no wall-clock dependence.
 
 Export must fail with clear errors if:
 	•	TimeRoot missing/invalid
-	•	Cycle export requested but no CycleTimeRoot
+
 	•	Phase-driven evaluation not possible due to illegal feedback without memory boundary
 	•	Any non-exportable renderer feature is used (SVG limitations)
 

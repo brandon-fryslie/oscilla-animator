@@ -37,7 +37,7 @@ Exactly one TimeRoot must be active per patch.
 | Block | Emits | TimeModel |
 |-------|-------|-----------|
 | `FiniteTimeRoot` | `Signal<time>`, `Signal<number>` (progress) | `{ kind: 'finite', durationMs }` |
-| `CycleTimeRoot` | `Signal<time>`, `Signal<phase>` | `{ kind: 'cyclic', periodMs }` |
+
 | `InfiniteTimeRoot` | `Signal<time>` | `{ kind: 'infinite', windowMs }` |
 
 **Hard rule**: No other block may "own time topology."
@@ -220,7 +220,7 @@ interface BlockDefinition {
 const KERNEL_PRIMITIVES: Record<string, KernelCapability> = {
   // Time Authority
   'FiniteTimeRoot': 'time',
-  'CycleTimeRoot': 'time',
+
   'InfiniteTimeRoot': 'time',
 
   // Identity Authority

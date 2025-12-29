@@ -17,7 +17,7 @@ A patch declares exactly one TimeRoot. It declares the *time contract*, not time
 | **FiniteTimeRoot** | `{ kind: 'finite', durationMs }` | One-shot animations |
 | **InfiniteTimeRoot** | `{ kind: 'infinite' }` | Generative, endless |
 
-**Note:** There is NO CycleTimeRoot. Cycles are produced by the Time Console.
+
 
 ### TimeRoot Outputs
 

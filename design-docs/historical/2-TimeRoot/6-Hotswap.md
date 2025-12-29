@@ -60,7 +60,7 @@ Class C: Topology / Identity / State-Resetting
 
 Examples:
 	•	changing TimeRoot kind (Finite ↔ Cycle ↔ Infinite)
-	•	changing CycleTimeRoot period in a way that changes phase mapping discontinuously
+
 	•	changing Domain count or element identity rules
 	•	editing memory blocks inside feedback loops (Delay/Integrate topology)
 	•	changes that modify SCC structure (feedback legality)
@@ -147,7 +147,7 @@ FiniteTimeRoot.duration
 	•	keep current progress constant
 	•	recompute localT mapping so the visual moment stays stable
 
-CycleTimeRoot.period
+
 
 This is highly sensitive. Default rule:
 	•	if RUNNING: schedule swap on pulse boundary (wrap/endpoints)

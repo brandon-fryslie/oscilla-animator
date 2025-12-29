@@ -5,7 +5,7 @@ This phase focused on "nailing the coffin" on the foundational architecture requ
 ## Completed Tasks
 
 ### 1. Time Architecture Unification
-- **Standardized TimeRoot Outputs**: `FiniteTimeRoot`, `CycleTimeRoot`, and `InfiniteTimeRoot` now all provide canonical `systemTime`, `phase`, and `pulse` outputs.
+
 - **Infinite Loop Authority**: `InfiniteTimeRoot` now includes a `periodMs` input to drive its internal ambient cycles, ensuring every patch has a rhythmic basis.
 - **Auto-Publication**: The compiler (`compileBusAware.ts`) now automatically publishes `phase` to `phaseA` and `pulse` to `pulse` for all TimeRoot variants, guaranteeing that modulation targets always have a source.
 

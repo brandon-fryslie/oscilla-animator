@@ -750,7 +750,7 @@ FiniteTimeRoot
 InfiniteTimeRoot
 ```
 
-There is no CycleTimeRoot.
+
 
 ### 3.2 FiniteTimeRoot UI
 
@@ -1537,7 +1537,7 @@ All TimeRoot types auto-publish to the standard buses for unified API.
 - `pulse` (Event) - **auto-published** *(provisional)* (end event)
 - `energy` (Signal) - **auto-published** *(provisional)* (1.0 while running, 0 when complete)
 
-**CycleTimeRoot:**
+
 - `phaseA` (Signal) - **auto-published** (primary phase)
 - `pulse` (Event) - **auto-published** (wrap event)
 - `energy` (Signal) - **auto-published** (constant 1.0)
@@ -1593,7 +1593,7 @@ TypeDesc: { world: 'signal', domain: 'unit', semantics: 'progress' }
 
 All TimeRoot blocks auto-publish to the canonical buses for unified API:
 
-**CycleTimeRoot publishes:**
+
 - `phaseA` <- TimeRoot.phase
 - `pulse` <- TimeRoot.wrap
 - `energy` <- TimeRoot.energy
@@ -1855,7 +1855,7 @@ interface CompiledProgram {
 The compiler analyzes the patch graph and infers the time model.
 
 **Rules (deterministic):**
-1. If any CycleTimeRoot exists -> cyclic
+
 2. If any feedback loop crosses memory blocks without full cycle closure -> infinite
 3. If only FiniteTimeRoot exists -> finite
 4. If conflicting models exist -> error (patch invalid)
@@ -1928,8 +1928,8 @@ type ErrorLocation =
 
 | Code | Title | Condition |
 |------|-------|-----------|
-| TM-101 | Missing primary phase | CycleTimeRoot no phase output |
-| TM-102 | Missing cycle pulse | CycleTimeRoot no wrap output |
+
+
 | TM-103 | Reserved bus has wrong type | Type mismatch on reserved bus |
 | TM-104 | Missing required system bus | Required bus not bound |
 
@@ -2045,7 +2045,7 @@ No structural changes.
 
 **Examples:**
 - Changing TimeRoot kind
-- Changing CycleTimeRoot period discontinuously
+
 - Changing Domain count or element identity
 - Editing memory blocks in feedback loops
 - Changes that modify SCC structure
@@ -2110,7 +2110,7 @@ If Class B change results in partial state loss:
 - If RUNNING: swap at frame boundary only if mapping can stay continuous
 - Keep current progress constant, recompute localT mapping
 
-**CycleTimeRoot.period:**
+
 - If RUNNING: schedule swap on pulse boundary
 - If no pulse bus: require freeze
 - Reason: changing period mid-cycle causes phase discontinuity
@@ -2248,7 +2248,7 @@ This is the user's "what kind of thing am I building?" anchor.
 - No phase ring
 - No wrap indicators
 - No "cycle" labeling
-- No "Loop View" option - if user wants looping, use CycleTimeRoot
+
 
 ## CYCLE Mode UI
 
@@ -2346,7 +2346,7 @@ Player only:
 - Freezes system time
 - Scales dt
 
-Looping lives entirely in CycleTimeRoot/phases.
+
 
 ## TimeRoot Picker
 
@@ -2472,7 +2472,7 @@ Export evaluates the program at a set of times:
 - Video: `t_i = i * (1000/fps)` for `i = 0..N-1`
 - SVG: `t_i = i * (periodMs/steps)` for `i = 0..steps`
 
-**Critical:** `t` is monotonic and unbounded as always. Any phase wrapping is internal to CycleTimeRoot/PhaseClocks.
+
 
 There is no "wrap maxTime."
 
@@ -2492,7 +2492,7 @@ There is no "wrap maxTime."
 
 No looping implied.
 
-### CycleTimeRoot Export (Seamless Loop)
+
 
 **Core rule: loop closure must be exact.**
 
@@ -2578,7 +2578,7 @@ Export must use:
 ### Phase-Driven Evaluation (Required for Cycle Export)
 To guarantee closure independent of fps:
 - Supply CycleRoot with phaseOverride
-- Or special export context where CycleTimeRoot.phase = requestedPhase
+
 
 This is not a hack; it is the correct abstraction.
 
@@ -2595,7 +2595,7 @@ No hidden randomness, no wall-clock dependence.
 
 Export must fail with clear errors if:
 - TimeRoot missing/invalid
-- Cycle export requested but no CycleTimeRoot
+
 - Phase-driven evaluation not possible due to illegal feedback
 - Non-exportable renderer feature used (SVG limitations)
 
@@ -2626,7 +2626,7 @@ Pre-built combinations of primitives for common patterns.
 
 > **⚠️ PROVISIONAL (2025-12-23):** The unified output set across all TimeRoot types (phase, pulse, energy auto-publication) is under evaluation. This design provides API consistency but may be revised based on user feedback. Original spec had more minimal outputs per TimeRoot type.
 
-### CycleTimeRoot
+
 **Role:** TimeRoot
 
 **Inputs:**
@@ -2666,7 +2666,7 @@ Pre-built combinations of primitives for common patterns.
 
 **Auto-publishes:** `progress` -> `progress`, `phase` -> `phaseA` *(provisional)*, `end` -> `pulse` *(provisional)*, `energy` -> `energy` *(provisional)*
 
-> *Provisional outputs added for API consistency with CycleTimeRoot. Original spec only required `systemTime`, `localT`, `progress`.*
+
 
 ### InfiniteTimeRoot
 **Role:** TimeRoot
@@ -2942,7 +2942,7 @@ Standard per-element operations for position, color, and opacity.
 ## Composite Library
 
 ### AmbientLoopRoot
-Wraps CycleTimeRoot with bus publishing.
+
 
 **Exposes:** period, mode
 
@@ -2997,7 +2997,7 @@ A loopable ambient system: a grid of dots that "breathes" (radius), slowly drift
 ## Patch Contract
 
 ### Time Topology
-- **TimeRoot:** CycleTimeRoot(period = 8.0s, mode = loop)
+
 - **Compiled TimeModel:** `{ kind: 'cyclic', periodMs: 8000 }`
 - **Required UI buses present:** phaseA, pulse, energy, palette
 
@@ -3017,7 +3017,7 @@ A loopable ambient system: a grid of dots that "breathes" (radius), slowly drift
 
 ### A) Time Topology Block
 
-**CycleTimeRoot**
+
 - Params: period = 8s, mode = loop
 - Publishes:
   - `phaseA` <- phase (primary)
@@ -3140,7 +3140,7 @@ While RUNNING:
 |--------|-------|----------|
 | GridDomain rows/cols | C | Requires explicit apply boundary |
 | Breath amplitude | A | Instant swap next frame |
-| CycleTimeRoot period | C | Offers apply on next pulse |
+
 
 ---
 
@@ -3181,7 +3181,7 @@ This patch is the canary for cycle export correctness.
 ## Why This Is The Golden Patch
 
 It exercises exactly what has been hard:
-- Single authoritative CycleTimeRoot
+
 - PhaseClock used correctly as secondary
 - Buses as glue (phaseA, pulse, energy, palette)
 - Lazy Fields that must not explode performance
@@ -3234,13 +3234,13 @@ Patch loads, validates, and produces intelligible errors until time/runtime exis
 Make looping/finite/infinite a property of the patch, not the player.
 
 ### Must-Haves
-- Implement CycleTimeRoot fully
+
 - Compiler outputs TimeModel
 - Player runs unbounded `t` and never wraps/clamps
 - Time Console UI driven by timeModel only
 
 ### Deliverables
-- CycleTimeRoot block compiler
+
 - Player transport rewrite (remove loopMode)
 - Time Console UI rework: CYCLE badge, phase ring, pulse indicator
 - Bus auto-publication from TimeRoot

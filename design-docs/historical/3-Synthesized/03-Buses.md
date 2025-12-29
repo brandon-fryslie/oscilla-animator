@@ -37,7 +37,7 @@ All TimeRoot types auto-publish to the standard buses for unified API.
 - `pulse` (Event) - **auto-published** *(provisional)* (end event)
 - `energy` (Signal) - **auto-published** *(provisional)* (1.0 while running, 0 when complete)
 
-**CycleTimeRoot:**
+
 - `phaseA` (Signal) - **auto-published** (primary phase)
 - `pulse` (Event) - **auto-published** (wrap event)
 - `energy` (Signal) - **auto-published** (constant 1.0)
@@ -93,7 +93,7 @@ TypeDesc: { world: 'signal', domain: 'unit', semantics: 'progress' }
 
 All TimeRoot blocks auto-publish to the canonical buses for unified API:
 
-**CycleTimeRoot publishes:**
+
 - `phaseA` <- TimeRoot.phase
 - `pulse` <- TimeRoot.wrap
 - `energy` <- TimeRoot.energy

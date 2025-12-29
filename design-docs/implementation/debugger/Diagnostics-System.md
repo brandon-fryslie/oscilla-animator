@@ -172,7 +172,7 @@ interface CompileFinishedEvent {
   diagnostics: Diagnostic[];  // Authoritative snapshot
   programMeta?: {
     timelineHint: 'finite' | 'cyclic' | 'infinite';
-    timeRootKind: 'FiniteTimeRoot' | 'CycleTimeRoot' | 'InfiniteTimeRoot' | 'none';
+
     busUsageSummary?: Record<string, { publishers: number; listeners: number }>;
   };
 }
@@ -408,7 +408,7 @@ private runAuthoringValidators(patchRevision: number): Diagnostic[] {
   // Validator: Check for missing TimeRoot
   const timeRootBlocks = blocks.filter(block =>
     block.type === 'FiniteTimeRoot' ||
-    block.type === 'CycleTimeRoot' ||
+
     block.type === 'InfiniteTimeRoot'
   );
 

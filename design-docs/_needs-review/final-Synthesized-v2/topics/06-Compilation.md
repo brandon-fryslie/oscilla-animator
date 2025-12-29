@@ -125,7 +125,7 @@ type ErrorLocation =
 | TM-103 | Reserved bus has wrong type | Type mismatch on reserved bus |
 | TM-104 | Missing required system bus | Required bus not bound |
 
-**Note:** CycleTimeRoot and PhaseClock errors (TM-101, TM-102, PC-xxx) are removed. These blocks no longer exist. Phase/pulse come from Time Console rails.
+
 
 ### Feedback Errors (FB-xxx)
 

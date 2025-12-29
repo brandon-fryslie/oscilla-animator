@@ -44,7 +44,7 @@ Common use
 B) CycleRoot (looping primary cycle)
 
 Required
-	•	CycleTimeRoot(periodMs, mode)
+
 	•	mode ∈ { loop, pingpong }
 
 Optional
@@ -89,7 +89,7 @@ Time blocks (affect topology)
 
 Only these can define TimeRoot:
 	•	FiniteTimeRoot
-	•	CycleTimeRoot
+
 	•	InfiniteTimeRoot
 
 Time-derived blocks (do not define topology)

@@ -18,7 +18,7 @@ FiniteTimeRoot
 	•	pulse optional
 	•	energy optional
 
-CycleTimeRoot
+
 	•	phaseA (Signal) required
 	•	pulse (Signal) required (wrap or endpoints)
 	•	energy optional but strongly encouraged
@@ -71,7 +71,7 @@ Rule:
 	•	TimeRoot outputs are the canonical source of the required buses for that topology.
 	•	The compiler (or patch initialization) ensures these are published.
 
-CycleTimeRoot publishes:
+
 	•	phaseA ← TimeRoot.phase
 	•	pulse ← TimeRoot.wrap
 Optionally:

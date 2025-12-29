@@ -44,13 +44,13 @@ Patch loads, validates, and produces intelligible errors until time/runtime exis
 Make looping/finite/infinite a property of the patch, not the player.
 
 ### Must-Haves
-- Implement CycleTimeRoot fully
+
 - Compiler outputs TimeModel
 - Player runs unbounded `t` and never wraps/clamps
 - Time Console UI driven by timeModel only
 
 ### Deliverables
-- CycleTimeRoot block compiler
+
 - Player transport rewrite (remove loopMode)
 - Time Console UI rework: CYCLE badge, phase ring, pulse indicator
 - Bus auto-publication from TimeRoot

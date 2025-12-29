@@ -43,7 +43,7 @@ interface CompiledProgram {
 The compiler analyzes the patch graph and infers the time model.
 
 **Rules (deterministic):**
-1. If any CycleTimeRoot exists -> cyclic
+
 2. If any feedback loop crosses memory blocks without full cycle closure -> infinite
 3. If only FiniteTimeRoot exists -> finite
 4. If conflicting models exist -> error (patch invalid)
@@ -116,8 +116,8 @@ type ErrorLocation =
 
 | Code | Title | Condition |
 |------|-------|-----------|
-| TM-101 | Missing primary phase | CycleTimeRoot no phase output |
-| TM-102 | Missing cycle pulse | CycleTimeRoot no wrap output |
+
+
 | TM-103 | Reserved bus has wrong type | Type mismatch on reserved bus |
 | TM-104 | Missing required system bus | Required bus not bound |
 

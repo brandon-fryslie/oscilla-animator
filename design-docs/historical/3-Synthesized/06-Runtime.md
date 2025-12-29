@@ -69,7 +69,7 @@ No structural changes.
 
 **Examples:**
 - Changing TimeRoot kind
-- Changing CycleTimeRoot period discontinuously
+
 - Changing Domain count or element identity
 - Editing memory blocks in feedback loops
 - Changes that modify SCC structure
@@ -134,7 +134,7 @@ If Class B change results in partial state loss:
 - If RUNNING: swap at frame boundary only if mapping can stay continuous
 - Keep current progress constant, recompute localT mapping
 
-**CycleTimeRoot.period:**
+
 - If RUNNING: schedule swap on pulse boundary
 - If no pulse bus: require freeze
 - Reason: changing period mid-cycle causes phase discontinuity
