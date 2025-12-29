@@ -138,7 +138,8 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
 
   const slot = ctx.b.allocValueSlot();
   return {
-    outputs: [{ k: 'sig', id: output, slot }],
+    outputs: [], // Legacy - empty for fully migrated blocks
+    outputsById: { out: { k: 'sig', id: output, slot } },
   };
 };
 

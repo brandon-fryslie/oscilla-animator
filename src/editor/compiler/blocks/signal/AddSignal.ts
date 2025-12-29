@@ -30,7 +30,10 @@ const lowerAddSignal: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
   }, outType);
 
   const slot = ctx.b.allocValueSlot();
-  return { outputs: [{ k: 'sig', id: sigId, slot }] };
+  return {
+    outputs: [], // Legacy - empty for fully migrated blocks
+    outputsById: { out: { k: 'sig', id: sigId, slot } },
+  };
 };
 
 // Register block type for IR lowering

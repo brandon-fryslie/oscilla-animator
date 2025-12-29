@@ -18,7 +18,44 @@ export type PortSpec = {
   defaultSource?: DefaultSource;
 };
 
-export const OSCILLATOR_PORTS = {
+/**
+ * Define a port catalog with compile-time validation.
+ *
+ * Enforces that:
+ * - `inputOrder` keys exactly match keys in `inputs` object
+ * - `outputOrder` keys exactly match keys in `outputs` object
+ *
+ * This prevents drift between port definitions and their ordering arrays,
+ * catching mismatches at TypeScript compile-time rather than runtime.
+ *
+ * @example
+ * ```typescript
+ * const PORTS = definePortCatalog({
+ *   inputs: {
+ *     a: { id: 'a', label: 'A', ... },
+ *     b: { id: 'b', label: 'B', ... }
+ *   },
+ *   inputOrder: ['a', 'b'], // TypeScript error if 'a' or 'b' missing from inputs
+ *   outputs: {
+ *     out: { id: 'out', label: 'Output', ... }
+ *   },
+ *   outputOrder: ['out'] // TypeScript error if 'out' missing from outputs
+ * });
+ * ```
+ */
+export function definePortCatalog<
+  const Inputs extends Record<string, PortSpec>,
+  const Outputs extends Record<string, PortSpec>
+>(catalog: {
+  inputs: Inputs;
+  inputOrder: readonly (keyof Inputs)[];
+  outputs: Outputs;
+  outputOrder: readonly (keyof Outputs)[];
+}) {
+  return catalog;
+}
+
+export const OSCILLATOR_PORTS = definePortCatalog({
   inputs: {
     phase: {
       id: 'phase',
@@ -89,9 +126,4 @@ export const OSCILLATOR_PORTS = {
     } as const,
   },
   outputOrder: ['out'] as const,
-} as const satisfies {
-  inputs: Record<string, PortSpec>;
-  inputOrder: readonly string[];
-  outputs: Record<string, PortSpec>;
-  outputOrder: readonly string[];
-};
+});

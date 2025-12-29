@@ -253,8 +253,8 @@ function lowerBlockInstance(
     // Use registered lowering function
     try {
       const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
-      const enforcePortContract = blockDef?.tags?.irPortContract === 'strict';
-      if (enforcePortContract) {
+      const enforcePortContract = blockDef?.tags?.irPortContract !== 'relaxed';
+      if (enforcePortContract && blockDef) {
         const defInputIds = blockDef.inputs.map((input) => input.id);
         const irInputIds = blockType.inputs.map((input) => input.portId);
         const defOutputIds = blockDef.outputs.map((output) => output.id);

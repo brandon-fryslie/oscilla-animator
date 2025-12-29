@@ -27,7 +27,10 @@ const lowerMulSignal: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
   const sigId = ctx.b.sigZip(a.id, b.id, { kind: 'opcode', opcode: OpCode.Mul }, outType,);
 
   const slot = ctx.b.allocValueSlot();
-  return { outputs: [{ k: 'sig', id: sigId, slot }] };
+  return {
+    outputs: [], // Legacy - empty for fully migrated blocks
+    outputsById: { out: { k: 'sig', id: sigId, slot } },
+  };
 };
 
 // Register block type for IR lowering

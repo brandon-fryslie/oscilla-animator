@@ -52,8 +52,10 @@ describe("Signal Math Operations", () => {
 
       const result = irDecl!.lower({ ctx, inputs });
 
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      // Migrated blocks use outputsById instead of positional outputs
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.out).toBeDefined();
+      expect(result.outputsById!.out.k).toBe("sig");
 
       // Verify signal expression was created
       const program = builder.build();
@@ -90,8 +92,9 @@ describe("Signal Math Operations", () => {
       };
 
       const result = irDecl!.lower({ ctx, inputs });
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.out).toBeDefined();
+      expect(result.outputsById!.out.k).toBe("sig");
     });
 
     it("should lower MulSignal to IR", () => {
@@ -124,8 +127,9 @@ describe("Signal Math Operations", () => {
       };
 
       const result = irDecl!.lower({ ctx, inputs });
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.out).toBeDefined();
+      expect(result.outputsById!.out.k).toBe("sig");
     });
 
     it("should lower DivSignal to IR", () => {
@@ -310,8 +314,9 @@ describe("Signal Math Operations", () => {
 
       const result = irDecl!.lower({ ctx, inputs });
 
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.out).toBeDefined();
+      expect(result.outputsById!.out.k).toBe("sig");
 
       // Verify signal expression graph was created
       const program = builder.build();
@@ -358,8 +363,9 @@ describe("Signal Math Operations", () => {
 
       const result = irDecl!.lower({ ctx, inputs });
 
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.out).toBeDefined();
+      expect(result.outputsById!.out.k).toBe("sig");
     });
 
     it("should lower Oscillator with saw waveform", () => {
@@ -402,8 +408,9 @@ describe("Signal Math Operations", () => {
 
       const result = irDecl!.lower({ ctx, inputs });
 
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.out).toBeDefined();
+      expect(result.outputsById!.out.k).toBe("sig");
     });
   });
 
