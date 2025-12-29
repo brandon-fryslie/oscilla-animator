@@ -23,6 +23,7 @@ import type {
 } from "../../types";
 import type { TypeDesc, TypeDomain } from "../ir/types";
 import type { NormalizedPatch, TypedPatch } from "../ir";
+import { domainFromString } from "../../ir/types/typeConversion";
 
 /**
  * Error types emitted by Pass 2.
@@ -70,6 +71,8 @@ export type Pass2Error =
  * Convert editor SlotType string to IR TypeDesc.
  * Parses patterns like "Signal<number>", "Field<vec2>", "Scalar:number".
  *
+ * Uses canonical domain mapping from typeConversion.ts.
+ *
  * @param slotType - The slot type string from the editor
  * @returns A TypeDesc for the IR
  * @throws Error if the slot type cannot be parsed
@@ -79,28 +82,30 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
   const worldMatch = slotType.match(/^(Signal|Field|Event)<(.+)>$/);
   if (worldMatch) {
     const world = worldMatch[1].toLowerCase();
-    const domain = worldMatch[2];
+    const domainStr = worldMatch[2];
 
-    // Normalize domain aliases
-    const normalizedDomain = normalizeDomain(domain);
+    // Use canonical domain mapping from typeConversion.ts
+    const domain = domainFromString(domainStr);
 
     return {
       world: world as "signal" | "field" | "event",
-      domain: normalizedDomain as TypeDomain,
+      domain: domain as TypeDomain,
     };
   }
 
   // Pattern: Scalar:domain
   const scalarMatch = slotType.match(/^Scalar:(.+)$/);
   if (scalarMatch) {
-    const domain = scalarMatch[1];
+    const domainStr = scalarMatch[1];
+    const domain = domainFromString(domainStr);
     return {
       world: "scalar",
-      domain: normalizeDomain(domain) as TypeDomain,
+      domain: domain as TypeDomain,
     };
   }
 
   // Special types without generic syntax
+  // Use 'special' world for compatibility with existing IR runtime
   const specialTypes: Record<string, TypeDesc> = {
     Scene: { world: "special", domain: "scene" },
     SceneTargets: { world: "special", domain: "sceneTargets" },
@@ -122,22 +127,6 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
   }
 
   throw new Error(`Unknown slot type: ${slotType}`);
-}
-
-/**
- * Normalize domain names to canonical IR domains.
- * Maps editor aliases to consistent IR domain names.
- */
-function normalizeDomain(domain: string): string {
-  const aliases: Record<string, string> = {
-    Point: "vec2",
-    Unit: "unit01",
-    Time: "timeMs",
-    PhaseSample: "phase01",
-    any: "unknown",
-  };
-
-  return aliases[domain] || domain.toLowerCase();
 }
 
 /**
@@ -237,25 +226,102 @@ function validateReservedBus(
 }
 
 /**
- * Precompute type conversion paths for wired connections.
- * For now, we only support direct type equality.
- * TODO: Add adapter/lens chain computation in future passes.
+ * Type compatibility check for wired connections.
+ * Determines if a value of type 'from' can be connected to a port expecting type 'to'.
+ *
+ * Compatibility rules:
+ * 1. Exact match (same world + domain)
+ * 2. Scalar can promote to Signal (same domain)
+ * 3. Signal can broadcast to Field (same domain)
+ * 4. Scalar can broadcast to Field via implicit signal promotion (same domain)
+ * 5. Special domain compatibility (render types, sceneTargets→vec2)
+ *
+ * Note: In the IR type system, 'point' is normalized to 'vec2' by domainFromString(),
+ * so we don't need special handling for point↔vec2 compatibility.
+ *
+ * @param from - Source type descriptor
+ * @param to - Target type descriptor
+ * @returns true if connection is compatible
+ */
+function isTypeCompatible(from: TypeDesc, to: TypeDesc): boolean {
+  // Exact match (world + domain)
+  if (from.world === to.world && from.domain === to.domain) {
+    return true;
+  }
+
+  // Scalar can promote to Signal (same domain)
+  if (from.world === "scalar" && to.world === "signal" && from.domain === to.domain) {
+    return true;
+  }
+
+  // Signal can broadcast to Field (same domain)
+  if (from.world === "signal" && to.world === "field" && from.domain === to.domain) {
+    return true;
+  }
+
+  // Scalar can broadcast to Field via signal promotion (same domain)
+  if (from.world === "scalar" && to.world === "field" && from.domain === to.domain) {
+    return true;
+  }
+
+  // Special case: renderTree and renderNode are compatible
+  const renderDomains: TypeDomain[] = ["renderTree", "renderNode"];
+  if (renderDomains.includes(from.domain as TypeDomain) && renderDomains.includes(to.domain as TypeDomain)) {
+    if (from.world === to.world) return true;
+  }
+
+  // Special case: sceneTargets can flow to vec2 (scene target points are positions)
+  // Note: sceneTargets→point is also handled because point is normalized to vec2
+  if (from.domain === "sceneTargets" && to.domain === "vec2") {
+    if (from.world === to.world) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Compute type conversion path for wired connections.
+ *
+ * Returns an array of conversion steps needed to transform 'from' type to 'to' type.
+ * Empty array means direct assignment (no conversion needed).
+ * null means no conversion path exists.
+ *
+ * Current implementation:
+ * - Direct compatibility → empty array (no conversion)
+ * - Incompatible types → null (no conversion path)
+ *
+ * Future enhancements:
+ * - Adapter chain computation (e.g., number→vec2 via broadcast adapter)
+ * - Lens transformations
+ * - Multi-step conversion paths
+ *
+ * @param fromType - Source type descriptor
+ * @param toType - Target type descriptor
+ * @returns Array of conversion step IDs, or null if no path exists
  */
 function computeConversionPath(
   fromType: TypeDesc,
   toType: TypeDesc
 ): string[] | null {
-  // For MVP: require exact type match
-  if (
-    fromType.world === toType.world &&
-    fromType.domain === toType.domain
-  ) {
-    return []; // No conversion needed
+  // Check if types are compatible (using compatibility rules)
+  if (isTypeCompatible(fromType, toType)) {
+    return []; // No conversion needed - direct assignment
   }
 
-  // TODO: Query adapter registry for conversion chains
-  // For now, return null to indicate no conversion path exists
-  return null;
+  // TODO: Future enhancement - query adapter registry for conversion chains
+  // For example:
+  // - number → vec2 (broadcast to both components)
+  // - color → number (luminance extraction)
+  // - vec2 → number (magnitude)
+  //
+  // This would involve:
+  // 1. Graph search through adapter registry
+  // 2. Cost-based path selection
+  // 3. Validation of adapter applicability
+  //
+  // For now, we only support direct compatibility (no adapters)
+
+  return null; // No conversion path exists
 }
 
 /**
