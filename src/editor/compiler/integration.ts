@@ -1097,6 +1097,9 @@ export function setupAutoCompile(
       connectionCount: store.patchStore.connections.length,
       connections: store.patchStore.connections.map((c: Connection) => `${c.from.blockId}:${c.from.slotId}->${c.to.blockId}:${c.to.slotId}`),
       seed: store.uiStore.settings.seed,
+      // Default sources - track value changes to trigger recompilation
+      // We use a revision counter because structural tracking of values in a Map is tricky
+      defaultSourceRevision: store.defaultSourceStore.valueRevision,
       // Bus system - track publishers and listeners
       busCount: store.busStore.buses.length,
       buses: store.busStore.buses.map(b => `${b.id}:${b.name}`),

@@ -1,47 +1,53 @@
 /**
- * IR Tab Component
+ * IR Tab Component - Compiler Debug Tool
  *
- * Displays the compiled IR structure:
- * - IR summary header (irVersion, patchId, seed)
- * - Collapsible "Nodes" section listing all nodes
- * - Collapsible "Buses" section listing all buses
- * - Collapsible "Time Model" section showing kind and parameters
+ * Shows compilation state whether it succeeds or fails:
+ * - Compile errors (with full context)
+ * - Source patch (blocks, connections, buses)
+ * - Intermediate IR (if available)
+ * - Final programIR (if compilation succeeded)
  */
 
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
-import type { CompiledProgramIR } from '../compiler/ir';
+import { useStore } from '../stores';
+import type { CompiledProgramIR, LinkedGraphIR } from '../compiler/ir';
+import type { CompileError } from '../compiler/types';
 import './IRTab.css';
+
+interface FullCompileResult {
+  ok: boolean;
+  errors: CompileError[];
+  ir?: LinkedGraphIR;
+  programIR?: CompiledProgramIR;
+  irWarnings?: CompileError[];
+}
 
 /**
  * Get the latest compile result from window.__compilerService
  */
-function getCompileResult(): { programIR?: CompiledProgramIR } | null {
+function getCompileResult(): FullCompileResult | null {
   const compilerService = (window as unknown as { __compilerService?: { getLatestResult(): unknown } }).__compilerService;
-  if (!compilerService) return null;
+  if (compilerService === null || compilerService === undefined) return null;
 
   const result = compilerService.getLatestResult();
-  if (!result || typeof result !== 'object') return null;
+  if (result === null || result === undefined || typeof result !== 'object') return null;
 
-  return result as { programIR?: CompiledProgramIR };
+  return result as FullCompileResult;
 }
 
 export const IRTab = observer(function IRTab() {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['nodes']));
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const store = useStore();
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['errors', 'blocks']));
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [selectedErrorIdx, setSelectedErrorIdx] = useState<number | null>(null);
 
   const result = getCompileResult();
-  const programIR = result?.programIR;
-
-  if (!programIR) {
-    return (
-      <div className="ir-tab">
-        <div className="ir-tab-empty">
-          No IR available. Create a patch with blocks to see compiled IR.
-        </div>
-      </div>
-    );
-  }
+  const blocks = store.patchStore.blocks;
+  const connections = store.patchStore.connections;
+  const buses = store.busStore.buses;
+  const publishers = store.busStore.publishers;
+  const listeners = store.busStore.listeners;
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections);
@@ -53,84 +59,305 @@ export const IRTab = observer(function IRTab() {
     setExpandedSections(newExpanded);
   };
 
-  const nodes = programIR.nodes?.nodes ?? [];
-  const buses = programIR.buses?.buses ?? [];
+  // Status indicator
+  const status = result === null || result === undefined
+    ? 'no-compile'
+    : result.ok
+      ? 'success'
+      : 'error';
+
+  const statusLabel = {
+    'no-compile': 'Not Compiled',
+    'success': 'Compiled OK',
+    'error': 'Compilation Failed',
+  }[status];
+
+  const statusClass = {
+    'no-compile': 'ir-status-none',
+    'success': 'ir-status-ok',
+    'error': 'ir-status-error',
+  }[status];
 
   return (
     <div className="ir-tab">
-      {/* Summary Header */}
+      {/* Status Header */}
       <div className="ir-tab-header">
-        <div className="ir-tab-header-item">
-          <span className="ir-tab-header-label">IR Version:</span>
-          <span className="ir-tab-header-value">{programIR.irVersion}</span>
+        <div className={`ir-tab-status ${statusClass}`}>
+          {statusLabel}
         </div>
-        <div className="ir-tab-header-item">
-          <span className="ir-tab-header-label">Patch ID:</span>
-          <span className="ir-tab-header-value ir-tab-header-mono">{programIR.patchId}</span>
-        </div>
-        <div className="ir-tab-header-item">
-          <span className="ir-tab-header-label">Seed:</span>
-          <span className="ir-tab-header-value">{programIR.seed}</span>
+        <div className="ir-tab-header-stats">
+          <span>{blocks.length} blocks</span>
+          <span>{connections.length} connections</span>
+          <span>{buses.length} buses</span>
         </div>
       </div>
 
-      {/* Nodes Section */}
+      {/* ERRORS Section - Most Important for Debugging */}
+      {result !== null && result !== undefined && result.errors.length > 0 && (
+        <section className="ir-tab-section ir-tab-section-errors">
+          <button
+            className="ir-tab-section-header ir-tab-section-header-error"
+            onClick={() => toggleSection('errors')}
+            type="button"
+          >
+            <span className="ir-tab-section-icon">
+              {expandedSections.has('errors') ? '▼' : '▶'}
+            </span>
+            <span className="ir-tab-section-title">
+              Errors ({result.errors.length})
+            </span>
+          </button>
+
+          {expandedSections.has('errors') && (
+            <div className="ir-tab-section-content">
+              {result.errors.map((err, idx) => (
+                <div
+                  key={idx}
+                  className={`ir-tab-error-item ${selectedErrorIdx === idx ? 'expanded' : ''}`}
+                >
+                  <button
+                    className="ir-tab-error-header"
+                    onClick={() => setSelectedErrorIdx(selectedErrorIdx === idx ? null : idx)}
+                    type="button"
+                  >
+                    <span className="ir-tab-error-code">{err.code}</span>
+                    {err.where?.blockId && (
+                      <span className="ir-tab-error-location">
+                        @ {err.where.blockId}
+                        {err.where.port ? `.${err.where.port}` : ''}
+                      </span>
+                    )}
+                  </button>
+
+                  {selectedErrorIdx === idx && (
+                    <div className="ir-tab-error-details">
+                      <div className="ir-tab-error-message">{err.message}</div>
+                      {err.where && (
+                        <div className="ir-tab-error-where">
+                          <pre>{JSON.stringify(err.where, null, 2)}</pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Warnings Section */}
+      {result?.irWarnings && result.irWarnings.length > 0 && (
+        <section className="ir-tab-section ir-tab-section-warnings">
+          <button
+            className="ir-tab-section-header ir-tab-section-header-warning"
+            onClick={() => toggleSection('warnings')}
+            type="button"
+          >
+            <span className="ir-tab-section-icon">
+              {expandedSections.has('warnings') ? '▼' : '▶'}
+            </span>
+            <span className="ir-tab-section-title">
+              Warnings ({result.irWarnings.length})
+            </span>
+          </button>
+
+          {expandedSections.has('warnings') && (
+            <div className="ir-tab-section-content">
+              {result.irWarnings.map((warn, idx) => (
+                <div key={idx} className="ir-tab-warning-item">
+                  <span className="ir-tab-warning-code">{warn.code}</span>
+                  <span className="ir-tab-warning-message">{warn.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Source Blocks - Always visible */}
       <section className="ir-tab-section">
         <button
           className="ir-tab-section-header"
-          onClick={() => toggleSection('nodes')}
+          onClick={() => toggleSection('blocks')}
           type="button"
         >
           <span className="ir-tab-section-icon">
-            {expandedSections.has('nodes') ? '▼' : '▶'}
+            {expandedSections.has('blocks') ? '▼' : '▶'}
           </span>
-          <span className="ir-tab-section-title">Nodes ({nodes.length})</span>
+          <span className="ir-tab-section-title">Source Blocks ({blocks.length})</span>
         </button>
 
-        {expandedSections.has('nodes') && (
+        {expandedSections.has('blocks') && (
           <div className="ir-tab-section-content">
-            {nodes.length === 0 ? (
-              <div className="ir-tab-empty-section">No nodes</div>
+            {blocks.length === 0 ? (
+              <div className="ir-tab-empty-section">No blocks in patch</div>
             ) : (
-              <div className="ir-tab-node-list">
-                {nodes.map((node) => (
-                  <div key={node.id} className="ir-tab-node-item">
-                    <button
-                      className={`ir-tab-node-button ${selectedNodeId === node.id ? 'active' : ''}`}
-                      onClick={() => setSelectedNodeId(selectedNodeId === node.id ? null : node.id)}
-                      type="button"
-                    >
-                      <span className="ir-tab-node-id">{node.id}</span>
-                      <span className="ir-tab-node-type">typeId={node.typeId}</span>
-                    </button>
+              <div className="ir-tab-block-list">
+                {blocks.map((block) => {
+                  // Check if this block has errors
+                  const blockErrors = result?.errors.filter(e => e.where?.blockId === block.id) ?? [];
+                  const hasError = blockErrors.length > 0;
 
-                    {selectedNodeId === node.id && (
-                      <div className="ir-tab-node-details">
-                        <div className="ir-tab-node-detail-section">
-                          <div className="ir-tab-node-detail-label">Input Count:</div>
-                          <span>{node.inputCount}</span>
-                        </div>
-                        <div className="ir-tab-node-detail-section">
-                          <div className="ir-tab-node-detail-label">Output Count:</div>
-                          <span>{node.outputCount}</span>
-                        </div>
-                        {node.compilerTag !== undefined && (
-                          <div className="ir-tab-node-detail-section">
-                            <div className="ir-tab-node-detail-label">Compiler Tag:</div>
-                            <span>{node.compilerTag}</span>
+                  return (
+                    <div key={block.id} className={`ir-tab-block-item ${hasError ? 'has-error' : ''}`}>
+                      <button
+                        className={`ir-tab-block-button ${selectedBlockId === block.id ? 'active' : ''}`}
+                        onClick={() => setSelectedBlockId(selectedBlockId === block.id ? null : block.id)}
+                        type="button"
+                      >
+                        <span className="ir-tab-block-id">{block.id}</span>
+                        <span className="ir-tab-block-type">{block.type}</span>
+                        {hasError && <span className="ir-tab-block-error-badge">!</span>}
+                      </button>
+
+                      {selectedBlockId === block.id && (
+                        <div className="ir-tab-block-details">
+                          <div className="ir-tab-detail-row">
+                            <span className="ir-tab-detail-label">Type:</span>
+                            <span className="ir-tab-detail-value">{block.type}</span>
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
+
+                          {block.inputs.length > 0 && (
+                            <div className="ir-tab-detail-row">
+                              <span className="ir-tab-detail-label">Inputs:</span>
+                              <ul className="ir-tab-detail-list">
+                                {block.inputs.map(input => {
+                                  const conn = connections.find(c => c.to.blockId === block.id && c.to.slotId === input.id);
+                                  const listener = listeners.find(l => l.to.blockId === block.id && l.to.slotId === input.id);
+                                  return (
+                                    <li key={input.id} className="ir-tab-port-item">
+                                      <span className="ir-tab-port-name">{input.id}</span>
+                                      <span className="ir-tab-port-type">{input.type}</span>
+                                      {conn && (
+                                        <span className="ir-tab-port-source">
+                                          ← {conn.from.blockId}.{conn.from.slotId}
+                                        </span>
+                                      )}
+                                      {listener && (
+                                        <span className="ir-tab-port-bus">
+                                          ← bus:{listener.busId}
+                                        </span>
+                                      )}
+                                      {!conn && !listener && (
+                                        <span className="ir-tab-port-unconnected">unconnected</span>
+                                      )}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+                          )}
+
+                          {block.outputs.length > 0 && (
+                            <div className="ir-tab-detail-row">
+                              <span className="ir-tab-detail-label">Outputs:</span>
+                              <ul className="ir-tab-detail-list">
+                                {block.outputs.map(output => {
+                                  const conns = connections.filter(c => c.from.blockId === block.id && c.from.slotId === output.id);
+                                  const pubs = publishers.filter(p => p.from.blockId === block.id && p.from.slotId === output.id);
+                                  return (
+                                    <li key={output.id} className="ir-tab-port-item">
+                                      <span className="ir-tab-port-name">{output.id}</span>
+                                      <span className="ir-tab-port-type">{output.type}</span>
+                                      {conns.map((conn, i) => (
+                                        <span key={i} className="ir-tab-port-dest">
+                                          → {conn.to.blockId}.{conn.to.slotId}
+                                        </span>
+                                      ))}
+                                      {pubs.map((pub, i) => (
+                                        <span key={i} className="ir-tab-port-bus">
+                                          → bus:{pub.busId}
+                                        </span>
+                                      ))}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+                          )}
+
+                          {Object.keys(block.params).length > 0 && (
+                            <div className="ir-tab-detail-row">
+                              <span className="ir-tab-detail-label">Params:</span>
+                              <pre className="ir-tab-params-json">
+                                {JSON.stringify(block.params, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+
+                          {blockErrors.length > 0 && (
+                            <div className="ir-tab-detail-row ir-tab-block-errors">
+                              <span className="ir-tab-detail-label">Errors:</span>
+                              <ul className="ir-tab-detail-list">
+                                {blockErrors.map((err, i) => (
+                                  <li key={i} className="ir-tab-block-error">
+                                    <span className="ir-tab-error-code">{err.code}</span>
+                                    <span className="ir-tab-error-message">{err.message}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
         )}
       </section>
 
-      {/* Buses Section */}
+      {/* Connections */}
+      <section className="ir-tab-section">
+        <button
+          className="ir-tab-section-header"
+          onClick={() => toggleSection('connections')}
+          type="button"
+        >
+          <span className="ir-tab-section-icon">
+            {expandedSections.has('connections') ? '▼' : '▶'}
+          </span>
+          <span className="ir-tab-section-title">Connections ({connections.length})</span>
+        </button>
+
+        {expandedSections.has('connections') && (
+          <div className="ir-tab-section-content">
+            {connections.length === 0 ? (
+              <div className="ir-tab-empty-section">No connections</div>
+            ) : (
+              <div className="ir-tab-connection-list">
+                {connections.map((conn, idx) => {
+                  const connError = result?.errors.find(e =>
+                    e.where?.connection?.from?.block === conn.from.blockId &&
+                    e.where?.connection?.to?.block === conn.to.blockId
+                  );
+                  return (
+                    <div key={idx} className={`ir-tab-connection-item ${connError ? 'has-error' : ''}`}>
+                      <span className="ir-tab-conn-from">
+                        {conn.from.blockId}.{conn.from.slotId}
+                      </span>
+                      <span className="ir-tab-conn-arrow">→</span>
+                      <span className="ir-tab-conn-to">
+                        {conn.to.blockId}.{conn.to.slotId}
+                      </span>
+                      {connError && (
+                        <span className="ir-tab-conn-error" title={connError.message}>
+                          {connError.code}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Buses & Routing */}
       <section className="ir-tab-section">
         <button
           className="ir-tab-section-header"
@@ -140,7 +367,9 @@ export const IRTab = observer(function IRTab() {
           <span className="ir-tab-section-icon">
             {expandedSections.has('buses') ? '▼' : '▶'}
           </span>
-          <span className="ir-tab-section-title">Buses ({buses.length})</span>
+          <span className="ir-tab-section-title">
+            Buses ({buses.length}) / Publishers ({publishers.length}) / Listeners ({listeners.length})
+          </span>
         </button>
 
         {expandedSections.has('buses') && (
@@ -149,67 +378,88 @@ export const IRTab = observer(function IRTab() {
               <div className="ir-tab-empty-section">No buses</div>
             ) : (
               <div className="ir-tab-bus-list">
-                {buses.map((bus) => (
-                  <div key={bus.id} className="ir-tab-bus-item">
-                    <span className="ir-tab-bus-id">{bus.id}</span>
-                    {bus.type !== undefined && (
-                      <span className="ir-tab-bus-type">
-                        ({typeof bus.type === 'object' ? JSON.stringify(bus.type) : String(bus.type)})
-                      </span>
-                    )}
-                  </div>
-                ))}
+                {buses.map((bus) => {
+                  const busPubs = publishers.filter(p => p.busId === bus.id);
+                  const busListeners = listeners.filter(l => l.busId === bus.id);
+                  return (
+                    <div key={bus.id} className="ir-tab-bus-item">
+                      <div className="ir-tab-bus-header">
+                        <span className="ir-tab-bus-id">{bus.id}</span>
+                        <span className="ir-tab-bus-name">{bus.name}</span>
+                        <span className="ir-tab-bus-type">{bus.valueType}</span>
+                      </div>
+                      {busPubs.length > 0 && (
+                        <div className="ir-tab-bus-pubs">
+                          Publishers: {busPubs.map(p => `${p.from.blockId}.${p.from.slotId}`).join(', ')}
+                        </div>
+                      )}
+                      {busListeners.length > 0 && (
+                        <div className="ir-tab-bus-listeners">
+                          Listeners: {busListeners.map(l => `${l.to.blockId}.${l.to.slotId}`).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
         )}
       </section>
 
-      {/* Time Model Section */}
-      <section className="ir-tab-section">
-        <button
-          className="ir-tab-section-header"
-          onClick={() => toggleSection('timeModel')}
-          type="button"
-        >
-          <span className="ir-tab-section-icon">
-            {expandedSections.has('timeModel') ? '▼' : '▶'}
-          </span>
-          <span className="ir-tab-section-title">Time Model</span>
-        </button>
+      {/* Intermediate IR (LinkedGraphIR) - Available before final codegen */}
+      {result?.ir && (
+        <section className="ir-tab-section">
+          <button
+            className="ir-tab-section-header"
+            onClick={() => toggleSection('linkedIR')}
+            type="button"
+          >
+            <span className="ir-tab-section-icon">
+              {expandedSections.has('linkedIR') ? '▼' : '▶'}
+            </span>
+            <span className="ir-tab-section-title">Intermediate IR (LinkedGraphIR)</span>
+          </button>
 
-        {expandedSections.has('timeModel') && (
-          <div className="ir-tab-section-content">
-            <div className="ir-tab-time-model">
-              <div className="ir-tab-time-model-item">
-                <span className="ir-tab-time-model-label">Kind:</span>
-                <span className="ir-tab-time-model-value">{programIR.timeModel.kind}</span>
-              </div>
-
-              {programIR.timeModel.kind === 'cyclic' && 'periodMs' in programIR.timeModel && (
-                <div className="ir-tab-time-model-item">
-                  <span className="ir-tab-time-model-label">Period:</span>
-                  <span className="ir-tab-time-model-value">{programIR.timeModel.periodMs}ms</span>
-                </div>
-              )}
-
-              {programIR.timeModel.kind === 'finite' && 'durationMs' in programIR.timeModel && (
-                <div className="ir-tab-time-model-item">
-                  <span className="ir-tab-time-model-label">Duration:</span>
-                  <span className="ir-tab-time-model-value">{programIR.timeModel.durationMs}ms</span>
-                </div>
-              )}
-
-              {programIR.timeModel.kind === 'infinite' && 'windowMs' in programIR.timeModel && (
-                <div className="ir-tab-time-model-item">
-                  <span className="ir-tab-time-model-label">Window:</span>
-                  <span className="ir-tab-time-model-value">{programIR.timeModel.windowMs}ms</span>
-                </div>
-              )}
+          {expandedSections.has('linkedIR') && (
+            <div className="ir-tab-section-content">
+              <pre className="ir-tab-ir-json">
+                {JSON.stringify(result.ir, null, 2)}
+              </pre>
             </div>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      )}
+
+      {/* Final Compiled IR - Only on success */}
+      {result?.programIR && (
+        <section className="ir-tab-section">
+          <button
+            className="ir-tab-section-header"
+            onClick={() => toggleSection('programIR')}
+            type="button"
+          >
+            <span className="ir-tab-section-icon">
+              {expandedSections.has('programIR') ? '▼' : '▶'}
+            </span>
+            <span className="ir-tab-section-title">Compiled Program IR</span>
+          </button>
+
+          {expandedSections.has('programIR') && (
+            <div className="ir-tab-section-content">
+              <div className="ir-tab-programir-summary">
+                <div>IR Version: {result.programIR.irVersion}</div>
+                <div>Patch ID: {result.programIR.patchId}</div>
+                <div>Seed: {result.programIR.seed}</div>
+                <div>Time Model: {result.programIR.timeModel.kind}</div>
+                <div>Nodes: {result.programIR.nodes?.nodes?.length ?? 0}</div>
+                <div>Buses: {result.programIR.buses?.buses?.length ?? 0}</div>
+                <div>Schedule Steps: {result.programIR.schedule?.steps?.length ?? 0}</div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 });

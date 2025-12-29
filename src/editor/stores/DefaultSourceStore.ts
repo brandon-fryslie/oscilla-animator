@@ -10,9 +10,52 @@
  *
  * @see design-docs/10-Refactor-for-UI-prep/14-RemoveParams.md
  */
-import { makeObservable, observable, action } from 'mobx';
+import { makeObservable, observable, action, makeAutoObservable } from 'mobx';
 import type { DefaultSourceState, TypeDesc, UIControlHint, Slot, BlockId, SlotWorld, SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import type { RootStore } from './RootStore';
+
+// =============================================================================
+// DefaultSource Class (Observable)
+// =============================================================================
+
+/**
+ * Observable DefaultSource class.
+ *
+ * This is the canonical way to create observable DefaultSourceState instances.
+ * By using a class with makeAutoObservable in the constructor, we guarantee
+ * that every instance is properly observable - mutations to .value are
+ * automatically tracked by MobX reactions.
+ *
+ * Pattern: All DefaultSourceState creation goes through this class.
+ */
+export class DefaultSource implements DefaultSourceState {
+  id: string;
+  type: TypeDesc;
+  value: unknown;
+  uiHint?: UIControlHint;
+  rangeHint?: DefaultSourceState['rangeHint'];
+
+  constructor(init: {
+    id: string;
+    type: TypeDesc;
+    value: unknown;
+    uiHint?: UIControlHint;
+    rangeHint?: DefaultSourceState['rangeHint'];
+  }) {
+    this.id = init.id;
+    this.type = init.type;
+    this.value = init.value;
+    this.uiHint = init.uiHint;
+    this.rangeHint = init.rangeHint;
+
+    // Make this instance observable - all property mutations are tracked
+    makeAutoObservable(this);
+  }
+}
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
 
 /**
  * Map from SlotWorld to TypeDesc world.
@@ -23,7 +66,9 @@ function slotWorldToTypeWorld(world: SlotWorld): 'signal' | 'field' | 'scalar' |
 }
 
 export class DefaultSourceStore {
-  sources: Map<string, DefaultSourceState> = new Map();
+  // Store DefaultSource instances (which are self-observable via makeAutoObservable)
+  // We use observable.shallow because the Map entries themselves are already observable
+  sources: Map<string, DefaultSource> = new Map();
 
   /**
    * Maps blockId -> Map of slotId -> defaultSource ID.
@@ -32,10 +77,15 @@ export class DefaultSourceStore {
   private blockSlotIndex: Map<string, Map<string, string>> = new Map();
 
   private root: RootStore | null = null;
+  
+  // Revision counter to force updates even when structural equality checks might fail
+  valueRevision = 0;
 
   constructor() {
     makeObservable(this, {
-      sources: observable,
+      // observable.shallow: track Map add/delete, but entries are self-observable
+      sources: observable.shallow,
+      valueRevision: observable,
       ensureDefaultSource: action,
       setDefaultValue: action,
       setDefaultValueForInput: action,
@@ -61,34 +111,37 @@ export class DefaultSourceStore {
   ensureDefaultSource(
     id: string,
     spec: { type: TypeDesc; value: unknown; uiHint?: UIControlHint; rangeHint?: DefaultSourceState['rangeHint'] }
-  ): DefaultSourceState {
+  ): DefaultSource {
     const existing = this.sources.get(id);
     if (existing !== undefined) return existing;
 
-    const created: DefaultSourceState = {
+    // DefaultSource class handles its own observability via makeAutoObservable
+    const created = new DefaultSource({
       id,
       type: spec.type,
       value: spec.value,
       uiHint: spec.uiHint,
       rangeHint: spec.rangeHint,
-    };
+    });
     this.sources.set(id, created);
     return created;
   }
 
   /**
    * Update the value of an existing default source.
+   * Since DefaultSourceState objects are observable, this mutation triggers reactions.
    */
   setDefaultValue(id: string, value: unknown): void {
     const existing = this.sources.get(id);
     if (existing === undefined) return;
     existing.value = value;
+    this.valueRevision++;
   }
 
   /**
    * Get a default source by ID.
    */
-  getDefaultSource(id: string): DefaultSourceState | undefined {
+  getDefaultSource(id: string): DefaultSource | undefined {
     return this.sources.get(id);
   }
 
@@ -96,7 +149,7 @@ export class DefaultSourceStore {
    * Get the default source for a block input.
    * Returns undefined if no default source exists for this input.
    */
-  getDefaultSourceForInput(blockId: BlockId, slotId: string): DefaultSourceState | undefined {
+  getDefaultSourceForInput(blockId: BlockId, slotId: string): DefaultSource | undefined {
     const slotMap = this.blockSlotIndex.get(blockId);
     if (!slotMap) return undefined;
     const dsId = slotMap.get(slotId);
@@ -111,6 +164,7 @@ export class DefaultSourceStore {
     const ds = this.getDefaultSourceForInput(blockId, slotId);
     if (!ds) return;
     ds.value = value;
+    this.valueRevision++;
   }
 
   /**
@@ -148,12 +202,13 @@ export class DefaultSourceStore {
       // Use param value if provided (e.g., from macro), otherwise use slot default
       const value = params?.[slot.id] !== undefined ? params[slot.id] : slot.defaultSource.value;
 
-      const ds: DefaultSourceState = {
+      // DefaultSource class handles its own observability via makeAutoObservable
+      const ds = new DefaultSource({
         id: dsId,
         type: typeDesc,
         value,
         uiHint: slot.defaultSource.uiHint,
-      };
+      });
 
       this.sources.set(dsId, ds);
       slotMap.set(slot.id, dsId);
@@ -182,7 +237,9 @@ export class DefaultSourceStore {
    * Load default sources from serialized state.
    */
   load(defaultSources: DefaultSourceState[]): void {
-    this.sources = new Map(defaultSources.map((source) => [source.id, source]));
+    // Create DefaultSource instances from serialized state
+    // DefaultSource class handles its own observability via makeAutoObservable
+    this.sources = new Map(defaultSources.map((source) => [source.id, new DefaultSource(source)]));
     // Note: The blockSlotIndex must be rebuilt separately
     // by calling registerBlockSlotMapping for each block
     this.blockSlotIndex.clear();

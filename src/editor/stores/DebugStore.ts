@@ -717,20 +717,56 @@ export class DebugStore {
   }
 
   /**
-   * IR inspection commands: `ir`, `ir nodes`, `ir buses`, `ir node <id>`
+   * IR inspection commands: `ir`, `ir errors`, `ir nodes`, `ir buses`, `ir node <id>`
    */
   private inspectIR(args: string[]): void {
-    const programIR = this.getProgramIR();
+    const result = this.getCompileResult();
+    const programIR = result?.programIR;
+    const subCmd = args[0]?.toLowerCase();
+
+    // Handle 'errors' subcommand - always show errors even if compilation failed
+    if (subCmd === 'errors') {
+      if (!result) {
+        this.log('error', 'No compile result available. Compile a patch first.');
+        return;
+      }
+      if (result.errors.length === 0) {
+        this.log('output', 'No compile errors.');
+        return;
+      }
+      this.log('output', `━━━ Compile Errors (${result.errors.length}) ━━━`);
+      for (const err of result.errors) {
+        const location = err.where?.blockId
+          ? ` @ ${err.where.blockId}${err.where.port ? '.' + err.where.port : ''}`
+          : '';
+        this.log('error', `  [${err.code}]${location}`);
+        this.log('error', `    ${err.message}`);
+      }
+      return;
+    }
+
+    // If no programIR but we have errors, show the errors
     if (!programIR) {
+      if (result && result.errors.length > 0) {
+        this.log('error', `Compilation failed with ${result.errors.length} error(s):`);
+        for (const err of result.errors) {
+          const location = err.where?.blockId
+            ? ` @ ${err.where.blockId}${err.where.port ? '.' + err.where.port : ''}`
+            : '';
+          this.log('error', `  [${err.code}]${location}`);
+          this.log('error', `    ${err.message}`);
+        }
+        this.log('output', '\nTip: Use "ir errors" to see full error details');
+        return;
+      }
       this.log('error', 'No IR available. Compile a patch first.');
       return;
     }
 
-    const subCmd = args[0]?.toLowerCase();
-
     if (!subCmd) {
       // Show IR summary
       this.log('output', '━━━ IR Summary ━━━');
+      this.log('output', `  Status: ${result?.ok ? 'OK' : 'FAILED'}`);
       this.log('output', `  IR Version: ${programIR.irVersion}`);
       this.log('output', `  Patch ID: ${programIR.patchId}`);
       this.log('output', `  Seed: ${programIR.seed}`);
@@ -806,7 +842,7 @@ export class DebugStore {
     }
 
     this.log('error', `Unknown IR subcommand: ${subCmd}`);
-    this.log('error', 'Usage: ir | ir nodes | ir buses | ir node <id>');
+    this.log('error', 'Usage: ir | ir errors | ir nodes | ir buses | ir node <id>');
   }
 
   /**
@@ -930,9 +966,14 @@ export class DebugStore {
   }
 
   /**
-   * Get the compiled program IR from window.__compilerService
+   * Get the full compile result from window.__compilerService
    */
-  private getProgramIR(): CompiledProgramIR | null {
+  private getCompileResult(): {
+    ok: boolean;
+    errors: CompileError[];
+    programIR?: CompiledProgramIR;
+    ir?: unknown;
+  } | null {
     const compilerService = (window as unknown as {
       __compilerService?: { getLatestResult(): unknown }
     }).__compilerService;
@@ -942,8 +983,20 @@ export class DebugStore {
     const result = compilerService.getLatestResult();
     if (!result || typeof result !== 'object') return null;
 
-    const compiledResult = result as { programIR?: CompiledProgramIR };
-    return compiledResult.programIR ?? null;
+    return result as {
+      ok: boolean;
+      errors: CompileError[];
+      programIR?: CompiledProgramIR;
+      ir?: unknown;
+    };
+  }
+
+  /**
+   * Get the compiled program IR from window.__compilerService
+   */
+  private getProgramIR(): CompiledProgramIR | null {
+    const result = this.getCompileResult();
+    return result?.programIR ?? null;
   }
 
   private findBlock(idOrLabel: string): StoreBlock | undefined {

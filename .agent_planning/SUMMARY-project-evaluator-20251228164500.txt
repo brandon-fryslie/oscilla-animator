@@ -1,0 +1,16 @@
+Agent: project-evaluator | 2025-12-28 16:45:00
+Scope: default-source-reactivity
+Completion: ISSUE IDENTIFIED | Gaps: 1 missing observable | Test Quality: N/A
+Reused: 0 findings | Fresh: 1 architecture discovery
+Cache updated: [compilation-triggers.md, INDEX.md]
+Ambiguities: 0 found | Workflow: CONTINUE
+
+ROOT CAUSE IDENTIFIED:
+- DefaultSourceStore.sources NOT tracked in setupAutoCompile reaction
+- Changing default values updates store but doesn't trigger recompilation
+- Workaround: Change any connection to force recompile
+- Fix: Add defaultSourceStore.sources to MobX reaction in integration.ts:1094-1107
+
+RECOMMENDATION:
+Add default source tracking to setupAutoCompile reaction (Option 1 in evaluation).
+Minimal, surgical fix. Low risk. Immediately resolves user-reported issue.
