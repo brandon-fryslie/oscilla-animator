@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   FiniteTimeRootBlock,
-  CycleTimeRootBlock,
+  InfiniteTimeRootBlock,
   InfiniteTimeRootBlock,
   extractTimeRootAutoPublications
 } from '../TimeRoot';
@@ -114,99 +114,6 @@ describe('FiniteTimeRootBlock', () => {
   });
 });
 
-// =============================================================================
-// CycleTimeRoot Tests
-// =============================================================================
-
-describe('CycleTimeRootBlock', () => {
-  it('should have correct type', () => {
-    expect(CycleTimeRootBlock.type).toBe('CycleTimeRoot');
-    // Note: category property doesn't exist on BlockCompiler interface
-    // expect(CycleTimeRootBlock.category).toBe('TimeRoot');
-  });
-
-  it('should have no inputs', () => {
-    expect(CycleTimeRootBlock.inputs).toEqual([]);
-  });
-
-  it('should have all expected outputs', () => {
-    expect(CycleTimeRootBlock.outputs).toEqual([
-      { name: 'systemTime', type: { kind: 'Signal:Time' } },
-      { name: 'cycleT', type: { kind: 'Signal:Time' } },
-      { name: 'phase', type: { kind: 'Signal:phase' } },
-      { name: 'wrap', type: { kind: 'Event' } },
-      { name: 'cycleIndex', type: { kind: 'Signal:int' } },
-      { name: 'energy', type: { kind: 'Signal:float' } },
-    ]);
-  });
-
-  it('should compile with default period', () => {
-    const ctx = createTestContext();
-    const result = CycleTimeRootBlock.compile({
-      id: 'test',
-      params: {},
-      inputs: {},
-      ctx,
-    });
-
-    expect(result.systemTime?.kind).toBe('Signal:Time');
-    expect(result.cycleT?.kind).toBe('Signal:Time');
-    expect(result.phase?.kind).toBe('Signal:phase');
-    expect(result.wrap?.kind).toBe('Event');
-    expect(result.cycleIndex?.kind).toBe('Signal:int');
-    expect(result.energy?.kind).toBe('Signal:float');
-
-    // Test phase (0..1 normalized)
-    if (result.phase?.kind === 'Signal:phase') {
-      const phase = result.phase.value;
-      expect(phase(0, ctx)).toBe(0);
-      expect(phase(1500, ctx)).toBe(0.5); // Halfway through 3s period
-      expect(phase(3000, ctx)).toBeCloseTo(0); // Complete cycle
-      expect(phase(4500, ctx)).toBe(0.5); // Second cycle halfway
-    }
-
-    // Test cycleT (time within current cycle)
-    if (result.cycleT?.kind === 'Signal:Time') {
-      const cycleT = result.cycleT.value;
-      expect(cycleT(0, ctx)).toBe(0);
-      expect(cycleT(1500, ctx)).toBe(1500);
-      expect(cycleT(3000, ctx)).toBe(0); // Reset at cycle boundary
-      expect(cycleT(4500, ctx)).toBe(1500); // Second cycle
-    }
-
-    // Test wrap event
-    if (result.wrap?.kind === 'Event') {
-      const wrap = result.wrap.value as Event;
-      expect(wrap(2999, 2000, ctx)).toBe(false); // Before wrap
-      expect(wrap(3000, 2000, ctx)).toBe(true); // At wrap boundary
-      expect(wrap(3001, 3000, ctx)).toBe(false); // After wrap
-    }
-
-    // Test cycle index
-    if (result.cycleIndex?.kind === 'Signal:int') {
-      const cycleIndex = result.cycleIndex.value;
-      expect(cycleIndex(1000, ctx)).toBe(0); // First cycle
-      expect(cycleIndex(3000, ctx)).toBe(1); // Second cycle
-      expect(cycleIndex(6000, ctx)).toBe(2); // Third cycle
-    }
-  });
-
-  it('should compile with custom period', () => {
-    const ctx = createTestContext();
-    const result = CycleTimeRootBlock.compile({
-      id: 'test',
-      params: { periodMs: 6000 },
-      inputs: {},
-      ctx,
-    });
-
-    if (result.phase?.kind === 'Signal:phase') {
-      const phase = result.phase.value;
-      expect(phase(1500, ctx)).toBe(0.25); // Quarter through 6s period
-      expect(phase(3000, ctx)).toBe(0.5); // Halfway through 6s period
-    }
-  });
-});
 
 // =============================================================================
 // InfiniteTimeRoot Tests

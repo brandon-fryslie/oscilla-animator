@@ -99,9 +99,9 @@ describe('TimeRoot WP1 Features', () => {
     });
   });
 
-  describe('CycleTimeRoot - wrap events', () => {
+  describe('InfiniteTimeRoot - wrap events', () => {
     it('fires wrap event at period boundary in loop mode', () => {
-      const result = CycleTimeRootBlock.compile({
+      const result = InfiniteTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000, mode: 'loop' },
         inputs: {},
@@ -127,7 +127,7 @@ describe('TimeRoot WP1 Features', () => {
     });
 
     it('fires wrap event on pingpong direction flips', () => {
-      const result = CycleTimeRootBlock.compile({
+      const result = InfiniteTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000, mode: 'pingpong' },
         inputs: {},
@@ -153,7 +153,7 @@ describe('TimeRoot WP1 Features', () => {
     });
 
     it('cycleIndex increments correctly over multiple cycles', () => {
-      const result = CycleTimeRootBlock.compile({
+      const result = InfiniteTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000, mode: 'loop' },
         inputs: {},
@@ -173,7 +173,7 @@ describe('TimeRoot WP1 Features', () => {
     });
 
     it('cycleT provides time within current cycle', () => {
-      const result = CycleTimeRootBlock.compile({
+      const result = InfiniteTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000, mode: 'loop' },
         inputs: {},
@@ -192,7 +192,7 @@ describe('TimeRoot WP1 Features', () => {
     });
 
     it('energy is constant 1.0 baseline', () => {
-      const result = CycleTimeRootBlock.compile({
+      const result = InfiniteTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000 },
         inputs: {},
@@ -226,7 +226,7 @@ describe('TimeRoot WP1 Features', () => {
   });
 
   describe('Auto-publications', () => {
-    it('CycleTimeRoot returns correct auto-publications', () => {
+    it('InfiniteTimeRoot returns correct auto-publications', () => {
       const result = CycleTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000 },
