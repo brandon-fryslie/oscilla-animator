@@ -101,8 +101,8 @@ registerBlockType({
   type: 'FieldFromExpression',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
-    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'phase01' }, optional: true },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
+    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'phase01' }, optional: true, defaultSource: { value: 0 } },
     {
       portId: 'expression',
       label: 'Expression',

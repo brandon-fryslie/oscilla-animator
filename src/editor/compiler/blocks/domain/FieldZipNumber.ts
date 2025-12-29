@@ -81,8 +81,8 @@ registerBlockType({
   type: 'FieldZipNumber',
   capability: 'pure',
   inputs: [
-    { portId: 'a', label: 'A', dir: 'in', type: { world: 'field', domain: 'number' } },
-    { portId: 'b', label: 'B', dir: 'in', type: { world: 'field', domain: 'number' } },
+    { portId: 'a', label: 'A', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'number' } },

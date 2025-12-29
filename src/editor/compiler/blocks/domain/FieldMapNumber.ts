@@ -106,7 +106,7 @@ registerBlockType({
   type: 'FieldMapNumber',
   capability: 'pure',
   inputs: [
-    { portId: 'x', label: 'X', dir: 'in', type: { world: 'field', domain: 'number' } },
+    { portId: 'x', label: 'X', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'y', label: 'Y', dir: 'out', type: { world: 'field', domain: 'number' } },

@@ -47,7 +47,7 @@ registerBlockType({
   type: 'ClampSignal',
   capability: 'pure',
   inputs: [
-    { portId: 'in', label: 'In', dir: 'in', type: { world: 'signal', domain: 'number' } },
+    { portId: 'in', label: 'In', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'out', label: 'Out', dir: 'out', type: { world: 'signal', domain: 'number' } },

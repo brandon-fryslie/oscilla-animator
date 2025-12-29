@@ -76,7 +76,7 @@ registerBlockType({
   type: 'FieldOpacity',
   capability: 'pure',
   inputs: [
-    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'number' } },
+    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'opacity', label: 'Opacity', dir: 'out', type: { world: 'field', domain: 'number' } },

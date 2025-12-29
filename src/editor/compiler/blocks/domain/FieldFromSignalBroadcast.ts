@@ -45,8 +45,8 @@ registerBlockType({
   type: 'FieldFromSignalBroadcast',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
-    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'number' } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
+    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'field', label: 'Field', dir: 'out', type: { world: 'field', domain: 'number' } },

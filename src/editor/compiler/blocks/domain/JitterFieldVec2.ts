@@ -74,8 +74,8 @@ registerBlockType({
   type: 'JitterFieldVec2',
   capability: 'pure',
   inputs: [
-    { portId: 'idRand', label: 'ID Random', dir: 'in', type: { world: 'field', domain: 'number' } },
-    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: 'signal', domain: 'phase01' } },
+    { portId: 'idRand', label: 'ID Random', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: 'signal', domain: 'phase01' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'drift', label: 'Drift', dir: 'out', type: { world: 'field', domain: 'vec2' } },

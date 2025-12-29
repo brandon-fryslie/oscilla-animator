@@ -104,30 +104,35 @@ registerBlockType({
       label: 'Domain',
       dir: 'in',
       type: { world: 'special', domain: 'domain' },
+      defaultSource: { value: 100 },
     },
     {
       portId: 'positions3d',
       label: 'Positions (3D)',
       dir: 'in',
       type: { world: 'field', domain: 'vec3' },
+      defaultSource: { value: [0, 0, 0] },
     },
     {
       portId: 'color',
       label: 'Color',
       dir: 'in',
       type: { world: 'field', domain: 'color' },
+      defaultSource: { value: '#ffffff' },
     },
     {
       portId: 'radius',
       label: 'Radius',
       dir: 'in',
       type: { world: 'field', domain: 'number' }, // Can also accept signal
+      defaultSource: { value: 5 },
     },
     {
       portId: 'opacity',
       label: 'Opacity',
       dir: 'in',
       type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 1.0 },
     },
     {
       portId: 'camera',
@@ -135,6 +140,7 @@ registerBlockType({
       dir: 'in',
       type: { world: 'special', domain: 'camera' },
       optional: true,  // Pass8 injects default if missing
+      defaultSource: { value: null },
     },
   ],
   outputs: [

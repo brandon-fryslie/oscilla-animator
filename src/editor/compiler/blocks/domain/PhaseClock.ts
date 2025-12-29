@@ -112,6 +112,7 @@ registerBlockType({
       label: 'Time In',
       dir: 'in',
       type: { world: 'signal', domain: 'timeMs' },
+      defaultSource: { value: 0 },
     },
   ],
   outputs: [

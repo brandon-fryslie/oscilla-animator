@@ -100,8 +100,8 @@ registerBlockType({
   type: 'FieldZipSignal',
   capability: 'pure',
   inputs: [
-    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'number' } },
-    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'number' } },
+    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'number' } },

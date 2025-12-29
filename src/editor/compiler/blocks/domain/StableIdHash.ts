@@ -69,7 +69,7 @@ registerBlockType({
   type: 'StableIdHash',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
   ],
   outputs: [
     { portId: 'u01', label: 'U01', dir: 'out', type: { world: 'field', domain: 'number' } },

@@ -102,6 +102,7 @@ registerBlockType({
       label: 'Trigger',
       dir: 'in',
       type: { world: 'signal', domain: 'trigger' },
+      defaultSource: { value: false },
     },
   ],
   outputs: [

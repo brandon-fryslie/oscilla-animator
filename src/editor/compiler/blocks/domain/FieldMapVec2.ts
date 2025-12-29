@@ -47,7 +47,7 @@ registerBlockType({
   type: 'FieldMapVec2',
   capability: 'pure',
   inputs: [
-    { portId: 'vec', label: 'Vec2', dir: 'in', type: { world: 'field', domain: 'vec2' } },
+    { portId: 'vec', label: 'Vec2', dir: 'in', type: { world: 'field', domain: 'vec2' }, defaultSource: { value: [0, 0] } },
   ],
   outputs: [
     { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'vec2' } },

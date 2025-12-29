@@ -45,7 +45,7 @@ registerBlockType({
   type: 'PathConst',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 1 } },
   ],
   outputs: [
     { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'path' } },

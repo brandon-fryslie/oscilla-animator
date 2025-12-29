@@ -36,7 +36,7 @@ registerBlockType({
   type: 'FieldConstNumber',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
     {
       portId: 'value',
       label: 'Value',

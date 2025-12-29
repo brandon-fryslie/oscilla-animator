@@ -34,8 +34,8 @@ registerBlockType({
   type: 'SubSignal',
   capability: 'pure',
   inputs: [
-    { portId: 'a', label: 'A', dir: 'in', type: { world: 'signal', domain: 'number' } },
-    { portId: 'b', label: 'B', dir: 'in', type: { world: 'signal', domain: 'number' } },
+    { portId: 'a', label: 'A', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'out', label: 'Out', dir: 'out', type: { world: 'signal', domain: 'number' } },

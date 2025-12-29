@@ -85,6 +85,7 @@ registerBlockType({
       label: 'Phase',
       dir: 'in',
       type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 0 },
     },
   ],
   outputs: [

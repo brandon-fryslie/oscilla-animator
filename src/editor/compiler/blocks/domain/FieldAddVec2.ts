@@ -33,8 +33,8 @@ registerBlockType({
   type: 'FieldAddVec2',
   capability: 'pure',
   inputs: [
-    { portId: 'a', label: 'A', dir: 'in', type: { world: 'field', domain: 'vec2' } },
-    { portId: 'b', label: 'B', dir: 'in', type: { world: 'field', domain: 'vec2' } },
+    { portId: 'a', label: 'A', dir: 'in', type: { world: 'field', domain: 'vec2' }, defaultSource: { value: [0, 0] } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: 'field', domain: 'vec2' }, defaultSource: { value: [0, 0] } },
   ],
   outputs: [
     { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'vec2' } },

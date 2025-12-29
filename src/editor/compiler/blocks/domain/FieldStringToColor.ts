@@ -32,7 +32,7 @@ registerBlockType({
   type: 'FieldStringToColor',
   capability: 'pure',
   inputs: [
-    { portId: 'strings', label: 'Strings', dir: 'in', type: { world: 'field', domain: 'string' } },
+    { portId: 'strings', label: 'Strings', dir: 'in', type: { world: 'field', domain: 'string' }, defaultSource: { value: '' } },
   ],
   outputs: [
     { portId: 'colors', label: 'Colors', dir: 'out', type: { world: 'field', domain: 'color' } },

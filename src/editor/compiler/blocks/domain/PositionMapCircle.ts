@@ -79,7 +79,7 @@ registerBlockType({
   type: 'PositionMapCircle',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
     {
       portId: 'centerX',
       label: 'Center X',

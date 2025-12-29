@@ -97,7 +97,7 @@ registerBlockType({
   type: 'FieldColorize',
   capability: 'pure',
   inputs: [
-    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'number' } },
+    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'colors', label: 'Colors', dir: 'out', type: { world: 'field', domain: 'color' } },

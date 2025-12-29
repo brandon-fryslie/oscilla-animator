@@ -97,12 +97,12 @@ registerBlockType({
   type: 'FieldHueGradient',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
-    { portId: 'hueOffset', label: 'Hue Offset', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true },
-    { portId: 'hueSpread', label: 'Hue Spread', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true },
-    { portId: 'saturation', label: 'Saturation', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true },
-    { portId: 'lightness', label: 'Lightness', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true },
-    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: 'signal', domain: 'phase01' }, optional: true },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
+    { portId: 'hueOffset', label: 'Hue Offset', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true, defaultSource: { value: 0 } },
+    { portId: 'hueSpread', label: 'Hue Spread', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true, defaultSource: { value: 1 } },
+    { portId: 'saturation', label: 'Saturation', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true, defaultSource: { value: 80 } },
+    { portId: 'lightness', label: 'Lightness', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true, defaultSource: { value: 60 } },
+    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: 'signal', domain: 'phase01' }, optional: true, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'colors', label: 'Colors', dir: 'out', type: { world: 'field', domain: 'color' } },

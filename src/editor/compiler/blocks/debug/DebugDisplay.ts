@@ -50,6 +50,7 @@ registerBlockType({
       dir: 'in',
       type: { world: 'signal', domain: 'number' },
       optional: true,
+      defaultSource: { value: 0 },
     },
     {
       portId: 'phase',
@@ -57,6 +58,7 @@ registerBlockType({
       dir: 'in',
       type: { world: 'signal', domain: 'phase01' },
       optional: true,
+      defaultSource: { value: 0 },
     },
     {
       portId: 'domain',
@@ -64,6 +66,7 @@ registerBlockType({
       dir: 'in',
       type: { world: 'special', domain: 'domain' },
       optional: true,
+      defaultSource: { value: 100 },
     },
     {
       portId: 'field',
@@ -71,6 +74,7 @@ registerBlockType({
       dir: 'in',
       type: { world: 'field', domain: 'number' },
       optional: true,
+      defaultSource: { value: 0 },
     },
   ],
   outputs: [

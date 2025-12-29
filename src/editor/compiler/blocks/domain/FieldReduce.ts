@@ -64,7 +64,7 @@ registerBlockType({
   type: 'FieldReduce',
   capability: 'pure',
   inputs: [
-    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'number' } },
+    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'signal', label: 'Signal', dir: 'out', type: { world: 'signal', domain: 'number' } },

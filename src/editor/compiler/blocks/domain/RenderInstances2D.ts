@@ -102,12 +102,14 @@ registerBlockType({
       label: 'Domain',
       dir: 'in',
       type: { world: 'special', domain: 'domain' },
+      defaultSource: { value: 100 },
     },
     {
       portId: 'positions',
       label: 'Positions',
       dir: 'in',
       type: { world: 'field', domain: 'vec2' },
+      defaultSource: { value: [0, 0] },
     },
     {
       portId: 'radius',

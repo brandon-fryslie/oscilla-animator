@@ -145,6 +145,7 @@ registerBlockType({
       label: 'Phase',
       dir: 'in',
       type: { world: 'signal', domain: 'phase01' },
+      defaultSource: { value: 0 },
     },
     {
       portId: 'amplitude',
@@ -152,6 +153,7 @@ registerBlockType({
       dir: 'in',
       type: { world: 'signal', domain: 'number' },
       optional: true,
+      defaultSource: { value: 1 },
     },
     {
       portId: 'bias',
@@ -159,6 +161,7 @@ registerBlockType({
       dir: 'in',
       type: { world: 'signal', domain: 'number' },
       optional: true,
+      defaultSource: { value: 0 },
     },
   ],
   outputs: [
