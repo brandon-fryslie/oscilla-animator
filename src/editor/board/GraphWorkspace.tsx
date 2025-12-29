@@ -44,11 +44,11 @@ export const GraphWorkspace = observer<GraphWorkspaceProps>(function GraphWorksp
   // Track workspace size for zoom-to-fit
   useEffect(() => {
     const element = workspaceRef.current;
-    if (!element) return;
+    if (element === null) return;
 
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (entry) {
+      if (entry !== undefined) {
         setWorkspaceSize({
           width: entry.contentRect.width,
           height: entry.contentRect.height,
@@ -120,7 +120,7 @@ export const GraphWorkspace = observer<GraphWorkspaceProps>(function GraphWorksp
     });
   }, [
     graphData,
-    viewportStore.viewport.density,
+    viewportStore,
     emphasisStore.focusedBlockId,
     emphasisStore.focusedBusId,
     workspaceSize,
@@ -191,7 +191,7 @@ export const GraphWorkspace = observer<GraphWorkspaceProps>(function GraphWorksp
   const viewportRectWorld = useMemo(
     () =>
       viewportStore.getVisibleWorldBounds(workspaceSize.width, workspaceSize.height),
-    [viewportStore.viewport, workspaceSize]
+    [viewportStore, workspaceSize]
   );
 
   return (

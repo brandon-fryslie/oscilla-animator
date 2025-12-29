@@ -41,11 +41,11 @@ export const BlockView = observer<BlockViewProps>(function BlockView({
 
   // Find the block data
   const block = patchStore.blocks.find((b) => b.id === blockId);
-  if (!block) return null;
+  if (block === undefined) return null;
 
   // Get block definition for metadata
   const blockDef = getBlockDefinition(block.type);
-  if (!blockDef) return null;
+  if (blockDef === undefined) return null;
 
   // Compute CSS classes
   const classes = [
@@ -85,7 +85,7 @@ export const BlockView = observer<BlockViewProps>(function BlockView({
       </div>
 
       {/* Collapsed summary */}
-      {paramSummary && <div className="block-summary">{paramSummary}</div>}
+      {paramSummary !== '' && <div className="block-summary">{paramSummary}</div>}
 
       {/* Port rails (visible on hover/focus) */}
       {(isHovered || isFocused) && (
@@ -190,8 +190,8 @@ function computeParamSummary(block: { type: string; params: Record<string, unkno
     Rectangle: ['width', 'height'],
   };
 
-  const keys = criticalParams[block.type] || [];
-  if (keys.length === 0) return '';
+  const keys = criticalParams[block.type];
+  if (keys === undefined || keys.length === 0) return '';
 
   const parts = keys
     .map((key) => {
@@ -199,7 +199,7 @@ function computeParamSummary(block: { type: string; params: Record<string, unkno
       if (value === undefined) return null;
       return `${key}=${formatParamValue(value)}`;
     })
-    .filter(Boolean);
+    .filter((item): item is string => item !== null);
 
   return parts.join(', ');
 }

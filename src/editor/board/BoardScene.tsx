@@ -42,7 +42,7 @@ export const BoardScene = observer<BoardSceneProps>(function BoardScene({
   const { nodes } = layout;
 
   // Optionally filter to visible blocks (virtualization)
-  const visibleBlockIds = viewportRectWorld
+  const visibleBlockIds = viewportRectWorld !== undefined
     ? filterVisibleBlocks(nodes, viewportRectWorld)
     : Object.keys(nodes);
 
@@ -53,7 +53,7 @@ export const BoardScene = observer<BoardSceneProps>(function BoardScene({
     <div className="board-scene">
       {visibleBlockIds.map((blockId) => {
         const node = nodes[blockId];
-        if (!node) return null;
+        if (node === undefined) return null;
 
         const isHovered = hoveredBlockId === blockId;
         const isFocused = focusedBlockId === blockId;
