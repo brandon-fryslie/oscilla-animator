@@ -21,8 +21,10 @@ const lowerDomainN: BlockLowerFn = ({ ctx, inputs }) => {
 
   if (inputs[0]) {
     if (inputs[0].k === 'scalarConst') {
-      // Get value from const pool
-      n = Number(ctx.b.allocConstId(inputs[0].constId));
+      // Read value from const pool using the existing constId
+      const constPool = ctx.b.getConstPool();
+      const constValue = constPool[inputs[0].constId];
+      n = Number(constValue);
     } else if (inputs[0].k === 'sig') {
       // Signal input - for now, cannot evaluate at compile time
       // This would need runtime domain creation support
