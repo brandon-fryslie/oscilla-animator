@@ -133,25 +133,13 @@ function registerFieldSlots(
 }
 
 /**
- * Create a ValueRef from a defaultSource value.
+ * Create a ValueRefPacked from a default source value.
  *
- * Handles signal and field worlds by creating appropriate IR constants.
+ * Supports:
+ * - signal/number → sigConst
+ * - field/* → fieldConst
+ * - scalar/* → scalarConst (stored in constant pool)
  */
-function applyRenderLowering(
-  builder: IRBuilder,
-  blocks: readonly Block[],
-  blockInputRoots: BlockInputRootIR,
-  blockOutputRoots: BlockOutputRootIR,
-  errors: CompileError[],
-): void {
-  /**
-   * Create a ValueRefPacked from a default source value.
-   *
-   * Supports:
-   * - signal/number → sigConst
-   * - field/* → fieldConst
-   * - scalar/* → scalarConst (stored in constant pool)
-   */
 function createDefaultRef(
   builder: IRBuilder,
   type: TypeDesc,
@@ -162,11 +150,9 @@ function createDefaultRef(
     // The IRBuilder.sigConst accepts numbers, but for other types (like color strings),
     // we may need special handling in the future. For now, only handle numeric signals.
     if (typeof defaultValue !== "number") {
-      // Non-numeric signal defaults (like colors) aren't yet supported in IR
-      return null;
-        // Non-number signal values (vec3, color) → use constant pool
-        const constId = builder.allocConstId(defaultValue);
-        return { k: "scalarConst", constId };
+      // Non-number signal values (vec3, color) → use constant pool
+      const constId = builder.allocConstId(defaultValue);
+      return { k: "scalarConst", constId };
     }
     const sigId = builder.sigConst(defaultValue, type);
     const slot = builder.allocValueSlot(type);
@@ -181,10 +167,10 @@ function createDefaultRef(
     return { k: "field", id: fieldId, slot };
   }
 
-    if (type.world === "scalar") {
-      const constId = builder.allocConstId(defaultValue);
-      return { k: "scalarConst", constId };
-    }
+  if (type.world === "scalar") {
+    const constId = builder.allocConstId(defaultValue);
+    return { k: "scalarConst", constId };
+  }
 
   return null;
 }
@@ -193,6 +179,7 @@ function applyRenderLowering(
   builder: IRBuilder,
   blocks: readonly Block[],
   blockInputRoots: BlockInputRootIR,
+  blockOutputRoots: BlockOutputRootIR,
   errors: CompileError[],
 ): void {
   // Phase 1: Process Camera blocks (produce Special<cameraRef> outputs)
@@ -226,7 +213,7 @@ function applyRenderLowering(
         const input = block.inputs[portIdx];
         const defaultSource = input.defaultSource;
         if (defaultSource) {
-          const defaultRef = createDefaultRef(inputDecl.type, defaultSource.value);
+          const defaultRef = createDefaultRef(builder, inputDecl.type, defaultSource.value);
           if (defaultRef) {
             inputs.push(defaultRef);
             continue;
