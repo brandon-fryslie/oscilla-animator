@@ -344,12 +344,30 @@ function lowerBlockInstance(
       // Call lowering function
       const result = blockType.lower({ ctx, inputs, inputsById });
 
-      // Map outputs to port IDs
-      result.outputs.forEach((ref, index) => {
-        if (index < block.outputs.length) {
-          outputRefs.set(block.outputs[index].id, ref);
+      // Map outputs to port IDs - prefer outputsById over positional outputs
+      if (result.outputsById && Object.keys(result.outputsById).length > 0) {
+        // New path: Use outputsById (keyed by port ID, order-independent)
+        const portOrder = blockType.outputs.map((p) => p.portId);
+        for (const portId of portOrder) {
+          const ref = result.outputsById[portId];
+          if (!ref) {
+            errors.push({
+              code: "IRValidationFailed",
+              message: `Block ${ctx.blockType}#${ctx.instanceId} outputsById missing port '${portId}'`,
+              where: { blockId: block.id },
+            });
+            continue;
+          }
+          outputRefs.set(portId, ref);
         }
-      });
+      } else {
+        // Legacy path: Use positional outputs array
+        result.outputs.forEach((ref, index) => {
+          if (index < block.outputs.length) {
+            outputRefs.set(block.outputs[index].id, ref);
+          }
+        });
+      }
 
     } catch (error) {
       // Lowering failed - record error and fall back

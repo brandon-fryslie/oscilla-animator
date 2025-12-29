@@ -155,10 +155,20 @@ export type BlockLowerFn = (args: {
  * Result of block lowering.
  *
  * Contains output ValueRefs and optional graph-level declarations.
+ *
+ * Blocks can return outputs in two ways:
+ * 1. Legacy: `outputs` array (positional, must match port order)
+ * 2. Migration: `outputsById` record (keyed by port ID, order-independent)
+ *
+ * If both are provided, `outputsById` takes precedence.
+ * Blocks should set `outputs: []` (empty) when fully migrated to `outputsById`.
  */
 export interface LowerResult {
-  /** Output ValueRefs - must have length === outputs.length */
+  /** Output ValueRefs - must have length === outputs.length (legacy positional) */
   readonly outputs: readonly ValueRefPacked[];
+
+  /** Output ValueRefs keyed by port ID (migration path, order-independent) */
+  readonly outputsById?: Readonly<Record<string, ValueRefPacked>>;
 
   /** Optional declarations for graph-level validation */
   readonly declares?: BlockDeclarations;
