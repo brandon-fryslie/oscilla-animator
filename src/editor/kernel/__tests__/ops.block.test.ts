@@ -132,7 +132,7 @@ describe('BlockRemove', () => {
     applyOp(patch, op);
     expect(patch.blocks).toHaveLength(0);
 
-    if (inverse) {
+    if (inverse !== null) {
       applyOp(patch, inverse);
       expect(patch.blocks).toHaveLength(1);
       expect(patch.blocks[0].id).toBe(block.id);
@@ -343,7 +343,7 @@ describe('BlockPatchParams', () => {
     applyOp(patch, op);
     expect(patch.blocks[0].params.value).toBe(20);
 
-    if (inverse) {
+    if (inverse !== null) {
       applyOp(patch, inverse);
       expect(patch.blocks[0].params.value).toBe(10);
       expect(patch.blocks[0].params.other).toBe('keep');

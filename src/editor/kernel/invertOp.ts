@@ -7,7 +7,7 @@
  * Reference: design-docs/10-Refactor-for-UI-prep/9-TransactionBuilderContract.md
  */
 
-import type { Patch } from '../types';
+import type { Patch, Block, Connection, Publisher, Listener } from '../types';
 import type { Op } from './ops';
 
 /**
@@ -37,7 +37,7 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'BlockRemove': {
       // Inverse of remove is add (need to capture the block before removal)
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (!block) return null; // Block doesn't exist, can't capture state
+      if (block === undefined) return null; // Block doesn't exist, can't capture state
 
       return {
         op: 'BlockAdd',
@@ -48,7 +48,7 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'BlockRetype': {
       // Inverse is retype back to original type (need to capture old type and params)
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (!block) return null;
+      if (block === undefined) return null;
 
       return {
         op: 'BlockRetype',
@@ -62,7 +62,7 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'BlockSetLabel': {
       // Inverse is set label back to original
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (!block) return null;
+      if (block === undefined) return null;
 
       return {
         op: 'BlockSetLabel',
@@ -75,7 +75,7 @@ export function invertOp(doc: Patch, op: Op): Op | null {
       // Inverse is patch back to original values
       // Need to capture the values being overwritten
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (!block) return null;
+      if (block === undefined) return null;
 
       const oldValues: Record<string, unknown> = {};
       for (const key of Object.keys(op.patch)) {
@@ -103,7 +103,7 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'WireRemove': {
       // Inverse of remove is add (need to capture the connection)
       const conn = doc.connections.find(c => c.id === op.connectionId);
-      if (!conn) return null;
+      if (conn === undefined) return null;
 
       return {
         op: 'WireAdd',
@@ -114,11 +114,11 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'WireRetarget': {
       // Inverse is retarget back to original endpoints
       const conn = doc.connections.find(c => c.id === op.connectionId);
-      if (!conn) return null;
+      if (conn === undefined) return null;
 
       const next: { from?: typeof conn.from; to?: typeof conn.to } = {};
-      if (op.next.from) next.from = conn.from;
-      if (op.next.to) next.to = conn.to;
+      if (op.next.from !== undefined) next.from = conn.from;
+      if (op.next.to !== undefined) next.to = conn.to;
 
       return {
         op: 'WireRetarget',
@@ -141,7 +141,7 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'BusRemove': {
       // Inverse of remove is add (need to capture the bus)
       const bus = doc.buses?.find(b => b.id === op.busId);
-      if (!bus) return null;
+      if (bus === undefined) return null;
 
       return {
         op: 'BusAdd',
@@ -152,11 +152,11 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'BusUpdate': {
       // Inverse is patch back to original values
       const bus = doc.buses?.find(b => b.id === op.busId);
-      if (!bus) return null;
+      if (bus === undefined) return null;
 
-      const oldValues: any = {};
+      const oldValues: Record<string, unknown> = {};
       for (const key of Object.keys(op.patch)) {
-        oldValues[key] = (bus as any)[key];
+        oldValues[key] = (bus as unknown as Record<string, unknown>)[key];
       }
 
       return {
@@ -180,7 +180,7 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'PublisherRemove': {
       // Inverse of remove is add (need to capture the publisher)
       const pub = doc.publishers?.find(p => p.id === op.publisherId);
-      if (!pub) return null;
+      if (pub === undefined) return null;
 
       return {
         op: 'PublisherAdd',
@@ -191,11 +191,11 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'PublisherUpdate': {
       // Inverse is patch back to original values
       const pub = doc.publishers?.find(p => p.id === op.publisherId);
-      if (!pub) return null;
+      if (pub === undefined) return null;
 
-      const oldValues: any = {};
+      const oldValues: Record<string, unknown> = {};
       for (const key of Object.keys(op.patch)) {
-        oldValues[key] = (pub as any)[key];
+        oldValues[key] = (pub as unknown as Record<string, unknown>)[key];
       }
 
       return {
@@ -219,7 +219,7 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'ListenerRemove': {
       // Inverse of remove is add (need to capture the listener)
       const listener = doc.listeners?.find(l => l.id === op.listenerId);
-      if (!listener) return null;
+      if (listener === undefined) return null;
 
       return {
         op: 'ListenerAdd',
@@ -230,11 +230,11 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'ListenerUpdate': {
       // Inverse is patch back to original values
       const listener = doc.listeners?.find(l => l.id === op.listenerId);
-      if (!listener) return null;
+      if (listener === undefined) return null;
 
-      const oldValues: any = {};
+      const oldValues: Record<string, unknown> = {};
       for (const key of Object.keys(op.patch)) {
-        oldValues[key] = (listener as any)[key];
+        oldValues[key] = (listener as unknown as Record<string, unknown>)[key];
       }
 
       return {
@@ -258,7 +258,7 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'CompositeDefRemove': {
       // Inverse of remove is add (need to capture the definition)
       const def = doc.composites?.find(c => c.id === op.defId);
-      if (!def) return null;
+      if (def === undefined) return null;
 
       return {
         op: 'CompositeDefAdd',
@@ -269,11 +269,11 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'CompositeDefUpdate': {
       // Inverse is patch back to original values
       const def = doc.composites?.find(c => c.id === op.defId);
-      if (!def) return null;
+      if (def === undefined) return null;
 
-      const oldValues: any = {};
+      const oldValues: Record<string, unknown> = {};
       for (const key of Object.keys(op.patch)) {
-        oldValues[key] = (def as any)[key];
+        oldValues[key] = (def as unknown as Record<string, unknown>)[key];
       }
 
       return {
@@ -286,21 +286,33 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     case 'CompositeDefReplaceGraph': {
       // Inverse is replace back to original graph
       const def = doc.composites?.find(c => c.id === op.defId);
-      if (!def) return null;
+      if (def === undefined) return null;
 
-      const oldGraph = (def as any).graph;
-      const oldExposed = (def as any).exposedPorts;
+      // Type assertion since composites aren't fully in the Patch type yet
+      interface DefWithGraph {
+        graph?: {
+          blocks?: Block[];
+          connections?: Connection[];
+          publishers?: Publisher[];
+          listeners?: Listener[];
+        };
+        exposedPorts?: { inputs: unknown[]; outputs: unknown[] };
+      }
+
+      const defWithGraph = def as unknown as DefWithGraph;
+      const oldGraph = defWithGraph.graph;
+      const oldExposed = defWithGraph.exposedPorts;
 
       return {
         op: 'CompositeDefReplaceGraph',
         defId: op.defId,
         nextGraph: {
-          nodes: oldGraph?.blocks || [],
-          edges: oldGraph?.connections || [],
-          publishers: oldGraph?.publishers || [],
-          listeners: oldGraph?.listeners || [],
+          nodes: oldGraph?.blocks ?? [],
+          edges: oldGraph?.connections ?? [],
+          publishers: oldGraph?.publishers ?? [],
+          listeners: oldGraph?.listeners ?? [],
         },
-        nextExposed: oldExposed || { inputs: [], outputs: [] },
+        nextExposed: oldExposed ?? { inputs: [], outputs: [] },
       };
     }
 
@@ -311,9 +323,9 @@ export function invertOp(doc: Patch, op: Op): Op | null {
       // Inverse is set back to previous time root
       // Note: We need to track what the previous time root was
       // For now, capture it from settings if it exists
-      const oldTimeRootId = (doc.settings as any).timeRootId;
+      const oldTimeRootId = (doc.settings as Record<string, unknown>).timeRootId;
 
-      if (!oldTimeRootId) {
+      if (typeof oldTimeRootId !== 'string') {
         // No previous time root set - this is not perfectly invertible
         // We'd need a special "unset" operation or null support
         return null;
@@ -327,9 +339,9 @@ export function invertOp(doc: Patch, op: Op): Op | null {
 
     case 'PatchSettingsUpdate': {
       // Inverse is patch back to original values
-      const oldValues: any = {};
+      const oldValues: Record<string, unknown> = {};
       for (const key of Object.keys(op.patch)) {
-        oldValues[key] = (doc.settings as any)[key];
+        oldValues[key] = (doc.settings as Record<string, unknown>)[key];
       }
 
       return {

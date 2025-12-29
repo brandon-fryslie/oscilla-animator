@@ -35,7 +35,7 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     // =========================================================================
     case 'BlockAdd': {
       const existing = doc.blocks.find(b => b.id === op.block.id);
-      if (existing) {
+      if (existing !== undefined) {
         return { ok: false, error: `Block with id '${op.block.id}' already exists` };
       }
       doc.blocks.push(op.block);
@@ -53,11 +53,11 @@ export function applyOp(doc: Patch, op: Op): OpResult {
 
     case 'BlockRetype': {
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (!block) {
+      if (block === undefined) {
         return { ok: false, error: `Block '${op.blockId}' not found` };
       }
       (block as { type: string }).type = op.nextType;
-      if (!op.remap || (op.remap.kind === 'schema' && op.remap.schemaId)) {
+      if (op.remap === undefined || (op.remap.kind === 'schema' && op.remap.schemaId !== undefined && op.remap.schemaId.length > 0)) {
         block.params = {};
       }
       return { ok: true };
@@ -65,7 +65,7 @@ export function applyOp(doc: Patch, op: Op): OpResult {
 
     case 'BlockSetLabel': {
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (!block) {
+      if (block === undefined) {
         return { ok: false, error: `Block '${op.blockId}' not found` };
       }
       block.label = op.label;
@@ -74,7 +74,7 @@ export function applyOp(doc: Patch, op: Op): OpResult {
 
     case 'BlockPatchParams': {
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (!block) {
+      if (block === undefined) {
         return { ok: false, error: `Block '${op.blockId}' not found` };
       }
       Object.assign(block.params, op.patch);
@@ -86,15 +86,15 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     // =========================================================================
     case 'WireAdd': {
       const existing = doc.connections.find(c => c.id === op.connection.id);
-      if (existing) {
+      if (existing !== undefined) {
         return { ok: false, error: `Connection with id '${op.connection.id}' already exists` };
       }
       const fromBlock = doc.blocks.find(b => b.id === op.connection.from.blockId);
       const toBlock = doc.blocks.find(b => b.id === op.connection.to.blockId);
-      if (!fromBlock) {
+      if (fromBlock === undefined) {
         return { ok: false, error: `Source block '${op.connection.from.blockId}' not found` };
       }
-      if (!toBlock) {
+      if (toBlock === undefined) {
         return { ok: false, error: `Target block '${op.connection.to.blockId}' not found` };
       }
       if (op.connection.from.direction !== 'output') {
@@ -118,13 +118,13 @@ export function applyOp(doc: Patch, op: Op): OpResult {
 
     case 'WireRetarget': {
       const conn = doc.connections.find(c => c.id === op.connectionId);
-      if (!conn) {
+      if (conn === undefined) {
         return { ok: false, error: `Connection '${op.connectionId}' not found` };
       }
       const newFrom = op.next.from;
-      if (newFrom) {
+      if (newFrom !== undefined) {
         const fromBlock = doc.blocks.find(b => b.id === newFrom.blockId);
-        if (!fromBlock) {
+        if (fromBlock === undefined) {
           return { ok: false, error: `Source block '${newFrom.blockId}' not found` };
         }
         if (newFrom.direction !== 'output') {
@@ -133,9 +133,9 @@ export function applyOp(doc: Patch, op: Op): OpResult {
         (conn as { from: typeof newFrom }).from = newFrom;
       }
       const newTo = op.next.to;
-      if (newTo) {
+      if (newTo !== undefined) {
         const toBlock = doc.blocks.find(b => b.id === newTo.blockId);
-        if (!toBlock) {
+        if (toBlock === undefined) {
           return { ok: false, error: `Target block '${newTo.blockId}' not found` };
         }
         if (newTo.direction !== 'input') {
@@ -150,9 +150,9 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     // Bus Ops
     // =========================================================================
     case 'BusAdd': {
-      if (!doc.buses) doc.buses = [];
+      if (doc.buses === undefined) doc.buses = [];
       const existing = doc.buses.find(b => b.id === op.bus.id);
-      if (existing) {
+      if (existing !== undefined) {
         return { ok: false, error: `Bus with id '${op.bus.id}' already exists` };
       }
       doc.buses.push(op.bus);
@@ -160,7 +160,7 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     }
 
     case 'BusRemove': {
-      if (!doc.buses) {
+      if (doc.buses === undefined) {
         return { ok: false, error: `Bus '${op.busId}' not found (no buses defined)` };
       }
       const index = doc.buses.findIndex(b => b.id === op.busId);
@@ -172,11 +172,11 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     }
 
     case 'BusUpdate': {
-      if (!doc.buses) {
+      if (doc.buses === undefined) {
         return { ok: false, error: `Bus '${op.busId}' not found (no buses defined)` };
       }
       const bus = doc.buses.find(b => b.id === op.busId);
-      if (!bus) {
+      if (bus === undefined) {
         return { ok: false, error: `Bus '${op.busId}' not found` };
       }
       Object.assign(bus, op.patch);
@@ -187,20 +187,20 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     // Binding Ops (Publishers)
     // =========================================================================
     case 'PublisherAdd': {
-      if (!doc.publishers) doc.publishers = [];
+      if (doc.publishers === undefined) doc.publishers = [];
       const existing = doc.publishers.find(p => p.id === op.publisher.id);
-      if (existing) {
+      if (existing !== undefined) {
         return { ok: false, error: `Publisher with id '${op.publisher.id}' already exists` };
       }
-      if (!doc.buses) {
+      if (doc.buses === undefined) {
         return { ok: false, error: `Bus '${op.publisher.busId}' not found (no buses defined)` };
       }
       const bus = doc.buses.find(b => b.id === op.publisher.busId);
-      if (!bus) {
+      if (bus === undefined) {
         return { ok: false, error: `Bus '${op.publisher.busId}' not found` };
       }
       const block = doc.blocks.find(b => b.id === op.publisher.from.blockId);
-      if (!block) {
+      if (block === undefined) {
         return { ok: false, error: `Source block '${op.publisher.from.blockId}' not found` };
       }
       doc.publishers.push(op.publisher);
@@ -208,7 +208,7 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     }
 
     case 'PublisherRemove': {
-      if (!doc.publishers) {
+      if (doc.publishers === undefined) {
         return { ok: false, error: `Publisher '${op.publisherId}' not found (no publishers defined)` };
       }
       const index = doc.publishers.findIndex(p => p.id === op.publisherId);
@@ -220,11 +220,11 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     }
 
     case 'PublisherUpdate': {
-      if (!doc.publishers) {
+      if (doc.publishers === undefined) {
         return { ok: false, error: `Publisher '${op.publisherId}' not found (no publishers defined)` };
       }
       const pub = doc.publishers.find(p => p.id === op.publisherId);
-      if (!pub) {
+      if (pub === undefined) {
         return { ok: false, error: `Publisher '${op.publisherId}' not found` };
       }
       Object.assign(pub, op.patch);
@@ -235,20 +235,20 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     // Binding Ops (Listeners)
     // =========================================================================
     case 'ListenerAdd': {
-      if (!doc.listeners) doc.listeners = [];
+      if (doc.listeners === undefined) doc.listeners = [];
       const existing = doc.listeners.find(l => l.id === op.listener.id);
-      if (existing) {
+      if (existing !== undefined) {
         return { ok: false, error: `Listener with id '${op.listener.id}' already exists` };
       }
-      if (!doc.buses) {
+      if (doc.buses === undefined) {
         return { ok: false, error: `Bus '${op.listener.busId}' not found (no buses defined)` };
       }
       const bus = doc.buses.find(b => b.id === op.listener.busId);
-      if (!bus) {
+      if (bus === undefined) {
         return { ok: false, error: `Bus '${op.listener.busId}' not found` };
       }
       const block = doc.blocks.find(b => b.id === op.listener.to.blockId);
-      if (!block) {
+      if (block === undefined) {
         return { ok: false, error: `Target block '${op.listener.to.blockId}' not found` };
       }
       doc.listeners.push(op.listener);
@@ -256,7 +256,7 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     }
 
     case 'ListenerRemove': {
-      if (!doc.listeners) {
+      if (doc.listeners === undefined) {
         return { ok: false, error: `Listener '${op.listenerId}' not found (no listeners defined)` };
       }
       const index = doc.listeners.findIndex(l => l.id === op.listenerId);
@@ -268,11 +268,11 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     }
 
     case 'ListenerUpdate': {
-      if (!doc.listeners) {
+      if (doc.listeners === undefined) {
         return { ok: false, error: `Listener '${op.listenerId}' not found (no listeners defined)` };
       }
       const listener = doc.listeners.find(l => l.id === op.listenerId);
-      if (!listener) {
+      if (listener === undefined) {
         return { ok: false, error: `Listener '${op.listenerId}' not found` };
       }
       Object.assign(listener, op.patch);
@@ -283,9 +283,9 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     // Composite Ops
     // =========================================================================
     case 'CompositeDefAdd': {
-      if (!doc.composites) doc.composites = [];
+      if (doc.composites === undefined) doc.composites = [];
       const existing = doc.composites.find(c => c.id === op.def.id);
-      if (existing) {
+      if (existing !== undefined) {
         return { ok: false, error: `Composite definition with id '${op.def.id}' already exists` };
       }
       doc.composites.push(op.def);
@@ -293,7 +293,7 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     }
 
     case 'CompositeDefRemove': {
-      if (!doc.composites) {
+      if (doc.composites === undefined) {
         return { ok: false, error: `Composite definition '${op.defId}' not found (no composites defined)` };
       }
       const index = doc.composites.findIndex(c => c.id === op.defId);
@@ -305,11 +305,11 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     }
 
     case 'CompositeDefUpdate': {
-      if (!doc.composites) {
+      if (doc.composites === undefined) {
         return { ok: false, error: `Composite definition '${op.defId}' not found (no composites defined)` };
       }
       const def = doc.composites.find(c => c.id === op.defId);
-      if (!def) {
+      if (def === undefined) {
         return { ok: false, error: `Composite definition '${op.defId}' not found` };
       }
       Object.assign(def, op.patch);
@@ -317,20 +317,33 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     }
 
     case 'CompositeDefReplaceGraph': {
-      if (!doc.composites) {
+      if (doc.composites === undefined) {
         return { ok: false, error: `Composite definition '${op.defId}' not found (no composites defined)` };
       }
       const def = doc.composites.find(c => c.id === op.defId);
-      if (!def) {
+      if (def === undefined) {
         return { ok: false, error: `Composite definition '${op.defId}' not found` };
       }
-      (def as any).graph = {
+
+      // Type assertion since composites aren't fully in the Patch type yet
+      interface DefWithGraph {
+        graph: {
+          blocks: unknown[];
+          connections: unknown[];
+          publishers: unknown[];
+          listeners: unknown[];
+        };
+        exposedPorts: unknown;
+      }
+
+      const defWithGraph = def as unknown as DefWithGraph;
+      defWithGraph.graph = {
         blocks: op.nextGraph.nodes,
         connections: op.nextGraph.edges,
-        publishers: op.nextGraph.publishers || [],
-        listeners: op.nextGraph.listeners || [],
+        publishers: op.nextGraph.publishers ?? [],
+        listeners: op.nextGraph.listeners ?? [],
       };
-      (def as any).exposedPorts = op.nextExposed;
+      defWithGraph.exposedPorts = op.nextExposed;
       return { ok: true };
     }
 
@@ -339,10 +352,12 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     // =========================================================================
     case 'TimeRootSet': {
       const block = doc.blocks.find(b => b.id === op.blockId);
-      if (!block) {
+      if (block === undefined) {
         return { ok: false, error: `Block '${op.blockId}' not found` };
       }
-      (doc.settings as any).timeRootId = op.blockId;
+
+      // Type assertion since timeRootId isn't in the settings type yet
+      (doc.settings as Record<string, unknown>).timeRootId = op.blockId;
       return { ok: true };
     }
 
