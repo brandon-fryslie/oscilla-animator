@@ -9,8 +9,14 @@ import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
 import { registerBlockType } from '../../ir/lowerTypes';
 import { OpCode } from '../../ir/opcodes';
+import type { TypeDesc } from '../../ir/types';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
+
+interface ShaperConfig {
+  kind?: string;
+  amount?: number;
+}
 
 /**
  * Waveshaping functions
@@ -59,10 +65,11 @@ const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error(`Shaper: expected sig input, got ${input.k}`);
   }
 
-  const kind = (config as any)?.kind || 'smoothstep';
-  const amount = Number((config as any)?.amount ?? 1);
+  const cfg = config as ShaperConfig | undefined;
+  const kind = (cfg?.kind !== undefined && cfg.kind !== null) ? String(cfg.kind) : 'smoothstep';
+  const amount = Number(cfg?.amount ?? 1);
 
-  const numberType: any = { world: 'signal', domain: 'number' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
 
   let outputId: number;
 
@@ -214,8 +221,10 @@ export const ShaperBlock: BlockCompiler = {
 
     const inputSignal = inputArtifact.value as Signal<number>;
     // Read from inputs - values come from defaultSource or explicit connections
-    const kind = String((inputs.kind as any)?.value);
-    const amount = Number((inputs.amount as any)?.value);
+    const kindInput = inputs.kind;
+    const amountInput = inputs.amount;
+    const kind = (kindInput !== undefined && kindInput.kind === 'Scalar:string') ? String(kindInput.value) : 'smoothstep';
+    const amount = (amountInput !== undefined && amountInput.kind === 'Scalar:number') ? Number(amountInput.value) : 1;
 
     const shapeFn = getShaper(kind, amount);
 

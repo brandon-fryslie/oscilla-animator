@@ -321,7 +321,7 @@ const DiagnosticBadgeWithTooltip = memo(function DiagnosticBadgeWithTooltip({
           <div key={diag.id} className={`diag-badge-item ${getSeverityClass(diag.severity)}`}>
             <span className="diag-badge-item-icon">{getSeverityIcon(diag.severity)}</span>
             <span className="diag-badge-item-text">{diag.title}</span>
-            {diag.actions && diag.actions.length > 0 && (
+            {(diag.actions != null) && diag.actions.length > 0 && (
               <div className="diag-badge-item-actions">
                 {diag.actions.map((action, idx) => (
                   <button
@@ -384,7 +384,7 @@ export const LogWindow = observer((): React.ReactElement => {
   const [height, setHeight] = useState(() => {
     try {
       const saved = localStorage.getItem('log-window-height');
-      return saved ? Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, parseInt(saved, 10))) : DEFAULT_HEIGHT;
+      return (saved !== null && saved !== '') ? Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, parseInt(saved, 10))) : DEFAULT_HEIGHT;
     } catch {
       return DEFAULT_HEIGHT;
     }
@@ -397,7 +397,7 @@ export const LogWindow = observer((): React.ReactElement => {
 
   // Auto-scroll to bottom when new entries arrive
   useEffect(() => {
-    if (logStore.autoScroll && scrollRef.current) {
+    if (logStore.autoScroll && scrollRef.current !== null) {
       scrollRef.current.scrollTop = 0; // Newest at top
     }
   }, [logStore.filteredEntries.length, logStore.autoScroll]);

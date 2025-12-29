@@ -163,7 +163,7 @@ describe('registry-validation', () => {
             exposedInputs: [],
             exposedOutputs: [],
           },
-        } as any as BlockDefinition;
+        } as unknown as BlockDefinition;
 
         expect(() => validateBlockDefinition(def)).toThrow(BlockDefinitionValidationError);
         expect(() => validateBlockDefinition(def)).toThrow(
@@ -184,7 +184,7 @@ describe('registry-validation', () => {
           paramSchema: [],
           color: '#000',
           laneKind: 'Output',
-        } as any as BlockDefinition;
+        } as unknown as BlockDefinition;
 
         expect(() => validateBlockDefinition(def)).toThrow(BlockDefinitionValidationError);
         expect(() => validateBlockDefinition(def)).toThrow(
@@ -205,7 +205,7 @@ describe('registry-validation', () => {
           paramSchema: [],
           color: '#000',
           laneKind: 'Scalars',
-        } as any as BlockDefinition;
+        } as unknown as BlockDefinition;
 
         expect(() => validateBlockDefinition(def)).toThrow(BlockDefinitionValidationError);
         expect(() => validateBlockDefinition(def)).toThrow(/not in KERNEL_PRIMITIVES/);
@@ -228,7 +228,7 @@ describe('registry-validation', () => {
           paramSchema: [],
           color: '#000',
           laneKind: 'Fields',
-        } as any as BlockDefinition;
+        } as unknown as BlockDefinition;
 
         expect(() => validateBlockDefinition(def)).toThrow(BlockDefinitionValidationError);
         expect(() => validateBlockDefinition(def)).toThrow(/Capability mismatch/);
@@ -240,6 +240,7 @@ describe('registry-validation', () => {
           type: 'FiniteTimeRoot',
           label: 'Finite Time',
           capability: 'time',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
           kernelId: 'CycleTimeRoot' as any, // Wrong!
           description: 'Test',
           inputs: [],
@@ -318,7 +319,7 @@ describe('registry-validation', () => {
           color: '#000',
           laneKind: 'Scalars',
         },
-      ] as any as BlockDefinition[];
+      ] as unknown as BlockDefinition[];
 
       expect(() => validateBlockDefinitions(defs)).toThrow(/2 error\(s\)/);
       expect(() => validateBlockDefinitions(defs)).toThrow(/FakeTimeRoot1/);
@@ -340,7 +341,7 @@ describe('registry-validation', () => {
           color: '#000',
           laneKind: 'Scalars',
         },
-      ] as any as BlockDefinition[];
+      ] as unknown as BlockDefinition[];
 
       expect(() => validateBlockDefinitions(defs)).toThrow(/KERNEL_PRIMITIVES/);
       expect(() => validateBlockDefinitions(defs)).toThrow(/kernel-primitives.ts/);

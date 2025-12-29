@@ -121,10 +121,10 @@ export const IRTab = observer(function IRTab() {
                     type="button"
                   >
                     <span className="ir-tab-error-code">{err.code}</span>
-                    {err.where?.blockId && (
+                    {err.where?.blockId !== undefined && err.where.blockId.length > 0 && (
                       <span className="ir-tab-error-location">
                         @ {err.where.blockId}
-                        {err.where.port ? `.${err.where.port}` : ''}
+                        {err.where.port !== undefined && err.where.port.length > 0 ? `.${err.where.port}` : ''}
                       </span>
                     )}
                   </button>
@@ -132,7 +132,7 @@ export const IRTab = observer(function IRTab() {
                   {selectedErrorIdx === idx && (
                     <div className="ir-tab-error-details">
                       <div className="ir-tab-error-message">{err.message}</div>
-                      {err.where && (
+                      {err.where !== undefined && err.where !== null && (
                         <div className="ir-tab-error-where">
                           <pre>{JSON.stringify(err.where, null, 2)}</pre>
                         </div>
@@ -147,7 +147,7 @@ export const IRTab = observer(function IRTab() {
       )}
 
       {/* Warnings Section */}
-      {result?.irWarnings && result.irWarnings.length > 0 && (
+      {result?.irWarnings !== undefined && result.irWarnings !== null && result.irWarnings.length > 0 && (
         <section className="ir-tab-section ir-tab-section-warnings">
           <button
             className="ir-tab-section-header ir-tab-section-header-warning"
@@ -229,17 +229,17 @@ export const IRTab = observer(function IRTab() {
                                     <li key={input.id} className="ir-tab-port-item">
                                       <span className="ir-tab-port-name">{input.id}</span>
                                       <span className="ir-tab-port-type">{input.type}</span>
-                                      {conn && (
+                                      {conn !== undefined && (
                                         <span className="ir-tab-port-source">
                                           ← {conn.from.blockId}.{conn.from.slotId}
                                         </span>
                                       )}
-                                      {listener && (
+                                      {listener !== undefined && (
                                         <span className="ir-tab-port-bus">
                                           ← bus:{listener.busId}
                                         </span>
                                       )}
-                                      {!conn && !listener && (
+                                      {conn === undefined && listener === undefined && (
                                         <span className="ir-tab-port-unconnected">unconnected</span>
                                       )}
                                     </li>
@@ -335,7 +335,7 @@ export const IRTab = observer(function IRTab() {
                     e.where?.connection?.to?.block === conn.to.blockId
                   );
                   return (
-                    <div key={idx} className={`ir-tab-connection-item ${connError ? 'has-error' : ''}`}>
+                    <div key={idx} className={`ir-tab-connection-item ${connError !== undefined ? 'has-error' : ''}`}>
                       <span className="ir-tab-conn-from">
                         {conn.from.blockId}.{conn.from.slotId}
                       </span>
@@ -343,7 +343,7 @@ export const IRTab = observer(function IRTab() {
                       <span className="ir-tab-conn-to">
                         {conn.to.blockId}.{conn.to.slotId}
                       </span>
-                      {connError && (
+                      {connError !== undefined && (
                         <span className="ir-tab-conn-error" title={connError.message}>
                           {connError.code}
                         </span>
@@ -408,7 +408,7 @@ export const IRTab = observer(function IRTab() {
       </section>
 
       {/* Intermediate IR (LinkedGraphIR) - Available before final codegen */}
-      {result?.ir && (
+      {result?.ir !== undefined && result.ir !== null && (
         <section className="ir-tab-section">
           <button
             className="ir-tab-section-header"
@@ -432,7 +432,7 @@ export const IRTab = observer(function IRTab() {
       )}
 
       {/* Final Compiled IR - Only on success */}
-      {result?.programIR && (
+      {result?.programIR !== undefined && result.programIR !== null && (
         <section className="ir-tab-section">
           <button
             className="ir-tab-section-header"

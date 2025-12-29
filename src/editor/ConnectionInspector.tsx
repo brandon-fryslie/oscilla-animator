@@ -65,8 +65,8 @@ function TypeBadges({ type }: { type: SlotType }) {
 
   return (
     <span className="conn-type-badges">
-      {worldBadge && <span className={`conn-type-badge world ${desc.world}`}>{worldBadge}</span>}
-      {desc.domain && <span className="conn-type-badge domain">{desc.domain}</span>}
+      {(worldBadge !== null && worldBadge !== undefined) && <span className={`conn-type-badge world ${desc.world}`}>{worldBadge}</span>}
+      {(desc.domain !== null && desc.domain !== undefined) && <span className="conn-type-badge domain">{desc.domain}</span>}
     </span>
   );
 }
@@ -94,8 +94,8 @@ function EndpointDisplay({
         <button
           className="conn-endpoint-block"
           onClick={onNavigate}
-          disabled={!onNavigate}
-          title={onNavigate ? `Navigate to ${blockName}` : undefined}
+          disabled={onNavigate === undefined}
+          title={onNavigate !== undefined ? `Navigate to ${blockName}` : undefined}
         >
           {blockName}
         </button>
@@ -128,8 +128,8 @@ function BusEndpointDisplay({
         <button
           className="conn-endpoint-bus-name"
           onClick={onNavigate}
-          disabled={!onNavigate}
-          title={onNavigate ? `Navigate to bus "${busName}"` : undefined}
+          disabled={onNavigate === undefined}
+          title={onNavigate !== undefined ? `Navigate to bus "${busName}"` : undefined}
         >
           {busName}
         </button>
@@ -170,7 +170,7 @@ const WireConnectionView = observer(({
 
   // Convert LensInstance[] to LensDefinition[] for the editor
   const lensChain = useMemo((): LensDefinition[] => {
-    if (!connection.lensStack || connection.lensStack.length === 0) return [];
+    if (connection.lensStack === undefined || connection.lensStack.length === 0) return [];
     return connection.lensStack.map(lens =>
       lensInstanceToDefinition(lens, store.defaultSourceStore)
     );
@@ -270,7 +270,7 @@ const PublisherConnectionView = observer(({
 
   // Convert LensInstance[] to LensDefinition[] for the editor
   const lensChain = useMemo((): LensDefinition[] => {
-    if (!publisher.lensStack || publisher.lensStack.length === 0) return [];
+    if (publisher.lensStack === undefined || publisher.lensStack.length === 0) return [];
     return publisher.lensStack.map(lens =>
       lensInstanceToDefinition(lens, store.defaultSourceStore)
     );
@@ -369,7 +369,7 @@ const ListenerConnectionView = observer(({
 
   // Convert LensInstance[] to LensDefinition[] for the editor
   const lensChain = useMemo((): LensDefinition[] => {
-    if (!listener.lensStack || listener.lensStack.length === 0) return [];
+    if (listener.lensStack === undefined || listener.lensStack.length === 0) return [];
     return listener.lensStack.map(lens =>
       lensInstanceToDefinition(lens, store.defaultSourceStore)
     );
@@ -445,7 +445,7 @@ function TypeDescription({ typeDesc, label }: { typeDesc: TypeDesc; label: strin
       <span className="conn-type-desc-label">{label}</span>
       <span className="conn-type-desc-value">
         <span className={`conn-type-world ${typeDesc.world}`}>{typeDesc.world}</span>
-        {typeDesc.domain && <span className="conn-type-domain">{typeDesc.domain}</span>}
+        {(typeDesc.domain !== null && typeDesc.domain !== undefined) && <span className="conn-type-domain">{typeDesc.domain}</span>}
       </span>
     </div>
   );
@@ -498,7 +498,7 @@ const CellConnectionView = observer(({
   const handleConnect = useCallback(() => {
     // Parse rowKey to get block/port info
     const parsed = parseRowKey(row.key);
-    if (!parsed) return;
+    if (parsed === null) return;
 
     const { blockId, portId, direction } = parsed;
 
@@ -508,13 +508,13 @@ const CellConnectionView = observer(({
       const existingListener = store.busStore.listeners.find(
         l => l.to.blockId === blockId && l.to.slotId === portId
       );
-      if (existingListener) {
+      if (existingListener !== undefined) {
         store.busStore.removeListener(existingListener.id);
       }
 
       // Find adapter chain if needed
       let adapterChain: AdapterStep[] | undefined;
-      if (compatibility.status === 'convertible' && compatibility.adapterChain) {
+      if (compatibility.status === 'convertible' && compatibility.adapterChain !== undefined) {
         adapterChain = compatibility.adapterChain;
       }
 
@@ -528,7 +528,7 @@ const CellConnectionView = observer(({
   const handleDisconnect = useCallback(() => {
     // Parse rowKey to get block/port info
     const parsed = parseRowKey(row.key);
-    if (!parsed) return;
+    if (parsed === null) return;
 
     const { blockId, portId, direction } = parsed;
 
@@ -537,7 +537,7 @@ const CellConnectionView = observer(({
       const listener = store.busStore.listeners.find(
         l => l.to.blockId === blockId && l.to.slotId === portId && l.busId === column.busId
       );
-      if (listener) {
+      if (listener !== undefined) {
         store.busStore.removeListener(listener.id);
       }
     } else {
@@ -545,7 +545,7 @@ const CellConnectionView = observer(({
       const publisher = store.busStore.publishers.find(
         p => p.from.blockId === blockId && p.from.slotId === portId && p.busId === column.busId
       );
-      if (publisher) {
+      if (publisher !== undefined) {
         store.busStore.removePublisher(publisher.id);
       }
     }
@@ -554,10 +554,10 @@ const CellConnectionView = observer(({
 
   // Get the binding (listener or publisher) for lens editing
   const binding = useMemo(() => {
-    if (cell.listenerId) {
+    if (cell.listenerId !== undefined) {
       return store.busStore.listeners.find(l => l.id === cell.listenerId);
     }
-    if (cell.publisherId) {
+    if (cell.publisherId !== undefined) {
       return store.busStore.publishers.find(p => p.id === cell.publisherId);
     }
     return null;
@@ -565,7 +565,7 @@ const CellConnectionView = observer(({
 
   // Convert LensInstance[] to LensDefinition[] for the editor
   const lensChain = useMemo((): LensDefinition[] => {
-    if (!binding?.lensStack || binding.lensStack.length === 0) return [];
+    if (binding?.lensStack === undefined || binding.lensStack.length === 0) return [];
     return binding.lensStack.map(lens =>
       lensInstanceToDefinition(lens, store.defaultSourceStore)
     );
@@ -573,19 +573,19 @@ const CellConnectionView = observer(({
 
   // Handle lens chain changes from the editor
   const handleLensChainChange = useCallback((chain: LensDefinition[]) => {
-    if (!binding) return;
+    if (binding === null) return;
 
-    const bindingType = cell.listenerId ? 'lis' : 'pub';
+    const bindingType = cell.listenerId !== undefined ? 'lis' : 'pub';
     const bindingId = `${bindingType}:${binding.id}`;
     const instances: LensInstance[] = chain.map((def, index) =>
       createLensInstanceFromDefinition(def, bindingId, index, store.defaultSourceStore)
     );
 
-    if (cell.listenerId) {
+    if (cell.listenerId !== undefined) {
       store.busStore.updateListener(cell.listenerId, {
         lensStack: instances.length > 0 ? instances : undefined,
       });
-    } else if (cell.publisherId) {
+    } else if (cell.publisherId !== undefined) {
       store.busStore.updatePublisher(cell.publisherId, {
         lensStack: instances.length > 0 ? instances : undefined,
       });
@@ -642,7 +642,7 @@ const CellConnectionView = observer(({
           <p className="conn-status conn-status-compatible">Types are directly compatible</p>
         )}
 
-        {compatibility.status === 'convertible' && compatibility.adapterChain && (
+        {compatibility.status === 'convertible' && compatibility.adapterChain !== undefined && (
           <>
             <p className="conn-status conn-status-convertible">Types can be converted with adapters</p>
             <AdapterChainDisplay chain={compatibility.adapterChain} />
@@ -701,35 +701,35 @@ export const ConnectionInspector = observer(() => {
 
   // Resolve connection data
   const resolved = useMemo((): ResolvedConnection | null => {
-    if (!selectedConnection) return null;
+    if (selectedConnection === null) return null;
 
     const type = selectedConnection.type;
 
     const id = type === "cell" ? null : selectedConnection.id;
     if (type === 'wire') {
       const connection = store.patchStore.connections.find(c => c.id === id);
-      if (!connection) return null;
+      if (connection === undefined) return null;
 
       const sourceBlock = store.patchStore.blocks.find(b => b.id === connection.from.blockId);
       const targetBlock = store.patchStore.blocks.find(b => b.id === connection.to.blockId);
-      if (!sourceBlock || !targetBlock) return null;
+      if (sourceBlock === undefined || targetBlock === undefined) return null;
 
       const sourceSlot = sourceBlock.outputs.find(s => s.id === connection.from.slotId);
       const targetSlot = targetBlock.inputs.find(s => s.id === connection.to.slotId);
-      if (!sourceSlot || !targetSlot) return null;
+      if (sourceSlot === undefined || targetSlot === undefined) return null;
 
       return { kind: 'wire', connection, sourceBlock, sourceSlot, targetBlock, targetSlot };
     }
 
     if (type === 'publisher') {
       const publisher = store.busStore.publishers.find(p => p.id === id);
-      if (!publisher) return null;
+      if (publisher === undefined) return null;
 
       const sourceBlock = store.patchStore.blocks.find(b => b.id === publisher.from.blockId);
-      if (!sourceBlock) return null;
+      if (sourceBlock === undefined) return null;
 
       const sourceSlot = sourceBlock.outputs.find(s => s.id === publisher.from.slotId);
-      if (!sourceSlot) return null;
+      if (sourceSlot === undefined) return null;
 
       const bus = store.busStore.buses.find(b => b.id === publisher.busId);
       const busName = bus?.name ?? publisher.busId;
@@ -739,13 +739,13 @@ export const ConnectionInspector = observer(() => {
 
     if (type === 'listener') {
       const listener = store.busStore.listeners.find(l => l.id === id);
-      if (!listener) return null;
+      if (listener === undefined) return null;
 
       const targetBlock = store.patchStore.blocks.find(b => b.id === listener.to.blockId);
-      if (!targetBlock) return null;
+      if (targetBlock === undefined) return null;
 
       const targetSlot = targetBlock.inputs.find(s => s.id === listener.to.slotId);
-      if (!targetSlot) return null;
+      if (targetSlot === undefined) return null;
 
       const bus = store.busStore.buses.find(b => b.id === listener.busId);
       const busName = bus?.name ?? listener.busId;
@@ -758,24 +758,24 @@ export const ConnectionInspector = observer(() => {
 
       // Parse rowKey to get block/port info
       const parsed = parseRowKey(rowKey);
-      if (!parsed) return null;
+      if (parsed === null) return null;
 
       // Get block and slot
       const block = store.patchStore.blocks.find(b => b.id === parsed.blockId);
-      if (!block) return null;
+      if (block === undefined) return null;
 
       const slot = direction === 'input'
         ? block.inputs.find(s => s.id === parsed.portId)
         : block.outputs.find(s => s.id === parsed.portId);
-      if (!slot) return null;
+      if (slot === undefined) return null;
 
       // Get bus for column info
       const bus = store.busStore.buses.find(b => b.id === busId);
-      if (!bus) return null;
+      if (bus === undefined) return null;
 
       // Build column info using slot type descriptor
       const slotTypeDesc = SLOT_TYPE_TO_TYPE_DESC[slot.type];
-      if (!slotTypeDesc) return null;
+      if (slotTypeDesc === undefined) return null;
 
       const column: TableColumn = {
         busId: bus.id,
@@ -810,7 +810,7 @@ export const ConnectionInspector = observer(() => {
         const listener = store.busStore.listeners.find(
           l => l.to.blockId === block.id && l.to.slotId === slot.id && l.busId === busId
         );
-        if (listener) {
+        if (listener !== undefined) {
           isBound = true;
           listenerId = listener.id;
           enabled = listener.enabled;
@@ -819,7 +819,7 @@ export const ConnectionInspector = observer(() => {
         const publisher = store.busStore.publishers.find(
           p => p.from.blockId === block.id && p.from.slotId === slot.id && p.busId === busId
         );
-        if (publisher) {
+        if (publisher !== undefined) {
           isBound = true;
           publisherId = publisher.id;
           enabled = publisher.enabled;
@@ -844,7 +844,7 @@ export const ConnectionInspector = observer(() => {
       } else {
         // Check for adapter path
         const adapterResult = findAdapterPath(column.type, row.type, direction === 'input' ? 'listener' : 'publisher');
-        if (adapterResult.ok && adapterResult.chain) {
+        if (adapterResult.ok && adapterResult.chain !== undefined) {
           compatibility = {
             status: 'convertible',
             adapterChain: adapterResult.chain,
@@ -869,7 +869,7 @@ export const ConnectionInspector = observer(() => {
   // Handle back navigation
   const handleBack = useCallback(() => {
     const entry = store.uiStore.popInspectorHistory();
-    if (!entry) {
+    if (entry === null) {
       // No history - just clear selection
       store.uiStore.deselectConnection();
     }
@@ -898,7 +898,7 @@ export const ConnectionInspector = observer(() => {
   }, [store, resolved]);
 
   // No connection selected
-  if (!resolved) {
+  if (resolved === null) {
     return (
       <InspectorContainer
         title="Connection"

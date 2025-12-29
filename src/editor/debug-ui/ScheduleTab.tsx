@@ -17,10 +17,10 @@ import './ScheduleTab.css';
  */
 function getCompileResult(): { programIR?: CompiledProgramIR } | null {
   const compilerService = (window as unknown as { __compilerService?: { getLatestResult(): unknown } }).__compilerService;
-  if (!compilerService) return null;
+  if (compilerService === null || compilerService === undefined) return null;
 
   const result = compilerService.getLatestResult();
-  if (!result || typeof result !== 'object') return null;
+  if (result === null || result === undefined || typeof result !== 'object') return null;
 
   return result as { programIR?: CompiledProgramIR };
 }
@@ -85,20 +85,34 @@ function getStepKindLabel(kind: string): string {
 }
 
 /**
+ * Safely convert value to string for display
+ */
+function safeToString(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  // For objects, use JSON.stringify
+  return JSON.stringify(value);
+}
+
+/**
  * Extract key information from a step for summary display
  */
 function getStepSummary(step: StepIR): string {
-  if ('node' in step && step.node) {
-    return `node: ${step.node}`;
+  if ('node' in step && step.node !== null && step.node !== undefined) {
+    return `node: ${safeToString(step.node)}`;
   }
-  if ('slot' in step && step.slot !== undefined) {
-    return `slot: ${step.slot}`;
+  if ('slot' in step && step.slot !== null && step.slot !== undefined) {
+    return `slot: ${safeToString(step.slot)}`;
   }
-  if ('bus' in step && step.bus !== undefined) {
-    return `bus: ${step.bus}`;
+  if ('bus' in step && step.bus !== null && step.bus !== undefined) {
+    return `bus: ${safeToString(step.bus)}`;
   }
-  if ('expr' in step && step.expr !== undefined) {
-    return `expr: ${step.expr}`;
+  if ('expr' in step && step.expr !== null && step.expr !== undefined) {
+    return `expr: ${safeToString(step.expr)}`;
   }
   return '';
 }
@@ -109,7 +123,7 @@ export const ScheduleTab = observer(function ScheduleTab() {
   const result = getCompileResult();
   const programIR = result?.programIR;
 
-  if (!programIR) {
+  if (programIR === null || programIR === undefined) {
     return (
       <div className="schedule-tab">
         <div className="schedule-tab-empty">
@@ -120,11 +134,11 @@ export const ScheduleTab = observer(function ScheduleTab() {
   }
 
   const schedule = programIR.schedule;
-  const steps = schedule?.steps || [];
+  const steps = schedule?.steps ?? [];
 
   // Count steps by kind
   const stepKindCounts = steps.reduce((acc, step) => {
-    acc[step.kind] = (acc[step.kind] || 0) + 1;
+    acc[step.kind] = (acc[step.kind] ?? 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 

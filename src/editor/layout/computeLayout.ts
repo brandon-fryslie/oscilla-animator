@@ -131,11 +131,14 @@ export function computeLayout(graph: GraphData, uiState: UILayoutState): LayoutR
 
   for (const tuple of sortedTuples) {
     const placement = placements.get(tuple.blockId);
-    if (!placement) continue;
+    if (placement === undefined) continue;
 
     const scc = sccMap.get(tuple.blockId);
-    const sccId = scc && scc.blocks.length > 1 ? scc.id : undefined;
-    const isCycleGroupLeader = scc && scc.blocks.length > 1 && scc.leader === tuple.blockId;
+    const sccId = (scc != null) && scc.blocks.length > 1 ? scc.id : undefined;
+    const isCycleGroupLeader = (scc != null) && scc.blocks.length > 1 && scc.leader === tuple.blockId;
+
+    const block = graph.blocks.find((b) => b.id === tuple.blockId);
+    if (block === undefined) continue;
 
     nodes[tuple.blockId] = {
       blockId: tuple.blockId,
@@ -145,23 +148,12 @@ export function computeLayout(graph: GraphData, uiState: UILayoutState): LayoutR
       h: placement.h,
       column: tuple.column,
       rowKey: tupleToRowKey(tuple),
-      role: tuple.blockId as any, // Temporary - will be fixed below
+      role: block.role,
       depth: tuple.depth,
       clusterKey: tuple.clusterKey,
       sccId,
       isCycleGroupLeader,
     };
-  }
-
-  // Fix role mapping
-  for (const tuple of sortedTuples) {
-    const block = graph.blocks.find((b) => b.id === tuple.blockId);
-    if (block && nodes[tuple.blockId]) {
-      nodes[tuple.blockId] = {
-        ...nodes[tuple.blockId],
-        role: block.role,
-      };
-    }
   }
 
   // Step 11: Compute bounds

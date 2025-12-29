@@ -41,7 +41,7 @@ describe("Signal Math Operations", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "AddSignal",
         instanceId: "test-add",
         inTypes: [typeNum, typeNum],
@@ -82,7 +82,7 @@ describe("Signal Math Operations", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "SubSignal",
         instanceId: "test-sub",
         inTypes: [typeNum, typeNum],
@@ -117,7 +117,7 @@ describe("Signal Math Operations", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "MulSignal",
         instanceId: "test-mul",
         inTypes: [typeNum, typeNum],
@@ -152,7 +152,7 @@ describe("Signal Math Operations", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "DivSignal",
         instanceId: "test-div",
         inTypes: [typeNum, typeNum],
@@ -186,7 +186,7 @@ describe("Signal Math Operations", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "MinSignal",
         instanceId: "test-min",
         inTypes: [typeNum, typeNum],
@@ -220,7 +220,7 @@ describe("Signal Math Operations", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "MaxSignal",
         instanceId: "test-max",
         inTypes: [typeNum, typeNum],
@@ -258,7 +258,7 @@ describe("Signal Math Operations", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "ClampSignal",
         instanceId: "test-clamp",
         inTypes: [typeNum, typeNum, typeNum],
@@ -303,7 +303,7 @@ describe("Signal Math Operations", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "Oscillator",
         instanceId: "test-osc-sine",
         inTypes: [typePhase, typeWaveform, typeNum, typeNum],
@@ -352,7 +352,7 @@ describe("Signal Math Operations", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "Oscillator",
         instanceId: "test-osc-tri",
         inTypes: [typePhase, typeWaveform, typeNum, typeNum],
@@ -397,7 +397,7 @@ describe("Signal Math Operations", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "Oscillator",
         instanceId: "test-osc-saw",
         inTypes: [typePhase, typeWaveform, typeNum, typeNum],
@@ -422,7 +422,7 @@ describe("Signal Math Operations", () => {
 
       // Verify legacy path exists
       expect(AddSignalBlock).toBeDefined();
-      expect(AddSignalBlock.compile).toBeDefined();
+      expect(typeof AddSignalBlock.compile).toBe("function");
     });
 
     it("should have both paths for Oscillator", () => {
@@ -430,7 +430,7 @@ describe("Signal Math Operations", () => {
       expect(irDecl).toBeDefined();
 
       expect(OscillatorBlock).toBeDefined();
-      expect(OscillatorBlock.compile).toBeDefined();
+      expect(typeof OscillatorBlock.compile).toBe("function");
     });
   });
 });

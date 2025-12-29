@@ -274,7 +274,7 @@ export class ScheduleExecutor {
     runtime: RuntimeState,
   ): RenderFrameIR {
     // Handle case where program has no outputs
-    if (!program.outputs || program.outputs.length === 0) {
+    if (program.outputs === undefined || program.outputs.length === 0) {
       // Return empty render frame
       return {
         version: 1,

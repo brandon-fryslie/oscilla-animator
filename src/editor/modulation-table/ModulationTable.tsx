@@ -899,7 +899,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
                 </button>
               </>
             )}
-            {contextMenu.type === 'block' && contextMenu.blockId && (
+            {(contextMenu.type === 'block') && (contextMenu.blockId !== undefined) && (
               <>
                 <button
                   onClick={() => {

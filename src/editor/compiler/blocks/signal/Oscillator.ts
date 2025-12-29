@@ -7,7 +7,9 @@
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
+import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
+import type { TypeDesc } from '../../ir/types';
 import { OSCILLATOR_IR_INPUTS, OSCILLATOR_IR_OUTPUTS } from '../../../blocks/oscillatorSpec';
 import { OpCode } from '../../ir/opcodes';
 
@@ -59,7 +61,7 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
 
   // Map phase to waveform using appropriate opcode
   let waveformId: number;
-  const numberType: any = { world: 'signal', domain: 'number' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
 
   switch (shape) {
     case 'sine':

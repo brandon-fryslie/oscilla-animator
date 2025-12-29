@@ -11,7 +11,7 @@ describe('TraceController', () => {
     TraceController._resetForTesting();
 
     // Clear localStorage
-    if (typeof window !== 'undefined' && window.localStorage) {
+    if (typeof window !== 'undefined' && window.localStorage !== null && window.localStorage !== undefined) {
       window.localStorage.clear();
     }
   });

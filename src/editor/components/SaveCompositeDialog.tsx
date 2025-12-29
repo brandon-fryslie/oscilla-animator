@@ -16,7 +16,7 @@ import {
   validateCompositeName,
   createCompositeFromSelection,
   generateCompositeId,
-  
+
 } from '../composite-utils';
 import './SaveCompositeDialog.css';
 
@@ -80,7 +80,7 @@ export function SaveCompositeDialog({
 
   // Validate name on change
   useEffect(() => {
-    if (name.trim() === '') {
+    if (name.trim().length === 0) {
       setNameError(undefined);
       return;
     }
@@ -143,11 +143,14 @@ export function SaveCompositeDialog({
     const exposedParams: ExposedParam[] = Array.from(exposedParamIds)
       .map(paramId => {
         const param = detectedParams.find(p => p.id === paramId);
-        if (!param) return null;
+        if (param === undefined || param === null) return null;
 
+        const customLabel = paramLabels.get(paramId);
         return {
           id: paramId,
-          label: paramLabels.get(paramId) || param.label,
+          label: (customLabel !== undefined && customLabel !== null && customLabel.length > 0)
+            ? customLabel
+            : param.label,
           blockId: param.blockId,
           paramKey: param.paramKey,
         };
@@ -156,7 +159,7 @@ export function SaveCompositeDialog({
 
     const composite = createCompositeFromSelection(
       name,
-      description || undefined,
+      description.length > 0 ? description : undefined,
       subcategory,
       selectedBlocks,
       allConnections,
@@ -172,7 +175,7 @@ export function SaveCompositeDialog({
     onSave(composite, finalInputs, finalOutputs);
   };
 
-  const canSave = name.trim() !== '' && !nameError;
+  const canSave = name.trim().length > 0 && nameError === undefined;
 
   return (
     <div className="save-composite-dialog-overlay" onClick={onCancel}>
@@ -202,8 +205,10 @@ export function SaveCompositeDialog({
               placeholder="My Custom Composite"
               autoFocus
             />
-            {nameError && <div className="save-composite-dialog__error">{nameError}</div>}
-            {name && !nameError && (
+            {nameError !== undefined && nameError.length > 0 && (
+              <div className="save-composite-dialog__error">{nameError}</div>
+            )}
+            {name.length > 0 && nameError === undefined && (
               <div className="save-composite-dialog__hint">
                 ID: {generateCompositeId(name)}
               </div>
@@ -273,7 +278,7 @@ export function SaveCompositeDialog({
                           />
                           <span>{port.label}</span>
                           <span className="save-composite-dialog__port-type">
-                            {typeDesc ? `${typeDesc.world}.${typeDesc.domain}` : String(port.slotType)}
+                            {typeDesc !== null && typeDesc !== undefined ? `${typeDesc.world}.${typeDesc.domain}` : String(port.slotType)}
                           </span>
                         </label>
                       );
@@ -298,7 +303,7 @@ export function SaveCompositeDialog({
                           />
                           <span>{port.label}</span>
                           <span className="save-composite-dialog__port-type">
-                            {typeDesc ? `${typeDesc.world}.${typeDesc.domain}` : String(port.slotType)}
+                            {typeDesc !== null && typeDesc !== undefined ? `${typeDesc.world}.${typeDesc.domain}` : String(port.slotType)}
                           </span>
                         </label>
                       );
@@ -321,7 +326,10 @@ export function SaveCompositeDialog({
                 <div className="save-composite-dialog__param-list">
                   {detectedParams.map(param => {
                     const isExposed = exposedParamIds.has(param.id);
-                    const customLabel = paramLabels.get(param.id) || param.label;
+                    const customLabel = paramLabels.get(param.id);
+                    const displayLabel = (customLabel !== undefined && customLabel !== null && customLabel.length > 0)
+                      ? customLabel
+                      : param.label;
 
                     return (
                       <div key={param.id} className="save-composite-dialog__param-item">
@@ -345,7 +353,7 @@ export function SaveCompositeDialog({
                             type="text"
                             className="save-composite-dialog__param-name-input"
                             placeholder="Custom label (optional)"
-                            value={customLabel}
+                            value={displayLabel}
                             onChange={(e) => handleParamLabelChange(param.id, e.target.value)}
                           />
                         )}

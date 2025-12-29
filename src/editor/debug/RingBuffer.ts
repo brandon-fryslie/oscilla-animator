@@ -12,7 +12,7 @@ export class RingBuffer<T> {
 
   constructor(capacity: number) {
     this.capacity = capacity;
-    this.buffer = new Array(capacity);
+    this.buffer = new Array<T | undefined>(capacity);
   }
 
   /**
@@ -129,7 +129,7 @@ export class RingBuffer<T> {
    * Clear all items.
    */
   clear(): void {
-    this.buffer = new Array(this.capacity);
+    this.buffer = new Array<T | undefined>(this.capacity);
     this.head = 0;
     this.count = 0;
   }

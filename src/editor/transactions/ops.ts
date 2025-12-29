@@ -160,10 +160,11 @@ export function computeInverse(op: Op): Op {
         ops: op.ops.map(computeInverse).reverse(),
       };
 
-    default:
+    default: {
       // TypeScript exhaustiveness check
       const _exhaustive: never = op;
       throw new Error(`Unknown op type: ${JSON.stringify(_exhaustive)}`);
+    }
   }
 }
 
@@ -190,7 +191,7 @@ export function validateOp(op: Op): void {
       if (!op.id) {
         throw new Error(`Remove op missing id: ${JSON.stringify(op)}`);
       }
-      if (!op.removed) {
+      if (typeof op.removed !== 'object' || op.removed === null) {
         throw new Error(`Remove op missing removed entity: ${JSON.stringify(op)}`);
       }
       break;
@@ -199,7 +200,7 @@ export function validateOp(op: Op): void {
       if (!op.id) {
         throw new Error(`Update op missing id: ${JSON.stringify(op)}`);
       }
-      if (!op.prev || !op.next) {
+      if (typeof op.prev !== 'object' || op.prev === null || typeof op.next !== 'object' || op.next === null) {
         throw new Error(`Update op missing prev/next: ${JSON.stringify(op)}`);
       }
       break;
@@ -226,8 +227,9 @@ export function validateOp(op: Op): void {
     case 'SetTimelineHint':
       break;
 
-    default:
+    default: {
       const _exhaustive: never = op;
       throw new Error(`Unknown op type: ${JSON.stringify(_exhaustive)}`);
+    }
   }
 }

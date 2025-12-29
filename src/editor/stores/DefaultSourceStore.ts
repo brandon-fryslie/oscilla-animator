@@ -77,7 +77,7 @@ export class DefaultSourceStore {
   private blockSlotIndex: Map<string, Map<string, string>> = new Map();
 
   private root: RootStore | null = null;
-  
+
   // Revision counter to force updates even when structural equality checks might fail
   valueRevision = 0;
 
@@ -151,9 +151,9 @@ export class DefaultSourceStore {
    */
   getDefaultSourceForInput(blockId: BlockId, slotId: string): DefaultSource | undefined {
     const slotMap = this.blockSlotIndex.get(blockId);
-    if (!slotMap) return undefined;
+    if (slotMap === null || slotMap === undefined) return undefined;
     const dsId = slotMap.get(slotId);
-    if (!dsId) return undefined;
+    if (dsId === null || dsId === undefined || dsId === '') return undefined;
     return this.sources.get(dsId);
   }
 
@@ -162,7 +162,7 @@ export class DefaultSourceStore {
    */
   setDefaultValueForInput(blockId: BlockId, slotId: string, value: unknown): void {
     const ds = this.getDefaultSourceForInput(blockId, slotId);
-    if (!ds) return;
+    if (ds === null || ds === undefined) return;
     ds.value = value;
     this.valueRevision++;
   }
@@ -185,10 +185,10 @@ export class DefaultSourceStore {
     const slotMap = new Map<string, string>();
 
     for (const slot of inputs) {
-      if (!slot.defaultSource) continue;
+      if (slot.defaultSource === null || slot.defaultSource === undefined) continue;
 
       // Generate opaque ID
-      const dsId = this.root?.generateId('ds') ?? `ds-${Date.now()}-${Math.random()}`;
+      const dsId = (this.root !== null && this.root !== undefined) ? this.root.generateId('ds') : `ds-${Date.now()}-${Math.random()}`;
 
       // Derive TypeDesc from slot type and defaultSource world
       const baseTypeDesc = slotTypeToTypeDesc[slot.type];
@@ -225,7 +225,7 @@ export class DefaultSourceStore {
    */
   removeDefaultSourcesForBlock(blockId: BlockId): void {
     const slotMap = this.blockSlotIndex.get(blockId);
-    if (!slotMap) return;
+    if (slotMap === null || slotMap === undefined) return;
 
     for (const dsId of slotMap.values()) {
       this.sources.delete(dsId);
@@ -251,7 +251,7 @@ export class DefaultSourceStore {
    */
   registerBlockSlotMapping(blockId: BlockId, slotId: string, dsId: string): void {
     let slotMap = this.blockSlotIndex.get(blockId);
-    if (!slotMap) {
+    if (slotMap === null || slotMap === undefined) {
       slotMap = new Map();
       this.blockSlotIndex.set(blockId, slotMap);
     }

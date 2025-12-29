@@ -183,7 +183,7 @@ export class HistoryStore {
    */
   getParent(id: number): RevisionNode | undefined {
     const node = this.revisions.get(id);
-    if (!node || node.parentId === 0) {
+    if (node === null || node === undefined || node.parentId === 0) {
       return undefined;
     }
     return this.revisions.get(node.parentId);
@@ -201,7 +201,7 @@ export class HistoryStore {
     }
 
     const current = this.revisions.get(this.currentRevisionId);
-    if (!current) {
+    if (current === null || current === undefined) {
       return false;
     }
 
@@ -215,7 +215,7 @@ export class HistoryStore {
     // Set preferred child on parent for future redo
     if (parentId !== 0) {
       const parent = this.revisions.get(parentId);
-      if (parent) {
+      if (parent !== null && parent !== undefined) {
         parent.preferredChildId = current.id;
       }
     } else {
@@ -243,9 +243,11 @@ export class HistoryStore {
     const preferredId = this.currentRevisionId === 0
       ? this.rootPreferredChildId
       : this.revisions.get(this.currentRevisionId)?.preferredChildId;
-    const nextChild = children.find(c => c.id === preferredId) ?? children[0];
+    const nextChild = (preferredId !== null && preferredId !== undefined)
+      ? children.find(c => c.id === preferredId) ?? children[0]
+      : children[0];
 
-    if (!nextChild) {
+    if (nextChild === null || nextChild === undefined) {
       return false;
     }
 

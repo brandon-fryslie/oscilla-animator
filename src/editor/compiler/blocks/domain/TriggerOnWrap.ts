@@ -10,7 +10,9 @@
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
+import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
+import type { TypeDesc } from '../../ir/types';
 import { isDefined } from '../../../types/helpers';
 
 type SignalNumber = (tMs: number, ctx: RuntimeCtx) => number;
@@ -43,8 +45,8 @@ const lowerTriggerOnWrap: BlockLowerFn = ({ ctx, inputs }) => {
     throw new Error(`TriggerOnWrap: expected sig input for phase, got ${phase.k}`);
   }
 
-  const numberType: any = { world: 'signal', domain: 'number' };
-  const triggerType: any = { world: 'signal', domain: 'trigger' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
+  const triggerType: TypeDesc = { world: 'signal', domain: 'trigger' };
 
   // Allocate state for previous phase value
   const stateId = ctx.b.allocStateId(

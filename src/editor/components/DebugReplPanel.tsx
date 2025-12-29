@@ -59,7 +59,7 @@ const OverviewTab = observer(() => {
       <div className="overview-section">
         <div className="overview-label">Time Mode</div>
         <div className="overview-value">{timeModeLabel}</div>
-        {overview.period && (
+        {overview.period !== undefined && overview.period !== null && (
           <div className="overview-detail">{overview.period}ms period</div>
         )}
       </div>
@@ -143,10 +143,16 @@ function PhaseMeter({ value, width = 60 }: { value: number; width?: number }) {
  * Single Probe Card
  */
 const ProbeCard = observer(({ probe }: { probe: Probe }) => {
-  const value = probe.currentSample ? formatValueSummary(probe.currentSample.value) : '—';
-  const age = probe.currentSample ? Date.now() - probe.currentSample.timestamp : null;
+  const value = probe.currentSample !== undefined && probe.currentSample !== null
+    ? formatValueSummary(probe.currentSample.value)
+    : '—';
+  const age = probe.currentSample !== undefined && probe.currentSample !== null
+    ? Date.now() - probe.currentSample.timestamp
+    : null;
   const isPhase = probe.currentSample?.value.t === 'phase';
-  const numericValue = probe.currentSample ? getNumericValue(probe.currentSample.value) : null;
+  const numericValue = probe.currentSample !== undefined && probe.currentSample !== null
+    ? getNumericValue(probe.currentSample.value)
+    : null;
 
   const handleRemove = () => {
     debugStore.removeProbe(probe.id);
@@ -231,14 +237,14 @@ const ConsoleTab = observer(() => {
 
   // Auto-scroll
   useEffect(() => {
-    if (outputRef.current) {
+    if (outputRef.current !== null && outputRef.current !== undefined) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
   }, [lines.length]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (inputValue.trim()) {
+    if (inputValue.trim().length > 0) {
       debugStore.executeCommand(inputValue);
       setInputValue('');
     }
@@ -300,7 +306,9 @@ export const DebugReplPanel = observer(({ collapsed, onToggleCollapse }: DebugRe
   useEffect(() => {
     if (!collapsed && activeTab === 'console') {
       const input = document.querySelector<HTMLInputElement>('.console-input');
-      input?.focus();
+      if (input !== null && input !== undefined) {
+        input.focus();
+      }
     }
   }, [collapsed, activeTab]);
 

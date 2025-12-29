@@ -209,9 +209,11 @@ export function isFlattenOn(policy: FlattenPolicy): policy is Extract<FlattenPol
  */
 export function validateFlattenPolicy(policy: FlattenPolicy): void {
   if (policy.kind === 'on' && policy.tolerancePx !== CANONICAL_FLATTEN_TOL_PX) {
+    const actualTolerance: number = policy.tolerancePx;
+    const canonicalTolerance: number = CANONICAL_FLATTEN_TOL_PX;
     throw new Error(
-      `FlattenPolicy must use canonical tolerance (${CANONICAL_FLATTEN_TOL_PX}px), ` +
-        `got ${policy.tolerancePx}px. Arbitrary tolerances are not permitted.`
+      `FlattenPolicy must use canonical tolerance (${canonicalTolerance}px), ` +
+        `got ${actualTolerance}px. Arbitrary tolerances are not permitted.`
     );
   }
 }

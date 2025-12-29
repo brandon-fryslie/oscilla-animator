@@ -281,7 +281,7 @@ export class TutorialStore {
    */
   checkWireAdded(event: WireAddedEvent): void {
     const step = this.currentStep;
-    if (!step) return;
+    if (step === null) return;
 
     const criteria = step.criteria;
     if (criteria.type !== 'wire') return;
@@ -304,7 +304,7 @@ export class TutorialStore {
    */
   checkBindingAdded(event: BindingAddedEvent): void {
     const step = this.currentStep;
-    if (!step) return;
+    if (step === null) return;
 
     const criteria = step.criteria;
 
@@ -313,7 +313,8 @@ export class TutorialStore {
       const blockLabel = this.blockIdToLabel.get(event.blockId);
 
       if (
-        bus?.name === criteria.busName &&
+        bus !== null && bus !== undefined &&
+        bus.name === criteria.busName &&
         blockLabel === criteria.toBlock &&
         event.port === criteria.toSlot
       ) {
@@ -326,7 +327,8 @@ export class TutorialStore {
       const blockLabel = this.blockIdToLabel.get(event.blockId);
 
       if (
-        bus?.name === criteria.busName &&
+        bus !== null && bus !== undefined &&
+        bus.name === criteria.busName &&
         blockLabel === criteria.fromBlock &&
         event.port === criteria.fromSlot
       ) {
@@ -340,7 +342,7 @@ export class TutorialStore {
    */
   getHighlightedBlockIds(): string[] {
     const step = this.currentStep;
-    if (!step || !step.highlightBlocks) return [];
+    if (step === null || step.highlightBlocks === null || step.highlightBlocks === undefined) return [];
 
     return step.highlightBlocks
       .map(label => this.labelToBlockId.get(label))

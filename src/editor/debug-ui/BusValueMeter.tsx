@@ -16,7 +16,7 @@ interface BusValueMeterProps {
   busType: string;
 }
 
-export function BusValueMeter({ value, busType }: BusValueMeterProps) {
+export function BusValueMeter({ value, busType }: BusValueMeterProps): React.ReactElement {
   // Format value based on type
   if (busType === 'number' || busType === 'phase') {
     const numValue = typeof value === 'number' ? value :
@@ -70,10 +70,14 @@ export function BusValueMeter({ value, busType }: BusValueMeterProps) {
     );
   }
 
-  // Fallback for unknown types
+  // Fallback for unknown types - handle object stringification safely
+  const displayValue = typeof value === 'object' && value !== null
+    ? JSON.stringify(value)
+    : String(value);
+
   return (
     <div className="bus-value-meter-unknown">
-      <div className="bus-value-meter-text">{String(value)}</div>
+      <div className="bus-value-meter-text">{displayValue}</div>
     </div>
   );
 }
@@ -152,7 +156,7 @@ const styles = `
 // Inject styles into document head
 if (typeof document !== 'undefined') {
   const styleId = 'bus-value-meter-styles';
-  if (!document.getElementById(styleId)) {
+  if (document.getElementById(styleId) === null) {
     const styleSheet = document.createElement('style');
     styleSheet.id = styleId;
     styleSheet.textContent = styles;

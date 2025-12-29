@@ -7,7 +7,7 @@ import type {
   StepIR,
   CyclicTimeModelIR,
 } from '../CompiledProgramIR';
-import { nodeId, busId, nodeIndex, busIndex, valueSlot, stepId } from '../../types/Indices';
+import { nodeId, busId, nodeIndex, busIndex, valueSlot, stepId, stateId } from '../../types/Indices';
 
 describe('CompiledProgramIR Schema', () => {
   describe('Minimal Program', () => {
@@ -142,7 +142,7 @@ describe('CompiledProgramIR Schema', () => {
         ],
         state: [
           {
-            stateId: 'int-state' as any,
+            stateId: stateId('int-state'),
             type: { world: 'signal', domain: 'number' },
             policy: 'frame',
           },

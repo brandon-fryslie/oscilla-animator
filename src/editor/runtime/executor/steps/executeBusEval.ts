@@ -101,7 +101,7 @@ function getSilentValue(
         throw new Error("Silent value kind 'const' requires constId");
       }
 
-      const constPool = program.constants || {
+      const constPool = program.constants ?? {
         f64: new Float64Array([]),
         f32: new Float32Array([]),
         i32: new Int32Array([]),

@@ -41,7 +41,9 @@ function StatusLight({ label, status, value, tooltip, onClick }: StatusLightProp
       type="button"
     >
       <div className="status-light-label">{label}</div>
-      {value && <div className="status-light-value">{value}</div>}
+      {value !== undefined && value.length > 0 && (
+        <div className="status-light-value">{value}</div>
+      )}
     </button>
   );
 }

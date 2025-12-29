@@ -113,7 +113,7 @@ export class DebugUIStore {
    */
   openDrawer(tab?: DebugDrawerTab): void {
     this.isDrawerOpen = true;
-    if (tab) {
+    if (tab !== undefined) {
       this.activeTab = tab;
     }
   }
@@ -203,7 +203,7 @@ export class DebugUIStore {
    * - red (error): >10 NaN/Inf
    */
   get healthStatus(): 'ok' | 'warning' | 'error' {
-    if (!this.latestHealthSnapshot) return 'ok';
+    if (this.latestHealthSnapshot === null) return 'ok';
 
     const { nanCount, infCount } = this.latestHealthSnapshot.evalStats;
     const totalBadValues = nanCount + infCount;

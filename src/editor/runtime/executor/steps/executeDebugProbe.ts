@@ -53,7 +53,7 @@ export function executeDebugProbe(step: StepDebugProbe, runtime: RuntimeState): 
 
     // Get slot metadata to determine type
     const slotMeta = runtime.values.slotMeta[slot];
-    if (!slotMeta) {
+    if (slotMeta === undefined) {
       continue; // Skip slots without metadata
     }
 
@@ -66,7 +66,7 @@ export function executeDebugProbe(step: StepDebugProbe, runtime: RuntimeState): 
     // Convert ValueSummary to ValueRecord32 for ring buffer storage
     const record = summaryToValueRecord(summary, 0); // typeId=0 for now (Phase 7.2 will use TypeKeyTable)
 
-    if (record) {
+    if (record !== null) {
       // Write to ValueRing (zero-allocation, uses columnar storage)
       controller.writeValue(record);
     }

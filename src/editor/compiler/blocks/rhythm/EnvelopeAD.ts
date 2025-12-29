@@ -7,7 +7,9 @@
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
+import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
+import type { TypeDesc } from '../../ir/types';
 import { isDefined } from '../../../types/helpers';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
@@ -51,8 +53,8 @@ const lowerEnvelopeAD: BlockLowerFn = ({ ctx, inputs, config }) => {
   const decay = Number((config as any)?.decay ?? 0.5) * 1000;
   const peak = Number((config as any)?.peak ?? 1.0);
 
-  const numberType: any = { world: 'signal', domain: 'number' };
-  const timeType: any = { world: 'signal', domain: 'timeMs' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
+  const timeType: TypeDesc = { world: 'signal', domain: 'timeMs' };
 
   // Allocate state for trigger time
   const triggerTimeStateId = ctx.b.allocStateId(

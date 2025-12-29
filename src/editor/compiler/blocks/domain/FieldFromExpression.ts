@@ -15,7 +15,7 @@
 
 import type { BlockCompiler, Field, CompileCtx, RuntimeCtx } from '../../types';
 import { isDefined } from '../../../types/helpers';
-import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import type { BlockLowerFn } from '../../ir/lowerTypes';
 
 interface FieldEvalCtx extends CompileCtx {
   t: number;
@@ -63,7 +63,8 @@ function createExpressionEvaluator(
 // IR Lowering
 // =============================================================================
 
-const lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
+// @ts-expect-error Intentionally unused - kept as template for DSL block
+const _lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
   const domain = inputs[0];
 
   if (domain.k !== 'special' || domain.tag !== 'domain') {
@@ -116,7 +117,7 @@ const lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
 //   outputs: [
 //     { portId: 'field', label: 'Field', dir: 'out', type: { world: 'field', domain: 'string' } },
 //   ],
-//   lower: lowerFieldFromExpression,
+//   lower: _lowerFieldFromExpression,
 // });
 
 // =============================================================================

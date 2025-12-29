@@ -7,7 +7,9 @@
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
+import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
+import type { TypeDesc } from '../../ir/types';
 import { OpCode } from '../../ir/opcodes';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
@@ -115,8 +117,8 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Note: sat and light are baked into the base color for Sprint 2
   // They would be used if we had a 3-input ColorHSLToRGB opcode
 
-  const numberType: any = { world: 'signal', domain: 'number' };
-  const colorType: any = { world: 'signal', domain: 'color' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
+  const colorType: TypeDesc = { world: 'signal', domain: 'color' };
 
   // Calculate hue shift: phase * hueSpan
   const hueSpanSig = ctx.b.sigConst(hueSpan, numberType);

@@ -51,7 +51,12 @@ export function definePortCatalog<
   inputOrder: readonly (keyof Inputs)[];
   outputs: Outputs;
   outputOrder: readonly (keyof Outputs)[];
-}) {
+}): {
+  inputs: Inputs;
+  inputOrder: readonly (keyof Inputs)[];
+  outputs: Outputs;
+  outputOrder: readonly (keyof Outputs)[];
+} {
   return catalog;
 }
 

@@ -33,7 +33,7 @@ export function executeNodeEval(
 ): void {
   // 1. Get NodeIR
   const node = program.nodes.nodes[step.nodeIndex];
-  if (!node) {
+  if (node === undefined) {
     throw new Error(`executeNodeEval: Invalid nodeIndex ${step.nodeIndex}`);
   }
 

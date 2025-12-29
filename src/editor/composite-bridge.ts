@@ -94,7 +94,7 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
  * Looks up the parameter definitions from internal blocks.
  */
 function generateParamSchema(def: CompositeDefinition): ParamSchema[] {
-  if (!def.exposedParams || def.exposedParams.length === 0) {
+  if ((def.exposedParams == null) || def.exposedParams.length === 0) {
     return [];
   }
 
@@ -103,21 +103,21 @@ function generateParamSchema(def: CompositeDefinition): ParamSchema[] {
   for (const exposedParam of def.exposedParams) {
     // Find the internal node
     const node = def.graph.nodes[exposedParam.blockId];
-    if (!node) {
+    if (node == null) {
       console.warn(`Exposed param references unknown node: ${exposedParam.blockId}`);
       continue;
     }
 
     // Get the block definition for this node
     const blockDef = getBlockDefinition(node.type);
-    if (!blockDef || !blockDef.paramSchema) {
+    if (blockDef == null || blockDef.paramSchema == null) {
       console.warn(`Block type ${node.type} has no paramSchema`);
       continue;
     }
 
     // Find the parameter in the block's schema
     const paramDef = blockDef.paramSchema.find(p => p.key === exposedParam.paramKey);
-    if (!paramDef) {
+    if (paramDef == null) {
       console.warn(`Parameter ${exposedParam.paramKey} not found in ${node.type}`);
       continue;
     }
@@ -147,7 +147,7 @@ export function compositeToPrimitiveGraph(def: CompositeDefinition): CompoundGra
   const graph = def.graph;
 
   // If there are no exposed params, return the graph as-is
-  if (!def.exposedParams || def.exposedParams.length === 0) {
+  if ((def.exposedParams == null) || def.exposedParams.length === 0) {
     return {
       nodes: graph.nodes,
       edges: graph.edges,
@@ -170,11 +170,11 @@ export function compositeToPrimitiveGraph(def: CompositeDefinition): CompoundGra
     const transformedParams: Record<string, unknown> = { ...node.params };
 
     // Check if any parameters of this node are exposed
-    for (const paramKey of Object.keys(node.params || {})) {
+    for (const paramKey of Object.keys(node.params ?? {})) {
       const mapKey = `${nodeId}:${paramKey}`;
       const exposedParamId = paramMap.get(mapKey);
 
-      if (exposedParamId) {
+      if (exposedParamId !== undefined) {
         // Replace the value with __fromParam directive
         transformedParams[paramKey] = { __fromParam: exposedParamId };
       }

@@ -216,7 +216,7 @@ export class BusStore {
   updateBus(busId: string, updates: Partial<Pick<Bus, 'name' | 'combineMode' | 'defaultValue'>>): void {
     runTx(this.root, { label: 'Update Bus' }, tx => {
       const bus = this.root.busStore.buses.find(b => b.id === busId);
-      if (!bus) {
+      if (bus === null || bus === undefined) {
         throw new Error(`Bus ${busId} not found`);
       }
 
@@ -291,7 +291,7 @@ export class BusStore {
   updatePublisher(publisherId: string, updates: Partial<Pick<Publisher, 'enabled' | 'sortKey' | 'adapterChain' | 'lensStack'>>): void {
     runTx(this.root, { label: 'Update Publisher' }, tx => {
       const existing = this.root.busStore.publishers.find(p => p.id === publisherId);
-      if (!existing) {
+      if (existing === null || existing === undefined) {
         throw new Error(`Publisher ${publisherId} not found`);
       }
 
@@ -405,7 +405,7 @@ export class BusStore {
   updateListener(listenerId: string, updates: Partial<Pick<Listener, 'enabled' | 'lensStack'>>): void {
     runTx(this.root, { label: 'Update Listener' }, tx => {
       const existing = this.root.busStore.listeners.find(l => l.id === listenerId);
-      if (!existing) {
+      if (existing === null || existing === undefined) {
         throw new Error(`Listener ${listenerId} not found`);
       }
 

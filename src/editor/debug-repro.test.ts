@@ -17,8 +17,8 @@ interface DefaultSourceState {
   id: string;
   type: TypeDesc;
   value: unknown;
-  uiHint?: any;
-  rangeHint?: any;
+  uiHint?: Record<string, unknown>;
+  rangeHint?: Record<string, unknown>;
 }
 
 // 1. Copy of DefaultSource from DefaultSourceStore.ts
@@ -26,15 +26,15 @@ class DefaultSource implements DefaultSourceState {
   id: string;
   type: TypeDesc;
   value: unknown;
-  uiHint?: any;
-  rangeHint?: any;
+  uiHint?: Record<string, unknown>;
+  rangeHint?: Record<string, unknown>;
 
   constructor(init: {
     id: string;
     type: TypeDesc;
     value: unknown;
-    uiHint?: any;
-    rangeHint?: any;
+    uiHint?: Record<string, unknown>;
+    rangeHint?: Record<string, unknown>;
   }) {
     this.id = init.id;
     this.type = init.type;
@@ -61,13 +61,13 @@ class DefaultSourceStore {
     });
   }
 
-  ensureDefaultSource(id: string, spec: any): DefaultSource {
+  ensureDefaultSource(id: string, spec: Record<string, unknown>): DefaultSource {
     const existing = this.sources.get(id);
     if (existing !== undefined) return existing;
 
     const created = new DefaultSource({
       id,
-      type: spec.type,
+      type: spec.type as TypeDesc,
       value: spec.value,
     });
     this.sources.set(id, created);
@@ -99,8 +99,12 @@ class RootStore {
   defaultSourceStore = new DefaultSourceStore();
 }
 
+interface CompileService {
+  compile: () => { ok: boolean; errors: unknown[] };
+}
+
 // 4. Simplified Service
-const service = {
+const service: CompileService = {
   compile: () => {
     console.log('[Service] Compile triggered!');
     return { ok: true, errors: [] };
@@ -108,9 +112,7 @@ const service = {
 };
 
 // 5. Setup AutoCompile (Logic from integration.ts)
-function setupAutoCompile(store: RootStore, service: any) {
-  let compileCount = 0;
-
+function setupAutoCompile(store: RootStore, svc: CompileService): () => void {
   reaction(
     () => {
       console.log('[Reaction] Data expression running...');
@@ -118,17 +120,16 @@ function setupAutoCompile(store: RootStore, service: any) {
         // blockCount: store.patchStore.blocks.length,
         // seed: store.uiStore.settings.seed,
         // Default sources - track value changes to trigger recompilation
-        defaultSourceRevision: store.defaultSourceStore.valueRevision, 
+        defaultSourceRevision: store.defaultSourceStore.valueRevision,
       };
     },
     (data) => {
       console.log(`[Reaction] Effect triggered! Revision: ${data.defaultSourceRevision}`);
-      compileCount++;
-      service.compile();
+      svc.compile();
     },
     { fireImmediately: false }
   );
-  
+
   return () => {};
 }
 
@@ -136,11 +137,11 @@ import { test } from 'vitest';
 
 // --- Test ---
 
-test('MobX Reproduction', async () => {
+test('MobX Reproduction', () => {
   console.log('--- Starting Reproduction Test ---');
   const store = new RootStore();
   const dsId = 'ds-1';
-  
+
   // 1. Create a default source
   console.log('1. Creating Default Source...');
   store.defaultSourceStore.ensureDefaultSource(dsId, {
@@ -159,6 +160,6 @@ test('MobX Reproduction', async () => {
   // 4. Change Value Again
   console.log('4. Changing Value to 30...');
   store.defaultSourceStore.setDefaultValue(dsId, 30);
-  
+
   console.log('--- Test Complete ---');
 });

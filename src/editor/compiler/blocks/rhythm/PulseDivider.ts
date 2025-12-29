@@ -7,7 +7,9 @@
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
+import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
+import type { TypeDesc } from '../../ir/types';
 import { isDefined } from '../../../types/helpers';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
@@ -39,8 +41,8 @@ const lowerPulseDivider: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   const divisions = Number((config as any)?.divisions ?? 4);
 
-  const numberType: any = { world: 'signal', domain: 'number' };
-  const triggerType: any = { world: 'signal', domain: 'trigger' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
+  const triggerType: TypeDesc = { world: 'signal', domain: 'trigger' };
 
   // Allocate state for previous subPhase
   const stateId = ctx.b.allocStateId(

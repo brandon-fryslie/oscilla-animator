@@ -32,7 +32,7 @@ describe("Block Lowering Coverage", () => {
       for (const blockDef of allBlocks) {
         const irDecl = getBlockType(blockDef.type);
 
-        if (irDecl) {
+        if (irDecl !== undefined) {
           // Block is registered in IR system and has lower function
           irReadyBlocks.push(blockDef.type);
         } else {
@@ -134,7 +134,7 @@ describe("Block Lowering Coverage", () => {
         const irDecl = getBlockType(blockType);
         // DebugDisplay may or may not be registered in some configurations
         // If it is registered, it should have io capability
-        if (blockType === "DebugDisplay" && irDecl) {
+        if (blockType === "DebugDisplay" && irDecl !== undefined) {
           expect(irDecl.capability).toBe("io");
         }
         // Just document that these are known legacy blocks - don't fail if not registered
@@ -150,7 +150,7 @@ describe("Block Lowering Coverage", () => {
         const irDecl = getBlockType(blockType);
         expect(irDecl, `${blockType} should be registered`).toBeDefined();
 
-        if (!irDecl) continue;
+        if (irDecl === undefined) continue;
 
         // Inputs should have valid port IDs and types
         for (const input of irDecl.inputs) {
@@ -186,7 +186,7 @@ describe("Block Lowering Coverage", () => {
       for (const [capability, blockTypes] of Object.entries(capabilities)) {
         for (const blockType of blockTypes) {
           const irDecl = getBlockType(blockType);
-          if (irDecl) {
+          if (irDecl !== undefined) {
             expect(irDecl.capability).toBe(capability);
           }
         }

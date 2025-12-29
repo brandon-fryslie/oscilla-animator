@@ -39,7 +39,7 @@ export function executeSignalEval(
 ): void {
   // VALIDATION: Hard-fail if signalTable is missing but step has outputs
   // This prevents silent failures where slots remain uninitialized
-  if (!program.signalTable || !program.signalTable.nodes) {
+  if (program.signalTable === undefined || program.signalTable.nodes === undefined) {
     if (step.outputs.length > 0) {
       throw new Error(
         `executeSignalEval: signalTable is required when step has outputs. ` +

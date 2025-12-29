@@ -33,7 +33,7 @@ import type { GraphDiffSummary } from '../events/types';
  * For our use case (entity data), this is sufficient.
  */
 function deepClone<T>(obj: T): T {
-  return JSON.parse(JSON.stringify(obj));
+  return JSON.parse(JSON.stringify(obj)) as T;
 }
 
 /**
@@ -257,9 +257,10 @@ export class TxBuilder {
         return this.root.compositeStore.composites.find(c => c.id === id);
       case 'defaultSources':
         return this.root.defaultSourceStore.sources.get(id);
-      default:
+      default: {
         const _exhaustive: never = table;
-        throw new Error(`Unknown table: ${_exhaustive}`);
+        throw new Error(`Unknown table: ${String(_exhaustive)}`);
+      }
     }
   }
 
@@ -320,11 +321,17 @@ export class TxBuilder {
 
   /**
    * Get default sources for a block.
+   * Iterates through all sources and filters by blockId prefix.
    */
   getDefaultSourcesForBlock(blockId: string): string[] {
-    const slotMap = (this.root.defaultSourceStore as any).blockSlotIndex.get(blockId);
-    if (!slotMap) return [];
-    return Array.from(slotMap.values());
+    const result: string[] = [];
+    const prefix = `${blockId}:`;
+    for (const [id] of Array.from(this.root.defaultSourceStore.sources)) {
+      if (id.startsWith(prefix)) {
+        result.push(id);
+      }
+    }
+    return result;
   }
 
   /**
@@ -509,7 +516,7 @@ export function runTx(
     // Emit GraphCommitted event and increment patch revision (unless suppressed)
     // When suppressed, the caller is responsible for emitting their own GraphCommitted
     // with the appropriate revision after completing their compound operation.
-    if (!spec.suppressGraphCommitted) {
+    if (spec.suppressGraphCommitted !== true) {
       store.patchStore.patchRevision++;
       const affectedBlockIds = extractAffectedBlockIds(result.ops);
       store.events.emit({
@@ -565,7 +572,8 @@ function computeDiffSummary(ops: Op[]): GraphDiffSummary {
           blocksAdded++;
           // Check if added block is a TimeRoot
           const block = op.entity as { type?: string };
-          if (block?.type && isTimeRootBlockType(block.type)) {
+          const blockType = block?.type;
+          if (blockType !== null && blockType !== undefined && isTimeRootBlockType(blockType)) {
             timeRootChanged = true;
           }
         }
@@ -579,7 +587,8 @@ function computeDiffSummary(ops: Op[]): GraphDiffSummary {
           blocksRemoved++;
           // Check if removed block is a TimeRoot
           const removedBlock = op.removed as { type?: string };
-          if (removedBlock?.type && isTimeRootBlockType(removedBlock.type)) {
+          const removedBlockType = removedBlock?.type;
+          if (removedBlockType !== null && removedBlockType !== undefined && isTimeRootBlockType(removedBlockType)) {
             timeRootChanged = true;
           }
         }
@@ -618,20 +627,24 @@ function extractAffectedBlockIds(ops: Op[]): string[] {
   const extractFromOp = (op: Op): void => {
     switch (op.type) {
       case 'Add':
-        if (op.table === 'blocks' && op.entity && typeof op.entity === 'object' && 'id' in op.entity) {
+        if (op.table === 'blocks' && typeof op.entity === 'object' && op.entity !== null && 'id' in op.entity) {
           blockIds.add(op.entity.id);
         }
         // For connections, add both source and target block IDs
-        if (op.table === 'connections' && op.entity && typeof op.entity === 'object') {
+        if (op.table === 'connections' && typeof op.entity === 'object' && op.entity !== null) {
           const conn = op.entity as { from?: { blockId?: string }; to?: { blockId?: string } };
-          if (conn.from?.blockId) blockIds.add(conn.from.blockId);
-          if (conn.to?.blockId) blockIds.add(conn.to.blockId);
+          const fromBlockId = conn.from?.blockId;
+          const toBlockId = conn.to?.blockId;
+          if (fromBlockId !== null && fromBlockId !== undefined) blockIds.add(fromBlockId);
+          if (toBlockId !== null && toBlockId !== undefined) blockIds.add(toBlockId);
         }
         // For publishers/listeners, add the block ID
-        if ((op.table === 'publishers' || op.table === 'listeners') && op.entity && typeof op.entity === 'object') {
+        if ((op.table === 'publishers' || op.table === 'listeners') && typeof op.entity === 'object' && op.entity !== null) {
           const binding = op.entity as { from?: { blockId?: string }; to?: { blockId?: string } };
-          if (binding.from?.blockId) blockIds.add(binding.from.blockId);
-          if (binding.to?.blockId) blockIds.add(binding.to.blockId);
+          const fromBlockId = binding.from?.blockId;
+          const toBlockId = binding.to?.blockId;
+          if (fromBlockId !== null && fromBlockId !== undefined) blockIds.add(fromBlockId);
+          if (toBlockId !== null && toBlockId !== undefined) blockIds.add(toBlockId);
         }
         break;
       case 'Remove':
@@ -639,10 +652,12 @@ function extractAffectedBlockIds(ops: Op[]): string[] {
           blockIds.add(op.id);
         }
         // For connections, add both source and target block IDs from removed entity
-        if (op.table === 'connections' && op.removed && typeof op.removed === 'object') {
+        if (op.table === 'connections' && typeof op.removed === 'object' && op.removed !== null) {
           const conn = op.removed as { from?: { blockId?: string }; to?: { blockId?: string } };
-          if (conn.from?.blockId) blockIds.add(conn.from.blockId);
-          if (conn.to?.blockId) blockIds.add(conn.to.blockId);
+          const fromBlockId = conn.from?.blockId;
+          const toBlockId = conn.to?.blockId;
+          if (fromBlockId !== null && fromBlockId !== undefined) blockIds.add(fromBlockId);
+          if (toBlockId !== null && toBlockId !== undefined) blockIds.add(toBlockId);
         }
         break;
       case 'Update':
@@ -654,8 +669,8 @@ function extractAffectedBlockIds(ops: Op[]): string[] {
         blockIds.add(op.blockId);
         break;
       case 'SetTimeRoot':
-        if (op.next) blockIds.add(op.next);
-        if (op.prev) blockIds.add(op.prev);
+        if (op.next !== null && op.next !== undefined) blockIds.add(op.next);
+        if (op.prev !== null && op.prev !== undefined) blockIds.add(op.prev);
         break;
       case 'Many':
         op.ops.forEach(extractFromOp);

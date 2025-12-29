@@ -140,13 +140,13 @@ const easingFunctions: Record<string, (t: number) => number> = {
  * Returns null for lenses that can't be visualized as a simple curve
  */
 function getLensTransformFn(lens: LensDefinition): ((t: number) => number) | null {
-  const params = lens.params || {};
+  const params = lens.params ?? {};
 
   switch (lens.type) {
     case 'ease':
     case 'Ease': {
       const easingName = (params.easing as string) || 'easeInOutSine';
-      const easingFn = easingFunctions[easingName] || easingFunctions.easeInOutSine;
+      const easingFn = easingFunctions[easingName] ?? easingFunctions.easeInOutSine;
       return (t) => easingFn(Math.max(0, Math.min(1, t)));
     }
 

@@ -35,7 +35,7 @@ describe("Color Domain Blocks", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "ColorLFO",
         instanceId: "test-color-lfo",
         inTypes: [typePhase],
@@ -76,7 +76,7 @@ describe("Color Domain Blocks", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "ColorLFO",
         instanceId: "test-color-lfo-blue",
         inTypes: [typePhase],
@@ -113,7 +113,7 @@ describe("Color Domain Blocks", () => {
       ];
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "ColorLFO",
         instanceId: "test-color-static",
         inTypes: [typePhase],
@@ -148,7 +148,7 @@ describe("Color Domain Blocks", () => {
 
       const typeDomain: TypeDesc = { world: "special", domain: "domain" };
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "DomainN",
         instanceId: "test-domain-10",
         inTypes: [{ world: "scalar" as const, domain: "number" as const }],
@@ -183,7 +183,7 @@ describe("Color Domain Blocks", () => {
 
       const typeDomain: TypeDesc = { world: "special", domain: "domain" };
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "DomainN",
         instanceId: "test-domain-1",
         inTypes: [{ world: "scalar" as const, domain: "number" as const }],
@@ -211,7 +211,7 @@ describe("Color Domain Blocks", () => {
 
       const typeDomain: TypeDesc = { world: "special", domain: "domain" };
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "DomainN",
         instanceId: "test-domain-large",
         inTypes: [{ world: "scalar" as const, domain: "number" as const }],
@@ -238,7 +238,7 @@ describe("Color Domain Blocks", () => {
       const typeVec2: TypeDesc = { world: "field", domain: "vec2" };
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "GridDomain",
         instanceId: "test-grid",
         inTypes: [],
@@ -282,7 +282,7 @@ describe("Color Domain Blocks", () => {
       const typeVec2: TypeDesc = { world: "field", domain: "vec2" };
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "GridDomain",
         instanceId: "test-grid-rect",
         inTypes: [],
@@ -315,7 +315,7 @@ describe("Color Domain Blocks", () => {
       const typeVec2: TypeDesc = { world: "field", domain: "vec2" };
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "GridDomain",
         instanceId: "test-grid-custom",
         inTypes: [],
@@ -348,7 +348,7 @@ describe("Color Domain Blocks", () => {
       const typeVec2: TypeDesc = { world: "field", domain: "vec2" };
 
       const ctx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "GridDomain",
         instanceId: "test-grid-decl",
         inTypes: [],
@@ -397,7 +397,7 @@ describe("Color Domain Blocks", () => {
       ];
 
       const domainCtx = {
-        blockIdx: 0 as any,
+        blockIdx: 0 as number,
         blockType: "DomainN",
         instanceId: "domain-for-color",
         inTypes: [{ world: "scalar" as const, domain: "number" as const }],
@@ -423,7 +423,7 @@ describe("Color Domain Blocks", () => {
       ];
 
       const colorCtx = {
-        blockIdx: 1 as any,
+        blockIdx: 1 as number,
         blockType: "ColorLFO",
         instanceId: "color-lfo",
         inTypes: [typePhase],

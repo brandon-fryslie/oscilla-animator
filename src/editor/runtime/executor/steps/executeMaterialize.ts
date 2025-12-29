@@ -276,7 +276,7 @@ function buildMaterializerEnv(
   const fieldNodes = convertFieldNodes(program.fields.nodes);
 
   const signalTable = program.signalTable?.nodes;
-  if (!signalTable) {
+  if (signalTable === undefined) {
     throw new Error("executeMaterialize: program.signalTable is missing");
   }
 

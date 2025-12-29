@@ -33,7 +33,7 @@ function getPortCompatibility(
   // Check all current outputs have a compatible match
   for (const currentOutput of currentBlock.outputs) {
     const candidateOutput = candidateDef.outputs.find(o => o.id === currentOutput.id);
-    if (!candidateOutput || !areTypesCompatible(currentOutput.type, candidateOutput.type)) {
+    if (!candidateOutput || !areTypesCompatible(currentOutput.type, currentOutput.type)) {
       return false;
     }
   }
@@ -101,7 +101,7 @@ const PortWiringPanel = observer(({
     }> = [];
     const nearMisses: Array<{ block: Block; slot: Slot }> = [];
     const sourceDesc = describeSlotType(slot.type);
-    if (!sourceDesc.domain) return { suggestions, nearMisses };
+    if (sourceDesc.domain === null || sourceDesc.domain === undefined) return { suggestions, nearMisses };
     const lookingForDirection = portRef.direction === 'output' ? 'input' : 'output';
 
     for (const b of store.patchStore.blocks) {
@@ -116,7 +116,7 @@ const PortWiringPanel = observer(({
         if (compatible) continue;
 
         const desc = describeSlotType(s.type);
-        if (!desc.domain) continue;
+        if (desc.domain === null || desc.domain === undefined) continue;
         // Same domain but different world -> likely needs adapter
         const domainMatches = desc.domain === sourceDesc.domain;
         const worldMismatch = desc.world !== sourceDesc.world;
@@ -158,7 +158,7 @@ const PortWiringPanel = observer(({
             return false;
           });
 
-          if (!adapter) {
+          if (adapter === undefined) {
             nearMisses.push({ block: b, slot: s });
           }
           break; // only list block once
@@ -166,7 +166,7 @@ const PortWiringPanel = observer(({
       }
     }
     return { suggestions, nearMisses };
-  }, [block.id, portRef.direction, slot.type, store.patchStore.blocks.length, adapterDefinitions]);
+  }, [block.id, portRef.direction, slot.type, store.patchStore.blocks, adapterDefinitions]);
 
   // Get existing wire connections for this port
   const existingConnections = getConnectionsForPort(
@@ -323,8 +323,8 @@ const PortWiringPanel = observer(({
     const worldBadge = worldGlyph[desc.world] ?? null;
     return (
       <span className="port-badges">
-        {worldBadge && <span className={`port-badge world ${desc.world}`}>{worldBadge}</span>}
-        {desc.domain && <span className="port-badge domain">{desc.domain}</span>}
+        {(worldBadge !== null && worldBadge !== undefined) && <span className={`port-badge world ${desc.world}`}>{worldBadge}</span>}
+        {(desc.domain !== null && desc.domain !== undefined) && <span className="port-badge domain">{desc.domain}</span>}
       </span>
     );
   };
@@ -381,7 +381,7 @@ const PortWiringPanel = observer(({
                     <span className="wiring-target-block">{otherBlock?.label ?? 'Unknown'}</span>
                     <span className="wiring-target-slot">
                       {otherSlot?.label ?? otherSlotId}
-                      {otherSlot ? renderTypeBadges(otherSlot.type) : null}
+                      {otherSlot !== undefined ? renderTypeBadges(otherSlot.type) : null}
                     </span>
                     <button
                       className="wiring-disconnect-btn"
@@ -400,7 +400,7 @@ const PortWiringPanel = observer(({
               {busConnections.map((busConn) => (
                 <li
                   key={busConn.id}
-                  className={`wiring-connection-item wiring-connection-bus clickable ${!busConn.enabled ? 'disabled' : ''}`}
+                  className={`wiring-connection-item wiring-connection-bus clickable ${busConn.enabled === false ? 'disabled' : ''}`}
                   onClick={() => store.uiStore.selectConnection(busConn.type, busConn.id)}
                   title={`Click to inspect ${busConn.type}`}
                 >
@@ -409,7 +409,7 @@ const PortWiringPanel = observer(({
                   {'hasLenses' in busConn && busConn.hasLenses && (
                     <span className="wiring-lens-indicator" title="Has lenses">🔧</span>
                   )}
-                  {!busConn.enabled && (
+                  {busConn.enabled === false && (
                     <span className="wiring-disabled-badge">disabled</span>
                   )}
                   <button
@@ -632,7 +632,6 @@ const PortItem = observer(({
 }) => {
   const store = useStore();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
-  const portRef: PortRef = { blockId, slotId: slot.id, direction };
 
   // Check for diagnostics on this port
   const portDiagnostics = useMemo(() => {
@@ -642,7 +641,8 @@ const PortItem = observer(({
         return ref.blockId === blockId && ref.slotId === slot.id && ref.direction === direction;
       }
       // Also check affected targets
-      return d.affectedTargets?.some(t =>
+      if (d.affectedTargets === undefined) return false;
+      return d.affectedTargets.some(t =>
         t.kind === 'port' &&
         t.portRef.blockId === blockId &&
         t.portRef.slotId === slot.id &&
@@ -666,25 +666,26 @@ const PortItem = observer(({
     ? store.busStore.listeners.find(l => l.to.blockId === blockId && l.to.slotId === slot.id)
     : store.busStore.publishers.find(p => p.from.blockId === blockId && p.from.slotId === slot.id);
 
-  const connectedBus = busConnection
+  const connectedBus = (busConnection !== undefined)
     ? store.busStore.buses.find(b => b.id === busConnection.busId)
     : null;
 
-  const connectedBlockId = wireConnection
+  const connectedBlockId = (wireConnection !== undefined)
     ? (direction === 'input' ? wireConnection.from.blockId : wireConnection.to.blockId)
     : null;
-  const connectedBlock = connectedBlockId
+  const connectedBlock = (connectedBlockId !== null)
     ? blocks.find(b => b.id === connectedBlockId)
     : null;
 
   const handleClick = useCallback(() => {
+    const portRef: PortRef = { blockId, slotId: slot.id, direction };
     store.uiStore.setSelectedPort(portRef);
-  }, [store, portRef]);
+  }, [store, blockId, slot.id, direction]);
 
   const handleDoubleClick = useCallback(() => {
-    if (connectedBlockId) {
+    if (connectedBlockId !== null) {
       onNavigate(connectedBlockId);
-    } else if (connectedBus) {
+    } else if (connectedBus !== null) {
       store.uiStore.selectBus(connectedBus.id);
     }
   }, [onNavigate, connectedBlockId, connectedBus, store]);
@@ -699,10 +700,10 @@ const PortItem = observer(({
   }, []);
 
   const handleDisconnect = useCallback(() => {
-    if (wireConnection) {
+    if (wireConnection !== undefined) {
       store.patchStore.disconnect(wireConnection.id);
     }
-    if (busConnection) {
+    if (busConnection !== undefined) {
       if (direction === 'input') {
         store.busStore.removeListener(busConnection.id);
       } else {
@@ -713,12 +714,12 @@ const PortItem = observer(({
   }, [wireConnection, busConnection, store, direction, closeContextMenu]);
 
   const handleGoToBlock = useCallback(() => {
-    if (connectedBlockId) onNavigate(connectedBlockId);
+    if (connectedBlockId !== null) onNavigate(connectedBlockId);
     closeContextMenu();
   }, [connectedBlockId, onNavigate, closeContextMenu]);
 
   const handleGoToBus = useCallback(() => {
-    if (connectedBus) store.uiStore.selectBus(connectedBus.id);
+    if (connectedBus !== null) store.uiStore.selectBus(connectedBus.id);
     closeContextMenu();
   }, [connectedBus, store, closeContextMenu]);
 
@@ -731,17 +732,17 @@ const PortItem = observer(({
   let icon = '○';
   let title = 'Not connected (click to wire, right-click for options)';
 
-  if (wireConnection) {
+  if (wireConnection !== undefined) {
     iconClass = 'port-wire-icon';
     icon = '●';
     title = `Wire: ${connectedBlock?.label ?? 'Unknown'}`;
-  } else if (busConnection) {
+  } else if (busConnection !== undefined) {
     iconClass = 'port-bus-icon';
     icon = '●';
     title = `Bus: ${connectedBus?.name ?? busConnection.busId}`;
   }
 
-  if (wireConnection && busConnection) {
+  if (wireConnection !== undefined && busConnection !== undefined) {
     title = `Wire: ${connectedBlock?.label ?? 'Unknown'} + Bus: ${connectedBus?.name ?? busConnection.busId}`;
   }
 
@@ -778,7 +779,7 @@ const PortItem = observer(({
       </span>
 
       {/* Context menu */}
-      {contextMenu && (
+      {contextMenu !== null && (
         <>
           <div className="port-context-backdrop" onClick={closeContextMenu} />
           <div
@@ -786,7 +787,7 @@ const PortItem = observer(({
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <div className="port-context-header">{slot.label}</div>
-            {wireConnection && (
+            {wireConnection !== undefined && (
               <>
                 <button className="port-context-item" onClick={handleGoToBlock}>
                   Go to: {connectedBlock?.label ?? 'Block'}
@@ -796,7 +797,7 @@ const PortItem = observer(({
                 </button>
               </>
             )}
-            {busConnection && (
+            {busConnection !== undefined && (
               <>
                 <button className="port-context-item" onClick={handleGoToBus}>
                   Go to bus: {connectedBus?.name ?? busConnection.busId}
@@ -806,7 +807,7 @@ const PortItem = observer(({
                 </button>
               </>
             )}
-            {!wireConnection && !busConnection && (
+            {wireConnection === undefined && busConnection === undefined && (
               <div className="port-context-empty">No connections</div>
             )}
             <button className="port-context-item" onClick={() => { handleClick(); closeContextMenu(); }}>
@@ -836,13 +837,13 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
       }
     }
     return results.sort((a, b) => a.label.localeCompare(b.label));
-  }, [block.type, block.inputs, block.outputs]);
+  }, [block]);
 
   const handleReplace = useCallback((newDef: BlockDefinition) => {
     const incoming = store.patchStore.connections.filter(c => c.to.blockId === block.id);
     const outgoing = store.patchStore.connections.filter(c => c.from.blockId === block.id);
     const lane = store.viewStore.lanes.find(l => l.blockIds.includes(block.id));
-    if (!lane) return;
+    if (lane === undefined) return;
 
     const savedIn = incoming.map(c => ({ from: c.from.blockId, fromSlot: c.from.slotId, toSlot: c.to.slotId }));
     const savedOut = outgoing.map(c => ({ to: c.to.blockId, toSlot: c.to.slotId, fromSlot: c.from.slotId }));
@@ -852,13 +853,13 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
 
     for (const c of savedIn) {
       const newBlock = store.patchStore.blocks.find(b => b.id === newId);
-      if (newBlock?.inputs.find(i => i.id === c.toSlot)) {
+      if (newBlock?.inputs.find(i => i.id === c.toSlot) !== undefined) {
         store.patchStore.connect(c.from, c.fromSlot, newId, c.toSlot);
       }
     }
     for (const c of savedOut) {
       const newBlock = store.patchStore.blocks.find(b => b.id === newId);
-      if (newBlock?.outputs.find(o => o.id === c.fromSlot)) {
+      if (newBlock?.outputs.find(o => o.id === c.fromSlot) !== undefined) {
         store.patchStore.connect(newId, c.fromSlot, c.to, c.toSlot);
       }
     }
@@ -950,7 +951,7 @@ const BusTag = observer(({
       >
         {busName}
       </span>
-      {contextMenu && (
+      {contextMenu !== null && (
         <>
           <div className="port-context-backdrop" onClick={closeContextMenu} />
           <div
@@ -1090,11 +1091,12 @@ const DefaultSourceControl = observer(function DefaultSourceControl({
 
   // Color control
   if (uiHint?.kind === 'color') {
+    const colorValue = typeof ds.value === 'string' ? ds.value : '#000000';
     return (
       <input
         type="color"
         className="param-input"
-        value={String(ds.value || '#000000')}
+        value={colorValue}
         disabled={isDriven}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -1152,9 +1154,10 @@ const DefaultSourceControl = observer(function DefaultSourceControl({
 
       // Try JSON parse first
       try {
-        const parsed = JSON.parse(text);
+        const parsed = JSON.parse(text) as unknown;
         if (typeof parsed === 'object' && parsed !== null && 'x' in parsed && 'y' in parsed && 'z' in parsed) {
-          onChange({ x: Number(parsed.x) || 0, y: Number(parsed.y) || 0, z: Number(parsed.z) || 0 });
+          const obj = parsed as { x: unknown; y: unknown; z: unknown };
+          onChange({ x: Number(obj.x) || 0, y: Number(obj.y) || 0, z: Number(obj.z) || 0 });
           e.preventDefault();
           return;
         }
@@ -1212,11 +1215,12 @@ const DefaultSourceControl = observer(function DefaultSourceControl({
 
 
   // Text fallback
+  const textValue = typeof ds.value === 'string' ? ds.value : String(ds.value ?? '');
   return (
     <input
       type="text"
       className="param-input"
-      value={String(ds.value ?? '')}
+      value={textValue}
       disabled={isDriven}
       onChange={(e) => onChange(e.target.value)}
     />
@@ -1241,7 +1245,8 @@ const DiagnosticsSection = observer(({ block }: { block: Block }) => {
         return true;
       }
       // Check affected targets
-      return d.affectedTargets?.some(t =>
+      if (d.affectedTargets === undefined) return false;
+      return d.affectedTargets.some(t =>
         (t.kind === 'block' && t.blockId === block.id) ||
         (t.kind === 'port' && t.portRef.blockId === block.id)
       );
@@ -1304,14 +1309,14 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
 
     for (const slot of block.inputs) {
       const ds = store.defaultSourceStore.getDefaultSourceForInput(block.id, slot.id);
-      if (!ds) continue;
+      if (ds === undefined) continue;
 
       const driven = isInputDriven(block.id, slot.id, connections, listeners);
       results.push({ slot, ds, isDriven: driven });
     }
 
     return results;
-  }, [block.id, block.inputs, connections, listeners, store.defaultSourceStore.sources]);
+  }, [block.id, block.inputs, connections, listeners, store.defaultSourceStore]);
 
   // Only show if there are any default sources
   if (inputsWithDefaults.length === 0) return null;
@@ -1321,8 +1326,8 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
   };
 
   // Separate into primary (undriven) and secondary (driven) sections
-  const undrivenInputs = inputsWithDefaults.filter((i) => !i.isDriven);
-  const drivenInputs = inputsWithDefaults.filter((i) => i.isDriven);
+  const undrivenInputs = inputsWithDefaults.filter((i) => i.isDriven === false);
+  const drivenInputs = inputsWithDefaults.filter((i) => i.isDriven === true);
 
   return (
     <div className="insp-section">
@@ -1412,7 +1417,7 @@ const BlockInspectorWiringPanel = observer(({
       store.patchStore.connect(target.portRef.blockId, target.portRef.slotId, sourcePortRef.blockId, sourcePortRef.slotId);
     }
     store.uiStore.setSelectedPort(null); // Clear selection after connecting
-  }, [store, sourcePortRef, sourcePortBlock.id, sourcePortSlot.id]);
+  }, [store, sourcePortRef]);
 
   const handleCancel = useCallback(() => {
     store.uiStore.setSelectedPort(null); // Clear selection
@@ -1435,8 +1440,8 @@ const BlockInspectorWiringPanel = observer(({
     const worldBadge = worldGlyph[desc.world] ?? null;
     return (
       <span className="port-badges">
-        {worldBadge && <span className={`port-badge world ${desc.world}`}>{worldBadge}</span>}
-        {desc.domain && <span className="port-badge domain">{desc.domain}</span>}
+        {(worldBadge !== null && worldBadge !== undefined) && <span className={`port-badge world ${desc.world}`}>{worldBadge}</span>}
+        {(desc.domain !== null && desc.domain !== undefined) && <span className="port-badge domain">{desc.domain}</span>}
       </span>
     );
   };
@@ -1508,17 +1513,17 @@ export const Inspector = observer(() => {
   }, [store]);
 
   // Show connection inspector if a connection is selected
-  if (selectedConnection) {
+  if (selectedConnection !== null) {
     return <ConnectionInspector />;
   }
 
   // Show bus inspector if a bus is selected
-  if (selectedBus) {
+  if (selectedBus !== null) {
     return <BusInspector busId={selectedBus.id} />;
   }
 
   // Show port wiring panel if a port is selected
-  if (selectedPortInfo) {
+  if (selectedPortInfo !== null) {
     return (
       <PortWiringPanel
         portRef={store.uiStore.uiState.selectedPort!}
@@ -1529,11 +1534,11 @@ export const Inspector = observer(() => {
   }
 
   // Show previewed definition if no block is selected
-  if (!block && previewedDefinition) {
+  if (block === null && previewedDefinition !== null) {
     return <DefinitionPreview definition={previewedDefinition} />;
   }
 
-  if (!block) {
+  if (block === null) {
     return (
       <InspectorContainer
         title="Inspector"
@@ -1563,8 +1568,8 @@ export const Inspector = observer(() => {
       backLabel="Deselect"
     >
                   {/* Wiring Panel for selected port on current block */}
-                  {store.uiStore.uiState.selectedPort &&
-                   store.uiStore.uiState.selectedPort.blockId === block.id ? (
+                  {(store.uiStore.uiState.selectedPort !== null &&
+                   store.uiStore.uiState.selectedPort.blockId === block.id) ? (
                     <BlockInspectorWiringPanel
                       sourcePortRef={store.uiStore.uiState.selectedPort}
                       sourcePortBlock={block}

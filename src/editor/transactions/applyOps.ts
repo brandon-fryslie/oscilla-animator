@@ -76,9 +76,10 @@ function applyOp(op: Op, store: RootStore): void {
       }
       break;
 
-    default:
+    default: {
       const _exhaustive: never = op;
       throw new Error(`Unknown op type: ${JSON.stringify(_exhaustive)}`);
+    }
   }
 }
 
@@ -111,9 +112,10 @@ function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
     case 'defaultSources':
       store.defaultSourceStore.sources.set(entity.id, entity as DefaultSourceState);
       break;
-    default:
+    default: {
       const _exhaustive: never = table;
-      throw new Error(`Unknown table: ${_exhaustive}`);
+      throw new Error(`Unknown table: ${String(_exhaustive)}`);
+    }
   }
 }
 
@@ -146,9 +148,10 @@ function applyRemove(table: TableName, id: string, store: RootStore): void {
     case 'defaultSources':
       store.defaultSourceStore.sources.delete(id);
       break;
-    default:
+    default: {
       const _exhaustive: never = table;
-      throw new Error(`Unknown table: ${_exhaustive}`);
+      throw new Error(`Unknown table: ${String(_exhaustive)}`);
+    }
   }
 }
 
@@ -214,9 +217,10 @@ function applyUpdate(table: TableName, id: string, next: Entity, store: RootStor
       }
       break;
     }
-    default:
+    default: {
       const _exhaustive: never = table;
-      throw new Error(`Unknown table: ${_exhaustive}`);
+      throw new Error(`Unknown table: ${String(_exhaustive)}`);
+    }
   }
 }
 

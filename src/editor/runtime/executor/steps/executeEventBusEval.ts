@@ -71,7 +71,7 @@ export function executeEventBusEval(
   for (const pub of enabledPublishers) {
     // Read source event stream from ValueStore
     const stream = runtime.values.read(pub.srcSlot) as EventStream | undefined;
-    if (stream && Array.isArray(stream)) {
+    if (stream !== undefined && Array.isArray(stream)) {
       streams.push(stream);
     } else {
       // No stream or invalid stream - treat as empty
