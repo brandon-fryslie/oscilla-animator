@@ -1,0 +1,209 @@
+/**
+ * Schedule Tab Styles
+ */
+
+.schedule-tab {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.schedule-tab-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--color-text-secondary, #888);
+  font-size: 14px;
+}
+
+/* Header */
+.schedule-tab-header {
+  display: flex;
+  gap: 24px;
+  padding: 12px;
+  background: var(--color-bg-elevated, #2a2a2a);
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.schedule-tab-header-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schedule-tab-header-label {
+  font-size: 11px;
+  color: var(--color-text-secondary, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.schedule-tab-header-value {
+  font-size: 14px;
+  color: var(--color-text-primary, #fff);
+  font-weight: 500;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
+/* Breakdown */
+.schedule-tab-breakdown {
+  padding: 12px;
+  background: var(--color-bg-elevated, #2a2a2a);
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.schedule-tab-breakdown-title {
+  font-size: 12px;
+  color: var(--color-text-secondary, #888);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.schedule-tab-breakdown-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule-tab-breakdown-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-tab-breakdown-count {
+  font-size: 13px;
+  color: var(--color-text-primary, #fff);
+  font-weight: 500;
+}
+
+/* Step Kind Badge */
+.schedule-step-kind-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.schedule-step-kind-time {
+  background: #3a5a3a;
+  color: #8fd68f;
+}
+
+.schedule-step-kind-signal {
+  background: #3a4a5a;
+  color: #8fb6d6;
+}
+
+.schedule-step-kind-bus {
+  background: #5a4a3a;
+  color: #d6b68f;
+}
+
+.schedule-step-kind-materialize {
+  background: #5a3a5a;
+  color: #d68fd6;
+}
+
+.schedule-step-kind-render {
+  background: #5a3a3a;
+  color: #d68f8f;
+}
+
+.schedule-step-kind-debug {
+  background: #4a4a4a;
+  color: #b0b0b0;
+}
+
+.schedule-step-kind-default {
+  background: #3a3a3a;
+  color: #aaa;
+}
+
+/* Step List */
+.schedule-tab-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schedule-tab-empty-section {
+  color: var(--color-text-secondary, #888);
+  font-size: 13px;
+  font-style: italic;
+  padding: 12px;
+}
+
+.schedule-step-item {
+  border: 1px solid var(--color-border, #444);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.schedule-step-button {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--color-bg-elevated, #2a2a2a);
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--color-text-primary, #fff);
+  font-size: 13px;
+  transition: background 0.1s ease;
+}
+
+.schedule-step-button:hover {
+  background: var(--color-bg-hover, #333);
+}
+
+.schedule-step-button.active {
+  background: var(--color-accent-dim, #3a4a5a);
+}
+
+.schedule-step-index {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--color-accent, #5c9fd6);
+  min-width: 30px;
+  text-align: right;
+}
+
+.schedule-step-summary {
+  flex: 1;
+  color: var(--color-text-secondary, #aaa);
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
+.schedule-step-expand-icon {
+  width: 12px;
+  font-size: 10px;
+  color: var(--color-text-secondary, #888);
+}
+
+/* Step Details */
+.schedule-step-details {
+  padding: 12px;
+  background: var(--color-bg-base, #1e1e1e);
+  border-top: 1px solid var(--color-border, #444);
+}
+
+.schedule-step-json {
+  margin: 0;
+  padding: 12px;
+  background: var(--color-bg-code, #0d0d0d);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  color: var(--color-text-primary, #ddd);
+  overflow-x: auto;
+  white-space: pre;
+  line-height: 1.5;
+}

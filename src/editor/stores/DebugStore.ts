@@ -23,6 +23,7 @@ import {
   formatValueSummary,
   getNumericValue,
 } from '../debug/types';
+import type { CompiledProgramIR } from '../compiler/ir';
 
 // =============================================================================
 // Store Shape Types (for accessing root store)
@@ -380,6 +381,12 @@ export class DebugStore {
         case 'overview':
           this.showOverview();
           break;
+        case 'ir':
+          this.inspectIR(args);
+          break;
+        case 'schedule':
+          this.inspectSchedule(args);
+          break;
         case 'eval':
           this.evalExpression(args.join(' '));
           break;
@@ -432,6 +439,14 @@ export class DebugStore {
     this.log('output', '  buses        List all buses');
     this.log('output', '  bus <id>     Inspect bus by ID');
     this.log('output', '  connections  List all connections');
+    this.log('output', '');
+    this.log('output', '━━━ IR & Schedule ━━━');
+    this.log('output', '  ir           Show IR summary');
+    this.log('output', '  ir nodes     List all IR nodes');
+    this.log('output', '  ir buses     List all IR buses');
+    this.log('output', '  ir node <id> Inspect specific IR node');
+    this.log('output', '  schedule     Show schedule overview');
+    this.log('output', '  schedule step <n> Inspect step at index');
     this.log('output', '');
     this.log('output', '━━━ Advanced ━━━');
     this.log('output', '  state        Show UI state');
@@ -701,6 +716,188 @@ export class DebugStore {
     this.log('output', `  Active Probes: ${this.probes.size}`);
   }
 
+  /**
+   * IR inspection commands: `ir`, `ir nodes`, `ir buses`, `ir node <id>`
+   */
+  private inspectIR(args: string[]): void {
+    const programIR = this.getProgramIR();
+    if (!programIR) {
+      this.log('error', 'No IR available. Compile a patch first.');
+      return;
+    }
+
+    const subCmd = args[0]?.toLowerCase();
+
+    if (!subCmd) {
+      // Show IR summary
+      this.log('output', '━━━ IR Summary ━━━');
+      this.log('output', `  IR Version: ${programIR.irVersion}`);
+      this.log('output', `  Patch ID: ${programIR.patchId}`);
+      this.log('output', `  Seed: ${programIR.seed}`);
+
+      const nodeCount = Object.keys(programIR.nodes).length;
+      const busCount = Object.keys(programIR.buses).length;
+
+      this.log('output', `  Node Count: ${nodeCount}`);
+      this.log('output', `  Bus Count: ${busCount}`);
+      this.log('output', `  Time Model: ${programIR.timeModel.kind}`);
+
+      if (programIR.timeModel.kind === 'cyclic' && 'periodMs' in programIR.timeModel) {
+        this.log('output', `  Period: ${programIR.timeModel.periodMs}ms`);
+      } else if (programIR.timeModel.kind === 'finite' && 'durationMs' in programIR.timeModel) {
+        this.log('output', `  Duration: ${programIR.timeModel.durationMs}ms`);
+      }
+      return;
+    }
+
+    if (subCmd === 'nodes') {
+      // List all nodes
+      const nodeEntries = Object.entries(programIR.nodes);
+      if (nodeEntries.length === 0) {
+        this.log('output', 'No nodes in IR');
+        return;
+      }
+
+      this.log('output', `━━━ IR Nodes (${nodeEntries.length}) ━━━`);
+      for (const [nodeId, node] of nodeEntries) {
+        const nodeType = node.type || 'unknown';
+        this.log('output', `  ${nodeId}: ${nodeType}`);
+      }
+      return;
+    }
+
+    if (subCmd === 'buses') {
+      // List all buses
+      const busEntries = Object.entries(programIR.buses);
+      if (busEntries.length === 0) {
+        this.log('output', 'No buses in IR');
+        return;
+      }
+
+      this.log('output', `━━━ IR Buses (${busEntries.length}) ━━━`);
+      for (const [busId, bus] of busEntries) {
+        const busName = bus.name || 'unnamed';
+        const busType = bus.type ? JSON.stringify(bus.type) : 'unknown';
+        this.log('output', `  ${busId}: "${busName}" (${busType})`);
+      }
+      return;
+    }
+
+    if (subCmd === 'node') {
+      // Inspect specific node
+      const nodeId = args[1];
+      if (!nodeId) {
+        this.log('error', 'Usage: ir node <id>');
+        return;
+      }
+
+      const node = programIR.nodes[nodeId];
+      if (!node) {
+        this.log('error', `IR node not found: ${nodeId}`);
+        return;
+      }
+
+      this.log('output', `━━━ IR Node: ${nodeId} ━━━`);
+      this.log('output', `  Type: ${node.type || 'unknown'}`);
+
+      if (node.inputs && node.inputs.length > 0) {
+        this.log('output', `  Inputs (${node.inputs.length}):`);
+        for (const input of node.inputs) {
+          const inputStr = typeof input === 'object' ? JSON.stringify(input) : String(input);
+          this.log('output', `    ${inputStr}`);
+        }
+      }
+
+      if (node.outputs && node.outputs.length > 0) {
+        this.log('output', `  Outputs (${node.outputs.length}):`);
+        for (const output of node.outputs) {
+          const outputStr = typeof output === 'object' ? JSON.stringify(output) : String(output);
+          this.log('output', `    ${outputStr}`);
+        }
+      }
+
+      if (node.params && Object.keys(node.params).length > 0) {
+        this.log('output', '  Params:');
+        for (const [key, value] of Object.entries(node.params)) {
+          const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
+          this.log('output', `    ${key}: ${valueStr}`);
+        }
+      }
+      return;
+    }
+
+    this.log('error', `Unknown IR subcommand: ${subCmd}`);
+    this.log('error', 'Usage: ir | ir nodes | ir buses | ir node <id>');
+  }
+
+  /**
+   * Schedule inspection commands: `schedule`, `schedule step <n>`
+   */
+  private inspectSchedule(args: string[]): void {
+    const programIR = this.getProgramIR();
+    if (!programIR) {
+      this.log('error', 'No schedule available. Compile a patch first.');
+      return;
+    }
+
+    const schedule = programIR.schedule;
+    if (!schedule || !schedule.steps) {
+      this.log('error', 'No schedule in IR');
+      return;
+    }
+
+    const steps = schedule.steps;
+    const subCmd = args[0]?.toLowerCase();
+
+    if (!subCmd) {
+      // Show schedule overview
+      this.log('output', '━━━ Schedule Overview ━━━');
+      this.log('output', `  Step Count: ${steps.length}`);
+      this.log('output', `  Time Model: ${programIR.timeModel.kind}`);
+
+      // Count steps by kind
+      const kindCounts: Record<string, number> = {};
+      for (const step of steps) {
+        kindCounts[step.kind] = (kindCounts[step.kind] || 0) + 1;
+      }
+
+      this.log('output', '  Step Kinds:');
+      for (const [kind, count] of Object.entries(kindCounts)) {
+        this.log('output', `    ${kind}: ${count}`);
+      }
+      return;
+    }
+
+    if (subCmd === 'step') {
+      // Inspect specific step
+      const stepIndexStr = args[1];
+      if (!stepIndexStr) {
+        this.log('error', 'Usage: schedule step <index>');
+        return;
+      }
+
+      const stepIndex = parseInt(stepIndexStr, 10);
+      if (isNaN(stepIndex) || stepIndex < 0 || stepIndex >= steps.length) {
+        this.log('error', `Invalid step index: ${stepIndexStr} (valid: 0-${steps.length - 1})`);
+        return;
+      }
+
+      const step = steps[stepIndex];
+      this.log('output', `━━━ Schedule Step ${stepIndex} ━━━`);
+      this.log('output', `  Kind: ${step.kind}`);
+
+      // Show step details as JSON
+      const stepJson = JSON.stringify(step, null, 2);
+      for (const line of stepJson.split('\n')) {
+        this.log('output', `  ${line}`);
+      }
+      return;
+    }
+
+    this.log('error', `Unknown schedule subcommand: ${subCmd}`);
+    this.log('error', 'Usage: schedule | schedule step <index>');
+  }
+
   private evalExpression(expr: string): void {
     if (!expr) {
       this.log('error', 'Usage: eval <expression>');
@@ -751,6 +948,23 @@ export class DebugStore {
 
   private getStore(): RootStore {
     return (window as unknown as { __rootStore: RootStore }).__rootStore ?? {};
+  }
+
+  /**
+   * Get the compiled program IR from window.__compilerService
+   */
+  private getProgramIR(): CompiledProgramIR | null {
+    const compilerService = (window as unknown as {
+      __compilerService?: { getLatestResult(): unknown }
+    }).__compilerService;
+
+    if (!compilerService) return null;
+
+    const result = compilerService.getLatestResult();
+    if (!result || typeof result !== 'object') return null;
+
+    const compiledResult = result as { programIR?: CompiledProgramIR };
+    return compiledResult.programIR ?? null;
   }
 
   private findBlock(idOrLabel: string): StoreBlock | undefined {

@@ -1,0 +1,245 @@
+/**
+ * IR Tab Styles
+ */
+
+.ir-tab {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.ir-tab-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--color-text-secondary, #888);
+  font-size: 14px;
+}
+
+/* Header */
+.ir-tab-header {
+  display: flex;
+  gap: 24px;
+  padding: 12px;
+  background: var(--color-bg-elevated, #2a2a2a);
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.ir-tab-header-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ir-tab-header-label {
+  font-size: 11px;
+  color: var(--color-text-secondary, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ir-tab-header-value {
+  font-size: 14px;
+  color: var(--color-text-primary, #fff);
+  font-weight: 500;
+}
+
+.ir-tab-header-mono {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+/* Sections */
+.ir-tab-section {
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border, #444);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ir-tab-section-header {
+  width: 100%;
+  padding: 12px;
+  background: var(--color-bg-elevated, #2a2a2a);
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--color-text-primary, #fff);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.1s ease;
+}
+
+.ir-tab-section-header:hover {
+  background: var(--color-bg-hover, #333);
+}
+
+.ir-tab-section-icon {
+  width: 12px;
+  font-size: 10px;
+  color: var(--color-text-secondary, #888);
+}
+
+.ir-tab-section-title {
+  flex: 1;
+}
+
+.ir-tab-section-content {
+  padding: 12px;
+  background: var(--color-bg-base, #1e1e1e);
+}
+
+.ir-tab-empty-section {
+  color: var(--color-text-secondary, #888);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Node List */
+.ir-tab-node-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ir-tab-node-item {
+  border: 1px solid var(--color-border, #444);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ir-tab-node-button {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--color-bg-elevated, #2a2a2a);
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--color-text-primary, #fff);
+  font-size: 13px;
+  transition: background 0.1s ease;
+}
+
+.ir-tab-node-button:hover {
+  background: var(--color-bg-hover, #333);
+}
+
+.ir-tab-node-button.active {
+  background: var(--color-accent-dim, #3a4a5a);
+}
+
+.ir-tab-node-id {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--color-accent, #5c9fd6);
+  min-width: 100px;
+}
+
+.ir-tab-node-type {
+  color: var(--color-text-secondary, #888);
+  font-size: 12px;
+}
+
+/* Node Details */
+.ir-tab-node-details {
+  padding: 12px;
+  background: var(--color-bg-base, #1e1e1e);
+  border-top: 1px solid var(--color-border, #444);
+}
+
+.ir-tab-node-detail-section {
+  margin-bottom: 8px;
+}
+
+.ir-tab-node-detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.ir-tab-node-detail-label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #888);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.ir-tab-node-detail-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-primary, #fff);
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
+.ir-tab-node-detail-list li {
+  padding: 2px 0;
+  color: var(--color-text-primary, #ddd);
+}
+
+.ir-tab-param-key {
+  color: var(--color-accent, #5c9fd6);
+}
+
+/* Bus List */
+.ir-tab-bus-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ir-tab-bus-item {
+  padding: 8px 12px;
+  background: var(--color-bg-elevated, #2a2a2a);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.ir-tab-bus-id {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--color-accent, #5c9fd6);
+  min-width: 80px;
+}
+
+.ir-tab-bus-name {
+  color: var(--color-text-primary, #fff);
+  font-weight: 500;
+}
+
+.ir-tab-bus-type {
+  color: var(--color-text-secondary, #888);
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
+/* Time Model */
+.ir-tab-time-model {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ir-tab-time-model-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.ir-tab-time-model-label {
+  color: var(--color-text-secondary, #888);
+  min-width: 80px;
+}
+
+.ir-tab-time-model-value {
+  color: var(--color-text-primary, #fff);
+  font-weight: 500;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}

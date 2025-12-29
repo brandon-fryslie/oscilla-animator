@@ -5,12 +5,16 @@
  * Currently supports:
  * - Overview tab: Patch summary and bus heatmap
  * - Buses tab: Live bus values with meters
+ * - IR tab: Compiled IR structure visualization
+ * - Schedule tab: Execution schedule visualization
  */
 
 import { observer } from 'mobx-react-lite';
 import { useStore } from '../stores';
 import { OverviewTab } from './OverviewTab';
 import { BusesTab } from './BusesTab';
+import { IRTab } from './IRTab';
+import { ScheduleTab } from './ScheduleTab';
 import './DebugDrawer.css';
 
 /**
@@ -42,6 +46,20 @@ export const DebugDrawer = observer(function DebugDrawer() {
           >
             Buses
           </button>
+          <button
+            className={`debug-drawer-tab ${activeTab === 'ir' ? 'active' : ''}`}
+            onClick={() => debugUIStore.setActiveTab('ir')}
+            type="button"
+          >
+            IR
+          </button>
+          <button
+            className={`debug-drawer-tab ${activeTab === 'schedule' ? 'active' : ''}`}
+            onClick={() => debugUIStore.setActiveTab('schedule')}
+            type="button"
+          >
+            Schedule
+          </button>
         </div>
 
         <button
@@ -57,6 +75,8 @@ export const DebugDrawer = observer(function DebugDrawer() {
       <div className="debug-drawer-content">
         {activeTab === 'overview' && <OverviewTab />}
         {activeTab === 'buses' && <BusesTab />}
+        {activeTab === 'ir' && <IRTab />}
+        {activeTab === 'schedule' && <ScheduleTab />}
       </div>
     </div>
   );

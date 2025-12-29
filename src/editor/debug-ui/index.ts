@@ -6,6 +6,10 @@
  * - DebugDrawer: Slide-up panel with tabs
  * - ProbeToggle: Enable/disable probe mode
  * - ProbeCard: Floating inspection card
+ * - OverviewTab: Patch overview and issues
+ * - BusesTab: Bus value monitoring
+ * - IRTab: IR structure visualization
+ * - ScheduleTab: Execution schedule visualization
  */
 
 export { DebugHUD } from './DebugHUD';
@@ -15,3 +19,5 @@ export { ProbeCard } from './ProbeCard';
 export { OverviewTab } from './OverviewTab';
 export { BusesTab } from './BusesTab';
 export { BusValueMeter } from './BusValueMeter';
+export { IRTab } from './IRTab';
+export { ScheduleTab } from './ScheduleTab';
