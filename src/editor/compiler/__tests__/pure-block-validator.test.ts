@@ -18,7 +18,7 @@ describe("validatePureBlockOutput", () => {
 
   it("allows pure blocks to emit Signal artifacts", () => {
     const outputs = new Map<string, Artifact>([
-      ["out", { kind: "Signal:number", value: (t: number) => t }],
+      ["out", { kind: "Signal:float", value: (t: number) => t }],
     ]);
 
     expect(() => {
@@ -38,7 +38,7 @@ describe("validatePureBlockOutput", () => {
 
   it("allows pure blocks to emit Scalar artifacts", () => {
     const outputs = new Map<string, Artifact>([
-      ["out", { kind: "Scalar:number", value: 42 }],
+      ["out", { kind: "Scalar:float", value: 42 }],
     ]);
 
     expect(() => {
@@ -178,7 +178,7 @@ describe("validatePureBlockOutput", () => {
 
   it("allows operator blocks to emit closures during transition period", () => {
     const outputs = new Map<string, Artifact>([
-      ["out", { kind: "Signal:number", value: (t: number) => t * 2 }],
+      ["out", { kind: "Signal:float", value: (t: number) => t * 2 }],
     ]);
 
     // During transition, operator blocks CAN emit closures
@@ -190,7 +190,7 @@ describe("validatePureBlockOutput", () => {
 
   it("allows composite blocks to emit closures", () => {
     const outputs = new Map<string, Artifact>([
-      ["out", { kind: "Signal:number", value: (t: number) => t * 2 }],
+      ["out", { kind: "Signal:float", value: (t: number) => t * 2 }],
     ]);
 
     // Composite blocks CAN emit closures - they're not required to be AST
@@ -205,7 +205,7 @@ describe("validatePureBlockOutput", () => {
 
   it("validates all outputs and reports first violation", () => {
     const outputs = new Map<string, Artifact>([
-      ["signal", { kind: "Signal:number", value: (t: number) => t }],
+      ["signal", { kind: "Signal:float", value: (t: number) => t }],
       [
         "render",
         {
@@ -223,9 +223,9 @@ describe("validatePureBlockOutput", () => {
 
   it("passes validation when all outputs are allowed", () => {
     const outputs = new Map<string, Artifact>([
-      ["signal", { kind: "Signal:number", value: (t: number) => t }],
+      ["signal", { kind: "Signal:float", value: (t: number) => t }],
       ["field", { kind: "Field:vec2", value: () => [] }],
-      ["scalar", { kind: "Scalar:number", value: 42 }],
+      ["scalar", { kind: "Scalar:float", value: 42 }],
     ]);
 
     expect(() => {

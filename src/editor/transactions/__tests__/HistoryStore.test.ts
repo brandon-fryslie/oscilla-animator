@@ -209,8 +209,8 @@ describe('HistoryStore', () => {
         id: 'block-1',
         type: 'test',
         label: 'Test Block',
-        inputs: [{ id: 'in', label: 'In', type: 'Signal<number>', direction: 'input' }],
-        outputs: [{ id: 'out', label: 'Out', type: 'Signal<number>', direction: 'output' }],
+        inputs: [{ id: 'in', label: 'In', type: 'Signal<float>', direction: 'input' }],
+        outputs: [{ id: 'out', label: 'Out', type: 'Signal<float>', direction: 'output' }],
         params: {},
         category: 'Other',
       };

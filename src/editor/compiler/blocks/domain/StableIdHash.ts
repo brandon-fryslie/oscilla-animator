@@ -16,7 +16,7 @@ import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
  * Simple hash function that produces a number in [0, 1)
  * Based on standard string hashing with good distribution.
  */
-function stableHash(str: string): number {
+function stableHash(str: string): float {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = ((hash << 5) - hash) + str.charCodeAt(i);
@@ -38,17 +38,17 @@ const lowerStableIdHash: BlockLowerFn = ({ ctx, inputs, config }) => {
   }
 
   const configData = config as {
-    salt?: number;
-    domainSize?: number;
+    salt?: int;
+    domainSize?: int;
     elementIds?: string[]; // Temporary: pass element IDs via config
   } | undefined;
 
-  const salt = Number(configData?.salt ?? 0);
-  const domainSize = configData?.domainSize ?? 100;
+  const salt: int = Number(configData?.salt ?? 0);
+  const domainSize: int = configData?.domainSize ?? 100;
   const elementIds = configData?.elementIds ?? Array.from({ length: domainSize }, (_, i) => String(i));
 
   // Compute hash values at compile time
-  const hashValues: number[] = [];
+  const hashValues: float[] = [];
   for (let i = 0; i < elementIds.length; i++) {
     const elementId = elementIds[i];
     const hashInput = `${elementId}-${salt}`;
@@ -56,7 +56,7 @@ const lowerStableIdHash: BlockLowerFn = ({ ctx, inputs, config }) => {
   }
 
   // Create field as const
-  const hashField = ctx.b.fieldConst(hashValues, { world: 'field', domain: 'number' });
+  const hashField = ctx.b.fieldConst(hashValues, { world: 'field', domain: 'float' });
 
   const slot = ctx.b.allocValueSlot();
   return {
@@ -72,7 +72,7 @@ registerBlockType({
     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
   ],
   outputs: [
-    { portId: 'u01', label: 'U01', dir: 'out', type: { world: 'field', domain: 'number' } },
+    { portId: 'u01', label: 'U01', dir: 'out', type: { world: 'field', domain: 'float' } },
   ],
   lower: lowerStableIdHash,
 });
@@ -86,11 +86,11 @@ export const StableIdHashBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'salt', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'salt', type: { kind: 'Scalar:int' }, required: false },
   ],
 
   outputs: [
-    { name: 'u01', type: { kind: 'Field:number' } },
+    { name: 'u01', type: { kind: 'Field:float' } },
   ],
 
   compile({ inputs, params }) {
@@ -109,18 +109,20 @@ export const StableIdHashBlock: BlockCompiler = {
     // Helper to extract numeric value from artifact with default fallback
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number') return Number(artifact.value);
+      if (artifact.kind === 'Scalar:int' || artifact.kind === 'Scalar:float') {
+        return Number(artifact.value);
+      }
       // Generic fallback for other artifact types
       return typeof artifact.value === 'function' ? Number((artifact.value as (t: number, ctx: unknown) => unknown)(0, {})) : Number(artifact.value);
     };
 
     // Support both new (inputs) and old (params) parameter systems
-    const salt = extractNumber(inputs.salt, (params as Record<string, unknown> | undefined)?.salt as number | undefined ?? 0);
+    const salt: int = extractNumber(inputs.salt, (params as Record<string, unknown> | undefined)?.salt as number | undefined ?? 0);
 
     // Create field that produces stable hash per element
-    const field: Field<number> = (_seed, n) => {
-      const count = Math.min(n, domain.elements.length);
-      const out = new Array<number>(count);
+    const field: Field<float> = (_seed, n) => {
+      const count: int = Math.min(n, domain.elements.length);
+      const out = new Array<float>(count);
 
       for (let i = 0; i < count; i++) {
         const elementId = domain.elements[i];
@@ -133,7 +135,7 @@ export const StableIdHashBlock: BlockCompiler = {
     };
 
     return {
-      u01: { kind: 'Field:number', value: field },
+      u01: { kind: 'Field:float', value: field },
     };
   },
 };

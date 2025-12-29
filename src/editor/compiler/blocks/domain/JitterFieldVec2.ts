@@ -75,8 +75,8 @@ registerBlockType({
   type: 'JitterFieldVec2',
   capability: 'pure',
   inputs: [
-    { portId: 'idRand', label: 'ID Random', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
-    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: 'signal', domain: 'phase01' }, defaultSource: { value: 0 } },
+    { portId: 'idRand', label: 'ID Random', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'drift', label: 'Drift', dir: 'out', type: { world: 'field', domain: 'vec2' } },
@@ -92,10 +92,10 @@ export const JitterFieldVec2Block: BlockCompiler = {
   type: 'JitterFieldVec2',
 
   inputs: [
-    { name: 'idRand', type: { kind: 'Field:number' }, required: true },
+    { name: 'idRand', type: { kind: 'Field:float' }, required: true },
     { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
-    { name: 'amount', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'frequency', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'amount', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'frequency', type: { kind: 'Scalar:float' }, required: false },
   ],
 
   outputs: [
@@ -106,11 +106,11 @@ export const JitterFieldVec2Block: BlockCompiler = {
     const idRandArtifact = inputs.idRand;
     const phaseArtifact = inputs.phase;
 
-    if (!isDefined(idRandArtifact) || idRandArtifact.kind !== 'Field:number') {
+    if (!isDefined(idRandArtifact) || idRandArtifact.kind !== 'Field:float') {
       return {
         drift: {
           kind: 'Error',
-          message: 'JitterFieldVec2 requires a Field<number> for idRand input',
+          message: 'JitterFieldVec2 requires a Field<float> for idRand input',
         },
       };
     }
@@ -130,7 +130,7 @@ export const JitterFieldVec2Block: BlockCompiler = {
     // Helper to extract numeric values from artifacts
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
+      if (artifact.kind === 'Scalar:float' || artifact.kind === 'Signal:float') {
         return Number(artifact.value);
       }
       if ('value' in artifact && artifact.value !== undefined) {

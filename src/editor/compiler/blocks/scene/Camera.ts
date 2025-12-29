@@ -197,10 +197,10 @@ function extractConstValue<T>(
  * 1. target: Signal<vec3>
  * 2. up: Signal<vec3>
  * 3. projectionKind: Scalar<string>
- * 4. fovYDeg: Signal<number>
- * 5. orthoHeight: Signal<number>
- * 6. near: Signal<number>
- * 7. far: Signal<number>
+ * 4. fovYDeg: Signal<float>
+ * 5. orthoHeight: Signal<float>
+ * 6. near: Signal<float>
+ * 7. far: Signal<float>
  *
  * Output:
  * 0. camera: Special<cameraRef>
@@ -338,28 +338,28 @@ registerBlockType({
       portId: 'fovYDeg',
       label: 'FOV (deg)',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 60 },
     },
     {
       portId: 'orthoHeight',
       label: 'Ortho Height',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 10 },
     },
     {
       portId: 'near',
       label: 'Near',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 0.1 },
     },
     {
       portId: 'far',
       label: 'Far',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 1000 },
     },
   ],

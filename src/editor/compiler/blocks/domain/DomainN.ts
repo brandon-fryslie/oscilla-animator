@@ -12,8 +12,8 @@ import { createSimpleDomain } from '../../unified/Domain';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 interface DomainNParams {
-  n?: number;
-  seed?: number;
+  n?: int;
+  seed?: int;
 }
 
 // =============================================================================
@@ -22,7 +22,7 @@ interface DomainNParams {
 
 const lowerDomainN: BlockLowerFn = ({ ctx, inputs }) => {
   // Get n from input port (if connected) or default to 1
-  let n = 1;
+  let n: int = 1;
 
   if (inputs[0] !== undefined) {
     if (inputs[0].k === 'scalarConst') {
@@ -57,14 +57,14 @@ registerBlockType({
       portId: 'n',
       label: 'N',
       dir: 'in',
-      type: { world: 'scalar', domain: 'number' },
+      type: { world: 'scalar', domain: 'int' },
       defaultSource: { value: 100 },
     },
     {
       portId: 'seed',
       label: 'Seed',
       dir: 'in',
-      type: { world: 'scalar', domain: 'number' },
+      type: { world: 'scalar', domain: 'int' },
       defaultSource: { value: 0 },
     },
   ],
@@ -82,8 +82,8 @@ export const DomainNBlock: BlockCompiler = {
   type: 'DomainN',
 
   inputs: [
-    { name: 'n', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'seed', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'n', type: { kind: 'Scalar:int' }, required: false },
+    { name: 'seed', type: { kind: 'Scalar:int' }, required: false },
   ],
 
   outputs: [
@@ -92,9 +92,11 @@ export const DomainNBlock: BlockCompiler = {
 
   compile({ id, inputs, params }) {
     // Helper to extract numeric value from artifact with default fallback
-    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: int): int => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number') return Number(artifact.value);
+      if (artifact.kind === 'Scalar:int' || artifact.kind === 'Scalar:float') {
+        return Number(artifact.value);
+      }
       // Generic fallback for other artifact types
       if ('value' in artifact && artifact.value !== undefined) {
         return typeof artifact.value === 'function'
@@ -106,8 +108,8 @@ export const DomainNBlock: BlockCompiler = {
 
     // Support both new (inputs) and old (params) parameter systems
     const paramsObj = params as DomainNParams | undefined;
-    const n = extractNumber(inputs.n, paramsObj?.n ?? 100);
-    const seed = extractNumber(inputs.seed, paramsObj?.seed ?? 0);
+    const n: int = extractNumber(inputs.n, paramsObj?.n ?? 100);
+    const seed: int = extractNumber(inputs.seed, paramsObj?.seed ?? 0);
 
     // Create a stable domain ID based on block id, n, and seed
     const domainId = `domain-${id}-${n}-${seed}`;

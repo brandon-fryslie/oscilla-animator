@@ -14,7 +14,8 @@ import type {
 } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
-type SignalNumber = (tMs: number, ctx: RuntimeCtx) => number;
+type SignalNumber = (tMs: number, ctx: RuntimeCtx) => float;
+type SignalInt = (tMs: number, ctx: RuntimeCtx) => int;
 type Event = (tMs: number, lastTMs: number, ctx: RuntimeCtx) => boolean;
 
 /**
@@ -73,8 +74,8 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   // Allocate time-related slots upfront
   const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
-  const progress01Type = { world: 'signal' as const, domain: 'number' as const };
-  const phase01Type = { world: 'signal' as const, domain: 'phase01' as const };
+  const progress01Type = { world: 'signal' as const, domain: 'float' as const };
+  const phase01Type = { world: 'signal' as const, domain: 'float' as const, semantics: 'phase(0..1)' as const };
   const triggerType = { world: 'event' as const, domain: 'trigger' as const };
 
   const tAbsMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'tAbsMs');
@@ -99,7 +100,7 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const endId = ctx.b.sigWrapEvent();
 
   // Energy: constant 1.0 (simplified - runtime handles completion)
-  const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'number' });
+  const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'float' });
 
   // Declare TimeModel
   const timeModel: TimeModel = {
@@ -113,7 +114,7 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
       { k: 'sig', id: progressId, slot: tModelMsSlot },       // progress
       { k: 'sig', id: phaseId, slot: phase01Slot },           // phase
       { k: 'sig', id: endId, slot: wrapEventSlot },           // end
-      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot({ world: 'signal', domain: 'number' }, 'energy') },
+      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot({ world: 'signal', domain: 'float' }, 'energy') },
     ],
     declares: { timeModel },
   };
@@ -135,9 +136,9 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   // Allocate time-related slots upfront
   const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
-  const phase01Type = { world: 'signal' as const, domain: 'phase01' as const };
+  const phase01Type = { world: 'signal' as const, domain: 'float' as const, semantics: 'phase(0..1)' as const };
   const triggerType = { world: 'event' as const, domain: 'trigger' as const };
-  const numberType = { world: 'signal' as const, domain: 'number' as const };
+  const numberType = { world: 'signal' as const, domain: 'float' as const };
 
   const tAbsMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'tAbsMs');
   const tModelMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'cycleT');
@@ -160,21 +161,22 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const wrapId = ctx.b.sigWrapEvent();
 
   // Cycle index: floor(systemTime / period)
-  const periodConst = ctx.b.sigConst(periodMs, { world: 'signal', domain: 'number' });
+  const periodConst = ctx.b.sigConst(periodMs, { world: 'signal', domain: 'float' });
   const cyclesId = ctx.b.sigZip(
     systemTimeId,
     periodConst,
     { kind: 'opcode', opcode: 102 }, // OpCode.Div
-    { world: 'signal', domain: 'number' }
+    { world: 'signal', domain: 'float' }
   );
+  const countType = { world: 'signal' as const, domain: 'int' as const };
   const cycleIndexId = ctx.b.sigMap(
     cyclesId,
     { kind: 'opcode', opcode: 121 }, // OpCode.Floor
-    { world: 'signal', domain: 'number' }
+    countType
   );
 
   // Energy: constant 1.0
-  const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'number' });
+  const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'float' });
 
   // Declare TimeModel
   const timeModel: TimeModel = {
@@ -190,7 +192,7 @@ const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
       { k: 'sig', id: cycleTId, slot: tModelMsSlot },             // cycleT
       { k: 'sig', id: phaseId, slot: phase01Slot },               // phase
       { k: 'sig', id: wrapId, slot: wrapEventSlot },              // wrap
-      { k: 'sig', id: cycleIndexId, slot: ctx.b.allocValueSlot(numberType, 'cycleIndex') },
+      { k: 'sig', id: cycleIndexId, slot: ctx.b.allocValueSlot(countType, 'cycleIndex') },
       { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot(numberType, 'energy') },
     ],
     declares: { timeModel },
@@ -211,9 +213,9 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   // Allocate time-related slots upfront
   const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
-  const phase01Type = { world: 'signal' as const, domain: 'phase01' as const };
+  const phase01Type = { world: 'signal' as const, domain: 'float' as const, semantics: 'phase(0..1)' as const };
   const triggerType = { world: 'event' as const, domain: 'trigger' as const };
-  const numberType = { world: 'signal' as const, domain: 'number' as const };
+  const numberType = { world: 'signal' as const, domain: 'float' as const };
 
   const tAbsMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'tAbsMs');
   const phase01Slot = ctx.b.allocValueSlot(phase01Type, 'phase');
@@ -235,7 +237,7 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const pulseId = ctx.b.sigWrapEvent();
 
   // Energy: constant 1.0
-  const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'number' });
+  const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'float' });
 
   // Declare TimeModel
   const timeModel: TimeModel = {
@@ -261,11 +263,11 @@ registerBlockType({
   inputs: [],
   outputs: [
     { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
-    { portId: 'progress', label: 'Progress', dir: 'out', type: { world: 'signal', domain: 'number' } },
-    { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'phase01' } },
+    { portId: 'progress', label: 'Progress', dir: 'out', type: { world: 'signal', domain: 'float' } },
+    { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' } },
     // end is event<trigger>, NOT signal - discrete event when animation completes
     { portId: 'end', label: 'End', dir: 'out', type: { world: 'event', domain: 'trigger' } },
-    { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'float' } },
   ],
   lower: lowerFiniteTimeRoot,
 });
@@ -278,7 +280,7 @@ registerBlockType({
       portId: 'periodMs',
       label: 'Period (ms)',
       dir: 'in',
-      type: { world: 'scalar', domain: 'number' },
+      type: { world: 'scalar', domain: 'float' },
       defaultSource: { value: 3000 },
     },
     {
@@ -292,11 +294,11 @@ registerBlockType({
   outputs: [
     { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
     { portId: 'cycleT', label: 'Cycle T', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
-    { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'phase01' } },
+    { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' } },
     // wrap is event<trigger>, NOT signal - discrete event on cycle boundary
     { portId: 'wrap', label: 'Wrap', dir: 'out', type: { world: 'event', domain: 'trigger' } },
-    { portId: 'cycleIndex', label: 'Cycle Index', dir: 'out', type: { world: 'signal', domain: 'number' } },
-    { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'cycleIndex', label: 'Cycle Index', dir: 'out', type: { world: 'signal', domain: 'int' } },
+    { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'float' } },
   ],
   lower: lowerCycleTimeRoot,
 });
@@ -307,10 +309,10 @@ registerBlockType({
   inputs: [],
   outputs: [
     { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
-    { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'phase01' } },
+    { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' } },
     // pulse is event<trigger>, NOT signal - discrete event on cycle boundary
     { portId: 'pulse', label: 'Pulse', dir: 'out', type: { world: 'event', domain: 'trigger' } },
-    { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'float' } },
   ],
   lower: lowerInfiniteTimeRoot,
 });
@@ -335,10 +337,10 @@ export const FiniteTimeRootBlock: BlockCompiler = {
 
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
-    { name: 'progress', type: { kind: 'Signal:number' } },
+    { name: 'progress', type: { kind: 'Signal:float' } },
     { name: 'phase', type: { kind: 'Signal:phase' } },
     { name: 'end', type: { kind: 'Event' } },
-    { name: 'energy', type: { kind: 'Signal:number' } },
+    { name: 'energy', type: { kind: 'Signal:float' } },
   ],
 
   compile({ params }): CompiledOutputs {
@@ -376,10 +378,10 @@ export const FiniteTimeRootBlock: BlockCompiler = {
 
     return {
       systemTime: { kind: 'Signal:Time', value: systemTime },
-      progress: { kind: 'Signal:number', value: progress },
+      progress: { kind: 'Signal:float', value: progress },
       phase: { kind: 'Signal:phase', value: phase },
       end: { kind: 'Event', value: end },
-      energy: { kind: 'Signal:number', value: energy },
+      energy: { kind: 'Signal:float', value: energy },
     };
   },
 };
@@ -405,8 +407,8 @@ export const CycleTimeRootBlock: BlockCompiler = {
     { name: 'cycleT', type: { kind: 'Signal:Time' } },
     { name: 'phase', type: { kind: 'Signal:phase' } },
     { name: 'wrap', type: { kind: 'Event' } },
-    { name: 'cycleIndex', type: { kind: 'Signal:number' } },
-    { name: 'energy', type: { kind: 'Signal:number' } },
+    { name: 'cycleIndex', type: { kind: 'Signal:int' } },
+    { name: 'energy', type: { kind: 'Signal:float' } },
   ],
 
   compile({ params }): CompiledOutputs {
@@ -442,7 +444,7 @@ export const CycleTimeRootBlock: BlockCompiler = {
     };
 
     // Cycle index: number of completed cycles
-    const cycleIndex: SignalNumber = (tMs) => {
+    const cycleIndex: SignalInt = (tMs) => {
       if (tMs < 0) return 0;
       return Math.floor(tMs / periodMs);
     };
@@ -471,8 +473,8 @@ export const CycleTimeRootBlock: BlockCompiler = {
       cycleT: { kind: 'Signal:Time', value: cycleT },
       phase: { kind: 'Signal:phase', value: phase },
       wrap: { kind: 'Event', value: wrap },
-      cycleIndex: { kind: 'Signal:number', value: cycleIndex },
-      energy: { kind: 'Signal:number', value: energy },
+      cycleIndex: { kind: 'Signal:int', value: cycleIndex },
+      energy: { kind: 'Signal:float', value: energy },
     };
   },
 };
@@ -493,7 +495,7 @@ export const InfiniteTimeRootBlock: BlockCompiler = {
     { name: 'systemTime', type: { kind: 'Signal:Time' } },
     { name: 'phase', type: { kind: 'Signal:phase' } },
     { name: 'pulse', type: { kind: 'Event' } },
-    { name: 'energy', type: { kind: 'Signal:number' } },
+    { name: 'energy', type: { kind: 'Signal:float' } },
   ],
 
   compile({ params }): CompiledOutputs {
@@ -525,7 +527,7 @@ export const InfiniteTimeRootBlock: BlockCompiler = {
       systemTime: { kind: 'Signal:Time', value: systemTime },
       phase: { kind: 'Signal:phase', value: phase },
       pulse: { kind: 'Event', value: pulse },
-      energy: { kind: 'Signal:number', value: energy },
+      energy: { kind: 'Signal:float', value: energy },
     };
   },
 };

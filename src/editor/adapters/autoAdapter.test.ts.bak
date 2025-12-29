@@ -8,8 +8,8 @@ describe('Auto Adapter Logic', () => {
     initAdapterRegistry();
   });
 
-  const SIGNAL_NUM: TypeDesc = { world: 'signal', domain: 'number', category: 'core', busEligible: true };
-  const FIELD_NUM: TypeDesc = { world: 'field', domain: 'number', category: 'core', busEligible: true };
+  const SIGNAL_NUM: TypeDesc = { world: 'signal', domain: 'float', category: 'core', busEligible: true };
+  const FIELD_NUM: TypeDesc = { world: 'field', domain: 'float', category: 'core', busEligible: true };
   const SIGNAL_PHASE: TypeDesc = { world: 'signal', domain: 'phase', category: 'core', busEligible: true };
 
   it('finds direct auto path for Signal -> Field (Broadcast)', () => {

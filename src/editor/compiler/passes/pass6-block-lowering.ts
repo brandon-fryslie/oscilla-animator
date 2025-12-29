@@ -63,11 +63,14 @@ export interface UnlinkedIRFragments {
  */
 function artifactKindToTypeDesc(kind: string): TypeDesc {
   // Signal types
-  if (kind === "Signal:number") {
-    return { world: "signal", domain: "number" };
+  if (kind === "Signal:float") {
+    return { world: "signal", domain: "float" };
+  }
+  if (kind === "Signal:int") {
+    return { world: "signal", domain: "int" };
   }
   if (kind === "Signal:phase") {
-    return { world: "signal", domain: "phase01" };
+    return { world: "signal", domain: "float", semantics: "phase(0..1)" };
   }
   if (kind === "Signal:vec2") {
     return { world: "signal", domain: "vec2" };
@@ -76,12 +79,15 @@ function artifactKindToTypeDesc(kind: string): TypeDesc {
     return { world: "signal", domain: "color" };
   }
   if (kind === "Signal:Time") {
-    return { world: "signal", domain: "number" };
+    return { world: "signal", domain: "float" };
   }
 
   // Field types
-  if (kind === "Field:number") {
-    return { world: "field", domain: "number" };
+  if (kind === "Field:float") {
+    return { world: "field", domain: "float" };
+  }
+  if (kind === "Field:int") {
+    return { world: "field", domain: "int" };
   }
   if (kind === "Field:vec2" || kind === "Field:Point" || kind === "Field<Point>") {
     return { world: "field", domain: "vec2" };
@@ -97,8 +103,11 @@ function artifactKindToTypeDesc(kind: string): TypeDesc {
   }
 
   // Scalars map to signals with constant values
-  if (kind === "Scalar:number") {
-    return { world: "signal", domain: "number" };
+  if (kind === "Scalar:float") {
+    return { world: "signal", domain: "float" };
+  }
+  if (kind === "Scalar:int") {
+    return { world: "signal", domain: "int" };
   }
   if (kind === "Scalar:vec2") {
     return { world: "signal", domain: "vec2" };
@@ -108,7 +117,7 @@ function artifactKindToTypeDesc(kind: string): TypeDesc {
   }
 
   // Default: unknown scalar
-  return { world: "signal", domain: "number" };
+  return { world: "signal", domain: "float" };
 }
 
 // =============================================================================
@@ -137,8 +146,11 @@ function artifactToValueRef(
   const { kind } = artifact;
 
   // Scalar: create constant signal
-  if (kind === "Scalar:number") {
-    const type: TypeDesc = { world: "signal", domain: "number" };
+  if (kind === "Scalar:float" || kind === "Scalar:int") {
+    const type: TypeDesc = {
+      world: "signal",
+      domain: kind === "Scalar:int" ? "int" : "float",
+    };
     const sigId = builder.sigConst(artifact.value, type);
     const slot = builder.allocValueSlot(type);
     builder.registerSigSlot(sigId, slot);
@@ -165,7 +177,8 @@ function artifactToValueRef(
   // Signal: create time-based signal (placeholder)
   // In Phase 4, we'll parse the closure to extract actual operations
   if (
-    kind === "Signal:number" ||
+    kind === "Signal:float" ||
+    kind === "Signal:int" ||
     kind === "Signal:phase" ||
     kind === "Signal:vec2" ||
     kind === "Signal:color" ||
@@ -182,7 +195,8 @@ function artifactToValueRef(
 
   // Field: create placeholder field node
   if (
-    kind === "Field:number" ||
+    kind === "Field:float" ||
+    kind === "Field:int" ||
     kind === "Field:vec2" ||
     kind === "Field:Point" ||
     kind === "Field<Point>" ||

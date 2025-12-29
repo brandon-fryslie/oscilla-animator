@@ -98,7 +98,7 @@ Why a tree structure? Because it maps naturally to SVG (which is also a tree), m
 
 ## The Type System
 
-The editor enforces a simple type system on connections. You can't connect a `Field<Point>` output to a `Signal<number>` input because they're fundamentally different things.
+The editor enforces a simple type system on connections. You can't connect a `Field<Point>` output to a `Signal<float>` input because they're fundamentally different things.
 
 Common types:
 - `Scene`: Collection of paths
@@ -110,21 +110,10 @@ Common types:
 
 This catches mistakes early. If ports can't connect, you know immediately rather than getting confusing runtime errors.
 
-## Lanes: Organizing the Graph
+## Patch Bay View
 
-As graphs get complex, they become hard to read. **Lanes** are horizontal tracks that organize blocks by their *role* in the animation:
-
-| Lane | Contains | Data Direction |
-|------|----------|----------------|
-| Scene | Source geometry | Provides data |
-| Phase | Time structure | Provides timing |
-| Fields | Per-element variations | Provides spatial data |
-| Spec | Animation type declarations | Consumes and produces |
-| Program | Compiled output | Final product |
-
-Lanes are a *visual convention*, not a hard constraint. You can put any block anywhere. But following the lane structure makes graphs readable.
-
-The "Simple" layout has 5 lanes. The "Detailed" layout has 9, splitting Fields into Motion/Timing/Style for larger projects.
+As graphs get complex, they become hard to read. The Patch Bay view is a visual projection that groups blocks by role to keep data flow
+readable. The graph remains the source of truth; the view is there to help you reason about structure.
 
 ## Compilation Pipeline
 
@@ -149,7 +138,7 @@ A few principles shaped this design:
 
 **Types prevent errors**: The type system catches mistakes at edit time. If ports connect, the animation will run.
 
-**Progressive disclosure**: Simple things are simple. The "Simple" layout hides complexity. Advanced users can switch to "Detailed" layout or add custom lanes.
+**Progressive disclosure**: Simple things are simple. Advanced workflows are still available without forcing complexity up front.
 
 ## Mental Model Summary
 
@@ -158,6 +147,6 @@ A few principles shaped this design:
 3. **Signals** give things that change over time
 4. **Phase machines** structure the animation timing
 5. **Programs** are the compiled result that runs each frame
-6. **Lanes** organize blocks by their role
+6. **The Patch Bay** organizes blocks by their role
 
 The goal: describe the *rules* of your animation, not every frame. The rules + randomness + time = infinite unique animations.

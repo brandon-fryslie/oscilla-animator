@@ -33,8 +33,8 @@ export const RESERVED_BUS_CONTRACTS: Record<string, ReservedBusContract> = {
   phaseA: {
     type: {
       world: 'signal',
-      domain: 'phase01',
-      semantics: 'primary',
+      domain: 'float',
+      semantics: 'phase(primary)',
       category: 'core',
       busEligible: true,
     },
@@ -45,8 +45,8 @@ export const RESERVED_BUS_CONTRACTS: Record<string, ReservedBusContract> = {
   phaseB: {
     type: {
       world: 'signal',
-      domain: 'phase01',
-      semantics: 'secondary',
+      domain: 'float',
+      semantics: 'phase(secondary)',
       category: 'core',
       busEligible: true,
     },
@@ -69,7 +69,7 @@ export const RESERVED_BUS_CONTRACTS: Record<string, ReservedBusContract> = {
   energy: {
     type: {
       world: 'signal',
-      domain: 'number',
+      domain: 'float',
       semantics: 'energy',
       category: 'core',
       busEligible: true,
@@ -81,7 +81,7 @@ export const RESERVED_BUS_CONTRACTS: Record<string, ReservedBusContract> = {
   progress: {
     type: {
       world: 'signal',
-      domain: 'number',
+      domain: 'float',
       semantics: 'progress',
       category: 'core',
       busEligible: true,
@@ -114,18 +114,17 @@ export const RESERVED_BUS_NAMES = new Set(Object.keys(RESERVED_BUS_CONTRACTS));
  * AC3: This matrix now reflects ACTUAL runtime support, not theoretical possibilities.
  * Runtime constraints:
  * - executeBusEval.ts only handles numeric values (AC2)
- * - Materializer.ts fillBufferCombine only handles Field<number> (AC2)
+ * - Materializer.ts fillBufferCombine only handles Field<float> (AC2)
  * - busSemantics.ts does NOT support 'layer' for fields (AC5)
  *
  * This defines the semantic meaning of combine operations per domain.
- * For example: 'phase' signals can only use 'last' because phases
+ * For example: phase signals should use 'last' because phases
  * represent positions in a cycle, not additive values.
  */
 export const COMBINE_MODE_COMPATIBILITY: Record<string, BusCombineMode[]> = {
   // Signal domains - numeric only (runtime constraint: executeBusEval.ts line 58-64)
-  'number': ['sum', 'average', 'max', 'min', 'last'],
-  'phase': ['last'],  // Phases are positions, only last-writer wins
-  'phase01': ['last'],  // Phase01 values (0..1) are positions, only last-writer wins
+  'float': ['sum', 'average', 'max', 'min', 'last'],
+  'int': ['sum', 'average', 'max', 'min', 'last'],
   'boolean': ['last'], // Boolean values use last writer
   'time': ['last'],     // Time values are authoritative
   'rate': ['last'],     // Rates are authoritative
@@ -134,7 +133,7 @@ export const COMBINE_MODE_COMPATIBILITY: Record<string, BusCombineMode[]> = {
 
   // Field domains - numeric only, NO layer support
   // Runtime constraints:
-  // - Materializer.ts line 1214: only Field<number> supported
+  // - Materializer.ts line 1214: only Field<float> supported
   // - busSemantics.ts line 210-230: 'layer' mode NOT implemented for fields
   // AC3: Removed 'layer' from vec2/vec3/vec4/color/hsl to match runtime
   'vec2': ['last'],  // REMOVED: 'layer' - not supported by runtime

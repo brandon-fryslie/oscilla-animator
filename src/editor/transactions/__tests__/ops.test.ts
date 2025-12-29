@@ -69,7 +69,7 @@ describe('computeInverse', () => {
         name: 'Test Bus',
         type: {
           world: 'signal',
-          domain: 'number',
+          domain: 'float',
           category: 'core',
           busEligible: true,
         },
@@ -283,7 +283,7 @@ describe('computeInverse', () => {
       const prev: Entity = {
         id: 'bus-1',
         name: 'Old',
-        type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+        type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
         combineMode: 'sum',
         defaultValue: 0,
         sortKey: 0,
@@ -372,7 +372,7 @@ describe('validateOp', () => {
     const entity: Bus = {
       id: 'bus-1',
       name: 'Test',
-      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
       combineMode: 'sum',
       defaultValue: 0,
       sortKey: 0,

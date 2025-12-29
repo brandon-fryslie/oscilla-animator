@@ -199,7 +199,7 @@ export interface OpCodeMeta {
 
 const numberSignal: TypeDesc = {
   world: "signal",
-  domain: "number",
+  domain: "float",
 };
 
 const vec2Signal: TypeDesc = {
@@ -219,7 +219,8 @@ const triggerSignal: TypeDesc = {
 
 const phaseSignal: TypeDesc = {
   world: "signal",
-  domain: "phase01",
+  domain: "float",
+  semantics: "phase(0..1)",
 };
 
 const timeSignal: TypeDesc = {
@@ -229,7 +230,7 @@ const timeSignal: TypeDesc = {
 
 const numberField: TypeDesc = {
   world: "field",
-  domain: "number",
+  domain: "float",
 };
 
 const mat4Field: TypeDesc = {

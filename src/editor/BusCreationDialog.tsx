@@ -40,12 +40,11 @@ interface BusCreationDialogProps {
  * Default bus names by domain (per spec).
  */
 const DEFAULT_BUS_NAMES: Record<CoreDomain, string> = {
-  number: 'energy',
+  float: 'energy',
+  int: 'count',
   vec2: 'position',
   vec3: 'cam',
   color: 'palette',
-  phase: 'phaseA',
-  phase01: 'phaseA',
   time: 'clock',
   rate: 'speed',
   trigger: 'pulse',
@@ -56,12 +55,11 @@ const DEFAULT_BUS_NAMES: Record<CoreDomain, string> = {
  * Default combine modes by domain (per spec).
  */
 const DEFAULT_COMBINE_MODES: Record<CoreDomain, BusCombineMode> = {
-  number: 'sum',
+  float: 'sum',
+  int: 'sum',
   vec2: 'sum',
   vec3: 'last',
   color: 'layer',
-  phase01: 'last',
-  phase: 'last',
   time: 'last',
   rate: 'last',
   trigger: 'last', // Note: spec says "or" but type system uses 'last' for now
@@ -73,12 +71,11 @@ const DEFAULT_COMBINE_MODES: Record<CoreDomain, BusCombineMode> = {
  */
 function getCombineModeOptions(domain: CoreDomain): BusCombineMode[] {
   const options: Record<CoreDomain, BusCombineMode[]> = {
-    number: ['sum', 'average', 'max', 'min', 'last'],
+    float: ['sum', 'average', 'max', 'min', 'last'],
+    int: ['sum', 'average', 'max', 'min', 'last'],
     vec2: ['sum', 'average', 'last'],
     vec3: ['sum', 'average', 'last'],
-    phase01: ['last'],
     color: ['layer', 'last'],
-    phase: ['last'],
     time: ['last'],
     rate: ['last'],
     trigger: ['last'], // Note: "or" in spec but not in type system yet
@@ -91,12 +88,12 @@ function getCombineModeOptions(domain: CoreDomain): BusCombineMode[] {
  * Core bus-eligible Signal types only.
  */
 const CORE_SIGNAL_TYPES: Array<{ domain: CoreDomain; label: string }> = [
-  { domain: 'number', label: 'Number (scalar)' },
+  { domain: 'float', label: 'Float' },
+  { domain: 'int', label: 'Integer' },
   { domain: 'vec2', label: 'Vec2 (2D position/vector)' },
   { domain: 'color', label: 'Color' },
   { domain: 'boolean', label: 'Boolean (true/false)' },
   { domain: 'time', label: 'Time (seconds)' },
-  { domain: 'phase', label: 'Phase [0,1]' },
   { domain: 'rate', label: 'Rate (multiplier)' },
   { domain: 'trigger', label: 'Trigger (pulse/event)' },
 ];

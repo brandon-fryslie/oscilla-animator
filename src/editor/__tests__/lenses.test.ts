@@ -24,14 +24,14 @@ import type { LensDefinition } from '../types';
 
 function createSignalArtifact(fn: (t: number) => number): Artifact {
   return {
-    kind: 'Signal:number',
+    kind: 'Signal:float',
     value: (tMs: number, _ctx: RuntimeCtx) => fn(tMs),
   };
 }
 
 function evalSignal(artifact: Artifact, tMs: number): number {
-  if (artifact.kind !== 'Signal:number' && artifact.kind !== 'Signal:Unit') {
-    throw new Error(`Expected Signal:number, got ${artifact.kind}`);
+  if (artifact.kind !== 'Signal:float' && artifact.kind !== 'Signal:Unit') {
+    throw new Error(`Expected Signal:float, got ${artifact.kind}`);
   }
   const ctx: RuntimeCtx = { viewport: { w: 800, h: 600, dpr: 1 } };
   return (artifact.value as (t: number, ctx: RuntimeCtx) => number)(tMs, ctx);
@@ -47,7 +47,7 @@ describe('EaseLens', () => {
     const lens: LensDefinition = { type: 'ease', params: {} };
 
     const result = applyLens(input, lens);
-    expect(result.kind).toBe('Signal:number');
+    expect(result.kind).toBe('Signal:float');
 
     // easeInOutSine: at t=0.5, should be 0.5
     const midValue = evalSignal(result, 500);
@@ -84,7 +84,7 @@ describe('EaseLens', () => {
   });
 
   it('returns error for non-Signal input', () => {
-    const input: Artifact = { kind: 'Scalar:number', value: 0.5 };
+    const input: Artifact = { kind: 'Scalar:float', value: 0.5 };
     const lens: LensDefinition = { type: 'ease', params: {} };
 
     const result = applyLens(input, lens);
@@ -270,7 +270,7 @@ describe('Lens Presets', () => {
     const input = createSignalArtifact((t) => t / 1000);
     const result = applyLens(input, LENS_PRESET_BREATHING);
 
-    expect(result.kind).toBe('Signal:number');
+    expect(result.kind).toBe('Signal:float');
     // Mid-point should be exactly 0.5 for easeInOutSine
     expect(evalSignal(result, 500)).toBeCloseTo(0.5, 2);
   });
@@ -286,7 +286,7 @@ describe('Lens Presets', () => {
     const input = createSignalArtifact(() => 1.0);
     const result = applyLens(input, LENS_PRESET_SMOOTH);
 
-    expect(result.kind).toBe('Signal:number');
+    expect(result.kind).toBe('Signal:float');
     // First evaluation initializes
     evalSignal(result, 0);
     // Rate limiting should be in effect - verify signal is callable
@@ -319,7 +319,7 @@ describe('Lens Error Handling', () => {
     const lens: LensDefinition = { type: 'ease', params: {} };
 
     const result = applyLens(input, lens);
-    expect(result.kind).toBe('Signal:number');
+    expect(result.kind).toBe('Signal:float');
   });
 });
 
@@ -529,7 +529,7 @@ describe('Lens Stacks', () => {
   });
 
   it('propagates errors through stack', () => {
-    const input: Artifact = { kind: 'Scalar:number', value: 0.5 };
+    const input: Artifact = { kind: 'Scalar:float', value: 0.5 };
     const lens: LensDefinition = { type: 'ease', params: { easing: 'easeInOutSine' } };
 
     const result = applyLens(input, lens);

@@ -38,7 +38,7 @@ function createMinimalProgram(steps: unknown[] = []): CompiledProgramIR {
       nodes: [
         {
           kind: "const",
-          type: { world: "field", domain: "number" },
+          type: { world: "field", domain: "float" },
           constId: 0,
         },
       ],
@@ -122,7 +122,7 @@ describe("Step Dispatch", () => {
         kind: "busEval",
         deps: [],
         busIndex: 0,
-        busType: { world: "signal", domain: "number" },
+        busType: { world: "signal", domain: "float" },
         outSlot: 1,
         publishers: [],
         combine: { mode: "last" },

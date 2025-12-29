@@ -90,7 +90,7 @@ const lowerFieldMapNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
   const bRaw = Number(configObj?.b);
   const b = !isNaN(bRaw) ? bRaw : 1;
 
-  const outType = { world: 'field' as const, domain: 'number' as const };
+  const outType = { world: 'field' as const, domain: 'float' as const };
   const opcode = getOpCode(fn);
 
   // Build the function reference using PureFnRef union types
@@ -109,10 +109,10 @@ registerBlockType({
   type: 'FieldMapNumber',
   capability: 'pure',
   inputs: [
-    { portId: 'x', label: 'X', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'x', label: 'X', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'y', label: 'Y', dir: 'out', type: { world: 'field', domain: 'number' } },
+    { portId: 'y', label: 'Y', dir: 'out', type: { world: 'field', domain: 'float' } },
   ],
   lower: lowerFieldMapNumber,
 });
@@ -125,24 +125,24 @@ export const FieldMapNumberBlock: BlockCompiler = {
   type: 'FieldMapNumber',
 
   inputs: [
-    { name: 'x', type: { kind: 'Field:number' }, required: true },
+    { name: 'x', type: { kind: 'Field:float' }, required: true },
     { name: 'fn', type: { kind: 'Scalar:string' }, required: false },
-    { name: 'k', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'a', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'b', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'k', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'a', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'b', type: { kind: 'Scalar:float' }, required: false },
   ],
 
   outputs: [
-    { name: 'y', type: { kind: 'Field:number' } },
+    { name: 'y', type: { kind: 'Field:float' } },
   ],
 
   compile({ inputs, params }) {
     const inputField = inputs.x;
-    if (!isDefined(inputField) || inputField.kind !== 'Field:number') {
+    if (!isDefined(inputField) || inputField.kind !== 'Field:float') {
       return {
         y: {
           kind: 'Error',
-          message: 'FieldMapNumber requires a Field<number> input',
+          message: 'FieldMapNumber requires a Field<float> input',
         },
       };
     }
@@ -150,7 +150,7 @@ export const FieldMapNumberBlock: BlockCompiler = {
     // Extract parameters with params fallback (for tests using old params system)
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
+      if (artifact.kind === 'Scalar:float' || artifact.kind === 'Signal:float') {
         return Number(artifact.value);
       }
       if ('value' in artifact && artifact.value !== undefined) {
@@ -192,13 +192,13 @@ export const FieldMapNumberBlock: BlockCompiler = {
     const mapFn = getMapFunction(fn, k, a, b);
 
     // Create mapped field
-    const field: Field<number> = (seed, n, ctx) => {
+    const field: Field<float> = (seed, n, ctx) => {
       const inputValues = inputFieldFn(seed, n, ctx);
       return inputValues.map(mapFn);
     };
 
     return {
-      y: { kind: 'Field:number', value: field },
+      y: { kind: 'Field:float', value: field },
     };
   },
 };

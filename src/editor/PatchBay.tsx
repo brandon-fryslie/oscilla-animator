@@ -17,9 +17,9 @@ import { useDroppable, useDraggable } from '@dnd-kit/core';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import { useStore } from './stores';
-import type { Lane, LaneKind, Block, Slot, PortRef, Bus } from './types';
+import type { Block, Slot, PortRef, Bus } from './types';
+import type { LaneViewLane as Lane, LaneViewKind as LaneKind } from './lanes/types';
 import { getBlockDefinition } from './blocks';
-import { LayoutSelector } from './LayoutSelector';
 import { BlockContextMenu } from './BlockContextMenu';
 import {
   buildPortColorMap,
@@ -702,7 +702,7 @@ const DraggablePatchBlock = observer(({
 function getLaneTypeHint(kind: LaneKind): string {
   const hints: Record<LaneKind, string> = {
     Scene: 'Scene, Targets',
-    Phase: 'PhaseMachine, Signal<Unit>',
+    Phase: 'PhaseMachine, Signal<float> (phase)',
     Fields: 'Field<T>',
     Scalars: 'Scalar<T>',
     Spec: 'Spec:* → Program',
@@ -746,13 +746,9 @@ function InsertionPoint({
  */
 const DroppableLane = observer(({
   lane,
-  isActive,
-  isSuggested,
   portColorMap,
 }: {
   lane: Lane;
-  isActive: boolean;
-  isSuggested: boolean;
   portColorMap: Map<string, string>;
 }) => {
   const store = useStore();
@@ -761,7 +757,6 @@ const DroppableLane = observer(({
     data: {
       type: 'lane',
       laneId: lane.id,
-      laneName: lane.id,
     },
   });
 
@@ -771,10 +766,6 @@ const DroppableLane = observer(({
   const typeHint = getLaneTypeHint(lane.kind);
 
   const handleHeaderClick = (e: React.MouseEvent) => {
-    // Set active lane on click (for palette filtering)
-    store.uiStore.setActiveLane(lane.id);
-
-    // Double-click toggles collapse
     if (e.detail === 2) {
       store.viewStore.toggleLaneCollapsed(lane.id);
     }
@@ -788,7 +779,7 @@ const DroppableLane = observer(({
   return (
     <div
       ref={setNodeRef}
-      className={`lane ${isOver ? 'drop-target' : ''} ${isCollapsed ? 'collapsed' : ''} ${lane.flowStyle} ${isActive ? 'active' : ''} ${isSuggested ? 'suggested' : ''}`}
+      className={`lane ${isOver ? 'drop-target' : ''} ${isCollapsed ? 'collapsed' : ''} ${lane.flowStyle}`}
       data-lane={lane.id}
       data-lane-kind={lane.kind}
       data-flow-style={lane.flowStyle}
@@ -900,8 +891,7 @@ const SelectionRectangle = observer(() => {
  */
 export const PatchBay = observer(() => {
   const store = useStore();
-  const activeLaneId = store.uiStore.uiState.activeLaneId;
-  const draggingLaneKind = store.uiStore.uiState.draggingLaneKind;
+  const lanes = store.viewStore.lanes;
   const patchBayRef = useRef<HTMLDivElement>(null);
   const [isSelecting, setIsSelecting] = useState(false);
 
@@ -998,14 +988,12 @@ export const PatchBay = observer(() => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      <LayoutSelector />
+      <div className="lane-layout-label">Lanes</div>
       <div className="patch-bay-lanes" onClick={handleBackgroundClick}>
-        {store.viewStore.lanes.map((lane) => (
+        {lanes.map((lane) => (
           <DroppableLane
             key={lane.id}
             lane={lane}
-            isActive={lane.id === activeLaneId}
-            isSuggested={draggingLaneKind !== null && lane.kind === draggingLaneKind}
             portColorMap={portColorMap}
           />
         ))}

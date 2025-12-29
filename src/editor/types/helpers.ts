@@ -23,13 +23,6 @@ export function isNonEmptyString(value: unknown): value is string {
 }
 
 /**
- * Type guard: check if value is a valid LaneId.
- */
-export function isLaneId(value: unknown): value is string {
-  return isNonEmptyString(value);
-}
-
-/**
  * Type guard: check if value is a valid BlockId.
  */
 export function isBlockId(value: unknown): value is string {

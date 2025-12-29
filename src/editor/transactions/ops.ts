@@ -21,7 +21,6 @@ import type {
   Bus,
   Publisher,
   Listener,
-  Lane,
   Composite,
   DefaultSourceState
 } from '../types';
@@ -35,7 +34,6 @@ export type TableName =
   | 'buses'
   | 'publishers'
   | 'listeners'
-  | 'lanes'
   | 'composites'
   | 'defaultSources';
 
@@ -48,7 +46,6 @@ export type Entity =
   | Bus
   | Publisher
   | Listener
-  | Lane
   | Composite
   | DefaultSourceState;
 

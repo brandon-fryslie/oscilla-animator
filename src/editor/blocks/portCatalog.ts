@@ -66,7 +66,7 @@ export const OSCILLATOR_PORTS = definePortCatalog({
       id: 'phase',
       label: 'Phase',
       slotType: 'Signal<phase>',
-      irType: { world: 'signal', domain: 'phase01' },
+      irType: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -97,8 +97,8 @@ export const OSCILLATOR_PORTS = definePortCatalog({
     amplitude: {
       id: 'amplitude',
       label: 'Amplitude',
-      slotType: 'Signal<number>',
-      irType: { world: 'signal', domain: 'number' },
+      slotType: 'Signal<float>',
+      irType: { world: 'signal', domain: 'float' },
       tier: 'primary',
       optional: true,
       defaultSource: {
@@ -110,8 +110,8 @@ export const OSCILLATOR_PORTS = definePortCatalog({
     bias: {
       id: 'bias',
       label: 'Bias',
-      slotType: 'Signal<number>',
-      irType: { world: 'signal', domain: 'number' },
+      slotType: 'Signal<float>',
+      irType: { world: 'signal', domain: 'float' },
       tier: 'secondary',
       optional: true,
       defaultSource: {
@@ -126,8 +126,8 @@ export const OSCILLATOR_PORTS = definePortCatalog({
     out: {
       id: 'out',
       label: 'Output',
-      slotType: 'Signal<number>',
-      irType: { world: 'signal', domain: 'number' },
+      slotType: 'Signal<float>',
+      irType: { world: 'signal', domain: 'float' },
     } as const,
   },
   outputOrder: ['out'] as const,

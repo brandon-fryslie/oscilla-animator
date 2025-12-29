@@ -91,7 +91,7 @@ The **② Oscillator** is already receiving timing from the **phaseA** bus. It o
     `.trim(),
     criteria: { type: 'wire', fromBlock: '② Oscillator', fromSlot: 'out', toBlock: '⑬ Render', toSlot: 'radius' },
     highlightBlocks: ['② Oscillator', '⑬ Render'],
-    hint: 'The Oscillator is in the Phase lane at the top.',
+    hint: 'The Oscillator is near the top of the Patch Bay.',
     celebration: 'The dots are pulsing! But they disappear when the wave goes negative...',
   },
   {
@@ -126,7 +126,7 @@ We need the **⑪ Broadcast Signal** to spread the color to all elements.
     `.trim(),
     criteria: { type: 'wire', fromBlock: '⑥ Color LFO', fromSlot: 'color', toBlock: '⑪ Broadcast Signal', toSlot: 'signal' },
     highlightBlocks: ['⑥ Color LFO', '⑪ Broadcast Signal'],
-    hint: 'Broadcast is in the Fields lane. It converts Signal → Field.',
+    hint: 'Broadcast is in the Patch Bay. It converts Signal → Field.',
     celebration: 'Color LFO connected to Broadcast!',
   },
   {

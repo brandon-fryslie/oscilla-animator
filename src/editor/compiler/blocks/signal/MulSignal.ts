@@ -23,7 +23,7 @@ const lowerMulSignal: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
     throw new Error('MulSignal requires signal inputs');
   }
 
-  const outType = { world: 'signal' as const, domain: 'number' as const };
+  const outType = { world: 'signal' as const, domain: 'float' as const };
   const sigId = ctx.b.sigZip(a.id, b.id, { kind: 'opcode', opcode: OpCode.Mul }, outType,);
 
   const slot = ctx.b.allocValueSlot();
@@ -38,11 +38,11 @@ registerBlockType({
   type: 'MulSignal',
   capability: 'pure',
   inputs: [
-    { portId: 'a', label: 'A', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 1 } },
-    { portId: 'b', label: 'B', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 1 } },
+    { portId: 'a', label: 'A', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 1 } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 1 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'signal', domain: 'float' } },
   ],
   lower: lowerMulSignal,
 });
@@ -55,46 +55,46 @@ export const MulSignalBlock: BlockCompiler = {
   type: 'MulSignal',
 
   inputs: [
-    { name: 'a', type: { kind: 'Signal:number' }, required: true },
-    { name: 'b', type: { kind: 'Signal:number' }, required: true },
+    { name: 'a', type: { kind: 'Signal:float' }, required: true },
+    { name: 'b', type: { kind: 'Signal:float' }, required: true },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Signal:number' } },
+    { name: 'out', type: { kind: 'Signal:float' } },
   ],
 
   compile({ inputs }) {
     const aArtifact = inputs.a;
     const bArtifact = inputs.b;
 
-    if (aArtifact === undefined || aArtifact.kind !== 'Signal:number') {
+    if (aArtifact === undefined || aArtifact.kind !== 'Signal:float') {
       return {
         out: {
           kind: 'Error',
-          message: 'MulSignal requires Signal<number> for input A',
+          message: 'MulSignal requires Signal<float> for input A',
         },
       };
     }
 
-    if (bArtifact === undefined || bArtifact.kind !== 'Signal:number') {
+    if (bArtifact === undefined || bArtifact.kind !== 'Signal:float') {
       return {
         out: {
           kind: 'Error',
-          message: 'MulSignal requires Signal<number> for input B',
+          message: 'MulSignal requires Signal<float> for input B',
         },
       };
     }
 
-    const aSignal = aArtifact.value as Signal<number>;
-    const bSignal = bArtifact.value as Signal<number>;
+    const aSignal = aArtifact.value as Signal<float>;
+    const bSignal = bArtifact.value as Signal<float>;
 
     // Create multiplied signal
-    const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
+    const signal: Signal<float> = (t: number, ctx: RuntimeCtx): number => {
       return aSignal(t, ctx) * bSignal(t, ctx);
     };
 
     return {
-      out: { kind: 'Signal:number', value: signal },
+      out: { kind: 'Signal:float', value: signal },
     };
   },
 };

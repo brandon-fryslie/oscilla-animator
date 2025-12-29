@@ -87,7 +87,7 @@ export function pass1Normalize(
           constId: constIdCounter++ as ConstId,
           type: {
             world: slotWorldToTypeWorld(input.defaultSource.world),
-            domain: "number", // Simplified for now - could be derived from slot type
+            domain: "float", // Simplified for now - could be derived from slot type
           },
         });
       }

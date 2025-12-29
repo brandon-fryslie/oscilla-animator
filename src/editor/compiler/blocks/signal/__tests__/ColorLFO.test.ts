@@ -25,9 +25,9 @@ describe('ColorLFOBlock', () => {
       inputs: {
         phase: { kind: 'Signal:phase', value: phaseSignal },
         base: { kind: 'Scalar:color', value: '#3B82F6' },
-        hueSpan: { kind: 'Scalar:number', value: 180 },
-        sat: { kind: 'Scalar:number', value: 0.8 },
-        light: { kind: 'Scalar:number', value: 0.5 },
+        hueSpan: { kind: 'Scalar:float', value: 180 },
+        sat: { kind: 'Scalar:float', value: 0.8 },
+        light: { kind: 'Scalar:float', value: 0.5 },
       },
       ctx: { env: {}, geom: mockGeom },
     });
@@ -45,9 +45,9 @@ describe('ColorLFOBlock', () => {
       inputs: {
         phase: { kind: 'Signal:phase', value: phaseSignal },
         base: { kind: 'Scalar:color', value: '#FF0000' }, // Red
-        hueSpan: { kind: 'Scalar:number', value: 360 },
-        sat: { kind: 'Scalar:number', value: 1.0 },
-        light: { kind: 'Scalar:number', value: 0.5 },
+        hueSpan: { kind: 'Scalar:float', value: 360 },
+        sat: { kind: 'Scalar:float', value: 1.0 },
+        light: { kind: 'Scalar:float', value: 0.5 },
       },
       ctx: { env: {}, geom: mockGeom },
     });
@@ -70,9 +70,9 @@ describe('ColorLFOBlock', () => {
       inputs: {
         phase: { kind: 'Signal:phase', value: (t: number): number => t / 1000 },
         base: { kind: 'Scalar:color', value: '#FF0000' }, // Red (hue = 0)
-        hueSpan: { kind: 'Scalar:number', value: 120 },
-        sat: { kind: 'Scalar:number', value: 1.0 },
-        light: { kind: 'Scalar:number', value: 0.5 },
+        hueSpan: { kind: 'Scalar:float', value: 120 },
+        sat: { kind: 'Scalar:float', value: 1.0 },
+        light: { kind: 'Scalar:float', value: 0.5 },
       },
       ctx: { env: {}, geom: mockGeom },
     });
@@ -105,9 +105,9 @@ describe('ColorLFOBlock', () => {
       params: {},
       inputs: {
         base: { kind: 'Scalar:color', value: '#3B82F6' },
-        hueSpan: { kind: 'Scalar:number', value: 180 },
-        sat: { kind: 'Scalar:number', value: 0.8 },
-        light: { kind: 'Scalar:number', value: 0.5 },
+        hueSpan: { kind: 'Scalar:float', value: 180 },
+        sat: { kind: 'Scalar:float', value: 0.8 },
+        light: { kind: 'Scalar:float', value: 0.5 },
       },
       ctx: { env: {}, geom: mockGeom },
     });
@@ -125,9 +125,9 @@ describe('ColorLFOBlock', () => {
       inputs: {
         phase: { kind: 'Signal:phase', value: phaseSignal },
         base: { kind: 'Scalar:color', value: '#3B82F6' },
-        hueSpan: { kind: 'Scalar:number', value: 180 },
-        sat: { kind: 'Scalar:number', value: 0.8 },
-        light: { kind: 'Scalar:number', value: 0.5 },
+        hueSpan: { kind: 'Scalar:float', value: 180 },
+        sat: { kind: 'Scalar:float', value: 0.8 },
+        light: { kind: 'Scalar:float', value: 0.5 },
       },
       ctx: { env: {}, geom: mockGeom },
     });

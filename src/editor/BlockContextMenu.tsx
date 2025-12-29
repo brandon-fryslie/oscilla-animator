@@ -133,17 +133,6 @@ export const BlockContextMenu = observer(() => {
       store.compositeStore.saveComposite(composite);
 
       // Convert Composite to CompositeDefinition for registration
-      // We need to determine the lane kind from the selected blocks
-      const laneKinds = new Set(
-        selectedBlocks.map(b => {
-          const lane = store.viewStore.lanes.find(l => l.blockIds.includes(b.id));
-          return lane?.kind;
-        }).filter(Boolean)
-      );
-
-      // Use the first lane kind, or default to 'Scalars' if none found
-      const laneKind = laneKinds.size > 0 ? Array.from(laneKinds)[0]! : 'Scalars';
-
       // Build the composite graph
       const nodes: Record<string, { type: string; params?: Record<string, unknown> }> = {};
       for (const block of composite.blocks) {
@@ -174,7 +163,6 @@ export const BlockContextMenu = observer(() => {
         label: composite.name,
         description: composite.description,
         subcategory: (composite.subcategory ?? 'Other') as BlockSubcategory,
-        laneKind,
         graph: {
           nodes,
           edges,

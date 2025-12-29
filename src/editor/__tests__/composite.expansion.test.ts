@@ -114,7 +114,6 @@ describe('composite expansion', () => {
       id: 'comp-scale-index',
       label: 'Scaled Index',
       subcategory: 'Timing',
-      laneKind: 'Fields',
       graph: {
         nodes: {
           idx: { type: 'elementIndexField' },
@@ -129,7 +128,7 @@ describe('composite expansion', () => {
         outputMap: { out: 'scale.out' },
       },
       exposedInputs: [],
-      exposedOutputs: [{ id: 'out', label: 'Out', direction: 'output', slotType: 'Field<number>', nodeId: 'scale', nodePort: 'out' }],
+      exposedOutputs: [{ id: 'out', label: 'Out', direction: 'output', slotType: 'Field<float>', nodeId: 'scale', nodePort: 'out' }],
     });
 
     // Re-register composites after adding the new one
@@ -485,7 +484,7 @@ describe('Error handling (Test Matrix Section H)', () => {
     const busId = store.busStore.createBus(
       {
         world: 'signal',
-        domain: 'number',
+        domain: 'float',
         category: 'core',
         busEligible: true,
       },

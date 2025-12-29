@@ -1,7 +1,7 @@
 /**
  * FieldZipSignal Block Compiler
  *
- * Combines a Field<number> with a Signal<number> using a binary operation.
+ * Combines a Field<float> with a Signal<float> using a binary operation.
  * The signal is evaluated once per frame and the operation is applied to each element.
  */
 
@@ -81,7 +81,7 @@ const lowerFieldZipSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // Strategy: broadcast signal to field, then zip the two fields
   // This matches the semantic of "apply signal value to each field element"
-  const outType = { world: 'field' as const, domain: 'number' as const };
+  const outType = { world: 'field' as const, domain: 'float' as const };
 
   // Note: We need domain slot from the field input
   // For now, we'll create a placeholder - this will need proper domain tracking
@@ -100,11 +100,11 @@ registerBlockType({
   type: 'FieldZipSignal',
   capability: 'pure',
   inputs: [
-    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
-    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'number' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'float' } },
   ],
   lower: lowerFieldZipSignal,
 });
@@ -117,32 +117,32 @@ export const FieldZipSignalBlock: BlockCompiler = {
   type: 'FieldZipSignal',
 
   inputs: [
-    { name: 'field', type: { kind: 'Field:number' }, required: true },
-    { name: 'signal', type: { kind: 'Signal:number' }, required: true },
+    { name: 'field', type: { kind: 'Field:float' }, required: true },
+    { name: 'signal', type: { kind: 'Signal:float' }, required: true },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Field:number' } },
+    { name: 'out', type: { kind: 'Field:float' } },
   ],
 
   compile({ params, inputs }) {
     const fieldArtifact = inputs.field;
     const signalArtifact = inputs.signal;
 
-    if (!isDefined(fieldArtifact) || fieldArtifact.kind !== 'Field:number') {
+    if (!isDefined(fieldArtifact) || fieldArtifact.kind !== 'Field:float') {
       return {
         out: {
           kind: 'Error',
-          message: 'FieldZipSignal requires a Field<number> for field input',
+          message: 'FieldZipSignal requires a Field<float> for field input',
         },
       };
     }
 
-    if (!isDefined(signalArtifact) || signalArtifact.kind !== 'Signal:number') {
+    if (!isDefined(signalArtifact) || signalArtifact.kind !== 'Signal:float') {
       return {
         out: {
           kind: 'Error',
-          message: 'FieldZipSignal requires a Signal<number> for signal input',
+          message: 'FieldZipSignal requires a Signal<float> for signal input',
         },
       };
     }
@@ -154,7 +154,7 @@ export const FieldZipSignalBlock: BlockCompiler = {
 
     // Create combined field
     // Note: ctx is typed as CompileCtx but at runtime contains time information
-    const combinedField: Field<number> = (seed, n, ctx) => {
+    const combinedField: Field<float> = (seed, n, ctx) => {
       // Evaluate field to get per-element values
       const fieldValues = fieldFn(seed, n, ctx);
 
@@ -172,7 +172,7 @@ export const FieldZipSignalBlock: BlockCompiler = {
     };
 
     return {
-      out: { kind: 'Field:number', value: combinedField },
+      out: { kind: 'Field:float', value: combinedField },
     };
   },
 };

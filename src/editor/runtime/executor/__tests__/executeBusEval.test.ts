@@ -63,7 +63,7 @@ function createTestContext(slotCount: number = 150): TestContext {
         publishers: [],
         combine: { mode: "sum" as const },
         silent: { kind: "zero" as const },
-        busType: { world: "signal", domain: "number" } as unknown as never,
+        busType: { world: "signal", domain: "float" } as unknown as never,
       }],
       stepIdToIndex: {},
       deps: { fwdDeps: {}, revDeps: {} },
@@ -109,7 +109,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "sum" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "number" } as unknown as never,
+      busType: { world: "signal", domain: "float" } as unknown as never,
     };
 
     executeBusEval(step, program, runtime);
@@ -136,7 +136,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "average" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "number" } as unknown as never,
+      busType: { world: "signal", domain: "float" } as unknown as never,
     };
 
     executeBusEval(step, program, runtime);
@@ -163,7 +163,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "min" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "number" } as unknown as never,
+      busType: { world: "signal", domain: "float" } as unknown as never,
     };
 
     executeBusEval(step, program, runtime);
@@ -190,7 +190,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "max" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "number" } as unknown as never,
+      busType: { world: "signal", domain: "float" } as unknown as never,
     };
 
     executeBusEval(step, program, runtime);
@@ -217,7 +217,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "last" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "number" } as unknown as never,
+      busType: { world: "signal", domain: "float" } as unknown as never,
     };
 
     executeBusEval(step, program, runtime);
@@ -244,7 +244,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "product" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "number" } as unknown as never,
+      busType: { world: "signal", domain: "float" } as unknown as never,
     };
 
     executeBusEval(step, program, runtime);
@@ -265,7 +265,7 @@ describe("executeBusEval - Silent Values", () => {
       publishers: [],
       combine: { mode: "sum" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "number" } as unknown as never,
+      busType: { world: "signal", domain: "float" } as unknown as never,
     };
 
     executeBusEval(step, program, runtime);
@@ -284,7 +284,7 @@ describe("executeBusEval - Silent Values", () => {
       publishers: [],
       combine: { mode: "sum" },
       silent: { kind: "const", constId: 1 }, // 99
-      busType: { world: "signal", domain: "number" } as unknown as never,
+      busType: { world: "signal", domain: "float" } as unknown as never,
     };
 
     executeBusEval(step, program, runtime);
@@ -305,7 +305,7 @@ describe("executeBusEval - Silent Values", () => {
       ],
       combine: { mode: "sum" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "number" } as unknown as never,
+      busType: { world: "signal", domain: "float" } as unknown as never,
     };
 
     executeBusEval(step, program, runtime);
@@ -334,7 +334,7 @@ describe("executeBusEval - Publisher Filtering", () => {
       ],
       combine: { mode: "sum" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "number" } as unknown as never,
+      busType: { world: "signal", domain: "float" } as unknown as never,
     };
 
     executeBusEval(step, program, runtime);

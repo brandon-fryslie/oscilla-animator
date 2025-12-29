@@ -3,7 +3,7 @@
  * @description Manages UI-related state like selection, playback, and editor settings.
  */
 import { makeObservable, observable, action, computed } from 'mobx';
-import type { BlockId, LaneId, LaneKind, PortRef } from '../types';
+import type { BlockId, PortRef } from '../types';
 import type { RootStore } from './RootStore';
 import type { BlockDefinition } from '../blocks';
 
@@ -46,8 +46,6 @@ export class UIStateStore {
     selectedBlockIds: new Set<BlockId>(), // Multi-select support
     selectedBusId: null as string | null,
     draggingBlockType: null as string | null,
-    draggingLaneKind: null as LaneKind | null,
-    activeLaneId: null as LaneId | null,
     hoveredPort: null as PortRef | null,
     selectedPort: null as PortRef | null,
     contextMenu: {
@@ -79,13 +77,10 @@ export class UIStateStore {
   settings = {
     seed: 0,
     speed: 1.0,
-    currentLayoutId: 'default' as string,
-    advancedLaneMode: false, // Controls lane visibility (Simple vs Detailed)
     autoConnect: false, // Auto-create connections on block drop
     showTypeHints: false, // Show type labels on ports
     highlightCompatible: false, // Highlight compatible ports when dragging
     warnBeforeDisconnect: false, // Confirmation before removing connections
-    filterByLane: false, // Filter library by lane compatibility
     filterByConnection: false, // Filter library by connection context
   };
 
@@ -125,24 +120,20 @@ export class UIStateStore {
       togglePlayPause: action,
       setSeed: action,
       setSpeed: action,
-      setAdvancedLaneMode: action,
       setAutoConnect: action,
       setShowTypeHints: action,
       setHighlightCompatible: action,
       setWarnBeforeDisconnect: action,
-      setFilterByLane: action,
       setFilterByConnection: action,
       setPreviewedDefinition: action,
       previewDefinition: action,
       setPlaying: action,
-      setActiveLane: action,
       setHoveredPort: action,
       setSelectedPort: action,
       openContextMenu: action,
       closeContextMenu: action,
       openBlockContextMenu: action,
       closeBlockContextMenu: action,
-      setDraggingLaneKind: action,
       startSelectionRectangle: action,
       updateSelectionRectangle: action,
       endSelectionRectangle: action,
@@ -387,17 +378,6 @@ export class UIStateStore {
   // Actions - Settings
   // =============================================================================
 
-  setAdvancedLaneMode(enabled: boolean): void {
-    this.settings.advancedLaneMode = enabled;
-
-    // Switch layout based on mode
-    if (enabled) {
-      this.root.viewStore.switchLayout('detailed');
-    } else {
-      this.root.viewStore.switchLayout('simple');
-    }
-  }
-
   setAutoConnect(enabled: boolean): void {
     this.settings.autoConnect = enabled;
   }
@@ -412,10 +392,6 @@ export class UIStateStore {
 
   setWarnBeforeDisconnect(enabled: boolean): void {
     this.settings.warnBeforeDisconnect = enabled;
-  }
-
-  setFilterByLane(enabled: boolean): void {
-    this.settings.filterByLane = enabled;
   }
 
   setFilterByConnection(enabled: boolean): void {
@@ -444,10 +420,6 @@ export class UIStateStore {
 
   setPlaying(playing: boolean): void {
     this.uiState.isPlaying = playing;
-  }
-
-  setActiveLane(laneId: LaneId | null): void {
-    this.uiState.activeLaneId = laneId;
   }
 
   setHoveredPort(port: PortRef | null): void {
@@ -494,7 +466,4 @@ export class UIStateStore {
     };
   }
 
-  setDraggingLaneKind(laneKind: LaneKind | null): void {
-    this.uiState.draggingLaneKind = laneKind;
-  }
 }

@@ -24,7 +24,7 @@ import type { RootStore } from '../stores/RootStore';
 import type { Op, TableName, Entity, Position } from './ops';
 import { computeInverse, validateOp } from './ops';
 import { applyOps } from './applyOps';
-import type { Connection, Publisher, Listener, Lane } from '../types';
+import type { Connection, Publisher, Listener } from '../types';
 import type { GraphDiffSummary } from '../events/types';
 
 /**
@@ -251,8 +251,6 @@ export class TxBuilder {
         return this.root.busStore.publishers.find(p => p.id === id);
       case 'listeners':
         return this.root.busStore.listeners.find(l => l.id === id);
-      case 'lanes':
-        return this.root.viewStore.lanes.find(l => l.id === id);
       case 'composites':
         return this.root.compositeStore.composites.find(c => c.id === id);
       case 'defaultSources':
@@ -334,13 +332,6 @@ export class TxBuilder {
     return result;
   }
 
-  /**
-   * Get lanes containing a block.
-   */
-  getLanesContainingBlock(blockId: string): Lane[] {
-    return this.root.viewStore.lanes.filter(l => l.blockIds.includes(blockId));
-  }
-
   // ===========================================================================
   // Cascade Helpers
   // ===========================================================================
@@ -353,8 +344,7 @@ export class TxBuilder {
    * 2. All bus publishers from the block
    * 3. All bus listeners to the block
    * 4. All default sources for the block's inputs
-   * 5. Block from all lanes
-   * 6. The block itself
+   * 5. The block itself
    *
    * This generates a Many op containing all sub-ops.
    * The inverse will recreate everything in reverse order.
@@ -394,17 +384,7 @@ export class TxBuilder {
         this.remove('defaultSources', dsId);
       }
 
-      // 5. Remove block from all lanes
-      const lanes = this.getLanesContainingBlock(blockId);
-      for (const lane of lanes) {
-        const updatedLane: Lane = {
-          ...lane,
-          blockIds: lane.blockIds.filter(id => id !== blockId),
-        };
-        this.replace('lanes', lane.id, updatedLane);
-      }
-
-      // 6. Remove the block itself
+      // 5. Remove the block itself
       this.remove('blocks', blockId);
     });
   }

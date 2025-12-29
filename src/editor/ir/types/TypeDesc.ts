@@ -49,13 +49,12 @@ export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
  * These are bus-eligible and part of the learnable API.
  */
 export type CoreDomain =
-  | 'number'    // Numeric values
+  | 'float'     // Floating-point values
+  | 'int'       // Integer values
   | 'vec2'      // 2D positions/vectors
   | 'color'     // Color values
   | 'boolean'   // True/false values
   | 'time'      // Time values (with unit: 'ms' or 'seconds')
-  | 'phase01'   // Phase values [0,1] (normalized phase)
-  | 'phase'     // Phase values [0,1]
   | 'rate'      // Rate/multiplier values
   | 'trigger';  // Pulse/event signals
 
@@ -88,6 +87,8 @@ export type InternalDomain =
   | 'render'       // Generic render type
   | 'expression'   // DSL expression values (FieldFromExpression)
   | 'waveform'     // Waveform shape selection for oscillators (sine, cosine, triangle, saw)
+  | 'phaseSample'  // Phase machine sample payload
+  | 'phaseMachine' // Phase machine instance
   | 'unknown';     // Unknown/fallback type
 
 /**
@@ -142,7 +143,8 @@ const INTERNAL_DOMAINS: ReadonlySet<TypeDomain> = new Set<TypeDomain>([
   'point', 'duration', 'hsl', 'path', 'wobble', 'spiral', 'wave', 'jitter',
   'program', 'renderTree', 'renderNode', 'filterDef', 'strokeStyle',
   'elementCount', 'scene', 'sceneTargets', 'sceneStrokes', 'event',
-  'string', 'bounds', 'spec', 'domain', 'render', 'expression', 'waveform', 'unknown'
+  'string', 'bounds', 'spec', 'domain', 'render', 'expression', 'waveform',
+  'phaseSample', 'phaseMachine', 'unknown'
 ]);
 
 // =============================================================================
@@ -230,16 +232,6 @@ export function isCompatible(from: TypeDesc, to: TypeDesc): boolean {
   // Special case: point and vec2 are compatible
   if ((from.domain === 'point' && to.domain === 'vec2') ||
       (from.domain === 'vec2' && to.domain === 'point')) {
-    // Must still match world or follow promotion rules
-    if (from.world === to.world) return true;
-    if (from.world === 'scalar' && to.world === 'signal') return true;
-    if (from.world === 'signal' && to.world === 'field') return true;
-    if (from.world === 'scalar' && to.world === 'field') return true;
-  }
-
-  // Special case: phase and phase01 are compatible (aliases)
-  if ((from.domain === 'phase' && to.domain === 'phase01') ||
-      (from.domain === 'phase01' && to.domain === 'phase')) {
     // Must still match world or follow promotion rules
     if (from.world === to.world) return true;
     if (from.world === 'scalar' && to.world === 'signal') return true;

@@ -9,10 +9,10 @@ import {
 describe('Type Conversion', () => {
   describe('valueKindToTypeDesc', () => {
     describe('Scalar types', () => {
-      it('converts Scalar:number', () => {
-        const result = valueKindToTypeDesc('Scalar:number');
+      it('converts Scalar:float', () => {
+        const result = valueKindToTypeDesc('Scalar:float');
         expect(result.world).toBe('scalar');
-        expect(result.domain).toBe('number');
+        expect(result.domain).toBe('float');
       });
 
       it('converts Scalar:boolean', () => {
@@ -35,17 +35,18 @@ describe('Type Conversion', () => {
     });
 
     describe('Signal types', () => {
-      it('converts Signal:number', () => {
-        const result = valueKindToTypeDesc('Signal:number');
+      it('converts Signal:float', () => {
+        const result = valueKindToTypeDesc('Signal:float');
         expect(result.world).toBe('signal');
-        expect(result.domain).toBe('number');
+        expect(result.domain).toBe('float');
       });
 
-      it('converts Signal:phase', () => {
-        const result = valueKindToTypeDesc('Signal:phase');
-        expect(result.world).toBe('signal');
-        expect(result.domain).toBe('phase');
-      });
+    it('converts Signal:phase', () => {
+      const result = valueKindToTypeDesc('Signal:phase');
+      expect(result.world).toBe('signal');
+      expect(result.domain).toBe('float');
+      expect(result.semantics).toBe('phase(0..1)');
+    });
 
       it('converts Signal:Time with unit', () => {
         const result = valueKindToTypeDesc('Signal:Time');
@@ -57,7 +58,7 @@ describe('Type Conversion', () => {
       it('converts Signal:Unit with semantics', () => {
         const result = valueKindToTypeDesc('Signal:Unit');
         expect(result.world).toBe('signal');
-        expect(result.domain).toBe('number');
+        expect(result.domain).toBe('float');
         expect(result.semantics).toBe('unit(0..1)');
       });
 
@@ -69,10 +70,10 @@ describe('Type Conversion', () => {
     });
 
     describe('Field types', () => {
-      it('converts Field:number', () => {
-        const result = valueKindToTypeDesc('Field:number');
+      it('converts Field:float', () => {
+        const result = valueKindToTypeDesc('Field:float');
         expect(result.world).toBe('field');
-        expect(result.domain).toBe('number');
+        expect(result.domain).toBe('float');
       });
 
       it('converts Field:vec2', () => {
@@ -140,13 +141,14 @@ describe('Type Conversion', () => {
     it('parses Signal<phase>', () => {
       const result = slotTypeToTypeDesc('Signal<phase>');
       expect(result.world).toBe('signal');
-      expect(result.domain).toBe('phase');
+      expect(result.domain).toBe('float');
+      expect(result.semantics).toBe('phase(0..1)');
     });
 
-    it('parses Signal<number>', () => {
-      const result = slotTypeToTypeDesc('Signal<number>');
+    it('parses Signal<float>', () => {
+      const result = slotTypeToTypeDesc('Signal<float>');
       expect(result.world).toBe('signal');
-      expect(result.domain).toBe('number');
+      expect(result.domain).toBe('float');
     });
 
     it('parses Field<Point> with semantics', () => {
@@ -162,10 +164,10 @@ describe('Type Conversion', () => {
       expect(result.domain).toBe('vec2');
     });
 
-    it('parses Scalar:number', () => {
-      const result = slotTypeToTypeDesc('Scalar:number');
+    it('parses Scalar:float', () => {
+      const result = slotTypeToTypeDesc('Scalar:float');
       expect(result.world).toBe('scalar');
-      expect(result.domain).toBe('number');
+      expect(result.domain).toBe('float');
     });
 
     it('parses bare Domain', () => {
@@ -182,18 +184,22 @@ describe('Type Conversion', () => {
 
   describe('domainFromString', () => {
     it('handles lowercase core domains', () => {
-      expect(domainFromString('number')).toBe('number');
+      expect(domainFromString('number')).toBe('float');
+      expect(domainFromString('float')).toBe('float');
+      expect(domainFromString('int')).toBe('int');
       expect(domainFromString('vec2')).toBe('vec2');
       expect(domainFromString('color')).toBe('color');
-      expect(domainFromString('phase')).toBe('phase');
+      expect(domainFromString('phase')).toBe('float');
       expect(domainFromString('time')).toBe('time');
       expect(domainFromString('trigger')).toBe('trigger');
     });
 
     it('handles PascalCase core domains', () => {
-      expect(domainFromString('Number')).toBe('number');
+      expect(domainFromString('Number')).toBe('float');
+      expect(domainFromString('Float')).toBe('float');
+      expect(domainFromString('Int')).toBe('int');
       expect(domainFromString('Vec2')).toBe('vec2');
-      expect(domainFromString('Phase')).toBe('phase');
+      expect(domainFromString('Phase')).toBe('float');
       expect(domainFromString('Time')).toBe('time');
     });
 
@@ -203,8 +209,8 @@ describe('Type Conversion', () => {
     });
 
     it('handles Unit as number', () => {
-      expect(domainFromString('Unit')).toBe('number');
-      expect(domainFromString('unit')).toBe('number');
+      expect(domainFromString('Unit')).toBe('float');
+      expect(domainFromString('unit')).toBe('float');
     });
 
     it('handles internal domains', () => {
@@ -221,8 +227,8 @@ describe('Type Conversion', () => {
 
   describe('typeDescToString', () => {
     it('formats signal types', () => {
-      const result = typeDescToString({ world: 'signal', domain: 'number' });
-      expect(result).toBe('Signal:number');
+      const result = typeDescToString({ world: 'signal', domain: 'float' });
+      expect(result).toBe('Signal:float');
     });
 
     it('formats field types', () => {
@@ -239,7 +245,7 @@ describe('Type Conversion', () => {
   describe('Round-trip validation', () => {
     it('ValueKind → TypeDesc preserves type information', () => {
       const kinds = [
-        'Signal:number',
+        'Signal:float',
         'Signal:phase',
         'Field:vec2',
         'Field<Point>',

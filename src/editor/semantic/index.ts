@@ -73,12 +73,9 @@ const COMPATIBLE_DOMAIN_SETS: ReadonlyArray<ReadonlyArray<string>> = [
   // Position types - Point and vec2 are semantically identical
   ['point', 'vec2'],
 
-  // Numeric signals - Unit is a constrained number, but compatible
-  ['number', 'unit'],
+  // Numeric signals - int and float are compatible for wiring
+  ['float', 'int'],
 
-  // Phase types - phase01 and phase are semantically identical
-  // phase01 is an alias for phase used by some blocks
-  ['phase01', 'phase'],
 
   // Render types - all render outputs are composable
   ['renderTree', 'renderNode', 'render'],
@@ -306,7 +303,8 @@ export function getCompatibilityHint(slotType: SlotType): string {
   }
 
   if (compatibleDomains.size === 1) {
-    return `Requires ${desc.world}:${desc.domain}`;
+    const semanticHint = desc.semantics != null ? ` (${desc.semantics})` : '';
+    return `Requires ${desc.world}:${desc.domain}${semanticHint}`;
   }
 
   const domainList = Array.from(compatibleDomains).join(', ');
@@ -321,12 +319,13 @@ export function getCompatibilityHint(slotType: SlotType): string {
  * Mapping from compiler ValueKind to TypeDesc.
  * This bridges the compiler's type system with the canonical semantic layer.
  *
- * NOTE: ValueKind uses colon syntax (Field:number), SlotType uses angle brackets (Field<number>).
+ * NOTE: ValueKind uses colon syntax (Field:float), SlotType uses angle brackets (Field<float>).
  * This table normalizes both into the same TypeDesc representation.
  */
 const VALUE_KIND_TO_TYPE_DESC: Partial<Record<ValueKind, TypeDesc>> = {
   // Scalars
-  'Scalar:number': { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'scalar' },
+  'Scalar:float': { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'scalar' },
+  'Scalar:int': { world: 'signal', domain: 'int', category: 'core', busEligible: true, semantics: 'scalar' },
   'Scalar:string': { world: 'signal', domain: 'string', category: 'internal', busEligible: false },
   'Scalar:boolean': { world: 'signal', domain: 'boolean', category: 'core', busEligible: false },
   'Scalar:color': { world: 'signal', domain: 'color', category: 'core', busEligible: true, semantics: 'scalar' },
@@ -334,30 +333,33 @@ const VALUE_KIND_TO_TYPE_DESC: Partial<Record<ValueKind, TypeDesc>> = {
   'Scalar:bounds': { world: 'signal', domain: 'bounds', category: 'internal', busEligible: false },
 
   // Fields
-  'Field:number': { world: 'field', domain: 'number', category: 'core', busEligible: true },
+  'Field:float': { world: 'field', domain: 'float', category: 'core', busEligible: true },
+  'Field:int': { world: 'field', domain: 'int', category: 'core', busEligible: true },
   'Field:string': { world: 'field', domain: 'string', category: 'internal', busEligible: false },
   'Field:boolean': { world: 'field', domain: 'boolean', category: 'internal', busEligible: false },
   'Field:color': { world: 'field', domain: 'color', category: 'core', busEligible: true },
   'Field:vec2': { world: 'field', domain: 'vec2', category: 'core', busEligible: true, semantics: 'position' },
   'Field:Point': { world: 'field', domain: 'point', category: 'internal', busEligible: false, semantics: 'position' },
   'Field<Point>': { world: 'field', domain: 'point', category: 'internal', busEligible: false, semantics: 'position' },
-  'Field:Jitter': { world: 'field', domain: 'number', category: 'internal', busEligible: false, semantics: 'jitter' },
-  'Field:Spiral': { world: 'field', domain: 'number', category: 'internal', busEligible: false, semantics: 'spiral' },
-  'Field:Wave': { world: 'field', domain: 'number', category: 'internal', busEligible: false, semantics: 'wave' },
-  'Field:Wobble': { world: 'field', domain: 'number', category: 'internal', busEligible: false, semantics: 'wobble' },
+  'Field:Jitter': { world: 'field', domain: 'float', category: 'internal', busEligible: false, semantics: 'jitter' },
+  'Field:Spiral': { world: 'field', domain: 'float', category: 'internal', busEligible: false, semantics: 'spiral' },
+  'Field:Wave': { world: 'field', domain: 'float', category: 'internal', busEligible: false, semantics: 'wave' },
+  'Field:Wobble': { world: 'field', domain: 'float', category: 'internal', busEligible: false, semantics: 'wobble' },
   'Field:Path': { world: 'field', domain: 'path', category: 'internal', busEligible: false },
 
   // Signals
   'Signal:Time': { world: 'signal', domain: 'time', category: 'core', busEligible: true, unit: 'seconds' },
-  'Signal:number': { world: 'signal', domain: 'number', category: 'core', busEligible: true },
-  'Signal:Unit': { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'unit(0..1)' },
+  'Signal:float': { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+  'Signal:int': { world: 'signal', domain: 'int', category: 'core', busEligible: true },
+  'Signal:Unit': { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'unit(0..1)' },
   'Signal:vec2': { world: 'signal', domain: 'vec2', category: 'core', busEligible: true },
-  'Signal:phase': { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
+  'Signal:phase': { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+  'Signal:phase01': { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
   'Signal:color': { world: 'signal', domain: 'color', category: 'core', busEligible: true },
 
   // Special types
   'Domain': { world: 'field', domain: 'elementCount', category: 'internal', busEligible: false },
-  'PhaseMachine': { world: 'signal', domain: 'phase', category: 'internal', busEligible: false },
+  'PhaseMachine': { world: 'signal', domain: 'phaseMachine', category: 'internal', busEligible: false },
   'TargetScene': { world: 'field', domain: 'sceneTargets', category: 'internal', busEligible: false },
   'Scene': { world: 'field', domain: 'scene', category: 'internal', busEligible: false },
   'Render': { world: 'field', domain: 'renderTree', category: 'internal', busEligible: false },
@@ -377,8 +379,8 @@ const VALUE_KIND_TO_TYPE_DESC: Partial<Record<ValueKind, TypeDesc>> = {
   'Spec:ProgramStack': { world: 'field', domain: 'spec', category: 'internal', busEligible: false, semantics: 'programStack' },
 
   // Additional artifact kinds
-  'ElementCount': { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'count' },
-  'FieldExpr': { world: 'field', domain: 'number', category: 'internal', busEligible: false, semantics: 'lazy' },
+  'ElementCount': { world: 'signal', domain: 'int', category: 'core', busEligible: true, semantics: 'count' },
+  'FieldExpr': { world: 'field', domain: 'float', category: 'internal', busEligible: false, semantics: 'lazy' },
 };
 
 /**
@@ -386,8 +388,8 @@ const VALUE_KIND_TO_TYPE_DESC: Partial<Record<ValueKind, TypeDesc>> = {
  * These are in addition to COMPATIBLE_DOMAIN_SETS.
  */
 const COMPILER_COMPATIBLE_DOMAIN_SETS: ReadonlyArray<ReadonlyArray<string>> = [
-  // ElementCount is compatible with number
-  ['elementCount', 'number'],
+  // ElementCount is compatible with int
+  ['elementCount', 'int'],
 
   // All spec types are their own category
   ['spec'],

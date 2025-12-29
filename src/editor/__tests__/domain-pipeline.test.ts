@@ -61,7 +61,7 @@ describe('Domain Pipeline', () => {
     });
 
     it('accepts n from input port', () => {
-      const nInput: Artifact = { kind: 'Scalar:number', value: 3 };
+      const nInput: Artifact = { kind: 'Scalar:float', value: 3 };
 
       const result = DomainNBlock.compile({
         id: 'test-domain-2',
@@ -190,7 +190,7 @@ describe('Domain Pipeline', () => {
         ctx: testCtx,
       });
 
-      if (constResult.out.kind === 'Field:number') {
+      if (constResult.out.kind === 'Field:float') {
         const values = constResult.out.value(0, 3, testCtx);
         expect(values).toEqual([42, 42, 42]);
       }
@@ -213,7 +213,7 @@ describe('Domain Pipeline', () => {
         ctx: testCtx,
       });
 
-      if (hashResult.u.kind === 'Field:number') {
+      if (hashResult.u.kind === 'Field:float') {
         const values1 = hashResult.u.value(0, 3, testCtx);
         const values2 = hashResult.u.value(0, 3, testCtx); // Same seed
 
@@ -256,7 +256,7 @@ describe('Domain Pipeline', () => {
         ctx: testCtx,
       });
 
-      if (mapResult.y.kind === 'Field:number') {
+      if (mapResult.y.kind === 'Field:float') {
         const values = mapResult.y.value(0, 3, testCtx);
         expect(values).toEqual([6, 6, 6]); // 2 * 3 = 6
       }
@@ -293,7 +293,7 @@ describe('Domain Pipeline', () => {
         ctx: testCtx,
       });
 
-      if (zipResult.out.kind === 'Field:number') {
+      if (zipResult.out.kind === 'Field:float') {
         const values = zipResult.out.value(0, 3, testCtx);
         expect(values).toEqual([13, 13, 13]); // 10 + 3 = 13
       }
@@ -328,7 +328,7 @@ describe('Domain Pipeline', () => {
         ctx: testCtx,
       });
 
-      if (zipResult.out.kind === 'Field:number') {
+      if (zipResult.out.kind === 'Field:float') {
         const values = zipResult.out.value(0, 2, testCtx);
         expect(values).toEqual([20, 20]); // 4 * 5 = 20
       }
@@ -411,7 +411,7 @@ describe('Domain Pipeline', () => {
       // This test verifies the complete data flow:
       // DomainN produces Domain
       // PositionMapGrid consumes Domain, produces Field<vec2>
-      // FieldConstNumber consumes Domain, produces Field<number>
+      // FieldConstNumber consumes Domain, produces Field<float>
       // FieldConstColor consumes Domain, produces Field<color>
       // RenderInstances2D consumes all, produces RenderTree
 
@@ -440,7 +440,7 @@ describe('Domain Pipeline', () => {
         inputs: { domain: domainResult.domain },
         ctx: testCtx,
       });
-      expect(radiusResult.out.kind).toBe('Field:number');
+      expect(radiusResult.out.kind).toBe('Field:float');
 
       // Step 4: Create color field
       const colorResult = FieldConstColorBlock.compile({

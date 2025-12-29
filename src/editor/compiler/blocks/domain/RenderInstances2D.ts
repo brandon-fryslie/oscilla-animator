@@ -7,7 +7,7 @@
  * Takes:
  *   - Domain: element identity (required)
  *   - positions: Field<vec2> - per-element positions (required)
- *   - radius: Field<number> OR Signal<number> - per-element radii or broadcast radius (required)
+ *   - radius: Field<float> OR Signal<float> - per-element radii or broadcast radius (required)
  *   - color: Field<color> - per-element colors (required)
  *
  * Produces:
@@ -40,7 +40,7 @@ const DEFAULT_CTX = {
  * It takes:
  * - Domain (special handle)
  * - positions: Field<vec2>
- * - radius: Field<number> OR Signal<number>
+ * - radius: Field<float> OR Signal<float>
  * - color: Field<color>
  *
  * And registers a render sink with these inputs.
@@ -58,7 +58,7 @@ const lowerRenderInstances2D: BlockLowerFn = ({ ctx, inputs }) => {
   }
 
   if (radius.k !== 'field' && radius.k !== 'sig') {
-    throw new Error(`RenderInstances2D requires Field<number> or Signal<number> radius, got ${radius.k}`);
+    throw new Error(`RenderInstances2D requires Field<float> or Signal<float> radius, got ${radius.k}`);
   }
 
   if (color.k !== 'field') {
@@ -66,7 +66,7 @@ const lowerRenderInstances2D: BlockLowerFn = ({ ctx, inputs }) => {
   }
 
   if (opacity.k !== 'sig') {
-    throw new Error(`RenderInstances2D requires Signal<number> opacity, got ${opacity.k}`);
+    throw new Error(`RenderInstances2D requires Signal<float> opacity, got ${opacity.k}`);
   }
 
   // Register render sink
@@ -115,7 +115,7 @@ registerBlockType({
       portId: 'radius',
       label: 'Radius',
       dir: 'in',
-      type: { world: 'field', domain: 'number' }, // Can also accept signal
+      type: { world: 'field', domain: 'float' }, // Can also accept signal
       defaultSource: { value: 5 },
     },
     {
@@ -129,7 +129,7 @@ registerBlockType({
       portId: 'opacity',
       label: 'Opacity',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 1.0 },
     },
     {
@@ -143,7 +143,7 @@ registerBlockType({
       portId: 'glowIntensity',
       label: 'Glow Intensity',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 0.5 },
     },
   ],
@@ -164,11 +164,11 @@ export const RenderInstances2DBlock: BlockCompiler = {
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
     { name: 'positions', type: { kind: 'Field:vec2' }, required: true },
-    { name: 'radius', type: { kind: 'Field:number' }, required: true },
+    { name: 'radius', type: { kind: 'Field:float' }, required: true },
     { name: 'color', type: { kind: 'Field:color' }, required: true },
-    { name: 'opacity', type: { kind: 'Signal:number' }, required: false },
+    { name: 'opacity', type: { kind: 'Signal:float' }, required: false },
     { name: 'glow', type: { kind: 'Scalar:boolean' }, required: false },
-    { name: 'glowIntensity', type: { kind: 'Signal:number' }, required: false },
+    { name: 'glowIntensity', type: { kind: 'Signal:float' }, required: false },
   ],
 
   compile({ inputs, params }) {
@@ -195,9 +195,9 @@ export const RenderInstances2DBlock: BlockCompiler = {
     const domain = domainArtifact.value;
     const positionField = positionsArtifact.value;
 
-    // Radius input: accept EITHER Field<number> OR Signal<number>
-    // - Field<number>: per-element radii (static or varied)
-    // - Signal<number>: broadcast same animated value to all elements
+    // Radius input: accept EITHER Field<float> OR Signal<float>
+    // - Field<float>: per-element radii (static or varied)
+    // - Signal<float>: broadcast same animated value to all elements
     const radiusArtifact = inputs.radius;
     if (!isDefined(radiusArtifact)) {
       return {
@@ -207,20 +207,20 @@ export const RenderInstances2DBlock: BlockCompiler = {
         },
       };
     }
-    if (radiusArtifact.kind !== 'Field:number' && radiusArtifact.kind !== 'Signal:number') {
+    if (radiusArtifact.kind !== 'Field:float' && radiusArtifact.kind !== 'Signal:float') {
       return {
         render: {
           kind: 'Error',
-          message: `RenderInstances2D requires a Field<number> or Signal<number> radius input. Got ${radiusArtifact.kind}`,
+          message: `RenderInstances2D requires a Field<float> or Signal<float> radius input. Got ${radiusArtifact.kind}`,
         },
       };
     }
 
     let radiusMode: 'field' | 'signal';
-    let radiusField: Field<number> | undefined;
+    let radiusField: Field<float> | undefined;
     let radiusSignal: ((t: number, ctx: RuntimeCtx) => number) | undefined;
 
-    if (radiusArtifact.kind === 'Field:number') {
+    if (radiusArtifact.kind === 'Field:float') {
       radiusMode = 'field';
       radiusField = radiusArtifact.value;
     } else {
@@ -248,8 +248,8 @@ export const RenderInstances2DBlock: BlockCompiler = {
     // Signal artifacts have .value as a function, Scalar artifacts have .value as a number
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number') return Number(artifact.value);
-      if (artifact.kind === 'Signal:number') {
+      if (artifact.kind === 'Scalar:float') return Number(artifact.value);
+      if (artifact.kind === 'Signal:float') {
         // Signal artifacts have .value as a function - call with t=0 for compile-time value
         return Number(artifact.value(0, defaultCtx));
       }
@@ -289,7 +289,7 @@ export const RenderInstances2DBlock: BlockCompiler = {
       const colors = colorField(seed, n, fieldCtx);
 
       // Radius: evaluate based on mode
-      let radii: readonly number[];
+      let radii: readonly float[];
       if (radiusMode === 'field') {
         radii = radiusField!(seed, n, fieldCtx);
       } else {

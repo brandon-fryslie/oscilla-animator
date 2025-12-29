@@ -43,8 +43,8 @@ function createMockDefinition(overrides: Partial<BlockDefinition> = {}): BlockDe
     description: 'A test block',
     inputs: [],
     outputs: [],
-    defaultParams: {},    color: '#666',
-    laneKind: 'Scalars',
+    defaultParams: {},
+    color: '#666',
     ...overrides,
   } as BlockDefinition;
 }
@@ -67,26 +67,6 @@ function createMockConnection(
 // =============================================================================
 
 describe('findCompatibleReplacements', () => {
-  it('filters by lane kind', () => {
-    const block = createMockBlock({
-      type: 'PhaseBlock',
-      category: 'Time',
-    });
-
-    const definitions: BlockDefinition[] = [
-      createMockDefinition({ type: 'Phase1', laneKind: 'Phase' }),
-      createMockDefinition({ type: 'Phase2', laneKind: 'Phase' }),
-      createMockDefinition({ type: 'Scalar1', laneKind: 'Scalars' }),
-      createMockDefinition({ type: 'Field1', laneKind: 'Fields' }),
-    ];
-
-    const compatible = findCompatibleReplacements(block, [], definitions);
-
-    // Should only include blocks with same lane kind (Phase)
-    expect(compatible).toHaveLength(2);
-    expect(compatible.map((d) => d.type).sort()).toEqual(['Phase1', 'Phase2']);
-  });
-
   it('excludes same block type', () => {
     const block = createMockBlock({
       type: 'TestBlock',
@@ -94,8 +74,8 @@ describe('findCompatibleReplacements', () => {
     });
 
     const definitions: BlockDefinition[] = [
-      createMockDefinition({ type: 'TestBlock', laneKind: 'Scalars' }),
-      createMockDefinition({ type: 'OtherBlock', laneKind: 'Scalars' }),
+      createMockDefinition({ type: 'TestBlock' }),
+      createMockDefinition({ type: 'OtherBlock' }),
     ];
 
     const compatible = findCompatibleReplacements(block, [], definitions);
@@ -112,21 +92,19 @@ describe('findCompatibleReplacements', () => {
     });
 
     const definitions: BlockDefinition[] = [
-      createMockDefinition({ type: 'Primitive', laneKind: 'Scalars' }),
+      createMockDefinition({ type: 'Primitive' }),
       createMockDefinition({
         type: 'composite:Composite',
-        laneKind: 'Scalars',
         compositeDefinition: {
           id: 'composite:Composite',
           label: 'Test Composite',
           subcategory: 'Math',
-          laneKind: 'Scalars',
           graph: { nodes: {}, edges: [], inputMap: {}, outputMap: {} },
           exposedInputs: [],
           exposedOutputs: [],
         },
       }),
-      createMockDefinition({ type: 'macro:Macro', laneKind: 'Scalars' }),
+      createMockDefinition({ type: 'macro:Macro' }),
     ];
 
     const compatible = findCompatibleReplacements(block, [], definitions);
@@ -140,7 +118,7 @@ describe('findCompatibleReplacements', () => {
     const block = createMockBlock({
       type: 'BlockWithInputs',
       inputs: [
-        { id: 'input1', label: 'In1', direction: 'input', type: 'Signal<number>' },
+        { id: 'input1', label: 'In1', direction: 'input', type: 'Signal<float>' },
         { id: 'input2', label: 'In2', direction: 'input', type: 'Signal<color>' },
       ],
     });
@@ -153,23 +131,20 @@ describe('findCompatibleReplacements', () => {
     const definitions: BlockDefinition[] = [
       createMockDefinition({
         type: 'FullMatch',
-        laneKind: 'Scalars',
         inputs: [
-          { id: 'a', label: 'A', direction: 'input', type: 'Signal<number>' },
+          { id: 'a', label: 'A', direction: 'input', type: 'Signal<float>' },
           { id: 'b', label: 'B', direction: 'input', type: 'Signal<color>' },
         ],
       }),
       createMockDefinition({
         type: 'PartialMatch',
-        laneKind: 'Scalars',
         inputs: [
-          { id: 'a', label: 'A', direction: 'input', type: 'Signal<number>' },
+          { id: 'a', label: 'A', direction: 'input', type: 'Signal<float>' },
           // Missing color input
         ],
       }),
       createMockDefinition({
         type: 'NoMatch',
-        laneKind: 'Scalars',
         inputs: [],
       }),
     ];
@@ -185,7 +160,7 @@ describe('findCompatibleReplacements', () => {
     const block = createMockBlock({
       type: 'BlockWithOutputs',
       outputs: [
-        { id: 'output1', label: 'Out1', direction: 'output', type: 'Signal<number>' },
+        { id: 'output1', label: 'Out1', direction: 'output', type: 'Signal<float>' },
         { id: 'output2', label: 'Out2', direction: 'output', type: 'Signal<Point>' },
       ],
     });
@@ -198,17 +173,15 @@ describe('findCompatibleReplacements', () => {
     const definitions: BlockDefinition[] = [
       createMockDefinition({
         type: 'FullMatch',
-        laneKind: 'Scalars',
         outputs: [
-          { id: 'a', label: 'A', direction: 'output', type: 'Signal<number>' },
+          { id: 'a', label: 'A', direction: 'output', type: 'Signal<float>' },
           { id: 'b', label: 'B', direction: 'output', type: 'Signal<Point>' },
         ],
       }),
       createMockDefinition({
         type: 'PartialMatch',
-        laneKind: 'Scalars',
         outputs: [
-          { id: 'a', label: 'A', direction: 'output', type: 'Signal<number>' },
+          { id: 'a', label: 'A', direction: 'output', type: 'Signal<float>' },
           // Missing Point output
         ],
       }),
@@ -221,23 +194,21 @@ describe('findCompatibleReplacements', () => {
     expect(compatible[0].type).toBe('FullMatch');
   });
 
-  it('handles unconnected blocks - any same-lane block valid', () => {
+  it('handles unconnected blocks', () => {
     const block = createMockBlock({
       type: 'UnconnectedBlock',
-      inputs: [{ id: 'in', label: 'In', direction: 'input', type: 'Signal<number>' }],
-      outputs: [{ id: 'out', label: 'Out', direction: 'output', type: 'Signal<number>' }],
+      inputs: [{ id: 'in', label: 'In', direction: 'input', type: 'Signal<float>' }],
+      outputs: [{ id: 'out', label: 'Out', direction: 'output', type: 'Signal<float>' }],
     });
 
     const definitions: BlockDefinition[] = [
       createMockDefinition({
         type: 'EmptyBlock',
-        laneKind: 'Scalars',
         inputs: [],
         outputs: [],
       }),
       createMockDefinition({
         type: 'DifferentSlots',
-        laneKind: 'Scalars',
         inputs: [{ id: 'x', label: 'X', direction: 'input', type: 'Signal<color>' }],
         outputs: [{ id: 'y', label: 'Y', direction: 'output', type: 'Signal<Point>' }],
       }),
@@ -245,7 +216,7 @@ describe('findCompatibleReplacements', () => {
 
     const compatible = findCompatibleReplacements(block, [], definitions);
 
-    // All same-lane blocks are valid when block has no connections
+    // All blocks are valid when block has no connections
     expect(compatible).toHaveLength(2);
     expect(compatible.map((d) => d.type).sort()).toEqual(['DifferentSlots', 'EmptyBlock']);
   });
@@ -254,7 +225,7 @@ describe('findCompatibleReplacements', () => {
     const block = createMockBlock({
       type: 'MixedBlock',
       inputs: [
-        { id: 'connectedIn', label: 'Connected', direction: 'input', type: 'Signal<number>' },
+        { id: 'connectedIn', label: 'Connected', direction: 'input', type: 'Signal<float>' },
         { id: 'unconnectedIn', label: 'Unconnected', direction: 'input', type: 'Signal<color>' },
       ],
       outputs: [
@@ -270,17 +241,15 @@ describe('findCompatibleReplacements', () => {
     const definitions: BlockDefinition[] = [
       createMockDefinition({
         type: 'Valid',
-        laneKind: 'Scalars',
         inputs: [
-          { id: 'a', label: 'A', direction: 'input', type: 'Signal<number>' },
+          { id: 'a', label: 'A', direction: 'input', type: 'Signal<float>' },
           // Doesn't need color input since it's not connected
         ],
         outputs: [{ id: 'b', label: 'B', direction: 'output', type: 'Signal<Point>' }],
       }),
       createMockDefinition({
         type: 'Invalid',
-        laneKind: 'Scalars',
-        inputs: [{ id: 'a', label: 'A', direction: 'input', type: 'Signal<number>' }],
+        inputs: [{ id: 'a', label: 'A', direction: 'input', type: 'Signal<float>' }],
         outputs: [], // Missing required Point output
       }),
     ];
@@ -302,14 +271,14 @@ describe('mapConnections', () => {
     const oldBlock = createMockBlock({
       id: 'old-block',
       inputs: [
-        { id: 'oldInput1', label: 'In1', direction: 'input', type: 'Signal<number>' },
+        { id: 'oldInput1', label: 'In1', direction: 'input', type: 'Signal<float>' },
         { id: 'oldInput2', label: 'In2', direction: 'input', type: 'Signal<color>' },
       ],
     });
 
     const newDef = createMockDefinition({
       inputs: [
-        { id: 'newInput1', label: 'New In1', direction: 'input', type: 'Signal<number>' },
+        { id: 'newInput1', label: 'New In1', direction: 'input', type: 'Signal<float>' },
         { id: 'newInput2', label: 'New In2', direction: 'input', type: 'Signal<color>' },
       ],
     });
@@ -333,14 +302,14 @@ describe('mapConnections', () => {
     const oldBlock = createMockBlock({
       id: 'old-block',
       outputs: [
-        { id: 'oldOutput1', label: 'Out1', direction: 'output', type: 'Signal<number>' },
+        { id: 'oldOutput1', label: 'Out1', direction: 'output', type: 'Signal<float>' },
         { id: 'oldOutput2', label: 'Out2', direction: 'output', type: 'Signal<Point>' },
       ],
     });
 
     const newDef = createMockDefinition({
       outputs: [
-        { id: 'newOutput1', label: 'New Out1', direction: 'output', type: 'Signal<number>' },
+        { id: 'newOutput1', label: 'New Out1', direction: 'output', type: 'Signal<float>' },
         { id: 'newOutput2', label: 'New Out2', direction: 'output', type: 'Signal<Point>' },
       ],
     });
@@ -364,15 +333,15 @@ describe('mapConnections', () => {
     const oldBlock = createMockBlock({
       id: 'old-block',
       inputs: [
-        { id: 'input1', label: 'In1', direction: 'input', type: 'Signal<number>' },
-        { id: 'input2', label: 'In2', direction: 'input', type: 'Signal<number>' },
+        { id: 'input1', label: 'In1', direction: 'input', type: 'Signal<float>' },
+        { id: 'input2', label: 'In2', direction: 'input', type: 'Signal<float>' },
       ],
     });
 
     const newDef = createMockDefinition({
       inputs: [
         // Only one input slot of matching type
-        { id: 'singleInput', label: 'Single In', direction: 'input', type: 'Signal<number>' },
+        { id: 'singleInput', label: 'Single In', direction: 'input', type: 'Signal<float>' },
       ],
     });
 
@@ -395,7 +364,7 @@ describe('mapConnections', () => {
     const oldBlock = createMockBlock({
       id: 'old-block',
       inputs: [
-        { id: 'numberInput', label: 'Number', direction: 'input', type: 'Signal<number>' },
+        { id: 'numberInput', label: 'Number', direction: 'input', type: 'Signal<float>' },
         { id: 'colorInput', label: 'Color', direction: 'input', type: 'Signal<color>' },
       ],
     });
@@ -403,7 +372,7 @@ describe('mapConnections', () => {
     const newDef = createMockDefinition({
       inputs: [
         // Only has number input, missing color
-        { id: 'newInput', label: 'New In', direction: 'input', type: 'Signal<number>' },
+        { id: 'newInput', label: 'New In', direction: 'input', type: 'Signal<float>' },
       ],
     });
 
@@ -425,7 +394,7 @@ describe('mapConnections', () => {
     const oldBlock = createMockBlock({
       id: 'old-block',
       outputs: [
-        { id: 'numberOutput', label: 'Number', direction: 'output', type: 'Signal<number>' },
+        { id: 'numberOutput', label: 'Number', direction: 'output', type: 'Signal<float>' },
         { id: 'pointOutput', label: 'Point', direction: 'output', type: 'Signal<Point>' },
       ],
     });
@@ -433,7 +402,7 @@ describe('mapConnections', () => {
     const newDef = createMockDefinition({
       outputs: [
         // Only has number output, missing Point
-        { id: 'newOutput', label: 'New Out', direction: 'output', type: 'Signal<number>' },
+        { id: 'newOutput', label: 'New Out', direction: 'output', type: 'Signal<float>' },
       ],
     });
 
@@ -454,13 +423,13 @@ describe('mapConnections', () => {
   it('handles connections to/from other blocks correctly', () => {
     const oldBlock = createMockBlock({
       id: 'old-block',
-      inputs: [{ id: 'in', label: 'In', direction: 'input', type: 'Signal<number>' }],
-      outputs: [{ id: 'out', label: 'Out', direction: 'output', type: 'Signal<number>' }],
+      inputs: [{ id: 'in', label: 'In', direction: 'input', type: 'Signal<float>' }],
+      outputs: [{ id: 'out', label: 'Out', direction: 'output', type: 'Signal<float>' }],
     });
 
     const newDef = createMockDefinition({
-      inputs: [{ id: 'newIn', label: 'New In', direction: 'input', type: 'Signal<number>' }],
-      outputs: [{ id: 'newOut', label: 'New Out', direction: 'output', type: 'Signal<number>' }],
+      inputs: [{ id: 'newIn', label: 'New In', direction: 'input', type: 'Signal<float>' }],
+      outputs: [{ id: 'newOut', label: 'New Out', direction: 'output', type: 'Signal<float>' }],
     });
 
     const connections: Connection[] = [
@@ -489,11 +458,11 @@ describe('mapConnections', () => {
 
   it('handles empty connections array', () => {
     const oldBlock = createMockBlock({
-      inputs: [{ id: 'in', label: 'In', direction: 'input', type: 'Signal<number>' }],
+      inputs: [{ id: 'in', label: 'In', direction: 'input', type: 'Signal<float>' }],
     });
 
     const newDef = createMockDefinition({
-      inputs: [{ id: 'in', label: 'In', direction: 'input', type: 'Signal<number>' }],
+      inputs: [{ id: 'in', label: 'In', direction: 'input', type: 'Signal<float>' }],
     });
 
     const result = mapConnections(oldBlock, newDef, []);

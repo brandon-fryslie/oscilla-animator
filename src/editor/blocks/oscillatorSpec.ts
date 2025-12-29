@@ -23,7 +23,6 @@ export const Oscillator: BlockDefinition = createBlock({
   })),
   outputs: OSCILLATOR_OUTPUT_SPECS.map((spec) => output(spec.id, spec.label, spec.slotType)),
   color: '#3B82F6',
-  laneKind: 'Phase',
   priority: 10,
   autoBusSubscriptions: {
     phase: 'phaseA',

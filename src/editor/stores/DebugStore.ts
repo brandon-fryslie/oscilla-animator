@@ -192,7 +192,7 @@ export class DebugStore {
         this.addProbe(
           { kind: 'block', blockId },
           (block.label !== undefined && block.label.length > 0) ? block.label : block.type,
-          'Signal:number', // Will be refined when we sample
+          'Signal:float', // Will be refined when we sample
           block.type
         );
         // Immediately inspect
@@ -927,7 +927,6 @@ export class DebugStore {
         patchStore: store?.patchStore,
         busStore: store?.busStore,
         uiStore: store?.uiStore,
-        viewStore: store?.viewStore,
         debugStore: this,
         probes: this.probes,
       };
@@ -1086,7 +1085,7 @@ export class DebugStore {
       signal?: number;
       phase?: number;
       domainCount?: number;
-      fieldSample?: number[];
+      fieldSample?: float[];
     };
     timestamp: number;
   }): void {
@@ -1099,7 +1098,7 @@ export class DebugStore {
         id: probeId,
         target: { kind: 'block', blockId: entry.id },
         label: entry.label,
-        artifactKind: entry.values.phase !== undefined ? 'Signal:phase' : 'Signal:number',
+        artifactKind: entry.values.phase !== undefined ? 'Signal:phase' : 'Signal:float',
         blockType: undefined,
         currentSample: undefined,
         history: [],

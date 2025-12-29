@@ -31,7 +31,7 @@ export function HelpModal({ topic, onClose }: HelpModalProps): React.ReactElemen
             body: (
               <ul>
                 <li>On the left, the Library holds Sources, Fields, Time, Compose, Render, and ✨ Macros.</li>
-                <li>Drag blocks into lanes in the Patch to start building an animation.</li>
+                <li>Drag blocks into the Patch to start building an animation.</li>
                 <li>Start with a macro, then tweak or replace its pieces as you learn.</li>
               </ul>
             ),
@@ -40,7 +40,7 @@ export function HelpModal({ topic, onClose }: HelpModalProps): React.ReactElemen
             title: 'Patch: the animation graph',
             body: (
               <ul>
-                <li>The center lanes show how data flows: Scene → Phase → Fields → Spec → Program.</li>
+                <li>The patch view shows how data flows from sources to outputs.</li>
                 <li>Connect outputs to inputs to move scenes, fields, and signals through the graph.</li>
                 <li>Think of it as a visual program where wires show the "why" behind the motion.</li>
               </ul>
@@ -61,7 +61,7 @@ export function HelpModal({ topic, onClose }: HelpModalProps): React.ReactElemen
             body: (
               <ul>
                 <li>Open the <strong>Demos</strong> menu (top center) and load <em>Full Pipeline</em> or <em>Particles</em>.</li>
-                <li>Watch how blocks land in lanes, then tweak parameters in the Inspector.</li>
+                <li>Watch how blocks land in the patch, then tweak parameters in the Inspector.</li>
                 <li>Change the <strong>seed</strong> and <strong>speed</strong> in the Preview to explore variations.</li>
               </ul>
             ),
@@ -78,8 +78,8 @@ export function HelpModal({ topic, onClose }: HelpModalProps): React.ReactElemen
                     define timing, compose motion, or render output.
                   </p>
                   <ul>
-                    <li>Drag blocks from the Library into lanes in the Patch.</li>
-                    <li>Use the lane filter and categories to find Sources, Fields, Time, Compose, Render, and Macros.</li>
+                    <li>Drag blocks from the Library into the Patch.</li>
+                    <li>Use categories to find Sources, Fields, Time, Compose, Render, and Macros.</li>
                     <li>Try dropping a ✨ macro first, then tweak or replace its pieces.</li>
                   </ul>
                 </>
@@ -133,9 +133,9 @@ export function HelpModal({ topic, onClose }: HelpModalProps): React.ReactElemen
                           The Patch is where you connect blocks into a graph. Lanes organize blocks by role: Scene, Phase, Fields, Spec, Program, Output.
                         </p>
                         <ul>
-                          <li>Drag from the Library into lanes; wires flow left-to-right.</li>
+                          <li>Drag from the Library into the Patch; wires flow left-to-right.</li>
                           <li>Connect outputs to inputs to move data between blocks.</li>
-                          <li>Use lane descriptions and type hints to keep structure clear.</li>
+                          <li>Use type hints to keep structure clear.</li>
                         </ul>
                       </>
                     ),

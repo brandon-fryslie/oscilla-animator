@@ -80,7 +80,7 @@ export const ProbeCard = observer(function ProbeCard({ target, position }: Probe
 
           {busValue !== undefined && busValue !== null && (
             <div className="probe-card-meter">
-              <BusValueMeter value={busValue} busType={bus.type?.domain ?? 'number'} />
+              <BusValueMeter value={busValue} busType={bus.type?.domain ?? 'float'} />
             </div>
           )}
 

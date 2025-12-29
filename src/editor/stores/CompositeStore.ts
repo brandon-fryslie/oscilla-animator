@@ -3,7 +3,7 @@
  * @description Manages saved block groups (composites).
  */
 import { makeObservable, observable, action } from 'mobx';
-import type { BlockId, Composite, LaneId } from '../types';
+import type { BlockId, Composite } from '../types';
 import type { RootStore } from './RootStore';
 
 /**
@@ -107,15 +107,10 @@ export class CompositeStore {
     this.composites = this.composites.filter((c) => c.id !== id);
   }
 
-  instantiateComposite(compositeId: string, laneId: LaneId, _position: { x: number; y: number }): void {
+  instantiateComposite(compositeId: string, _position: { x: number; y: number }): void {
     const composite = this.composites.find((c) => c.id === compositeId);
     if (composite === undefined) {
       throw new Error(`Composite "${compositeId}" not found`);
-    }
-
-    const lane = this.root.viewStore.lanes.find((l) => l.id === laneId);
-    if (lane === undefined) {
-      throw new Error(`Lane "${laneId}" not found for composite instantiation`);
     }
 
     // Create new blocks with updated IDs
@@ -124,9 +119,6 @@ export class CompositeStore {
       // Use addBlock to ensure proper initialization and event emission
       const newId = this.root.patchStore.addBlock(block.type, block.params);
       idMap.set(block.id, newId);
-
-      // Move to the target lane
-      this.root.viewStore.moveBlockToLane(newId, laneId);
     }
 
     // Create new connections with updated IDs

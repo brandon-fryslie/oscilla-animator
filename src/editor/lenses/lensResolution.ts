@@ -43,7 +43,7 @@ export function resolveLensParam(binding: LensParamBinding, ctx: ParamResolution
     }
     case 'literal': {
       // Literal bindings store the value directly
-      return { kind: 'Scalar:number', value: binding.value as number };
+      return { kind: 'Scalar:float', value: binding.value as number };
     }
   }
 }
@@ -51,7 +51,8 @@ export function resolveLensParam(binding: LensParamBinding, ctx: ParamResolution
 function artifactFromDefaultSource(source: DefaultSourceState): Artifact {
   const { type, value } = source;
   if (type.world === 'scalar') {
-    if (type.domain === 'number') return { kind: 'Scalar:number', value: value as number };
+    if (type.domain === 'float') return { kind: 'Scalar:float', value: value as number };
+    if (type.domain === 'int') return { kind: 'Scalar:int', value: value as number };
     if (type.domain === 'boolean') return { kind: 'Scalar:boolean', value: value as boolean };
     if (type.domain === 'vec2') return { kind: 'Scalar:vec2', value: value as Vec2 };
     if (type.domain === 'color') return { kind: 'Scalar:color', value };
@@ -59,8 +60,11 @@ function artifactFromDefaultSource(source: DefaultSourceState): Artifact {
   }
 
   if (type.world === 'signal') {
-    if (type.domain === 'number') {
-      return { kind: 'Signal:number', value: () => value as number };
+    if (type.domain === 'float') {
+      return { kind: 'Signal:float', value: () => value as number };
+    }
+    if (type.domain === 'int') {
+      return { kind: 'Signal:int', value: () => value as number };
     }
     if (type.domain === 'vec2') {
       return { kind: 'Signal:vec2', value: () => value as Vec2 };
@@ -69,7 +73,7 @@ function artifactFromDefaultSource(source: DefaultSourceState): Artifact {
       return { kind: 'Signal:color', value: () => value as string };
     }
     if (type.domain === 'boolean') {
-      return { kind: 'Signal:number', value: () => ((value as number !== 0) ? 1 : 0) };
+      return { kind: 'Signal:float', value: () => ((value as number !== 0) ? 1 : 0) };
     }
     if (type.domain === 'phase') {
       return { kind: 'Signal:phase', value: () => value as number };

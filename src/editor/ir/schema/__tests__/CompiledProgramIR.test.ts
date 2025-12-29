@@ -82,14 +82,14 @@ describe('CompiledProgramIR Schema', () => {
         inputs: [
           {
             name: 'phase',
-            type: { world: 'signal', domain: 'phase' },
+            type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
             source: { kind: 'slot', slot: valueSlot(0) },
           },
         ],
         outputs: [
           {
             name: 'out',
-            type: { world: 'signal', domain: 'number' },
+            type: { world: 'signal', domain: 'float' },
             slot: valueSlot(1),
           },
         ],
@@ -110,7 +110,7 @@ describe('CompiledProgramIR Schema', () => {
         outputs: [
           {
             name: 'phase',
-            type: { world: 'signal', domain: 'phase' },
+            type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
             slot: valueSlot(0),
           },
         ],
@@ -129,21 +129,21 @@ describe('CompiledProgramIR Schema', () => {
         inputs: [
           {
             name: 'input',
-            type: { world: 'signal', domain: 'number' },
+            type: { world: 'signal', domain: 'float' },
             source: { kind: 'slot', slot: valueSlot(0) },
           },
         ],
         outputs: [
           {
             name: 'out',
-            type: { world: 'signal', domain: 'number' },
+            type: { world: 'signal', domain: 'float' },
             slot: valueSlot(1),
           },
         ],
         state: [
           {
             stateId: stateId('int-state'),
-            type: { world: 'signal', domain: 'number' },
+            type: { world: 'signal', domain: 'float' },
             policy: 'frame',
           },
         ],
@@ -186,7 +186,7 @@ describe('CompiledProgramIR Schema', () => {
       const bus: BusIR = {
         id: busId('phaseA'),
         index: busIndex(0),
-        type: { world: 'signal', domain: 'phase' },
+        type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
         combineMode: 'last',
         publishers: [
           {
@@ -208,7 +208,7 @@ describe('CompiledProgramIR Schema', () => {
       const bus: BusIR = {
         id: busId('energy'),
         index: busIndex(1),
-        type: { world: 'signal', domain: 'number' },
+        type: { world: 'signal', domain: 'float' },
         combineMode: 'sum',
         publishers: [
           { sourceSlot: valueSlot(10), sortKey: 0, enabled: true },

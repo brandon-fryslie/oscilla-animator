@@ -44,7 +44,7 @@ describe("Pass 7: Bus Lowering", () => {
   describe("Empty buses", () => {
     it("should create constant signal for signal bus with no publishers", () => {
       const unlinked = createUnlinkedFragments();
-      const buses: Bus[] = [createBus("bus1", "signal", "number", "last", 42)];
+      const buses: Bus[] = [createBus("bus1", "signal", "float", "last", 42)];
       const publishers: Publisher[] = [];
 
       const result = pass7BusLowering(unlinked, buses, publishers, []);
@@ -57,7 +57,7 @@ describe("Pass 7: Bus Lowering", () => {
 
     it("should create constant field for field bus with no publishers", () => {
       const unlinked = createUnlinkedFragments();
-      const buses: Bus[] = [createBus("bus1", "field", "number", "sum", 10)];
+      const buses: Bus[] = [createBus("bus1", "field", "float", "sum", 10)];
       const publishers: Publisher[] = [];
 
       const result = pass7BusLowering(unlinked, buses, publishers, []);
@@ -72,7 +72,7 @@ describe("Pass 7: Bus Lowering", () => {
   describe("Combine modes", () => {
     it("should support 'sum' combine mode for signal buses", () => {
       const unlinked = createUnlinkedFragments();
-      const buses: Bus[] = [createBus("bus1", "signal", "number", "sum", 0)];
+      const buses: Bus[] = [createBus("bus1", "signal", "float", "sum", 0)];
 
       const result = pass7BusLowering(unlinked, buses, [], []);
 
@@ -82,7 +82,7 @@ describe("Pass 7: Bus Lowering", () => {
 
     it("should support 'last' combine mode for signal buses", () => {
       const unlinked = createUnlinkedFragments();
-      const buses: Bus[] = [createBus("bus1", "signal", "number", "last", 0)];
+      const buses: Bus[] = [createBus("bus1", "signal", "float", "last", 0)];
 
       const result = pass7BusLowering(unlinked, buses, [], []);
 
@@ -92,7 +92,7 @@ describe("Pass 7: Bus Lowering", () => {
 
     it("should support 'average' combine mode for field buses", () => {
       const unlinked = createUnlinkedFragments();
-      const buses: Bus[] = [createBus("bus1", "field", "number", "average", 0)];
+      const buses: Bus[] = [createBus("bus1", "field", "float", "average", 0)];
 
       const result = pass7BusLowering(unlinked, buses, [], []);
 
@@ -102,7 +102,7 @@ describe("Pass 7: Bus Lowering", () => {
 
     it("should support 'max' combine mode for field buses", () => {
       const unlinked = createUnlinkedFragments();
-      const buses: Bus[] = [createBus("bus1", "field", "number", "max", 0)];
+      const buses: Bus[] = [createBus("bus1", "field", "float", "max", 0)];
 
       const result = pass7BusLowering(unlinked, buses, [], []);
 
@@ -112,7 +112,7 @@ describe("Pass 7: Bus Lowering", () => {
 
     it("should support 'min' combine mode for field buses", () => {
       const unlinked = createUnlinkedFragments();
-      const buses: Bus[] = [createBus("bus1", "field", "number", "min", 0)];
+      const buses: Bus[] = [createBus("bus1", "field", "float", "min", 0)];
 
       const result = pass7BusLowering(unlinked, buses, [], []);
 
@@ -136,8 +136,8 @@ describe("Pass 7: Bus Lowering", () => {
       const unlinked = createUnlinkedFragments();
 
       const buses: Bus[] = [
-        createBus("bus1", "signal", "number", "sum", 1),
-        createBus("bus2", "signal", "number", "last", 2),
+        createBus("bus1", "signal", "float", "sum", 1),
+        createBus("bus2", "signal", "float", "last", 2),
       ];
 
       const result = pass7BusLowering(unlinked, buses, [], []);
@@ -152,7 +152,7 @@ describe("Pass 7: Bus Lowering", () => {
       const unlinked = createUnlinkedFragments();
 
       const buses: Bus[] = [
-        createBus("sig_bus", "signal", "number", "sum", 0),
+        createBus("sig_bus", "signal", "float", "sum", 0),
         createBus("field_bus", "field", "vec2", "average", { x: 0, y: 0 }),
       ];
 

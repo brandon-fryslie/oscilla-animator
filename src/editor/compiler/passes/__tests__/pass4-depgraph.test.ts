@@ -115,7 +115,7 @@ function createBus(id: string, name: string): Bus {
     name,
     type: {
       world: "signal",
-      domain: "number",
+      domain: "float",
       category: "core",
       busEligible: true,
     },

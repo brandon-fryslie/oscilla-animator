@@ -66,7 +66,7 @@ const lowerFieldZipNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
   const op = configObj?.op ?? 'add';
   const opcode = getOpCode(op);
 
-  const outType = { world: 'field' as const, domain: 'number' as const };
+  const outType = { world: 'field' as const, domain: 'float' as const };
   const fieldId = ctx.b.fieldZip(a.id, b.id, {
     kind: 'opcode',
     opcode,
@@ -81,11 +81,11 @@ registerBlockType({
   type: 'FieldZipNumber',
   capability: 'pure',
   inputs: [
-    { portId: 'a', label: 'A', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
-    { portId: 'b', label: 'B', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'a', label: 'A', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'number' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'float' } },
   ],
   lower: lowerFieldZipNumber,
 });
@@ -98,32 +98,32 @@ export const FieldZipNumberBlock: BlockCompiler = {
   type: 'FieldZipNumber',
 
   inputs: [
-    { name: 'a', type: { kind: 'Field:number' }, required: true },
-    { name: 'b', type: { kind: 'Field:number' }, required: true },
+    { name: 'a', type: { kind: 'Field:float' }, required: true },
+    { name: 'b', type: { kind: 'Field:float' }, required: true },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Field:number' } },
+    { name: 'out', type: { kind: 'Field:float' } },
   ],
 
   compile({ params, inputs }) {
     const fieldA = inputs.a;
     const fieldB = inputs.b;
 
-    if (!isDefined(fieldA) || fieldA.kind !== 'Field:number') {
+    if (!isDefined(fieldA) || fieldA.kind !== 'Field:float') {
       return {
         out: {
           kind: 'Error',
-          message: 'FieldZipNumber requires a Field<number> for input A',
+          message: 'FieldZipNumber requires a Field<float> for input A',
         },
       };
     }
 
-    if (!isDefined(fieldB) || fieldB.kind !== 'Field:number') {
+    if (!isDefined(fieldB) || fieldB.kind !== 'Field:float') {
       return {
         out: {
           kind: 'Error',
-          message: 'FieldZipNumber requires a Field<number> for input B',
+          message: 'FieldZipNumber requires a Field<float> for input B',
         },
       };
     }
@@ -135,7 +135,7 @@ export const FieldZipNumberBlock: BlockCompiler = {
     const zipOp = getZipOperation(op);
 
     // Create zipped field
-    const field: Field<number> = (seed, n, ctx) => {
+    const field: Field<float> = (seed, n, ctx) => {
       const valuesA = fieldAFn(seed, n, ctx);
       const valuesB = fieldBFn(seed, n, ctx);
       const count = Math.min(valuesA.length, valuesB.length);
@@ -149,7 +149,7 @@ export const FieldZipNumberBlock: BlockCompiler = {
     };
 
     return {
-      out: { kind: 'Field:number', value: field },
+      out: { kind: 'Field:float', value: field },
     };
   },
 };

@@ -69,8 +69,6 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
       : `Composite: ${def.label}`,
     color: def.color ?? '#666666',
     subcategory: def.subcategory,
-    laneKind: def.laneKind,
-    laneFlavor: def.laneFlavor,
     // Note: form is derived from compositeDefinition via getBlockForm()
     inputs,
     outputs,
@@ -80,7 +78,6 @@ export function compositeToBlockDefinition(def: CompositeDefinition): BlockDefin
     tags: {
       ...def.tags,
       subcategory: def.subcategory,
-      laneKind: def.laneKind,
       origin: 'composite',
     } as BlockTags,
     // Store the composite definition for compiler integration

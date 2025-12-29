@@ -168,7 +168,7 @@ describe('instrumentClosure', () => {
       const wrapped = wrapFieldForDebug(
         original,
         'field:test',
-        'number',
+        'float',
         debugIndex,
         spanRing,
         valueRing,
@@ -188,7 +188,7 @@ describe('instrumentClosure', () => {
       const wrapped = wrapFieldForDebug(
         original,
         'field:test',
-        'number',
+        'float',
         debugIndex,
         spanRing,
         valueRing,
@@ -213,7 +213,7 @@ describe('instrumentClosure', () => {
       const wrapped = wrapFieldForDebug(
         original,
         'field:test',
-        'number',
+        'float',
         debugIndex,
         spanRing,
         valueRing,
@@ -240,7 +240,7 @@ describe('instrumentClosure', () => {
       const wrapped = wrapFieldForDebug(
         original,
         'field:test',
-        'number',
+        'float',
         debugIndex,
         spanRing,
         valueRing,
@@ -260,7 +260,7 @@ describe('instrumentClosure', () => {
       const wrapped = wrapFieldForDebug(
         original,
         'field:test',
-        'number',
+        'float',
         debugIndex,
         spanRing,
         valueRing,
@@ -384,7 +384,7 @@ describe('instrumentClosure', () => {
       const wrappedField = wrapFieldForDebug(
         field,
         'field:test',
-        'number',
+        'float',
         debugIndex,
         spanRing,
         valueRing,

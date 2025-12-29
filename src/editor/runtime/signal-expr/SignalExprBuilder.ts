@@ -141,7 +141,7 @@ class SignalExprBuilderImpl implements SignalExprBuilder {
   // Standard number type for signals
   private readonly numberType: TypeDesc = {
     world: "signal",
-    domain: "number",
+    domain: "float",
   };
 
   sigConst(value: number): SigExprId {

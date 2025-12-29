@@ -19,7 +19,7 @@
 import { runInAction } from 'mobx';
 import type { Op, TableName, Entity } from './ops';
 import type { RootStore } from '../stores/RootStore';
-import type { Block, Connection, Bus, Publisher, Listener, Lane, Composite, DefaultSourceState } from '../types';
+import type { Block, Connection, Bus, Publisher, Listener, Composite, DefaultSourceState } from '../types';
 
 /**
  * Apply a sequence of ops to the store.
@@ -103,9 +103,6 @@ function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
     case 'listeners':
       store.busStore.listeners.push(entity as Listener);
       break;
-    case 'lanes':
-      store.viewStore.lanes.push(entity as Lane);
-      break;
     case 'composites':
       store.compositeStore.composites.push(entity as Composite);
       break;
@@ -138,9 +135,6 @@ function applyRemove(table: TableName, id: string, store: RootStore): void {
       break;
     case 'listeners':
       store.busStore.listeners = store.busStore.listeners.filter(l => l.id !== id);
-      break;
-    case 'lanes':
-      store.viewStore.lanes = store.viewStore.lanes.filter(l => l.id !== id);
       break;
     case 'composites':
       store.compositeStore.composites = store.compositeStore.composites.filter(c => c.id !== id);
@@ -193,13 +187,6 @@ function applyUpdate(table: TableName, id: string, next: Entity, store: RootStor
       const listener = store.busStore.listeners.find(l => l.id === id);
       if (listener) {
         Object.assign(listener, next);
-      }
-      break;
-    }
-    case 'lanes': {
-      const lane = store.viewStore.lanes.find(l => l.id === id);
-      if (lane) {
-        Object.assign(lane, next);
       }
       break;
     }

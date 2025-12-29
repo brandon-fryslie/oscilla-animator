@@ -26,7 +26,7 @@ function createBlock(
       id: name,
       name,
       label: name,
-      type: "Signal<number>" as SlotType,
+      type: "Signal<float>" as SlotType,
       direction: "output" as const,
     })),
     params: {},
@@ -60,12 +60,12 @@ function createGraph(
 
 describe("pass6BlockLowering", () => {
   describe("Scalar Artifacts", () => {
-    it("translates Scalar:number to constant signal", () => {
+    it("translates Scalar:float to constant signal", () => {
       const block = createBlock("b1", "Constant");
       const { validated, blocks } = createGraph([block], [createTrivialSCC(0)]);
 
       const compiledPortMap = new Map<string, Artifact>([
-        ["b1:out", { kind: "Scalar:number", value: 42 }],
+        ["b1:out", { kind: "Scalar:float", value: 42 }],
       ]);
 
       const result = pass6BlockLowering(validated, blocks, compiledPortMap);
@@ -113,7 +113,7 @@ describe("pass6BlockLowering", () => {
   });
 
   describe("Signal Artifacts", () => {
-    it("translates Signal:number to placeholder signal", () => {
+    it("translates Signal:float to placeholder signal", () => {
       const block = createBlock("b1", "Oscillator");
       const { validated, blocks } = createGraph([block], [createTrivialSCC(0)]);
 
@@ -121,7 +121,7 @@ describe("pass6BlockLowering", () => {
         [
           "b1:out",
           {
-            kind: "Signal:number",
+            kind: "Signal:float",
             value: (_t: number, _ctx: RuntimeCtx) => Math.sin(_t / 1000),
           },
         ],
@@ -182,15 +182,15 @@ describe("pass6BlockLowering", () => {
   });
 
   describe("Field Artifacts", () => {
-    it("translates Field:number to placeholder field", () => {
+    it("translates Field:float to placeholder field", () => {
       const block = createBlock("b1", "FieldMap");
       const { validated, blocks } = createGraph([block], [createTrivialSCC(0)]);
 
       // Create a minimal Field-like structure (use unknown cast to bypass type checks)
-      const mockField = { n: 10 } as unknown as Field<number>;
+      const mockField = { n: 10 } as unknown as Field<float>;
 
       const compiledPortMap = new Map<string, Artifact>([
-        ["b1:out", { kind: "Field:number", value: mockField }],
+        ["b1:out", { kind: "Field:float", value: mockField }],
       ]);
 
       const result = pass6BlockLowering(validated, blocks, compiledPortMap);
@@ -257,9 +257,9 @@ describe("pass6BlockLowering", () => {
       const { validated, blocks } = createGraph([block], [createTrivialSCC(0)]);
 
       const compiledPortMap = new Map<string, Artifact>([
-        ["b1:out1", { kind: "Scalar:number", value: 1 }],
-        ["b1:out2", { kind: "Scalar:number", value: 2 }],
-        ["b1:out3", { kind: "Scalar:number", value: 3 }],
+        ["b1:out1", { kind: "Scalar:float", value: 1 }],
+        ["b1:out2", { kind: "Scalar:float", value: 2 }],
+        ["b1:out3", { kind: "Scalar:float", value: 3 }],
       ]);
 
       const result = pass6BlockLowering(validated, blocks, compiledPortMap);
@@ -313,11 +313,11 @@ describe("pass6BlockLowering", () => {
       );
 
       const compiledPortMap = new Map<string, Artifact>([
-        ["b1:out", { kind: "Scalar:number", value: 42 }],
+        ["b1:out", { kind: "Scalar:float", value: 42 }],
         [
           "b2:out",
           {
-            kind: "Signal:number",
+            kind: "Signal:float",
             value: (_t: number, _ctx: RuntimeCtx) => _t,
           },
         ],
@@ -333,7 +333,7 @@ describe("pass6BlockLowering", () => {
 
       // Original compiledPortMap is unchanged
       expect(compiledPortMap.get("b1:out")).toEqual({
-        kind: "Scalar:number",
+        kind: "Scalar:float",
         value: 42,
       });
     });

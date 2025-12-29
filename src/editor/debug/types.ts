@@ -47,7 +47,7 @@ export function summarize(kind: string, value: unknown): ValueSummary {
   }
 
   // Number signals
-  if (kind === 'Signal:number' || kind === 'Signal:Time') {
+  if (kind === 'Signal:float' || kind === 'Signal:Time') {
     const num = typeof value === 'number' ? value : 0;
     if (Number.isNaN(num)) return { t: 'err', code: 'nan' };
     if (!Number.isFinite(num)) return { t: 'err', code: 'inf' };

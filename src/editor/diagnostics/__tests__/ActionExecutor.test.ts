@@ -7,9 +7,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ActionExecutor } from '../ActionExecutor';
 import type { PatchStore } from '../../stores/PatchStore';
 import type { UIStateStore } from '../../stores/UIStateStore';
-import type { ViewStateStore } from '../../stores/ViewStateStore';
 import type { DiagnosticHub } from '../DiagnosticHub';
-import type { BlockId, LaneId, Block, Connection } from '../../types';
+import type { BlockId, Block, Connection } from '../../types';
 
 // Mock stores
 const createMockPatchStore = (): Partial<PatchStore> => {
@@ -29,15 +28,6 @@ const createMockPatchStore = (): Partial<PatchStore> => {
 };
 
 
-const createMockViewStore = (): Partial<ViewStateStore> => ({
-  lanes: [
-    { id: 'phase' as LaneId, kind: 'Phase', blockIds: [], label: 'Phase', description: '', flavor: 'General', flowStyle: 'patchbay', collapsed: false, pinned: false },
-    { id: 'fields' as LaneId, kind: 'Fields', blockIds: [], label: 'Fields', description: '', flavor: 'General', flowStyle: 'patchbay', collapsed: false, pinned: false },
-  ],
-  moveBlockToLane: vi.fn(),
-  reorderBlockInLane: vi.fn(),
-});
-
 const createMockUIStateStore = (): Partial<UIStateStore> => ({
   selectBlock: vi.fn(),
   selectBus: vi.fn(),
@@ -50,20 +40,17 @@ const createMockDiagnosticHub = (): Partial<DiagnosticHub> => ({
 describe('ActionExecutor', () => {
   let actionExecutor: ActionExecutor;
   let mockPatchStore: Partial<PatchStore>;
-  let mockViewStore: Partial<ViewStateStore>;
   let mockUIStateStore: Partial<UIStateStore>;
   let mockDiagnosticHub: Partial<DiagnosticHub>;
 
   beforeEach(() => {
     mockPatchStore = createMockPatchStore();
-    mockViewStore = createMockViewStore();
     mockUIStateStore = createMockUIStateStore();
     mockDiagnosticHub = createMockDiagnosticHub();
 
     actionExecutor = new ActionExecutor(
       mockPatchStore as PatchStore,
       mockUIStateStore as UIStateStore,
-      mockViewStore as ViewStateStore,
       mockDiagnosticHub as DiagnosticHub
     );
   });
@@ -131,7 +118,7 @@ describe('ActionExecutor', () => {
   });
 
   describe('insertBlock', () => {
-    it('should add a block to the first lane when no nearBlockId specified', () => {
+    it('should add a block when no nearBlockId specified', () => {
       const result = actionExecutor.execute({
         kind: 'insertBlock',
         blockType: 'SineWave',
@@ -142,9 +129,6 @@ describe('ActionExecutor', () => {
     });
 
     it('should add a block near an existing block', () => {
-      // Set up mock blocks in lane
-      mockViewStore.lanes![0].blockIds = ['block-1' as BlockId, 'block-2' as BlockId];
-
       const result = actionExecutor.execute({
         kind: 'insertBlock',
         blockType: 'SineWave',
@@ -273,7 +257,7 @@ describe('ActionExecutor', () => {
         type: 'Oscillator',
         label: 'Source',
         inputs: [],
-        outputs: [{ id: 'out', label: 'Output', type: 'Signal<number>', direction: 'output' }],
+        outputs: [{ id: 'out', label: 'Output', type: 'Signal<float>', direction: 'output' }],
         params: {},
         category: 'Time',
         description: 'Source block',
@@ -283,7 +267,7 @@ describe('ActionExecutor', () => {
         id: 'target-block' as BlockId,
         type: 'ClampSignal',
         label: 'Target',
-        inputs: [{ id: 'in', label: 'Input', type: 'Signal<number>', direction: 'input' }],
+        inputs: [{ id: 'in', label: 'Input', type: 'Signal<float>', direction: 'input' }],
         outputs: [],
         params: {},
         category: 'Math',
@@ -294,8 +278,8 @@ describe('ActionExecutor', () => {
         id: 'adapter-block' as BlockId,
         type: 'ClampSignal',
         label: 'Clamp',
-        inputs: [{ id: 'in', label: 'Input', type: 'Signal<number>', direction: 'input' }],
-        outputs: [{ id: 'out', label: 'Output', type: 'Signal<number>', direction: 'output' }],
+        inputs: [{ id: 'in', label: 'Input', type: 'Signal<float>', direction: 'input' }],
+        outputs: [{ id: 'out', label: 'Output', type: 'Signal<float>', direction: 'output' }],
         params: {},
         category: 'Math',
         description: 'Adapter block',
@@ -309,13 +293,10 @@ describe('ActionExecutor', () => {
 
       mockPatchStore.blocks = [sourceBlock, targetBlock];
       mockPatchStore.connections = [connection];
-      mockViewStore.lanes![0].blockIds = ['source-block' as BlockId, 'target-block' as BlockId];
-
       // Mock addBlock to return adapter and add it to blocks
-      (mockPatchStore.addBlock as ReturnType<typeof vi.fn>) = vi.fn((_adapterType: string, laneId: LaneId) => {
+      (mockPatchStore.addBlock as ReturnType<typeof vi.fn>) = vi.fn((_adapterType: string) => {
         const adapterId = 'adapter-block' as BlockId;
         mockPatchStore.blocks!.push(adapterBlock);
-        mockViewStore.lanes!.find(l => l.id === laneId)?.blockIds.push(adapterId);
         return adapterId;
       });
     });
@@ -365,45 +346,23 @@ describe('ActionExecutor', () => {
       consoleWarnSpy.mockRestore();
     });
 
-    it('should return false if lane not found', () => {
-      // Remove all lanes
-      mockViewStore.lanes = [];
-
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const result = actionExecutor.execute({
-        kind: 'addAdapter',
-        fromPort: { kind: 'port', portRef: { blockId: 'source-block', slotId: 'out', direction: 'output' } },
-        adapterType: 'ClampSignal',
-      });
-
-      expect(result).toBe(false);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        '[ActionExecutor] Lane not found for block:',
-        'source-block'
-      );
-
-      consoleWarnSpy.mockRestore();
-    });
-
     it('should handle adapter block with missing ports gracefully', () => {
       // Create an adapter block with non-standard port names
       const badAdapterBlock: Block = {
         id: 'adapter-block' as BlockId,
         type: 'BadAdapter',
         label: 'Bad Adapter',
-        inputs: [{ id: 'nonstandard-input', label: 'Input', type: 'Signal<number>', direction: 'input' }],
-        outputs: [{ id: 'nonstandard-output', label: 'Output', type: 'Signal<number>', direction: 'output' }],
+        inputs: [{ id: 'nonstandard-input', label: 'Input', type: 'Signal<float>', direction: 'input' }],
+        outputs: [{ id: 'nonstandard-output', label: 'Output', type: 'Signal<float>', direction: 'output' }],
         params: {},
         category: 'Math',
         description: 'Bad adapter',
       };
 
       // Override addBlock to add bad adapter
-      (mockPatchStore.addBlock as ReturnType<typeof vi.fn>) = vi.fn((_badAdapterType: string, laneId: LaneId) => {
+      (mockPatchStore.addBlock as ReturnType<typeof vi.fn>) = vi.fn((_badAdapterType: string) => {
         const adapterId = 'adapter-block' as BlockId;
         mockPatchStore.blocks!.push(badAdapterBlock);
-        mockViewStore.lanes!.find(l => l.id === laneId)?.blockIds.push(adapterId);
         return adapterId;
       });
 

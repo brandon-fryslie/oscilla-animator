@@ -140,7 +140,7 @@ describe("Golden Tests - Block Migration Validation", () => {
         nodes: [
           {
             kind: "const",
-            type: { world: "signal", domain: "number" },
+            type: { world: "signal", domain: "float" },
             constId: 0,
           },
         ],

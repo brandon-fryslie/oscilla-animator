@@ -21,7 +21,7 @@ const lowerMaxSignal: BlockLowerFn = ({ ctx, inputs }) => {
     throw new Error('MaxSignal requires signal inputs');
   }
 
-  const outType = { world: 'signal' as const, domain: 'number' as const };
+  const outType = { world: 'signal' as const, domain: 'float' as const };
   const sigId = ctx.b.sigZip(a.id, b.id, { kind: 'opcode', opcode: OpCode.Max }, outType,);
 
   const slot = ctx.b.allocValueSlot();
@@ -33,11 +33,11 @@ registerBlockType({
   type: 'MaxSignal',
   capability: 'pure',
   inputs: [
-    { portId: 'a', label: 'A', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: -Infinity } },
-    { portId: 'b', label: 'B', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: -Infinity } },
+    { portId: 'a', label: 'A', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: -Infinity } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: -Infinity } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'signal', domain: 'float' } },
   ],
   lower: lowerMaxSignal,
 });
@@ -50,46 +50,46 @@ export const MaxSignalBlock: BlockCompiler = {
   type: 'MaxSignal',
 
   inputs: [
-    { name: 'a', type: { kind: 'Signal:number' }, required: true },
-    { name: 'b', type: { kind: 'Signal:number' }, required: true },
+    { name: 'a', type: { kind: 'Signal:float' }, required: true },
+    { name: 'b', type: { kind: 'Signal:float' }, required: true },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Signal:number' } },
+    { name: 'out', type: { kind: 'Signal:float' } },
   ],
 
   compile({ inputs }) {
     const aArtifact = inputs.a;
     const bArtifact = inputs.b;
 
-    if (aArtifact === undefined || aArtifact.kind !== 'Signal:number') {
+    if (aArtifact === undefined || aArtifact.kind !== 'Signal:float') {
       return {
         out: {
           kind: 'Error',
-          message: 'MaxSignal requires Signal<number> for input A',
+          message: 'MaxSignal requires Signal<float> for input A',
         },
       };
     }
 
-    if (bArtifact === undefined || bArtifact.kind !== 'Signal:number') {
+    if (bArtifact === undefined || bArtifact.kind !== 'Signal:float') {
       return {
         out: {
           kind: 'Error',
-          message: 'MaxSignal requires Signal<number> for input B',
+          message: 'MaxSignal requires Signal<float> for input B',
         },
       };
     }
 
-    const aSignal = aArtifact.value as Signal<number>;
-    const bSignal = bArtifact.value as Signal<number>;
+    const aSignal = aArtifact.value as Signal<float>;
+    const bSignal = bArtifact.value as Signal<float>;
 
     // Create max signal
-    const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
+    const signal: Signal<float> = (t: number, ctx: RuntimeCtx): number => {
       return Math.max(aSignal(t, ctx), bSignal(t, ctx));
     };
 
     return {
-      out: { kind: 'Signal:number', value: signal },
+      out: { kind: 'Signal:float', value: signal },
     };
   },
 };

@@ -522,7 +522,7 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
       offset: slot, // Dense allocation: offset = slot index
       type: {
         world: "signal",
-        domain: "number",
+        domain: "float",
       },
     });
   }

@@ -341,7 +341,7 @@ export function regionField(
 export function staggerField(
   baseStagger: number,
   jitterPercent: number = 0
-): Field<number> {
+): Field<float> {
   return (seed: Seed, n: number, _ctx: CompileCtx) => {
     const rng = createPRNG(seed);
     return Array(n)

@@ -1,4 +1,4 @@
-import type { BlockDefinition, BlockTags, LaneKind } from './types';
+import type { BlockDefinition, BlockTags } from './types';
 import { getBlockForm } from './types';
 
 // Import domain blocks (new system only)
@@ -50,12 +50,6 @@ export function getBlockTags(definition: BlockDefinition): BlockTags {
   // Normalize canonical tags - form is derived, not stored
   tags.form = getBlockForm(definition);
   tags.subcategory = definition.subcategory ?? 'Other';
-  tags.laneKind = definition.laneKind;
-
-  if (definition.laneFlavor) {
-    tags.laneFlavor = definition.laneFlavor;
-  }
-
   return tags;
 }
 
@@ -93,57 +87,9 @@ export const BLOCK_DEFS_BY_TYPE = new Map<string, BlockDefinition>(
 /**
  * Lane-aware filtering
  */
-export function getBlocksForLaneKind(laneKind?: LaneKind): readonly BlockDefinition[] {
+export function getBlocksForPalette(): { matched: readonly BlockDefinition[]; other: readonly BlockDefinition[] } {
   const allBlocks = getBlockDefinitions(true);
-
-  if (!laneKind) {
-    return allBlocks; // All blocks available for general context
-  }
-
-  // Filter blocks matching the lane kind
-  return allBlocks.filter((block) => {
-    if (block.laneKind === laneKind) {
-      return true;
-    }
-
-    // Allow cross-lane blocks (e.g., adapters) in any lane
-    if (block.laneKind === undefined) {
-      return true;
-    }
-
-    return false;
-  });
-}
-
-/**
- * Get blocks for palette with lane filtering support.
- * Returns matched blocks (exact lane) and other blocks (cross-lane/adapters).
- */
-export function getBlocksForPalette(
-  filterByLane: boolean,
-  laneKind?: LaneKind,
-  _laneFlavor?: string
-): { matched: readonly BlockDefinition[]; other: readonly BlockDefinition[] } {
-  const allBlocks = getBlockDefinitions(true);
-
-  if (!filterByLane || !laneKind) {
-    return { matched: allBlocks, other: [] };
-  }
-
-  const matched: BlockDefinition[] = [];
-  const other: BlockDefinition[] = [];
-
-  for (const block of allBlocks) {
-    if (block.laneKind === laneKind) {
-      matched.push(block);
-    } else if (block.laneKind === undefined) {
-      // Cross-lane blocks (adapters) go to "other"
-      other.push(block);
-    }
-    // Blocks from other lanes are excluded entirely
-  }
-
-  return { matched, other };
+  return { matched: allBlocks, other: [] };
 }
 
 /**

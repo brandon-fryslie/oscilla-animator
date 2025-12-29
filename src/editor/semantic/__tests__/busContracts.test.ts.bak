@@ -31,7 +31,7 @@ describe('Bus Contracts', () => {
       expect(RESERVED_BUS_CONTRACTS.energy).toEqual({
         type: {
           world: 'signal',
-          domain: 'number',
+          domain: 'float',
           semantics: 'energy',
           category: 'core',
           busEligible: true,
@@ -64,7 +64,7 @@ describe('Bus Contracts', () => {
     it('should reject reserved bus with wrong type', () => {
       const wrongType: TypeDesc = {
         world: 'signal',
-        domain: 'number', // Wrong domain
+        domain: 'float', // Wrong domain
         semantics: 'primary',
         category: 'core',
         busEligible: true,
@@ -94,7 +94,7 @@ describe('Bus Contracts', () => {
     it('should validate multiple errors for reserved bus', () => {
       const wrongType: TypeDesc = {
         world: 'field', // Wrong world
-        domain: 'number', // Wrong domain
+        domain: 'float', // Wrong domain
         semantics: 'wrong', // Wrong semantics
         category: 'internal', // Wrong category
         busEligible: false, // Wrong busEligible

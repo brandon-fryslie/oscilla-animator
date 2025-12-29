@@ -9,8 +9,8 @@
  *   - paths: Field<path> (required)
  *   - fillColor: Field<color> (required)
  *   - strokeColor: Field<color> (required)
- *   - strokeWidth: Field<number> (required)
- *   - opacity: Signal<number> (required)
+ *   - strokeWidth: Field<float> (required)
+ *   - opacity: Signal<float> (required)
  */
 
 import type { BlockCompiler } from '../../types';
@@ -40,11 +40,11 @@ const lowerRenderPaths2D: BlockLowerFn = ({ ctx, inputs }) => {
   }
 
   if (strokeWidth.k !== 'field') {
-    throw new Error(`RenderPaths2D requires Field<number> strokeWidth, got ${strokeWidth.k}`);
+    throw new Error(`RenderPaths2D requires Field<float> strokeWidth, got ${strokeWidth.k}`);
   }
 
   if (opacity.k !== 'sig') {
-    throw new Error(`RenderPaths2D requires Signal<number> opacity, got ${opacity.k}`);
+    throw new Error(`RenderPaths2D requires Signal<float> opacity, got ${opacity.k}`);
   }
 
   const sinkInputs = {
@@ -90,8 +90,8 @@ registerBlockType({
     },
     { portId: 'fillColor', label: 'Fill Color', dir: 'in', type: { world: 'field', domain: 'color' }, defaultSource: { value: '#ffffff' } },
     { portId: 'strokeColor', label: 'Stroke Color', dir: 'in', type: { world: 'field', domain: 'color' }, defaultSource: { value: '#000000' } },
-    { portId: 'strokeWidth', label: 'Stroke Width', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 1 } },
-    { portId: 'opacity', label: 'Opacity', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 1.0 } },
+    { portId: 'strokeWidth', label: 'Stroke Width', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 1 } },
+    { portId: 'opacity', label: 'Opacity', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 1.0 } },
   ],
   outputs: [],
   lower: lowerRenderPaths2D,
@@ -109,8 +109,8 @@ export const RenderPaths2DBlock: BlockCompiler = {
     { name: 'paths', type: { kind: 'Field:Path' }, required: true },
     { name: 'fillColor', type: { kind: 'Field:color' }, required: true },
     { name: 'strokeColor', type: { kind: 'Field:color' }, required: true },
-    { name: 'strokeWidth', type: { kind: 'Field:number' }, required: true },
-    { name: 'opacity', type: { kind: 'Signal:number' }, required: true },
+    { name: 'strokeWidth', type: { kind: 'Field:float' }, required: true },
+    { name: 'opacity', type: { kind: 'Signal:float' }, required: true },
   ],
 
   outputs: [],

@@ -38,7 +38,7 @@ export const Shaper = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('in', 'Input', 'Signal<number>', {
+    input('in', 'Input', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -63,7 +63,7 @@ export const Shaper = createBlock({
         },
       },
     }),
-    input('amount', 'Amount', 'Signal<number>', {
+    input('amount', 'Amount', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -73,10 +73,9 @@ export const Shaper = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Output', 'Signal<number>'),
+    output('out', 'Output', 'Signal<float>'),
   ],
   color: '#3B82F6',
-  laneKind: 'Phase',
   priority: 11,});
 
 /**
@@ -111,7 +110,7 @@ export const ColorLFO = createBlock({
         uiHint: { kind: 'color' },
       },
     }),
-    input('hueSpan', 'Hue Span', 'Signal<number>', {
+    input('hueSpan', 'Hue Span', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 180,
@@ -119,7 +118,7 @@ export const ColorLFO = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 360, step: 1 },
       },
     }),
-    input('sat', 'Saturation', 'Signal<number>', {
+    input('sat', 'Saturation', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: {
         value: 0.8,
@@ -127,7 +126,7 @@ export const ColorLFO = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
       },
     }),
-    input('light', 'Lightness', 'Signal<number>', {
+    input('light', 'Lightness', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: {
         value: 0.5,
@@ -140,7 +139,6 @@ export const ColorLFO = createBlock({
     output('color', 'Color', 'Signal<color>'),
   ],
   color: '#F59E0B',
-  laneKind: 'Phase',
   priority: 12,
   // Auto-subscribe phase to phaseA bus when no explicit connection
   autoBusSubscriptions: {
@@ -160,7 +158,7 @@ export const AddSignal = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('a', 'A', 'Signal<number>', {
+    input('a', 'A', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -168,7 +166,7 @@ export const AddSignal = createBlock({
         uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       },
     }),
-    input('b', 'B', 'Signal<number>', {
+    input('b', 'B', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -178,10 +176,9 @@ export const AddSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Sum', 'Signal<number>'),
+    output('out', 'Sum', 'Signal<float>'),
   ],
   color: '#8B5CF6',
-  laneKind: 'Phase',
   priority: 20,});
 
 /**
@@ -197,7 +194,7 @@ export const MulSignal = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('a', 'A', 'Signal<number>', {
+    input('a', 'A', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -205,7 +202,7 @@ export const MulSignal = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 10, step: 0.1 },
       },
     }),
-    input('b', 'B', 'Signal<number>', {
+    input('b', 'B', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -215,10 +212,9 @@ export const MulSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Product', 'Signal<number>'),
+    output('out', 'Product', 'Signal<float>'),
   ],
   color: '#8B5CF6',
-  laneKind: 'Phase',
   priority: 21,});
 
 /**
@@ -232,7 +228,7 @@ export const MinSignal = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('a', 'A', 'Signal<number>', {
+    input('a', 'A', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: Infinity, // Identity: min(x, ∞) = x
@@ -240,7 +236,7 @@ export const MinSignal = createBlock({
         uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       },
     }),
-    input('b', 'B', 'Signal<number>', {
+    input('b', 'B', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: Infinity, // Identity: min(x, ∞) = x
@@ -250,10 +246,9 @@ export const MinSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Min', 'Signal<number>'),
+    output('out', 'Min', 'Signal<float>'),
   ],
   color: '#8B5CF6',
-  laneKind: 'Phase',
   priority: 22,});
 
 /**
@@ -267,7 +262,7 @@ export const MaxSignal = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('a', 'A', 'Signal<number>', {
+    input('a', 'A', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: -Infinity, // Identity: max(x, -∞) = x
@@ -275,7 +270,7 @@ export const MaxSignal = createBlock({
         uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       },
     }),
-    input('b', 'B', 'Signal<number>', {
+    input('b', 'B', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: -Infinity, // Identity: max(x, -∞) = x
@@ -285,10 +280,9 @@ export const MaxSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Max', 'Signal<number>'),
+    output('out', 'Max', 'Signal<float>'),
   ],
   color: '#8B5CF6',
-  laneKind: 'Phase',
   priority: 23,});
 
 /**
@@ -304,7 +298,7 @@ export const ClampSignal = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('in', 'Input', 'Signal<number>', {
+    input('in', 'Input', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -312,7 +306,7 @@ export const ClampSignal = createBlock({
         uiHint: { kind: 'slider', min: -1, max: 1, step: 0.01 },
       },
     }),
-    input('min', 'Min', 'Signal<number>', {
+    input('min', 'Min', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -320,7 +314,7 @@ export const ClampSignal = createBlock({
         uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 },
       },
     }),
-    input('max', 'Max', 'Signal<number>', {
+    input('max', 'Max', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -330,8 +324,7 @@ export const ClampSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Output', 'Signal<number>'),
+    output('out', 'Output', 'Signal<float>'),
   ],
   color: '#8B5CF6',
-  laneKind: 'Phase',
   priority: 24,});

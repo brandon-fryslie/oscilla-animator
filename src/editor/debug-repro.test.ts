@@ -145,7 +145,7 @@ test('MobX Reproduction', () => {
   // 1. Create a default source
   console.log('1. Creating Default Source...');
   store.defaultSourceStore.ensureDefaultSource(dsId, {
-    type: { world: 'signal', domain: 'number' },
+    type: { world: 'signal', domain: 'float' },
     value: 10
   });
 

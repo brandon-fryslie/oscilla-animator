@@ -88,14 +88,13 @@ export type PureCompileKind = 'operator' | 'composite' | 'spec';
  * These are the learnable creative vocabulary.
  */
 export type CoreDomain =
-  | 'number'   // Numeric values
+  | 'float'    // Floating-point values
+  | 'int'      // Integer values
   | 'vec2'     // 2D positions/vectors
   | 'vec3'     // 3D positions/vectors
   | 'color'    // Color values
   | 'boolean'  // True/false values
   | 'time'     // Time values (always in seconds)
-  | 'phase01'   // Phase values [0,1] (normalized phase)
-  | 'phase'    // Phase values [0,1]
   | 'rate'     // Rate/multiplier values
   | 'trigger'; // Pulse/event signals
 
@@ -109,6 +108,8 @@ export type InternalDomain =
   | 'path'         // Path data
   | 'expression'   // DSL expression source
   | 'waveform'     // Oscillator waveform selector
+  | 'phaseSample'  // PhaseMachine sample payload
+  | 'phaseMachine' // PhaseMachine instance payload
   | 'wobble'       // Wobble modulator config
   | 'spiral'       // Spiral modulator config
   | 'wave'         // Wave modulator config
@@ -333,15 +334,18 @@ export type SlotType =
   | 'SceneTargets'      // Sampled points from scene
   | 'SceneStrokes'      // Path segments for line drawing
   | 'Domain'            // Per-element identity (Phase 3)
-  | 'Scalar:number'     // Compile-time constant number
+  | 'Scalar:float'      // Compile-time constant float
+  | 'Scalar:int'        // Compile-time constant integer
   | 'Scalar:vec2'       // Compile-time constant vec2
   | 'Field<Point>'      // Per-element positions
   | 'Field<vec2>'       // Per-element positions (alias)
-  | 'Field<number>'     // Per-element scalars (radius, opacity)
+  | 'Field<float>'      // Per-element scalars (radius, opacity)
+  | 'Field<int>'        // Per-element integer scalars
   | 'Field<color>'      // Per-element colors
   | 'Field<string>'     // Per-element strings (colors, easing names)
   | 'Signal<Point>'     // Time-varying position
-  | 'Signal<number>'    // Time-varying scalar
+  | 'Signal<float>'     // Time-varying scalar
+  | 'Signal<int>'       // Time-varying integer scalar
   | 'Signal<Unit>'      // Time-varying progress [0,1]
   | 'Signal<Time>'      // Time-varying time value (for local time)
   | 'Signal<time>'      // Monotonic system time (TimeRoot output)
@@ -714,120 +718,6 @@ export interface ExposedParam {
   readonly paramKey: string;
 }
 // =============================================================================
-// Lanes
-// =============================================================================
-
-/**
- * Canonical lane kinds (structural types).
- * These define what kind of values live in a lane.
- * Per lanes-overview.md: lanes represent value domains.
- */
-export type LaneKind =
-  | 'Scene'      // Scene / Targets / selections
-  | 'Phase'      // PhaseMachine
-  | 'Fields'     // Field<T> (bulk per-element values)
-  | 'Scalars'    // Scalar<T> (constants, params)
-  | 'Spec'       // Spec:* (intent declarations)
-  | 'Program'    // Program<RenderTree>
-  | 'Output';    // Export / render output
-
-/**
- * Lane flavor - optional UI hints for organization.
- * Does NOT affect type validity, only palette suggestions.
- */
-export type LaneFlavor =
-  | 'Timing'     // Delays, durations, easing
-  | 'Style'      // Colors, sizes, opacity
-  | 'Motion'     // Positions, trajectories
-  | 'General';   // Default, no specific flavor
-
-/**
- * Lane flow style - how blocks relate within the lane.
- * Per lanes-overview.md: chain vs patch-bay.
- */
-export type LaneFlowStyle =
-  | 'chain'      // Pipeline: blocks flow left-to-right
-  | 'patchbay';  // Fan-out: blocks are sources for other lanes
-
-/**
- * Lane identifier - unique string for each lane instance.
- * Allows multiple lanes of the same kind.
- */
-export type LaneId = string;
-
-/**
- * A Lane is a horizontal track in the patch bay.
- * Blocks are assigned to lanes for organization.
- *
- * Key principles (from lanes-overview.md):
- * - Lanes are UI affordances, not semantic truth
- * - Port types determine connection validity
- * - Multiple lanes of same kind allowed
- * - Lanes guide users into sane structure
- */
-export interface Lane {
-  /** Unique identifier for this lane */
-  readonly id: LaneId;
-
-  /** Structural kind (what type of values live here) */
-  readonly kind: LaneKind;
-
-  /** Human-readable label (user can rename) */
-  label: string;
-
-  /** Description shown in UI */
-  description: string;
-
-  /** Optional flavor hint for palette filtering */
-  flavor?: LaneFlavor;
-
-  /** Flow style: chain (pipeline) or patchbay (fan-out sources) */
-  flowStyle: LaneFlowStyle;
-
-  /** Blocks in this lane (by ID) */
-  blockIds: BlockId[];
-
-  /** UI state: is lane collapsed? */
-  collapsed: boolean;
-
-  /** UI state: is lane pinned (always visible)? */
-  pinned: boolean;
-}
-
-/**
- * Lane template for defining layouts (without runtime state like blockIds).
- */
-export interface LaneTemplate {
-  readonly id: LaneId;
-  readonly kind: LaneKind;
-  readonly label: string;
-  readonly description: string;
-  readonly flavor?: LaneFlavor;
-  readonly flowStyle: LaneFlowStyle;
-}
-
-/**
- * A lane layout defines a preset arrangement of lanes.
- * Users can switch between layouts; blocks are migrated based on lane kind.
- */
-export interface LaneLayout {
-  /** Unique identifier */
-  readonly id: string;
-
-  /** Display name */
-  readonly name: string;
-
-  /** Description of when to use this layout */
-  readonly description: string;
-
-  /** Lane templates in order */
-  readonly lanes: readonly LaneTemplate[];
-
-  /** Is this a built-in preset or user-created? */
-  readonly isPreset: boolean;
-}
-
-// =============================================================================
 // Patch (Complete Editor State)
 // =============================================================================
 
@@ -845,9 +735,6 @@ export interface Patch {
   /** All connections between blocks */
   connections: Connection[];
 
-  /** Lane assignments (which blocks are in which lanes) */
-  lanes: Lane[];
-
   /** Bus definitions */
   buses: Bus[];
 
@@ -864,13 +751,10 @@ export interface Patch {
   settings: {
     seed: number;
     speed: number;
-    currentLayoutId?: string;
-    advancedLaneMode?: boolean;
     autoConnect?: boolean;
     showTypeHints?: boolean;
     highlightCompatible?: boolean;
     warnBeforeDisconnect?: boolean;
-    filterByLane?: boolean;
     filterByConnection?: boolean;
   };
 
@@ -905,12 +789,6 @@ export interface EditorUIState {
 
   /** Currently dragging block type (from library) */
   draggingBlockType: BlockType | null;
-
-  /** Lane kind of the block being dragged (for highlighting suggested lanes) */
-  draggingLaneKind: LaneKind | null;
-
-  /** Active lane for palette filtering (lane user is working in) */
-  activeLaneId: LaneId | null;
 
   /** Currently hovered port (for compatible highlighting) */
   hoveredPort: PortRef | null;
@@ -964,30 +842,33 @@ export interface AdapterPath {
  */
 export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc> = {
   // Core types (bus-eligible)
-  'Scalar:number': { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'scalar' },
+  'Scalar:float': { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'scalar' },
+  'Scalar:int': { world: 'signal', domain: 'int', category: 'core', busEligible: true, semantics: 'scalar' },
   'Scalar:vec2': { world: 'signal', domain: 'vec2', category: 'core', busEligible: true, semantics: 'scalar' },
-  'Field<number>': { world: 'field', domain: 'number', category: 'core', busEligible: true },
+  'Field<float>': { world: 'field', domain: 'float', category: 'core', busEligible: true },
+  'Field<int>': { world: 'field', domain: 'int', category: 'core', busEligible: true },
   'Field<vec2>': { world: 'field', domain: 'vec2', category: 'core', busEligible: true, semantics: 'position' },
   'Field<color>': { world: 'field', domain: 'color', category: 'core', busEligible: true },
   'Field<path>': { world: 'field', domain: 'path', category: 'internal', busEligible: false },
 
   'Field<string>': { world: 'field', domain: 'color', category: 'core', busEligible: true, semantics: 'hex-color' },
-  'Signal<number>': { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+  'Signal<float>': { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+  'Signal<int>': { world: 'signal', domain: 'int', category: 'core', busEligible: true },
   'Signal<Point>': { world: 'signal', domain: 'vec2', category: 'core', busEligible: true, semantics: 'point' },
-  'Signal<Unit>': { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'unit(0..1)' },
+  'Signal<Unit>': { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'unit(0..1)' },
   'Signal<Time>': { world: 'signal', domain: 'time', category: 'core', busEligible: true, unit: 'seconds' },
   'Signal<time>': { world: 'signal', domain: 'time', category: 'core', busEligible: true, unit: 'ms', semantics: 'system-time' },
-  'Signal<phase>': { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'unit(0..1)' },
+  'Signal<phase>': { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
   'Signal<color>': { world: 'signal', domain: 'color', category: 'core', busEligible: true },
   'Signal<string>': { world: 'signal', domain: 'string', category: 'core', busEligible: false, semantics: 'config-enum' },
   'Signal<vec3>': { world: 'signal', domain: 'vec3', category: 'core', busEligible: true, semantics: 'position3d' },
   'Scalar:string': { world: 'scalar', domain: 'string', category: 'core', busEligible: false, semantics: 'config-enum' },
   'Scalar:expression': { world: 'scalar', domain: 'expression', category: 'internal', busEligible: false, semantics: 'dsl-expression' },
   'Scalar:waveform': { world: 'scalar', domain: 'waveform', category: 'internal', busEligible: false, semantics: 'waveform' },
-  'Signal<PhaseSample>': { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'sample' },
+  'Signal<PhaseSample>': { world: 'signal', domain: 'phaseSample', category: 'internal', busEligible: false, semantics: 'sample' },
   'Event<string>': { world: 'signal', domain: 'trigger', category: 'core', busEligible: true, semantics: 'string' },
   'Event<any>': { world: 'signal', domain: 'trigger', category: 'core', busEligible: true },
-  'ElementCount': { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'count' },
+  'ElementCount': { world: 'signal', domain: 'int', category: 'core', busEligible: true, semantics: 'count' },
 
   // Special types (Phase 3)
   'Domain': { world: 'field', domain: 'elementCount', category: 'internal', busEligible: false, semantics: 'domain' },
@@ -1012,14 +893,13 @@ export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc> = {
  * Default values for core domains (JSON-serializable).
  */
 export const CORE_DOMAIN_DEFAULTS: Record<CoreDomain, unknown> = {
-  number: 0,
+  float: 0,
+  int: 0,
   vec2: { x: 0, y: 0 },
   vec3: { x: 0, y: 0, z: 0 },
   color: '#000000',
   boolean: false,
   time: 0.0, // Always seconds!
-  phase01: 0.0,
-  phase: 0.0,
   rate: 1.0,
   trigger: false, // Pulse state
 };
@@ -1073,10 +953,11 @@ export function validateDefaultValue(typeDesc: TypeDesc, value: unknown): boolea
 
   // Basic type checking - could be enhanced
   switch (typeDesc.domain) {
-    case 'number':
+    case 'float':
+      return typeof value === 'number';
+    case 'int':
+      return typeof value === 'number' && Number.isInteger(value);
     case 'time':
-    case 'phase':
-    case 'phase01':
     case 'rate':
       return typeof value === 'number';
     case 'boolean':

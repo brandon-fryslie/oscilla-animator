@@ -187,7 +187,7 @@ const CyclicControls = memo(function CyclicControls({
   const phase = currentTime >= 0 ? (currentTime % periodMs) / periodMs : 0;
 
   // Calculate cycle index (number of completed cycles)
-  const cycleIndex = currentTime >= 0 ? Math.floor(currentTime / periodMs) : 0;
+  const cycleIndex: int = currentTime >= 0 ? Math.floor(currentTime / periodMs) : 0;
 
   // For pingpong mode, adjust phase to show the actual direction
   const displayPhase = mode === 'pingpong' && cycleIndex % 2 === 1

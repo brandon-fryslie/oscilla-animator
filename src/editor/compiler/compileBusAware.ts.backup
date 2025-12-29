@@ -314,7 +314,7 @@ function compileIR(
         const s = state as { type?: unknown; value?: unknown; uiHint?: unknown; rangeHint?: unknown };
         return {
           id: slotId,
-          type: (s.type ?? { world: 'signal', domain: 'number', category: 'core' }) as import('../types').TypeDesc,
+          type: (s.type ?? { world: 'signal', domain: 'float', category: 'core' }) as import('../types').TypeDesc,
           value: s.value,
           uiHint: s.uiHint as import('../types').UIControlHint | undefined,
           rangeHint: s.rangeHint as { min?: number; max?: number; step?: number; log?: boolean } | undefined,
@@ -1112,8 +1112,8 @@ function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx
 
   switch (adapterName) {
     case 'ConstToSignal': {
-      if (artifact.kind === 'Scalar:number') {
-        return { kind: 'Signal:number', value: () => artifact.value };
+      if (artifact.kind === 'Scalar:float') {
+        return { kind: 'Signal:float', value: () => artifact.value };
       }
       if (artifact.kind === 'Scalar:vec2') {
         return { kind: 'Signal:vec2', value: () => artifact.value };
@@ -1122,14 +1122,14 @@ function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx
         return { kind: 'Signal:color', value: () => artifact.value as string };
       }
       if (artifact.kind === 'Scalar:boolean') {
-        return { kind: 'Signal:number', value: () => (artifact.value ? 1 : 0) };
+        return { kind: 'Signal:float', value: () => (artifact.value ? 1 : 0) };
       }
       return { kind: 'Error', message: `ConstToSignal unsupported for ${artifact.kind}` };
     }
     case 'BroadcastScalarToField': {
-      if (artifact.kind === 'Scalar:number') {
+      if (artifact.kind === 'Scalar:float') {
         return {
-          kind: 'Field:number',
+          kind: 'Field:float',
           value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
         };
       }
@@ -1155,9 +1155,9 @@ function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx
     }
     case 'BroadcastSignalToField': {
       const t = (ctx.env as { t?: number }).t ?? 0;
-      if (artifact.kind === 'Signal:number') {
+      if (artifact.kind === 'Signal:float') {
         return {
-          kind: 'Field:number',
+          kind: 'Field:float',
           value: (_seed, n, compileCtx) => {
             const time = (compileCtx.env as { t?: number }).t ?? t;
             const v = artifact.value(time, { viewport: { w: 0, h: 0, dpr: 1 } });
@@ -1189,15 +1189,15 @@ function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx
     }
     case 'PhaseToNumber': {
       if (artifact.kind === 'Signal:phase') {
-        return { kind: 'Signal:number', value: artifact.value };
+        return { kind: 'Signal:float', value: artifact.value };
       }
-      if (artifact.kind === 'Scalar:number') {
+      if (artifact.kind === 'Scalar:float') {
         return artifact;
       }
       return { kind: 'Error', message: `PhaseToNumber unsupported for ${artifact.kind}` };
     }
     case 'NormalizeToPhase': {
-      if (artifact.kind === 'Signal:number') {
+      if (artifact.kind === 'Signal:float') {
         return {
           kind: 'Signal:phase',
           value: (t, runtimeCtx) => {
@@ -1206,9 +1206,9 @@ function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx
           },
         };
       }
-      if (artifact.kind === 'Scalar:number') {
+      if (artifact.kind === 'Scalar:float') {
         const v = artifact.value;
-        return { kind: 'Scalar:number', value: ((v % 1) + 1) % 1 };
+        return { kind: 'Scalar:float', value: ((v % 1) + 1) % 1 };
       }
       return { kind: 'Error', message: `NormalizeToPhase unsupported for ${artifact.kind}` };
     }
@@ -1289,22 +1289,22 @@ function applyLensStack(
 
 function getArtifactType(artifact: Artifact): { world: 'signal' | 'field' | 'scalar'; domain: string } | null {
   switch (artifact.kind) {
-    case 'Signal:number':
-      return { world: 'signal', domain: 'number' };
+    case 'Signal:float':
+      return { world: 'signal', domain: 'float' };
     case 'Signal:vec2':
       return { world: 'signal', domain: 'vec2' };
     case 'Signal:phase':
       return { world: 'signal', domain: 'phase' };
     case 'Signal:color':
       return { world: 'signal', domain: 'color' };
-    case 'Field:number':
-      return { world: 'field', domain: 'number' };
+    case 'Field:float':
+      return { world: 'field', domain: 'float' };
     case 'Field:vec2':
       return { world: 'field', domain: 'vec2' };
     case 'Field:color':
       return { world: 'field', domain: 'color' };
-    case 'Scalar:number':
-      return { world: 'scalar', domain: 'number' };
+    case 'Scalar:float':
+      return { world: 'scalar', domain: 'float' };
     case 'Scalar:vec2':
       return { world: 'scalar', domain: 'vec2' };
     case 'Scalar:boolean':
@@ -1391,16 +1391,16 @@ function resolveDefaultSource(
 
 function createDefaultArtifact(value: unknown, kind: string): Artifact {
   switch (kind) {
-    case 'Signal:number':
-      return { kind: 'Signal:number', value: () => Number(value) };
+    case 'Signal:float':
+      return { kind: 'Signal:float', value: () => Number(value) };
     case 'Signal:Unit':
       return { kind: 'Signal:Unit', value: () => Number(value) };
     case 'Signal:phase':
       return { kind: 'Signal:phase', value: () => Number(value) };
     case 'Signal:Time':
       return { kind: 'Signal:Time', value: () => Number(value) };
-    case 'Scalar:number':
-      return { kind: 'Scalar:number', value: Number(value) };
+    case 'Scalar:float':
+      return { kind: 'Scalar:float', value: Number(value) };
     case 'Scalar:boolean':
       return { kind: 'Scalar:boolean', value: Boolean(value) };
     case 'Scalar:string':
@@ -1411,10 +1411,10 @@ function createDefaultArtifact(value: unknown, kind: string): Artifact {
       return { kind: 'Signal:vec2', value: () => (value as Vec2) };
     case 'Signal:color':
       return { kind: 'Signal:color', value: () => String(value) };
-    case 'Field:number': {
+    case 'Field:float': {
       // Broadcast scalar to field
       const num = Number(value);
-      return { kind: 'Field:number', value: (_s: Seed, n: number) => Array.from({ length: n }, () => num) };
+      return { kind: 'Field:float', value: (_s: Seed, n: number) => Array.from({ length: n }, () => num) };
     }
     case 'Field:color': {
       // Broadcast scalar color to field

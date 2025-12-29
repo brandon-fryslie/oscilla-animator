@@ -46,7 +46,7 @@ const lowerFieldHash01ById: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // For now, we emit a kernel-based field map node
   // The kernel 'hash01ById' will be implemented in the runtime
-  const outType = { world: 'field' as const, domain: 'number' as const };
+  const outType = { world: 'field' as const, domain: 'float' as const };
 
   // Use Hash01ById opcode if available, otherwise use a kernel reference
   const fieldId = ctx.b.fieldMap(
@@ -69,7 +69,7 @@ registerBlockType({
     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
   ],
   outputs: [
-    { portId: 'u', label: 'U', dir: 'out', type: { world: 'field', domain: 'number' } },
+    { portId: 'u', label: 'U', dir: 'out', type: { world: 'field', domain: 'float' } },
   ],
   lower: lowerFieldHash01ById,
 });
@@ -83,11 +83,11 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'seed', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'seed', type: { kind: 'Scalar:float' }, required: false },
   ],
 
   outputs: [
-    { name: 'u', type: { kind: 'Field:number' } },
+    { name: 'u', type: { kind: 'Field:float' } },
   ],
 
   compile({ inputs, params }) {
@@ -106,7 +106,7 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
     // Extract seed with params fallback (for tests using old params system)
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
+      if (artifact.kind === 'Scalar:float' || artifact.kind === 'Signal:float') {
         return Number(artifact.value);
       }
       if ('value' in artifact && artifact.value !== undefined) {
@@ -121,7 +121,7 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
     const blockSeed = extractNumber(inputs.seed, paramsObj?.seed ?? 0);
 
     // Create field that produces deterministic random per element
-    const field: Field<number> = (seed, n) => {
+    const field: Field<float> = (seed, n) => {
       const count = Math.min(n, domain.elements.length);
       const out = new Array<number>(count);
       const combinedSeed = seed + blockSeed;
@@ -135,7 +135,7 @@ export const FieldHash01ByIdBlock: BlockCompiler = {
     };
 
     return {
-      u: { kind: 'Field:number', value: field },
+      u: { kind: 'Field:float', value: field },
     };
   },
 };

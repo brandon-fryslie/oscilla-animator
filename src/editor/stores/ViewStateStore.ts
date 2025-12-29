@@ -1,336 +1,110 @@
 /**
  * @file View State Store
- * @description Manages visual layout and UI-only state (Lanes, positions, focus).
- *
- * This store implements the "Layout as Projection" design, decoupling how a patch
- * is displayed from its semantic meaning.
- *
- * Reference: design-docs/10-Refactor-for-UI-prep/4-Layout-As-Projection.md
+ * @description Manages the lane view projection and its ephemeral UI state.
  */
 
 import { makeObservable, observable, action, computed } from 'mobx';
-import type { BlockId, LaneId, Lane } from '../types';
-import { getLayoutById, DEFAULT_LAYOUT, mapLaneToLayout, PRESET_LAYOUTS } from '../laneLayouts';
-import type { LaneLayout } from '../laneLayouts';
+import type { BlockId } from '../types';
 import type { RootStore } from './RootStore';
-import { getBlockDefinition } from '../blocks';
-import { SemanticGraph } from '../semantic';
-import { storeToPatchDocument } from '../semantic/patchAdapter';
+import type { LaneViewId, LaneViewLane } from '../lanes/types';
+import { DEFAULT_LANE_TEMPLATES } from '../lanes/layout';
+import { applyLaneOrderOverrides, buildLaneProjection } from '../lanes/ordering';
 
-export interface ViewLayout {
-  id: string;
-  lanes: Lane[];
-  currentLayoutId: string;
-}
-
-export interface ProjectionLayout {
-  nodes: Map<BlockId, { x: number; y: number }>;
-}
+type LaneViewState = {
+  collapsed: boolean;
+  pinned: boolean;
+};
 
 export class ViewStateStore {
   root: RootStore;
 
-  /** Current lane layout ID */
-  currentLayoutId: string = DEFAULT_LAYOUT.id;
+  private laneOrderOverrides = observable.map<LaneViewId, BlockId[]>();
+  private laneStateById = observable.map<LaneViewId, LaneViewState>();
 
-  /** Lane definitions with block assignments */
-  lanes: Lane[] = [];
-
-  /** Active view id (lane vs projection) */
-  activeViewId: string = 'lane';
-
-    constructor(root: RootStore) {
+  constructor(root: RootStore) {
     this.root = root;
-    this.lanes = this.createLanesFromLayout(DEFAULT_LAYOUT);
 
     makeObservable(this, {
-      lanes: observable,
-      currentLayoutId: observable,
-      currentLayout: computed,
-      availableLayouts: computed,
-      projectionLayout: computed,
+      lanes: computed,
       toggleLaneCollapsed: action,
       toggleLanePinned: action,
-      renameLane: action,
-      addLane: action,
-      removeLane: action,
-      moveBlockToLane: action,
-      moveBlockToLaneAtIndex: action,
       reorderBlockInLane: action,
-      switchLayout: action,
-      resetLayout: action,
-      assignBlockToLane: action,
-      removeBlockFromLanes: action,
+      insertBlockInLane: action,
+      removeBlockFromOverrides: action,
     });
 
     this.setupEventListeners();
   }
 
   private setupEventListeners(): void {
-    // React to blocks being added/removed/replaced in PatchStore
-    this.root.events.on('BlockAdded', (event) => {
-      // If block is already assigned to a lane (e.g. by explicit UI action), skip
-      const laneForBlock = this.findLaneForBlock(event.blockId);
-      if (laneForBlock !== undefined && laneForBlock !== null) return;
-
-      // Otherwise, auto-place based on affinity
-      const def = getBlockDefinition(event.blockType);
-      if (def !== undefined && def !== null) {
-        const targetLane = this.lanes.find(l => l.kind === def.laneKind);
-        const fallbackLane = this.lanes[0];
-        const selectedLane = targetLane !== undefined ? targetLane : fallbackLane;
-        if (selectedLane !== undefined && selectedLane !== null) {
-          this.assignBlockToLane(event.blockId, selectedLane.id);
-        }
-      }
-    });
-
     this.root.events.on('BlockRemoved', (event) => {
-      this.removeBlockFromLanes(event.blockId);
+      this.removeBlockFromOverrides(event.blockId);
     });
+  }
 
-    this.root.events.on('BlockReplaced', (event) => {
-      // Find lane of old block
-      const lane = this.findLaneForBlock(event.oldBlockId);
-      if (lane !== undefined && lane !== null) {
-        // Replace ID in place
-        const index = lane.blockIds.indexOf(event.oldBlockId);
-        if (index !== -1) {
-          lane.blockIds[index] = event.newBlockId;
-        }
-      }
+  get lanes(): LaneViewLane[] {
+    const projected = buildLaneProjection(this.root, DEFAULT_LANE_TEMPLATES);
+    const ordered = applyLaneOrderOverrides(projected, this.laneOrderOverrides);
+    return ordered.map((lane) => {
+      const state = this.laneStateById.get(lane.id);
+      return {
+        ...lane,
+        collapsed: state?.collapsed ?? lane.collapsed,
+        pinned: state?.pinned ?? lane.pinned,
+      };
     });
-    
-    // Listen for PatchLoaded to sync lanes if provided
-    // (Handled in RootStore.loadPatch explicitly for now, but could be reactive here)
   }
 
-  private findLaneForBlock(blockId: string): Lane | undefined {
-    return this.lanes.find(l => l.blockIds.includes(blockId));
+  toggleLaneCollapsed(laneId: LaneViewId): void {
+    const state = this.getOrCreateLaneState(laneId);
+    state.collapsed = !state.collapsed;
+    this.laneStateById.set(laneId, state);
   }
 
-  // =============================================================================
-  // Computed Values
-  // =============================================================================
-
-  /** Get current lane layout template */
-  get currentLayout(): LaneLayout {
-    return getLayoutById(this.currentLayoutId) ?? DEFAULT_LAYOUT;
+  toggleLanePinned(laneId: LaneViewId): void {
+    const state = this.getOrCreateLaneState(laneId);
+    state.pinned = !state.pinned;
+    this.laneStateById.set(laneId, state);
   }
 
-  /** Get all available layouts */
-  get availableLayouts(): readonly LaneLayout[] {
-    return PRESET_LAYOUTS;
-  }
-
-  /** Get projection layout derived from SemanticGraph */
-  get projectionLayout(): ProjectionLayout {
-    return computeProjectionLayout(this.root);
-  }
-
-  // =============================================================================
-  // Helpers
-  // =============================================================================
-
-  private createLanesFromLayout(layout: LaneLayout): Lane[] {
-    return layout.lanes.map((template) => ({
-      id: template.id,
-      kind: template.kind,
-      label: template.label,
-      description: template.description,
-      flavor: template.flavor,
-      flowStyle: template.flowStyle,
-      blockIds: [],
-      collapsed: false,
-      pinned: false,
-    }));
-  }
-
-  // =============================================================================
-  // Actions - Lane Management
-  // =============================================================================
-
-  toggleLaneCollapsed(laneId: LaneId): void {
-    const lane = this.lanes.find((l) => l.id === laneId);
-    if (lane === undefined) return;
-    lane.collapsed = !lane.collapsed;
-  }
-
-  toggleLanePinned(laneId: LaneId): void {
-    const lane = this.lanes.find((l) => l.id === laneId);
-    if (lane === undefined) return;
-    lane.pinned = !lane.pinned;
-  }
-
-  renameLane(laneId: LaneId, newName: string): void {
-    const lane = this.lanes.find((l) => l.id === laneId);
-    if (lane === undefined) return;
-    lane.label = newName;
-  }
-
-    addLane(lane: Lane): void {
-    this.lanes.push(lane);
-  }
-
-  removeLane(laneId: LaneId): void {
-    const lane = this.lanes.find((l) => l.id === laneId);
-    if (lane === undefined || lane.pinned) return;
-
-    // Move blocks to first available lane
-    const firstLane = this.lanes.find((l) => l.id !== laneId);
-    if (firstLane !== undefined) {
-      firstLane.blockIds.push(...lane.blockIds);
-    }
-
-    this.lanes = this.lanes.filter((l) => l.id !== laneId);
-  }
-
-  moveBlockToLane(blockId: BlockId, targetLaneId: LaneId): void {
-    // Remove from all lanes
-    for (const lane of this.lanes) {
-      lane.blockIds = lane.blockIds.filter((id) => id !== blockId);
-    }
-
-    // Add to target lane
-    const targetLane = this.lanes.find((l) => l.id === targetLaneId);
-    if (targetLane !== undefined) {
-      targetLane.blockIds.push(blockId);
-    }
-  }
-
-  moveBlockToLaneAtIndex(blockId: BlockId, targetLaneId: LaneId, index: number): void {
-    // Remove from all lanes
-    for (const lane of this.lanes) {
-      lane.blockIds = lane.blockIds.filter((id) => id !== blockId);
-    }
-
-    // Add to target lane at specific index
-    const targetLane = this.lanes.find((l) => l.id === targetLaneId);
-    if (targetLane !== undefined) {
-      const newBlockIds = [...targetLane.blockIds];
-      newBlockIds.splice(index, 0, blockId);
-      targetLane.blockIds = newBlockIds;
-    }
-  }
-
-  reorderBlockInLane(laneId: LaneId, blockId: BlockId, newIndex: number): void {
-    const lane = this.lanes.find((l) => l.id === laneId);
+  reorderBlockInLane(laneId: LaneViewId, blockId: BlockId, newIndex: number): void {
+    const lane = this.lanes.find((entry) => entry.id === laneId);
     if (lane === undefined) return;
 
-    const oldIndex = lane.blockIds.indexOf(blockId);
+    const current = [...lane.blockIds];
+    const oldIndex = current.indexOf(blockId);
     if (oldIndex === -1) return;
 
-    lane.blockIds.splice(oldIndex, 1);
-    lane.blockIds.splice(newIndex, 0, blockId);
+    current.splice(oldIndex, 1);
+    current.splice(newIndex, 0, blockId);
+    this.laneOrderOverrides.set(laneId, current);
   }
 
-  // =============================================================================
-  // Actions - Layout Management
-  // =============================================================================
+  insertBlockInLane(laneId: LaneViewId, blockId: BlockId, index: number): void {
+    const lane = this.lanes.find((entry) => entry.id === laneId);
+    if (lane === undefined) return;
 
-  switchLayout(layoutId: string): void {
-    const newLayout = getLayoutById(layoutId);
-    if (newLayout === null || newLayout === undefined || layoutId === this.currentLayoutId) return;
-
-    const oldLayout = this.currentLayout;
-    const blockAssignments: Array<{ blockId: BlockId; oldLaneId: string }> = [];
-
-    for (const lane of this.lanes) {
-      for (const blockId of lane.blockIds) {
-        blockAssignments.push({ blockId, oldLaneId: lane.id });
-      }
+    const current = [...lane.blockIds];
+    if (!current.includes(blockId)) {
+      current.splice(index, 0, blockId);
+      this.laneOrderOverrides.set(laneId, current);
     }
+  }
 
-    this.lanes = this.createLanesFromLayout(newLayout);
-    this.currentLayoutId = layoutId;
-
-    for (const { blockId, oldLaneId } of blockAssignments) {
-      const newLaneId = mapLaneToLayout(oldLaneId, oldLayout, newLayout);
-      const newLane = this.lanes.find((l) => l.id === newLaneId);
-      if (newLane !== null && newLane !== undefined) {
-        newLane.blockIds.push(blockId);
-      } else {
-        this.lanes[0]?.blockIds.push(blockId);
+  removeBlockFromOverrides(blockId: BlockId): void {
+    for (const [laneId, list] of this.laneOrderOverrides.entries()) {
+      if (list.includes(blockId)) {
+        const next = list.filter((id) => id !== blockId);
+        if (next.length === 0) {
+          this.laneOrderOverrides.delete(laneId);
+        } else {
+          this.laneOrderOverrides.set(laneId, next);
+        }
       }
     }
   }
 
-  resetLayout(): void {
-    for (const lane of this.lanes) {
-      lane.blockIds = [];
-    }
-    // Repopulate from current blocks in patchStore
-    const blocks = this.root.patchStore.blocks;
-    for (const block of blocks) {
-      // Logic to place block in default lane
-      const defaultLane = this.lanes.find(l => l.kind === 'Program');
-      const resolvedLane = defaultLane !== undefined && defaultLane !== null ? defaultLane : this.lanes[0];
-      if (resolvedLane !== undefined && resolvedLane !== null) {
-        resolvedLane.blockIds.push(block.id);
-      }
-    }
+  private getOrCreateLaneState(laneId: LaneViewId): LaneViewState {
+    return this.laneStateById.get(laneId) ?? { collapsed: false, pinned: false };
   }
-
-  assignBlockToLane(blockId: BlockId, laneId: LaneId): void {
-    const lane = this.lanes.find(l => l.id === laneId);
-    if (lane !== null && lane !== undefined && !lane.blockIds.includes(blockId)) {
-      lane.blockIds.push(blockId);
-    }
-  }
-
-  removeBlockFromLanes(blockId: BlockId): void {
-    for (const lane of this.lanes) {
-      lane.blockIds = lane.blockIds.filter(id => id !== blockId);
-    }
-  }
-}
-
-function computeProjectionLayout(root: RootStore): ProjectionLayout {
-  const doc = storeToPatchDocument(root);
-  const graph = SemanticGraph.fromPatch(doc);
-  const blocks = graph.getBlocks().map((b) => b.blockId);
-
-  const indegree = new Map<string, number>();
-  const layers = new Map<string, number>();
-  for (const blockId of blocks) {
-    indegree.set(blockId, 0);
-  }
-
-  for (const blockId of blocks) {
-    for (const downstream of graph.getDownstreamBlocks(blockId)) {
-      indegree.set(downstream, (indegree.get(downstream) ?? 0) + 1);
-    }
-  }
-
-  const queue: string[] = blocks.filter((id) => (indegree.get(id) ?? 0) === 0).sort();
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    const baseLayer = layers.get(current) ?? 0;
-    for (const next of graph.getDownstreamBlocks(current)) {
-      layers.set(next, Math.max(layers.get(next) ?? 0, baseLayer + 1));
-      indegree.set(next, (indegree.get(next) ?? 0) - 1);
-      if ((indegree.get(next) ?? 0) === 0) {
-        queue.push(next);
-        queue.sort();
-      }
-    }
-  }
-
-  const buckets = new Map<number, string[]>();
-  for (const blockId of blocks) {
-    const layer = layers.get(blockId) ?? 0;
-    const list = buckets.get(layer) ?? [];
-    list.push(blockId);
-    buckets.set(layer, list);
-  }
-
-  const nodes = new Map<BlockId, { x: number; y: number }>();
-  for (const [layer, ids] of buckets.entries()) {
-    const sorted = [...ids].sort();
-    sorted.forEach((id, index) => {
-      nodes.set(id, { x: layer * 280, y: index * 140 });
-    });
-  }
-
-  return { nodes };
 }

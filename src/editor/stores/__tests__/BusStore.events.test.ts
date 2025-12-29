@@ -41,7 +41,7 @@ describe('BusStore - Event Emission', () => {
     describe('BusCreated event', () => {
       it('emits BusCreated when bus created', () => {
         const busId = root.busStore.createBus(
-          { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+          { world: 'signal', domain: 'float', category: 'core', busEligible: true },
           'testBus',
           'last'
         );
@@ -52,13 +52,13 @@ describe('BusStore - Event Emission', () => {
           type: 'BusCreated',
           busId,
           name: 'testBus',
-          busType: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+          busType: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
         });
       });
 
       it('includes correct bus metadata in event', () => {
         const busId = root.busStore.createBus(
-          { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
+          { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
           'customPhase',
           'sum',
           0.5
@@ -83,7 +83,7 @@ describe('BusStore - Event Emission', () => {
     describe('BusDeleted event', () => {
       it('emits BusDeleted when bus deleted', () => {
         const busId = root.busStore.createBus(
-          { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+          { world: 'signal', domain: 'float', category: 'core', busEligible: true },
           'tempBus',
           'last'
         );
@@ -102,7 +102,7 @@ describe('BusStore - Event Emission', () => {
 
       it('emits BusDeleted AFTER bus removed (event contains preserved bus data)', () => {
         const busId = root.busStore.createBus(
-          { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+          { world: 'signal', domain: 'float', category: 'core', busEligible: true },
           'toDelete',
           'last'
         );
@@ -141,7 +141,7 @@ describe('BusStore - Event Emission', () => {
     beforeEach(() => {
       // Create a test bus
       busId = root.busStore.createBus(
-        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -292,7 +292,7 @@ describe('BusStore - Event Emission', () => {
   describe('Integration: Bus deletion cascades', () => {
     it('emits BindingRemoved events when bus deleted removes bindings (implicit)', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
         'cascadeBus',
         'last'
       );

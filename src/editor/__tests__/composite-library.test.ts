@@ -61,12 +61,10 @@ describe('Composite Registration', () => {
     }
   });
 
-  it('each composite has valid lane kind and subcategory', () => {
+  it('each composite has a subcategory', () => {
     const composites = listCompositeDefinitions();
-    const validLaneKinds = ['Scene', 'Phase', 'Fields', 'Spec', 'Program', 'Output'];
 
     for (const comp of composites) {
-      expect(validLaneKinds).toContain(comp.laneKind);
       expect(comp.subcategory).toBeTruthy();
     }
   });
@@ -279,7 +277,6 @@ describe('Domain Composites', () => {
     const gridPoints = composites.find(c => c.id === 'GridPoints');
 
     expect(gridPoints).toBeDefined();
-    expect(gridPoints?.laneKind).toBe('Fields');
     expect(gridPoints?.subcategory).toBe('Sources');
 
     // Should have domain and grid nodes
@@ -320,7 +317,6 @@ describe('Domain Composites', () => {
     const dotsRenderer = composites.find(c => c.id === 'DotsRenderer');
 
     expect(dotsRenderer).toBeDefined();
-    expect(dotsRenderer?.laneKind).toBe('Output');
     expect(dotsRenderer?.subcategory).toBe('Render');
 
     // Should have RenderInstances2D node
@@ -344,7 +340,6 @@ describe('Signal Composites', () => {
     const rotationScatter = composites.find(c => c.id === 'RotationScatter');
 
     expect(rotationScatter).toBeDefined();
-    expect(rotationScatter?.laneKind).toBe('Fields');
     expect(rotationScatter?.subcategory).toBe('Fields');
   });
 
@@ -370,7 +365,6 @@ describe('Signal Composites', () => {
     const glyphRenderer = composites.find(c => c.id === 'GlyphRenderer');
 
     expect(glyphRenderer).toBeDefined();
-    expect(glyphRenderer?.laneKind).toBe('Output');
     expect(glyphRenderer?.subcategory).toBe('Render');
   });
 });
@@ -392,7 +386,6 @@ describe('Macro Registry', () => {
       for (const block of macro.blocks) {
         expect(block.ref).toBeTruthy();
         expect(block.type).toBeTruthy();
-        expect(block.laneKind).toBeTruthy();
       }
 
       // Each connection references valid refs
@@ -600,7 +593,8 @@ describe('Composite Compilation', () => {
       busId = store.busStore.createBus(
         {
           world: 'signal',
-          domain: 'phase',
+          domain: 'float',
+          semantics: 'phase(0..1)',
           category: 'core',
           busEligible: true,
         },

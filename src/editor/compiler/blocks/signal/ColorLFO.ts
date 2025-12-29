@@ -136,7 +136,7 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Note: sat and light are baked into the base color for Sprint 2
   // They would be used if we had a 3-input ColorHSLToRGB opcode
 
-  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
   const colorType: TypeDesc = { world: 'signal', domain: 'color' };
 
   // Calculate hue shift: phase * hueSpan
@@ -160,7 +160,7 @@ registerBlockType({
       portId: 'phase',
       label: 'Phase',
       dir: 'in',
-      type: { world: 'signal', domain: 'phase01' },
+      type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
       defaultSource: { value: 0 },
     },
   ],
@@ -185,9 +185,9 @@ export const ColorLFOBlock: BlockCompiler = {
   inputs: [
     { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
     { name: 'base', type: { kind: 'Scalar:color' }, required: false },
-    { name: 'hueSpan', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'sat', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'light', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'hueSpan', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'sat', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'light', type: { kind: 'Scalar:float' }, required: false },
   ],
 
   outputs: [{ name: 'color', type: { kind: 'Signal:color' } }],
@@ -203,7 +203,7 @@ export const ColorLFOBlock: BlockCompiler = {
       };
     }
 
-    const phaseSignal = phaseArtifact.value as Signal<number>;
+    const phaseSignal = phaseArtifact.value as Signal<float>;
     // Read from inputs - values come from defaultSource or explicit connections
     const baseArtifact = inputs.base;
     const base = baseArtifact !== undefined && 'value' in baseArtifact && typeof baseArtifact.value === 'string'

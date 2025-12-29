@@ -49,12 +49,12 @@ function createRenderInstances3DSinkScenario(): {
   builder.registerFieldSlot(colorFieldId, colorSlot);
 
   builder.setCurrentBlockId("SizeGen#1");
-  const radiusSigId = builder.sigConst(5, makeType("signal", "number"));
-  const radiusSlot = builder.allocValueSlot(makeType("signal", "number"), "radius");
+  const radiusSigId = builder.sigConst(5, makeType("signal", "float"));
+  const radiusSlot = builder.allocValueSlot(makeType("signal", "float"), "radius");
   builder.registerSigSlot(radiusSigId, radiusSlot);
 
-  const opacitySigId = builder.sigConst(1.0, makeType("signal", "number"));
-  const opacitySlot = builder.allocValueSlot(makeType("signal", "number"), "opacity");
+  const opacitySigId = builder.sigConst(1.0, makeType("signal", "float"));
+  const opacitySlot = builder.allocValueSlot(makeType("signal", "float"), "opacity");
   builder.registerSigSlot(opacitySigId, opacitySlot);
 
   // Register render sink (simulates RenderInstances3D block lowering)
@@ -206,12 +206,12 @@ describe("RenderInstances3D block lowering", () => {
       const colorSlot = builder.allocValueSlot(makeType("field", "color"), "color");
       builder.registerFieldSlot(colorFieldId, colorSlot);
 
-      const radiusSigId = builder.sigConst(5, makeType("signal", "number"));
-      const radiusSlot = builder.allocValueSlot(makeType("signal", "number"), "radius");
+      const radiusSigId = builder.sigConst(5, makeType("signal", "float"));
+      const radiusSlot = builder.allocValueSlot(makeType("signal", "float"), "radius");
       builder.registerSigSlot(radiusSigId, radiusSlot);
 
-      const opacitySigId = builder.sigConst(1.0, makeType("signal", "number"));
-      const opacitySlot = builder.allocValueSlot(makeType("signal", "number"), "opacity");
+      const opacitySigId = builder.sigConst(1.0, makeType("signal", "float"));
+      const opacitySlot = builder.allocValueSlot(makeType("signal", "float"), "opacity");
       builder.registerSigSlot(opacitySigId, opacitySlot);
 
       // Allocate a camera slot (simulates Camera block output)
@@ -254,13 +254,13 @@ describe("RenderInstances3D block lowering", () => {
       const colorSlot = builder.allocValueSlot(makeType("field", "color"), "color");
       builder.registerFieldSlot(colorFieldId, colorSlot);
 
-      // Use Field<number> for radius
-      const radiusFieldId = builder.fieldConst(5, makeType("field", "number"));
-      const radiusSlot = builder.allocValueSlot(makeType("field", "number"), "radius");
+      // Use Field<float> for radius
+      const radiusFieldId = builder.fieldConst(5, makeType("field", "float"));
+      const radiusSlot = builder.allocValueSlot(makeType("field", "float"), "radius");
       builder.registerFieldSlot(radiusFieldId, radiusSlot);
 
-      const opacitySigId = builder.sigConst(1.0, makeType("signal", "number"));
-      const opacitySlot = builder.allocValueSlot(makeType("signal", "number"), "opacity");
+      const opacitySigId = builder.sigConst(1.0, makeType("signal", "float"));
+      const opacitySlot = builder.allocValueSlot(makeType("signal", "float"), "opacity");
       builder.registerSigSlot(opacitySigId, opacitySlot);
 
       builder.renderSink("instances3d", {

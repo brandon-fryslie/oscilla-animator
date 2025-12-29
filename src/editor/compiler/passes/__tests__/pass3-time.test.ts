@@ -292,7 +292,7 @@ describe("pass3TimeTopology", () => {
   describe("Pass-through Fields", () => {
     it("preserves all fields from TypedPatch", () => {
       const busTypes = new Map<string, TypeDesc>();
-      busTypes.set("bus1", { world: "signal", domain: "number" });
+      busTypes.set("bus1", { world: "signal", domain: "float" });
 
       const patch = createPatchWithTimeRoot("FiniteTimeRoot");
       Object.assign(patch, { busTypes });

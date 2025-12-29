@@ -39,7 +39,6 @@ function createPatch(overrides?: Partial<Patch>): Patch {
     version: 1,
     blocks: [],
     connections: [],
-    lanes: [],
     buses: [],
     publishers: [],
     listeners: [],
@@ -97,7 +96,7 @@ function createBus(id: string, name: string): Bus {
   return {
     id,
     name,
-    type: { world: "signal", domain: "number" } as unknown as Bus["type"],
+    type: { world: "signal", domain: "float" } as unknown as Bus["type"],
     combineMode: "last",
   } as Bus;
 }
@@ -165,9 +164,9 @@ describe("Pipeline Integration - Minimal Patch", () => {
       params: { periodMs: 3000, mode: "loop" },
       inputs: [],
       outputs: [
-        createSlot("tAbsMs", "Signal<number>", "output"),
-        createSlot("tModelMs", "Signal<number>", "output"),
-        createSlot("phase", "Signal<number>", "output"),
+        createSlot("tAbsMs", "Signal<float>", "output"),
+        createSlot("tModelMs", "Signal<float>", "output"),
+        createSlot("phase", "Signal<float>", "output"),
       ],
     });
 
@@ -215,12 +214,12 @@ describe("Pipeline Integration - Minimal Patch", () => {
   it("should compile a simple chain: TimeRoot -> Oscillator", () => {
     const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
-      outputs: [createSlot("phase", "Signal<number>", "output")],
+      outputs: [createSlot("phase", "Signal<float>", "output")],
     });
 
     const oscillator = createBlock("osc", "Oscillator", {
-      inputs: [createSlot("phase", "Signal<number>", "input")],
-      outputs: [createSlot("out", "Signal<number>", "output")],
+      inputs: [createSlot("phase", "Signal<float>", "input")],
+      outputs: [createSlot("out", "Signal<float>", "output")],
     });
 
     const wire = createConnection("timeroot", "phase", "osc", "phase");
@@ -250,17 +249,17 @@ describe("Pipeline Integration - Minimal Patch", () => {
   it("should compile a patch with bus communication", () => {
     const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
-      outputs: [createSlot("phase", "Signal<number>", "output")],
+      outputs: [createSlot("phase", "Signal<float>", "output")],
     });
 
     const producer = createBlock("producer", "Oscillator", {
-      inputs: [createSlot("phase", "Signal<number>", "input")],
-      outputs: [createSlot("out", "Signal<number>", "output")],
+      inputs: [createSlot("phase", "Signal<float>", "input")],
+      outputs: [createSlot("out", "Signal<float>", "output")],
     });
 
     const consumer = createBlock("consumer", "Scaler", {
-      inputs: [createSlot("in", "Signal<number>", "input")],
-      outputs: [createSlot("out", "Signal<number>", "output")],
+      inputs: [createSlot("in", "Signal<float>", "input")],
+      outputs: [createSlot("out", "Signal<float>", "output")],
     });
 
     const energyBus = createBus("bus1", "energy");
@@ -290,7 +289,7 @@ describe("Pipeline Integration - Minimal Patch", () => {
     expect(normalized.listeners).toHaveLength(1);
     expect(typed.busTypes.get("bus1")).toEqual({
       world: "signal",
-      domain: "number",
+      domain: "float",
     });
     expect(depGraphWithTime.graph.nodes).toHaveLength(4); // 3 blocks + 1 bus
     expect(depGraphWithTime.graph.edges).toHaveLength(3); // 1 wire + 1 publisher + 1 listener
@@ -305,8 +304,8 @@ describe("Pipeline Integration - Minimal Patch", () => {
 describe("Pipeline Integration - Error Cases", () => {
   it("should fail with missing TimeRoot", () => {
     const oscillator = createBlock("osc", "Oscillator", {
-      inputs: [createSlot("phase", "Signal<number>", "input")],
-      outputs: [createSlot("out", "Signal<number>", "output")],
+      inputs: [createSlot("phase", "Signal<float>", "input")],
+      outputs: [createSlot("out", "Signal<float>", "output")],
     });
 
     const patch = createPatch({
@@ -343,7 +342,7 @@ describe("Pipeline Integration - Error Cases", () => {
   it("should fail with type mismatch on wire", () => {
     const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
-      outputs: [createSlot("phase", "Signal<number>", "output")],
+      outputs: [createSlot("phase", "Signal<float>", "output")],
     });
 
     const block = createBlock("block", "SomeBlock", {
@@ -367,7 +366,7 @@ describe("Pipeline Integration - Error Cases", () => {
   it("should fail with dangling connection", () => {
     const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
-      outputs: [createSlot("phase", "Signal<number>", "output")],
+      outputs: [createSlot("phase", "Signal<float>", "output")],
     });
 
     // Wire references non-existent block
@@ -389,21 +388,21 @@ describe("Pipeline Integration - Error Cases", () => {
   it("should fail with illegal cycle (no state boundary)", () => {
     const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
-      outputs: [createSlot("phase", "Signal<number>", "output")],
+      outputs: [createSlot("phase", "Signal<float>", "output")],
     });
 
     // Create a feedback loop without a state boundary
     const block1 = createBlock("block1", "Adder", {
       inputs: [
-        createSlot("a", "Signal<number>", "input"),
-        createSlot("b", "Signal<number>", "input"),
+        createSlot("a", "Signal<float>", "input"),
+        createSlot("b", "Signal<float>", "input"),
       ],
-      outputs: [createSlot("out", "Signal<number>", "output")],
+      outputs: [createSlot("out", "Signal<float>", "output")],
     });
 
     const block2 = createBlock("block2", "Multiplier", {
-      inputs: [createSlot("in", "Signal<number>", "input")],
-      outputs: [createSlot("out", "Signal<number>", "output")],
+      inputs: [createSlot("in", "Signal<float>", "input")],
+      outputs: [createSlot("out", "Signal<float>", "output")],
     });
 
     const wire1 = createConnection("timeroot", "phase", "block1", "a");
@@ -430,21 +429,21 @@ describe("Pipeline Integration - Error Cases", () => {
   it("should accept legal cycle with state boundary", () => {
     const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
-      outputs: [createSlot("phase", "Signal<number>", "output")],
+      outputs: [createSlot("phase", "Signal<float>", "output")],
     });
 
     // Create a feedback loop WITH a state boundary (Delay block)
     const adder = createBlock("adder", "Adder", {
       inputs: [
-        createSlot("a", "Signal<number>", "input"),
-        createSlot("b", "Signal<number>", "input"),
+        createSlot("a", "Signal<float>", "input"),
+        createSlot("b", "Signal<float>", "input"),
       ],
-      outputs: [createSlot("out", "Signal<number>", "output")],
+      outputs: [createSlot("out", "Signal<float>", "output")],
     });
 
     const delay = createBlock("delay", "Delay", {
-      inputs: [createSlot("in", "Signal<number>", "input")],
-      outputs: [createSlot("out", "Signal<number>", "output")],
+      inputs: [createSlot("in", "Signal<float>", "input")],
+      outputs: [createSlot("out", "Signal<float>", "output")],
     });
 
     const wire1 = createConnection("timeroot", "phase", "adder", "a");
@@ -476,12 +475,12 @@ describe("Pipeline Integration - Invariants", () => {
   it("should preserve block count through all passes", () => {
     const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
-      outputs: [createSlot("phase", "Signal<number>", "output")],
+      outputs: [createSlot("phase", "Signal<float>", "output")],
     });
 
     const osc = createBlock("osc", "Oscillator", {
-      inputs: [createSlot("phase", "Signal<number>", "input")],
-      outputs: [createSlot("out", "Signal<number>", "output")],
+      inputs: [createSlot("phase", "Signal<float>", "input")],
+      outputs: [createSlot("out", "Signal<float>", "output")],
     });
 
     const wire = createConnection("timeroot", "phase", "osc", "phase");

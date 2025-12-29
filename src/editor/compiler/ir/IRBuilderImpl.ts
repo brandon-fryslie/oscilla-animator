@@ -260,7 +260,7 @@ export class IRBuilderImpl implements IRBuilder {
     const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "timeModelMs",
-      type: { world: "signal", domain: "number" },
+      type: { world: "signal", domain: "float" },
     });
     this.trackSigExprSource(id);
     return id;
@@ -270,7 +270,7 @@ export class IRBuilderImpl implements IRBuilder {
     const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "phase01",
-      type: { world: "signal", domain: "phase01" },
+      type: { world: "signal", domain: "float", semantics: "phase(0..1)" },
     });
     this.trackSigExprSource(id);
     return id;

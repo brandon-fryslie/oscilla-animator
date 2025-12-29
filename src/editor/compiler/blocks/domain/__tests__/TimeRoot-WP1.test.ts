@@ -90,7 +90,7 @@ describe('TimeRoot WP1 Features', () => {
         ctx: mockCompileCtx,
       });
 
-      const energy = getSignalValue<number>(result.energy, 'Signal:number');
+      const energy = getSignalValue<float>(result.energy, 'Signal:float');
 
       expect(energy(1000, mockRuntimeCtx)).toBe(1.0);  // During animation
       expect(energy(2999, mockRuntimeCtx)).toBe(1.0);  // Just before end
@@ -160,7 +160,7 @@ describe('TimeRoot WP1 Features', () => {
         ctx: mockCompileCtx,
       });
 
-      const cycleIndex = getSignalValue<number>(result.cycleIndex, 'Signal:number');
+      const cycleIndex = getSignalValue<int>(result.cycleIndex, 'Signal:int');
 
       expect(cycleIndex(0, mockRuntimeCtx)).toBe(0);      // Start of cycle 0
       expect(cycleIndex(500, mockRuntimeCtx)).toBe(0);    // During cycle 0
@@ -180,7 +180,7 @@ describe('TimeRoot WP1 Features', () => {
         ctx: mockCompileCtx,
       });
 
-      const cycleT = getSignalValue<number>(result.cycleT, 'Signal:Time');
+      const cycleT = getSignalValue<float>(result.cycleT, 'Signal:Time');
 
       expect(cycleT(0, mockRuntimeCtx)).toBe(0);      // Start of cycle 0
       expect(cycleT(500, mockRuntimeCtx)).toBe(500);  // Mid cycle 0
@@ -199,7 +199,7 @@ describe('TimeRoot WP1 Features', () => {
         ctx: mockCompileCtx,
       });
 
-      const energy = getSignalValue<number>(result.energy, 'Signal:number');
+      const energy = getSignalValue<float>(result.energy, 'Signal:float');
 
       expect(energy(0, mockRuntimeCtx)).toBe(1.0);
       expect(energy(500, mockRuntimeCtx)).toBe(1.0);
@@ -217,7 +217,7 @@ describe('TimeRoot WP1 Features', () => {
         ctx: mockCompileCtx,
       });
 
-      const energy = getSignalValue<number>(result.energy, 'Signal:number');
+      const energy = getSignalValue<float>(result.energy, 'Signal:float');
 
       expect(energy(0, mockRuntimeCtx)).toBe(1.0);
       expect(energy(5000, mockRuntimeCtx)).toBe(1.0);

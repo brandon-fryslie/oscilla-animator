@@ -69,7 +69,7 @@ export type Pass2Error =
 
 /**
  * Convert editor SlotType string to IR TypeDesc.
- * Parses patterns like "Signal<number>", "Field<vec2>", "Scalar:number".
+ * Parses patterns like "Signal<float>", "Field<vec2>", "Scalar:float".
  *
  * Uses canonical domain mapping from typeConversion.ts.
  *
@@ -119,7 +119,7 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
     "RenderNode[]": { world: "special", domain: "renderNode" },
     FilterDef: { world: "special", domain: "filterDef" },
     StrokeStyle: { world: "special", domain: "strokeStyle" },
-    ElementCount: { world: "scalar", domain: "number" },
+    ElementCount: { world: "scalar", domain: "int" },
   };
 
   if (slotType in specialTypes) {
@@ -134,7 +134,7 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
  *
  * Rules:
  * - signal world: always bus-eligible
- * - field world: only if domain is scalar (number, boolean, color)
+ * - field world: only if domain is scalar (float, int, boolean, color)
  * - scalar world: not bus-eligible (compile-time only)
  * - event world: bus-eligible (for event buses)
  * - special world: not bus-eligible
@@ -150,7 +150,7 @@ export function isBusEligible(type: TypeDesc): boolean {
 
   if (type.world === "field") {
     // Field is bus-eligible only for scalar domains
-    const scalarDomains = ["number", "boolean", "color"];
+    const scalarDomains = ["float", "int", "boolean", "color"];
     return scalarDomains.includes(type.domain);
   }
 
@@ -163,9 +163,10 @@ export function isBusEligible(type: TypeDesc): boolean {
  * These buses have strict type requirements enforced by the compiler.
  *
  * Canonical types:
- * - phaseA: signal<phase> - Phase has special invariants (wrap semantics, cycle-derived provenance)
+ * - phaseA: signal<float> - Phase has special invariants (wrap semantics, cycle-derived provenance)
  * - pulse: event<trigger> - Discrete events, not continuous signals (cleaner scheduling)
  * - energy: signal<number> - Continuous energy/amplitude
+ * - energy: signal<float> - Continuous energy/amplitude
  * - palette: signal<color> - Color palette
  */
 const RESERVED_BUS_CONSTRAINTS: Record<
@@ -174,7 +175,7 @@ const RESERVED_BUS_CONSTRAINTS: Record<
 > = {
   phaseA: {
     world: "signal",
-    domain: "phase01",
+    domain: "float",
     description: "Primary phase signal (0..1) with wrap semantics",
   },
   pulse: {
@@ -184,7 +185,7 @@ const RESERVED_BUS_CONSTRAINTS: Record<
   },
   energy: {
     world: "signal",
-    domain: "number",
+    domain: "float",
     description: "Energy/amplitude signal (0..∞)",
   },
   palette: {

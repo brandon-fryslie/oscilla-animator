@@ -20,7 +20,7 @@ export function expect<A extends Artifact['kind']>(
  * Extract scalar number from artifact with error context.
  */
 export function scalarNum(a: Readonly<Artifact>, who: string): number {
-  return expect(a, 'Scalar:number', who).value;
+  return expect(a, 'Scalar:float', who).value;
 }
 
 /**

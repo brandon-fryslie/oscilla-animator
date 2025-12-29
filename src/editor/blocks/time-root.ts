@@ -30,7 +30,7 @@ export const FiniteTimeRoot: KernelBlockDefinition = createBlock({
   capability: 'time',
   kernelId: 'FiniteTimeRoot',
   inputs: [
-    input('durationMs', 'Duration (ms)', 'Signal<number>', {
+    input('durationMs', 'Duration (ms)', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 5000,
@@ -41,13 +41,12 @@ export const FiniteTimeRoot: KernelBlockDefinition = createBlock({
   ],
   outputs: [
     output('systemTime', 'System Time', 'Signal<time>'),
-    output('progress', 'Progress', 'Signal<number>'),
+    output('progress', 'Progress', 'Signal<float>'),
     output('phase', 'Phase', 'Signal<phase>'),
     output('end', 'End Event', 'Event<any>'),
-    output('energy', 'Energy', 'Signal<number>'),
+    output('energy', 'Energy', 'Signal<float>'),
   ],
   color: '#ef4444', // Red for finite
-  laneKind: 'Phase',
   subcategory: 'TimeRoot',
   priority: -10, // High priority to appear first
   // Auto-publish TimeRoot outputs to canonical buses (per design-docs/3-Synthesized/03-Buses.md)
@@ -73,7 +72,7 @@ export const CycleTimeRoot: KernelBlockDefinition = createBlock({
   capability: 'time',
   kernelId: 'CycleTimeRoot',
   inputs: [
-    input('periodMs', 'Period (ms)', 'Signal<number>', {
+    input('periodMs', 'Period (ms)', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 3000,
@@ -101,11 +100,10 @@ export const CycleTimeRoot: KernelBlockDefinition = createBlock({
     output('cycleT', 'Cycle Time', 'Signal<time>'),
     output('phase', 'Phase', 'Signal<phase>'),
     output('wrap', 'Wrap Event', 'Event<any>'),
-    output('cycleIndex', 'Cycle Index', 'Signal<number>'),
-    output('energy', 'Energy', 'Signal<number>'),
+    output('cycleIndex', 'Cycle Index', 'Signal<int>'),
+    output('energy', 'Energy', 'Signal<float>'),
   ],
   color: '#3b82f6', // Blue for cyclic
-  laneKind: 'Phase',
   subcategory: 'TimeRoot',
   priority: -9,
   // Auto-publish TimeRoot outputs to canonical buses (per design-docs/3-Synthesized/03-Buses.md)
@@ -131,7 +129,7 @@ export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
   capability: 'time',
   kernelId: 'InfiniteTimeRoot',
   inputs: [
-    input('windowMs', 'Preview Window (ms)', 'Signal<number>', {
+    input('windowMs', 'Preview Window (ms)', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 10000,
@@ -139,7 +137,7 @@ export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
         uiHint: { kind: 'slider', min: 1000, max: 60000, step: 1000 },
       },
     }),
-    input('periodMs', 'Ambient Period (ms)', 'Signal<number>', {
+    input('periodMs', 'Ambient Period (ms)', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: {
         value: 10000,
@@ -152,10 +150,9 @@ export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
     output('systemTime', 'System Time', 'Signal<time>'),
     output('phase', 'Ambient Phase', 'Signal<phase>'),
     output('pulse', 'Ambient Pulse', 'Event<any>'),
-    output('energy', 'Energy', 'Signal<number>'),
+    output('energy', 'Energy', 'Signal<float>'),
   ],
   color: '#8b5cf6', // Purple for infinite
-  laneKind: 'Phase',
   subcategory: 'TimeRoot',
   priority: -8,
   // Auto-publish TimeRoot outputs to canonical buses (per design-docs/3-Synthesized/03-Buses.md)

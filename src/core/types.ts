@@ -23,7 +23,7 @@ export type Time = number;
 export type Unit = number;
 
 /** PRNG seed for reproducible randomness. */
-export type Seed = number;
+export type Seed = int;
 
 /** 2D point/vector. */
 export type Point = {

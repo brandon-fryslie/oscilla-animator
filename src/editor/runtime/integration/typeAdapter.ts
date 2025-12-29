@@ -84,7 +84,8 @@ export function canBroadcastToField(type: CompilerTypeDesc): boolean {
  */
 export function isDomainCompatible(domain: string): boolean {
   return (
-    domain === "number" ||
+    domain === "float" ||
+    domain === "int" ||
     domain === "vec2" ||
     domain === "vec3" ||
     domain === "vec4" ||
@@ -118,7 +119,8 @@ export function compilerToRuntimeType(
 
   // Map domain to runtime type kind
   switch (compilerType.domain) {
-    case "number":
+    case "float":
+    case "int":
       return { kind: "number" };
     case "vec2":
       return { kind: "vec2" };
@@ -186,7 +188,7 @@ export function runtimeToCompilerType(
   // Map runtime kind to compiler domain
   switch (runtimeType.kind) {
     case "number":
-      return { world, domain: "number" };
+      return { world, domain: "float" };
     case "vec2":
       return { world, domain: "vec2" };
     case "vec3":

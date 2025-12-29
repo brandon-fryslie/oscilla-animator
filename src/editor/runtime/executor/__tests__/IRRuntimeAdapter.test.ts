@@ -50,7 +50,7 @@ function createTestProgram(
       nodes: [
         {
           kind: "const",
-          type: { world: "field", domain: "number" },
+          type: { world: "field", domain: "float" },
           constId: 0,
         },
       ],

@@ -22,7 +22,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Scalars',
         };
 
         expect(() => validateBlockDefinition(def)).not.toThrow();
@@ -40,7 +39,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Fields',
         };
 
         expect(() => validateBlockDefinition(def)).not.toThrow();
@@ -58,7 +56,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Output',
         };
 
         expect(() => validateBlockDefinition(def)).not.toThrow();
@@ -76,7 +73,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Fields',
         };
 
         expect(() => validateBlockDefinition(def)).not.toThrow();
@@ -94,13 +90,11 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Fields',
           compositeDefinition: {
             id: 'test',
             label: 'Test',
             description: 'Test composite',
             subcategory: 'Other',
-            laneKind: 'Fields',
             graph: {
               nodes: {},
               edges: [],
@@ -127,7 +121,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Fields',
         };
 
         expect(() => validateBlockDefinition(def)).not.toThrow();
@@ -147,13 +140,11 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Scalars',
           compositeDefinition: {
             id: 'test',
             label: 'Test',
             description: 'Test composite',
             subcategory: 'Other',
-            laneKind: 'Scalars',
             graph: {
               nodes: {},
               edges: [],
@@ -183,7 +174,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Output',
         } as unknown as BlockDefinition;
 
         expect(() => validateBlockDefinition(def)).toThrow(BlockDefinitionValidationError);
@@ -204,7 +194,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Scalars',
         } as unknown as BlockDefinition;
 
         expect(() => validateBlockDefinition(def)).toThrow(BlockDefinitionValidationError);
@@ -227,7 +216,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Fields',
         } as unknown as BlockDefinition;
 
         expect(() => validateBlockDefinition(def)).toThrow(BlockDefinitionValidationError);
@@ -248,7 +236,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Scalars',
         };
 
         expect(() => validateBlockDefinition(def)).toThrow(BlockDefinitionValidationError);
@@ -271,7 +258,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Scalars',
         },
         {
           type: 'AddNumbers',
@@ -284,7 +270,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Fields',
         },
       ];
 
@@ -304,7 +289,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Scalars',
         },
         {
           type: 'FakeTimeRoot2',
@@ -317,7 +301,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Scalars',
         },
       ] as unknown as BlockDefinition[];
 
@@ -339,7 +322,6 @@ describe('registry-validation', () => {
           defaultParams: {},
           paramSchema: [],
           color: '#000',
-          laneKind: 'Scalars',
         },
       ] as unknown as BlockDefinition[];
 

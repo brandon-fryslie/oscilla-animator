@@ -11,7 +11,7 @@
  *
  * Use cases:
  * 1. User dragged from an output port and dropped a new block
- * 2. User dropped a block after another in a chain lane
+ * 2. User dropped a block near another and wants sensible wiring
  * 3. User dropped a block to satisfy a specific input port
  */
 
@@ -36,7 +36,7 @@ export interface AutoWireContext {
   /** Block definition for the new block */
   newBlockDef: BlockDefinition;
 
-  /** Function to get block definition by type (for cross-lane wiring) */
+  /** Function to get block definition by type */
   getDefinition?: (type: string) => BlockDefinition | undefined;
 
   /** Optional: user dragged from an existing output port */
@@ -53,12 +53,6 @@ export interface AutoWireContext {
     slotType: SlotType;
   };
 
-  /** Optional: previous block in same lane (for chain wiring) */
-  prevBlockInLane?: {
-    blockId: BlockId;
-    block: Block;
-    definition: BlockDefinition;
-  };
 }
 
 export interface AutoWireResult {
@@ -84,8 +78,7 @@ export interface AutoWireResult {
  * Priority:
  * 1. If toPort is provided: wire newBlock.output -> toPort.input
  * 2. If fromPort is provided: wire fromPort.output -> newBlock.input
- * 3. If prevBlockInLane is provided: wire prev.outputs -> newBlock.inputs
- * 4. Cross-lane: find ALL compatible connections from existing blocks
+ * 3. Find compatible connections from existing blocks
  */
 export function computeAutoWire(ctx: AutoWireContext): AutoWireResult {
   // Case 1: Satisfy an explicit input port
@@ -98,15 +91,7 @@ export function computeAutoWire(ctx: AutoWireContext): AutoWireResult {
     return wireFromExplicitOutput(ctx);
   }
 
-  // Case 3: Chain lane heuristic (previous block in lane)
-  if (ctx.prevBlockInLane) {
-    const result = wireFromPrevInLane(ctx);
-    if (result.connections.length > 0) {
-      return result;
-    }
-  }
-
-  // Case 4: Cross-lane - find ALL compatible connections from any block
+  // Case 3: Find compatible connections from any block
   return wireFromAllBlocks(ctx);
 }
 
@@ -202,59 +187,7 @@ function wireFromExplicitOutput(ctx: AutoWireContext): AutoWireResult {
 }
 
 /**
- * Case 3: Wire from previous block in lane (chain heuristic).
- *
- * This is more permissive than cases 1 & 2:
- * - We try to wire ALL compatible outputs from prev to inputs on new
- * - But only if each connection is unambiguous (1:1 mapping)
- */
-function wireFromPrevInLane(ctx: AutoWireContext): AutoWireResult {
-  const { prevBlockInLane, newBlockId, newBlockDef, connections, blocks } = ctx;
-  if (prevBlockInLane === undefined) return { connections: [], reason: 'no prevBlockInLane' };
-
-  const prevDef = prevBlockInLane.definition;
-  const result: AutoWireResult['connections'] = [];
-
-  // Try to match each output from prev to an input on new
-  for (const prevOutput of prevDef.outputs) {
-    // Find free inputs on new block that match this output type
-    const matchingInputs = newBlockDef.inputs.filter((inp) => {
-      if (!areTypesCompatible(prevOutput.type, inp.type)) return false;
-      // Must not already have an incoming connection
-      if (hasIncomingConnection(connections, newBlockId, inp.id)) return false;
-      // Must not already be claimed by another auto-wire in this batch
-      if (result.some((r) => r.toSlotId === inp.id)) return false;
-      return true;
-    });
-
-    // Only wire if exactly one match (no ambiguity)
-    if (matchingInputs.length === 1) {
-      const input = matchingInputs[0];
-      if (input == null) continue;
-
-      const candidate = {
-        fromBlockId: prevBlockInLane.blockId,
-        fromSlotId: prevOutput.id,
-        toBlockId: newBlockId,
-        toSlotId: input.id,
-      };
-
-      // Check for cycles
-      if (!wouldCreateCycle(blocks, [...connections, ...result.map(toConnection)], candidate)) {
-        result.push(candidate);
-      }
-    }
-  }
-
-  if (result.length === 0) {
-    return { connections: [], reason: 'no unambiguous matches from prevInLane' };
-  }
-
-  return { connections: result };
-}
-
-/**
- * Case 4: Cross-lane wiring - find ALL compatible connections from any block.
+ * Case 3: Find ALL compatible connections from any block.
  *
  * For each free input on the new block, find if there's exactly ONE
  * output in the entire patch that can satisfy it (and isn't already connected).
@@ -264,7 +197,7 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
   const result: AutoWireResult['connections'] = [];
 
   if (getDefinition === undefined) {
-    return { connections: [], reason: 'no getDefinition provided for cross-lane wiring' };
+    return { connections: [], reason: 'no getDefinition provided for autowire' };
   }
 
   // For each input on the new block
@@ -324,7 +257,7 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
   }
 
   if (result.length === 0) {
-    return { connections: [], reason: 'no unambiguous cross-lane matches' };
+    return { connections: [], reason: 'no unambiguous matches' };
   }
 
   return { connections: result };
@@ -414,36 +347,4 @@ function isReachable(adj: Map<string, Set<string>>, start: string, goal: string)
   }
 
   return false;
-}
-
-// =============================================================================
-// Utility: Find previous block in lane
-// =============================================================================
-
-/**
- * Find the block that comes before a given position in a lane.
- * Used to determine the "prevInLane" for chain wiring.
- */
-export function findPrevBlockInLane(
-  laneBlockIds: readonly BlockId[],
-  newBlockIndex: number,
-  blocks: readonly Block[],
-  getDefinition: (type: string) => BlockDefinition | undefined
-): AutoWireContext['prevBlockInLane'] | undefined {
-  if (newBlockIndex <= 0) return undefined;
-
-  const prevBlockId = laneBlockIds[newBlockIndex - 1];
-  if (!prevBlockId) return undefined;
-
-  const prevBlock = blocks.find((b) => b.id === prevBlockId);
-  if (!prevBlock) return undefined;
-
-  const prevDef = getDefinition(prevBlock.type);
-  if (!prevDef) return undefined;
-
-  return {
-    blockId: prevBlockId,
-    block: prevBlock,
-    definition: prevDef,
-  };
 }

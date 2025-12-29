@@ -57,7 +57,7 @@ function OverviewPage({ onRetakeTour }: { onRetakeTour: () => void }) {
           The <strong>Library</strong> (left) holds blocks: Sources, Fields, Time, Compose, Render, FX, and Macros.
         </li>
         <li>
-          The <strong>Patch</strong> (center) is where those blocks are wired into lanes that represent different value domains.
+          The <strong>Patch</strong> (center) is where those blocks are wired into a graph that represents different value domains.
         </li>
         <li>
           The <strong>Preview</strong> and <strong>Control Surface</strong> (right) let you see and play with the running program.
@@ -269,7 +269,7 @@ function BlocksMacrosPage() {
     <div className="help-center-page">
       <h2>Blocks: Macros</h2>
       <p>
-        <strong>Macro</strong> blocks are &quot;recipe starters&quot;. When you drop a macro into a lane, it expands into a prewired
+        <strong>Macro</strong> blocks are &quot;recipe starters&quot;. When you drop a macro into the Patch, it expands into a prewired
         collection of blocks that implement a particular animation style.
       </p>
       <p>Examples include:</p>
@@ -373,7 +373,7 @@ function PortsFieldsPage() {
         <code>Field&lt;Duration&gt;</code>, or <code>Field&lt;number&gt;</code>.
       </p>
       <p>
-        At the kernel level, numeric fields share a common representation (<code>Field:number</code>), and point-like fields share
+        At the kernel level, numeric fields share a common representation (<code>Field:float</code>), and point-like fields share
         another (<code>Field:vec2</code>). This lets primitives like PerElementProgress and PerElementTransport work with any field
         that produces the right shape of data.
       </p>
@@ -443,9 +443,6 @@ function LibraryPage() {
       <p>You can filter the Library in a few ways:</p>
       <ul>
         <li>
-          <strong>By lane:</strong> show only blocks that are a natural fit for the lane you&apos;re working in.
-        </li>
-        <li>
           <strong>By connection:</strong> show blocks whose inputs can accept the currently selected output.
         </li>
         <li>
@@ -453,7 +450,7 @@ function LibraryPage() {
         </li>
       </ul>
       <p>
-        Drag blocks from the Library into lanes to add them to your patch. Many macros will drop a whole configuration of blocks
+        Drag blocks from the Library into the Patch to add them to your patch. Many macros will drop a whole configuration of blocks
         and wires, while primitives land as a single block that you can wire up yourself.
       </p>
     </div>
@@ -550,22 +547,14 @@ function PatchPage() {
     <div className="help-center-page">
       <h2>Patch Bay</h2>
       <p>
-        The Patch Bay is where you connect blocks into a graph. Lanes organize blocks by role: Scene, Phase, Fields, Spec, Program, Output.
+        The Patch Bay is where you connect blocks into a graph.
       </p>
       <p>
-        Drag blocks from the Library into lanes, then wire outputs to inputs. Wires flow left-to-right, showing how data moves through
+        Drag blocks from the Library into the Patch, then wire outputs to inputs. Wires flow left-to-right, showing how data moves through
         your animation pipeline.
       </p>
-      <ul>
-        <li><strong>Scene lane:</strong> Where your source geometry lives (SVG paths, text, shapes).</li>
-        <li><strong>Fields lane:</strong> Per-element values (positions, delays, durations, colors).</li>
-        <li><strong>Phase lane:</strong> Time structure (entrance, hold, exit phases).</li>
-        <li><strong>Spec lane:</strong> Animation specifications combining fields and timing.</li>
-        <li><strong>Program lane:</strong> The compiled animation program.</li>
-        <li><strong>Output lane:</strong> Rendering and output blocks.</li>
-      </ul>
       <p>
-        Use lane descriptions and type hints to keep structure clear. The compiler validates that you&apos;re wiring compatible types together.
+        Use type hints to keep structure clear. The compiler validates that you&apos;re wiring compatible types together.
       </p>
     </div>
   );

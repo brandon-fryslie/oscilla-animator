@@ -20,7 +20,9 @@ import { createTypeDesc } from './TypeDesc';
  */
 const VALUE_KIND_MAP: Record<string, TypeDesc> = {
   // Scalars
-  'Scalar:number': createTypeDesc({ world: 'scalar', domain: 'number' }),
+  'Scalar:float': createTypeDesc({ world: 'scalar', domain: 'float' }),
+  'Scalar:int': createTypeDesc({ world: 'scalar', domain: 'int' }),
+  'Scalar:number': createTypeDesc({ world: 'scalar', domain: 'float' }),
   'Scalar:string': createTypeDesc({ world: 'scalar', domain: 'string' }),
   'Scalar:boolean': createTypeDesc({ world: 'scalar', domain: 'boolean' }),
   'Scalar:color': createTypeDesc({ world: 'scalar', domain: 'color' }),
@@ -28,15 +30,20 @@ const VALUE_KIND_MAP: Record<string, TypeDesc> = {
   'Scalar:bounds': createTypeDesc({ world: 'scalar', domain: 'bounds' }),
 
   // Signals
-  'Signal:number': createTypeDesc({ world: 'signal', domain: 'number' }),
+  'Signal:float': createTypeDesc({ world: 'signal', domain: 'float' }),
+  'Signal:int': createTypeDesc({ world: 'signal', domain: 'int' }),
+  'Signal:number': createTypeDesc({ world: 'signal', domain: 'float' }),
   'Signal:Time': createTypeDesc({ world: 'signal', domain: 'time', unit: 'ms' }),
-  'Signal:Unit': createTypeDesc({ world: 'signal', domain: 'number', semantics: 'unit(0..1)' }),
+  'Signal:Unit': createTypeDesc({ world: 'signal', domain: 'float', semantics: 'unit(0..1)' }),
   'Signal:vec2': createTypeDesc({ world: 'signal', domain: 'vec2' }),
-  'Signal:phase': createTypeDesc({ world: 'signal', domain: 'phase' }),
+  'Signal:phase': createTypeDesc({ world: 'signal', domain: 'float', semantics: 'phase(0..1)' }),
+  'Signal:phase01': createTypeDesc({ world: 'signal', domain: 'float', semantics: 'phase(0..1)' }),
   'Signal:color': createTypeDesc({ world: 'signal', domain: 'color' }),
 
   // Fields
-  'Field:number': createTypeDesc({ world: 'field', domain: 'number' }),
+  'Field:float': createTypeDesc({ world: 'field', domain: 'float' }),
+  'Field:int': createTypeDesc({ world: 'field', domain: 'int' }),
+  'Field:number': createTypeDesc({ world: 'field', domain: 'float' }),
   'Field:string': createTypeDesc({ world: 'field', domain: 'string' }),
   'Field:boolean': createTypeDesc({ world: 'field', domain: 'boolean' }),
   'Field:color': createTypeDesc({ world: 'field', domain: 'color' }),
@@ -51,7 +58,7 @@ const VALUE_KIND_MAP: Record<string, TypeDesc> = {
 
   // Special types
   'Domain': createTypeDesc({ world: 'config', domain: 'domain' }),
-  'PhaseMachine': createTypeDesc({ world: 'config', domain: 'program' }),
+  'PhaseMachine': createTypeDesc({ world: 'config', domain: 'phaseMachine' }),
   'TargetScene': createTypeDesc({ world: 'config', domain: 'sceneTargets' }),
   'Scene': createTypeDesc({ world: 'config', domain: 'scene' }),
 
@@ -81,7 +88,7 @@ const VALUE_KIND_MAP: Record<string, TypeDesc> = {
 /**
  * Convert a ValueKind string to a TypeDesc.
  *
- * @param kind - The ValueKind string (e.g., 'Signal:number', 'Field<Point>')
+ * @param kind - The ValueKind string (e.g., 'Signal:float', 'Field<Point>')
  * @returns The corresponding TypeDesc, or a fallback for unknown types
  */
 export function valueKindToTypeDesc(kind: string): TypeDesc {
@@ -142,7 +149,7 @@ function parseValueKindFallback(kind: string): TypeDesc {
 
 /**
  * Convert a SlotType string to a TypeDesc.
- * SlotType uses patterns like 'Signal<phase>', 'Field<Point>', 'Scalar:number'.
+ * SlotType uses patterns like 'Signal<phase>', 'Field<Point>', 'Scalar:float'.
  *
  * @param slot - The SlotType string
  * @returns The corresponding TypeDesc
@@ -202,17 +209,23 @@ export function slotTypeToTypeDesc(slot: string): TypeDesc {
  */
 const DOMAIN_STRING_MAP: Record<string, TypeDomain> = {
   // Core domains (lowercase)
-  'number': 'number',
+  'number': 'float',
+  'float': 'float',
+  'int': 'int',
   'vec2': 'vec2',
   'color': 'color',
   'boolean': 'boolean',
   'time': 'time',
-  'phase': 'phase',
+  'phase': 'float',
+  'phase01': 'float',
+  'unit': 'float',
   'rate': 'rate',
   'trigger': 'trigger',
 
   // Core domains (various casings)
-  'Number': 'number',
+  'Number': 'float',
+  'Float': 'float',
+  'Int': 'int',
   'Vec2': 'vec2',
   'Color': 'color',
   'Boolean': 'boolean',
@@ -222,8 +235,8 @@ const DOMAIN_STRING_MAP: Record<string, TypeDomain> = {
   'Trigger': 'trigger',
 
   // Special time variants
-  'Unit': 'number',  // Unit is a number with unit(0..1) semantics
-  'unit': 'number',
+  'Unit': 'float',  // Unit is a float with unit(0..1) semantics
+  'unit': 'float',
 
   // Point/position variants
   'Point': 'vec2',
@@ -282,8 +295,10 @@ const DOMAIN_STRING_MAP: Record<string, TypeDomain> = {
   'Domain': 'domain',
 
   // PhaseSample and other compound types
-  'PhaseSample': 'phase',
-  'phaseSample': 'phase',
+  'PhaseSample': 'phaseSample',
+  'phaseSample': 'phaseSample',
+  'phaseMachine': 'phaseMachine',
+  'PhaseMachine': 'phaseMachine',
 };
 
 /**
@@ -320,6 +335,9 @@ function getSemantics(typeName: string): string | undefined {
     'point': 'point',
     'Unit': 'unit(0..1)',
     'unit': 'unit(0..1)',
+    'Phase': 'phase(0..1)',
+    'phase': 'phase(0..1)',
+    'phase01': 'phase(0..1)',
     'PhaseSample': 'phaseSample',
     'phaseSample': 'phaseSample',
     'Position': 'position',

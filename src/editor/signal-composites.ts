@@ -19,7 +19,6 @@ export const RotationScatter = registerComposite({
   description: 'Per-element rotation variation in [0, 2π]',
   color: '#EC4899',
   subcategory: 'Fields',
-  laneKind: 'Fields',
   tags: {
     origin: 'signal-composites',
     form: 'composite',
@@ -73,7 +72,7 @@ export const RotationScatter = registerComposite({
       id: 'rotation',
       label: 'Rotation',
       direction: 'output',
-      slotType: 'Field<number>',
+      slotType: 'Field<float>',
       nodeId: 'applyAmount',
       nodePort: 'y',
     },
@@ -92,7 +91,6 @@ export const BreathingScale = registerComposite({
   description: 'Global pulse to size/opacity via bus',
   color: '#3B82F6',
   subcategory: 'Time',
-  laneKind: 'Phase',
   tags: {
     origin: 'signal-composites',
     form: 'composite',
@@ -155,7 +153,6 @@ export const PaletteDrift = registerComposite({
   description: 'Slow color evolution from phase',
   color: '#F59E0B',
   subcategory: 'Time',
-  laneKind: 'Phase',
   tags: {
     origin: 'signal-composites',
     form: 'composite',
@@ -202,7 +199,6 @@ export const PerElementColorScatter = registerComposite({
   description: 'Apply per-element hue offsets to base color',
   color: '#F59E0B',
   subcategory: 'Style',
-  laneKind: 'Fields',
   tags: {
     origin: 'signal-composites',
     form: 'composite',
@@ -275,7 +271,6 @@ export const PulseToEnvelope = registerComposite({
   description: 'AD envelope triggered by pulse bus',
   color: '#F59E0B',
   subcategory: 'Time',
-  laneKind: 'Phase',
   tags: {
     origin: 'signal-composites',
     form: 'composite',
@@ -321,7 +316,6 @@ export const PhaseWrapPulse = registerComposite({
   description: 'Subdivide phase into pulse events',
   color: '#F59E0B',
   subcategory: 'Time',
-  laneKind: 'Phase',
   tags: {
     origin: 'signal-composites',
     form: 'composite',
@@ -368,7 +362,6 @@ export const GlyphRenderer = registerComposite({
   description: 'Render paths/glyphs at each element',
   color: '#EF4444',
   subcategory: 'Render',
-  laneKind: 'Output',
   tags: {
     origin: 'signal-composites',
     form: 'composite',
@@ -417,7 +410,7 @@ export const GlyphRenderer = registerComposite({
       id: 'radius',
       label: 'Size',
       direction: 'input',
-      slotType: 'Field<number>',
+      slotType: 'Field<float>',
       nodeId: 'render',
       nodePort: 'radius',
     },
@@ -425,7 +418,7 @@ export const GlyphRenderer = registerComposite({
       id: 'rotation',
       label: 'Rotation',
       direction: 'input',
-      slotType: 'Field<number>',
+      slotType: 'Field<float>',
       nodeId: 'render',
       nodePort: 'rotation',
     },
@@ -454,7 +447,6 @@ export const JitterMotion = registerComposite({
   description: 'Phase-driven jitter/drift per element',
   color: '#A855F7',
   subcategory: 'Math',
-  laneKind: 'Fields',
   tags: {
     origin: 'signal-composites',
     form: 'composite',

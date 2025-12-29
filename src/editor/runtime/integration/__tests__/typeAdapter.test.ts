@@ -22,7 +22,7 @@ import {
 describe("Type Adapter - Compiler to Runtime", () => {
   describe("Field type conversions", () => {
     it("should convert number field type", () => {
-      const compiler: CompilerTypeDesc = { world: "field", domain: "number" };
+      const compiler: CompilerTypeDesc = { world: "field", domain: "float" };
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "number" });
     });
@@ -60,7 +60,7 @@ describe("Type Adapter - Compiler to Runtime", () => {
 
   describe("Signal type conversions (for broadcast nodes)", () => {
     it("should convert signal number type", () => {
-      const compiler: CompilerTypeDesc = { world: "signal", domain: "number" };
+      const compiler: CompilerTypeDesc = { world: "signal", domain: "float" };
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "number" });
     });
@@ -82,7 +82,7 @@ describe("Type Adapter - Compiler to Runtime", () => {
     it("should ignore semantics annotation", () => {
       const compiler: CompilerTypeDesc = {
         world: "field",
-        domain: "number",
+        domain: "float",
         semantics: "point",
       };
       const runtime = compilerToRuntimeType(compiler);
@@ -92,7 +92,7 @@ describe("Type Adapter - Compiler to Runtime", () => {
     it("should ignore unit annotation", () => {
       const compiler: CompilerTypeDesc = {
         world: "field",
-        domain: "number",
+        domain: "float",
         unit: "px",
       };
       const runtime = compilerToRuntimeType(compiler);
@@ -113,7 +113,7 @@ describe("Type Adapter - Compiler to Runtime", () => {
 
   describe("Unsupported type errors", () => {
     it("should throw for scalar world", () => {
-      const compiler: CompilerTypeDesc = { world: "scalar", domain: "number" };
+      const compiler: CompilerTypeDesc = { world: "scalar", domain: "float" };
       expect(() => compilerToRuntimeType(compiler)).toThrow(
         UnsupportedTypeError
       );
@@ -146,8 +146,8 @@ describe("Type Adapter - Compiler to Runtime", () => {
       );
     });
 
-    it("should throw for unsupported domain (phase01)", () => {
-      const compiler: CompilerTypeDesc = { world: "signal", domain: "phase01" };
+    it("should throw for unsupported domain (phaseSample)", () => {
+      const compiler: CompilerTypeDesc = { world: "signal", domain: "phaseSample" };
       expect(() => compilerToRuntimeType(compiler)).toThrow(
         UnsupportedTypeError
       );
@@ -161,7 +161,7 @@ describe("Type Adapter - Compiler to Runtime", () => {
     });
 
     it("should include source and target types in error message", () => {
-      const compiler: CompilerTypeDesc = { world: "scalar", domain: "number" };
+      const compiler: CompilerTypeDesc = { world: "scalar", domain: "float" };
       try {
         compilerToRuntimeType(compiler);
         expect.fail("Should have thrown");
@@ -169,7 +169,7 @@ describe("Type Adapter - Compiler to Runtime", () => {
         expect(error).toBeInstanceOf(UnsupportedTypeError);
         const err = error as UnsupportedTypeError;
         expect(err.message).toContain("world=scalar");
-        expect(err.message).toContain("domain=number");
+        expect(err.message).toContain("domain=float");
         expect(err.message).toContain("Supported domains:");
       }
     });
@@ -181,7 +181,7 @@ describe("Type Adapter - Runtime to Compiler", () => {
     it("should convert number to field number (default)", () => {
       const runtime: RuntimeTypeDesc = { kind: "number" };
       const compiler = runtimeToCompilerType(runtime);
-      expect(compiler).toEqual({ world: "field", domain: "number" });
+      expect(compiler).toEqual({ world: "field", domain: "float" });
     });
 
     it("should convert vec2 to field vec2", () => {
@@ -213,7 +213,7 @@ describe("Type Adapter - Runtime to Compiler", () => {
     it("should create signal types when world='signal'", () => {
       const runtime: RuntimeTypeDesc = { kind: "number" };
       const compiler = runtimeToCompilerType(runtime, "signal");
-      expect(compiler).toEqual({ world: "signal", domain: "number" });
+      expect(compiler).toEqual({ world: "signal", domain: "float" });
     });
 
     it("should create field types when world='field' (explicit)", () => {
@@ -248,7 +248,7 @@ describe("Type Adapter - Runtime to Compiler", () => {
 describe("Type Adapter - Batch Conversion", () => {
   it("should convert all supported types", () => {
     const compilerTypes: CompilerTypeDesc[] = [
-      { world: "field", domain: "number" },
+      { world: "field", domain: "float" },
       { world: "field", domain: "vec2" },
       { world: "signal", domain: "color" },
     ];
@@ -264,8 +264,8 @@ describe("Type Adapter - Batch Conversion", () => {
 
   it("should skip unsupported types without throwing", () => {
     const compilerTypes: CompilerTypeDesc[] = [
-      { world: "field", domain: "number" }, // Supported
-      { world: "scalar", domain: "number" }, // Unsupported (world)
+      { world: "field", domain: "float" }, // Supported
+      { world: "scalar", domain: "float" }, // Unsupported (world)
       { world: "field", domain: "vec2" }, // Supported
       { world: "field", domain: "domain" }, // Unsupported (domain)
     ];
@@ -280,7 +280,7 @@ describe("Type Adapter - Batch Conversion", () => {
 
   it("should return empty array for all unsupported types", () => {
     const compilerTypes: CompilerTypeDesc[] = [
-      { world: "scalar", domain: "number" },
+      { world: "scalar", domain: "float" },
       { world: "special", domain: "domain" },
     ];
 
@@ -291,9 +291,9 @@ describe("Type Adapter - Batch Conversion", () => {
 
   it("should preserve indices correctly", () => {
     const compilerTypes: CompilerTypeDesc[] = [
-      { world: "scalar", domain: "number" }, // index 0, skipped
-      { world: "field", domain: "number" }, // index 1, kept
-      { world: "scalar", domain: "number" }, // index 2, skipped
+      { world: "scalar", domain: "float" }, // index 0, skipped
+      { world: "field", domain: "float" }, // index 1, kept
+      { world: "scalar", domain: "float" }, // index 2, skipped
       { world: "field", domain: "vec2" }, // index 3, kept
     ];
 
@@ -305,7 +305,7 @@ describe("Type Adapter - Batch Conversion", () => {
 
 describe("Type Adapter - Type Compatibility", () => {
   it("should return true for compatible types", () => {
-    const compiler: CompilerTypeDesc = { world: "field", domain: "number" };
+    const compiler: CompilerTypeDesc = { world: "field", domain: "float" };
     const runtime: RuntimeTypeDesc = { kind: "number" };
 
     expect(areTypesCompatible(compiler, runtime)).toBe(true);
@@ -319,7 +319,7 @@ describe("Type Adapter - Type Compatibility", () => {
   });
 
   it("should return false for unsupported compiler types", () => {
-    const compiler: CompilerTypeDesc = { world: "scalar", domain: "number" };
+    const compiler: CompilerTypeDesc = { world: "scalar", domain: "float" };
     const runtime: RuntimeTypeDesc = { kind: "number" };
 
     expect(areTypesCompatible(compiler, runtime)).toBe(false);
@@ -336,20 +336,20 @@ describe("Type Adapter - Type Compatibility", () => {
 describe("Type Adapter - Type Guards", () => {
   describe("isFieldType", () => {
     it("should return true for field types", () => {
-      expect(isFieldType({ world: "field", domain: "number" })).toBe(true);
+      expect(isFieldType({ world: "field", domain: "float" })).toBe(true);
       expect(isFieldType({ world: "field", domain: "vec2" })).toBe(true);
     });
 
     it("should return false for non-field types", () => {
-      expect(isFieldType({ world: "signal", domain: "number" })).toBe(false);
-      expect(isFieldType({ world: "scalar", domain: "number" })).toBe(false);
+      expect(isFieldType({ world: "signal", domain: "float" })).toBe(false);
+      expect(isFieldType({ world: "scalar", domain: "float" })).toBe(false);
       expect(isFieldType({ world: "special", domain: "domain" })).toBe(false);
     });
   });
 
   describe("canBroadcastToField", () => {
     it("should return true for signal types with field-compatible domains", () => {
-      expect(canBroadcastToField({ world: "signal", domain: "number" })).toBe(
+      expect(canBroadcastToField({ world: "signal", domain: "float" })).toBe(
         true
       );
       expect(canBroadcastToField({ world: "signal", domain: "vec2" })).toBe(
@@ -364,16 +364,16 @@ describe("Type Adapter - Type Guards", () => {
       expect(canBroadcastToField({ world: "signal", domain: "timeMs" })).toBe(
         false
       );
-      expect(canBroadcastToField({ world: "signal", domain: "phase01" })).toBe(
+      expect(canBroadcastToField({ world: "signal", domain: "phaseSample" })).toBe(
         false
       );
     });
 
     it("should return false for non-signal types", () => {
-      expect(canBroadcastToField({ world: "field", domain: "number" })).toBe(
+      expect(canBroadcastToField({ world: "field", domain: "float" })).toBe(
         false
       );
-      expect(canBroadcastToField({ world: "scalar", domain: "number" })).toBe(
+      expect(canBroadcastToField({ world: "scalar", domain: "float" })).toBe(
         false
       );
     });
@@ -381,7 +381,7 @@ describe("Type Adapter - Type Guards", () => {
 
   describe("isDomainCompatible", () => {
     it("should return true for supported domains", () => {
-      expect(isDomainCompatible("number")).toBe(true);
+      expect(isDomainCompatible("float")).toBe(true);
       expect(isDomainCompatible("vec2")).toBe(true);
       expect(isDomainCompatible("vec3")).toBe(true);
       expect(isDomainCompatible("vec4")).toBe(true);
@@ -391,7 +391,7 @@ describe("Type Adapter - Type Guards", () => {
 
     it("should return false for unsupported domains", () => {
       expect(isDomainCompatible("timeMs")).toBe(false);
-      expect(isDomainCompatible("phase01")).toBe(false);
+      expect(isDomainCompatible("phaseSample")).toBe(false);
       expect(isDomainCompatible("domain")).toBe(false);
       expect(isDomainCompatible("renderTree")).toBe(false);
       expect(isDomainCompatible("unknown")).toBe(false);
@@ -401,7 +401,7 @@ describe("Type Adapter - Type Guards", () => {
 
 describe("Type Adapter - Caching", () => {
   it("should cache converted types", () => {
-    const compiler: CompilerTypeDesc = { world: "field", domain: "number" };
+    const compiler: CompilerTypeDesc = { world: "field", domain: "float" };
 
     const result1 = compilerToRuntimeTypeCached(compiler);
     const result2 = compilerToRuntimeTypeCached(compiler);
@@ -419,7 +419,7 @@ describe("Type Adapter - Caching", () => {
   });
 
   it("should cache different types separately", () => {
-    const compiler1: CompilerTypeDesc = { world: "field", domain: "number" };
+    const compiler1: CompilerTypeDesc = { world: "field", domain: "float" };
     const compiler2: CompilerTypeDesc = { world: "field", domain: "vec2" };
 
     const result1 = compilerToRuntimeTypeCached(compiler1);
@@ -431,7 +431,7 @@ describe("Type Adapter - Caching", () => {
   });
 
   it("should throw for unsupported types even with caching", () => {
-    const compiler: CompilerTypeDesc = { world: "scalar", domain: "number" };
+    const compiler: CompilerTypeDesc = { world: "scalar", domain: "float" };
 
     expect(() => compilerToRuntimeTypeCached(compiler)).toThrow(
       UnsupportedTypeError
@@ -441,7 +441,7 @@ describe("Type Adapter - Caching", () => {
 
 describe("Type Adapter - Roundtrip Conversion", () => {
   it("should roundtrip field types correctly", () => {
-    const original: CompilerTypeDesc = { world: "field", domain: "number" };
+    const original: CompilerTypeDesc = { world: "field", domain: "float" };
     const runtime = compilerToRuntimeType(original);
     const backToCompiler = runtimeToCompilerType(runtime, "field");
 
@@ -461,7 +461,7 @@ describe("Type Adapter - Roundtrip Conversion", () => {
   it("should lose semantics/unit in roundtrip (expected)", () => {
     const original: CompilerTypeDesc = {
       world: "field",
-      domain: "number",
+      domain: "float",
       semantics: "point",
       unit: "px",
     };

@@ -1,15 +1,12 @@
 /**
  * @file Patch Store
- * @description Manages the core patch data: blocks, connections, and lanes.
+ * @description Manages the core patch data: blocks and connections.
  */
 import { makeObservable, observable, action } from 'mobx';
 import type {
   Block,
   Connection,
   BlockId,
-  LaneId,
-  LaneKind,
-  BlockSubcategory,
   BlockType,
   LensInstance,
 } from '../types';
@@ -177,14 +174,12 @@ export class PatchStore {
    *
    * @param type - Block type
    * @param params - Block parameters
-   * @param laneKind - Optional lane kind to place block in
    * @param label - Optional label override
    * @returns The created block ID
    */
   private _createBlock(
     type: BlockType,
     params?: Record<string, unknown>,
-    laneKind?: LaneKind,
     label?: string
   ): BlockId {
     const id = this.generateBlockId();
@@ -211,14 +206,6 @@ export class PatchStore {
 
     this.blocks.push(block);
 
-    // Add to lane if specified
-    if (laneKind !== undefined) {
-      const lane = this.root.viewStore.lanes.find((l) => l.kind === laneKind);
-      if (lane !== undefined) {
-        lane.blockIds = [...lane.blockIds, id];
-      }
-    }
-
     // Create default sources for inputs with defaultSource metadata
     // Pass migratedParams so macro params override slot defaults
     this.root.defaultSourceStore.createDefaultSourcesForBlock(
@@ -236,7 +223,6 @@ export class PatchStore {
       type: 'BlockAdded',
       blockId: id,
       blockType: type,
-      laneId: '', // Legacy payload, unused by ViewStore now
     });
 
     return id;
@@ -389,92 +375,11 @@ export class PatchStore {
       type: 'BlockAdded',
       blockId: id,
       blockType: type,
-      laneId: '', // Legacy payload, unused by ViewStore now
     });
 
     return id;
   }
 
-  /**
-   * Add a block at a specific index within a lane.
-   * Used when dropping blocks at a precise position.
-   */
-  addBlockAtIndex(type: BlockType, laneId: LaneId, index: number, params?: Record<string, unknown>): BlockId {
-    // Check if this is a macro that should expand
-    const macroKey = getMacroKey(type, params);
-    if (macroKey !== null && macroKey !== undefined && macroKey !== '') {
-      const expansion = getMacroExpansion(macroKey);
-      if (expansion !== null && expansion !== undefined) {
-        return this.expandMacro(expansion, macroKey);
-      }
-      throw new Error(`Macro "${macroKey}" has no expansion registered in MACRO_REGISTRY`);
-    }
-
-    if (type.startsWith('macro:')) {
-      throw new Error(`Cannot add macro block "${type}" directly. Macros must have an expansion in MACRO_REGISTRY.`);
-    }
-
-    const id = this.generateBlockId();
-    const definition = getBlockDefinition(type);
-    const laneObj = this.root.viewStore.lanes.find((l) => l.id === laneId);
-
-    const rawParams = params ?? definition?.defaultParams ?? {};
-    const migratedParams = migrateBlockParams(type, rawParams);
-
-    const block: Block = {
-      id,
-      type,
-      label: definition?.label ?? type,
-      inputs: definition?.inputs ?? [],
-      outputs: definition?.outputs ?? [],
-      params: migratedParams,
-      category: definition?.subcategory ?? this.inferSubcategory(laneObj?.kind ?? 'Program'),
-      description: definition?.description ?? `${type} block`,
-    };
-
-    this.blocks.push(block);
-
-    // Create default sources for inputs with defaultSource metadata
-    // Pass migratedParams so macro params override slot defaults
-    this.root.defaultSourceStore.createDefaultSourcesForBlock(
-      id,
-      block.inputs,
-      SLOT_TYPE_TO_TYPE_DESC,
-      migratedParams
-    );
-
-    // Add to lane at specific index
-    if (laneObj !== null && laneObj !== undefined) {
-      const newBlockIds = [...laneObj.blockIds];
-      newBlockIds.splice(index, 0, id);
-      laneObj.blockIds = newBlockIds;
-    }
-
-    // Process auto-bus connections (suppress GraphCommitted - we emit one at the end)
-    this.processAutoBusConnections(id, type, { suppressGraphCommitted: true });
-
-    this.root.events.emit({
-      type: 'BlockAdded',
-      blockId: id,
-      blockType: type,
-      laneId,
-    });
-
-    this.emitGraphCommitted(
-      'userEdit',
-      {
-        blocksAdded: 1,
-        blocksRemoved: 0,
-        busesAdded: 0,
-        busesRemoved: 0,
-        bindingsChanged: 0,
-        timeRootChanged: this.isTimeRootBlock(type),
-      },
-      [id]
-    );
-
-    return id;
-  }
 
   /**
    * Expand a macro into multiple blocks with connections.
@@ -492,11 +397,10 @@ export class PatchStore {
     // Create all blocks using shared _createBlock method
     // This ensures all automatic features work (defaultBus, autoBus, etc.)
     for (const macroBlock of expansion.blocks) {
-      // Use shared block creation with lane placement and label override
+      // Use shared block creation with label override
       const id = this._createBlock(
         macroBlock.type,
         macroBlock.params,
-        macroBlock.laneKind,
         macroBlock.label
       );
       refToId.set(macroBlock.ref, id);
@@ -672,22 +576,6 @@ export class PatchStore {
   }
 
   /**
-   * Map lane kind to block subcategory.
-   */
-  private inferSubcategory(kind: LaneKind): BlockSubcategory {
-    const mapping: Record<LaneKind, BlockSubcategory> = {
-      Scene: 'Sources',
-      Phase: 'Time',
-      Fields: 'Fields',
-      Scalars: 'Math',
-      Spec: 'Compose',
-      Program: 'Compose',
-      Output: 'Render',
-    };
-    return mapping[kind];
-  }
-
-  /**
    * Update a block's properties.
    *
    * P0-3 MIGRATED: Now uses runTx() for undo/redo support.
@@ -771,24 +659,13 @@ export class PatchStore {
       };
     }
 
-    // Find the lane for this block
-    const lane = this.root.viewStore.lanes.find((l) => l.blockIds.includes(oldBlockId));
-    if (lane === undefined || lane === null) {
-      return {
-        success: false,
-        preservedConnections: 0,
-        droppedConnections: [],
-        error: `Lane for block ${oldBlockId} not found`,
-      };
-    }
-
     // Map connections
     const mapping = mapConnections(oldBlock, newDef, this.connections);
 
     // Copy compatible parameters
     const newParams = copyCompatibleParams(oldBlock.params, newDef);
 
-    // Create new block in the same lane
+    // Create new block for replacement
     const newBlockId = this.generateBlockId();
     const newBlock: Block = {
       id: newBlockId,
@@ -812,11 +689,6 @@ export class PatchStore {
       SLOT_TYPE_TO_TYPE_DESC,
       newParams
     );
-
-    // Add to lane at the same position as old block
-    const oldIndex = lane.blockIds.indexOf(oldBlockId);
-    lane.blockIds = [...lane.blockIds];
-    lane.blockIds.splice(oldIndex, 0, newBlockId);
 
     // Remap preserved connections (suppress GraphCommitted - we emit one at the end)
     for (const preserved of mapping.preserved) {

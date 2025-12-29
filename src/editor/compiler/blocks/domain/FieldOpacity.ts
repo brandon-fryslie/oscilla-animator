@@ -2,7 +2,7 @@
  * FieldOpacity Block Compiler
  *
  * Converts a numeric Field to opacity values with range mapping and curve application.
- * Takes Field<number> and produces Field<number> clamped to [min, max] with optional curve.
+ * Takes Field<float> and produces Field<float> clamped to [min, max] with optional curve.
  */
 
 import type { BlockCompiler, Field, Artifact } from '../../types';
@@ -77,10 +77,10 @@ registerBlockType({
   type: 'FieldOpacity',
   capability: 'pure',
   inputs: [
-    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'opacity', label: 'Opacity', dir: 'out', type: { world: 'field', domain: 'number' } },
+    { portId: 'opacity', label: 'Opacity', dir: 'out', type: { world: 'field', domain: 'float' } },
   ],
   lower: lowerFieldOpacity,
 });
@@ -93,23 +93,23 @@ export const FieldOpacityBlock: BlockCompiler = {
   type: 'FieldOpacity',
 
   inputs: [
-    { name: 'values', type: { kind: 'Field:number' }, required: true },
-    { name: 'min', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'max', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'values', type: { kind: 'Field:float' }, required: true },
+    { name: 'min', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'max', type: { kind: 'Scalar:float' }, required: false },
     { name: 'curve', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
-    { name: 'opacity', type: { kind: 'Field:number' } },
+    { name: 'opacity', type: { kind: 'Field:float' } },
   ],
 
   compile({ inputs }) {
     const valuesArtifact = inputs.values;
-    if (!isDefined(valuesArtifact) || valuesArtifact.kind !== 'Field:number') {
+    if (!isDefined(valuesArtifact) || valuesArtifact.kind !== 'Field:float') {
       return {
         opacity: {
           kind: 'Error',
-          message: 'FieldOpacity requires a Field<number> input',
+          message: 'FieldOpacity requires a Field<float> input',
         },
       };
     }
@@ -119,7 +119,7 @@ export const FieldOpacityBlock: BlockCompiler = {
     // Helper to extract numeric/string values from artifacts
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
+      if (artifact.kind === 'Scalar:float' || artifact.kind === 'Signal:float') {
         return Number(artifact.value);
       }
       if ('value' in artifact && artifact.value !== undefined) {
@@ -155,7 +155,7 @@ export const FieldOpacityBlock: BlockCompiler = {
     const curve = extractString(inputs.curve, 'linear');
 
     // Create opacity field
-    const field: Field<number> = (seed, n, ctx) => {
+    const field: Field<float> = (seed, n, ctx) => {
       const values = valuesFn(seed, n, ctx);
       return values.map((v) => {
         const normalized = Math.max(0, Math.min(1, v));
@@ -165,7 +165,7 @@ export const FieldOpacityBlock: BlockCompiler = {
     };
 
     return {
-      opacity: { kind: 'Field:number', value: field },
+      opacity: { kind: 'Field:float', value: field },
     };
   },
 };

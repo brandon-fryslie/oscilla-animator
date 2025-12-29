@@ -2,7 +2,6 @@
  * Settings Toolbar
  *
  * Top toolbar with dropdowns for editor settings:
- * - Lane layout/mode (Simple vs Advanced)
  * - Connection settings
  * - Palette filtering
  */
@@ -10,7 +9,6 @@
 import { observer } from 'mobx-react-lite';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useStore } from './stores';
-import { PRESET_LAYOUTS } from './laneLayouts';
 import { getAllMacroKeys, getMacroDisplayName } from './macros';
 import { isDefined } from './types/helpers';
 import type { Patch } from './types';
@@ -122,19 +120,6 @@ function MenuDivider() {
  */
 function MenuHeader({ children }: { children: React.ReactNode }) {
   return <div className="dropdown-menu-header">{children}</div>;
-}
-
-/**
- * Lanes icon (grid/rows).
- */
-function LanesIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <rect x="1" y="2" width="14" height="3" rx="1" fill="currentColor" opacity="0.6" />
-      <rect x="1" y="6.5" width="14" height="3" rx="1" fill="currentColor" opacity="0.8" />
-      <rect x="1" y="11" width="14" height="3" rx="1" fill="currentColor" />
-    </svg>
-  );
 }
 
 /**
@@ -337,7 +322,6 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(n
  */
 export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModalOpen, showHelpNudge, onDesignerView, onPerformanceView }: SettingsToolbarProps): React.ReactElement => {
   const store = useStore();
-  const currentLayout = store.viewStore.currentLayout;
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -484,35 +468,6 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
       </div>
 
       <div className="toolbar-center">
-        {/* Lane Layout Dropdown */}
-        <Dropdown icon={<LanesIcon />} label="Lanes">
-          <MenuHeader>Layout Preset</MenuHeader>
-          {PRESET_LAYOUTS.map((layout) => (
-            <MenuItem
-              key={layout.id}
-              label={layout.name}
-              description={layout.description}
-              checked={currentLayout.id === layout.id}
-              onClick={() => store.viewStore.switchLayout(layout.id)}
-            />
-          ))}
-          <MenuDivider />
-          <MenuHeader>Mode</MenuHeader>
-          <MenuItem
-            label="Simple Mode"
-            description="Fixed lane structure, guided workflow"
-            checked={store.uiStore.settings.advancedLaneMode === false}
-            onClick={() => store.uiStore.setAdvancedLaneMode(false)}
-          />
-          <MenuItem
-            label="Advanced Mode"
-            description="Customize lanes freely"
-            checked={store.uiStore.settings.advancedLaneMode === true}
-            onClick={() => store.uiStore.setAdvancedLaneMode(true)}
-            disabled={true}
-          />
-        </Dropdown>
-
         {/* Connection Settings Dropdown */}
         <Dropdown icon={<ConnectionIcon />} label="Connections">
           <MenuHeader>Auto-Connect</MenuHeader>
@@ -549,12 +504,6 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
         <Dropdown icon={<FilterIcon />} label="Palette">
           <MenuHeader>Filtering</MenuHeader>
           <MenuItem
-            label="Filter by lane"
-            description="Show blocks matching lane type"
-            checked={store.uiStore.settings.filterByLane === true}
-            onClick={() => store.uiStore.setFilterByLane(!store.uiStore.settings.filterByLane)}
-          />
-          <MenuItem
             label="Filter by connection"
             description="Show blocks that can connect to selection"
             checked={store.uiStore.settings.filterByConnection === true}
@@ -565,9 +514,8 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
           <MenuItem
             label="Show all blocks"
             description="Always show full library"
-            checked={store.uiStore.settings.filterByLane === false && store.uiStore.settings.filterByConnection === false}
+            checked={store.uiStore.settings.filterByConnection === false}
             onClick={() => {
-              store.uiStore.setFilterByLane(false);
               store.uiStore.setFilterByConnection(false);
             }}
           />

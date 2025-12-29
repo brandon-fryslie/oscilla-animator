@@ -67,13 +67,13 @@ export const FieldMapVec2Block: BlockCompiler = {
   inputs: [
     { name: 'vec', type: { kind: 'Field:vec2' }, required: true },
     { name: 'fn', type: { kind: 'Scalar:string' }, required: false },
-    { name: 'angle', type: { kind: 'Signal:number' }, required: false },
-    { name: 'scaleX', type: { kind: 'Signal:number' }, required: false },
-    { name: 'scaleY', type: { kind: 'Signal:number' }, required: false },
-    { name: 'offsetX', type: { kind: 'Signal:number' }, required: false },
-    { name: 'offsetY', type: { kind: 'Signal:number' }, required: false },
-    { name: 'centerX', type: { kind: 'Signal:number' }, required: false },
-    { name: 'centerY', type: { kind: 'Signal:number' }, required: false },
+    { name: 'angle', type: { kind: 'Signal:float' }, required: false },
+    { name: 'scaleX', type: { kind: 'Signal:float' }, required: false },
+    { name: 'scaleY', type: { kind: 'Signal:float' }, required: false },
+    { name: 'offsetX', type: { kind: 'Signal:float' }, required: false },
+    { name: 'offsetY', type: { kind: 'Signal:float' }, required: false },
+    { name: 'centerX', type: { kind: 'Signal:float' }, required: false },
+    { name: 'centerY', type: { kind: 'Signal:float' }, required: false },
   ],
 
   outputs: [

@@ -11,11 +11,11 @@ import type { ProbeTarget } from '../types';
 describe('summarize', () => {
   describe('null/undefined handling', () => {
     it('returns none for null', () => {
-      expect(summarize('Signal:number', null)).toEqual({ t: 'none' });
+      expect(summarize('Signal:float', null)).toEqual({ t: 'none' });
     });
 
     it('returns none for undefined', () => {
-      expect(summarize('Signal:number', undefined)).toEqual({ t: 'none' });
+      expect(summarize('Signal:float', undefined)).toEqual({ t: 'none' });
     });
   });
 
@@ -37,13 +37,13 @@ describe('summarize', () => {
     });
   });
 
-  describe('Signal:number', () => {
+  describe('Signal:float', () => {
     it('summarizes number value', () => {
-      expect(summarize('Signal:number', 42)).toEqual({ t: 'num', v: 42 });
+      expect(summarize('Signal:float', 42)).toEqual({ t: 'num', v: 42 });
     });
 
     it('returns error for NaN', () => {
-      expect(summarize('Signal:number', NaN)).toEqual({ t: 'err', code: 'nan' });
+      expect(summarize('Signal:float', NaN)).toEqual({ t: 'err', code: 'nan' });
     });
   });
 
@@ -82,8 +82,8 @@ describe('summarize', () => {
   });
 
   describe('Field types', () => {
-    it('returns none for Field:number', () => {
-      expect(summarize('Field:number', [1, 2, 3])).toEqual({ t: 'none' });
+    it('returns none for Field:float', () => {
+      expect(summarize('Field:float', [1, 2, 3])).toEqual({ t: 'none' });
     });
 
     it('returns none for Field:color', () => {

@@ -13,7 +13,6 @@ function createTestPatch(): Patch {
     version: 1,
     blocks: [],
     connections: [],
-    lanes: [],
     buses: [],
     publishers: [],
     listeners: [],

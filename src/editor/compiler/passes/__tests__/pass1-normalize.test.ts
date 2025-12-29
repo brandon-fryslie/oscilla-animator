@@ -23,7 +23,6 @@ function createPatch(overrides?: Partial<Patch>): Patch {
     version: 1,
     blocks: [],
     connections: [],
-    lanes: [],
     buses: [],
     publishers: [],
     listeners: [],
@@ -59,7 +58,7 @@ function createSlot(
   return {
     id,
     label: id,
-    type: "Signal<number>",
+    type: "Signal<float>",
     direction,
     ...overrides,
   } as Slot;
@@ -120,7 +119,7 @@ function createBus(id: string): Bus {
     name: id,
     type: {
       world: "signal",
-      domain: "number",
+      domain: "float",
       category: "core",
       busEligible: true,
     },
@@ -188,7 +187,7 @@ describe("pass1Normalize", () => {
         constId: 0,
         type: {
           world: "signal",
-          domain: "number",
+          domain: "float",
         },
       });
     });

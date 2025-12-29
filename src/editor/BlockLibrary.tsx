@@ -5,7 +5,7 @@ import { useStore } from './stores';
 import { ALL_SUBCATEGORIES } from './types';
 import type { BlockSubcategory, BlockForm } from './types';
 import type { BlockDefinition } from './blocks/types';
-import { getBlockDefinitions, getBlocksForPalette, getBlockTags, getBlockForm } from './blocks';
+import { getBlockDefinitions, getBlockTags, getBlockForm } from './blocks';
 import './BlockLibrary.css';
 
 import { listCompositeDefinitions } from './composites';
@@ -153,18 +153,14 @@ function DraggableBlockItem({ definition, isSelected, onSelect, onDoubleClickAdd
 
 /**
  * BlockLibrary displays available blocks by category with search.
- * Supports lane-based filtering when an active lane is set.
  */
 export const BlockLibrary = observer(() => {
   const store = useStore();
   const [search, setSearch] = useState('');
   const [collapsedForms, setCollapsedForms] = useState<Set<BlockForm>>(new Set());
   const [collapsedSubcategories, setCollapsedSubcategories] = useState<Set<string>>(new Set());
-  const [showAllBlocks, setShowAllBlocks] = useState(false);
 
   const previewedType = store.uiStore.previewedDefinition?.type ?? null;
-  const activeLane = store.activeLane;
-  const filterByLane = store.uiStore.settings.filterByLane;
 
   // Include composites in the block list
   const blockDefs = useMemo(() => getBlockDefinitions(true), []);
@@ -175,21 +171,12 @@ export const BlockLibrary = observer(() => {
   );
 
   /**
-   * Add a block to its suggested lane (first lane matching laneKind).
+   * Add a block to the patch.
    */
   const addBlockToSuggestedLane = (definition: BlockDefinition) => {
     // Just add the block - ViewStore will handle placement based on affinity
     store.patchStore.addBlock(definition.type, definition.defaultParams);
   };
-
-  // Get filtered blocks based on lane context
-  const { matched: matchedBlocks, other: otherBlocks } = useMemo(() => {
-    return getBlocksForPalette(
-      filterByLane,
-      activeLane?.kind,
-      activeLane?.flavor
-    );
-  }, [filterByLane, activeLane?.kind, activeLane?.flavor]);
 
   // Filter by search term
   const searchFilteredBlocks = useMemo(() => {
@@ -254,9 +241,6 @@ export const BlockLibrary = observer(() => {
     });
   };
 
-  // Determine if we're in filtered mode (active lane + filter enabled)
-  const isFiltered = filterByLane && activeLane !== null;
-
   const compositeCount = listCompositeDefinitions().length;
 
   return (
@@ -266,11 +250,6 @@ export const BlockLibrary = observer(() => {
         {compositeCount > 0 && (
           <div className="library-composite-badge" title="User composites available">
             {compositeCount} composites
-          </div>
-        )}
-        {isFiltered && (
-          <div className="library-filter-badge" title={`Showing blocks for ${activeLane.label}`}>
-            {activeLane.kind}
           </div>
         )}
         <input
@@ -300,61 +279,6 @@ export const BlockLibrary = observer(() => {
               ))
             )}
           </div>
-        ) : isFiltered ? (
-          // Lane-filtered view
-          <>
-            {/* Matched blocks section */}
-            <div className="filtered-section matched">
-              <div className="filtered-section-header">
-                <span className="filtered-section-label">For {activeLane.label}</span>
-                <span className="filtered-section-count">{matchedBlocks.length}</span>
-              </div>
-              <div className="filtered-blocks">
-                {matchedBlocks.length === 0 ? (
-                  <div className="category-empty">No blocks for this lane type</div>
-                ) : (
-                  matchedBlocks.map((definition) => (
-                    <DraggableBlockItem
-                      key={definition.type}
-                      definition={definition}
-                      isSelected={previewedType === definition.type}
-                      onSelect={() => store.uiStore.previewDefinition(definition)}
-                      onDoubleClickAdd={() => addBlockToSuggestedLane(definition)}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Other blocks section (collapsible) */}
-            {otherBlocks.length > 0 && (
-              <div className={`filtered-section other ${showAllBlocks ? 'expanded' : ''}`}>
-                <div
-                  className="filtered-section-header clickable"
-                  onClick={() => setShowAllBlocks(!showAllBlocks)}
-                >
-                  <span className="filtered-section-chevron">
-                    {showAllBlocks ? '▾' : '▸'}
-                  </span>
-                  <span className="filtered-section-label">All other blocks</span>
-                  <span className="filtered-section-count">{otherBlocks.length}</span>
-                </div>
-                {showAllBlocks && (
-                  <div className="filtered-blocks">
-                    {otherBlocks.map((definition) => (
-                      <DraggableBlockItem
-                        key={definition.type}
-                        definition={definition}
-                        isSelected={previewedType === definition.type}
-                        onSelect={() => store.uiStore.previewDefinition(definition)}
-                        onDoubleClickAdd={() => addBlockToSuggestedLane(definition)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </>
         ) : (
           // Form/Subcategory view (default, no filtering)
           formGroups.map((group) => {

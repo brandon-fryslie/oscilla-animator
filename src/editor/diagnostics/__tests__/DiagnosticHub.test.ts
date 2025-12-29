@@ -50,7 +50,7 @@ function createCompileDiagnostic(
     domain: 'compile',
     primaryTarget: { kind: 'block', blockId: 'block-1' },
     title: 'Type Mismatch',
-    message: 'Expected Signal<number>, got Signal<string>',
+    message: 'Expected Signal<float>, got Signal<string>',
     patchRevision,
   });
 }

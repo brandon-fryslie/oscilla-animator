@@ -89,9 +89,9 @@ describe('StableIdHash', () => {
       ctx: testCtx,
     });
 
-    expect(hashResult.u01.kind).toBe('Field:number');
+    expect(hashResult.u01.kind).toBe('Field:float');
 
-    if (hashResult.u01.kind === 'Field:number') {
+    if (hashResult.u01.kind === 'Field:float') {
       const values1 = hashResult.u01.value(0, 4, testCtx);
       const values2 = hashResult.u01.value(0, 4, testCtx); // Same seed
 
@@ -132,7 +132,7 @@ describe('StableIdHash', () => {
       ctx: testCtx,
     });
 
-    if (hash1.u01.kind === 'Field:number' && hash2.u01.kind === 'Field:number') {
+    if (hash1.u01.kind === 'Field:float' && hash2.u01.kind === 'Field:float') {
       const values1 = hash1.u01.value(0, 3, testCtx);
       const values2 = hash2.u01.value(0, 3, testCtx);
 

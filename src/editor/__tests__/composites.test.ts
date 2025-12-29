@@ -10,7 +10,6 @@ describe('composite registry', () => {
       description: 'Example composite',
       color: '#00bcd4',
       subcategory: 'Compose',
-      laneKind: 'Spec',
       tags: { origin: 'test' },
       graph: {
         nodes: {
@@ -21,10 +20,10 @@ describe('composite registry', () => {
         outputMap: { out: 'n1.out' },
       },
       exposedInputs: [
-        { id: 'in', label: 'In', direction: 'input', slotType: 'Scalar:number', nodeId: 'n1', nodePort: 'in' },
+        { id: 'in', label: 'In', direction: 'input', slotType: 'Scalar:float', nodeId: 'n1', nodePort: 'in' },
       ],
       exposedOutputs: [
-        { id: 'out', label: 'Out', direction: 'output', slotType: 'Scalar:number', nodeId: 'n1', nodePort: 'out' },
+        { id: 'out', label: 'Out', direction: 'output', slotType: 'Scalar:float', nodeId: 'n1', nodePort: 'out' },
       ],
     });
 

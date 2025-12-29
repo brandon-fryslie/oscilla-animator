@@ -21,7 +21,7 @@ describe("IRBuilder", () => {
   describe("ID Allocation", () => {
     it("allocates sequential signal expression IDs starting from 0", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       const id0 = builder.sigConst(1, type);
       const id1 = builder.sigConst(2, type);
@@ -34,7 +34,7 @@ describe("IRBuilder", () => {
 
     it("allocates sequential field expression IDs starting from 0", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("field", "number");
+      const type = makeType("field", "float");
 
       const id0 = builder.fieldConst([1], type);
       const id1 = builder.fieldConst([2], type);
@@ -47,8 +47,8 @@ describe("IRBuilder", () => {
 
     it("signal and field IDs are independent", () => {
       const builder = new IRBuilderImpl();
-      const sigType = makeType("signal", "number");
-      const fieldType = makeType("field", "number");
+      const sigType = makeType("signal", "float");
+      const fieldType = makeType("field", "float");
 
       const sigId = builder.sigConst(1, sigType);
       const fieldId = builder.fieldConst([1], fieldType);
@@ -61,7 +61,7 @@ describe("IRBuilder", () => {
   describe("Signal Expressions", () => {
     it("creates a const node with correct structure", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       const id = builder.sigConst(42, type);
 
@@ -79,8 +79,8 @@ describe("IRBuilder", () => {
 
     it("creates a map node with correct structure", () => {
       const builder = new IRBuilderImpl();
-      const srcType = makeType("signal", "number");
-      const outputType = makeType("signal", "number");
+      const srcType = makeType("signal", "float");
+      const outputType = makeType("signal", "float");
 
       const src = builder.sigConst(10, srcType);
       const mapped = builder.sigMap(src, {
@@ -104,7 +104,7 @@ describe("IRBuilder", () => {
 
     it("creates a zip node with correct structure", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       const a = builder.sigConst(10, type);
       const b = builder.sigConst(20, type);
@@ -146,12 +146,12 @@ describe("IRBuilder", () => {
 
       expect(node.kind).toBe("phase01");
       expect(node.type.world).toBe("signal");
-      expect(node.type.domain).toBe("phase01");
+      expect(node.type.domain).toBe("float");
     });
 
     it("creates a select node", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
       const boolType = makeType("signal", "boolean");
 
       const cond = builder.sigConst(1, boolType);
@@ -174,7 +174,7 @@ describe("IRBuilder", () => {
   describe("Constant Deduplication", () => {
     it("deduplicates identical constant values", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       const id1 = builder.sigConst(42, type);
       const id2 = builder.sigConst(42, type);
@@ -200,7 +200,7 @@ describe("IRBuilder", () => {
 
     it("does NOT deduplicate different values", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       const id1 = builder.sigConst(42, type);
       const id2 = builder.sigConst(99, type);
@@ -224,7 +224,7 @@ describe("IRBuilder", () => {
   describe("Build Result", () => {
     it("returns BuilderProgramIR with populated signalIR.nodes", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       builder.sigConst(1, type);
       builder.sigConst(2, type);
@@ -245,7 +245,7 @@ describe("IRBuilder", () => {
 
     it("includes all constants in the constant pool", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       builder.sigConst(100, type);
       builder.sigConst(200, type);
@@ -272,7 +272,7 @@ describe("IRBuilder", () => {
   describe("Field Expressions", () => {
     it("creates a field const node", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("field", "number");
+      const type = makeType("field", "float");
 
       const id = builder.fieldConst([1, 2, 3], type);
 
@@ -288,7 +288,7 @@ describe("IRBuilder", () => {
 
     it("creates a field map node", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("field", "number");
+      const type = makeType("field", "float");
 
       const src = builder.fieldConst([1, 2, 3], type);
       const mapped = builder.fieldMap(src, {
@@ -307,8 +307,8 @@ describe("IRBuilder", () => {
 
     it("creates a broadcastSig node", () => {
       const builder = new IRBuilderImpl();
-      const sigType = makeType("signal", "number");
-      const fieldType = makeType("field", "number");
+      const sigType = makeType("signal", "float");
+      const fieldType = makeType("field", "float");
 
       const sig = builder.sigConst(42, sigType);
       const domainSlot = builder.domainFromN(10);
@@ -328,7 +328,7 @@ describe("IRBuilder", () => {
   describe("State Allocation", () => {
     it("allocates state with correct metadata", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       const stateId = builder.allocStateId(type, 0, "counter");
 
@@ -345,7 +345,7 @@ describe("IRBuilder", () => {
 
     it("creates stateful signal node", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       const input = builder.sigConst(1, type);
       const stateId = builder.allocStateId(type, 0, "accumulator");
@@ -366,7 +366,7 @@ describe("IRBuilder", () => {
   describe("Transform Chains", () => {
     it("creates a transform chain", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       const chainId = builder.transformChain(
         [
@@ -387,7 +387,7 @@ describe("IRBuilder", () => {
 
     it("applies transform chain to signal", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       const src = builder.sigConst(5, type);
       const chainId = builder.transformChain([{ kind: "scaleBias", scale: 2, bias: 0 }], type);
@@ -422,7 +422,7 @@ describe("IRBuilder", () => {
 
       const domainSlot = builder.domainFromN(100);
 
-      expect(typeof domainSlot).toBe("number");
+      expect(typeof domainSlot).toBe("float");
       expect(domainSlot).toBe(0);
 
       const nextSlot = builder.allocValueSlot();
@@ -450,7 +450,7 @@ describe("IRBuilder", () => {
   describe("Debug Index Population", () => {
     it("tracks sigExprSource when currentBlockId is set", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       builder.setCurrentBlockId("Block#1");
       const sig1 = builder.sigConst(42, type);
@@ -468,7 +468,7 @@ describe("IRBuilder", () => {
 
     it("tracks fieldExprSource when currentBlockId is set", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("field", "number");
+      const type = makeType("field", "float");
 
       builder.setCurrentBlockId("FieldBlock#1");
       const field1 = builder.fieldConst([1, 2, 3], type);
@@ -484,7 +484,7 @@ describe("IRBuilder", () => {
 
     it("tracks slotSource when currentBlockId and debugName are set", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       builder.setCurrentBlockId("TimeRoot#1");
       const slot1 = builder.allocValueSlot(type, "phase01");
@@ -505,7 +505,7 @@ describe("IRBuilder", () => {
 
     it("does not track when currentBlockId is undefined", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       // No setCurrentBlockId call
       const sig = builder.sigConst(42, type);
@@ -517,7 +517,7 @@ describe("IRBuilder", () => {
 
     it("given 3 blocks, debugIndex contains 3+ sigExpr mappings", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       // Simulate compiling 3 blocks
       builder.setCurrentBlockId("Block#1");
@@ -545,8 +545,8 @@ describe("IRBuilder", () => {
 
     it("given field-using blocks, debugIndex.fieldExprSource is populated", () => {
       const builder = new IRBuilderImpl();
-      const sigType = makeType("signal", "number");
-      const fieldType = makeType("field", "number");
+      const sigType = makeType("signal", "float");
+      const fieldType = makeType("field", "float");
 
       // Simulate a block that uses fields
       builder.setCurrentBlockId("DomainBlock#1");
@@ -565,7 +565,7 @@ describe("IRBuilder", () => {
 
     it("clearing currentBlockId stops tracking", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       builder.setCurrentBlockId("Block#1");
       const sig1 = builder.sigConst(1, type);
@@ -581,7 +581,7 @@ describe("IRBuilder", () => {
 
     it("tracks all signal expression types", () => {
       const builder = new IRBuilderImpl();
-      const type = makeType("signal", "number");
+      const type = makeType("signal", "float");
 
       builder.setCurrentBlockId("TestBlock#1");
       const const1 = builder.sigConst(42, type);
@@ -610,8 +610,8 @@ describe("IRBuilder", () => {
 
     it("tracks all field expression types", () => {
       const builder = new IRBuilderImpl();
-      const sigType = makeType("signal", "number");
-      const fieldType = makeType("field", "number");
+      const sigType = makeType("signal", "float");
+      const fieldType = makeType("field", "float");
 
       builder.setCurrentBlockId("TestFieldBlock#1");
       const domainSlot = builder.domainFromN(10);

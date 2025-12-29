@@ -96,7 +96,7 @@ export function wrapSignalForDebug(
 export function wrapFieldForDebug<T>(
   original: (seed: number, n: number, ctx: RuntimeCtx) => readonly T[],
   fieldId: string,
-  domain: 'number' | 'vec2' | 'color' | 'unknown',
+  domain: 'float' | 'int' | 'vec2' | 'color' | 'unknown',
   debugIndex: DebugIndex,
   spanRing: SpanRing,
   valueRing: ValueRing,
@@ -125,7 +125,7 @@ export function wrapFieldForDebug<T>(
     let max = 0;
 
     // Compute min/max for number[] fields
-    if (domain === 'number' && array.length > 0) {
+    if ((domain === 'float' || domain === 'int') && array.length > 0) {
       const nums = array as readonly number[];
       min = nums[0];
       max = nums[0];
@@ -156,7 +156,7 @@ export function wrapFieldForDebug<T>(
     });
 
     // Emit value record (if capturing values and numeric domain)
-    if (TraceController.instance.shouldCaptureValues() && domain === 'number') {
+    if (TraceController.instance.shouldCaptureValues() && (domain === 'float' || domain === 'int')) {
       valueRing.writeValue({
         tag: ValueTag.FieldStats,
         typeId: 0, // TODO: get from TypeKeyTable in future

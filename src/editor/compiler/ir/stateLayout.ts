@@ -37,8 +37,8 @@ import type { StateLayoutEntry } from './builderTypes';
  *
  * const layout = computeStateLayout(nodes);
  * // layout = [
- * //   { stateId: 'state_0', type: { world: 'signal', domain: 'number' }, initial: 0 },
- * //   { stateId: 'state_1', type: { world: 'signal', domain: 'number' }, initial: undefined },
+ * //   { stateId: 'state_0', type: { world: 'signal', domain: 'float' }, initial: 0 },
+ * //   { stateId: 'state_1', type: { world: 'signal', domain: 'float' }, initial: undefined },
  * // ]
  * ```
  */

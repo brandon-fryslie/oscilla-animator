@@ -33,7 +33,7 @@ export const BusesTab = observer(function BusesTab() {
             <div className="bus-row-type">{bus.type?.domain ?? 'unknown'}</div>
             <div className="bus-row-meter">
               {busValue !== undefined && busValue !== null ? (
-                <BusValueMeter value={busValue} busType={bus.type?.domain ?? 'number'} />
+                <BusValueMeter value={busValue} busType={bus.type?.domain ?? 'float'} />
               ) : (
                 <span style={{ color: '#666', fontStyle: 'italic' }}>No value</span>
               )}

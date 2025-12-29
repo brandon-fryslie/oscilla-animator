@@ -15,7 +15,7 @@
  * Key principles:
  * - Fixed format instrument panel, not a free-form inspector
  * - Width is fixed (muscle memory matters)
- * - Independent of lane scrolling
+ * - Independent of patch scrolling
  */
 
 import { observer } from 'mobx-react-lite';

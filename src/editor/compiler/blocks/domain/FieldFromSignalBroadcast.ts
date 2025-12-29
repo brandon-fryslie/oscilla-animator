@@ -1,8 +1,8 @@
 /**
  * FieldFromSignalBroadcast Block Compiler
  *
- * Broadcasts a Signal<number> value to all elements in a domain,
- * creating a Field<number> where all elements have the same value.
+ * Broadcasts a Signal<float> value to all elements in a domain,
+ * creating a Field<float> where all elements have the same value.
  */
 
 import type { BlockCompiler, Field, CompileCtx, RuntimeCtx } from '../../types';
@@ -33,7 +33,7 @@ const lowerFieldFromSignalBroadcast: BlockLowerFn = ({ ctx, inputs }) => {
     throw new Error('FieldFromSignalBroadcast requires signal input');
   }
 
-  const outType = { world: 'field' as const, domain: 'number' as const };
+  const outType = { world: 'field' as const, domain: 'float' as const };
   const fieldId = ctx.b.broadcastSigToField(signal.id, domain.id, outType);
 
   const slot = ctx.b.allocValueSlot();
@@ -46,10 +46,10 @@ registerBlockType({
   capability: 'pure',
   inputs: [
     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
-    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'field', label: 'Field', dir: 'out', type: { world: 'field', domain: 'number' } },
+    { portId: 'field', label: 'Field', dir: 'out', type: { world: 'field', domain: 'float' } },
   ],
   lower: lowerFieldFromSignalBroadcast,
 });
@@ -63,11 +63,11 @@ export const FieldFromSignalBroadcastBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'signal', type: { kind: 'Signal:number' }, required: true },
+    { name: 'signal', type: { kind: 'Signal:float' }, required: true },
   ],
 
   outputs: [
-    { name: 'field', type: { kind: 'Field:number' } },
+    { name: 'field', type: { kind: 'Field:float' } },
   ],
 
   compile({ inputs }) {
@@ -83,11 +83,11 @@ export const FieldFromSignalBroadcastBlock: BlockCompiler = {
       };
     }
 
-    if (!isDefined(signalArtifact) || signalArtifact.kind !== 'Signal:number') {
+    if (!isDefined(signalArtifact) || signalArtifact.kind !== 'Signal:float') {
       return {
         field: {
           kind: 'Error',
-          message: 'FieldFromSignalBroadcast requires a Signal<number> input',
+          message: 'FieldFromSignalBroadcast requires a Signal<float> input',
         },
       };
     }
@@ -97,7 +97,7 @@ export const FieldFromSignalBroadcastBlock: BlockCompiler = {
 
     // Create field that broadcasts signal value to all elements
     // Note: ctx is typed as CompileCtx but at runtime contains time information
-    const field: Field<number> = (_seed, n, ctx) => {
+    const field: Field<float> = (_seed, n, ctx) => {
       const count = Math.min(n, domain.elements.length);
 
       // Evaluate signal once per frame (ctx is extended with .t at runtime)
@@ -109,7 +109,7 @@ export const FieldFromSignalBroadcastBlock: BlockCompiler = {
     };
 
     return {
-      field: { kind: 'Field:number', value: field },
+      field: { kind: 'Field:float', value: field },
     };
   },
 };

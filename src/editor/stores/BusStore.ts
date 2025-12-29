@@ -80,9 +80,9 @@ export class BusStore {
    * Only creates if no buses exist yet.
    *
    * Default buses (Signal world only):
-   * - phaseA: signal:phase01 (primary phase source)
-   * - phaseB: signal:phase01 (secondary phase source)
-   * - energy: signal:number (accumulated energy)
+   * - phaseA: signal:float (primary phase source)
+   * - phaseB: signal:float (secondary phase source)
+   * - energy: signal:float (accumulated energy)
    * - pulse: signal:trigger (discrete trigger events)
    * - palette: signal:color (color bias/palette signal)
    */
@@ -95,18 +95,18 @@ export class BusStore {
     const defaults: Array<{
       name: string;
       world: 'signal' | 'event';
-      domain: 'phase01' | 'number' | 'trigger' | 'color';
+      domain: 'float' | 'trigger' | 'color';
       combineMode: BusCombineMode;
       defaultValue: unknown;
       semantics?: string;
     }> = [
-      { name: 'phaseA', world: 'signal', domain: 'phase01', combineMode: 'last', defaultValue: 0, semantics: 'primary' },
-      { name: 'phaseB', world: 'signal', domain: 'phase01', combineMode: 'last', defaultValue: 0, semantics: 'secondary' },
-      { name: 'energy', world: 'signal', domain: 'number', combineMode: 'sum', defaultValue: 0, semantics: 'energy' },
+      { name: 'phaseA', world: 'signal', domain: 'float', combineMode: 'last', defaultValue: 0, semantics: 'phase(primary)' },
+      { name: 'phaseB', world: 'signal', domain: 'float', combineMode: 'last', defaultValue: 0, semantics: 'phase(secondary)' },
+      { name: 'energy', world: 'signal', domain: 'float', combineMode: 'sum', defaultValue: 0, semantics: 'energy' },
       // pulse is event<trigger>, NOT signal<trigger> - discrete events, not continuous
       { name: 'pulse', world: 'event', domain: 'trigger', combineMode: 'last', defaultValue: null, semantics: 'pulse' },
       { name: 'palette', world: 'signal', domain: 'color', combineMode: 'last', defaultValue: '#000000' }, // No semantics required
-      { name: 'progress', world: 'signal', domain: 'number', combineMode: 'last', defaultValue: 0, semantics: 'progress' },
+      { name: 'progress', world: 'signal', domain: 'float', combineMode: 'last', defaultValue: 0, semantics: 'progress' },
     ];
 
     defaults.forEach((def) => {

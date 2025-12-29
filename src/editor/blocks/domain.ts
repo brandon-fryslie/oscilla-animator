@@ -20,7 +20,7 @@ export const DomainN = createBlock({
   label: 'Domain N',
   description: 'Create a domain with N elements, each with a stable ID',
   inputs: [
-    input('n', 'Element Count', 'Scalar:number', {
+    input('n', 'Element Count', 'Scalar:int', {
       tier: 'primary',
       defaultSource: {
         value: 100,
@@ -28,7 +28,7 @@ export const DomainN = createBlock({
         uiHint: { kind: 'slider', min: 1, max: 10000, step: 1 },
       },
     }),
-    input('seed', 'Seed', 'Scalar:number', {
+    input('seed', 'Seed', 'Scalar:int', {
       tier: 'secondary',
       defaultSource: {
         value: 0,
@@ -41,7 +41,6 @@ export const DomainN = createBlock({
     output('domain', 'Domain', 'Domain'),
   ],
   color: '#8B5CF6',
-  laneKind: 'Scene',
   priority: 0,
 });
 
@@ -60,7 +59,7 @@ export const GridDomain = createBlock({
   label: 'Grid Domain',
   description: 'Create a grid domain with stable element IDs and base positions',
   inputs: [
-    input('rows', 'Rows', 'Scalar:number', {
+    input('rows', 'Rows', 'Scalar:int', {
       tier: 'primary',
       defaultSource: {
         value: 10,
@@ -68,7 +67,7 @@ export const GridDomain = createBlock({
         uiHint: { kind: 'slider', min: 1, max: 100, step: 1 },
       },
     }),
-    input('cols', 'Columns', 'Scalar:number', {
+    input('cols', 'Columns', 'Scalar:int', {
       tier: 'primary',
       defaultSource: {
         value: 10,
@@ -76,7 +75,7 @@ export const GridDomain = createBlock({
         uiHint: { kind: 'slider', min: 1, max: 100, step: 1 },
       },
     }),
-    input('spacing', 'Spacing', 'Signal<number>', {
+    input('spacing', 'Spacing', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 20,
@@ -84,7 +83,7 @@ export const GridDomain = createBlock({
         uiHint: { kind: 'slider', min: 1, max: 200, step: 1 },
       },
     }),
-    input('originX', 'Origin X', 'Signal<number>', {
+    input('originX', 'Origin X', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: {
         value: 100,
@@ -92,7 +91,7 @@ export const GridDomain = createBlock({
         uiHint: { kind: 'slider', min: -1000, max: 2000, step: 10 },
       },
     }),
-    input('originY', 'Origin Y', 'Signal<number>', {
+    input('originY', 'Origin Y', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: {
         value: 100,
@@ -106,7 +105,6 @@ export const GridDomain = createBlock({
     output('pos0', 'Base Positions', 'Field<vec2>'),
   ],
   color: '#8B5CF6',
-  laneKind: 'Scene',
   priority: 1,
 });
 
@@ -134,7 +132,7 @@ export const SVGSampleDomain = createBlock({
         uiHint: { kind: 'text' },
       },
     }),
-    input('sampleCount', 'Sample Count', 'Scalar:number', {
+    input('sampleCount', 'Sample Count', 'Scalar:int', {
       tier: 'primary',
       defaultSource: {
         value: 100,
@@ -142,7 +140,7 @@ export const SVGSampleDomain = createBlock({
         uiHint: { kind: 'slider', min: 1, max: 5000, step: 1 },
       },
     }),
-    input('seed', 'Seed', 'Scalar:number', {
+    input('seed', 'Seed', 'Scalar:int', {
       tier: 'secondary',
       defaultSource: {
         value: 0,
@@ -170,7 +168,6 @@ export const SVGSampleDomain = createBlock({
     output('pos0', 'Sampled Positions', 'Field<vec2>'),
   ],
   color: '#8B5CF6',
-  laneKind: 'Scene',
   priority: 2,
 });
 
@@ -189,7 +186,7 @@ export const StableIdHash = createBlock({
       tier: 'primary',
       defaultSource: { value: 100, world: 'field' },
     }),
-    input('salt', 'Salt', 'Scalar:number', {
+    input('salt', 'Salt', 'Scalar:int', {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -199,10 +196,9 @@ export const StableIdHash = createBlock({
     }),
   ],
   outputs: [
-    output('u01', 'Hash [0,1)', 'Field<number>'),
+    output('u01', 'Hash [0,1)', 'Field<float>'),
   ],
   color: '#EC4899',
-  laneKind: 'Fields',
   priority: 7,
 });
 
@@ -220,23 +216,23 @@ export const PositionMapGrid = createBlock({
       tier: 'primary',
       defaultSource: { value: 100, world: 'field' },
     }),
-    input('rows', 'Rows', 'Scalar:number', {
+    input('rows', 'Rows', 'Scalar:float', {
       tier: 'primary',
       defaultSource: { value: 10, world: 'scalar', uiHint: { kind: 'slider', min: 1, max: 100, step: 1 } },
     }),
-    input('cols', 'Columns', 'Scalar:number', {
+    input('cols', 'Columns', 'Scalar:float', {
       tier: 'primary',
       defaultSource: { value: 10, world: 'scalar', uiHint: { kind: 'slider', min: 1, max: 100, step: 1 } },
     }),
-    input('spacing', 'Spacing', 'Signal<number>', {
+    input('spacing', 'Spacing', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 20, world: 'signal', uiHint: { kind: 'slider', min: 1, max: 200, step: 1 } },
     }),
-    input('originX', 'Origin X', 'Signal<number>', {
+    input('originX', 'Origin X', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 100, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
     }),
-    input('originY', 'Origin Y', 'Signal<number>', {
+    input('originY', 'Origin Y', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 100, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
     }),
@@ -259,7 +255,6 @@ export const PositionMapGrid = createBlock({
     output('pos', 'Positions', 'Field<vec2>'),
   ],
   color: '#22C55E',
-  laneKind: 'Fields',
   priority: 1,
 });
 
@@ -277,19 +272,19 @@ export const PositionMapCircle = createBlock({
       tier: 'primary',
       defaultSource: { value: 100, world: 'field' },
     }),
-    input('centerX', 'Center X', 'Signal<number>', {
+    input('centerX', 'Center X', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 400, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
     }),
-    input('centerY', 'Center Y', 'Signal<number>', {
+    input('centerY', 'Center Y', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 300, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
     }),
-    input('radius', 'Radius', 'Signal<number>', {
+    input('radius', 'Radius', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 150, world: 'signal', uiHint: { kind: 'slider', min: 10, max: 500, step: 10 } },
     }),
-    input('startAngle', 'Start Angle (deg)', 'Signal<number>', {
+    input('startAngle', 'Start Angle (deg)', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 360, step: 15 } },
     }),
@@ -326,7 +321,6 @@ export const PositionMapCircle = createBlock({
     output('pos', 'Positions', 'Field<vec2>'),
   ],
   color: '#22C55E',
-  laneKind: 'Fields',
   priority: 2,
 });
 
@@ -344,19 +338,19 @@ export const PositionMapLine = createBlock({
       tier: 'primary',
       defaultSource: { value: 100, world: 'field' },
     }),
-    input('ax', 'Start X', 'Signal<number>', {
+    input('ax', 'Start X', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 100, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
     }),
-    input('ay', 'Start Y', 'Signal<number>', {
+    input('ay', 'Start Y', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 200, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
     }),
-    input('bx', 'End X', 'Signal<number>', {
+    input('bx', 'End X', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 700, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
     }),
-    input('by', 'End Y', 'Signal<number>', {
+    input('by', 'End Y', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 200, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
     }),
@@ -378,7 +372,6 @@ export const PositionMapLine = createBlock({
     output('pos', 'Positions', 'Field<vec2>'),
   ],
   color: '#22C55E',
-  laneKind: 'Fields',
   priority: 3,
 });
 
@@ -394,16 +387,15 @@ export const FieldConstNumber = createBlock({
       tier: 'primary',
       defaultSource: { value: 100, world: 'field' },
     }),
-    input('value', 'Value', 'Signal<number>', {
+    input('value', 'Value', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: -10000, max: 10000, step: 0.1 } },
     }),
   ],
   outputs: [
-    output('out', 'Value', 'Field<number>'),
+    output('out', 'Value', 'Field<float>'),
   ],
   color: '#F59E0B',
-  laneKind: 'Fields',
   priority: 4,
 });
 
@@ -428,7 +420,6 @@ export const FieldConstColor = createBlock({
     output('out', 'Color', 'Field<color>'),
   ],
   color: '#F59E0B',
-  laneKind: 'Fields',
   priority: 5,
 });
 
@@ -446,16 +437,15 @@ export const FieldHash01ById = createBlock({
       tier: 'primary',
       defaultSource: { value: 100, world: 'field' },
     }),
-    input('seed', 'Seed', 'Scalar:number', {
+    input('seed', 'Seed', 'Scalar:float', {
       tier: 'secondary',
       defaultSource: { value: 0, world: 'scalar', uiHint: { kind: 'number', min: 0, max: 999999, step: 1 } },
     }),
   ],
   outputs: [
-    output('u', 'Random', 'Field<number>'),
+    output('u', 'Random', 'Field<float>'),
   ],
   color: '#EC4899',
-  laneKind: 'Fields',
   priority: 6,
 });
 
@@ -467,7 +457,7 @@ export const FieldMapNumber = createBlock({
   label: 'Map Number',
   description: 'Apply a function to each element of a numeric field',
   inputs: [
-    input('x', 'Input', 'Field<number>', {
+    input('x', 'Input', 'Field<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'field' },
     }),
@@ -492,24 +482,23 @@ export const FieldMapNumber = createBlock({
         },
       },
     }),
-    input('k', 'Parameter', 'Signal<number>', {
+    input('k', 'Parameter', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 } },
     }),
-    input('a', 'Range Min', 'Signal<number>', {
+    input('a', 'Range Min', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 } },
     }),
-    input('b', 'Range Max', 'Signal<number>', {
+    input('b', 'Range Max', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 } },
     }),
   ],
   outputs: [
-    output('y', 'Output', 'Field<number>'),
+    output('y', 'Output', 'Field<float>'),
   ],
   color: '#A855F7',
-  laneKind: 'Fields',
   priority: 10,
 });
 
@@ -541,31 +530,31 @@ export const FieldMapVec2 = createBlock({
         },
       },
     }),
-    input('angle', 'Angle (deg)', 'Signal<number>', {
+    input('angle', 'Angle (deg)', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -360, max: 360, step: 15 } },
     }),
-    input('scaleX', 'Scale X', 'Signal<number>', {
+    input('scaleX', 'Scale X', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: 0.1, max: 10, step: 0.1 } },
     }),
-    input('scaleY', 'Scale Y', 'Signal<number>', {
+    input('scaleY', 'Scale Y', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: 0.1, max: 10, step: 0.1 } },
     }),
-    input('offsetX', 'Offset X', 'Signal<number>', {
+    input('offsetX', 'Offset X', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -500, max: 500, step: 10 } },
     }),
-    input('offsetY', 'Offset Y', 'Signal<number>', {
+    input('offsetY', 'Offset Y', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -500, max: 500, step: 10 } },
     }),
-    input('centerX', 'Center X', 'Signal<number>', {
+    input('centerX', 'Center X', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 400, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
     }),
-    input('centerY', 'Center Y', 'Signal<number>', {
+    input('centerY', 'Center Y', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 300, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1000, step: 10 } },
     }),
@@ -574,7 +563,6 @@ export const FieldMapVec2 = createBlock({
     output('out', 'Output', 'Field<vec2>'),
   ],
   color: '#A855F7',
-  laneKind: 'Fields',
   priority: 11,
 });
 
@@ -586,11 +574,11 @@ export const FieldZipNumber = createBlock({
   label: 'Combine Numbers',
   description: 'Combine two numeric fields element-wise',
   inputs: [
-    input('a', 'A', 'Field<number>', {
+    input('a', 'A', 'Field<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'field' },
     }),
-    input('b', 'B', 'Field<number>', {
+    input('b', 'B', 'Field<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'field' },
     }),
@@ -613,10 +601,9 @@ export const FieldZipNumber = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Result', 'Field<number>'),
+    output('out', 'Result', 'Field<float>'),
   ],
   color: '#A855F7',
-  laneKind: 'Fields',
   priority: 12,
 });
 
@@ -631,7 +618,7 @@ export const JitterFieldVec2 = createBlock({
   label: 'Jitter Field',
   description: 'Animated per-element position drift',
   inputs: [
-    input('idRand', 'Random', 'Field<number>', {
+    input('idRand', 'Random', 'Field<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'field' },
     }),
@@ -639,11 +626,11 @@ export const JitterFieldVec2 = createBlock({
       tier: 'primary',
       defaultSource: { value: 0, world: 'signal', defaultBus: 'phaseA', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 } },
     }),
-    input('amount', 'Amount', 'Signal<number>', {
+    input('amount', 'Amount', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 5, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 100, step: 1 } },
     }),
-    input('frequency', 'Frequency', 'Signal<number>', {
+    input('frequency', 'Frequency', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 1, world: 'signal', uiHint: { kind: 'slider', min: 0.1, max: 10, step: 0.1 } },
     }),
@@ -652,15 +639,14 @@ export const JitterFieldVec2 = createBlock({
     output('drift', 'Drift', 'Field<vec2>'),
   ],
   color: '#A855F7',
-  laneKind: 'Fields',
   priority: 15,
 });
 
 /**
  * FieldFromSignalBroadcast - Broadcast Signal value to all Field elements.
  *
- * Takes a Signal<number> and broadcasts its value to every element in the domain,
- * creating a Field<number> where all elements have the same value at each time.
+ * Takes a Signal<float> and broadcasts its value to every element in the domain,
+ * creating a Field<float> where all elements have the same value at each time.
  */
 export const FieldFromSignalBroadcast = createBlock({
   type: 'FieldFromSignalBroadcast',
@@ -671,21 +657,20 @@ export const FieldFromSignalBroadcast = createBlock({
       tier: 'primary',
       defaultSource: { value: 100, world: 'field' },
     }),
-    input('signal', 'Signal', 'Signal<number>', {
+    input('signal', 'Signal', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 } },
     }),
   ],
   outputs: [
-    output('field', 'Field', 'Field<number>'),
+    output('field', 'Field', 'Field<float>'),
   ],
   color: '#A855F7',
-  laneKind: 'Fields',
   priority: 13,
 });
 
 /**
- * FieldZipSignal - Combine Field<number> with Signal<number>.
+ * FieldZipSignal - Combine Field<float> with Signal<float>.
  *
  * Evaluates the signal once per frame and applies the operation to every
  * element in the field. Useful for applying time-varying modulation to fields.
@@ -695,11 +680,11 @@ export const FieldZipSignal = createBlock({
   label: 'Field + Signal',
   description: 'Combine field with signal value',
   inputs: [
-    input('field', 'Field', 'Field<number>', {
+    input('field', 'Field', 'Field<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'field' },
     }),
-    input('signal', 'Signal', 'Signal<number>', {
+    input('signal', 'Signal', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 } },
     }),
@@ -722,10 +707,9 @@ export const FieldZipSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Result', 'Field<number>'),
+    output('out', 'Result', 'Field<float>'),
   ],
   color: '#A855F7',
-  laneKind: 'Fields',
   priority: 14,
 });
 
@@ -752,7 +736,6 @@ export const BroadcastSignalColor = createBlock({
     output('field', 'Field', 'Field<color>'),
   ],
   color: '#4ade80', // Green, for adapters/conversion
-  laneKind: 'Fields',
   priority: 100, // Adapters should be easy to find
 });
 
@@ -778,7 +761,6 @@ export const PathConst = createBlock({
   ],
   paramSchema: [],
   color: '#F59E0B',
-  laneKind: 'Fields',
   priority: 8,
 });
 
@@ -788,7 +770,7 @@ export const PathConst = createBlock({
  * This is the render sink that materializes Domain + Fields into visual output.
  * All per-element data flows through this block to produce the final render tree.
  *
- * The radius input accepts BOTH Field<number> (per-element radii) and Signal<number>
+ * The radius input accepts BOTH Field<float> (per-element radii) and Signal<float>
  * (broadcast same animated value to all elements).
  */
 export const RenderInstances2D = createBlock({
@@ -805,7 +787,7 @@ export const RenderInstances2D = createBlock({
       tier: 'primary',
       defaultSource: { value: [0, 0], world: 'field' },
     }),
-    input('radius', 'Radius', 'Field<number>', {
+    input('radius', 'Radius', 'Field<float>', {
       tier: 'primary',
       defaultSource: { value: 5, world: 'field', uiHint: { kind: 'slider', min: 1, max: 50, step: 1 } },
     }),
@@ -813,7 +795,7 @@ export const RenderInstances2D = createBlock({
       tier: 'primary',
       defaultSource: { value: '#ffffff', world: 'field', uiHint: { kind: 'color' } },
     }),
-    input('opacity', 'Opacity', 'Signal<number>', {
+    input('opacity', 'Opacity', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 1.0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 } },
     }),
@@ -825,7 +807,7 @@ export const RenderInstances2D = createBlock({
         uiHint: { kind: 'boolean' },
       },
     }),
-    input('glowIntensity', 'Glow Intensity', 'Signal<number>', {
+    input('glowIntensity', 'Glow Intensity', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: { value: 2.0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 5, step: 0.5 } },
     }),
@@ -834,7 +816,6 @@ export const RenderInstances2D = createBlock({
   // The compiler still defines the 'render' output for patch output inference
   outputs: [],
   color: '#EF4444',
-  laneKind: 'Program',
   priority: 100,
 });
 
@@ -875,11 +856,11 @@ export const RenderPaths2D = createBlock({
       tier: 'secondary',
       defaultSource: { value: '#000000', world: 'field', uiHint: { kind: 'color' } },
     }),
-    input('strokeWidth', 'Stroke Width', 'Field<number>', {
+    input('strokeWidth', 'Stroke Width', 'Field<float>', {
       tier: 'secondary',
       defaultSource: { value: 1, world: 'field', uiHint: { kind: 'slider', min: 0, max: 20, step: 0.5 } },
     }),
-    input('opacity', 'Opacity', 'Signal<number>', {
+    input('opacity', 'Opacity', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 1.0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 } },
     }),
@@ -887,7 +868,6 @@ export const RenderPaths2D = createBlock({
   outputs: [],
   paramSchema: [],
   color: '#EF4444',
-  laneKind: 'Program',
   priority: 101,
 });
 
@@ -909,6 +889,5 @@ export const Render2dCanvas = createBlock({
     output('render', 'Render', 'CanvasRender'),
   ],
   color: '#F97316', // Orange, distinct from SVG red
-  laneKind: 'Program',
   priority: 101,
 });

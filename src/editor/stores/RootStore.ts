@@ -23,7 +23,7 @@ import { TutorialStore } from './TutorialStore';
 import { DebugUIStore } from './DebugUIStore';
 import { Kernel } from '../kernel/PatchKernel';
 import type { PatchKernel } from '../kernel/types';
-import type { Block, Bus, Composite, Lane, Patch, Slot } from '../types';
+import type { Block, Bus, Composite, Patch, Slot } from '../types';
 
 export class RootStore {
   // Event dispatcher (created first so stores can set up listeners)
@@ -73,7 +73,6 @@ export class RootStore {
       version: 2,
       blocks: [],
       connections: [],
-      lanes: [],
       buses: [],
       publishers: [],
       listeners: [],
@@ -81,13 +80,10 @@ export class RootStore {
       settings: {
         seed: 0,
         speed: 1,
-        currentLayoutId: 'default',
-        advancedLaneMode: false,
         autoConnect: false,
         showTypeHints: false,
         highlightCompatible: false,
         warnBeforeDisconnect: true,
-        filterByLane: false,
         filterByConnection: false,
       },
     };
@@ -118,15 +114,9 @@ export class RootStore {
         // Create action executor (after stores and diagnostic hub)
 
         this.actionExecutor = new ActionExecutor(
-
           this.patchStore,
-
           this.uiStore,
-
-          this.viewStore,
-
           this.diagnosticHub
-
         );
 
     // Create tutorial store
@@ -138,7 +128,6 @@ export class RootStore {
     makeObservable(this, {
       selectedBlock: computed,
       selectedBus: computed,
-      activeLane: computed,
       selectedPortInfo: computed,
       loadPatch: action,
       clearPatch: action,
@@ -242,7 +231,7 @@ export class RootStore {
         this.busStore.listeners = patch.listeners.map(l => ({ ...l }));
       }
 
-      // Note: defaultSources and lanes are not in kernel yet
+      // Note: defaultSources are not in kernel yet
       // They remain in their respective stores for now
     });
   }
@@ -261,12 +250,6 @@ export class RootStore {
     const { selectedBusId } = this.uiStore.uiState;
     if (selectedBusId === null || selectedBusId === undefined) return null;
     return this.busStore.buses.find((b) => b.id === selectedBusId) ?? null;
-  }
-
-  get activeLane(): Lane | null {
-    const { activeLaneId } = this.uiStore.uiState;
-    if (activeLaneId === null || activeLaneId === undefined) return null;
-    return this.viewStore.lanes.find((l) => l.id === activeLaneId) ?? null;
   }
 
   get selectedPortInfo(): { block: Block; slot: Slot; direction: 'input' | 'output' } | null {
@@ -292,14 +275,12 @@ export class RootStore {
       version: 2,
       blocks: this.patchStore.blocks.map((b) => ({ ...b })),
       connections: this.patchStore.connections.map((c) => ({ ...c })),
-      lanes: this.viewStore.lanes.map((l) => ({ ...l })),
       buses: this.busStore.buses.map((b) => ({ ...b })),
       publishers: this.busStore.publishers.map((p) => ({ ...p })),
       listeners: this.busStore.listeners.map((l) => ({ ...l })),
       defaultSources: Array.from(this.defaultSourceStore.sources.values()).map((s) => ({ ...s })),
       settings: {
         ...this.uiStore.settings,
-        currentLayoutId: this.viewStore.currentLayoutId,
       },
     };
   }
@@ -312,24 +293,13 @@ export class RootStore {
     this.patchStore.blocks = patch.blocks.map((block) => ({ ...block }));
     this.patchStore.connections = patch.connections.map((connection) => ({ ...connection }));
 
-    // View state
-    if (patch.lanes !== undefined && patch.lanes !== null) {
-      this.viewStore.lanes = patch.lanes;
-    }
-    if (patch.settings !== null && patch.settings !== undefined && patch.settings.currentLayoutId !== null && patch.settings.currentLayoutId !== undefined && patch.settings.currentLayoutId !== '') {
-      this.viewStore.currentLayoutId = patch.settings.currentLayoutId;
-    }
-
     this.uiStore.settings = {
       seed: patch.settings.seed,
       speed: patch.settings.speed,
-      currentLayoutId: (patch.settings.currentLayoutId !== null && patch.settings.currentLayoutId !== undefined && patch.settings.currentLayoutId !== '') ? patch.settings.currentLayoutId : 'default',
-      advancedLaneMode: patch.settings.advancedLaneMode ?? false,
       autoConnect: patch.settings.autoConnect ?? false,
       showTypeHints: patch.settings.showTypeHints ?? false,
       highlightCompatible: patch.settings.highlightCompatible ?? false,
       warnBeforeDisconnect: patch.settings.warnBeforeDisconnect ?? true,
-      filterByLane: patch.settings.filterByLane ?? false,
       filterByConnection: patch.settings.filterByConnection ?? false,
     };
 
@@ -380,7 +350,6 @@ export class RootStore {
       version: 2,
       blocks: [],
       connections: [],
-      lanes: this.viewStore.lanes.map(l => ({ ...l, blockIds: [] })),
       buses: [],
       publishers: [],
       listeners: [],
@@ -397,10 +366,6 @@ export class RootStore {
     this.busStore.listeners = [];
     this.uiStore.uiState.selectedBlockId = null;
     this.uiStore.previewedDefinition = null;
-
-    for (const lane of this.viewStore.lanes) {
-      lane.blockIds = [];
-    }
 
     // Create default buses for new empty patch
     this.busStore.createDefaultBuses();

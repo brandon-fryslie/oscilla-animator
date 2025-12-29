@@ -2,7 +2,7 @@
  * FieldConstNumber Block Compiler
  *
  * Creates a constant numeric Field - same value for all elements.
- * Takes a Domain and produces Field<number>.
+ * Takes a Domain and produces Field<float>.
  */
 
 import type { BlockCompiler, Field, Artifact } from '../../types';
@@ -24,7 +24,7 @@ const lowerFieldConstNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
   const configObj = config as { value?: unknown } | undefined;
   const value = Number(configObj?.value ?? 0);
 
-  const outType = { world: 'field' as const, domain: 'number' as const };
+  const outType = { world: 'field' as const, domain: 'float' as const };
   const fieldId = ctx.b.fieldConst(value, outType);
 
   const slot = ctx.b.allocValueSlot();
@@ -41,12 +41,12 @@ registerBlockType({
       portId: 'value',
       label: 'Value',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 0 },
     },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'number' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'float' } },
   ],
   lower: lowerFieldConstNumber,
 });
@@ -60,11 +60,11 @@ export const FieldConstNumberBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'value', type: { kind: 'Signal:number' }, required: false },
+    { name: 'value', type: { kind: 'Signal:float' }, required: false },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Field:number' } },
+    { name: 'out', type: { kind: 'Field:float' } },
   ],
 
   compile({ inputs, params }) {
@@ -83,7 +83,7 @@ export const FieldConstNumberBlock: BlockCompiler = {
     // Helper to extract numeric value from artifact with default fallback
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
+      if (artifact.kind === 'Scalar:float' || artifact.kind === 'Signal:float') {
         return Number(artifact.value);
       }
       if ('value' in artifact && artifact.value !== undefined) {
@@ -99,13 +99,13 @@ export const FieldConstNumberBlock: BlockCompiler = {
     const value = extractNumber(inputs.value, paramsObj?.value ?? 0);
 
     // Create constant field that returns the same value for all elements
-    const field: Field<number> = (_seed, n) => {
+    const field: Field<float> = (_seed, n) => {
       const count = Math.min(n, domain.elements.length);
       return Array<number>(count).fill(value);
     };
 
     return {
-      out: { kind: 'Field:number', value: field },
+      out: { kind: 'Field:float', value: field },
     };
   },
 };

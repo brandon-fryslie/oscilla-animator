@@ -40,7 +40,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.buses.push({
         id: 'custom-bus',
         name: 'customBus',
-        type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+        type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
         combineMode: 'last',
         defaultValue: 0,
         sortKey: 0,
@@ -84,7 +84,7 @@ describe('Bus Diagnostics', () => {
       store.busStore.buses.push({
         id: 'custom-bus',
         name: 'customBus',
-        type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+        type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
         combineMode: 'last',
         defaultValue: 0,
         sortKey: 0,

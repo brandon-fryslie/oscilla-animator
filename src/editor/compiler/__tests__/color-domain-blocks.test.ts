@@ -24,7 +24,7 @@ describe("Color Domain Blocks", () => {
       const irDecl = getBlockType("ColorLFO");
       expect(irDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "phase01" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
       const typeColor: TypeDesc = { world: "signal", domain: "color" };
 
       const phaseSignal = builder.sigConst(0.5, typePhase);
@@ -65,7 +65,7 @@ describe("Color Domain Blocks", () => {
       const irDecl = getBlockType("ColorLFO");
       expect(irDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "phase01" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
       const typeColor: TypeDesc = { world: "signal", domain: "color" };
 
       const phaseSignal = builder.sigConst(0, typePhase);
@@ -102,7 +102,7 @@ describe("Color Domain Blocks", () => {
       const irDecl = getBlockType("ColorLFO");
       expect(irDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "phase01" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
       const typeColor: TypeDesc = { world: "signal", domain: "color" };
 
       const phaseSignal = builder.sigConst(0.25, typePhase);
@@ -152,7 +152,7 @@ describe("Color Domain Blocks", () => {
         blockIdx: 0 as BlockIndex,
         blockType: "DomainN",
         instanceId: "test-domain-10",
-        inTypes: [{ world: "scalar" as const, domain: "number" as const }],
+        inTypes: [{ world: "scalar" as const, domain: "float" as const }],
         outTypes: [typeDomain],
         b: builder,
         seedConstId: 0,
@@ -187,7 +187,7 @@ describe("Color Domain Blocks", () => {
         blockIdx: 0 as BlockIndex,
         blockType: "DomainN",
         instanceId: "test-domain-1",
-        inTypes: [{ world: "scalar" as const, domain: "number" as const }],
+        inTypes: [{ world: "scalar" as const, domain: "float" as const }],
         outTypes: [typeDomain],
         b: builder,
         seedConstId: 0,
@@ -215,7 +215,7 @@ describe("Color Domain Blocks", () => {
         blockIdx: 0 as BlockIndex,
         blockType: "DomainN",
         instanceId: "test-domain-large",
-        inTypes: [{ world: "scalar" as const, domain: "number" as const }],
+        inTypes: [{ world: "scalar" as const, domain: "float" as const }],
         outTypes: [typeDomain],
         b: builder,
         seedConstId: 0,
@@ -401,7 +401,7 @@ describe("Color Domain Blocks", () => {
         blockIdx: 0 as BlockIndex,
         blockType: "DomainN",
         instanceId: "domain-for-color",
-        inTypes: [{ world: "scalar" as const, domain: "number" as const }],
+        inTypes: [{ world: "scalar" as const, domain: "float" as const }],
         outTypes: [{ world: "special" as const, domain: "domain" as const }],
         b: builder,
         seedConstId: 0,
@@ -414,7 +414,7 @@ describe("Color Domain Blocks", () => {
       const colorDecl = getBlockType("ColorLFO");
       expect(colorDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "phase01" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
       const phaseSignal = builder.sigConst(0.5, typePhase);
       const slotPhase = builder.allocValueSlot(typePhase);
       builder.registerSigSlot(phaseSignal, slotPhase);

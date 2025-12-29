@@ -49,10 +49,10 @@ describe('FiniteTimeRootBlock', () => {
   it('should have all expected outputs', () => {
     expect(FiniteTimeRootBlock.outputs).toEqual([
       { name: 'systemTime', type: { kind: 'Signal:Time' } },
-      { name: 'progress', type: { kind: 'Signal:number' } },
+      { name: 'progress', type: { kind: 'Signal:float' } },
       { name: 'phase', type: { kind: 'Signal:phase' } },
       { name: 'end', type: { kind: 'Event' } },
-      { name: 'energy', type: { kind: 'Signal:number' } },
+      { name: 'energy', type: { kind: 'Signal:float' } },
     ]);
   });
 
@@ -66,9 +66,9 @@ describe('FiniteTimeRootBlock', () => {
     });
 
     expect(result.systemTime?.kind).toBe('Signal:Time');
-    expect(result.progress?.kind).toBe('Signal:number');
+    expect(result.progress?.kind).toBe('Signal:float');
     expect(result.end?.kind).toBe('Event');
-    expect(result.energy?.kind).toBe('Signal:number');
+    expect(result.energy?.kind).toBe('Signal:float');
 
     // Test signal behavior
     if (result.systemTime?.kind === 'Signal:Time') {
@@ -79,7 +79,7 @@ describe('FiniteTimeRootBlock', () => {
     }
 
     // Test progress clamping
-    if (result.progress?.kind === 'Signal:number') {
+    if (result.progress?.kind === 'Signal:float') {
       const progress = result.progress.value;
       expect(progress(-1000, ctx)).toBe(0); // Before start
       expect(progress(0, ctx)).toBe(0); // Start
@@ -106,7 +106,7 @@ describe('FiniteTimeRootBlock', () => {
       ctx,
     });
 
-    if (result.progress?.kind === 'Signal:number') {
+    if (result.progress?.kind === 'Signal:float') {
       const progress = result.progress.value;
       expect(progress(5000, ctx)).toBe(0.5); // Halfway through 10s
       expect(progress(10000, ctx)).toBe(1); // End at 10s
@@ -135,8 +135,8 @@ describe('CycleTimeRootBlock', () => {
       { name: 'cycleT', type: { kind: 'Signal:Time' } },
       { name: 'phase', type: { kind: 'Signal:phase' } },
       { name: 'wrap', type: { kind: 'Event' } },
-      { name: 'cycleIndex', type: { kind: 'Signal:number' } },
-      { name: 'energy', type: { kind: 'Signal:number' } },
+      { name: 'cycleIndex', type: { kind: 'Signal:int' } },
+      { name: 'energy', type: { kind: 'Signal:float' } },
     ]);
   });
 
@@ -153,8 +153,8 @@ describe('CycleTimeRootBlock', () => {
     expect(result.cycleT?.kind).toBe('Signal:Time');
     expect(result.phase?.kind).toBe('Signal:phase');
     expect(result.wrap?.kind).toBe('Event');
-    expect(result.cycleIndex?.kind).toBe('Signal:number');
-    expect(result.energy?.kind).toBe('Signal:number');
+    expect(result.cycleIndex?.kind).toBe('Signal:int');
+    expect(result.energy?.kind).toBe('Signal:float');
 
     // Test phase (0..1 normalized)
     if (result.phase?.kind === 'Signal:phase') {
@@ -183,7 +183,7 @@ describe('CycleTimeRootBlock', () => {
     }
 
     // Test cycle index
-    if (result.cycleIndex?.kind === 'Signal:number') {
+    if (result.cycleIndex?.kind === 'Signal:int') {
       const cycleIndex = result.cycleIndex.value;
       expect(cycleIndex(1000, ctx)).toBe(0); // First cycle
       expect(cycleIndex(3000, ctx)).toBe(1); // Second cycle
@@ -228,7 +228,7 @@ describe('InfiniteTimeRootBlock', () => {
       { name: 'systemTime', type: { kind: 'Signal:Time' } },
       { name: 'phase', type: { kind: 'Signal:phase' } },
       { name: 'pulse', type: { kind: 'Event' } },
-      { name: 'energy', type: { kind: 'Signal:number' } },
+      { name: 'energy', type: { kind: 'Signal:float' } },
     ]);
   });
 
@@ -242,7 +242,7 @@ describe('InfiniteTimeRootBlock', () => {
     });
 
     expect(result.systemTime?.kind).toBe('Signal:Time');
-    expect(result.energy?.kind).toBe('Signal:number');
+    expect(result.energy?.kind).toBe('Signal:float');
 
     // Test system time (identity)
     if (result.systemTime?.kind === 'Signal:Time') {
@@ -252,7 +252,7 @@ describe('InfiniteTimeRootBlock', () => {
     }
 
     // Test energy (constant 1.0)
-    if (result.energy?.kind === 'Signal:number') {
+    if (result.energy?.kind === 'Signal:float') {
       const energy = result.energy.value;
       expect(energy(0, ctx)).toBe(1.0);
       expect(energy(1000, ctx)).toBe(1.0);

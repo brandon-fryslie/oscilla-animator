@@ -38,8 +38,8 @@ const SHAPES: Record<string, (p: number) => number> = {
 const lowerOscillator: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
   const phase = inputsById?.phase ?? inputs[0]; // Signal:phase
   const shapeInput = inputsById?.shape ?? inputs[1]; // Scalar:waveform
-  const amplitude = inputsById?.amplitude ?? inputs[2]; // Signal:number
-  const bias = inputsById?.bias ?? inputs[3]; // Signal:number
+  const amplitude = inputsById?.amplitude ?? inputs[2]; // Signal:float
+  const bias = inputsById?.bias ?? inputs[3]; // Signal:float
 
   if (phase.k !== 'sig') {
     throw new Error(`Oscillator: expected sig input for phase, got ${phase.k}`);
@@ -60,7 +60,7 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
 
   // Map phase to waveform using appropriate opcode
   let waveformId: number;
-  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
 
   switch (shape) {
     case 'sine':
@@ -162,13 +162,13 @@ export const OscillatorBlock: BlockCompiler = {
 
   inputs: [
     { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
-    { name: 'amplitude', type: { kind: 'Signal:number' }, required: false },
-    { name: 'bias', type: { kind: 'Signal:number' }, required: false },
+    { name: 'amplitude', type: { kind: 'Signal:float' }, required: false },
+    { name: 'bias', type: { kind: 'Signal:float' }, required: false },
     { name: 'shape', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Signal:number' } },
+    { name: 'out', type: { kind: 'Signal:float' } },
   ],
 
   compile({ inputs }) {
@@ -182,7 +182,7 @@ export const OscillatorBlock: BlockCompiler = {
       };
     }
 
-    const phaseSignal = phaseArtifact.value as Signal<number>;
+    const phaseSignal = phaseArtifact.value as Signal<float>;
 
     // Read from inputs - values come from defaultSource or explicit connections
     const shapeArtifact = inputs.shape;
@@ -191,28 +191,28 @@ export const OscillatorBlock: BlockCompiler = {
     const shapeFn: (phase: number) => number = SHAPES[shape] ?? SHAPES.sine;
 
     const amplitudeArtifact = inputs.amplitude;
-    const amplitudeSignal = amplitudeArtifact?.kind === 'Signal:number'
-      ? (amplitudeArtifact.value as Signal<number>)
+    const amplitudeSignal = amplitudeArtifact?.kind === 'Signal:float'
+      ? (amplitudeArtifact.value as Signal<float>)
       : (): number => {
           const val = amplitudeArtifact !== undefined && 'value' in amplitudeArtifact ? amplitudeArtifact.value : 1;
           return Number(val);
         };
     const biasArtifact = inputs.bias;
-    const biasSignal = biasArtifact?.kind === 'Signal:number'
-      ? (biasArtifact.value as Signal<number>)
+    const biasSignal = biasArtifact?.kind === 'Signal:float'
+      ? (biasArtifact.value as Signal<float>)
       : (): number => {
           const val = biasArtifact !== undefined && 'value' in biasArtifact ? biasArtifact.value : 0;
           return Number(val);
         };
 
     // Create output signal
-    const signal: Signal<number> = (t: number, ctx: Readonly<RuntimeCtx>): number => {
+    const signal: Signal<float> = (t: number, ctx: Readonly<RuntimeCtx>): number => {
       const phase = phaseSignal(t, ctx);
       return shapeFn(phase) * amplitudeSignal(t, ctx) + biasSignal(t, ctx);
     };
 
     return {
-      out: { kind: 'Signal:number', value: signal },
+      out: { kind: 'Signal:float', value: signal },
     };
   },
 };

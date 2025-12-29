@@ -23,7 +23,7 @@ function createCanonicalBuses(): Bus[] {
     {
       id: 'phaseA',
       name: 'phaseA',
-      type: { world: 'signal', domain: 'phase01', category: 'core', busEligible: true, semantics: 'primary' },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(primary)' },
       combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
@@ -39,7 +39,7 @@ function createCanonicalBuses(): Bus[] {
     {
       id: 'energy',
       name: 'energy',
-      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'energy' },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'energy' },
       combineMode: 'sum',
       defaultValue: 0,
       sortKey: 0,
@@ -72,20 +72,20 @@ function createTestRegistry(): BlockRegistry {
       outputs: [
         { name: 'systemTime', type: { kind: 'Signal:Time' }, required: true },
         { name: 'cycleT', type: { kind: 'Signal:Time' }, required: true },
-        { name: 'phase', type: { kind: 'Signal:phase01' }, required: true },
+        { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
         { name: 'wrap', type: { kind: 'Event' }, required: true },
-        { name: 'cycleIndex', type: { kind: 'Signal:number' }, required: true },
-        { name: 'energy', type: { kind: 'Signal:number' }, required: true },
+        { name: 'cycleIndex', type: { kind: 'Signal:int' }, required: true },
+        { name: 'energy', type: { kind: 'Signal:float' }, required: true },
       ],
       compile: ({ params }: { params: Record<string, unknown> }) => {
         const periodMs = (params.periodMs as number) ?? 3000;
         return {
           systemTime: { kind: 'Signal:Time', value: (t: number) => t },
           cycleT: { kind: 'Signal:Time', value: (t: number) => t % periodMs },
-          phase: { kind: 'Signal:phase01', value: (t: number) => (t / periodMs) % 1 },
+          phase: { kind: 'Signal:phase', value: (t: number) => (t / periodMs) % 1 },
           wrap: { kind: 'Event', value: (t: number, lastT: number) => Math.floor(t / periodMs) > Math.floor(lastT / periodMs) },
-          cycleIndex: { kind: 'Signal:number', value: (t: number) => Math.floor(t / periodMs) },
-          energy: { kind: 'Signal:number', value: () => 1.0 },
+          cycleIndex: { kind: 'Signal:int', value: (t: number) => Math.floor(t / periodMs) },
+          energy: { kind: 'Signal:float', value: () => 1.0 },
         };
       },
     },
@@ -94,23 +94,23 @@ function createTestRegistry(): BlockRegistry {
     NumberSource: {
       type: 'NumberSource',
       inputs: [],
-      outputs: [{ name: 'value', type: { kind: 'Signal:number' }, required: true }],
+      outputs: [{ name: 'value', type: { kind: 'Signal:float' }, required: true }],
       compile: ({ params }: { params: Record<string, unknown> }) => ({
-        value: { kind: 'Signal:number', value: () => (params.value as number) ?? 0 },
+        value: { kind: 'Signal:float', value: () => (params.value as number) ?? 0 },
       }),
     },
     // Simple number consumer (outputs RenderTreeProgram for patch output)
     NumberSink: {
       type: 'NumberSink',
-      inputs: [{ name: 'input', type: { kind: 'Signal:number' }, required: true }],
+      inputs: [{ name: 'input', type: { kind: 'Signal:float' }, required: true }],
       outputs: [{ name: 'program', type: { kind: 'RenderTreeProgram' }, required: true }],
       compile: ({ inputs }: { inputs: Record<string, Artifact> }) => {
         const input = inputs.input;
-        if (input?.kind !== 'Signal:number') {
+        if (input?.kind !== 'Signal:float') {
           return {
             program: {
               kind: 'Error',
-              message: 'NumberSink requires Signal:number input',
+              message: 'NumberSink requires Signal:float input',
             },
           };
         }
@@ -138,7 +138,7 @@ function createTestRegistry(): BlockRegistry {
 // =============================================================================
 
 describe('Bus Compilation - Happy Path', () => {
-  it('compiles single Signal<number> bus with one publisher and one listener', () => {
+  it('compiles single Signal<float> bus with one publisher and one listener', () => {
     const blocks = [
       { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'NumberSource', params: { value: 42 } },
@@ -148,7 +148,7 @@ describe('Bus Compilation - Happy Path', () => {
     const bus: Bus = {
       id: 'bus1',
       name: 'Test Bus',
-      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
       combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
@@ -199,7 +199,7 @@ describe('Bus Compilation - Happy Path', () => {
     const bus: Bus = {
       id: 'bus1',
       name: 'Empty Bus',
-      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
       combineMode: 'last',
       defaultValue: 99, // Should return this
       sortKey: 0,
@@ -246,7 +246,7 @@ describe('Bus Compilation - Happy Path', () => {
     const bus: Bus = {
       id: 'bus1',
       name: 'Multi Publisher Bus',
-      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
       combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
@@ -294,7 +294,7 @@ describe('Bus Compilation - Happy Path', () => {
     const bus: Bus = {
       id: 'bus1',
       name: 'Sum Bus',
-      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
       combineMode: 'sum',
       defaultValue: 0,
       sortKey: 0,
@@ -347,7 +347,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
     const bus: Bus = {
       id: 'bus1',
       name: 'Tie Bus',
-      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
       combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
@@ -394,7 +394,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
     const bus: Bus = {
       id: 'bus1',
       name: 'Test Bus',
-      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
       combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
@@ -475,7 +475,7 @@ describe('Bus Compilation - Error Handling', () => {
     const bus: Bus = {
       id: 'bus1',
       name: 'Average Bus',
-      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
       combineMode: 'average', // Not supported for Signal buses (only Field buses)
       defaultValue: 0,
       sortKey: 0,

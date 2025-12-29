@@ -15,7 +15,6 @@ function createTestPatch(): Patch {
     version: 1,
     blocks: [],
     connections: [],
-    lanes: [],
     buses: [],
     publishers: [],
     listeners: [],
@@ -39,7 +38,7 @@ describe('Integration: Block → Wire → Bus → Publisher → Undo Chain', () 
       label: 'Test Source',
       params: {},
       inputs: [],
-      outputs: [{ id: 'out', label: 'Output', type: 'Signal<number>', direction: 'output' }],
+      outputs: [{ id: 'out', label: 'Output', type: 'Signal<float>', direction: 'output' }],
       category: 'Other',
     };
 
@@ -55,7 +54,7 @@ describe('Integration: Block → Wire → Bus → Publisher → Undo Chain', () 
       type: 'TestTarget',
       label: 'Test Target',
       params: {},
-      inputs: [{ id: 'in', label: 'Input', type: 'Signal<number>', direction: 'input' }],
+      inputs: [{ id: 'in', label: 'Input', type: 'Signal<float>', direction: 'input' }],
       outputs: [],
       category: 'Other',
     };
@@ -83,7 +82,7 @@ describe('Integration: Block → Wire → Bus → Publisher → Undo Chain', () 
     const bus: Bus = {
       id: 'bus1',
       name: 'Test Bus',
-      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
       combineMode: 'sum',
       defaultValue: 0,
       sortKey: 0,

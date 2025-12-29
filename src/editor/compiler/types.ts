@@ -13,7 +13,7 @@
 // Kernel Primitives
 // =============================================================================
 
-export type Seed = number;
+export type Seed = int;
 
 export interface Env {}
 
@@ -198,7 +198,7 @@ export type Field<T> = (seed: Seed, n: number, ctx: CompileCtx) => readonly T[];
  */
 export type ValueKind =
   // Scalars (single values)
-  | 'Scalar:number'
+  | 'Scalar:float'
   | 'Scalar:string'
   | 'Scalar:boolean'
   | 'Scalar:color'
@@ -206,7 +206,7 @@ export type ValueKind =
   | 'Scalar:bounds'
 
   // Fields (per-element arrays)
-  | 'Field:number'
+  | 'Field:float'
   | 'Field:string'
   | 'Field:boolean'
   | 'Field:color'
@@ -221,7 +221,7 @@ export type ValueKind =
 
   // Signals
   | 'Signal:Time'
-  | 'Signal:number'
+  | 'Signal:float'
   | 'Signal:Unit'
   | 'Signal:vec2'
   | 'Signal:phase'
@@ -277,9 +277,9 @@ export interface PortDef {
 
 export interface PhaseSample {
   phase: string;
-  u: number;
-  uRaw: number;
-  tLocal: number;
+  u: float;
+  uRaw: float;
+  tLocal: float;
 }
 
 export interface PhaseMachine {
@@ -289,7 +289,7 @@ export interface PhaseMachine {
 export interface TargetScene {
   id: string;
   targets: readonly Vec2[];
-  groups?: readonly number[];
+  groups?: readonly int[];
   bounds?: Bounds;
   meta?: Record<string, unknown>;
 }
@@ -305,7 +305,6 @@ export interface BlockInstance {
   id: BlockId;
   type: string; // registry key
   params: Record<string, unknown>;
-  lane?: number;
   position?: number;
 }
 
@@ -341,14 +340,16 @@ export interface CompilerConnection {
  * Each kind has a precise value type - not `unknown`.
  */
 export type Artifact =
-  | { kind: 'Scalar:number'; value: number }
+  | { kind: 'Scalar:float'; value: float }
+  | { kind: 'Scalar:int'; value: int }
   | { kind: 'Scalar:string'; value: string }
   | { kind: 'Scalar:boolean'; value: boolean }
   | { kind: 'Scalar:color'; value: unknown }
   | { kind: 'Scalar:vec2'; value: Vec2 }
   | { kind: 'Scalar:bounds'; value: Bounds }
 
-  | { kind: 'Field:number'; value: Field<number> }
+  | { kind: 'Field:float'; value: Field<float> }
+  | { kind: 'Field:int'; value: Field<int> }
   | { kind: 'Field:string'; value: Field<string> }
   | { kind: 'Field:boolean'; value: Field<boolean> }
   | { kind: 'Field:color'; value: Field<unknown> }
@@ -368,13 +369,14 @@ export type Artifact =
   | { kind: 'StrokeStyle'; value: unknown }
 
   // Primitive block artifacts (Phase 2)
-  | { kind: 'ElementCount'; value: number }
-  | { kind: 'Signal:Time'; value: (t: number, ctx: RuntimeCtx) => number }
-  | { kind: 'Signal:number'; value: (t: number, ctx: RuntimeCtx) => number }
-  | { kind: 'Signal:Unit'; value: (t: number, ctx: RuntimeCtx) => number }
+  | { kind: 'ElementCount'; value: int }
+  | { kind: 'Signal:Time'; value: (t: number, ctx: RuntimeCtx) => float }
+  | { kind: 'Signal:float'; value: (t: number, ctx: RuntimeCtx) => float }
+  | { kind: 'Signal:int'; value: (t: number, ctx: RuntimeCtx) => int }
+  | { kind: 'Signal:Unit'; value: (t: number, ctx: RuntimeCtx) => float }
   | { kind: 'Signal:vec2'; value: (t: number, ctx: RuntimeCtx) => Vec2 }
-  | { kind: 'Signal:phase'; value: (t: number, ctx: RuntimeCtx) => number }
-  | { kind: 'Signal:phase01'; value: (t: number, ctx: RuntimeCtx) => number }
+  | { kind: 'Signal:phase'; value: (t: number, ctx: RuntimeCtx) => float }
+  | { kind: 'Signal:phase01'; value: (t: number, ctx: RuntimeCtx) => float }
   | { kind: 'Signal:color'; value: (t: number, ctx: RuntimeCtx) => string }
   | { kind: 'RenderNode'; value: DrawNode }
   | { kind: 'RenderNodeArray'; value: readonly DrawNode[] }

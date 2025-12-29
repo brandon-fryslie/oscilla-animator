@@ -59,7 +59,7 @@ function createMinimalProgram(
     nodes: [
       {
         kind: "const",
-        type: { world: "field", domain: "number" },
+        type: { world: "field", domain: "float" },
         constId: 0,
       },
     ],
@@ -238,7 +238,7 @@ describe("ScheduleExecutor", () => {
           kind: "busEval",
           deps: [],
           busIndex: 0,
-          busType: { world: "signal", domain: "number" },
+          busType: { world: "signal", domain: "float" },
           outSlot: 2,
           publishers: [],
           combine: { mode: "last" },

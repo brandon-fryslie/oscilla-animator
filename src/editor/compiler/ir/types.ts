@@ -30,7 +30,8 @@ export type TypeWorld = "signal" | "field" | "scalar" | "event" | "special";
  * Describes the semantic domain of a value (e.g., number, color, vec2).
  */
 export type TypeDomain =
-  | "number"
+  | "float"
+  | "int"
   | "boolean"
   | "string"
   | "expression"
@@ -42,8 +43,6 @@ export type TypeDomain =
   | "color"
   | "bounds"
   | "timeMs"
-  | "phase01"
-  | "unit01"
   | "trigger" // discrete event-ish signal
   | "domain" // element identity handle
   | "renderTree"
@@ -56,6 +55,8 @@ export type TypeDomain =
   | "path"
   | "strokeStyle"
   | "filterDef"
+  | "phaseSample"
+  | "phaseMachine"
   | "scene"
   | "sceneTargets"
   | "sceneStrokes"

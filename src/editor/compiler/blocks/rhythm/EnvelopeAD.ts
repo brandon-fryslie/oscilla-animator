@@ -58,7 +58,7 @@ const lowerEnvelopeAD: BlockLowerFn = ({ ctx, inputs, config }) => {
     ? Number(config.peak)
     : 1.0;
 
-  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
   const timeType: TypeDesc = { world: 'signal', domain: 'timeMs' };
 
   // Allocate state for trigger time
@@ -120,7 +120,7 @@ registerBlockType({
       portId: 'env',
       label: 'Envelope',
       dir: 'out',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
     },
   ],
   lower: lowerEnvelopeAD,
@@ -135,13 +135,13 @@ export const EnvelopeADBlock: BlockCompiler = {
 
   inputs: [
     { name: 'trigger', type: { kind: 'Signal:Unit' }, required: true },
-    { name: 'attack', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'decay', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'peak', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'attack', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'decay', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'peak', type: { kind: 'Scalar:float' }, required: false },
   ],
 
   outputs: [
-    { name: 'env', type: { kind: 'Signal:number' } },
+    { name: 'env', type: { kind: 'Signal:float' } },
   ],
 
   compile({ inputs }) {
@@ -155,7 +155,7 @@ export const EnvelopeADBlock: BlockCompiler = {
       };
     }
 
-    const triggerSignal = triggerArtifact.value as Signal<number>;
+    const triggerSignal = triggerArtifact.value as Signal<float>;
     // Read from inputs - values come from defaultSource or explicit connections
     const attackArtifact = inputs.attack;
     const attack = (attackArtifact !== undefined && 'value' in attackArtifact ? Number(attackArtifact.value) : 0.05) * 1000; // Convert to ms
@@ -169,7 +169,7 @@ export const EnvelopeADBlock: BlockCompiler = {
     let wasTriggered = false;
 
     // Envelope signal
-    const envelopeSignal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
+    const envelopeSignal: Signal<float> = (t: number, ctx: RuntimeCtx): number => {
       const trig = triggerSignal(t, ctx);
 
       // Detect rising edge (event fires)
@@ -200,7 +200,7 @@ export const EnvelopeADBlock: BlockCompiler = {
     };
 
     return {
-      env: { kind: 'Signal:number', value: envelopeSignal },
+      env: { kind: 'Signal:float', value: envelopeSignal },
     };
   },
 };

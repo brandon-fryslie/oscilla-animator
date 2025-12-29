@@ -32,7 +32,7 @@ function createMinimalProgram(step: StepMaterialize): CompiledProgramIR {
       nodes: [
         {
           kind: "const",
-          type: { world: "field", domain: "number", channels: 1 },
+          type: { world: "field", domain: "float", channels: 1 },
           constId: 0,
         },
       ],

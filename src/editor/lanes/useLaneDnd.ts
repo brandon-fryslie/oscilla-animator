@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
-import { useStore } from './stores';
-import type { BlockDefinition } from './blocks';
+import { useStore } from '../stores';
+import type { BlockDefinition } from '../blocks';
+import { isLibraryBlockDragData, isTrashDropData } from '../types/dnd';
 import {
-  isLibraryBlockDragData,
   isPatchBlockDragData,
   isLaneDropData,
   isPatchBlockDropData,
-  isTrashDropData,
-  getLaneIdFromDropData,
-} from './types/dnd';
+  isInsertionPointDropData,
+} from './dnd';
 
-export function useEditorDnd(): {
+export function useLaneDnd(): {
   handleDragStart: (event: DragStartEvent) => void;
   handleDragEnd: (event: DragEndEvent) => void;
   activeDefinition: BlockDefinition | null;
@@ -34,10 +33,7 @@ export function useEditorDnd(): {
 
     if (isLibraryBlockDragData(data)) {
       setActiveDefinition(data.definition);
-      // Set dragging lane kind for highlighting suggested lanes
-      store.uiStore.setDraggingLaneKind(data.definition.laneKind ?? null);
     } else if (isPatchBlockDragData(data)) {
-      // Dragging a placed block
       const block = store.patchStore.blocks.find((b) => b.id === data.blockId);
       if (block) {
         setActivePlacedBlock({
@@ -50,9 +46,8 @@ export function useEditorDnd(): {
   }
 
   function getBlockColor(blockType: string): string {
-    // Import would create circular dep, so inline the lookup
     const colors: Record<string, string> = {
-      Scene: '#4a9eff',
+      Sources: '#4a9eff',
       Fields: '#a855f7',
       Time: '#22c55e',
       Math: '#f59e0b',
@@ -67,54 +62,58 @@ export function useEditorDnd(): {
     const { active, over } = event;
     setActiveDefinition(null);
     setActivePlacedBlock(null);
-    store.uiStore.setDraggingLaneKind(null);
 
     if (!over) return;
 
     const activeData = active.data.current;
     const overData = over.data.current;
 
-    // Dropping placed block onto another block (reorder/move)
     if (isPatchBlockDragData(activeData) && isPatchBlockDropData(overData)) {
       const { blockId, sourceLaneId, sourceIndex } = activeData;
       const { laneId: targetLaneId, index: targetIndex } = overData;
-
-      if (sourceLaneId === targetLaneId) {
-        if (sourceIndex !== targetIndex) {
-          store.viewStore.reorderBlockInLane(sourceLaneId, blockId, targetIndex);
-        }
-      } else {
-        store.viewStore.moveBlockToLane(blockId, targetLaneId);
+      if (sourceLaneId !== targetLaneId) return;
+      if (sourceIndex !== targetIndex) {
+        store.viewStore.reorderBlockInLane(sourceLaneId, blockId, targetIndex);
       }
       return;
     }
 
-    // Dropping library block onto a lane
     if (isLibraryBlockDragData(activeData) && isLaneDropData(overData)) {
       const { blockType } = activeData;
-      const laneId = getLaneIdFromDropData(overData);
       const blockId = store.patchStore.addBlock(blockType);
-
-      // Explicitly move to the target lane since user dropped it there
-      store.viewStore.moveBlockToLane(blockId, laneId);
+      store.viewStore.insertBlockInLane(overData.laneId, blockId, 0);
+      return;
     }
 
-    // Dropping placed block onto trash
+    if (isLibraryBlockDragData(activeData) && isInsertionPointDropData(overData)) {
+      const { blockType } = activeData;
+      const blockId = store.patchStore.addBlock(blockType);
+      store.viewStore.insertBlockInLane(overData.laneId, blockId, overData.index);
+      return;
+    }
+
+    if (isPatchBlockDragData(activeData) && isInsertionPointDropData(overData)) {
+      const { blockId, sourceLaneId, sourceIndex } = activeData;
+      const { laneId: targetLaneId, index: targetIndex } = overData;
+
+      if (sourceLaneId !== targetLaneId) return;
+      const adjustedIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+      if (sourceIndex !== adjustedIndex) {
+        store.viewStore.reorderBlockInLane(sourceLaneId, blockId, adjustedIndex);
+      }
+      return;
+    }
+
     if (isPatchBlockDragData(activeData) && isTrashDropData(overData)) {
       store.patchStore.removeBlock(activeData.blockId);
+      return;
     }
 
-    // Dropping placed block onto a lane (move/reorder)
     if (isPatchBlockDragData(activeData) && isLaneDropData(overData)) {
       const { blockId, sourceLaneId } = activeData;
-      const targetLaneId = getLaneIdFromDropData(overData);
-
-      if (sourceLaneId !== targetLaneId) {
-        // Move to different lane
-        store.viewStore.moveBlockToLane(blockId, targetLaneId);
+      if (sourceLaneId === overData.laneId) {
+        store.viewStore.insertBlockInLane(overData.laneId, blockId, 0);
       }
-      // Note: reordering within same lane would need drop position info
-      // For now, moving to same lane just keeps it in place
     }
   }
 

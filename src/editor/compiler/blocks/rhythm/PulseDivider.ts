@@ -38,11 +38,11 @@ const lowerPulseDivider: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error(`PulseDivider: expected sig input for phase, got ${phase.k}`);
   }
 
-  const divisions = (config != null && typeof config === 'object' && 'divisions' in config)
+  const divisions: int = (config != null && typeof config === 'object' && 'divisions' in config)
     ? Number(config.divisions)
     : 4;
 
-  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
   const triggerType: TypeDesc = { world: 'signal', domain: 'trigger' };
 
   // Allocate state for previous subPhase
@@ -92,7 +92,7 @@ registerBlockType({
       portId: 'phase',
       label: 'Phase',
       dir: 'in',
-      type: { world: 'signal', domain: 'phase01' },
+      type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
       defaultSource: { value: 0 },
     },
   ],
@@ -116,7 +116,7 @@ export const PulseDividerBlock: BlockCompiler = {
 
   inputs: [
     { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
-    { name: 'divisions', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'divisions', type: { kind: 'Scalar:int' }, required: false },
   ],
 
   outputs: [
@@ -134,20 +134,20 @@ export const PulseDividerBlock: BlockCompiler = {
       };
     }
 
-    const phaseSignal = phaseArtifact.value as Signal<number>;
+    const phaseSignal = phaseArtifact.value as Signal<float>;
     // Read from inputs - values come from defaultSource or explicit connections
     const divisionsArtifact = inputs.divisions;
-    const divisions = divisionsArtifact !== undefined && 'value' in divisionsArtifact
+    const divisions: int = divisionsArtifact !== undefined && 'value' in divisionsArtifact
       ? Number(divisionsArtifact.value)
       : 4;
 
     // State for edge detection
-    let lastSubPhase = -1;
+    let lastSubPhase: int = -1;
 
     // Event signal: returns 1 on tick frame, 0 otherwise
-    const eventSignal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
+    const eventSignal: Signal<float> = (t: number, ctx: RuntimeCtx): number => {
       const phase = phaseSignal(t, ctx);
-      const subPhase = Math.floor(phase * divisions);
+      const subPhase: int = Math.floor(phase * divisions);
 
       // Detect crossing
       if (subPhase !== lastSubPhase) {

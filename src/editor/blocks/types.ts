@@ -1,4 +1,4 @@
-import type { BlockForm, BlockSubcategory, Slot, BlockParams, LaneKind, LaneFlavor, KernelCapability, KernelId, PureCompileKind } from '../types';
+import type { BlockForm, BlockSubcategory, Slot, BlockParams, KernelCapability, KernelId, PureCompileKind } from '../types';
 import type { CompositeDefinition } from '../composites';
 
 // Re-export types that are used by other modules
@@ -6,8 +6,6 @@ export type {
   BlockForm,
   Slot,
   SlotType,
-  LaneKind,
-  LaneFlavor,
   BlockSubcategory,
   // New types for "Remove Parameters" refactor (Phase 1)
   SlotWorld,
@@ -96,14 +94,6 @@ interface BlockDefinitionBase {
 
   /** Color for visual identification */
   readonly color: string;
-
-  // === Lane affinity tags (for palette filtering) ===
-
-  /** Which lane kind this block naturally belongs to */
-  readonly laneKind: LaneKind;
-
-  /** Optional flavor hint (motion, timing, style) */
-  readonly laneFlavor?: LaneFlavor;
 
   /** Priority for palette ordering (lower = higher priority, shown first) */
   readonly priority?: number;

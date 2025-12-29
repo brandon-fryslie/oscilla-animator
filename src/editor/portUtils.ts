@@ -72,11 +72,14 @@ function normalizeDomain(domain: string): string {
     case 'time':
       return 'time';
     case 'unit':
+      return 'unit';
     case 'phase':
       return 'phase';
     case 'phasesample':
       return 'phase-sample';
     case 'number':
+    case 'float':
+    case 'int':
       return 'num';
     case 'hsl':
       return 'color';

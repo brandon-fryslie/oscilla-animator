@@ -48,7 +48,7 @@ registerBlockType({
       portId: 'signal',
       label: 'Signal',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       optional: true,
       defaultSource: { value: 0 },
     },
@@ -56,7 +56,7 @@ registerBlockType({
       portId: 'phase',
       label: 'Phase',
       dir: 'in',
-      type: { world: 'signal', domain: 'phase01' },
+      type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
       optional: true,
       defaultSource: { value: 0 },
     },
@@ -72,7 +72,7 @@ registerBlockType({
       portId: 'field',
       label: 'Field',
       dir: 'in',
-      type: { world: 'field', domain: 'number' },
+      type: { world: 'field', domain: 'float' },
       optional: true,
       defaultSource: { value: 0 },
     },
@@ -111,13 +111,13 @@ export const DebugDisplayBlock: BlockCompiler = {
   type: 'DebugDisplay',
 
   inputs: [
-    { name: 'signal', type: { kind: 'Signal:number' }, required: false },
+    { name: 'signal', type: { kind: 'Signal:float' }, required: false },
     { name: 'phase', type: { kind: 'Signal:phase' }, required: false },
     { name: 'domain', type: { kind: 'Domain' }, required: false },
-    { name: 'field', type: { kind: 'Field:number' }, required: false },
+    { name: 'field', type: { kind: 'Field:float' }, required: false },
     { name: 'label', type: { kind: 'Scalar:string' }, required: false },
-    { name: 'posX', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'posY', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'posX', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'posY', type: { kind: 'Scalar:float' }, required: false },
   ],
 
   outputs: [
@@ -140,12 +140,12 @@ export const DebugDisplayBlock: BlockCompiler = {
     const fieldArtifact = inputs.field;
 
     // Get signal function if connected
-    const signalFn = (signalArtifact?.kind === 'Signal:number')
+    const signalFn = (signalArtifact?.kind === 'Signal:float')
       ? signalArtifact.value as (t: number, ctx: RuntimeCtx) => number
       : undefined;
 
     // Get phase function if connected
-    const phaseFn = (phaseArtifact?.kind === 'Signal:phase' || phaseArtifact?.kind === 'Signal:number')
+    const phaseFn = (phaseArtifact?.kind === 'Signal:phase' || phaseArtifact?.kind === 'Signal:float')
       ? phaseArtifact.value as (t: number, ctx: RuntimeCtx) => number
       : undefined;
 
@@ -155,7 +155,7 @@ export const DebugDisplayBlock: BlockCompiler = {
       : undefined;
 
     // Get field function if connected
-    const fieldFn = (fieldArtifact?.kind === 'Field:number')
+    const fieldFn = (fieldArtifact?.kind === 'Field:float')
       ? fieldArtifact.value
       : undefined;
 
@@ -173,7 +173,7 @@ export const DebugDisplayBlock: BlockCompiler = {
           signal?: number;
           phase?: number;
           domainCount?: number;
-          fieldSample?: number[];
+          fieldSample?: float[];
         } = {};
 
         if (signalFn !== undefined) {

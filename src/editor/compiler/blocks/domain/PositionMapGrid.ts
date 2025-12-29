@@ -27,26 +27,26 @@ const lowerPositionMapGrid: BlockLowerFn = ({ ctx, inputs, config }) => {
   // TODO: Add procedural field IR nodes or runtime domain size query
 
   const configData = config as {
-    cols?: number;
-    spacing?: number;
-    originX?: number;
-    originY?: number;
+    cols?: int;
+    spacing?: float;
+    originX?: float;
+    originY?: float;
     order?: string;
-    domainSize?: number; // Temporary: pass domain size via config
+    domainSize?: int; // Temporary: pass domain size via config
   } | undefined;
 
-  const cols = Number(configData?.cols ?? 10);
-  const spacing = Number(configData?.spacing ?? 20);
-  const originX = Number(configData?.originX ?? 100);
-  const originY = Number(configData?.originY ?? 100);
+  const cols: int = Number(configData?.cols ?? 10);
+  const spacing: float = Number(configData?.spacing ?? 20);
+  const originX: float = Number(configData?.originX ?? 100);
+  const originY: float = Number(configData?.originY ?? 100);
   const order = configData?.order ?? 'rowMajor';
-  const domainSize = configData?.domainSize ?? 100; // Fallback size
+  const domainSize: int = configData?.domainSize ?? 100; // Fallback size
 
   // Compute grid positions at compile time
   const positions: Vec2[] = [];
   for (let i = 0; i < domainSize; i++) {
-    let col: number;
-    let row: number;
+    let col: int;
+    let row: int;
 
     if (order === 'serpentine') {
       row = Math.floor(i / cols);
@@ -83,35 +83,35 @@ registerBlockType({
       portId: 'rows',
       label: 'Rows',
       dir: 'in',
-      type: { world: 'scalar', domain: 'number' },
+      type: { world: 'scalar', domain: 'int' },
       defaultSource: { value: 10 },
     },
     {
       portId: 'cols',
       label: 'Cols',
       dir: 'in',
-      type: { world: 'scalar', domain: 'number' },
+      type: { world: 'scalar', domain: 'int' },
       defaultSource: { value: 10 },
     },
     {
       portId: 'spacing',
       label: 'Spacing',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 20 },
     },
     {
       portId: 'originX',
       label: 'Origin X',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 0 },
     },
     {
       portId: 'originY',
       label: 'Origin Y',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 0 },
     },
     {
@@ -137,10 +137,10 @@ export const PositionMapGridBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'cols', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'spacing', type: { kind: 'Signal:number' }, required: false },
-    { name: 'originX', type: { kind: 'Signal:number' }, required: false },
-    { name: 'originY', type: { kind: 'Signal:number' }, required: false },
+    { name: 'cols', type: { kind: 'Scalar:int' }, required: false },
+    { name: 'spacing', type: { kind: 'Signal:float' }, required: false },
+    { name: 'originX', type: { kind: 'Signal:float' }, required: false },
+    { name: 'originY', type: { kind: 'Signal:float' }, required: false },
     { name: 'order', type: { kind: 'Scalar:string' }, required: false },
   ],
 
@@ -167,8 +167,10 @@ export const PositionMapGridBlock: BlockCompiler = {
     // Helper to extract numeric value from artifact with default fallback
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number') return Number(artifact.value);
-      if (artifact.kind === 'Signal:number') {
+      if (artifact.kind === 'Scalar:int' || artifact.kind === 'Scalar:float') {
+        return Number(artifact.value);
+      }
+      if (artifact.kind === 'Signal:float') {
         return Number(artifact.value(0, defaultCtx));
       }
       // For other types, try to convert to number (fallback for any other artifact type)
@@ -183,20 +185,20 @@ export const PositionMapGridBlock: BlockCompiler = {
     };
 
     // Support both new (inputs) and old (params) parameter systems
-    const cols = extractNumber(inputs.cols, (params as Record<string, unknown> | undefined)?.cols as number | undefined ?? 10);
-    const spacing = extractNumber(inputs.spacing, (params as Record<string, unknown> | undefined)?.spacing as number | undefined ?? 20);
-    const originX = extractNumber(inputs.originX, (params as Record<string, unknown> | undefined)?.originX as number | undefined ?? 0);
-    const originY = extractNumber(inputs.originY, (params as Record<string, unknown> | undefined)?.originY as number | undefined ?? 0);
+    const cols: int = extractNumber(inputs.cols, (params as Record<string, unknown> | undefined)?.cols as number | undefined ?? 10);
+    const spacing: float = extractNumber(inputs.spacing, (params as Record<string, unknown> | undefined)?.spacing as number | undefined ?? 20);
+    const originX: float = extractNumber(inputs.originX, (params as Record<string, unknown> | undefined)?.originX as number | undefined ?? 0);
+    const originY: float = extractNumber(inputs.originY, (params as Record<string, unknown> | undefined)?.originY as number | undefined ?? 0);
     const order = extractString(inputs.order, (params as Record<string, unknown> | undefined)?.order as string | undefined ?? 'rowMajor');
 
     // Create the position field based on domain element count
     const positionField: PositionField = (_seed, n) => {
-      const elementCount = Math.min(n, domain.elements.length);
+      const elementCount: int = Math.min(n, domain.elements.length);
       const out = new Array<Vec2>(elementCount);
 
       for (let i = 0; i < elementCount; i++) {
-        let col: number;
-        let row: number;
+        let col: int;
+        let row: int;
 
         if (order === 'serpentine') {
           row = Math.floor(i / cols);

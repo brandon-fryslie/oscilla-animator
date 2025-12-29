@@ -66,7 +66,7 @@ import { createLegacyContext } from "./LegacyClosure";
  * const env = createSigEnv({ tAbsMs: 1000, constPool, cache });
  *
  * const nodes: SignalExprIR[] = [
- *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }
+ *   { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 }
  * ];
  *
  * console.log(evalSig(0, env, nodes)); // 42
@@ -176,7 +176,7 @@ export function evalSig(
  * // sin(1000) where timeAbsMs = 1000
  * const nodes: SignalExprIR[] = [
  *   { kind: "timeAbsMs", type: { world: "signal", domain: "timeMs" } }, // id: 0
- *   { kind: "map", type: { world: "signal", domain: "number" }, src: 0, fn: { kind: "opcode", opcode: OpCode.Sin } } // id: 1
+ *   { kind: "map", type: { world: "signal", domain: "float" }, src: 0, fn: { kind: "opcode", opcode: OpCode.Sin } } // id: 1
  * ];
  * // evalSig(1, env, nodes) → sin(1000)
  * ```
@@ -208,9 +208,9 @@ function evalMap(
  * ```typescript
  * // 10 + 20
  * const nodes: SignalExprIR[] = [
- *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 10
- *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 1 }, // 20
- *   { kind: "zip", type: { world: "signal", domain: "number" }, a: 0, b: 1, fn: { kind: "opcode", opcode: OpCode.Add } }
+ *   { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 }, // 10
+ *   { kind: "const", type: { world: "signal", domain: "float" }, constId: 1 }, // 20
+ *   { kind: "zip", type: { world: "signal", domain: "float" }, a: 0, b: 1, fn: { kind: "opcode", opcode: OpCode.Add } }
  * ];
  * // evalSig(2, env, nodes) → 30
  * ```
@@ -249,10 +249,10 @@ function evalZip(
  * ```typescript
  * // select(1.0, 100, 200) → 100 (true branch)
  * const nodes: SignalExprIR[] = [
- *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 0: cond = 1.0
- *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 1 }, // 1: t = 100
- *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 2 }, // 2: f = 200
- *   { kind: "select", type: { world: "signal", domain: "number" }, cond: 0, t: 1, f: 2 }
+ *   { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 }, // 0: cond = 1.0
+ *   { kind: "const", type: { world: "signal", domain: "float" }, constId: 1 }, // 1: t = 100
+ *   { kind: "const", type: { world: "signal", domain: "float" }, constId: 2 }, // 2: f = 200
+ *   { kind: "select", type: { world: "signal", domain: "float" }, cond: 0, t: 1, f: 2 }
  * ];
  * // evalSig(3, env, nodes) → 100
  * ```
@@ -298,7 +298,7 @@ function evalSelect(
  * const slots = createArraySlotReader(new Map([[0, 42]]));
  * const env = createSigEnv({ tAbsMs: 0, constPool: { numbers: [] }, cache, slotValues: slots });
  * const nodes: SignalExprIR[] = [
- *   { kind: "inputSlot", type: { world: "signal", domain: "number" }, slot: 0 }
+ *   { kind: "inputSlot", type: { world: "signal", domain: "float" }, slot: 0 }
  * ];
  * // evalSig(0, env, nodes) → 42
  * ```
@@ -334,12 +334,12 @@ function evalInputSlot(
  * ```typescript
  * // Sum of three signals: 10 + 20 + 30 = 60
  * const nodes: SignalExprIR[] = [
- *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 10
- *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 1 }, // 20
- *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 2 }, // 30
+ *   { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 }, // 10
+ *   { kind: "const", type: { world: "signal", domain: "float" }, constId: 1 }, // 20
+ *   { kind: "const", type: { world: "signal", domain: "float" }, constId: 2 }, // 30
  *   {
  *     kind: "busCombine",
- *     type: { world: "signal", domain: "number" },
+ *     type: { world: "signal", domain: "float" },
  *     busIndex: 0,
  *     terms: [0, 1, 2],
  *     combine: { mode: "sum" }
@@ -411,13 +411,13 @@ function evalBusCombine(
  * // scaleBias: 5 * 2 + 10 = 20
  * const chain: TransformChainIR = {
  *   steps: [{ kind: "scaleBias", scale: 2, bias: 10 }],
- *   fromType: { world: "signal", domain: "number" },
- *   toType: { world: "signal", domain: "number" },
+ *   fromType: { world: "signal", domain: "float" },
+ *   toType: { world: "signal", domain: "float" },
  *   cost: "cheap"
  * };
  * const nodes: SignalExprIR[] = [
- *   { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 5
- *   { kind: "transform", type: { world: "signal", domain: "number" }, src: 0, chain: 0 }
+ *   { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 }, // 5
+ *   { kind: "transform", type: { world: "signal", domain: "float" }, src: 0, chain: 0 }
  * ];
  * const env = createSigEnv({
  *   tAbsMs: 0,
@@ -571,7 +571,7 @@ function evalStateful(
  * const nodes: SignalExprIR[] = [
  *   {
  *     kind: "closureBridge",
- *     type: { world: "signal", domain: "number" },
+ *     type: { world: "signal", domain: "float" },
  *     closureId: "testClosure",
  *     inputSlots: []
  *   }

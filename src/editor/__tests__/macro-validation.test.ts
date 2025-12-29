@@ -89,8 +89,8 @@ describe('Macro Registry Validation', () => {
 
         it('should have at least one render block', () => {
           const expansion = MACRO_REGISTRY[macroKey];
-          const hasRenderBlock = expansion.blocks.some(b => 
-            b.type === 'RenderInstances2D' || b.laneKind === 'Program'
+          const hasRenderBlock = expansion.blocks.some(b =>
+            b.type.toLowerCase().includes('render')
           );
           expect(hasRenderBlock, `Macro "${macroKey}" has no render block`).toBe(true);
         });
@@ -175,8 +175,8 @@ describe('Macro Registry Validation', () => {
 
         it('should have at least one render block', () => {
           const expansion = MACRO_REGISTRY[macroKey];
-          const hasRenderBlock = expansion.blocks.some(b => 
-            b.type === 'RenderInstances2D' || b.laneKind === 'Program'
+          const hasRenderBlock = expansion.blocks.some(b =>
+            b.type.toLowerCase().includes('render')
           );
           expect(hasRenderBlock, `Macro "${macroKey}" has no render block`).toBe(true);
         });

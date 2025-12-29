@@ -72,11 +72,11 @@ const cache = createSigFrameCache(1024);
 // 3. Build signal DAG: sin(t * 0.001) * 2
 const nodes: SignalExprIR[] = [
   { kind: "timeAbsMs", type: { world: "signal", domain: "timeMs" } }, // 0: t
-  { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 1: 0.001
-  { kind: "zip", type: { world: "signal", domain: "number" }, a: 0, b: 1, fn: { kind: "opcode", opcode: OpCode.Mul } }, // 2: t * 0.001
-  { kind: "map", type: { world: "signal", domain: "number" }, src: 2, fn: { kind: "opcode", opcode: OpCode.Sin } }, // 3: sin(t * 0.001)
-  { kind: "const", type: { world: "signal", domain: "number" }, constId: 1 }, // 4: 2.0
-  { kind: "zip", type: { world: "signal", domain: "number" }, a: 3, b: 4, fn: { kind: "opcode", opcode: OpCode.Mul } }, // 5: sin(t * 0.001) * 2
+  { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 }, // 1: 0.001
+  { kind: "zip", type: { world: "signal", domain: "float" }, a: 0, b: 1, fn: { kind: "opcode", opcode: OpCode.Mul } }, // 2: t * 0.001
+  { kind: "map", type: { world: "signal", domain: "float" }, src: 2, fn: { kind: "opcode", opcode: OpCode.Sin } }, // 3: sin(t * 0.001)
+  { kind: "const", type: { world: "signal", domain: "float" }, constId: 1 }, // 4: 2.0
+  { kind: "zip", type: { world: "signal", domain: "float" }, a: 3, b: 4, fn: { kind: "opcode", opcode: OpCode.Mul } }, // 5: sin(t * 0.001) * 2
 ];
 
 // 4. Evaluate per frame
@@ -100,26 +100,26 @@ import { createArraySlotReader } from "./SlotValueReader";
 
 // select(x > 0, 1/x, 0) - safe division with short-circuit
 const nodes: SignalExprIR[] = [
-  { kind: "inputSlot", type: { world: "signal", domain: "number" }, slot: 0 }, // 0: x
-  { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 1: 0
+  { kind: "inputSlot", type: { world: "signal", domain: "float" }, slot: 0 }, // 0: x
+  { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 }, // 1: 0
   {
     kind: "zip",
-    type: { world: "signal", domain: "number" },
+    type: { world: "signal", domain: "float" },
     a: 0,
     b: 1,
     fn: { kind: "opcode", opcode: OpCode.Sub },
   }, // 2: x - 0 (cond > 0.5 means x > 0)
-  { kind: "const", type: { world: "signal", domain: "number" }, constId: 1 }, // 3: 1
+  { kind: "const", type: { world: "signal", domain: "float" }, constId: 1 }, // 3: 1
   {
     kind: "zip",
-    type: { world: "signal", domain: "number" },
+    type: { world: "signal", domain: "float" },
     a: 3,
     b: 0,
     fn: { kind: "opcode", opcode: OpCode.Div },
   }, // 4: 1/x (only evaluated if x > 0)
   {
     kind: "select",
-    type: { world: "signal", domain: "number" },
+    type: { world: "signal", domain: "float" },
     cond: 2,
     t: 4,
     f: 1,
@@ -156,11 +156,11 @@ const env = createSigEnv({
 });
 
 const nodes: SignalExprIR[] = [
-  { kind: "inputSlot", type: { world: "signal", domain: "number" }, slot: 0 }, // 0: slot[0]
-  { kind: "inputSlot", type: { world: "signal", domain: "number" }, slot: 1 }, // 1: slot[1]
+  { kind: "inputSlot", type: { world: "signal", domain: "float" }, slot: 0 }, // 0: slot[0]
+  { kind: "inputSlot", type: { world: "signal", domain: "float" }, slot: 1 }, // 1: slot[1]
   {
     kind: "zip",
-    type: { world: "signal", domain: "number" },
+    type: { world: "signal", domain: "float" },
     a: 0,
     b: 1,
     fn: { kind: "opcode", opcode: OpCode.Add },
@@ -177,7 +177,7 @@ const emptySlots = createArraySlotReader(new Map()); // No slots
 const env = createSigEnv({ tAbsMs: 0, constPool, cache, slotValues: emptySlots });
 
 const nodes: SignalExprIR[] = [
-  { kind: "inputSlot", type: { world: "signal", domain: "number" }, slot: 99 }, // Missing slot
+  { kind: "inputSlot", type: { world: "signal", domain: "float" }, slot: 99 }, // Missing slot
 ];
 
 const result = evalSig(0, env, nodes); // NaN
@@ -188,12 +188,12 @@ const result = evalSig(0, env, nodes); // NaN
 ```typescript
 // Sum of multiple publishers on a bus
 const nodes: SignalExprIR[] = [
-  { kind: "const", type: { world: "signal", domain: "number" }, constId: 0 }, // 10
-  { kind: "const", type: { world: "signal", domain: "number" }, constId: 1 }, // 20
-  { kind: "const", type: { world: "signal", domain: "number" }, constId: 2 }, // 30
+  { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 }, // 10
+  { kind: "const", type: { world: "signal", domain: "float" }, constId: 1 }, // 20
+  { kind: "const", type: { world: "signal", domain: "float" }, constId: 2 }, // 30
   {
     kind: "busCombine",
-    type: { world: "signal", domain: "number" },
+    type: { world: "signal", domain: "float" },
     busIndex: 0,
     terms: [0, 1, 2], // Pre-sorted by compiler
     combine: { mode: "sum" }, // Sum all terms
@@ -222,7 +222,7 @@ const result = evalSig(3, env, nodes); // 60
 ```typescript
 {
   kind: "busCombine",
-  type: { world: "signal", domain: "number" },
+  type: { world: "signal", domain: "float" },
   busIndex: 0,
   terms: [],
   combine: { mode: "sum", default: 100 }, // Return 100 when empty

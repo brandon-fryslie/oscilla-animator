@@ -98,11 +98,11 @@ registerBlockType({
   capability: 'pure',
   inputs: [
     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
-    { portId: 'hueOffset', label: 'Hue Offset', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true, defaultSource: { value: 0 } },
-    { portId: 'hueSpread', label: 'Hue Spread', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true, defaultSource: { value: 1 } },
-    { portId: 'saturation', label: 'Saturation', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true, defaultSource: { value: 80 } },
-    { portId: 'lightness', label: 'Lightness', dir: 'in', type: { world: 'signal', domain: 'number' }, optional: true, defaultSource: { value: 60 } },
-    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: 'signal', domain: 'phase01' }, optional: true, defaultSource: { value: 0 } },
+    { portId: 'hueOffset', label: 'Hue Offset', dir: 'in', type: { world: 'signal', domain: 'float' }, optional: true, defaultSource: { value: 0 } },
+    { portId: 'hueSpread', label: 'Hue Spread', dir: 'in', type: { world: 'signal', domain: 'float' }, optional: true, defaultSource: { value: 1 } },
+    { portId: 'saturation', label: 'Saturation', dir: 'in', type: { world: 'signal', domain: 'float' }, optional: true, defaultSource: { value: 80 } },
+    { portId: 'lightness', label: 'Lightness', dir: 'in', type: { world: 'signal', domain: 'float' }, optional: true, defaultSource: { value: 60 } },
+    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' }, optional: true, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'colors', label: 'Colors', dir: 'out', type: { world: 'field', domain: 'color' } },
@@ -119,10 +119,10 @@ export const FieldHueGradientBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'hueOffset', type: { kind: 'Signal:number' }, required: false },
-    { name: 'hueSpread', type: { kind: 'Signal:number' }, required: false },
-    { name: 'saturation', type: { kind: 'Signal:number' }, required: false },
-    { name: 'lightness', type: { kind: 'Signal:number' }, required: false },
+    { name: 'hueOffset', type: { kind: 'Signal:float' }, required: false },
+    { name: 'hueSpread', type: { kind: 'Signal:float' }, required: false },
+    { name: 'saturation', type: { kind: 'Signal:float' }, required: false },
+    { name: 'lightness', type: { kind: 'Signal:float' }, required: false },
     { name: 'phase', type: { kind: 'Signal:phase' }, required: false },
   ],
 
@@ -169,23 +169,23 @@ export const FieldHueGradientBlock: BlockCompiler = {
       const runtimeCtx: RuntimeCtx = { viewport: { w: 0, h: 0, dpr: 1 } };
 
       // Evaluate signal inputs or use defaults
-      const hueOffset = isDefined(hueOffsetArtifact) && hueOffsetArtifact.kind === 'Signal:number'
+      const hueOffset = isDefined(hueOffsetArtifact) && hueOffsetArtifact.kind === 'Signal:float'
         ? hueOffsetArtifact.value(t, runtimeCtx)
         : defaultHueOffset;
 
-      const hueSpread = isDefined(hueSpreadArtifact) && hueSpreadArtifact.kind === 'Signal:number'
+      const hueSpread = isDefined(hueSpreadArtifact) && hueSpreadArtifact.kind === 'Signal:float'
         ? hueSpreadArtifact.value(t, runtimeCtx)
         : defaultHueSpread;
 
-      const saturation = isDefined(saturationArtifact) && saturationArtifact.kind === 'Signal:number'
+      const saturation = isDefined(saturationArtifact) && saturationArtifact.kind === 'Signal:float'
         ? saturationArtifact.value(t, runtimeCtx)
         : defaultSaturation;
 
-      const lightness = isDefined(lightnessArtifact) && lightnessArtifact.kind === 'Signal:number'
+      const lightness = isDefined(lightnessArtifact) && lightnessArtifact.kind === 'Signal:float'
         ? lightnessArtifact.value(t, runtimeCtx)
         : defaultLightness;
 
-      const phase = isDefined(phaseArtifact) && (phaseArtifact.kind === 'Signal:phase' || phaseArtifact.kind === 'Signal:number')
+      const phase = isDefined(phaseArtifact) && (phaseArtifact.kind === 'Signal:phase' || phaseArtifact.kind === 'Signal:float')
         ? phaseArtifact.value(t, runtimeCtx)
         : 0;
 

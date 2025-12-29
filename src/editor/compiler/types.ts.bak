@@ -198,7 +198,7 @@ export type Field<T> = (seed: Seed, n: number, ctx: CompileCtx) => readonly T[];
  */
 export type ValueKind =
   // Scalars (single values)
-  | 'Scalar:number'
+  | 'Scalar:float'
   | 'Scalar:string'
   | 'Scalar:boolean'
   | 'Scalar:color'
@@ -206,7 +206,7 @@ export type ValueKind =
   | 'Scalar:bounds'
 
   // Fields (per-element arrays)
-  | 'Field:number'
+  | 'Field:float'
   | 'Field:string'
   | 'Field:boolean'
   | 'Field:color'
@@ -221,7 +221,7 @@ export type ValueKind =
 
   // Signals
   | 'Signal:Time'
-  | 'Signal:number'
+  | 'Signal:float'
   | 'Signal:Unit'
   | 'Signal:vec2'
   | 'Signal:phase'
@@ -343,14 +343,14 @@ export interface CompilerConnection {
  * Each kind has a precise value type - not `unknown`.
  */
 export type Artifact =
-  | { kind: 'Scalar:number'; value: number }
+  | { kind: 'Scalar:float'; value: number }
   | { kind: 'Scalar:string'; value: string }
   | { kind: 'Scalar:boolean'; value: boolean }
   | { kind: 'Scalar:color'; value: unknown }
   | { kind: 'Scalar:vec2'; value: Vec2 }
   | { kind: 'Scalar:bounds'; value: Bounds }
 
-  | { kind: 'Field:number'; value: Field<number> }
+  | { kind: 'Field:float'; value: Field<float> }
   | { kind: 'Field:string'; value: Field<string> }
   | { kind: 'Field:boolean'; value: Field<boolean> }
   | { kind: 'Field:color'; value: Field<unknown> }
@@ -372,7 +372,7 @@ export type Artifact =
   // Primitive block artifacts (Phase 2)
   | { kind: 'ElementCount'; value: number }
   | { kind: 'Signal:Time'; value: (t: number, ctx: RuntimeCtx) => number }
-  | { kind: 'Signal:number'; value: (t: number, ctx: RuntimeCtx) => number }
+  | { kind: 'Signal:float'; value: (t: number, ctx: RuntimeCtx) => number }
   | { kind: 'Signal:Unit'; value: (t: number, ctx: RuntimeCtx) => number }
   | { kind: 'Signal:vec2'; value: (t: number, ctx: RuntimeCtx) => Vec2 }
   | { kind: 'Signal:phase'; value: (t: number, ctx: RuntimeCtx) => number }

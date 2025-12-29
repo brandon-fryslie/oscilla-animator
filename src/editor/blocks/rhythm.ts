@@ -31,7 +31,7 @@ export const PulseDivider = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
       },
     }),
-    input('divisions', 'Divisions', 'Scalar:number', {
+    input('divisions', 'Divisions', 'Scalar:int', {
       tier: 'primary',
       defaultSource: {
         value: 4,
@@ -44,7 +44,6 @@ export const PulseDivider = createBlock({
     output('tick', 'Tick', 'Signal<Unit>'),
   ],
   color: '#F59E0B',
-  laneKind: 'Phase',
   priority: 15,
   // Auto-subscribe phase to phaseA bus when no explicit connection
   autoBusSubscriptions: {
@@ -75,7 +74,7 @@ export const EnvelopeAD = createBlock({
         world: 'signal',
       },
     }),
-    input('attack', 'Attack (s)', 'Signal<number>', {
+    input('attack', 'Attack (s)', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 0.05,
@@ -83,7 +82,7 @@ export const EnvelopeAD = createBlock({
         uiHint: { kind: 'slider', min: 0.001, max: 2.0, step: 0.01 },
       },
     }),
-    input('decay', 'Decay (s)', 'Signal<number>', {
+    input('decay', 'Decay (s)', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 0.5,
@@ -91,7 +90,7 @@ export const EnvelopeAD = createBlock({
         uiHint: { kind: 'slider', min: 0.001, max: 5.0, step: 0.01 },
       },
     }),
-    input('peak', 'Peak Value', 'Signal<number>', {
+    input('peak', 'Peak Value', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: {
         value: 1.0,
@@ -101,10 +100,9 @@ export const EnvelopeAD = createBlock({
     }),
   ],
   outputs: [
-    output('env', 'Envelope', 'Signal<number>'),
+    output('env', 'Envelope', 'Signal<float>'),
   ],
   color: '#F59E0B',
-  laneKind: 'Phase',
   priority: 16,
   // Note: trigger input requires explicit wire connection from PulseDivider.tick
   // The pulse bus type (event:trigger) is incompatible with Signal<Unit>

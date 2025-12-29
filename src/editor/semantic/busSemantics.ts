@@ -80,13 +80,16 @@ export function combineSignalArtifacts(
   if (artifacts.length === 0) {
     // Infer kind from default value type
     if (typeof defaultValue === 'number') {
-      return { kind: 'Signal:number', value: () => defaultValue };
+      if (Number.isInteger(defaultValue)) {
+        return { kind: 'Signal:int', value: () => defaultValue };
+      }
+      return { kind: 'Signal:float', value: () => defaultValue };
     }
     if (typeof defaultValue === 'object' && defaultValue !== null && 'x' in defaultValue) {
       return { kind: 'Signal:vec2', value: () => defaultValue as Vec2 };
     }
     // Fallback: return as scalar
-    return { kind: 'Scalar:number', value: 0 };
+    return { kind: 'Scalar:float', value: 0 };
   }
 
   // Single publisher: return as-is
@@ -104,10 +107,10 @@ export function combineSignalArtifacts(
     // Sum all values - works for number and vec2
     const first = artifacts[0];
 
-    if (first.kind === 'Signal:number') {
+    if (first.kind === 'Signal:float' || first.kind === 'Signal:int') {
       const signals = artifacts.map(a => (a as typeof first).value);
       return {
-        kind: 'Signal:number',
+        kind: first.kind,
         value: (t: number, ctx: RuntimeCtx) => {
           let sum = 0;
           for (const sig of signals) {
@@ -136,9 +139,9 @@ export function combineSignalArtifacts(
     }
 
     // For scalars, convert to signals and sum
-    if (first.kind === 'Scalar:number') {
+    if (first.kind === 'Scalar:float' || first.kind === 'Scalar:int') {
       const sum = artifacts.reduce((acc, a) => acc + ((a as typeof first).value ?? 0), 0);
-      return { kind: 'Scalar:number', value: sum };
+      return { kind: first.kind, value: sum };
     }
 
     if (first.kind === 'Scalar:vec2') {
@@ -189,14 +192,24 @@ export function combineFieldArtifacts(
   // No publishers: return constant field with default value
   if (artifacts.length === 0) {
     if (typeof defaultValue === 'number') {
-      const constField: Field<number> = (_seed: Seed, n: number, _ctx: CompileCtx) => {
-        const result: number[] = [];
+      if (Number.isInteger(defaultValue)) {
+        const constField: Field<int> = (_seed: Seed, n: number, _ctx: CompileCtx) => {
+          const result: int[] = [];
+          for (let i = 0; i < n; i++) {
+            result.push(defaultValue);
+          }
+          return result;
+        };
+        return { kind: 'Field:int', value: constField };
+      }
+      const constField: Field<float> = (_seed: Seed, n: number, _ctx: CompileCtx) => {
+        const result: float[] = [];
         for (let i = 0; i < n; i++) {
           result.push(defaultValue);
         }
         return result;
       };
-      return { kind: 'Field:number', value: constField };
+      return { kind: 'Field:float', value: constField };
     }
     // Fallback for non-number defaults
     return {
@@ -213,15 +226,15 @@ export function combineFieldArtifacts(
   // Multiple publishers: combine based on mode
   const first = artifacts[0];
 
-  // Ensure all artifacts are Field:number
-  if (first.kind !== 'Field:number') {
+  // Ensure all artifacts are Field:float or Field:int
+  if (first.kind !== 'Field:float' && first.kind !== 'Field:int') {
     return {
       kind: 'Error',
-      message: `Field combination only supports Field:number, got ${first.kind}`,
+      message: `Field combination only supports Field:float or Field:int, got ${first.kind}`,
     };
   }
 
-  const fields = artifacts.map(a => (a as { kind: 'Field:number'; value: Field<number> }).value);
+  const fields = artifacts.map(a => (a as { kind: 'Field:float' | 'Field:int'; value: Field<float> | Field<int> }).value);
 
   if (mode === 'last') {
     // Highest sortKey wins (last in sorted array)
@@ -229,9 +242,9 @@ export function combineFieldArtifacts(
   }
 
   if (mode === 'sum') {
-    const combined: Field<number> = (seed: Seed, n: number, ctx: CompileCtx) => {
+    const combined: Field<float> | Field<int> = (seed: Seed, n: number, ctx: CompileCtx) => {
       const allValues = fields.map(f => f(seed, n, ctx));
-      const result: number[] = [];
+      const result: float[] = [];
       for (let i = 0; i < n; i++) {
         let sum = 0;
         for (const vals of allValues) {
@@ -241,13 +254,13 @@ export function combineFieldArtifacts(
       }
       return result;
     };
-    return { kind: 'Field:number', value: combined };
+    return { kind: first.kind, value: combined };
   }
 
   if (mode === 'average') {
-    const combined: Field<number> = (seed: Seed, n: number, ctx: CompileCtx) => {
+    const combined: Field<float> | Field<int> = (seed: Seed, n: number, ctx: CompileCtx) => {
       const allValues = fields.map(f => f(seed, n, ctx));
-      const result: number[] = [];
+      const result: float[] = [];
       for (let i = 0; i < n; i++) {
         let sum = 0;
         for (const vals of allValues) {
@@ -257,13 +270,13 @@ export function combineFieldArtifacts(
       }
       return result;
     };
-    return { kind: 'Field:number', value: combined };
+    return { kind: first.kind, value: combined };
   }
 
   if (mode === 'max') {
-    const combined: Field<number> = (seed: Seed, n: number, ctx: CompileCtx) => {
+    const combined: Field<float> | Field<int> = (seed: Seed, n: number, ctx: CompileCtx) => {
       const allValues = fields.map(f => f(seed, n, ctx));
-      const result: number[] = [];
+      const result: float[] = [];
       for (let i = 0; i < n; i++) {
         let maxVal = -Infinity;
         for (const vals of allValues) {
@@ -274,13 +287,13 @@ export function combineFieldArtifacts(
       }
       return result;
     };
-    return { kind: 'Field:number', value: combined };
+    return { kind: first.kind, value: combined };
   }
 
   if (mode === 'min') {
-    const combined: Field<number> = (seed: Seed, n: number, ctx: CompileCtx) => {
+    const combined: Field<float> | Field<int> = (seed: Seed, n: number, ctx: CompileCtx) => {
       const allValues = fields.map(f => f(seed, n, ctx));
-      const result: number[] = [];
+      const result: float[] = [];
       for (let i = 0; i < n; i++) {
         let minVal = Infinity;
         for (const vals of allValues) {
@@ -291,7 +304,7 @@ export function combineFieldArtifacts(
       }
       return result;
     };
-    return { kind: 'Field:number', value: combined };
+    return { kind: first.kind, value: combined };
   }
 
   // Unsupported combine mode
@@ -323,7 +336,7 @@ export function validateCombineMode(world: 'signal' | 'field', mode: string): bo
  */
 export function getCombineModesForDomain(domain: string): string[] {
   // Numeric domains support all combine modes
-  if (['number', 'duration', 'time', 'rate'].includes(domain)) {
+  if (['float', 'int', 'duration', 'time', 'rate'].includes(domain)) {
     return ['sum', 'average', 'max', 'min', 'last'];
   }
   // Point/vec2 domains support vector operations

@@ -9,7 +9,6 @@ import type { Block, Connection, BlockId, Slot } from './types';
 import type { BlockDefinition } from './blocks/types';
 import { getBlockForm } from './blocks/types';
 import { areTypesCompatible } from './portUtils';
-import { getBlockDefinition } from './blocks/registry';
 
 export interface ConnectionMapping {
   /** Connections that can be preserved with direct remapping */
@@ -39,10 +38,9 @@ export interface ReplacementResult {
  * Find all block definitions compatible with replacing the given block.
  *
  * Compatibility is determined by:
- * 1. Same lane kind (blocks must be in the same lane type)
- * 2. For connected blocks: must be able to receive all currently connected
+ * 1. For connected blocks: must be able to receive all currently connected
  *    inputs and provide all currently connected outputs
- * 3. For unconnected blocks: any block in the same lane kind is valid
+ * 2. For unconnected blocks: any block is valid (excluding macros)
  */
 export function findCompatibleReplacements(
   block: Block,
@@ -66,16 +64,10 @@ export function findCompatibleReplacements(
   const inputSlots = block.inputs.filter(s => connectedInputs.has(s.id));
   const outputSlots = block.outputs.filter(s => connectedOutputs.has(s.id));
 
-  // Get block's lane kind from its definition or infer from category
-  const blockLaneKind = getLaneKindFromBlock(block);
-
   // Filter compatible definitions
   return allDefinitions.filter(def => {
     // Don't suggest the same block type
     if (def.type === block.type) return false;
-
-    // Must be in the same lane kind for valid replacement
-    if (def.laneKind !== blockLaneKind) return false;
 
     // Don't suggest macros as replacements (they expand into multiple blocks)
     if (getBlockForm(def) === 'macro') return false;
@@ -98,37 +90,6 @@ export function findCompatibleReplacements(
 
     return true;
   });
-}
-
-/**
- * Get the lane kind from a block instance by looking up its definition.
- * Falls back to 'Scalars' if unknown (most common lane for math/utility blocks).
- */
-function getLaneKindFromBlock(block: Block): string {
-  // Look up the block definition to get the lane kind
-  const def = getBlockDefinition(block.type);
-  if (def?.laneKind) {
-    return def.laneKind;
-  }
-
-  // Fallback: Check if block has a category that maps to a lane kind
-  const categoryToLane: Record<string, string> = {
-    'Time': 'Phase',
-    'Math': 'Scalars',
-    'Fields': 'Fields',
-    'Field': 'Fields',
-    'Render': 'Program',
-    'Output': 'Program',
-    'Program': 'Program',
-    'Scene': 'Scene',
-  };
-
-  if (block.category && categoryToLane[block.category]) {
-    return categoryToLane[block.category];
-  }
-
-  // Default to Scalars for most utility blocks (a valid LaneKind)
-  return 'Scalars';
 }
 
 /**

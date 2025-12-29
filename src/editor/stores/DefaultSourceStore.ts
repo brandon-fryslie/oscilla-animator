@@ -194,7 +194,7 @@ export class DefaultSourceStore {
       const baseTypeDesc = slotTypeToTypeDesc[slot.type];
       const typeDesc: TypeDesc = baseTypeDesc ?? {
         world: slotWorldToTypeWorld(slot.defaultSource.world),
-        domain: 'number', // fallback
+        domain: 'float', // fallback
         category: 'core',
         busEligible: false,
       };

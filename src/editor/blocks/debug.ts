@@ -20,7 +20,7 @@ export const DebugDisplay = createBlock({
   description: 'Display input values on canvas overlay for debugging',
   subcategory: 'Other',
   inputs: [
-    input('signal', 'Signal Value', 'Signal<number>', {
+    input('signal', 'Signal Value', 'Signal<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'number' } },
     }),
@@ -31,7 +31,7 @@ export const DebugDisplay = createBlock({
     input('domain', 'Domain', 'Domain', {
       tier: 'secondary',
     }),
-    input('field', 'Field Value', 'Field<number>', {
+    input('field', 'Field Value', 'Field<float>', {
       tier: 'secondary',
     }),
   ],
@@ -44,6 +44,5 @@ export const DebugDisplay = createBlock({
     posY: 0,    // 0 = auto-position
   },
   color: '#F59E0B', // Amber - stands out for debugging
-  laneKind: 'Program',
   priority: 200, // High priority so it's easy to find
 });

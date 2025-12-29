@@ -80,10 +80,10 @@ export const PositionMapLineBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'ax', type: { kind: 'Signal:number' }, required: false },
-    { name: 'ay', type: { kind: 'Signal:number' }, required: false },
-    { name: 'bx', type: { kind: 'Signal:number' }, required: false },
-    { name: 'by', type: { kind: 'Signal:number' }, required: false },
+    { name: 'ax', type: { kind: 'Signal:float' }, required: false },
+    { name: 'ay', type: { kind: 'Signal:float' }, required: false },
+    { name: 'bx', type: { kind: 'Signal:float' }, required: false },
+    { name: 'by', type: { kind: 'Signal:float' }, required: false },
     { name: 'distribution', type: { kind: 'Scalar:string' }, required: false },
   ],
 
@@ -106,16 +106,16 @@ export const PositionMapLineBlock: BlockCompiler = {
 
     // Read from inputs - values come from defaultSource or explicit connections
     const axArtifact = inputs.ax as Artifact | undefined;
-    const ax = Number(axArtifact?.kind === 'Signal:number' || axArtifact?.kind === 'Scalar:number' ? axArtifact.value : 100);
+    const ax = Number(axArtifact?.kind === 'Signal:float' || axArtifact?.kind === 'Scalar:float' ? axArtifact.value : 100);
 
     const ayArtifact = inputs.ay as Artifact | undefined;
-    const ay = Number(ayArtifact?.kind === 'Signal:number' || ayArtifact?.kind === 'Scalar:number' ? ayArtifact.value : 200);
+    const ay = Number(ayArtifact?.kind === 'Signal:float' || ayArtifact?.kind === 'Scalar:float' ? ayArtifact.value : 200);
 
     const bxArtifact = inputs.bx as Artifact | undefined;
-    const bx = Number(bxArtifact?.kind === 'Signal:number' || bxArtifact?.kind === 'Scalar:number' ? bxArtifact.value : 700);
+    const bx = Number(bxArtifact?.kind === 'Signal:float' || bxArtifact?.kind === 'Scalar:float' ? bxArtifact.value : 700);
 
     const byArtifact = inputs.by as Artifact | undefined;
-    const by = Number(byArtifact?.kind === 'Signal:number' || byArtifact?.kind === 'Scalar:number' ? byArtifact.value : 200);
+    const by = Number(byArtifact?.kind === 'Signal:float' || byArtifact?.kind === 'Scalar:float' ? byArtifact.value : 200);
 
     const distributionArtifact = inputs.distribution as Artifact | undefined;
     const distribution = String(distributionArtifact?.kind === 'Scalar:string' ? distributionArtifact.value : 'even');

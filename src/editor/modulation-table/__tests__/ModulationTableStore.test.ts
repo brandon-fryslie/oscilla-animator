@@ -57,7 +57,7 @@ describe('ModulationTableStore', () => {
       expect(types).toContain('RenderInstances2D');
     });
 
-    it('should derive rows from GridDomain inputs (Scene lane blocks)', () => {
+    it('should derive rows from GridDomain inputs (scene blocks)', () => {
       // Add the macro
       rootStore.patchStore.addBlock('macro:simpleGrid');
 
@@ -68,8 +68,8 @@ describe('ModulationTableStore', () => {
         console.log(`  - ${row.key}: ${row.label} (${row.type.domain})`);
       }
 
-      // GridDomain (Scene lane) has bus-eligible inputs that show as rows
-      // shouldBlockShowRows() includes blocks with laneKind: 'Scene'
+      // GridDomain (scene) has bus-eligible inputs that show as rows
+      // shouldBlockShowRows() includes blocks tagged as Scene-related
       expect(rows.length).toBeGreaterThan(0);
 
       const labels = rows.map(r => r.label);

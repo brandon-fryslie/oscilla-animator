@@ -18,7 +18,6 @@ export const GridPoints = registerComposite({
   description: 'Create a grid of positioned elements',
   color: '#8B5CF6',
   subcategory: 'Sources',
-  laneKind: 'Fields',
   tags: {
     origin: 'domain-composites',
     form: 'composite',
@@ -85,7 +84,6 @@ export const CirclePoints = registerComposite({
   description: 'Create elements arranged in a circle',
   color: '#8B5CF6',
   subcategory: 'Sources',
-  laneKind: 'Fields',
   tags: {
     origin: 'domain-composites',
     form: 'composite',
@@ -152,7 +150,6 @@ export const LinePoints = registerComposite({
   description: 'Create elements arranged along a line',
   color: '#8B5CF6',
   subcategory: 'Sources',
-  laneKind: 'Fields',
   tags: {
     origin: 'domain-composites',
     form: 'composite',
@@ -219,7 +216,6 @@ export const SVGSamplePoints = registerComposite({
   description: 'Sample points from SVG path',
   color: '#8B5CF6',
   subcategory: 'Sources',
-  laneKind: 'Fields',
   tags: {
     origin: 'domain-composites',
     form: 'composite',
@@ -275,7 +271,6 @@ export const PerElementRandom = registerComposite({
   description: 'Generate random values for each element',
   color: '#EC4899',
   subcategory: 'Fields',
-  laneKind: 'Fields',
   tags: {
     origin: 'domain-composites',
     form: 'composite',
@@ -312,7 +307,7 @@ export const PerElementRandom = registerComposite({
       id: 'random',
       label: 'Random',
       direction: 'output',
-      slotType: 'Field<number>',
+      slotType: 'Field<float>',
       nodeId: 'hash',
       nodePort: 'u',
     },
@@ -330,7 +325,6 @@ export const PerElementPhaseOffset = registerComposite({
   description: 'Generate phase offsets for staggered animations',
   color: '#EC4899',
   subcategory: 'Fields',
-  laneKind: 'Fields',
   tags: {
     origin: 'domain-composites',
     form: 'composite',
@@ -376,7 +370,7 @@ export const PerElementPhaseOffset = registerComposite({
       id: 'offset',
       label: 'Offset',
       direction: 'output',
-      slotType: 'Field<number>',
+      slotType: 'Field<float>',
       nodeId: 'scale',
       nodePort: 'y',
     },
@@ -394,7 +388,6 @@ export const SizeScatter = registerComposite({
   description: 'Random size variation per element',
   color: '#EC4899',
   subcategory: 'Fields',
-  laneKind: 'Fields',
   tags: {
     origin: 'domain-composites',
     form: 'composite',
@@ -450,7 +443,7 @@ export const SizeScatter = registerComposite({
       id: 'size',
       label: 'Size',
       direction: 'output',
-      slotType: 'Field<number>',
+      slotType: 'Field<float>',
       nodeId: 'addMin',
       nodePort: 'y',
     },
@@ -468,7 +461,6 @@ export const OrbitMotion = registerComposite({
   description: 'Rotate positions around a center point',
   color: '#A855F7',
   subcategory: 'Math',
-  laneKind: 'Fields',
   tags: {
     origin: 'domain-composites',
     form: 'composite',
@@ -526,7 +518,6 @@ export const WaveDisplace = registerComposite({
   description: 'Generate wave displacement values',
   color: '#A855F7',
   subcategory: 'Math',
-  laneKind: 'Fields',
   tags: {
     origin: 'domain-composites',
     form: 'composite',
@@ -587,7 +578,7 @@ export const WaveDisplace = registerComposite({
       id: 'displacement',
       label: 'Displacement',
       direction: 'output',
-      slotType: 'Field<number>',
+      slotType: 'Field<float>',
       nodeId: 'amplitude',
       nodePort: 'y',
     },
@@ -606,7 +597,6 @@ export const DotsRenderer = registerComposite({
   description: 'Complete renderer with size and color variation',
   color: '#EF4444',
   subcategory: 'Render',
-  laneKind: 'Output',
   tags: {
     origin: 'domain-composites',
     form: 'composite',
@@ -655,7 +645,7 @@ export const DotsRenderer = registerComposite({
       id: 'radius',
       label: 'Radius',
       direction: 'input',
-      slotType: 'Field<number>',
+      slotType: 'Field<float>',
       nodeId: 'render',
       nodePort: 'radius',
     },

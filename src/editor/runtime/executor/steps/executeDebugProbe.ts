@@ -79,28 +79,32 @@ export function executeDebugProbe(step: StepDebugProbe, runtime: RuntimeState): 
  * This is a bridge function until we have a unified type system.
  */
 function typeDescToArtifactKind(type: import("../../../compiler/ir/types").TypeDesc): string {
-  const { world, domain } = type;
+  const { world, domain, semantics } = type;
 
   if (world === 'signal') {
     switch (domain) {
-      case 'number': return 'Signal:number';
-      case 'phase01': return 'Signal:phase';
+      case 'float':
+        return semantics !== undefined && semantics.startsWith('phase')
+          ? 'Signal:phase'
+          : 'Signal:float';
+      case 'int': return 'Signal:int';
       case 'vec2': return 'Signal:vec2';
       case 'color': return 'Signal:color';
       case 'timeMs': return 'Signal:Time';
       case 'boolean': return 'Signal:bool';
-      default: return 'Signal:number';
+      default: return 'Signal:float';
     }
   }
 
   if (world === 'field') {
     switch (domain) {
-      case 'number': return 'Field:number';
+      case 'float': return 'Field:float';
+      case 'int': return 'Field:int';
       case 'vec2': return 'Field:vec2';
       case 'color': return 'Field:color';
       case 'string': return 'Field:string';
       case 'boolean': return 'Field:boolean';
-      default: return 'Field:number';
+      default: return 'Field:float';
     }
   }
 
@@ -108,7 +112,7 @@ function typeDescToArtifactKind(type: import("../../../compiler/ir/types").TypeD
     return 'Event';
   }
 
-  return 'Signal:number'; // Default fallback
+  return 'Signal:float'; // Default fallback
 }
 
 /**

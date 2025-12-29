@@ -22,7 +22,7 @@ type PositionField = (seed: number, n: number) => readonly Vec2[];
  */
 function sampleSVGPath(
   pathData: string,
-  sampleCount: number,
+  sampleCount: int,
   distribution: 'even' | 'parametric'
 ): Vec2[] {
   if (!isDefined(pathData) || pathData.trim() === '') {
@@ -39,7 +39,7 @@ function sampleSVGPath(
   const segments = parseSVGPath(pathData);
 
   // Calculate total length for even distribution
-  const totalLength = distribution === 'even'
+  const totalLength: float = distribution === 'even'
     ? calculatePathLength(segments)
     : sampleCount;
 
@@ -296,13 +296,13 @@ function sampleBezier(seg: PathSegment, t: number): Vec2 {
 const lowerSVGSampleDomain: BlockLowerFn = ({ ctx, config }) => {
   const configData = config as {
     asset?: string;
-    sampleCount?: number;
-    seed?: number;
+    sampleCount?: int;
+    seed?: int;
     distribution?: 'even' | 'parametric';
   } | undefined;
 
   const asset = typeof configData?.asset === 'string' ? configData.asset : '';
-  const sampleCount = Math.max(1, Math.floor(Number(configData?.sampleCount ?? 100)));
+  const sampleCount: int = Math.max(1, Math.floor(Number(configData?.sampleCount ?? 100)));
   const distribution = (configData?.distribution ?? 'even');
 
   // Create domain value slot
@@ -347,8 +347,8 @@ export const SVGSampleDomainBlock: BlockCompiler = {
 
   inputs: [
     { name: 'asset', type: { kind: 'Scalar:string' }, required: false },
-    { name: 'sampleCount', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'seed', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'sampleCount', type: { kind: 'Scalar:int' }, required: false },
+    { name: 'seed', type: { kind: 'Scalar:int' }, required: false },
     { name: 'distribution', type: { kind: 'Scalar:string' }, required: false },
   ],
 
@@ -363,10 +363,23 @@ export const SVGSampleDomainBlock: BlockCompiler = {
     const asset = assetArtifact?.kind === 'Scalar:string' ? String(assetArtifact.value) : '';
 
     const sampleCountArtifact = inputs.sampleCount as Artifact | undefined;
-    const sampleCount = Math.max(1, Math.floor(Number(sampleCountArtifact?.kind === 'Scalar:number' ? sampleCountArtifact.value : 100)));
+    const sampleCount: int = Math.max(
+      1,
+      Math.floor(
+        Number(
+          sampleCountArtifact?.kind === 'Scalar:int' || sampleCountArtifact?.kind === 'Scalar:float'
+            ? sampleCountArtifact.value
+            : 100
+        )
+      )
+    );
 
     const seedArtifact = inputs.seed as Artifact | undefined;
-    const seed = Number(seedArtifact?.kind === 'Scalar:number' ? seedArtifact.value : 0);
+    const seed: int = Number(
+      seedArtifact?.kind === 'Scalar:int' || seedArtifact?.kind === 'Scalar:float'
+        ? seedArtifact.value
+        : 0
+    );
 
     const distributionArtifact = inputs.distribution as Artifact | undefined;
     const distribution = String(distributionArtifact?.kind === 'Scalar:string' ? distributionArtifact.value : 'even') as 'even' | 'parametric';
@@ -386,7 +399,7 @@ export const SVGSampleDomainBlock: BlockCompiler = {
 
     // Create position field (sampled positions)
     const positionField: PositionField = (_seed, n) => {
-      const count = Math.min(n, sampleCount);
+      const count: int = Math.min(n, sampleCount);
       return sampledPoints.slice(0, count);
     };
 

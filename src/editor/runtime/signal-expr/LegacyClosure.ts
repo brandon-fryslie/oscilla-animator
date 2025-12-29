@@ -18,7 +18,7 @@
 import type { SigEnv } from "./SigEnv";
 
 /**
- * Legacy closure signature - matches existing Signal<number> type.
+ * Legacy closure signature - matches existing Signal<float> type.
  *
  * This is the signature used by the current closure-based compiler.
  * During migration, these closures are called from within SignalExpr DAG

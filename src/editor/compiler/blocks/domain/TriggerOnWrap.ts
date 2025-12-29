@@ -1,7 +1,7 @@
 /**
  * TriggerOnWrap Block Compiler
  *
- * Takes a Signal<number> (typically a phase signal) and generates a trigger signal
+ * Takes a Signal<float> (typically a phase signal) and generates a trigger signal
  * whenever the signal wraps from near 1 back to near 0.
  *
  * Output is Signal:Unit where 1 = triggered, 0 = not triggered.
@@ -38,13 +38,13 @@ type SignalNumber = (tMs: number, ctx: RuntimeCtx) => number;
  * Uses the 'edgeDetectWrap' stateful operation.
  */
 const lowerTriggerOnWrap: BlockLowerFn = ({ ctx, inputs }) => {
-  const phase = inputs[0]; // Signal:number (phase)
+  const phase = inputs[0]; // Signal:float (phase)
 
   if (phase.k !== 'sig') {
     throw new Error(`TriggerOnWrap: expected sig input for phase, got ${phase.k}`);
   }
 
-  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
   const triggerType: TypeDesc = { world: 'signal', domain: 'trigger' };
 
   // Allocate state for previous phase value
@@ -85,7 +85,7 @@ registerBlockType({
       portId: 'phase',
       label: 'Phase',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 0 },
     },
   ],
@@ -108,7 +108,7 @@ export const TriggerOnWrapBlock: BlockCompiler = {
   type: 'TriggerOnWrap',
 
   inputs: [
-    { name: 'phase', type: { kind: 'Signal:number' }, required: true },
+    { name: 'phase', type: { kind: 'Signal:float' }, required: true },
   ],
 
   outputs: [
@@ -117,11 +117,11 @@ export const TriggerOnWrapBlock: BlockCompiler = {
 
   compile({ inputs }) {
     const phaseArtifact = inputs.phase;
-    if (!isDefined(phaseArtifact) || phaseArtifact.kind !== 'Signal:number') {
+    if (!isDefined(phaseArtifact) || phaseArtifact.kind !== 'Signal:float') {
       return {
         trigger: {
           kind: 'Error',
-          message: 'TriggerOnWrap requires a Signal<number> input',
+          message: 'TriggerOnWrap requires a Signal<float> input',
         },
       };
     }

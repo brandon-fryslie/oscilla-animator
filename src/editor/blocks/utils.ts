@@ -27,7 +27,7 @@ export interface InputSlotOptions {
  *
  * @param id - Unique identifier within the block
  * @param label - Human-readable label
- * @param type - Slot type (e.g., 'Signal<number>')
+ * @param type - Slot type (e.g., 'Signal<float>')
  * @param options - Optional default source and tier metadata
  */
 export function input(id: string, label: string, type: SlotType, options?: InputSlotOptions): Slot {

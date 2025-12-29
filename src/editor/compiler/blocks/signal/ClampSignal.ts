@@ -27,7 +27,7 @@ const lowerClampSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
   const minValue = cfg?.min ?? 0;
   const maxValue = cfg?.max ?? 1;
 
-  const outType = { world: 'signal' as const, domain: 'number' as const };
+  const outType = { world: 'signal' as const, domain: 'float' as const };
 
   // Create min constant, then max(value, minConst), then min(result, maxConst)
   const minConstId = ctx.b.sigConst(minValue, outType);
@@ -47,10 +47,10 @@ registerBlockType({
   type: 'ClampSignal',
   capability: 'pure',
   inputs: [
-    { portId: 'in', label: 'In', dir: 'in', type: { world: 'signal', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'in', label: 'In', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'signal', domain: 'float' } },
   ],
   lower: lowerClampSignal,
 });
@@ -63,27 +63,27 @@ export const ClampSignalBlock: BlockCompiler = {
   type: 'ClampSignal',
 
   inputs: [
-    { name: 'in', type: { kind: 'Signal:number' }, required: true },
-    { name: 'min', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'max', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'in', type: { kind: 'Signal:float' }, required: true },
+    { name: 'min', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'max', type: { kind: 'Scalar:float' }, required: false },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Signal:number' } },
+    { name: 'out', type: { kind: 'Signal:float' } },
   ],
 
   compile({ inputs }) {
     const inputArtifact = inputs.in;
-    if (inputArtifact === undefined || inputArtifact.kind !== 'Signal:number') {
+    if (inputArtifact === undefined || inputArtifact.kind !== 'Signal:float') {
       return {
         out: {
           kind: 'Error',
-          message: 'ClampSignal requires a Signal<number> input',
+          message: 'ClampSignal requires a Signal<float> input',
         },
       };
     }
 
-    const inputSignal = inputArtifact.value as Signal<number>;
+    const inputSignal = inputArtifact.value as Signal<float>;
     // Read from inputs - values come from defaultSource or explicit connections
     const minArtifact = inputs.min;
     const min = Number(minArtifact !== undefined && 'value' in minArtifact ? minArtifact.value : 0);
@@ -91,13 +91,13 @@ export const ClampSignalBlock: BlockCompiler = {
     const max = Number(maxArtifact !== undefined && 'value' in maxArtifact ? maxArtifact.value : 1);
 
     // Create clamped signal
-    const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
+    const signal: Signal<float> = (t: number, ctx: RuntimeCtx): number => {
       const value = inputSignal(t, ctx);
       return Math.max(min, Math.min(max, value));
     };
 
     return {
-      out: { kind: 'Signal:number', value: signal },
+      out: { kind: 'Signal:float', value: signal },
     };
   },
 };

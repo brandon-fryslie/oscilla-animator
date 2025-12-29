@@ -38,7 +38,6 @@ export const FieldAddVec2 = createBlock({
     output('out', 'Result', 'Field<vec2>'),
   ],
   color: '#A855F7',
-  laneKind: 'Fields',
   priority: 31,});
 
 // =============================================================================
@@ -48,7 +47,7 @@ export const FieldAddVec2 = createBlock({
 /**
  * FieldColorize - Apply color to field elements
  *
- * Takes a Field<number> in [0,1] and maps it to colors using a gradient.
+ * Takes a Field<float> in [0,1] and maps it to colors using a gradient.
  * The mapping can be direct or use different color spaces.
  *
  * Inputs with defaultSource:
@@ -63,7 +62,7 @@ export const FieldColorize = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('values', 'Values', 'Field<number>', {
+    input('values', 'Values', 'Field<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'field' },
     }),
@@ -102,13 +101,12 @@ export const FieldColorize = createBlock({
     output('colors', 'Colors', 'Field<color>'),
   ],
   color: '#F59E0B',
-  laneKind: 'Fields',
   priority: 40,});
 
 /**
- * FieldOpacity - Set per-element opacity from Field<number>
+ * FieldOpacity - Set per-element opacity from Field<float>
  *
- * Takes a Field<number> and converts it to opacity values,
+ * Takes a Field<float> and converts it to opacity values,
  * with optional clamping and curve application.
  *
  * Inputs with defaultSource:
@@ -123,11 +121,11 @@ export const FieldOpacity = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('values', 'Values', 'Field<number>', {
+    input('values', 'Values', 'Field<float>', {
       tier: 'primary',
       defaultSource: { value: 0, world: 'field' },
     }),
-    input('min', 'Min Opacity', 'Signal<number>', {
+    input('min', 'Min Opacity', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -135,7 +133,7 @@ export const FieldOpacity = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 },
       },
     }),
-    input('max', 'Max Opacity', 'Signal<number>', {
+    input('max', 'Max Opacity', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -161,10 +159,9 @@ export const FieldOpacity = createBlock({
     }),
   ],
   outputs: [
-    output('opacity', 'Opacity', 'Field<number>'),
+    output('opacity', 'Opacity', 'Field<float>'),
   ],
   color: '#F59E0B',
-  laneKind: 'Fields',
   priority: 41,});
 
 // =============================================================================
@@ -196,7 +193,7 @@ export const FieldHueGradient = createBlock({
       tier: 'primary',
       defaultSource: { value: 100, world: 'field' },
     }),
-    input('hueOffset', 'Hue Offset', 'Signal<number>', {
+    input('hueOffset', 'Hue Offset', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -204,7 +201,7 @@ export const FieldHueGradient = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 360, step: 1 },
       },
     }),
-    input('hueSpread', 'Hue Spread', 'Signal<number>', {
+    input('hueSpread', 'Hue Spread', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -212,7 +209,7 @@ export const FieldHueGradient = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 },
       },
     }),
-    input('saturation', 'Saturation', 'Signal<number>', {
+    input('saturation', 'Saturation', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 80,
@@ -220,7 +217,7 @@ export const FieldHueGradient = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 100, step: 1 },
       },
     }),
-    input('lightness', 'Lightness', 'Signal<number>', {
+    input('lightness', 'Lightness', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 60,
@@ -241,7 +238,6 @@ export const FieldHueGradient = createBlock({
     output('colors', 'Colors', 'Field<color>'),
   ],
   color: '#F472B6', // Pink for color blocks
-  laneKind: 'Fields',
   priority: 42,});
 
 // =============================================================================
@@ -251,7 +247,7 @@ export const FieldHueGradient = createBlock({
 /**
  * FieldFromExpression - Transform signals to fields using custom expressions
  *
- * Takes a Signal<number> and generates a Field<number> by evaluating a custom
+ * Takes a Signal<float> and generates a Field<float> by evaluating a custom
  * JavaScript expression for each element. The expression can use:
  * - i: element index (0 to n-1)
  * - n: total number of elements
@@ -297,7 +293,6 @@ export const FieldFromExpression = createBlock({
     output('field', 'Field', 'Field<string>'),
   ],
   color: '#10B981', // Emerald for adapter blocks
-  laneKind: 'Fields',
   priority: 43,});
 
 /**
@@ -323,7 +318,6 @@ export const FieldStringToColor = createBlock({
     output('colors', 'Colors', 'Field<color>'),
   ],
   color: '#F472B6',
-  laneKind: 'Fields',
   priority: 44,});
 
 // =============================================================================
@@ -349,5 +343,4 @@ export const ViewportInfo = createBlock({
     output('center', 'Center', 'Scalar:vec2'),
   ],
   color: '#8B5CF6',
-  laneKind: 'Scene',
   priority: 10,});

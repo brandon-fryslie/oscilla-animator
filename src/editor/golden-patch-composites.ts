@@ -20,7 +20,6 @@ export const BreathEnergy = registerComposite({
   description: 'Smooth breathing intensity from phase, publishes to energy bus',
   color: '#3B82F6',
   subcategory: 'Time',
-  laneKind: 'Phase',
   tags: {
     origin: 'golden-patch-composites',
     form: 'composite',
@@ -69,7 +68,7 @@ export const BreathEnergy = registerComposite({
       id: 'energy',
       label: 'Energy',
       direction: 'output',
-      slotType: 'Signal<number>',
+      slotType: 'Signal<float>',
       nodeId: 'shaper',
       nodePort: 'out',
     },
@@ -89,7 +88,6 @@ export const PulseAccentEnergy = registerComposite({
   description: 'Rhythmic accent envelope from pulse subdivisions',
   color: '#F59E0B',
   subcategory: 'Time',
-  laneKind: 'Phase',
   tags: {
     origin: 'golden-patch-composites',
     form: 'composite',
@@ -137,7 +135,7 @@ export const PulseAccentEnergy = registerComposite({
       id: 'energy',
       label: 'Energy',
       direction: 'output',
-      slotType: 'Signal<number>',
+      slotType: 'Signal<float>',
       nodeId: 'envelope',
       nodePort: 'env',
     },
@@ -156,7 +154,6 @@ export const SlowPaletteDrift = registerComposite({
   description: 'Slow color cycling from phrase phase, publishes to palette bus',
   color: '#F59E0B',
   subcategory: 'Time',
-  laneKind: 'Phase',
   tags: {
     origin: 'golden-patch-composites',
     form: 'composite',
@@ -227,7 +224,6 @@ export const BreathingDotsRenderer = registerComposite({
   description: 'Complete breathing dots visualization from Golden Patch',
   color: '#EF4444',
   subcategory: 'Render',
-  laneKind: 'Output',
   tags: {
     origin: 'golden-patch-composites',
     form: 'composite',
@@ -343,7 +339,7 @@ export const BreathingDotsRenderer = registerComposite({
       id: 'idRand',
       label: 'ID Random',
       direction: 'output',
-      slotType: 'Field<number>',
+      slotType: 'Field<float>',
       nodeId: 'idHash',
       nodePort: 'u01',
     },
@@ -362,7 +358,6 @@ export const AmbientLoopRoot = registerComposite({
   description: 'Standard 8-second ambient loop time source',
   color: '#22C55E',
   subcategory: 'Time',
-  laneKind: 'Phase',
   tags: {
     origin: 'golden-patch-composites',
     form: 'composite',

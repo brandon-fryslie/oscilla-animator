@@ -101,11 +101,11 @@ function createBus(
 
 describe("pass2TypeGraph", () => {
   describe("SlotType → TypeDesc Conversion", () => {
-    it("converts Signal<number> to TypeDesc", () => {
+    it("converts Signal<float> to TypeDesc", () => {
       const patch = createNormalizedPatch({
         blocks: [
           createBlock("b1", {
-            outputs: [createSlot("out1", "Signal<number>", "output")],
+            outputs: [createSlot("out1", "Signal<float>", "output")],
           }),
         ],
       });
@@ -154,11 +154,11 @@ describe("pass2TypeGraph", () => {
       expect(typed).toBeDefined();
     });
 
-    it("converts Scalar:number to TypeDesc", () => {
+    it("converts Scalar:float to TypeDesc", () => {
       const patch = createNormalizedPatch({
         blocks: [
           createBlock("b1", {
-            inputs: [createSlot("in1", "Scalar:number", "input")],
+            inputs: [createSlot("in1", "Scalar:float", "input")],
           }),
         ],
       });
@@ -184,7 +184,7 @@ describe("pass2TypeGraph", () => {
       expect(typed).toBeDefined();
     });
 
-    it("normalizes domain aliases (Point → vec2, Unit → unit01)", () => {
+    it("normalizes domain aliases (Point → vec2, Unit → float)", () => {
       const patch = createNormalizedPatch({
         blocks: [
           createBlock("b1", {
@@ -234,7 +234,7 @@ describe("pass2TypeGraph", () => {
         buses: [
           createBus("bus1", "testBus", {
             world: "signal",
-            domain: "number",
+            domain: "float",
           }),
         ],
       });
@@ -243,7 +243,7 @@ describe("pass2TypeGraph", () => {
       expect(typed.busTypes.size).toBe(1);
       expect(typed.busTypes.get("bus1")).toEqual({
         world: "signal",
-        domain: "number",
+        domain: "float",
       });
     });
 
@@ -261,12 +261,12 @@ describe("pass2TypeGraph", () => {
       expect(typed.busTypes.size).toBe(1);
     });
 
-    it("accepts field buses with scalar domains (number, boolean, color)", () => {
+    it("accepts field buses with scalar domains (float, boolean, color)", () => {
       const patch = createNormalizedPatch({
         buses: [
           createBus("bus1", "fieldNumber", {
             world: "field",
-            domain: "number",
+            domain: "float",
           }),
           createBus("bus2", "fieldBoolean", {
             world: "field",
@@ -302,7 +302,7 @@ describe("pass2TypeGraph", () => {
         buses: [
           createBus("bus1", "scalarBus", {
             world: "scalar",
-            domain: "number",
+            domain: "float",
           }),
         ],
       });
@@ -328,7 +328,7 @@ describe("pass2TypeGraph", () => {
         buses: [
           createBus("bus-123", "myInvalidBus", {
             world: "scalar",
-            domain: "number",
+            domain: "float",
           }),
         ],
       });
@@ -344,7 +344,7 @@ describe("pass2TypeGraph", () => {
         buses: [
           createBus("phaseA", "phaseA", {
             world: "signal",
-            domain: "phase01",
+            domain: "float",
           }),
         ],
       });
@@ -367,7 +367,7 @@ describe("pass2TypeGraph", () => {
         /ReservedBusTypeViolation/
       );
       expect(() => pass2TypeGraph(patch)).toThrow(/phaseA/);
-      expect(() => pass2TypeGraph(patch)).toThrow(/signal<phase01>/);
+      expect(() => pass2TypeGraph(patch)).toThrow(/signal<float>/);
     });
 
     it("accepts pulse bus with Event<trigger> type", () => {
@@ -389,7 +389,7 @@ describe("pass2TypeGraph", () => {
         buses: [
           createBus("pulse", "pulse", {
             world: "signal",
-            domain: "number",
+            domain: "float",
           }),
         ],
       });
@@ -400,12 +400,12 @@ describe("pass2TypeGraph", () => {
       expect(() => pass2TypeGraph(patch)).toThrow(/pulse/);
     });
 
-    it("accepts energy bus with Signal<number> type", () => {
+    it("accepts energy bus with Signal<float> type", () => {
       const patch = createNormalizedPatch({
         buses: [
           createBus("energy", "energy", {
             world: "signal",
-            domain: "number",
+            domain: "float",
           }),
         ],
       });
@@ -434,10 +434,10 @@ describe("pass2TypeGraph", () => {
       const patch = createNormalizedPatch({
         blocks: [
           createBlock("b1", {
-            outputs: [createSlot("out1", "Signal<number>", "output")],
+            outputs: [createSlot("out1", "Signal<float>", "output")],
           }),
           createBlock("b2", {
-            inputs: [createSlot("in1", "Signal<number>", "input")],
+            inputs: [createSlot("in1", "Signal<float>", "input")],
           }),
         ],
         wires: [createConnection("b1", "out1", "b2", "in1")],
@@ -454,7 +454,7 @@ describe("pass2TypeGraph", () => {
             outputs: [createSlot("out1", "Signal<vec2>", "output")],
           }),
           createBlock("b2", {
-            inputs: [createSlot("in1", "Signal<number>", "input")],
+            inputs: [createSlot("in1", "Signal<float>", "input")],
           }),
         ],
         wires: [createConnection("b1", "out1", "b2", "in1")],
@@ -462,7 +462,7 @@ describe("pass2TypeGraph", () => {
 
       expect(() => pass2TypeGraph(patch)).toThrow(/NoConversionPath/);
       expect(() => pass2TypeGraph(patch)).toThrow(/vec2/);
-      expect(() => pass2TypeGraph(patch)).toThrow(/number/);
+      expect(() => pass2TypeGraph(patch)).toThrow(/float/);
     });
 
     it("includes connection ID in NoConversionPath error", () => {
@@ -473,7 +473,7 @@ describe("pass2TypeGraph", () => {
             outputs: [createSlot("out1", "Signal<color>", "output")],
           }),
           createBlock("b2", {
-            inputs: [createSlot("in1", "Signal<number>", "input")],
+            inputs: [createSlot("in1", "Signal<float>", "input")],
           }),
         ],
         wires: [wire],
@@ -496,7 +496,7 @@ describe("pass2TypeGraph", () => {
   describe("isBusEligible helper", () => {
     it("returns true for signal types", () => {
       expect(
-        isBusEligible({ world: "signal", domain: "number" })
+        isBusEligible({ world: "signal", domain: "float" })
       ).toBe(true);
       expect(
         isBusEligible({ world: "signal", domain: "color" })
@@ -511,7 +511,7 @@ describe("pass2TypeGraph", () => {
 
     it("returns true for field types with scalar domains", () => {
       expect(
-        isBusEligible({ world: "field", domain: "number" })
+        isBusEligible({ world: "field", domain: "float" })
       ).toBe(true);
       expect(
         isBusEligible({ world: "field", domain: "boolean" })
@@ -532,7 +532,7 @@ describe("pass2TypeGraph", () => {
 
     it("returns false for scalar types", () => {
       expect(
-        isBusEligible({ world: "scalar", domain: "number" })
+        isBusEligible({ world: "scalar", domain: "float" })
       ).toBe(false);
     });
 

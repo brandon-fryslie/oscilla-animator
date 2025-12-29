@@ -23,14 +23,14 @@ open http://localhost:5173/#/editor
 +------------------+------------------------+----------+----------+
 |                  |                        |          |          |
 |  Block Library   |       Patch Bay        | Preview  | Inspector|
-|                  |     (Lane Layout)      |          |          |
+|                  |                        |          |          |
 |                  |                        |          |          |
 +------------------+------------------------+----------+----------+
 |                         Transport                               |
 +-----------------------------------------------------------------+
 ```
 
-- **Block Library** (left): Drag blocks from here into lanes
+- **Block Library** (left): Drag blocks from here into the Patch Bay
 - **Patch Bay** (center): Where you build the animation graph
 - **Preview** (right): Live animation preview
 - **Inspector** (far right): Edit parameters and configure bus routing
@@ -57,17 +57,10 @@ Buses are typed signal distributors that enable modular routing. They support:
 - **Lenses**: Transform bus values at the listener side (easing, quantization, scaling, etc.)
 - **Default buses**: Five buses auto-created on each patch (`phaseA`, `phaseB`, `energy`, `pulse`, `palette`)
 
-### 3. Lanes
+### 3. Patch Bay View
 
-Lanes organize blocks visually by value domain:
-
-- **Scene**: Data sources (SVG paths, points)
-- **Phase**: Time/rhythm blocks
-- **Fields**: Per-element values
-- **Program**: Compiled animation programs
-- **Output**: Renderers and exports
-
-**Important**: Lanes are UI organization only. Port types determine what can connect to what, not lane placement.
+The Patch Bay is the primary view for wiring blocks into a graph. It organizes blocks visually by value domain, but the graph is
+the source of truth. Port types determine what can connect to what.
 
 ## Available Primitives
 
@@ -106,7 +99,7 @@ Lanes organize blocks visually by value domain:
 ### Variation Composites
 - **PerElementRandom**: Wrapper around FieldHash01ById for convenience
 - **PerElementPhaseOffset**: Hash + scale → staggered animation offsets
-- **SizeScatter**: Random size variation → Field<number> in [min, max]
+- **SizeScatter**: Random size variation → Field<float> in [min, max]
 
 ### Motion Composites
 - **OrbitMotion**: Rotate positions around a center point
@@ -154,15 +147,15 @@ Lenses transform bus values before they reach their destination:
 ### Example: "Breathing Dots"
 
 1. **Create Domain + Positions**
-   - Drop `GridPoints` composite into Fields lane
+   - Drop `GridPoints` composite into the Patch Bay
    - Set params: `count: 25`, `rows: 5`, `cols: 5`, `spacing: 60`
 
 2. **Add Time Source**
-   - Drop `PhaseClock` into Phase lane
+   - Drop `PhaseClock` into the Patch Bay
    - Set params: `duration: 2`, `mode: loop`
 
 3. **Render Output**
-   - Drop `DotsRenderer` into Output lane
+   - Drop `DotsRenderer` into the Patch Bay
    - Wire `GridPoints.domain` → `DotsRenderer.domain`
    - Wire `GridPoints.positions` → `DotsRenderer.positions`
 
@@ -178,7 +171,7 @@ Lenses transform bus values before they reach their destination:
 
 ### 1. Add Blocks
 
-Drag blocks from the library onto lanes in the patch bay. The library filters to show relevant blocks based on which lane you're targeting.
+Drag blocks from the library into the patch bay. Use connection filtering to focus on compatible blocks.
 
 ### 2. Connect Blocks
 
@@ -220,9 +213,9 @@ Ports have types that determine what can connect to what. Common types:
 |------|-------------|
 | `Domain` | Per-element identity (for Field operations) |
 | `Field<vec2>` | Per-element 2D positions |
-| `Field<number>` | Per-element numeric values |
+| `Field<float>` | Per-element numeric values |
 | `Field<color>` | Per-element colors |
-| `Signal<number>` | Time-varying numeric signal |
+| `Signal<float>` | Time-varying numeric signal |
 | `Signal<PhaseSample>` | Phase machine output |
 | `RenderTree` | Final render output |
 
@@ -257,9 +250,8 @@ The editor has a two-tier type system:
 
 Click the dropdowns in the toolbar to access settings:
 
-- **Lanes**: Switch between Simple and Detailed lane layouts
 - **Connections**: Show type hints, highlight compatible ports
-- **Palette**: Filter blocks by lane or connection compatibility
+- **Palette**: Filter blocks by connection compatibility
 
 ## Tips and Best Practices
 

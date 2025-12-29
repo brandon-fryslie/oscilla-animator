@@ -92,7 +92,6 @@ describe('EventDispatcher', () => {
         type: 'BlockAdded',
         blockId: 'block-1',
         blockType: 'TestBlock',
-        laneId: 'lane-1',
       });
 
       expect(errorHandler).toHaveBeenCalled();

@@ -17,8 +17,6 @@ import {
   useSensor,
   useSensors,
   PointerSensor,
-  type DragStartEvent,
-  type DragEndEvent,
   pointerWithin,
 } from '@dnd-kit/core';
 import { useStore } from './stores';
@@ -36,16 +34,7 @@ import { PathManagerModal } from './PathManagerModal';
 import { createCompilerService, setupAutoCompile } from './compiler';
 import { ControlSurfaceStore, ControlSurfacePanel, generateSurfaceForMacro } from './controlSurface';
 import { useEditorLayout, PATCH_VIEW_MODES } from './useEditorLayout';
-import type { BlockDefinition } from './blocks';
-import {
-  isLibraryBlockDragData,
-  isPatchBlockDragData,
-  isLaneDropData,
-  isPatchBlockDropData,
-  isInsertionPointDropData,
-  isTrashDropData,
-  getLaneIdFromDropData,
-} from './types/dnd';
+import { useLaneDnd } from './lanes/useLaneDnd';
 import { isNonEmptyString } from './types/helpers';
 import './Editor.css';
 import './mobile.css';
@@ -89,7 +78,7 @@ function HelpModal({ topic, onClose }: HelpModalProps) {
             body: (
               <ul>
                 <li>On the left, the Library holds Sources, Fields, Time, Compose, Render, and ✨ Macros.</li>
-                <li>Drag blocks into lanes in the Patch to start building an animation.</li>
+                <li>Drag blocks into the Patch to start building an animation.</li>
                 <li>Start with a macro, then tweak or replace its pieces as you learn.</li>
               </ul>
             ),
@@ -98,7 +87,7 @@ function HelpModal({ topic, onClose }: HelpModalProps) {
             title: 'Patch: the animation graph',
             body: (
               <ul>
-                <li>The center lanes show how data flows: Scene → Phase → Fields → Spec → Program.</li>
+                <li>The patch view shows how data flows from sources to outputs.</li>
                 <li>Connect outputs to inputs to move scenes, fields, and signals through the graph.</li>
                 <li>Think of it as a visual program where wires show the "why" behind the motion.</li>
               </ul>
@@ -119,7 +108,7 @@ function HelpModal({ topic, onClose }: HelpModalProps) {
             body: (
               <ul>
                 <li>Open the <strong>Demos</strong> menu (top center) and load <em>Full Pipeline</em> or <em>Particles</em>.</li>
-                <li>Watch how blocks land in lanes, then tweak parameters in the Inspector.</li>
+                <li>Watch how blocks land in the patch, then tweak parameters in the Inspector.</li>
                 <li>Change the <strong>seed</strong> and <strong>speed</strong> in the Preview to explore variations.</li>
               </ul>
             ),
@@ -136,8 +125,8 @@ function HelpModal({ topic, onClose }: HelpModalProps) {
                     define timing, compose motion, or render output.
                   </p>
                   <ul>
-                    <li>Drag blocks from the Library into lanes in the Patch.</li>
-                    <li>Use the lane filter and categories to find Sources, Fields, Time, Compose, Render, and Macros.</li>
+                    <li>Drag blocks from the Library into the Patch.</li>
+                    <li>Use categories to find Sources, Fields, Time, Compose, Render, and Macros.</li>
                     <li>Try dropping a ✨ macro first, then tweak or replace its pieces.</li>
                   </ul>
                 </>
@@ -188,12 +177,12 @@ function HelpModal({ topic, onClose }: HelpModalProps) {
                     body: (
                       <>
                         <p>
-                          The Patch is where you connect blocks into a graph. Lanes organize blocks by role: Scene, Phase, Fields, Spec, Program, Output.
+                          The Patch is where you connect blocks into a graph. Blocks organize the flow from sources to outputs.
                         </p>
                         <ul>
-                          <li>Drag from the Library into lanes; wires flow left-to-right.</li>
+                          <li>Drag from the Library into the Patch; wires flow left-to-right.</li>
                           <li>Connect outputs to inputs to move data between blocks.</li>
-                          <li>Use lane descriptions and type hints to keep structure clear.</li>
+                          <li>Use type hints to keep structure clear.</li>
                         </ul>
                       </>
                     ),
@@ -621,133 +610,13 @@ export const Editor = observer(() => {
     }
   }, [store, controlSurfaceStore]);
 
-  // Track active drag state
-  const [activeDefinition, setActiveDefinition] = useState<BlockDefinition | null>(null);
-  const [activePlacedBlock, setActivePlacedBlock] = useState<{
-    label: string;
-    color: string;
-    blockId: string;
-  } | null>(null);
-
-  const isDraggingPlacedBlock = activePlacedBlock !== null;
-
-  function handleDragStart(event: DragStartEvent) {
-    const { active } = event;
-    const data = active.data.current;
-
-    if (isLibraryBlockDragData(data)) {
-      setActiveDefinition(data.definition);
-      // Set dragging lane kind for highlighting suggested lanes
-      store.uiStore.setDraggingLaneKind(data.definition.laneKind ?? null);
-    } else if (isPatchBlockDragData(data)) {
-      // Dragging a placed block
-      const block = store.patchStore.blocks.find((b) => b.id === data.blockId);
-      if (block) {
-        setActivePlacedBlock({
-          label: block.label,
-          color: getBlockColor(block.type),
-          blockId: block.id,
-        });
-      }
-    }
-  }
-
-  function getBlockColor(blockType: string): string {
-    // Import would create circular dep, so inline the lookup
-    const colors: Record<string, string> = {
-      Sources: '#4a9eff',
-      Fields: '#a855f7',
-      Time: '#22c55e',
-      Math: '#f59e0b',
-      Compose: '#ec4899',
-      Render: '#ef4444',
-    };
-    const block = store.patchStore.blocks.find((b) => b.type === blockType);
-    return colors[block?.category ?? 'Compose'] ?? '#666';
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    setActiveDefinition(null);
-    setActivePlacedBlock(null);
-    store.uiStore.setDraggingLaneKind(null);
-
-    if (!over) return;
-
-    const activeData = active.data.current;
-    const overData = over.data.current;
-
-    // Dropping placed block onto another block (reorder/move)
-    if (isPatchBlockDragData(activeData) && isPatchBlockDropData(overData)) {
-      const { blockId, sourceLaneId, sourceIndex } = activeData;
-      const { laneId: targetLaneId, index: targetIndex } = overData;
-
-      if (sourceLaneId === targetLaneId) {
-        if (sourceIndex !== targetIndex) {
-          store.viewStore.reorderBlockInLane(sourceLaneId, blockId, targetIndex);
-        }
-      } else {
-        store.viewStore.moveBlockToLane(blockId, targetLaneId);
-      }
-      return;
-    }
-
-    // Dropping library block onto a lane
-    if (isLibraryBlockDragData(activeData) && isLaneDropData(overData)) {
-      const { blockType } = activeData;
-      const laneId = getLaneIdFromDropData(overData);
-      const blockId = store.patchStore.addBlock(blockType);
-
-      // Explicitly move to target lane
-      store.viewStore.moveBlockToLane(blockId, laneId);
-    }
-
-    // Dropping library block onto an insertion point
-    if (isLibraryBlockDragData(activeData) && isInsertionPointDropData(overData)) {
-      const { blockType } = activeData;
-      const { laneId, index } = overData;
-      const blockId = store.patchStore.addBlock(blockType);
-
-      // Explicitly move and reorder in target lane
-      store.viewStore.moveBlockToLaneAtIndex(blockId, laneId, index);
-    }
-
-    // Dropping placed block onto an insertion point (reorder)
-    if (isPatchBlockDragData(activeData) && isInsertionPointDropData(overData)) {
-      const { blockId, sourceLaneId, sourceIndex } = activeData;
-      const { laneId: targetLaneId, index: targetIndex } = overData;
-
-      if (sourceLaneId === targetLaneId) {
-        // Reorder within same lane
-        // Adjust target index if moving forward (since we remove first)
-        const adjustedIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
-        if (sourceIndex !== adjustedIndex) {
-          store.viewStore.reorderBlockInLane(sourceLaneId, blockId, adjustedIndex);
-        }
-      } else {
-        // Move to different lane at specific position
-        store.viewStore.moveBlockToLaneAtIndex(blockId, targetLaneId, targetIndex);
-      }
-    }
-
-    // Dropping placed block onto trash
-    if (isPatchBlockDragData(activeData) && isTrashDropData(overData)) {
-      store.patchStore.removeBlock(activeData.blockId);
-    }
-
-    // Dropping placed block onto a lane (move/reorder)
-    if (isPatchBlockDragData(activeData) && isLaneDropData(overData)) {
-      const { blockId, sourceLaneId } = activeData;
-      const targetLaneId = getLaneIdFromDropData(overData);
-
-      if (sourceLaneId !== targetLaneId) {
-        // Move to different lane
-        store.viewStore.moveBlockToLane(blockId, targetLaneId);
-      }
-      // Note: reordering within same lane would need drop position info
-      // For now, moving to same lane just keeps it in place
-    }
-  }
+  const {
+    handleDragStart,
+    handleDragEnd,
+    activeDefinition,
+    activePlacedBlock,
+    isDraggingPlacedBlock,
+  } = useLaneDnd();
 
   // Compute dynamic grid template columns based on sidebar modes
   const gridTemplateColumns = `${getLeftSidebarWidth()} minmax(0, 1fr) ${getRightSidebarWidth()}`;

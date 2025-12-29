@@ -47,8 +47,8 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   const periodMs = periodSec * 1000;
 
-  const numberType = { world: 'signal' as const, domain: 'number' as const };
-  const phaseType = { world: 'signal' as const, domain: 'phase01' as const };
+  const numberType = { world: 'signal' as const, domain: 'float' as const };
+  const phaseType = { world: 'signal' as const, domain: 'float' as const, semantics: 'phase(0..1)' as const };
 
   // Calculate raw phase: t / period
   const periodConst = ctx.b.sigConst(periodMs, numberType);
@@ -120,13 +120,13 @@ registerBlockType({
       portId: 'phase',
       label: 'Phase',
       dir: 'out',
-      type: { world: 'signal', domain: 'phase01' },
+      type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
     },
     {
       portId: 'u',
       label: 'U',
       dir: 'out',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
     },
   ],
   lower: lowerPhaseClock,
@@ -141,7 +141,7 @@ export const PhaseClockBlock: BlockCompiler = {
 
   inputs: [
     { name: 'tIn', type: { kind: 'Signal:Time' }, required: true },
-    { name: 'period', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'period', type: { kind: 'Scalar:float' }, required: false },
     { name: 'mode', type: { kind: 'Scalar:string' }, required: false },
   ],
 
@@ -169,7 +169,7 @@ export const PhaseClockBlock: BlockCompiler = {
     // Helper to extract values from artifacts
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') {
+      if (artifact.kind === 'Scalar:float' || artifact.kind === 'Signal:float') {
         return Number(artifact.value);
       }
       if ('value' in artifact && artifact.value !== undefined) {

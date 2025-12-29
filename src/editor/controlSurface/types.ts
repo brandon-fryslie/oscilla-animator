@@ -66,7 +66,7 @@ export interface SurfaceSection {
  * Output type that a control produces.
  */
 export type ControlOutputType =
-  | 'Scalar<number>'
+  | 'Scalar<float>'
   | 'Scalar<boolean>'
   | 'Scalar<string>'  // For enum values
   | 'Scalar<Vec2>'

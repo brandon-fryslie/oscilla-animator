@@ -72,7 +72,7 @@ export const Camera = createBlock({
       },
     }),
 
-    input('fovYDeg', 'FOV (deg)', 'Signal<number>', {
+    input('fovYDeg', 'FOV (deg)', 'Signal<float>', {
       tier: 'primary',
       defaultSource: {
         value: 60,
@@ -81,7 +81,7 @@ export const Camera = createBlock({
       },
     }),
 
-    input('orthoHeight', 'Ortho Height', 'Signal<number>', {
+    input('orthoHeight', 'Ortho Height', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: {
         value: 10,
@@ -90,7 +90,7 @@ export const Camera = createBlock({
       },
     }),
 
-    input('near', 'Near Plane', 'Signal<number>', {
+    input('near', 'Near Plane', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: {
         value: 0.1,
@@ -99,7 +99,7 @@ export const Camera = createBlock({
       },
     }),
 
-    input('far', 'Far Plane', 'Signal<number>', {
+    input('far', 'Far Plane', 'Signal<float>', {
       tier: 'secondary',
       defaultSource: {
         value: 1000,
@@ -116,6 +116,5 @@ export const Camera = createBlock({
   ],
 
   color: '#6366F1', // Indigo for 3D scene blocks
-  laneKind: 'Scene',
   priority: 10, // High priority - cameras should appear early in scene
 });

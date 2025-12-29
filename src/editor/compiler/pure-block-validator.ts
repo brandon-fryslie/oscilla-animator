@@ -57,7 +57,7 @@ const FORBIDDEN_ARTIFACT_KINDS = new Set([
  */
 const ALLOWED_PURE_ARTIFACT_KINDS = new Set([
   // Scalars
-  "Scalar:number",
+  "Scalar:float",
   "Scalar:string",
   "Scalar:boolean",
   "Scalar:color",
@@ -66,14 +66,14 @@ const ALLOWED_PURE_ARTIFACT_KINDS = new Set([
 
   // Signals
   "Signal:Time",
-  "Signal:number",
+  "Signal:float",
   "Signal:Unit",
   "Signal:vec2",
   "Signal:phase",
   "Signal:color",
 
   // Fields
-  "Field:number",
+  "Field:float",
   "Field:string",
   "Field:boolean",
   "Field:color",

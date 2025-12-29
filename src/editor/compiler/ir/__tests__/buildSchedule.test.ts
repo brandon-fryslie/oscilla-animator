@@ -23,7 +23,7 @@ function makeType(world: "signal" | "field", domain: string): TypeDesc {
  */
 function createMinimalBuilderIR(): BuilderProgramIR {
   const builder = new IRBuilderImpl();
-  const type = makeType("signal", "number");
+  const type = makeType("signal", "float");
 
   // Add a few signal expressions
   builder.setCurrentBlockId("TestBlock#1");

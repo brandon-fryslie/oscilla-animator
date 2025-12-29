@@ -23,9 +23,9 @@ describe("ValueStore", () => {
   describe("Allocation", () => {
     it("allocates f64 array with correct size based on max offset", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
-        { slot: 1, storage: "f64", offset: 2, type: makeType("signal", "phase01") },
-        { slot: 2, storage: "f64", offset: 1, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
+        { slot: 1, storage: "f64", offset: 2, type: makeType("signal", "float") },
+        { slot: 2, storage: "f64", offset: 1, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -36,8 +36,8 @@ describe("ValueStore", () => {
 
     it("allocates f32 array with correct size", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f32", offset: 0, type: makeType("signal", "number") },
-        { slot: 1, storage: "f32", offset: 4, type: makeType("signal", "number") },
+        { slot: 0, storage: "f32", offset: 0, type: makeType("signal", "float") },
+        { slot: 1, storage: "f32", offset: 4, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -47,8 +47,8 @@ describe("ValueStore", () => {
 
     it("allocates i32 array with correct size", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "i32", offset: 1, type: makeType("signal", "number") },
-        { slot: 1, storage: "i32", offset: 3, type: makeType("signal", "number") },
+        { slot: 0, storage: "i32", offset: 1, type: makeType("signal", "float") },
+        { slot: 1, storage: "i32", offset: 3, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -58,8 +58,8 @@ describe("ValueStore", () => {
 
     it("allocates u32 array with correct size", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "u32", offset: 0, type: makeType("signal", "number") },
-        { slot: 1, storage: "u32", offset: 2, type: makeType("signal", "number") },
+        { slot: 0, storage: "u32", offset: 0, type: makeType("signal", "float") },
+        { slot: 1, storage: "u32", offset: 2, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -80,10 +80,10 @@ describe("ValueStore", () => {
 
     it("allocates mixed storage types correctly", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
-        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "number") },
-        { slot: 2, storage: "f32", offset: 0, type: makeType("signal", "number") },
-        { slot: 3, storage: "i32", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
+        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "float") },
+        { slot: 2, storage: "f32", offset: 0, type: makeType("signal", "float") },
+        { slot: 3, storage: "i32", offset: 0, type: makeType("signal", "float") },
         { slot: 4, storage: "object", offset: 0, type: makeType("field", "vec2") },
       ];
 
@@ -109,9 +109,9 @@ describe("ValueStore", () => {
 
     it("handles sparse slot indices (gaps in slot numbers)", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
-        { slot: 5, storage: "f64", offset: 1, type: makeType("signal", "number") },
-        { slot: 10, storage: "f64", offset: 2, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
+        { slot: 5, storage: "f64", offset: 1, type: makeType("signal", "float") },
+        { slot: 10, storage: "f64", offset: 2, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -133,8 +133,8 @@ describe("ValueStore", () => {
   describe("Write Operations", () => {
     it("writes to f64 array at correct offset", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
-        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
+        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -148,7 +148,7 @@ describe("ValueStore", () => {
 
     it("writes to f32 array", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f32", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "f32", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -159,7 +159,7 @@ describe("ValueStore", () => {
 
     it("writes to i32 array", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "i32", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "i32", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -170,7 +170,7 @@ describe("ValueStore", () => {
 
     it("writes to u32 array", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "u32", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "u32", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -193,7 +193,7 @@ describe("ValueStore", () => {
 
     it("throws error when writing to non-existent slot", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -205,7 +205,7 @@ describe("ValueStore", () => {
   describe("Read Operations", () => {
     it("reads value from f64 array", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -216,7 +216,7 @@ describe("ValueStore", () => {
 
     it("reads value from f32 array", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f32", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "f32", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -227,7 +227,7 @@ describe("ValueStore", () => {
 
     it("reads value from i32 array", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "i32", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "i32", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -238,7 +238,7 @@ describe("ValueStore", () => {
 
     it("reads value from u32 array", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "u32", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "u32", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -261,7 +261,7 @@ describe("ValueStore", () => {
 
     it("throws error when reading from non-existent slot", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -271,9 +271,9 @@ describe("ValueStore", () => {
 
     it("reads correct value with multiple slots at different offsets", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
-        { slot: 1, storage: "f64", offset: 2, type: makeType("signal", "number") },
-        { slot: 2, storage: "f64", offset: 1, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
+        { slot: 1, storage: "f64", offset: 2, type: makeType("signal", "float") },
+        { slot: 2, storage: "f64", offset: 1, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -291,8 +291,8 @@ describe("ValueStore", () => {
   describe("Single-Writer Enforcement", () => {
     it("allows single write to each slot per frame", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
-        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
+        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -304,7 +304,7 @@ describe("ValueStore", () => {
 
     it("throws error on duplicate write to same slot in same frame", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -315,7 +315,7 @@ describe("ValueStore", () => {
 
     it("error message includes slot index for debugging", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 5, storage: "f64", offset: 0, type: makeType("signal", "number") },
+        { slot: 5, storage: "f64", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -326,8 +326,8 @@ describe("ValueStore", () => {
 
     it("allows write to different slots in same frame", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
-        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
+        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "float") },
         { slot: 2, storage: "object", offset: 0, type: makeType("field", "vec2") },
       ];
 
@@ -344,7 +344,7 @@ describe("ValueStore", () => {
   describe("Frame Management", () => {
     it("clear() resets write tracking", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -362,8 +362,8 @@ describe("ValueStore", () => {
 
     it("clear() does not erase values (optimization)", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
-        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
+        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -379,7 +379,7 @@ describe("ValueStore", () => {
 
     it("supports multiple frame cycles", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);
@@ -403,8 +403,8 @@ describe("ValueStore", () => {
 
     it("clear() resets tracking for all slots", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
-        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
+        { slot: 1, storage: "f64", offset: 1, type: makeType("signal", "float") },
         { slot: 2, storage: "object", offset: 0, type: makeType("field", "vec2") },
       ];
 
@@ -429,7 +429,7 @@ describe("ValueStore", () => {
   describe("Slot Metadata", () => {
     it("stores slotMeta reference", () => {
       const slotMeta: SlotMeta[] = [
-        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "number") },
+        { slot: 0, storage: "f64", offset: 0, type: makeType("signal", "float") },
       ];
 
       const store = createValueStore(slotMeta);

@@ -21,7 +21,7 @@ export interface TypeKey {
   /** World: signal, field, scalar, or config */
   readonly world: TypeWorld;
 
-  /** Domain: number, vec2, color, etc. */
+  /** Domain: float, int, vec2, color, etc. */
   readonly domain: Domain;
 
   /** Optional semantic information for precise matching */
@@ -97,7 +97,7 @@ export class TypeKeyTable {
    * - No trailing separators
    *
    * Examples:
-   * - {world: 'signal', domain: 'number'} → "w:signal|d:number"
+   * - {world: 'signal', domain: 'float'} → "w:signal|d:float"
    * - {world: 'field', domain: 'vec2', semantics: 'position'} → "w:field|d:vec2|s:position"
    * - {world: 'signal', domain: 'time', unit: 'seconds'} → "w:signal|d:time|u:seconds"
    */

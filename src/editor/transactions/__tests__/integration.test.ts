@@ -24,8 +24,8 @@ describe('Undo/Redo Integration', () => {
     id,
     type,
     label: `Test ${type}`,
-    inputs: [{ id: 'in', type: 'Signal<number>', label: 'Input', direction: 'input' as const }],
-    outputs: [{ id: 'out', type: 'Signal<number>', label: 'Output', direction: 'output' as const }],
+    inputs: [{ id: 'in', type: 'Signal<float>', label: 'Input', direction: 'input' as const }],
+    outputs: [{ id: 'out', type: 'Signal<float>', label: 'Output', direction: 'output' as const }],
     params: { value: 1 },
     category: 'Other',
   });
@@ -34,7 +34,7 @@ describe('Undo/Redo Integration', () => {
   const createTestBus = (id: string, name: string): Bus => ({
     id,
     name,
-    type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+    type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
     combineMode: 'last',
     defaultValue: 0,
     sortKey: 0,

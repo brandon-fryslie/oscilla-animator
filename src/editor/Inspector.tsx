@@ -227,7 +227,7 @@ const PortWiringPanel = observer(({
   };
 
   /**
-   * Add a library block to its suggested lane and connect to the selected port.
+   * Add a library block and connect to the selected port.
    */
   const handleAddAndConnect = (def: BlockDefinition, targetSlot: Slot) => {
     // Add the block
@@ -842,8 +842,6 @@ const CompatibleBlocksSection = observer(({ block }: { block: Block }) => {
   const handleReplace = useCallback((newDef: BlockDefinition) => {
     const incoming = store.patchStore.connections.filter(c => c.to.blockId === block.id);
     const outgoing = store.patchStore.connections.filter(c => c.from.blockId === block.id);
-    const lane = store.viewStore.lanes.find(l => l.blockIds.includes(block.id));
-    if (lane === undefined) return;
 
     const savedIn = incoming.map(c => ({ from: c.from.blockId, fromSlot: c.from.slotId, toSlot: c.to.slotId }));
     const savedOut = outgoing.map(c => ({ to: c.to.blockId, toSlot: c.to.slotId, fromSlot: c.from.slotId }));

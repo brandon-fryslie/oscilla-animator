@@ -2,7 +2,7 @@
  * FieldColorize Block Compiler
  *
  * Maps a numeric Field to colors using a gradient.
- * Takes Field<number> (typically in [0,1]) and produces Field<color>.
+ * Takes Field<float> (typically in [0,1]) and produces Field<color>.
  */
 
 import type { BlockCompiler, Field } from '../../types';
@@ -99,7 +99,7 @@ registerBlockType({
   type: 'FieldColorize',
   capability: 'pure',
   inputs: [
-    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
   ],
   outputs: [
     { portId: 'colors', label: 'Colors', dir: 'out', type: { world: 'field', domain: 'color' } },
@@ -115,7 +115,7 @@ export const FieldColorizeBlock: BlockCompiler = {
   type: 'FieldColorize',
 
   inputs: [
-    { name: 'values', type: { kind: 'Field:number' }, required: true },
+    { name: 'values', type: { kind: 'Field:float' }, required: true },
   ],
 
   outputs: [
@@ -124,11 +124,11 @@ export const FieldColorizeBlock: BlockCompiler = {
 
   compile({ params, inputs }) {
     const valuesArtifact = inputs.values;
-    if (!isDefined(valuesArtifact) || valuesArtifact.kind !== 'Field:number') {
+    if (!isDefined(valuesArtifact) || valuesArtifact.kind !== 'Field:float') {
       return {
         colors: {
           kind: 'Error',
-          message: 'FieldColorize requires a Field<number> input',
+          message: 'FieldColorize requires a Field<float> input',
         },
       };
     }

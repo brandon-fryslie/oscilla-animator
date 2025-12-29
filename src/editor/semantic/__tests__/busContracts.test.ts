@@ -19,8 +19,8 @@ describe('Bus Contracts', () => {
       expect(RESERVED_BUS_CONTRACTS.phaseA).toEqual({
         type: {
           world: 'signal',
-          domain: 'phase01',
-          semantics: 'primary',
+          domain: 'float',
+          semantics: 'phase(primary)',
           category: 'core',
           busEligible: true,
         },
@@ -31,7 +31,7 @@ describe('Bus Contracts', () => {
       expect(RESERVED_BUS_CONTRACTS.energy).toEqual({
         type: {
           world: 'signal',
-          domain: 'number',
+          domain: 'float',
           semantics: 'energy',
           category: 'core',
           busEligible: true,
@@ -51,8 +51,8 @@ describe('Bus Contracts', () => {
     it('should validate correct reserved bus contracts', () => {
       const correctPhaseA: TypeDesc = {
         world: 'signal',
-        domain: 'phase01',
-        semantics: 'primary',
+        domain: 'float',
+        semantics: 'phase(primary)',
         category: 'core',
         busEligible: true,
       };
@@ -64,7 +64,7 @@ describe('Bus Contracts', () => {
     it('should reject reserved bus with wrong type', () => {
       const wrongType: TypeDesc = {
         world: 'signal',
-        domain: 'number', // Wrong domain
+        domain: 'float', // Wrong semantics
         semantics: 'primary',
         category: 'core',
         busEligible: true,
@@ -73,14 +73,14 @@ describe('Bus Contracts', () => {
       const errors = validateReservedBus('phaseA', wrongType, 'last');
       expect(errors).toHaveLength(1);
       expect(errors[0].code).toBe('E_RESERVED_BUS_TYPE_MISMATCH');
-      expect(errors[0].message).toContain('must have type signal:phase');
+      expect(errors[0].message).toContain('must have type signal:float');
     });
 
     it('should reject reserved bus with wrong combine mode', () => {
       const correctType: TypeDesc = {
         world: 'signal',
-        domain: 'phase01',
-        semantics: 'primary',
+        domain: 'float',
+        semantics: 'phase(primary)',
         category: 'core',
         busEligible: true,
       };
@@ -94,7 +94,7 @@ describe('Bus Contracts', () => {
     it('should validate multiple errors for reserved bus', () => {
       const wrongType: TypeDesc = {
         world: 'field', // Wrong world
-        domain: 'number', // Wrong domain
+        domain: 'float', // Wrong domain
         semantics: 'wrong', // Wrong semantics
         category: 'internal', // Wrong category
         busEligible: false, // Wrong busEligible
@@ -120,29 +120,18 @@ describe('Bus Contracts', () => {
   describe('Combine Mode Compatibility', () => {
     it('should allow compatible combine modes', () => {
       // Number domain allows many combine modes
-      expect(validateCombineModeCompatibility('number', 'sum')).toBeNull();
-      expect(validateCombineModeCompatibility('number', 'average')).toBeNull();
-      expect(validateCombineModeCompatibility('number', 'max')).toBeNull();
-      expect(validateCombineModeCompatibility('number', 'min')).toBeNull();
-      expect(validateCombineModeCompatibility('number', 'last')).toBeNull();
-
-      // Phase domain only allows last
-      expect(validateCombineModeCompatibility('phase', 'last')).toBeNull();
+      expect(validateCombineModeCompatibility('float', 'sum')).toBeNull();
+      expect(validateCombineModeCompatibility('float', 'average')).toBeNull();
+      expect(validateCombineModeCompatibility('float', 'max')).toBeNull();
+      expect(validateCombineModeCompatibility('float', 'min')).toBeNull();
+      expect(validateCombineModeCompatibility('float', 'last')).toBeNull();
 
       // Trigger domain allows last
       expect(validateCombineModeCompatibility('trigger', 'last')).toBeNull();
     });
 
     it('should reject incompatible combine modes', () => {
-      const error = validateCombineModeCompatibility('phase', 'sum');
-      expect(error).not.toBeNull();
-      expect(error!.code).toBe('E_BUS_COMBINE_MODE_INCOMPATIBLE');
-      expect(error!.message).toContain('cannot use combineMode="sum"');
-      expect(error!.expected).toEqual(['last']);
-      expect(error!.actual).toBe('sum');
-    });
-
-    it('should reject incompatible modes for trigger domain', () => {
+      // Trigger domain only allows last
       const error = validateCombineModeCompatibility('trigger', 'sum');
       expect(error).not.toBeNull();
       expect(error!.code).toBe('E_BUS_COMBINE_MODE_INCOMPATIBLE');
@@ -158,7 +147,7 @@ describe('Bus Contracts', () => {
       // AC3: Field domains now only support 'last' (no 'layer' support in runtime)
       // Runtime constraints:
       // - busSemantics.ts line 210-230: 'layer' NOT implemented for fields
-      // - Materializer.ts line 1214: only Field<number> supported
+      // - Materializer.ts line 1214: only Field<float> supported
       expect(validateCombineModeCompatibility('vec2', 'last')).toBeNull();
 
       // AC3: 'layer' mode now rejected (was previously in compatibility matrix but not supported by runtime)

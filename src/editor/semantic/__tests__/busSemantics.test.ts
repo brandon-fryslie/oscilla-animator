@@ -107,10 +107,10 @@ describe('combineSignalArtifacts', () => {
   const mockCtx: RuntimeCtx = { viewport: { w: 1920, h: 1080, dpr: 1 } };
 
   describe('with no artifacts', () => {
-    it('returns default number as Signal:number', () => {
+    it('returns default number as Signal:float', () => {
       const result = combineSignalArtifacts([], 'last', 42);
-      expect(result.kind).toBe('Signal:number');
-      if (result.kind === 'Signal:number') {
+      expect(result.kind).toBe('Signal:float');
+      if (result.kind === 'Signal:float') {
         expect(result.value(0, mockCtx)).toBe(42);
       }
     });
@@ -124,16 +124,16 @@ describe('combineSignalArtifacts', () => {
       }
     });
 
-    it('returns Scalar:number for unknown default types', () => {
+    it('returns Scalar:float for unknown default types', () => {
       const result = combineSignalArtifacts([], 'last', 'unknown');
-      expect(result.kind).toBe('Scalar:number');
+      expect(result.kind).toBe('Scalar:float');
     });
   });
 
   describe('with single artifact', () => {
     it('returns the artifact as-is', () => {
       const artifact: Artifact = {
-        kind: 'Signal:number',
+        kind: 'Signal:float',
         value: () => 100,
       };
       const result = combineSignalArtifacts([artifact], 'last', 0);
@@ -144,28 +144,28 @@ describe('combineSignalArtifacts', () => {
   describe('with multiple artifacts - last mode', () => {
     it('returns the last artifact (highest sortKey)', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Signal:number', value: () => 1 },
-        { kind: 'Signal:number', value: () => 2 },
-        { kind: 'Signal:number', value: () => 3 },
+        { kind: 'Signal:float', value: () => 1 },
+        { kind: 'Signal:float', value: () => 2 },
+        { kind: 'Signal:float', value: () => 3 },
       ];
       const result = combineSignalArtifacts(artifacts, 'last', 0);
-      expect(result.kind).toBe('Signal:number');
-      if (result.kind === 'Signal:number') {
+      expect(result.kind).toBe('Signal:float');
+      if (result.kind === 'Signal:float') {
         expect(result.value(0, mockCtx)).toBe(3);
       }
     });
   });
 
   describe('with multiple artifacts - sum mode', () => {
-    it('sums Signal:number values', () => {
+    it('sums Signal:float values', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Signal:number', value: () => 10 },
-        { kind: 'Signal:number', value: () => 20 },
-        { kind: 'Signal:number', value: () => 30 },
+        { kind: 'Signal:float', value: () => 10 },
+        { kind: 'Signal:float', value: () => 20 },
+        { kind: 'Signal:float', value: () => 30 },
       ];
       const result = combineSignalArtifacts(artifacts, 'sum', 0);
-      expect(result.kind).toBe('Signal:number');
-      if (result.kind === 'Signal:number') {
+      expect(result.kind).toBe('Signal:float');
+      if (result.kind === 'Signal:float') {
         expect(result.value(0, mockCtx)).toBe(60);
       }
     });
@@ -183,15 +183,15 @@ describe('combineSignalArtifacts', () => {
       }
     });
 
-    it('sums Scalar:number values', () => {
+    it('sums Scalar:float values', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Scalar:number', value: 5 },
-        { kind: 'Scalar:number', value: 10 },
-        { kind: 'Scalar:number', value: 15 },
+        { kind: 'Scalar:float', value: 5 },
+        { kind: 'Scalar:float', value: 10 },
+        { kind: 'Scalar:float', value: 15 },
       ];
       const result = combineSignalArtifacts(artifacts, 'sum', 0);
-      expect(result.kind).toBe('Scalar:number');
-      if (result.kind === 'Scalar:number') {
+      expect(result.kind).toBe('Scalar:float');
+      if (result.kind === 'Scalar:float') {
         expect(result.value).toBe(30);
       }
     });
@@ -227,8 +227,8 @@ describe('combineSignalArtifacts', () => {
     it('returns Error for unknown mode', () => {
       // Need 2+ artifacts to trigger combine logic (single artifacts pass through)
       const artifacts: Artifact[] = [
-        { kind: 'Signal:number', value: () => 10 },
-        { kind: 'Signal:number', value: () => 20 },
+        { kind: 'Signal:float', value: () => 10 },
+        { kind: 'Signal:float', value: () => 20 },
       ];
       const result = combineSignalArtifacts(artifacts, 'average', 0);
       expect(result.kind).toBe('Error');
@@ -241,12 +241,12 @@ describe('combineSignalArtifacts', () => {
   describe('time-varying behavior', () => {
     it('evaluates signals at different times correctly', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Signal:number', value: (t: number) => t * 2 },
-        { kind: 'Signal:number', value: (t: number) => t + 10 },
+        { kind: 'Signal:float', value: (t: number) => t * 2 },
+        { kind: 'Signal:float', value: (t: number) => t + 10 },
       ];
       const result = combineSignalArtifacts(artifacts, 'sum', 0);
-      expect(result.kind).toBe('Signal:number');
-      if (result.kind === 'Signal:number') {
+      expect(result.kind).toBe('Signal:float');
+      if (result.kind === 'Signal:float') {
         expect(result.value(0, mockCtx)).toBe(10); // 0*2 + 0+10 = 10
         expect(result.value(5, mockCtx)).toBe(25); // 5*2 + 5+10 = 25
         expect(result.value(10, mockCtx)).toBe(40); // 10*2 + 10+10 = 40
@@ -266,8 +266,8 @@ describe('combineFieldArtifacts', () => {
   describe('with no artifacts', () => {
     it('returns constant field with default number', () => {
       const result = combineFieldArtifacts([], 'last', 42);
-      expect(result.kind).toBe('Field:number');
-      if (result.kind === 'Field:number') {
+      expect(result.kind).toBe('Field:float');
+      if (result.kind === 'Field:float') {
         const values = result.value(seed, 3, mockCtx);
         expect(values).toEqual([42, 42, 42]);
       }
@@ -285,7 +285,7 @@ describe('combineFieldArtifacts', () => {
   describe('with single artifact', () => {
     it('returns the artifact as-is', () => {
       const artifact: Artifact = {
-        kind: 'Field:number',
+        kind: 'Field:float',
         value: () => [1, 2, 3],
       };
       const result = combineFieldArtifacts([artifact], 'last', 0);
@@ -296,13 +296,13 @@ describe('combineFieldArtifacts', () => {
   describe('with multiple artifacts - last mode', () => {
     it('returns the last artifact (highest sortKey)', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Field:number', value: () => [1, 2, 3] },
-        { kind: 'Field:number', value: () => [4, 5, 6] },
-        { kind: 'Field:number', value: () => [7, 8, 9] },
+        { kind: 'Field:float', value: () => [1, 2, 3] },
+        { kind: 'Field:float', value: () => [4, 5, 6] },
+        { kind: 'Field:float', value: () => [7, 8, 9] },
       ];
       const result = combineFieldArtifacts(artifacts, 'last', 0);
-      expect(result.kind).toBe('Field:number');
-      if (result.kind === 'Field:number') {
+      expect(result.kind).toBe('Field:float');
+      if (result.kind === 'Field:float') {
         expect(result.value(seed, 3, mockCtx)).toEqual([7, 8, 9]);
       }
     });
@@ -311,25 +311,25 @@ describe('combineFieldArtifacts', () => {
   describe('with multiple artifacts - sum mode', () => {
     it('sums field values per-element', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Field:number', value: () => [1, 2, 3] },
-        { kind: 'Field:number', value: () => [10, 20, 30] },
-        { kind: 'Field:number', value: () => [100, 200, 300] },
+        { kind: 'Field:float', value: () => [1, 2, 3] },
+        { kind: 'Field:float', value: () => [10, 20, 30] },
+        { kind: 'Field:float', value: () => [100, 200, 300] },
       ];
       const result = combineFieldArtifacts(artifacts, 'sum', 0);
-      expect(result.kind).toBe('Field:number');
-      if (result.kind === 'Field:number') {
+      expect(result.kind).toBe('Field:float');
+      if (result.kind === 'Field:float') {
         expect(result.value(seed, 3, mockCtx)).toEqual([111, 222, 333]);
       }
     });
 
     it('handles missing values as 0', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Field:number', value: () => [1, 2] },
-        { kind: 'Field:number', value: () => [10, 20, 30] },
+        { kind: 'Field:float', value: () => [1, 2] },
+        { kind: 'Field:float', value: () => [10, 20, 30] },
       ];
       const result = combineFieldArtifacts(artifacts, 'sum', 0);
-      expect(result.kind).toBe('Field:number');
-      if (result.kind === 'Field:number') {
+      expect(result.kind).toBe('Field:float');
+      if (result.kind === 'Field:float') {
         expect(result.value(seed, 3, mockCtx)).toEqual([11, 22, 30]);
       }
     });
@@ -338,25 +338,25 @@ describe('combineFieldArtifacts', () => {
   describe('with multiple artifacts - average mode', () => {
     it('averages field values per-element', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Field:number', value: () => [10, 20, 30] },
-        { kind: 'Field:number', value: () => [20, 40, 60] },
+        { kind: 'Field:float', value: () => [10, 20, 30] },
+        { kind: 'Field:float', value: () => [20, 40, 60] },
       ];
       const result = combineFieldArtifacts(artifacts, 'average', 0);
-      expect(result.kind).toBe('Field:number');
-      if (result.kind === 'Field:number') {
+      expect(result.kind).toBe('Field:float');
+      if (result.kind === 'Field:float') {
         expect(result.value(seed, 3, mockCtx)).toEqual([15, 30, 45]);
       }
     });
 
     it('divides by field count, not element count', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Field:number', value: () => [9, 12, 15] },
-        { kind: 'Field:number', value: () => [3, 6, 9] },
-        { kind: 'Field:number', value: () => [0, 0, 0] },
+        { kind: 'Field:float', value: () => [9, 12, 15] },
+        { kind: 'Field:float', value: () => [3, 6, 9] },
+        { kind: 'Field:float', value: () => [0, 0, 0] },
       ];
       const result = combineFieldArtifacts(artifacts, 'average', 0);
-      expect(result.kind).toBe('Field:number');
-      if (result.kind === 'Field:number') {
+      expect(result.kind).toBe('Field:float');
+      if (result.kind === 'Field:float') {
         expect(result.value(seed, 3, mockCtx)).toEqual([4, 6, 8]);
       }
     });
@@ -365,25 +365,25 @@ describe('combineFieldArtifacts', () => {
   describe('with multiple artifacts - max mode', () => {
     it('takes max value per-element', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Field:number', value: () => [1, 20, 3] },
-        { kind: 'Field:number', value: () => [10, 2, 30] },
-        { kind: 'Field:number', value: () => [5, 15, 25] },
+        { kind: 'Field:float', value: () => [1, 20, 3] },
+        { kind: 'Field:float', value: () => [10, 2, 30] },
+        { kind: 'Field:float', value: () => [5, 15, 25] },
       ];
       const result = combineFieldArtifacts(artifacts, 'max', 0);
-      expect(result.kind).toBe('Field:number');
-      if (result.kind === 'Field:number') {
+      expect(result.kind).toBe('Field:float');
+      if (result.kind === 'Field:float') {
         expect(result.value(seed, 3, mockCtx)).toEqual([10, 20, 30]);
       }
     });
 
     it('handles negative values correctly', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Field:number', value: () => [-5, -10, -15] },
-        { kind: 'Field:number', value: () => [-2, -20, -8] },
+        { kind: 'Field:float', value: () => [-5, -10, -15] },
+        { kind: 'Field:float', value: () => [-2, -20, -8] },
       ];
       const result = combineFieldArtifacts(artifacts, 'max', 0);
-      expect(result.kind).toBe('Field:number');
-      if (result.kind === 'Field:number') {
+      expect(result.kind).toBe('Field:float');
+      if (result.kind === 'Field:float') {
         expect(result.value(seed, 3, mockCtx)).toEqual([-2, -10, -8]);
       }
     });
@@ -392,48 +392,48 @@ describe('combineFieldArtifacts', () => {
   describe('with multiple artifacts - min mode', () => {
     it('takes min value per-element', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Field:number', value: () => [1, 20, 3] },
-        { kind: 'Field:number', value: () => [10, 2, 30] },
-        { kind: 'Field:number', value: () => [5, 15, 25] },
+        { kind: 'Field:float', value: () => [1, 20, 3] },
+        { kind: 'Field:float', value: () => [10, 2, 30] },
+        { kind: 'Field:float', value: () => [5, 15, 25] },
       ];
       const result = combineFieldArtifacts(artifacts, 'min', 0);
-      expect(result.kind).toBe('Field:number');
-      if (result.kind === 'Field:number') {
+      expect(result.kind).toBe('Field:float');
+      if (result.kind === 'Field:float') {
         expect(result.value(seed, 3, mockCtx)).toEqual([1, 2, 3]);
       }
     });
 
     it('handles negative values correctly', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Field:number', value: () => [-5, -10, -15] },
-        { kind: 'Field:number', value: () => [-2, -20, -8] },
+        { kind: 'Field:float', value: () => [-5, -10, -15] },
+        { kind: 'Field:float', value: () => [-2, -20, -8] },
       ];
       const result = combineFieldArtifacts(artifacts, 'min', 0);
-      expect(result.kind).toBe('Field:number');
-      if (result.kind === 'Field:number') {
+      expect(result.kind).toBe('Field:float');
+      if (result.kind === 'Field:float') {
         expect(result.value(seed, 3, mockCtx)).toEqual([-5, -20, -15]);
       }
     });
   });
 
   describe('error handling', () => {
-    it('returns Error for non-Field:number artifacts', () => {
+    it('returns Error for non-Field:float artifacts', () => {
       // Create wrong-type artifacts that will fail type checking
-      const wrongArtifact1: Artifact = { kind: 'Signal:number', value: () => 10 };
-      const wrongArtifact2: Artifact = { kind: 'Signal:number', value: () => 20 };
+      const wrongArtifact1: Artifact = { kind: 'Signal:float', value: () => 10 };
+      const wrongArtifact2: Artifact = { kind: 'Signal:float', value: () => 20 };
       const artifacts = [wrongArtifact1, wrongArtifact2];
 
       const result = combineFieldArtifacts(artifacts, 'sum', 0);
       expect(result.kind).toBe('Error');
       if (result.kind === 'Error') {
-        expect(result.message).toContain('Field combination only supports Field:number');
+        expect(result.message).toContain('Field combination only supports Field:float or Field:int');
       }
     });
 
     it('returns Error for unsupported combine mode', () => {
       const artifacts: Artifact[] = [
-        { kind: 'Field:number', value: () => [1, 2, 3] },
-        { kind: 'Field:number', value: () => [4, 5, 6] },
+        { kind: 'Field:float', value: () => [1, 2, 3] },
+        { kind: 'Field:float', value: () => [4, 5, 6] },
       ];
       const result = combineFieldArtifacts(artifacts, 'median', 0);
       expect(result.kind).toBe('Error');

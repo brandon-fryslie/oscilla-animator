@@ -8,8 +8,8 @@
  *   - Domain: element identity (required)
  *   - positions3d: Field<vec3> - per-element 3D positions (required)
  *   - color: Field<color> - per-element colors (required)
- *   - radius: Field<number> OR Signal<number> - per-element radii or broadcast radius (required)
- *   - opacity: Signal<number> - opacity multiplier (required)
+ *   - radius: Field<float> OR Signal<float> - per-element radii or broadcast radius (required)
+ *   - opacity: Signal<float> - opacity multiplier (required)
  *   - camera: Special<camera> - camera reference (optional, default injected by pass8)
  *
  * Produces:
@@ -30,8 +30,8 @@ import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
  * - Domain (special handle)
  * - positions3d: Field<vec3>
  * - color: Field<color>
- * - radius: Field<number> OR Signal<number>
- * - opacity: Signal<number>
+ * - radius: Field<float> OR Signal<float>
+ * - opacity: Signal<float>
  * - camera: Special<camera> (optional)
  *
  * And registers a render sink with these inputs.
@@ -56,12 +56,12 @@ const lowerRenderInstances3D: BlockLowerFn = ({ ctx, inputs }) => {
 
   // Validate radius (Field or Signal)
   if (radius.k !== 'field' && radius.k !== 'sig') {
-    throw new Error(`RenderInstances3D requires Field<number> or Signal<number> radius, got ${radius.k}`);
+    throw new Error(`RenderInstances3D requires Field<float> or Signal<float> radius, got ${radius.k}`);
   }
 
   // Validate opacity
   if (opacity.k !== 'sig') {
-    throw new Error(`RenderInstances3D requires Signal<number> opacity, got ${opacity.k}`);
+    throw new Error(`RenderInstances3D requires Signal<float> opacity, got ${opacity.k}`);
   }
 
   // Validate camera (optional)
@@ -124,14 +124,14 @@ registerBlockType({
       portId: 'radius',
       label: 'Radius',
       dir: 'in',
-      type: { world: 'field', domain: 'number' }, // Can also accept signal
+      type: { world: 'field', domain: 'float' }, // Can also accept signal
       defaultSource: { value: 5 },
     },
     {
       portId: 'opacity',
       label: 'Opacity',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 1.0 },
     },
     {

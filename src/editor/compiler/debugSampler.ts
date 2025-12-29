@@ -16,7 +16,7 @@ interface DebuggedBlockInfo {
   blockType: string;
   signalArtifacts: Array<{
     portName: string;
-    artifact: Extract<Artifact, { kind: 'Signal:number' | 'Signal:phase' }>;
+    artifact: Extract<Artifact, { kind: 'Signal:float' | 'Signal:phase' }>;
   }>;
 }
 
@@ -33,7 +33,7 @@ let debugStore: {
       signal?: number;
       phase?: number;
       domainCount?: number;
-      fieldSample?: number[];
+      fieldSample?: float[];
     };
     timestamp: number;
   }) => void;
@@ -95,7 +95,7 @@ export function sampleBlockOutputs(
   const signalArtifacts: DebuggedBlockInfo['signalArtifacts'] = [];
 
   for (const [portName, artifact] of Object.entries(outputs)) {
-    if (artifact.kind === 'Signal:number' || artifact.kind === 'Signal:phase') {
+    if (artifact.kind === 'Signal:float' || artifact.kind === 'Signal:phase') {
       signalArtifacts.push({
         portName,
         artifact,

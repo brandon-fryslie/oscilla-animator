@@ -1,4 +1,4 @@
-import type { BlockSubcategory, LaneKind, LaneFlavor, SlotType, ExposedParam } from './types';
+import type { BlockSubcategory, SlotType, ExposedParam } from './types';
 import type { BlockTags } from './blocks';
 
 export interface ExposedPort {
@@ -37,8 +37,6 @@ export interface CompositeDefinition {
   description?: string;
   color?: string;
   subcategory: BlockSubcategory;
-  laneKind: LaneKind;
-  laneFlavor?: LaneFlavor;
   tags?: BlockTags;
   graph: CompositeGraph;
   exposedInputs: readonly ExposedPort[];

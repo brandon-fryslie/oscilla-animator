@@ -78,23 +78,23 @@ export interface StepInstances3DProjectTo2D extends StepBase {
   /** Field<quat> - 3D rotations (null for billboard) */
   rotationSlot?: ValueSlot;
 
-  /** Field<number> or Field<vec3> - scales */
+  /** Field<float> or Field<vec3> - scales */
   scaleSlot?: ValueSlot;
 
   // Style inputs (pass through to 2D)
-  /** Field<number> - red channel 0-1 */
+  /** Field<float> - red channel 0-1 */
   colorRSlot: ValueSlot;
 
-  /** Field<number> - green channel 0-1 */
+  /** Field<float> - green channel 0-1 */
   colorGSlot: ValueSlot;
 
-  /** Field<number> - blue channel 0-1 */
+  /** Field<float> - blue channel 0-1 */
   colorBSlot: ValueSlot;
 
-  /** Field<number> - alpha channel 0-1 */
+  /** Field<float> - alpha channel 0-1 */
   colorASlot: ValueSlot;
 
-  /** Field<number> - size in output */
+  /** Field<float> - size in output */
   radiusSlot: ValueSlot;
 
   // Projection options
@@ -558,7 +558,7 @@ export function executeInstances3DProject(
 // =============================================================================
 
 /**
- * Read a channel buffer (Field<number>) from a slot
+ * Read a channel buffer (Field<float>) from a slot
  */
 function readChannelBuffer(
   valueStore: ValueStore,

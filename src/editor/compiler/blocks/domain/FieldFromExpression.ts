@@ -107,7 +107,7 @@ const _lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
 //   capability: 'pure',
 //   inputs: [
 //     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
-//     { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'phase01' }, optional: true, defaultSource: { value: 0 } },
+//     { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'float' }, optional: true, defaultSource: { value: 0 } },
 //     {
 //       portId: 'expression',
 //       label: 'Expression',
@@ -131,7 +131,7 @@ export const FieldFromExpressionBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
-    // Accept Signal:phase (from phaseA bus) or Signal:number
+    // Accept Signal:phase (from phaseA bus) or Signal:float
     { name: 'signal', type: { kind: 'Signal:phase' }, required: false },
     { name: 'expression', type: { kind: 'Scalar:string' }, required: false },
   ],
@@ -162,9 +162,9 @@ export const FieldFromExpressionBlock: BlockCompiler = {
     const expression = typeof expressionValue === 'string' ? expressionValue : String(expressionValue);
     const evaluator = createExpressionEvaluator(expression);
 
-    // Accept Signal:phase or Signal:number (both are numeric)
+    // Accept Signal:phase or Signal:float (both are numeric)
     const signalFn = isDefined(signalArtifact) &&
-      (signalArtifact.kind === 'Signal:phase' || signalArtifact.kind === 'Signal:number')
+      (signalArtifact.kind === 'Signal:phase' || signalArtifact.kind === 'Signal:float')
       ? signalArtifact.value
       : () => 0;
 

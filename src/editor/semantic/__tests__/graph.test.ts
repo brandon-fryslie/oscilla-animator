@@ -22,7 +22,7 @@ describe('SemanticGraph', () => {
           {
             id: 'block2',
             type: 'RenderInstances2D',
-            inputs: [{ id: 'progress', type: 'Signal<number>' }],
+            inputs: [{ id: 'progress', type: 'Signal<float>' }],
             outputs: [{ id: 'render', type: 'Render' }],
           },
         ],
@@ -52,7 +52,7 @@ describe('SemanticGraph', () => {
           {
             id: 'block2',
             type: 'RenderInstances2D',
-            inputs: [{ id: 'progress', type: 'Signal<number>' }],
+            inputs: [{ id: 'progress', type: 'Signal<float>' }],
             outputs: [{ id: 'render', type: 'Render' }],
           },
         ],
@@ -102,7 +102,7 @@ describe('SemanticGraph', () => {
             id: 'block2',
             type: 'Oscillator',
             inputs: [{ id: 'phase', type: 'Signal<phase>' }],
-            outputs: [{ id: 'value', type: 'Signal<number>' }],
+            outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
         ],
         connections: [],
@@ -112,7 +112,8 @@ describe('SemanticGraph', () => {
             name: 'phaseA',
             type: {
               world: 'signal',
-              domain: 'phase',
+              domain: 'float',
+              semantics: 'phase(0..1)',
               category: 'core',
               busEligible: true,
             },
@@ -196,7 +197,8 @@ describe('SemanticGraph', () => {
             name: 'phaseA',
             type: {
               world: 'signal',
-              domain: 'phase',
+              domain: 'float',
+              semantics: 'phase(0..1)',
               category: 'core',
               busEligible: true,
             },
@@ -233,9 +235,9 @@ describe('SemanticGraph', () => {
     it('should detect no cycles in acyclic graph', () => {
       const patch: PatchDocument = {
         blocks: [
-          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: 'Signal<number>' }] },
-          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [{ id: 'out', type: 'Signal<number>' }] },
-          { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [{ id: 'out', type: 'Signal<number>' }] },
+          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: 'Signal<float>' }] },
+          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
+          { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
         ],
         connections: [
           { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
@@ -254,8 +256,8 @@ describe('SemanticGraph', () => {
     it('should detect simple cycle', () => {
       const patch: PatchDocument = {
         blocks: [
-          { id: 'a', type: 'A', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [{ id: 'out', type: 'Signal<number>' }] },
-          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [{ id: 'out', type: 'Signal<number>' }] },
+          { id: 'a', type: 'A', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
+          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
         ],
         connections: [
           { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
@@ -276,9 +278,9 @@ describe('SemanticGraph', () => {
     it('should detect if adding edge would create cycle', () => {
       const patch: PatchDocument = {
         blocks: [
-          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: 'Signal<number>' }] },
-          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [{ id: 'out', type: 'Signal<number>' }] },
-          { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [{ id: 'out', type: 'Signal<number>' }] },
+          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: 'Signal<float>' }] },
+          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
+          { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
         ],
         connections: [
           { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
@@ -306,10 +308,10 @@ describe('SemanticGraph', () => {
     it('should return downstream blocks correctly', () => {
       const patch: PatchDocument = {
         blocks: [
-          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: 'Signal<number>' }] },
-          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [{ id: 'out', type: 'Signal<number>' }] },
-          { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [] },
-          { id: 'd', type: 'D', inputs: [{ id: 'in', type: 'Signal<number>' }], outputs: [] },
+          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: 'Signal<float>' }] },
+          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
+          { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [] },
+          { id: 'd', type: 'D', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [] },
         ],
         connections: [
           { id: 'conn1', from: { blockId: 'a', slotId: 'out', direction: 'output' }, to: { blockId: 'b', slotId: 'in', direction: 'input' } },
@@ -341,16 +343,16 @@ describe('SemanticGraph', () => {
     it('should sort publishers by sortKey', () => {
       const patch: PatchDocument = {
         blocks: [
-          { id: 'block1', type: 'A', inputs: [], outputs: [{ id: 'val', type: 'Signal<number>' }] },
-          { id: 'block2', type: 'B', inputs: [], outputs: [{ id: 'val', type: 'Signal<number>' }] },
-          { id: 'block3', type: 'C', inputs: [], outputs: [{ id: 'val', type: 'Signal<number>' }] },
+          { id: 'block1', type: 'A', inputs: [], outputs: [{ id: 'val', type: 'Signal<float>' }] },
+          { id: 'block2', type: 'B', inputs: [], outputs: [{ id: 'val', type: 'Signal<float>' }] },
+          { id: 'block3', type: 'C', inputs: [], outputs: [{ id: 'val', type: 'Signal<float>' }] },
         ],
         connections: [],
         buses: [
           {
             id: 'energy',
             name: 'energy',
-            type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+            type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
             combineMode: 'sum',
             defaultValue: 0,
             sortKey: 0,

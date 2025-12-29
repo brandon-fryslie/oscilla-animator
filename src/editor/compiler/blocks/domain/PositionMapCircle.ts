@@ -84,35 +84,35 @@ registerBlockType({
       portId: 'centerX',
       label: 'Center X',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 250 },
     },
     {
       portId: 'centerY',
       label: 'Center Y',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 250 },
     },
     {
       portId: 'radius',
       label: 'Radius',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 150 },
     },
     {
       portId: 'startAngle',
       label: 'Start Angle',
       dir: 'in',
-      type: { world: 'scalar', domain: 'number' },
+      type: { world: 'scalar', domain: 'float' },
       defaultSource: { value: 0 },
     },
     {
       portId: 'winding',
       label: 'Winding',
       dir: 'in',
-      type: { world: 'scalar', domain: 'number' },
+      type: { world: 'scalar', domain: 'float' },
       defaultSource: { value: 1 },
     },
     {
@@ -138,11 +138,11 @@ export const PositionMapCircleBlock: BlockCompiler = {
 
   inputs: [
     { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'centerX', type: { kind: 'Signal:number' }, required: false },
-    { name: 'centerY', type: { kind: 'Signal:number' }, required: false },
-    { name: 'radius', type: { kind: 'Signal:number' }, required: false },
-    { name: 'startAngle', type: { kind: 'Scalar:number' }, required: false },
-    { name: 'winding', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'centerX', type: { kind: 'Signal:float' }, required: false },
+    { name: 'centerY', type: { kind: 'Signal:float' }, required: false },
+    { name: 'radius', type: { kind: 'Signal:float' }, required: false },
+    { name: 'startAngle', type: { kind: 'Scalar:float' }, required: false },
+    { name: 'winding', type: { kind: 'Scalar:float' }, required: false },
     { name: 'distribution', type: { kind: 'Scalar:string' }, required: false },
   ],
 
@@ -166,7 +166,7 @@ export const PositionMapCircleBlock: BlockCompiler = {
     // Helper to extract numeric value from artifact with default fallback
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:number' || artifact.kind === 'Signal:number') return Number(artifact.value);
+      if (artifact.kind === 'Scalar:float' || artifact.kind === 'Signal:float') return Number(artifact.value);
       if ('value' in artifact && artifact.value !== undefined) {
         return typeof artifact.value === 'function'
           ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))

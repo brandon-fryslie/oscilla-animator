@@ -59,7 +59,7 @@ function getShaper(kind: string, amount: number): (x: number) => number {
  * Kind parameter determines the shaping function, amount controls intensity.
  */
 const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
-  const input = inputs[0]; // Signal:number
+  const input = inputs[0]; // Signal:float
 
   if (input.k !== 'sig') {
     throw new Error(`Shaper: expected sig input, got ${input.k}`);
@@ -69,7 +69,7 @@ const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
   const kind = (cfg?.kind !== undefined && cfg.kind !== null) ? String(cfg.kind) : 'smoothstep';
   const amount = Number(cfg?.amount ?? 1);
 
-  const numberType: TypeDesc = { world: 'signal', domain: 'number' };
+  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
 
   let outputId: number;
 
@@ -176,7 +176,7 @@ registerBlockType({
       portId: 'in',
       label: 'Input',
       dir: 'in',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
       defaultSource: { value: 0 },
     },
   ],
@@ -185,7 +185,7 @@ registerBlockType({
       portId: 'out',
       label: 'Output',
       dir: 'out',
-      type: { world: 'signal', domain: 'number' },
+      type: { world: 'signal', domain: 'float' },
     },
   ],
   lower: lowerShaper,
@@ -199,43 +199,43 @@ export const ShaperBlock: BlockCompiler = {
   type: 'Shaper',
 
   inputs: [
-    { name: 'in', type: { kind: 'Signal:number' }, required: true },
+    { name: 'in', type: { kind: 'Signal:float' }, required: true },
     { name: 'kind', type: { kind: 'Scalar:string' }, required: false },
-    { name: 'amount', type: { kind: 'Scalar:number' }, required: false },
+    { name: 'amount', type: { kind: 'Scalar:float' }, required: false },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Signal:number' } },
+    { name: 'out', type: { kind: 'Signal:float' } },
   ],
 
   compile({ inputs }) {
     const inputArtifact = inputs.in;
-    if (inputArtifact === undefined || inputArtifact.kind !== 'Signal:number') {
+    if (inputArtifact === undefined || inputArtifact.kind !== 'Signal:float') {
       return {
         out: {
           kind: 'Error',
-          message: 'Shaper requires a Signal<number> input',
+          message: 'Shaper requires a Signal<float> input',
         },
       };
     }
 
-    const inputSignal = inputArtifact.value as Signal<number>;
+    const inputSignal = inputArtifact.value as Signal<float>;
     // Read from inputs - values come from defaultSource or explicit connections
     const kindInput = inputs.kind;
     const amountInput = inputs.amount;
     const kind = (kindInput !== undefined && kindInput.kind === 'Scalar:string') ? String(kindInput.value) : 'smoothstep';
-    const amount = (amountInput !== undefined && amountInput.kind === 'Scalar:number') ? Number(amountInput.value) : 1;
+    const amount = (amountInput !== undefined && amountInput.kind === 'Scalar:float') ? Number(amountInput.value) : 1;
 
     const shapeFn = getShaper(kind, amount);
 
     // Create shaped signal
-    const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
+    const signal: Signal<float> = (t: number, ctx: RuntimeCtx): number => {
       const value = inputSignal(t, ctx);
       return shapeFn(value);
     };
 
     return {
-      out: { kind: 'Signal:number', value: signal },
+      out: { kind: 'Signal:float', value: signal },
     };
   },
 };

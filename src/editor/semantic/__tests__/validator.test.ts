@@ -112,19 +112,19 @@ describe('Validator', () => {
             id: 'source1',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<number>' }],
+            outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
           {
             id: 'source2',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<number>' }],
+            outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
           {
             id: 'target',
             type: 'Scale',
-            inputs: [{ id: 'value', type: 'Signal<number>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<number>' }],
+            inputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
           },
         ],
         connections: [
@@ -163,13 +163,13 @@ describe('Validator', () => {
             id: 'source',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<number>' }],
+            outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
           {
             id: 'target',
             type: 'Scale',
             inputs: [{ id: 'phase', type: 'Signal<phase>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<number>' }],
+            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
           },
         ],
         connections: [
@@ -202,13 +202,13 @@ describe('Validator', () => {
             id: 'source',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<number>' }],
+            outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
           {
             id: 'target',
             type: 'Scale',
-            inputs: [{ id: 'value', type: 'Signal<number>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<number>' }],
+            inputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
           },
         ],
         connections: [
@@ -244,14 +244,14 @@ describe('Validator', () => {
           {
             id: 'a',
             type: 'Scale',
-            inputs: [{ id: 'value', type: 'Signal<number>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<number>' }],
+            inputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
           },
           {
             id: 'b',
             type: 'Scale',
-            inputs: [{ id: 'value', type: 'Signal<number>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<number>' }],
+            inputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
           },
         ],
         connections: [
@@ -293,7 +293,7 @@ describe('Validator', () => {
             id: 'source',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<number>' }],
+            outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
         ],
         connections: [
@@ -337,8 +337,8 @@ describe('Validator', () => {
             name: 'phaseA',
             type: {
               world: 'signal',
-              domain: 'phase01',
-              semantics: 'primary',
+              domain: 'float',
+              semantics: 'phase(primary)',
               category: 'core',
               busEligible: true,
             },
@@ -351,7 +351,7 @@ describe('Validator', () => {
             name: 'energy',
             type: {
               world: 'signal',
-              domain: 'number',
+              domain: 'float',
               semantics: 'energy',
               category: 'core',
               busEligible: true,
@@ -391,7 +391,7 @@ describe('Validator', () => {
             name: 'phaseA',
             type: {
               world: 'signal',
-              domain: 'number', // Wrong domain for phaseA
+              domain: 'float', // Wrong domain for phaseA
               semantics: 'primary',
               category: 'core',
               busEligible: true,
@@ -434,7 +434,7 @@ describe('Validator', () => {
             name: 'energy',
             type: {
               world: 'signal',
-              domain: 'number',
+              domain: 'float',
               semantics: 'energy',
               category: 'core',
               busEligible: true,
@@ -507,7 +507,7 @@ describe('Validator', () => {
           {
             id: 'time',
             type: 'CycleTimeRoot',
-            inputs: [{ id: 'period', type: 'Scalar<number>' }],
+            inputs: [{ id: 'period', type: 'Scalar<float>' }],
             outputs: [{ id: 'phase', type: 'Signal<phase>' }],
           },
         ],
@@ -532,14 +532,14 @@ describe('Validator', () => {
           {
             id: 'time',
             type: 'CycleTimeRoot',
-            inputs: [{ id: 'period', type: 'Scalar<number>' }],
+            inputs: [{ id: 'period', type: 'Scalar<float>' }],
             outputs: [{ id: 'phase', type: 'Signal<phase>' }],
           },
           {
             id: 'default',
             type: 'DefaultSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Scalar<number>' }],
+            outputs: [{ id: 'value', type: 'Scalar<float>' }],
           },
         ],
         connections: [
@@ -569,14 +569,14 @@ describe('Validator', () => {
           {
             id: 'time',
             type: 'CycleTimeRoot',
-            inputs: [{ id: 'period', type: 'Scalar<number>' }],
+            inputs: [{ id: 'period', type: 'Scalar<float>' }],
             outputs: [{ id: 'phase', type: 'Signal<phase>' }],
           },
           {
             id: 'source',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<number>' }],
+            outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
         ],
         connections: [
@@ -609,7 +609,7 @@ describe('Validator', () => {
           {
             id: 'time',
             type: 'CycleTimeRoot',
-            inputs: [{ id: 'period', type: 'Scalar<number>' }],
+            inputs: [{ id: 'period', type: 'Scalar<float>' }],
             outputs: [{ id: 'phase', type: 'Signal<phase>' }],
           },
         ],
@@ -620,7 +620,7 @@ describe('Validator', () => {
             name: 'energy',
             type: {
               world: 'signal',
-              domain: 'number',
+              domain: 'float',
               category: 'core',
               busEligible: true,
             },
@@ -671,7 +671,7 @@ describe('Validator', () => {
             name: 'numbers',
             type: {
               world: 'signal',
-              domain: 'number',
+              domain: 'float',
               category: 'core',
               busEligible: true,
             },
@@ -684,7 +684,8 @@ describe('Validator', () => {
             name: 'phases',
             type: {
               world: 'signal',
-              domain: 'phase01',
+              domain: 'float',
+              semantics: 'phase(0..1)',
               category: 'core',
               busEligible: true,
             },
@@ -723,11 +724,11 @@ describe('Validator', () => {
             name: 'phases',
             type: {
               world: 'signal',
-              domain: 'phase01',
+              domain: 'time',
               category: 'core',
               busEligible: true,
             },
-            combineMode: 'sum', // Incompatible with phase domain
+            combineMode: 'sum', // Incompatible with time domain
             defaultValue: 0,
             sortKey: 0,
           },
@@ -766,8 +767,8 @@ describe('Validator', () => {
             name: 'phaseA',
             type: {
               world: 'signal',
-              domain: 'phase01',
-              semantics: 'primary',
+              domain: 'float',
+              semantics: 'phase(primary)',
               category: 'core',
               busEligible: true,
             },
@@ -826,8 +827,8 @@ describe('Validator', () => {
             name: 'phaseA',
             type: {
               world: 'signal',
-              domain: 'phase01',
-              semantics: 'primary',
+              domain: 'float',
+              semantics: 'phase(primary)',
               category: 'core',
               busEligible: true,
             },
@@ -880,13 +881,13 @@ describe('Validator', () => {
             id: 'source1',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<number>' }],
+            outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
           {
             id: 'source2',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<number>' }],
+            outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
         ],
         connections: [],
@@ -896,7 +897,7 @@ describe('Validator', () => {
             name: 'energy',
             type: {
               world: 'signal',
-              domain: 'number',
+              domain: 'float',
               semantics: 'energy',
               category: 'core',
               busEligible: true,
@@ -943,13 +944,13 @@ describe('Validator', () => {
             id: 'source',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<number>' }],
+            outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
           {
             id: 'target',
             type: 'Scale',
-            inputs: [{ id: 'value', type: 'Signal<number>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<number>' }],
+            inputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
           },
         ],
         connections: [],
@@ -988,7 +989,7 @@ describe('Validator', () => {
             name: 'energy',
             type: {
               world: 'signal',
-              domain: 'number',
+              domain: 'float',
               category: 'core',
               busEligible: true,
             },

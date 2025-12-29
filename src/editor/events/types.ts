@@ -66,8 +66,6 @@ export interface BlockAddedEvent {
   blockId: string;
   /** Type of the added block */
   blockType: string;
-  /** ID of the lane containing the block */
-  laneId: string;
 }
 
 /**

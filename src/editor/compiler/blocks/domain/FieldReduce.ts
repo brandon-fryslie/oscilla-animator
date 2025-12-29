@@ -1,7 +1,7 @@
 /**
  * FieldReduce Block Compiler
  *
- * Reduces a Field<number> to a Signal<number> using an aggregation operation.
+ * Reduces a Field<float> to a Signal<float> using an aggregation operation.
  * This is the inverse of FieldFromSignalBroadcast - it converts per-element
  * data back into a single time-varying value.
  *
@@ -15,7 +15,7 @@ import type { ReduceFn } from '../../ir/builderTypes';
 
 type ReduceOp = 'avg' | 'max' | 'min' | 'sum' | 'first';
 
-function reduceArray(values: readonly number[], op: ReduceOp): number {
+function reduceArray(values: readonly float[], op: ReduceOp): float {
   if (values.length === 0) return 0;
 
   switch (op) {
@@ -51,7 +51,7 @@ const lowerFieldReduce: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Map reduce operations to ReduceFn interface
   const reduceFn: ReduceFn = {
     reducerId: op,
-    outputType: { world: 'signal', domain: 'number' },
+    outputType: { world: 'signal', domain: 'float' },
   };
 
   // Use IRBuilder's reduceFieldToSig method
@@ -65,10 +65,10 @@ registerBlockType({
   type: 'FieldReduce',
   capability: 'pure',
   inputs: [
-    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'number' }, defaultSource: { value: 0 } },
+    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'signal', label: 'Signal', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'signal', label: 'Signal', dir: 'out', type: { world: 'signal', domain: 'float' } },
   ],
   lower: lowerFieldReduce,
 });
@@ -81,22 +81,22 @@ export const FieldReduceBlock: BlockCompiler = {
   type: 'FieldReduce',
 
   inputs: [
-    { name: 'field', type: { kind: 'Field:number' }, required: true },
+    { name: 'field', type: { kind: 'Field:float' }, required: true },
   ],
 
   outputs: [
-    { name: 'signal', type: { kind: 'Signal:number' } },
+    { name: 'signal', type: { kind: 'Signal:float' } },
   ],
 
   compile({ inputs, params }) {
     const fieldArtifact = inputs.field;
     const op = (typeof params.op === 'string' ? params.op : 'avg') as ReduceOp;
 
-    if (!isDefined(fieldArtifact) || fieldArtifact.kind !== 'Field:number') {
+    if (!isDefined(fieldArtifact) || fieldArtifact.kind !== 'Field:float') {
       return {
         signal: {
           kind: 'Error',
-          message: 'FieldReduce requires a Field<number> input',
+          message: 'FieldReduce requires a Field<float> input',
         },
       };
     }
@@ -125,7 +125,7 @@ export const FieldReduceBlock: BlockCompiler = {
     };
 
     return {
-      signal: { kind: 'Signal:number', value: signalFn },
+      signal: { kind: 'Signal:float', value: signalFn },
     };
   },
 };

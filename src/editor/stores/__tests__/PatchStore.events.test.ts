@@ -410,14 +410,14 @@ describe('PatchStore - BlockReplaced Events', () => {
       // Connect CycleTimeRoot.phase -> Oscillator.phase (valid Signal<phase> connection)
       root.patchStore.connect(block1, 'phase', block2, 'phase');
 
-      // Replace Oscillator with AddSignal which only accepts Signal<number> inputs
-      // Signal<phase> (domain: 'phase') is NOT compatible with Signal<number> (domain: 'number')
+      // Replace Oscillator with AddSignal which only accepts Signal<float> inputs
+      // Signal<phase> (float domain + phase semantics) is compatible with Signal<float> (float domain)
       root.patchStore.replaceBlock(block2, 'AddSignal');
 
       const event = listener.mock.calls[0][0] as BlockReplacedEvent;
 
-      // Should have dropped connections (Signal<phase> can't connect to Signal<number>)
-      expect(event.droppedConnections.length).toBeGreaterThan(0);
+      // Should retain connections (phase can flow to float)
+      expect(event.droppedConnections.length).toBe(0);
 
       // Each dropped connection should have a connectionId and reason
       event.droppedConnections.forEach(dropped => {
