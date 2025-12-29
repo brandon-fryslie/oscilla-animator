@@ -43,7 +43,7 @@ function fnRefToFieldOp(fn: FnRef): FieldOp {
   };
 
   const op = opMap[fn.opcode];
-  if (!op) {
+  if (op === undefined || op === null) {
     throw new Error(`Unknown field operation: ${fn.opcode}`);
   }
   return op;
@@ -69,7 +69,7 @@ function fnRefToFieldZipOp(fn: FnRef): FieldZipOp {
   };
 
   const op = opMap[fn.opcode];
-  if (!op) {
+  if (op === undefined || op === null) {
     throw new Error(`Unknown field zip operation: ${fn.opcode}`);
   }
   return op;
@@ -197,7 +197,7 @@ export function evalFieldHandle(
       break;
 
     default:
-      throw new Error(`Unknown field kind: ${(node as any).kind}`);
+      throw new Error(`Unknown field kind: ${String((node as { kind: unknown }).kind)}`);
   }
 
   // Cache the handle

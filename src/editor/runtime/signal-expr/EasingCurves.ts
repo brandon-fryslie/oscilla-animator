@@ -41,34 +41,34 @@ export interface EasingCurveTable {
 export const BUILTIN_CURVES: EasingCurve[] = [
   {
     name: "linear",
-    fn: (t) => t,
+    fn: (t: number): number => t,
   },
   {
     name: "easeInQuad",
-    fn: (t) => t * t,
+    fn: (t: number): number => t * t,
   },
   {
     name: "easeOutQuad",
-    fn: (t) => t * (2 - t),
+    fn: (t: number): number => t * (2 - t),
   },
   {
     name: "easeInOutQuad",
-    fn: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
+    fn: (t: number): number => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
   },
   {
     name: "easeInCubic",
-    fn: (t) => t * t * t,
+    fn: (t: number): number => t * t * t,
   },
   {
     name: "easeOutCubic",
-    fn: (t) => {
+    fn: (t: number): number => {
       const t1 = t - 1;
       return t1 * t1 * t1 + 1;
     },
   },
   {
     name: "smoothstep",
-    fn: (t) => t * t * (3 - 2 * t),
+    fn: (t: number): number => t * t * (3 - 2 * t),
   },
 ];
 

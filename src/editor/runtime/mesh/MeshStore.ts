@@ -75,7 +75,7 @@ export class MeshStore {
    */
   getOrMaterialize(meshId: string): MeshBufferRef {
     // Check mesh table is set
-    if (!this.meshTable) {
+    if (this.meshTable === null) {
       throw new Error('MeshStore: mesh table not set');
     }
 
@@ -85,7 +85,7 @@ export class MeshStore {
       throw new Error(`MeshStore: mesh not found: ${meshId}`);
     }
     const mesh = this.meshTable.meshes[meshIndex];
-    if (!mesh) {
+    if (mesh === undefined) {
       throw new Error(`MeshStore: invalid mesh index: ${meshIndex}`);
     }
 
@@ -94,7 +94,7 @@ export class MeshStore {
 
     // Check cache
     const cached = this.cache.get(meshId);
-    if (cached && cached.recipeHash === recipeHash) {
+    if (cached !== undefined && cached.recipeHash === recipeHash) {
       this.stats.hits++;
       return cached.buffer;
     }

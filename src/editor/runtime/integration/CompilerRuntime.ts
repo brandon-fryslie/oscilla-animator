@@ -18,13 +18,13 @@
  */
 
 import type { LinkedGraphIR } from '../../compiler/passes/pass8-link-resolution';
-import type { FieldExprTable } from '../../compiler/ir/fieldExpr';
+import type { FieldExprTable, FieldExprIR as CompilerFieldExprIR } from '../../compiler/ir/fieldExpr';
 import type { IRBuilder } from '../../compiler/ir/IRBuilder';
 import type { ValueSlot } from '../../compiler/ir/types';
 import { FieldMaterializer, type MaterializerEnv, type ConstantsTable, type SourceFields } from '../field/Materializer';
 import { FieldBufferPool } from '../field/BufferPool';
 import { createFieldHandleCache } from '../field/FieldHandle';
-import type { FieldEnv, FieldExprIR, SlotHandles } from '../field/types';
+import type { FieldEnv, FieldExprIR as RuntimeFieldExprIR, SlotHandles , MaterializationRequest} from '../field/types';
 import { compilerToRuntimeType } from './typeAdapter';
 import type { SignalBridge } from './SignalBridge';
 
@@ -135,7 +135,7 @@ export class CompilerRuntime {
     const constants = this.createConstantsTable(linkedIR.builder);
 
     // Create source fields adapter
-    const sources = config.sourceFields || {
+    const sources = config.sourceFields ?? {
       get: () => undefined,
     };
 
@@ -180,14 +180,14 @@ export class CompilerRuntime {
   private extractFieldExprTable(builder: IRBuilder): FieldExprTable {
     // TEMPORARY: Access via any cast until IRBuilder exposes field table
     // TODO: Add builder.getFieldExprTable() method to IRBuilder interface
-    const builderImpl = builder as any;
+    const builderImpl = builder as { fieldExprs?: unknown };
 
-    if (!builderImpl.fieldExprs) {
+    if (builderImpl.fieldExprs === undefined) {
       throw new MissingFieldExprTableError();
     }
 
     return {
-      nodes: builderImpl.fieldExprs,
+      nodes: builderImpl.fieldExprs as CompilerFieldExprIR[],
     };
   }
 
@@ -196,7 +196,7 @@ export class CompilerRuntime {
    *
    * This mainly involves type conversion from compiler TypeDesc to runtime TypeDesc.
    */
-  private convertFieldNodes(fieldExprTable: FieldExprTable): FieldExprIR[] {
+  private convertFieldNodes(fieldExprTable: FieldExprTable): RuntimeFieldExprIR[] {
     return fieldExprTable.nodes.map((node) => {
       // Convert the type
       const runtimeType = compilerToRuntimeType(node.type);
@@ -206,7 +206,7 @@ export class CompilerRuntime {
       return {
         ...node,
         type: runtimeType,
-      } as FieldExprIR;
+      } as RuntimeFieldExprIR;
     });
   }
 
@@ -215,11 +215,11 @@ export class CompilerRuntime {
    */
   private createConstantsTable(builder: IRBuilder): ConstantsTable {
     // TEMPORARY: Access via any cast until IRBuilder exposes const pool
-    const builderImpl = builder as any;
+    const builderImpl = builder as { constPool?: unknown[] };
 
     return {
       get: (constId: number): number => {
-        if (!builderImpl.constPool || constId >= builderImpl.constPool.length) {
+        if (builderImpl.constPool === undefined || !Array.isArray(builderImpl.constPool) || constId >= builderImpl.constPool.length) {
           throw new Error(`Constant ${constId} not found in const pool`);
         }
         const value = builderImpl.constPool[constId];
@@ -295,7 +295,7 @@ export class CompilerRuntime {
     this.setDomain(request.domainId);
 
     // Delegate to materializer
-    return this.materializer.materialize(request as any);
+    return this.materializer.materialize(request as MaterializationRequest);
   }
 
   /**

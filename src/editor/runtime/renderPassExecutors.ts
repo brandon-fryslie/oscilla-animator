@@ -89,7 +89,8 @@ function readBuffer(
 
     default: {
       const _exhaustive: never = bufferRef.type;
-      throw new Error(`readBuffer: unknown buffer type ${_exhaustive}`);
+      const unknownType = String(_exhaustive);
+      throw new Error(`readBuffer: unknown buffer type ${unknownType}`);
     }
   }
 }
@@ -124,7 +125,8 @@ function requireAttribute(
         return { isScalar: true, value: attr.value, buffer: null };
       default: {
         const _exhaustive: never = attr;
-        throw new Error(`requireAttribute: unknown scalar kind ${(_exhaustive as any).kind}`);
+        const unknownKind = String((_exhaustive as { kind: string }).kind);
+        throw new Error(`requireAttribute: unknown scalar kind ${unknownKind}`);
       }
     }
   }
@@ -202,7 +204,8 @@ function applyPassHeader(
         break;
       default: {
         const _exhaustive: never = header.blend.mode;
-        throw new Error(`applyPassHeader: unknown blend mode ${_exhaustive}`);
+        const unknownMode = String(_exhaustive);
+        throw new Error(`applyPassHeader: unknown blend mode ${unknownMode}`);
       }
     }
 
@@ -609,7 +612,7 @@ export function renderPaths2DPass(
           if (fillStyle !== null) {
             ctx.fillStyle = fillStyle;
             // Apply fill rule if specified
-            const fillRule = pass.style.fillRule || "nonzero";
+            const fillRule = pass.style.fillRule !== null && pass.style.fillRule !== undefined ? pass.style.fillRule : "nonzero";
             ctx.fill(fillRule);
           }
         }

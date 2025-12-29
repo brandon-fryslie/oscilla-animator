@@ -201,7 +201,7 @@ function readParamNumber(
   opLabel: string,
   env: MaterializerEnv
 ): number {
-  if (!params || !(key in params)) {
+  if (params === undefined || params === null || !(key in params)) {
     throw new Error(`Missing param "${key}" for field op ${opLabel}`);
   }
   const raw = params[key];
@@ -516,7 +516,7 @@ function fillBufferConst(
 
       if (typeof value === 'boolean') {
         const arr = out as Float32Array;
-        const numeric = value ? 1 : 0;
+        const numeric = (value !== undefined && value !== null && value !== false) ? 1 : 0;
         for (let i = 0; i < N; i++) {
           arr[i] = numeric;
         }
@@ -541,7 +541,7 @@ function fillBufferConst(
         return;
       }
 
-      if (value && typeof value === 'object') {
+      if (value !== undefined && value !== null && typeof value === 'object') {
         const v = value as { x?: number; y?: number };
         const x = Number(v.x ?? 0);
         const y = Number(v.y ?? 0);
@@ -578,7 +578,7 @@ function fillBufferConst(
       }
 
       // Object constant: {x, y, z}
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (value !== undefined && value !== null && typeof value === 'object' && !Array.isArray(value)) {
         const v = value as { x?: number; y?: number; z?: number };
         const x = Number(v.x ?? 0);
         const y = Number(v.y ?? 0);
@@ -609,7 +609,7 @@ function fillBufferConst(
       }
 
       // Object constant: {x, y, z, w}
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (value !== undefined && value !== null && typeof value === 'object' && !Array.isArray(value)) {
         const v = value as { x?: number; y?: number; z?: number; w?: number };
         const x = Number(v.x ?? 0);
         const y = Number(v.y ?? 0);
@@ -632,7 +632,7 @@ function fillBufferConst(
       
       // Quaternion constant: {x, y, z, w}
       // CRITICAL: Must be normalized (unit quaternion)
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (value !== undefined && value !== null && typeof value === 'object' && !Array.isArray(value)) {
         const v = value as { x?: number; y?: number; z?: number; w?: number };
         const x = Number(v.x ?? 0);
         const y = Number(v.y ?? 0);
@@ -724,7 +724,7 @@ function fillBufferConst(
     }
 
     case 'boolean': {
-      const numeric = value ? 1 : 0;
+      const numeric = (value !== undefined && value !== null && value !== false) ? 1 : 0;
       const arr = out as Float32Array;
       for (let i = 0; i < N; i++) {
         arr[i] = numeric;
@@ -984,7 +984,7 @@ function fillBufferZip(
       handle.op !== FieldZipOp.Vec2Mul &&
       handle.op !== FieldZipOp.Vec2Div
     ) {
-      throw new Error(`fillBufferZip: unsupported vec2 op ${handle.op}`);
+      throw new Error(`fillBufferZip: unsupported vec2 op ${String(handle.op)}`);
     }
 
     const aBuffer = materialize(
@@ -1036,7 +1036,7 @@ function fillBufferZip(
           outArr[idx + 1] = ay / by;
           break;
         default:
-          throw new Error(`fillBufferZip: unsupported vec2 op ${handle.op}`);
+          throw new Error(`fillBufferZip: unsupported vec2 op ${String(handle.op)}`);
       }
     }
 
@@ -1159,7 +1159,7 @@ function fillBufferTransform(
 
   // Get transform chain
   const chain = env.transforms?.get(handle.chain);
-  if (!chain) {
+  if (chain === undefined || chain === null) {
     throw new Error(`fillBufferTransform: missing transform chain ${handle.chain}`);
   }
 
@@ -1184,7 +1184,7 @@ function toColorRGBA(value: unknown): { r: number; g: number; b: number; a: numb
     return parseColor(value);
   }
 
-  if (value && typeof value === 'object') {
+  if (value !== undefined && value !== null && typeof value === 'object') {
     const v = value as { r?: number; g?: number; b?: number; a?: number };
     if (
       typeof v.r === 'number' &&

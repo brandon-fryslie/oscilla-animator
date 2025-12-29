@@ -202,7 +202,7 @@ export function runtimeToCompilerType(
     default:
       throw new RuntimeTypeConversionError(
         runtimeType,
-        `Unknown runtime type kind: ${(runtimeType as any).kind}`
+        `Unknown runtime type kind: ${String((runtimeType as { kind: unknown }).kind)}`
       );
   }
 }
@@ -249,7 +249,7 @@ export function compilerToRuntimeTypeCached(
   compilerType: CompilerTypeDesc
 ): RuntimeTypeDesc {
   const cached = conversionCache.get(compilerType);
-  if (cached) {
+  if (cached !== undefined) {
     return cached;
   }
 

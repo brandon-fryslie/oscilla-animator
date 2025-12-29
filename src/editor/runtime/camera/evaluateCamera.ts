@@ -52,17 +52,17 @@ export function evaluateCamera(
   // Validate camera convention (must match locked values)
   if (camera.handedness !== 'right') {
     throw new Error(
-      `Camera handedness must be 'right', got '${camera.handedness}'`
+      `Camera handedness must be 'right', got '${String(camera.handedness)}'`
     );
   }
   if (camera.forwardAxis !== '-Z') {
     throw new Error(
-      `Camera forwardAxis must be '-Z', got '${camera.forwardAxis}'`
+      `Camera forwardAxis must be '-Z', got '${String(camera.forwardAxis)}'`
     );
   }
   if (camera.upAxis !== '+Y') {
     throw new Error(
-      `Camera upAxis must be '+Y', got '${camera.upAxis}'`
+      `Camera upAxis must be '+Y', got '${String(camera.upAxis)}'`
     );
   }
 
@@ -115,7 +115,7 @@ export function evaluateCamera(
     );
   } else {
     throw new Error(
-      `Unknown projection kind: ${(camera.projection as any).kind}`
+      `Unknown projection kind: ${String((camera.projection as { kind: unknown }).kind)}`
     );
   }
 

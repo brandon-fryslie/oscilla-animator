@@ -223,7 +223,7 @@ export class Canvas2DRenderer {
     }
 
     // 4. Execute overlay passes (if any)
-    if (frame.overlays) {
+    if (frame.overlays !== undefined && frame.overlays !== null) {
       for (const overlay of frame.overlays) {
         this.renderPass(overlay, valueStore);
       }
@@ -256,7 +256,7 @@ export class Canvas2DRenderer {
 
       default: {
         const _exhaustive: never = pass;
-        throw new Error(`Canvas2DRenderer: unknown pass kind ${(_exhaustive as any).kind}`);
+        throw new Error(`Canvas2DRenderer: unknown pass kind ${String((_exhaustive as { kind: unknown }).kind)}`);
       }
     }
   }
@@ -330,7 +330,7 @@ export class Canvas2DRenderer {
     const ctx = this.ctx;
 
     withSavedState(ctx, () => {
-      if (cmd.blend) {
+      if (cmd.blend !== undefined && cmd.blend !== null) {
         setBlendMode(ctx, cmd.blend);
         this.stats.stateChangeCount++;
       }
@@ -366,14 +366,14 @@ export class Canvas2DRenderer {
 
       const opacity = style.opacity ?? 1;
 
-      if (style.fill) {
+      if (style.fill !== undefined && style.fill !== null) {
         const fill: ColorRGBA = { ...style.fill, a: style.fill.a * opacity };
         ctx.fillStyle = colorToCss(fill);
         ctx.fill();
         this.stats.drawCallCount++;
       }
 
-      if (style.stroke) {
+      if (style.stroke !== undefined && style.stroke !== null) {
         const stroke: ColorRGBA = { ...style.stroke, a: style.stroke.a * opacity };
         ctx.strokeStyle = colorToCss(stroke);
         ctx.lineWidth = style.strokeWidth ?? 1;
@@ -430,8 +430,8 @@ export class Canvas2DRenderer {
           case 'circle': {
             ctx.beginPath();
             ctx.arc(0, 0, 0.5, 0, Math.PI * 2); // Unit circle radius 0.5
-            if (fillCss) ctx.fill();
-            if (strokeCss) ctx.stroke();
+            if (fillCss !== null) ctx.fill();
+            if (strokeCss !== null) ctx.stroke();
             this.stats.drawCallCount++;
             break;
           }
@@ -439,8 +439,8 @@ export class Canvas2DRenderer {
           case 'rect': {
             // Unit square centered at origin
             const x = -0.5, y = -0.5, w = 1, h = 1;
-            if (fillCss) ctx.fillRect(x, y, w, h);
-            if (strokeCss) ctx.strokeRect(x, y, w, h);
+            if (fillCss !== null) ctx.fillRect(x, y, w, h);
+            if (strokeCss !== null) ctx.strokeRect(x, y, w, h);
             this.stats.drawCallCount++;
             break;
           }
@@ -461,7 +461,7 @@ export class Canvas2DRenderer {
             }
             ctx.closePath();
 
-            if (fillCss != null) ctx.fill();
+            if (fillCss !== null) ctx.fill();
             if (strokeCss != null) ctx.stroke();
             this.stats.drawCallCount++;
             break;

@@ -131,7 +131,7 @@ export class SignalBridge {
   evalSig(sigId: SigExprId, env: SigEnv): number {
     const closure = this.signalClosures.get(sigId);
 
-    if (!closure) {
+    if (closure === undefined) {
       throw new UnregisteredSignalError(sigId);
     }
 

@@ -56,7 +56,7 @@ export class CameraStore {
    */
   getOrEvaluate(cameraId: string, viewport: ViewportInfo): CameraEval {
     // Check camera table is set
-    if (!this.cameraTable) {
+    if (this.cameraTable === null) {
       throw new Error('CameraStore: camera table not set');
     }
 
@@ -66,7 +66,7 @@ export class CameraStore {
       throw new Error(`CameraStore: camera not found: ${cameraId}`);
     }
     const camera = this.cameraTable.cameras[cameraIndex];
-    if (!camera) {
+    if (camera === undefined) {
       throw new Error(`CameraStore: invalid camera index: ${cameraIndex}`);
     }
 
@@ -75,13 +75,13 @@ export class CameraStore {
 
     // Check cache
     let cameraCache = this.cache.get(cameraId);
-    if (!cameraCache) {
+    if (cameraCache === undefined) {
       cameraCache = new Map();
       this.cache.set(cameraId, cameraCache);
     }
 
     const cached = cameraCache.get(viewportKey);
-    if (cached) {
+    if (cached !== undefined) {
       return cached.eval;
     }
 
