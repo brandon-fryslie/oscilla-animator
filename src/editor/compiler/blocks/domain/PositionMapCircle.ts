@@ -80,6 +80,48 @@ registerBlockType({
   capability: 'pure',
   inputs: [
     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
+    {
+      portId: 'centerX',
+      label: 'Center X',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 250 },
+    },
+    {
+      portId: 'centerY',
+      label: 'Center Y',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 250 },
+    },
+    {
+      portId: 'radius',
+      label: 'Radius',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 150 },
+    },
+    {
+      portId: 'startAngle',
+      label: 'Start Angle',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'number' },
+      defaultSource: { value: 0 },
+    },
+    {
+      portId: 'winding',
+      label: 'Winding',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'number' },
+      defaultSource: { value: 1 },
+    },
+    {
+      portId: 'distribution',
+      label: 'Distribution',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'string' },
+      defaultSource: { value: 'even' },
+    },
   ],
   outputs: [
     { portId: 'pos', label: 'Pos', dir: 'out', type: { world: 'field', domain: 'vec2' } },

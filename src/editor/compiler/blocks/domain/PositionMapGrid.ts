@@ -79,6 +79,48 @@ registerBlockType({
   capability: 'pure',
   inputs: [
     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
+    {
+      portId: 'rows',
+      label: 'Rows',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'number' },
+      defaultSource: { value: 10 },
+    },
+    {
+      portId: 'cols',
+      label: 'Cols',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'number' },
+      defaultSource: { value: 10 },
+    },
+    {
+      portId: 'spacing',
+      label: 'Spacing',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 20 },
+    },
+    {
+      portId: 'originX',
+      label: 'Origin X',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 0 },
+    },
+    {
+      portId: 'originY',
+      label: 'Origin Y',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 0 },
+    },
+    {
+      portId: 'order',
+      label: 'Order',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'string' },
+      defaultSource: { value: 'rowMajor' },
+    },
   ],
   outputs: [
     { portId: 'pos', label: 'Pos', dir: 'out', type: { world: 'field', domain: 'vec2' } },

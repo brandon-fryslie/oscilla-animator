@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { materialize, FieldMaterializer, type MaterializerEnv, type ConstantsTable, type SourceFields } from '../Materializer';
 import { createFieldHandleCache } from '../FieldHandle';
 import { FieldBufferPool } from '../BufferPool';
+import { SignalBridge } from '../../integration/SignalBridge';
 import type {
   FieldExprIR,
   FieldEnv,
@@ -28,6 +29,7 @@ function createTestMaterializerEnv(opts?: {
   constants?: number[];
   sources?: Record<string, ArrayBufferView>;
   domainCount?: number;
+  signalValues?: Record<number, number>; // sigId -> value
 }): MaterializerEnv {
   const cache = createFieldHandleCache();
 
@@ -55,12 +57,22 @@ function createTestMaterializerEnv(opts?: {
     },
   };
 
+  // Create signal bridge if signal values are provided
+  let signalBridge: SignalBridge | undefined;
+  if (opts?.signalValues) {
+    signalBridge = new SignalBridge();
+    for (const [sigIdStr, value] of Object.entries(opts.signalValues)) {
+      const sigId = Number(sigIdStr);
+      signalBridge.registerSignal(sigId, () => value);
+    }
+  }
+
   return {
     pool: new FieldBufferPool(),
     cache: new Map(),
     fieldEnv,
     fieldNodes: [],
-    sigEnv: { time: 0 },
+    sigEnv: { time: 0, signalBridge },
     sigNodes: [],
     constants,
     sources,
@@ -203,7 +215,8 @@ describe('Materializer', () => {
       { kind: 'sampleSignal', type: numberType, signalSlot: 0, domainId: 0 },
     ];
 
-    const env = createTestMaterializerEnv({ domainCount: 5 });
+    // Provide signal value 42 for sigId 0
+    const env = createTestMaterializerEnv({ domainCount: 5, signalValues: { 0: 42 } });
     env.fieldNodes = nodes;
 
     const request: MaterializationRequest = {
@@ -216,12 +229,9 @@ describe('Materializer', () => {
 
     const buffer = materialize(request, env) as Float32Array;
 
-    // All elements should have same value (broadcast)
+    // All elements should have the signal value (broadcast)
     expect(buffer.length).toBe(5);
-    expect(buffer[0]).toBe(buffer[1]);
-    expect(buffer[1]).toBe(buffer[2]);
-    expect(buffer[2]).toBe(buffer[3]);
-    expect(buffer[3]).toBe(buffer[4]);
+    expect(Array.from(buffer)).toEqual([42, 42, 42, 42, 42]);
   });
 
   // P0-3 Tests: Op and Zip operations

@@ -48,7 +48,20 @@ registerBlockType({
   type: 'DomainN',
   capability: 'identity',
   inputs: [
-    { portId: 'n', label: 'N', dir: 'in', type: { world: 'scalar', domain: 'number' }, optional: true },
+    {
+      portId: 'n',
+      label: 'N',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'number' },
+      defaultSource: { value: 100 },
+    },
+    {
+      portId: 'seed',
+      label: 'Seed',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'number' },
+      defaultSource: { value: 0 },
+    },
   ],
   outputs: [
     { portId: 'domain', label: 'Domain', dir: 'out', type: { world: 'special', domain: 'domain' } },

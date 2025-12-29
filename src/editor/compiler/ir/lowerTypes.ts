@@ -54,6 +54,9 @@ export interface BlockPortDecl {
 
   /** If true, DefaultSource will attach automatically when unconnected */
   readonly optional?: boolean;
+
+  /** Default value for this port when not connected */
+  readonly defaultSource?: { readonly value: unknown };
 }
 
 // =============================================================================

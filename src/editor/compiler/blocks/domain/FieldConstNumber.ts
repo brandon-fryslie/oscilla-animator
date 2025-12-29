@@ -37,6 +37,13 @@ registerBlockType({
   capability: 'pure',
   inputs: [
     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' } },
+    {
+      portId: 'value',
+      label: 'Value',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 0 },
+    },
   ],
   outputs: [
     { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'number' } },

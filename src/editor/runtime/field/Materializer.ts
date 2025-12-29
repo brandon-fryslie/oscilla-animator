@@ -179,8 +179,13 @@ function evalSig(
     return env.signalBridge.evalSig(sigId, env);
   }
 
-  // Fallback to 0 if no evaluator available (for backward compatibility)
-  return 0;
+  // No evaluator available - this is a bug in the compiler or runtime setup
+  throw new Error(
+    `[Materializer] Cannot evaluate signal ${sigId}: ` +
+    `No signal evaluation context available. ` +
+    `Fix: Compiler must emit signal IR with proper wiring, ` +
+    `or signalBridge must be provided for legacy execution.`
+  );
 }
 
 // =============================================================================

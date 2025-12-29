@@ -114,18 +114,35 @@ registerBlockType({
       label: 'Radius',
       dir: 'in',
       type: { world: 'field', domain: 'number' }, // Can also accept signal
+      defaultSource: { value: 5 },
     },
     {
       portId: 'color',
       label: 'Color',
       dir: 'in',
       type: { world: 'field', domain: 'color' },
+      defaultSource: { value: '#ffffff' },
     },
     {
       portId: 'opacity',
       label: 'Opacity',
       dir: 'in',
       type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 1.0 },
+    },
+    {
+      portId: 'glow',
+      label: 'Glow',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'boolean' },
+      defaultSource: { value: false },
+    },
+    {
+      portId: 'glowIntensity',
+      label: 'Glow Intensity',
+      dir: 'in',
+      type: { world: 'signal', domain: 'number' },
+      defaultSource: { value: 0.5 },
     },
   ],
   outputs: [

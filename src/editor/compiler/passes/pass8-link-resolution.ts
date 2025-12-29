@@ -101,6 +101,7 @@ export function pass8LinkResolution(
 
   // Build BlockInputRootIR by resolving wires, listeners, and defaults
   const blockInputRoots = buildBlockInputRoots(
+    builder,
     blocks,
     wires,
     listeners,
@@ -132,6 +133,15 @@ function registerFieldSlots(
   }
 }
 
+/**
+ * Create a ValueRef for a default source value.
+ *
+ * For signal types: creates a sigConst
+ * For field types: creates a fieldConst
+ *
+ * Note: Scalar types are handled at the call site (they're compile-time
+ * config values, not runtime IR).
+ */
 /**
  * Create a ValueRefPacked from a default source value.
  *
@@ -174,6 +184,7 @@ function createDefaultRef(
 
   return null;
 }
+
 
 function applyRenderLowering(
   builder: IRBuilder,
@@ -279,6 +290,12 @@ function applyRenderLowering(
     let missingInput = false;
 
     for (const inputDecl of decl.inputs) {
+      // Scalar types are compile-time config values, not runtime IR
+      // They're passed to block lowering via config, not resolved here
+      if (inputDecl.type.world === "scalar") {
+        continue;
+      }
+
       const portIdx = block.inputs.findIndex((p) => p.id === inputDecl.portId);
       if (portIdx < 0) {
         missingInput = true;
@@ -287,7 +304,7 @@ function applyRenderLowering(
       const ref = blockInputRoots.refs[blockInputRoots.indexOf(blockIdx as BlockIndex, portIdx)];
       if (!ref) {
         const input = block.inputs[portIdx];
-        const defaultSource = input.defaultSource;
+        const defaultSource = input.defaultSource ?? inputDecl.defaultSource;
         if (defaultSource) {
           const defaultRef = createDefaultRef(builder, inputDecl.type, defaultSource.value);
           if (defaultRef) {
@@ -369,11 +386,13 @@ function buildBlockOutputRoots(
  * Resolution priority:
  * 1. Wire connection (direct block-to-block)
  * 2. Bus listener (bus → input)
+ * 3. Default source (materialized into IR)
  * 3. Default source (fallback constant from slot definition)
  *
  * If no source is found and input has no defaultSource, it's an error.
  */
 function buildBlockInputRoots(
+  builder: IRBuilder,
   blocks: readonly Block[],
   wires: readonly CompilerConnection[],
   listeners: readonly Listener[],
@@ -507,6 +526,32 @@ function buildBlockInputRoots(
       }
 
       // Priority 3: Default source
+      // Check instance first, then block definition for defaultSource
+      const blockDef = getBlockType(block.type);
+      const inputDef = blockDef?.inputs.find(i => i.portId === input.id);
+      const defaultSource = input.defaultSource ?? inputDef?.defaultSource;
+
+      if (defaultSource && inputDef) {
+        // Scalar types are compile-time config values, not runtime IR
+        // They're passed to block lowering via config, not resolved here
+        if (inputDef.type.world === "scalar") {
+          continue; // Successfully resolved via config
+        }
+
+        const defaultRef = createDefaultRef(builder, inputDef.type, defaultSource.value);
+        if (defaultRef) {
+          refs[flatIdx] = defaultRef;
+          continue; // Successfully resolved via default
+        }
+      }
+
+      // Check if this is a scalar input that doesn't need IR resolution
+      // (even without explicit defaultSource, scalars come from params/config)
+      if (inputDef?.type.world === "scalar") {
+        continue;
+      }
+
+      // No wire, no bus, no default - this is a missing required input
       // Use the defaultSource from the input slot if available
       if (input.defaultSource && blockDecl) {
         // Find the port declaration to get the type
@@ -523,12 +568,11 @@ function buildBlockInputRoots(
       // No source found - check if this is an error
       // Only report error if there's no defaultSource
       if (!input.defaultSource) {
-        errors.push({
-          code: "MissingInput",
-          message: `Missing required input for ${block.type}.${input.id} (no defaultSource).`,
-          where: { blockId: block.id, port: input.id },
-        });
-      }
+      errors.push({
+        code: "MissingInput",
+        message: `Missing required input for ${block.type}.${input.id} (no wire, bus, or valid defaultSource).`,
+        where: { blockId: block.id, port: input.id },
+      });
     }
   }
 

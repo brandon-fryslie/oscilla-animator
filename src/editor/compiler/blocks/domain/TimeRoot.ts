@@ -273,7 +273,22 @@ registerBlockType({
 registerBlockType({
   type: 'CycleTimeRoot',
   capability: 'time',
-  inputs: [],
+  inputs: [
+    {
+      portId: 'periodMs',
+      label: 'Period (ms)',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'number' },
+      defaultSource: { value: 3000 },
+    },
+    {
+      portId: 'mode',
+      label: 'Mode',
+      dir: 'in',
+      type: { world: 'scalar', domain: 'string' },
+      defaultSource: { value: 'loop' },
+    },
+  ],
   outputs: [
     { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
     { portId: 'cycleT', label: 'Cycle T', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
