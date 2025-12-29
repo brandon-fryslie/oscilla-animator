@@ -54,7 +54,7 @@ const DEFAULT_LAYOUT: LayoutState = {
 function loadLayoutState(): LayoutState {
   try {
     const stored = localStorage.getItem(LAYOUT_STORAGE_KEY);
-    if (stored) {
+    if (stored !== null && stored !== '') {
       const parsed = JSON.parse(stored) as Partial<LayoutState>;
       // Merge with defaults to handle missing keys from older versions
       return { ...DEFAULT_LAYOUT, ...parsed };

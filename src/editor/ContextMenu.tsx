@@ -25,13 +25,13 @@ export const ContextMenu = observer(() => {
   const isOpen = contextMenu.isOpen && portRef !== null;
 
   // Get block/slot info for display (needed for useMemo dependency)
-  const block = isOpen ? store.patchStore.blocks.find((b) => b.id === portRef.blockId) : null;
-  const slots = isOpen ? (portRef.direction === 'input' ? block?.inputs : block?.outputs) : null;
-  const slot = slots?.find((s) => s.id === portRef?.slotId);
+  const block = isOpen && portRef !== null ? store.patchStore.blocks.find((b) => b.id === portRef.blockId) : null;
+  const slots = isOpen && portRef !== null ? (portRef.direction === 'input' ? block?.inputs : block?.outputs) : null;
+  const slot = (slots !== null && slots !== undefined && portRef !== null) ? slots.find((s) => s.id === portRef.slotId) : null;
 
   // Find compatible ports that can be connected - MUST be before early return
   const compatiblePorts = useMemo(() => {
-    if (!isOpen || !slot || !portRef) return [];
+    if (!isOpen || slot === null || slot === undefined || portRef === null) return [];
     return findCompatiblePorts(
       portRef,
       slot,
@@ -45,7 +45,7 @@ export const ContextMenu = observer(() => {
     if (!isOpen) return;
 
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (menuRef.current !== null && !menuRef.current.contains(e.target as Node)) {
         store.uiStore.closeContextMenu();
         setShowConfirm(null);
       }
@@ -71,7 +71,7 @@ export const ContextMenu = observer(() => {
     };
   }, [isOpen, store]);
 
-  if (!isOpen || !portRef) {
+  if (!isOpen || portRef === null) {
     return null;
   }
 
@@ -90,7 +90,7 @@ export const ContextMenu = observer(() => {
       // This port is an input, target is an output
       // Remove existing connection first (input can only have one source)
       const existingConn = connections.find(c => c.to.blockId === portRef.blockId && c.to.slotId === portRef.slotId);
-      if (existingConn) {
+      if (existingConn !== undefined) {
         store.patchStore.disconnect(existingConn.id);
       }
       store.patchStore.connect(targetBlockId, targetSlotId, portRef.blockId, portRef.slotId);

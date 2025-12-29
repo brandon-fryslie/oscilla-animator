@@ -22,7 +22,7 @@ export const TutorialOverlay = observer(() => {
   }
 
   const step = tutorialStore.currentStep;
-  if (!step) {
+  if (step === null) {
     return null;
   }
 
@@ -109,7 +109,7 @@ export const TutorialOverlay = observer(() => {
         </div>
 
         {/* Hint */}
-        {step.hint && (
+        {(step.hint !== null && step.hint !== undefined && step.hint !== '') && (
           <div className="tutorial-hint">
             <span className="tutorial-hint-icon">💡</span>
             <span>{step.hint}</span>
@@ -158,7 +158,7 @@ function formatInlineMarkdown(text: string): React.ReactNode {
   while (remaining.length > 0) {
     // Check for bold (**text**)
     const boldMatch = remaining.match(/\*\*([^*]+)\*\*/);
-    if (boldMatch && boldMatch.index !== undefined) {
+    if (boldMatch !== null && boldMatch.index !== undefined) {
       if (boldMatch.index > 0) {
         parts.push(remaining.slice(0, boldMatch.index));
       }
@@ -169,7 +169,7 @@ function formatInlineMarkdown(text: string): React.ReactNode {
 
     // Check for code (`text`)
     const codeMatch = remaining.match(/`([^`]+)`/);
-    if (codeMatch && codeMatch.index !== undefined) {
+    if (codeMatch !== null && codeMatch.index !== undefined) {
       if (codeMatch.index > 0) {
         parts.push(remaining.slice(0, codeMatch.index));
       }

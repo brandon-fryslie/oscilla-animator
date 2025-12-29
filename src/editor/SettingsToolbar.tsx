@@ -217,7 +217,7 @@ export function getStartupMacro(): string {
 
   try {
     const saved = localStorage.getItem(STARTUP_MACRO_KEY);
-    if (saved && allMacros.includes(saved)) {
+    if (saved !== null && saved !== '' && allMacros.includes(saved)) {
       return saved;
     }
   } catch {

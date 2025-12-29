@@ -685,7 +685,7 @@ const PortItem = observer(({
   const handleDoubleClick = useCallback(() => {
     if (connectedBlockId !== null) {
       onNavigate(connectedBlockId);
-    } else if (connectedBus !== null) {
+    } else if (connectedBus != null) {
       store.uiStore.selectBus(connectedBus.id);
     }
   }, [onNavigate, connectedBlockId, connectedBus, store]);
@@ -719,7 +719,7 @@ const PortItem = observer(({
   }, [connectedBlockId, onNavigate, closeContextMenu]);
 
   const handleGoToBus = useCallback(() => {
-    if (connectedBus !== null) store.uiStore.selectBus(connectedBus.id);
+    if (connectedBus != null) store.uiStore.selectBus(connectedBus.id);
     closeContextMenu();
   }, [connectedBus, store, closeContextMenu]);
 
@@ -1214,8 +1214,15 @@ const DefaultSourceControl = observer(function DefaultSourceControl({
   }
 
 
-  // Text fallback
-  const textValue = typeof ds.value === 'string' ? ds.value : String(ds.value ?? '');
+
+  // Text fallback - handle non-string values properly
+  const textValue = ((): string => {
+    if (typeof ds.value === 'string') return ds.value;
+    if (ds.value === null || ds.value === undefined) return '';
+    if (typeof ds.value === 'object') return JSON.stringify(ds.value);
+    return String(ds.value);
+  })();
+                    '';
   return (
     <input
       type="text"

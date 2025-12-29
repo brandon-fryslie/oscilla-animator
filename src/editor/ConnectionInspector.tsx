@@ -573,7 +573,7 @@ const CellConnectionView = observer(({
 
   // Handle lens chain changes from the editor
   const handleLensChainChange = useCallback((chain: LensDefinition[]) => {
-    if (binding === null) return;
+    if (binding == null) return;
 
     const bindingType = cell.listenerId !== undefined ? 'lis' : 'pub';
     const bindingId = `${bindingType}:${binding.id}`;
