@@ -126,7 +126,7 @@ function registerFieldSlots(
   blockOutputRoots: BlockOutputRootIR,
 ): void {
   for (const ref of blockOutputRoots.refs) {
-    if (ref && ref.k === "field") {
+    if (ref !== null && ref.k === "field") {
       builder.registerFieldSlot(ref.id, ref.slot);
     }
   }
@@ -208,7 +208,7 @@ function applyRenderLowering(
     }
 
     const decl = getBlockType(block.type);
-    if (!decl) {
+    if (decl === undefined) {
       continue;
     }
 
@@ -219,24 +219,24 @@ function applyRenderLowering(
       const portIdx = block.inputs.findIndex((p) => p.id === inputDecl.portId);
       if (portIdx < 0) {
         // Check if port is optional
-        if (inputDecl.optional) {
+        if (inputDecl.optional === true) {
           continue;
         }
         missingInput = true;
         break;
       }
       const ref = blockInputRoots.refs[blockInputRoots.indexOf(blockIdx as BlockIndex, portIdx)];
-      if (!ref) {
+      if (ref === undefined) {
         const input = block.inputs[portIdx];
         const defaultSource = input.defaultSource;
-        if (defaultSource) {
+        if (defaultSource !== undefined) {
           const defaultRef = createDefaultRef(builder, inputDecl.type, defaultSource.value);
-          if (defaultRef) {
+          if (defaultRef !== null) {
             inputs.push(defaultRef);
             continue;
           }
         }
-        if (inputDecl.optional) {
+        if (inputDecl.optional === true) {
           continue;
         }
         errors.push({
@@ -276,7 +276,7 @@ function applyRenderLowering(
       for (let outIdx = 0; outIdx < result.outputs.length; outIdx++) {
         const output = result.outputs[outIdx];
         const outputDecl = decl.outputs[outIdx];
-        if (outputDecl) {
+        if (outputDecl !== undefined) {
           const idx = blockOutputRoots.indexOf(blockIdx as BlockIndex, outIdx);
           blockOutputRoots.refs[idx] = output;
         }
@@ -288,7 +288,7 @@ function applyRenderLowering(
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx];
     const decl = getBlockType(block.type);
-    if (!decl || decl.capability !== "render") {
+    if (decl === undefined || decl.capability !== "render") {
       continue;
     }
 
@@ -308,12 +308,12 @@ function applyRenderLowering(
         break;
       }
       const ref = blockInputRoots.refs[blockInputRoots.indexOf(blockIdx as BlockIndex, portIdx)];
-      if (!ref) {
+      if (ref === undefined) {
         const input = block.inputs[portIdx];
         const defaultSource = input.defaultSource ?? inputDecl.defaultSource;
-        if (defaultSource) {
+        if (defaultSource !== undefined) {
           const defaultRef = createDefaultRef(builder, inputDecl.type, defaultSource.value);
-          if (defaultRef) {
+          if (defaultRef !== null) {
             inputs.push(defaultRef);
             continue;
           }
@@ -372,7 +372,7 @@ function buildBlockOutputRoots(
     for (let portIdx = 0; portIdx < block.outputs.length; portIdx++) {
       const portId = block.outputs[portIdx].id;
       const ref = outputs?.get(portId);
-      if (ref) {
+      if (ref !== undefined) {
         refs[blockIdx * maxOutputs + portIdx] = ref;
       }
     }
@@ -445,9 +445,9 @@ function buildBlockInputRoots(
         (w) => w.to.block === block.id && w.to.port === input.id
       );
 
-      if (wire) {
+      if (wire !== undefined) {
         // Validate no adapters on wires (unsupported in IR mode)
-        if (wire.adapterChain && wire.adapterChain.length > 0) {
+        if (wire.adapterChain !== undefined && wire.adapterChain.length > 0) {
           errors.push({
             code: "UnsupportedAdapterInIRMode",
             message: `Wire connection to ${block.type}.${input.id} uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
@@ -470,7 +470,7 @@ function buildBlockInputRoots(
         const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
         const ref = upstreamOutputs?.get(wire.from.port);
 
-        if (ref) {
+        if (ref !== undefined) {
           refs[flatIdx] = ref;
           continue; // Successfully resolved via wire
         }
@@ -486,9 +486,9 @@ function buildBlockInputRoots(
         (l) => l.to.blockId === block.id && l.to.slotId === input.id
       );
 
-      if (listener) {
+      if (listener !== undefined) {
         // Validate no adapters on listeners (unsupported in IR mode)
-        if (listener.adapterChain && listener.adapterChain.length > 0) {
+        if (listener.adapterChain !== undefined && listener.adapterChain.length > 0) {
           errors.push({
             code: "UnsupportedAdapterInIRMode",
             message: `Bus listener for ${block.type}.${input.id} uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
@@ -509,7 +509,7 @@ function buildBlockInputRoots(
 
         const busRef = busRoots.get(busIdx);
 
-        if (busRef) {
+        if (busRef !== undefined) {
           // Adapters/lenses validated above - assume 1:1 mapping
           refs[flatIdx] = busRef;
           continue; // Successfully resolved via bus
@@ -526,7 +526,7 @@ function buildBlockInputRoots(
       const inputDef = blockDef?.inputs.find(i => i.portId === input.id);
       const defaultSource = input.defaultSource ?? inputDef?.defaultSource;
 
-      if (defaultSource && inputDef) {
+      if (defaultSource !== undefined && inputDef !== undefined) {
         // Scalar types are compile-time config values, not runtime IR
         // They're passed to block lowering via config, not resolved here
         if (inputDef.type.world === "scalar") {
@@ -534,7 +534,7 @@ function buildBlockInputRoots(
         }
 
         const defaultRef = createDefaultRef(builder, inputDef.type, defaultSource.value);
-        if (defaultRef) {
+        if (defaultRef !== null) {
           refs[flatIdx] = defaultRef;
           continue; // Successfully resolved via default
         }
@@ -548,12 +548,12 @@ function buildBlockInputRoots(
 
       // No wire, no bus, no default - this is a missing required input
       // Use the defaultSource from the input slot if available
-      if (input.defaultSource && blockDecl) {
+      if (input.defaultSource !== undefined && blockDecl !== undefined) {
         // Find the port declaration to get the type
         const portDecl = blockDecl.inputs.find((p) => p.portId === input.id);
-        if (portDecl) {
+        if (portDecl !== undefined) {
           const defaultRef = createDefaultRef(builder, portDecl.type, input.defaultSource.value);
-          if (defaultRef) {
+          if (defaultRef !== null) {
             refs[flatIdx] = defaultRef;
             continue; // Successfully resolved via default source
           }
@@ -562,7 +562,7 @@ function buildBlockInputRoots(
 
       // No source found - check if this is an error
       // Only report error if there's no defaultSource
-      if (!input.defaultSource) {
+      if (input.defaultSource === undefined) {
         errors.push({
           code: "MissingInput",
           message: `Missing required input for ${block.type}.${input.id} (no wire, bus, or valid defaultSource).`,

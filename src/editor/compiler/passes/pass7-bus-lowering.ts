@@ -109,7 +109,7 @@ export function pass7BusLowering(
 
     // Validate no adapters/lenses are used (not yet supported in IR mode)
     for (const pub of busPublishers) {
-      if (pub.adapterChain && pub.adapterChain.length > 0) {
+      if (pub.adapterChain !== undefined && pub.adapterChain.length > 0) {
         errors.push({
           code: "UnsupportedAdapterInIRMode",
           message: `Publisher to bus '${bus.name}' uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
@@ -130,7 +130,7 @@ export function pass7BusLowering(
         blocks
       );
 
-      if (busRef) {
+      if (busRef !== null) {
         busRoots.set(busIdx, busRef);
       }
     } catch (error) {
@@ -184,7 +184,7 @@ function lowerBusToCombineNode(
     const outputs = blockOutputs.get(blockIdx);
     const ref = outputs?.get(pub.from.slotId);
 
-    if (!ref) {
+    if (ref === undefined) {
       // Port may not have IR representation yet - this is OK during migration
       continue;
     }

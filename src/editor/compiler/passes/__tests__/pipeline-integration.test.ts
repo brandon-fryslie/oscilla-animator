@@ -97,7 +97,7 @@ function createBus(id: string, name: string): Bus {
   return {
     id,
     name,
-    type: { world: "signal", domain: "number" } as any,
+    type: { world: "signal", domain: "number" } as unknown as Bus["type"],
     combineMode: "last",
   } as Bus;
 }
@@ -142,7 +142,7 @@ function createListener(
 function getSortedBlocksForPass5<T extends Block>(
   timeResolved: TimeResolvedPatch<T, unknown, unknown, unknown, unknown>
 ): readonly T[] {
-  const sorted: T[] = new Array(timeResolved.blocks.length);
+  const sorted: (T | undefined)[] = new Array<T | undefined>(timeResolved.blocks.length);
 
   for (const block of timeResolved.blocks) {
     const blockIndex = timeResolved.blockIndexMap.get(block.id);
@@ -151,7 +151,7 @@ function getSortedBlocksForPass5<T extends Block>(
     }
   }
 
-  return sorted;
+  return sorted.filter((b): b is T => b !== undefined);
 }
 
 // =============================================================================

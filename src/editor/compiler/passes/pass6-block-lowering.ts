@@ -249,12 +249,12 @@ function lowerBlockInstance(
   // Check if block has registered lowering function
   const blockType = getBlockType(block.type);
 
-  if (blockType) {
+  if (blockType !== undefined) {
     // Use registered lowering function
     try {
       const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
       const enforcePortContract = blockDef?.tags?.irPortContract !== 'relaxed';
-      if (enforcePortContract && blockDef) {
+      if (enforcePortContract && blockDef !== undefined) {
         const defInputIds = blockDef.inputs.map((input) => input.id);
         const irInputIds = blockType.inputs.map((input) => input.portId);
         const defOutputIds = blockDef.outputs.map((output) => output.id);
@@ -283,9 +283,9 @@ function lowerBlockInstance(
         const portKey = `${block.id}:${inputPort.id}`;
         const artifact = compiledPortMap.get(portKey);
 
-        if (artifact) {
+        if (artifact !== undefined) {
           const ref = artifactToValueRef(artifact, builder, block.id, inputPort.id);
-          if (ref) {
+          if (ref !== null) {
             inputsById[inputPort.id] = ref;
             return ref;
           }
@@ -299,7 +299,7 @@ function lowerBlockInstance(
           const value = portDecl.defaultSource.value;
           if (type.world === 'signal') {
             // Signal constants must be numbers
-            const numValue = typeof value === 'number' ? value : Number(value) || 0;
+            const numValue = typeof value === 'number' ? value : (Number(value) !== 0 && !Number.isNaN(Number(value)) ? Number(value) : 0);
             const sigId = builder.sigConst(numValue, type);
             const slot = builder.allocValueSlot(type);
             builder.registerSigSlot(sigId, slot);
@@ -352,12 +352,12 @@ function lowerBlockInstance(
       const result = blockType.lower({ ctx, inputs, inputsById });
 
       // Map outputs to port IDs - prefer outputsById over positional outputs
-      if (result.outputsById && Object.keys(result.outputsById).length > 0) {
+      if (result.outputsById !== undefined && Object.keys(result.outputsById).length > 0) {
         // New path: Use outputsById (keyed by port ID, order-independent)
         const portOrder = blockType.outputs.map((p) => p.portId);
         for (const portId of portOrder) {
           const ref = result.outputsById[portId];
-          if (!ref) {
+          if (ref === undefined) {
             errors.push({
               code: "IRValidationFailed",
               message: `Block ${ctx.blockType}#${ctx.instanceId} outputsById missing port '${portId}'`,
@@ -389,7 +389,7 @@ function lowerBlockInstance(
         const portKey = `${block.id}:${output.id}`;
         const artifact = compiledPortMap.get(portKey);
 
-        if (!artifact) {
+        if (artifact === undefined) {
           continue;
         }
 
@@ -400,7 +400,7 @@ function lowerBlockInstance(
           output.id
         );
 
-        if (valueRef) {
+        if (valueRef !== null) {
           outputRefs.set(output.id, valueRef);
         }
       }
@@ -411,7 +411,7 @@ function lowerBlockInstance(
       const portKey = `${block.id}:${output.id}`;
       const artifact = compiledPortMap.get(portKey);
 
-      if (!artifact) {
+      if (artifact === undefined) {
         // Output not in compiled map - might be unused or error
         // Don't fail here - downstream passes will catch missing inputs
         continue;
@@ -425,7 +425,7 @@ function lowerBlockInstance(
         output.id
       );
 
-      if (valueRef) {
+      if (valueRef !== null) {
         outputRefs.set(output.id, valueRef);
       }
     }
@@ -472,7 +472,7 @@ export function pass6BlockLowering(
       const blockIndex = node.blockIndex;
       const block = blocks[blockIndex];
 
-      if (!block) {
+      if (block === undefined) {
         errors.push({
           code: "BlockMissing",
           message: `Block index ${blockIndex} out of bounds`,
@@ -497,7 +497,7 @@ export function pass6BlockLowering(
       for (const output of block.outputs) {
         const portKey = `${block.id}:${output.id}`;
         const artifact = compiledPortMap.get(portKey);
-        if (artifact) {
+        if (artifact !== undefined) {
           blockArtifacts.set(output.id, artifact);
         }
       }
@@ -505,7 +505,7 @@ export function pass6BlockLowering(
       // Validate pure block outputs (Deliverable 3: Pure Block Compilation Enforcement)
       // Only validate if the block has a definition with capability metadata
       const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
-      if (blockDef && blockDef.capability === 'pure') {
+      if (blockDef !== undefined && blockDef.capability === 'pure') {
         try {
           validatePureBlockOutput(
             block.type,
