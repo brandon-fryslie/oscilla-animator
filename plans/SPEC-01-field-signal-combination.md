@@ -22,6 +22,16 @@ Several field operations cannot be lowered to IR because they require combining 
 
 ---
 
+## Backlog Checklist
+
+- [ ] Add `FieldExprMapIndexed` node + evaluator (indexed mapping with i/n).
+- [ ] Add `FieldExprZipSig` node + evaluator (field + signals with n-ary kernel).
+- [ ] Extend kernel library for indexed/field-signal kernels (jitter, gradients, vec2 transforms).
+- [ ] Decide vec2 strategy (kernel vs opcode) and implement chosen path.
+- [ ] Add IR lowering + runtime tests for JitterFieldVec2, FieldMapVec2, FieldHueGradient.
+
+---
+
 ## Current IR Architecture
 
 ### Existing FieldExprIR Nodes

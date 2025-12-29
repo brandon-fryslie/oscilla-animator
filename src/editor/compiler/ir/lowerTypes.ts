@@ -137,6 +137,9 @@ export type BlockLowerFn = (args: {
   /** Inputs resolved by the compiler (wire/bus/defaultSource already decided) */
   inputs: readonly ValueRefPacked[];
 
+  /** Inputs keyed by portId (optional migration path off positional indexing) */
+  inputsById?: Readonly<Record<string, ValueRefPacked>>;
+
   /**
    * Instance configuration (static, non-user-adjustable).
    * User-adjustable params should use DefaultSource inputs instead.

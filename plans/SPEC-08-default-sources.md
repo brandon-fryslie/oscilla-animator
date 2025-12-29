@@ -13,6 +13,16 @@ The default sources system allows ports to have automatic values when not connec
 
 ---
 
+## Backlog Checklist
+
+- [ ] Materialize defaultSource in IR lowering (wire/bus/default resolution).
+- [ ] Support scalar/signal/field default materialization paths.
+- [ ] Define empty values for optional inputs across domains.
+- [ ] Add diagnostics for missing defaults vs required inputs.
+- [ ] Add tests for defaultSource behavior in IR mode.
+
+---
+
 ## Gap 1: Default Sources Not Materialized (CRITICAL)
 
 ### Current State

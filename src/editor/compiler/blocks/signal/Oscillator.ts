@@ -8,6 +8,7 @@
 import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
 import { registerBlockType } from '../../ir/lowerTypes';
+import { OSCILLATOR_IR_INPUTS, OSCILLATOR_IR_OUTPUTS } from '../../../blocks/oscillatorSpec';
 import { OpCode } from '../../ir/opcodes';
 
 type Signal<A> = (t: number, ctx: Readonly<RuntimeCtx>) => A;
@@ -33,13 +34,17 @@ const SHAPES: Record<string, (p: number) => number> = {
  * Waveform generation using sigMap with OpCode-based kernels.
  * Shape parameter is static config, amplitude and bias are inputs.
  */
-const lowerOscillator: BlockLowerFn = ({ ctx, inputs, config }) => {
-  const phase = inputs[0]; // Signal:phase
-  const amplitude = inputs[1]; // Signal:number (optional, defaultSource provides 1)
-  const bias = inputs[2]; // Signal:number (optional, defaultSource provides 0)
+const lowerOscillator: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
+  const phase = inputsById?.phase ?? inputs[0]; // Signal:phase
+  const shapeInput = inputsById?.shape ?? inputs[1]; // Scalar:waveform
+  const amplitude = inputsById?.amplitude ?? inputs[2]; // Signal:number
+  const bias = inputsById?.bias ?? inputs[3]; // Signal:number
 
   if (phase.k !== 'sig') {
     throw new Error(`Oscillator: expected sig input for phase, got ${phase.k}`);
+  }
+  if (shapeInput.k !== 'scalarConst') {
+    throw new Error(`Oscillator: expected scalar input for shape, got ${shapeInput.k}`);
   }
   if (amplitude.k !== 'sig') {
     throw new Error(`Oscillator: expected sig input for amplitude, got ${amplitude.k}`);
@@ -48,7 +53,9 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error(`Oscillator: expected sig input for bias, got ${bias.k}`);
   }
 
-  const shape = (config as any)?.shape || 'sine';
+  const constPool = ctx.b.getConstPool();
+  const shapeValue = constPool[shapeInput.constId];
+  const shape = typeof shapeValue === 'string' ? shapeValue : String(shapeValue ?? 'sine');
 
   // Map phase to waveform using appropriate opcode
   let waveformId: number;
@@ -139,39 +146,8 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, config }) => {
 registerBlockType({
   type: 'Oscillator',
   capability: 'pure',
-  inputs: [
-    {
-      portId: 'phase',
-      label: 'Phase',
-      dir: 'in',
-      type: { world: 'signal', domain: 'phase01' },
-      defaultSource: { value: 0 },
-    },
-    {
-      portId: 'amplitude',
-      label: 'Amplitude',
-      dir: 'in',
-      type: { world: 'signal', domain: 'number' },
-      optional: true,
-      defaultSource: { value: 1 },
-    },
-    {
-      portId: 'bias',
-      label: 'Bias',
-      dir: 'in',
-      type: { world: 'signal', domain: 'number' },
-      optional: true,
-      defaultSource: { value: 0 },
-    },
-  ],
-  outputs: [
-    {
-      portId: 'out',
-      label: 'Output',
-      dir: 'out',
-      type: { world: 'signal', domain: 'number' },
-    },
-  ],
+  inputs: OSCILLATOR_IR_INPUTS,
+  outputs: OSCILLATOR_IR_OUTPUTS,
   lower: lowerOscillator,
 });
 

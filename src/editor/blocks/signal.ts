@@ -6,6 +6,7 @@
  */
 import { createBlock } from './factory';
 import { input, output } from './utils';
+import { Oscillator } from './oscillatorSpec';
 
 /**
  * Oscillator - Generate waveforms from phase
@@ -17,66 +18,7 @@ import { input, output } from './utils';
  * - shape: Config world - changing triggers hot-swap (crossfade)
  * - amplitude/bias: Signal world - can be animated via bus/wire
  */
-export const Oscillator = createBlock({
-
-  type: 'Oscillator',
-  label: 'Oscillator',
-  description: 'Generate waveforms (sine, cosine, triangle, saw) from phase',
-  capability: 'pure',
-  compileKind: 'operator',
-  inputs: [
-    input('phase', 'Phase', 'Signal<phase>', {
-      tier: 'primary',
-      defaultSource: {
-        value: 0,
-        world: 'signal',
-        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
-      },
-    }),
-    // Former params - now inputs with default sources
-    input('shape', 'Waveform', 'Signal<string>', {
-      tier: 'primary',
-      defaultSource: {
-        value: 'sine',
-        world: 'config', // Enum selection triggers hot-swap, not per-frame eval
-        uiHint: {
-          kind: 'select',
-          options: [
-            { value: 'sine', label: 'Sine' },
-            { value: 'cosine', label: 'Cosine' },
-            { value: 'triangle', label: 'Triangle' },
-            { value: 'saw', label: 'Sawtooth' },
-          ],
-        },
-      },
-    }),
-    input('amplitude', 'Amplitude', 'Signal<number>', {
-      tier: 'primary',
-      defaultSource: {
-        value: 1,
-        world: 'signal', // Continuous modulation allowed
-        uiHint: { kind: 'slider', min: 0, max: 10, step: 0.1 },
-      },
-    }),
-    input('bias', 'Bias', 'Signal<number>', {
-      tier: 'secondary', // Less commonly tweaked
-      defaultSource: {
-        value: 0,
-        world: 'signal',
-        uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
-      },
-    }),
-  ],
-  outputs: [
-    output('out', 'Output', 'Signal<number>'),
-  ],
-  color: '#3B82F6',
-  laneKind: 'Phase',
-  priority: 10,
-  // Auto-subscribe phase to phaseA bus when no explicit connection
-  autoBusSubscriptions: {
-    phase: 'phaseA',
-  },});
+export { Oscillator };
 
 /**
  * Shaper - Apply waveshaping to signals

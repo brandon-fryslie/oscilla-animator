@@ -13,6 +13,16 @@ The bus system has critical gaps: bus evaluation steps aren't emitted in the sch
 
 ---
 
+## Backlog Checklist
+
+- [ ] Emit bus evaluation steps in schedule and thread bus roots/listeners.
+- [ ] Implement event bus combination + listener edge detection.
+- [ ] Extend bus combination to non-numeric domains (vec2/vec3/color).
+- [ ] Implement field-typed bus evaluation and combine.
+- [ ] Add bus publisher ordering/priority support.
+
+---
+
 ## Gap 1: Bus Evaluation Never Runs (CRITICAL)
 
 ### Current State

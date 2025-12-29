@@ -252,8 +252,33 @@ function lowerBlockInstance(
   if (blockType) {
     // Use registered lowering function
     try {
+      const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
+      const enforcePortContract = blockDef?.tags?.irPortContract === 'strict';
+      if (enforcePortContract) {
+        const defInputIds = blockDef.inputs.map((input) => input.id);
+        const irInputIds = blockType.inputs.map((input) => input.portId);
+        const defOutputIds = blockDef.outputs.map((output) => output.id);
+        const irOutputIds = blockType.outputs.map((output) => output.portId);
+
+        const inputOrderMismatch = defInputIds.join('|') !== irInputIds.join('|');
+        const outputOrderMismatch = defOutputIds.join('|') !== irOutputIds.join('|');
+
+        if (inputOrderMismatch || outputOrderMismatch) {
+          errors.push({
+            code: "IRValidationFailed",
+            message:
+              `IR port contract mismatch for "${block.type}" (${block.id}). ` +
+              `Editor inputs [${defInputIds.join(", ")}], IR inputs [${irInputIds.join(", ")}]; ` +
+              `Editor outputs [${defOutputIds.join(", ")}], IR outputs [${irOutputIds.join(", ")}].`,
+            where: { blockId: block.id },
+          });
+          return outputRefs;
+        }
+      }
+
       // Collect input ValueRefs (need to resolve from wires/buses)
       // For now, we'll collect inputs from compiled port map
+      const inputsById: Record<string, ValueRefPacked> = {};
       const inputs: ValueRefPacked[] = block.inputs.map((inputPort, portIndex) => {
         const portKey = `${block.id}:${inputPort.id}`;
         const artifact = compiledPortMap.get(portKey);
@@ -261,6 +286,7 @@ function lowerBlockInstance(
         if (artifact) {
           const ref = artifactToValueRef(artifact, builder, block.id, inputPort.id);
           if (ref) {
+            inputsById[inputPort.id] = ref;
             return ref;
           }
         }
@@ -277,12 +303,21 @@ function lowerBlockInstance(
             const sigId = builder.sigConst(numValue, type);
             const slot = builder.allocValueSlot(type);
             builder.registerSigSlot(sigId, slot);
-            return { k: "sig", id: sigId, slot } as ValueRefPacked;
+            const ref = { k: "sig", id: sigId, slot } as ValueRefPacked;
+            inputsById[inputPort.id] = ref;
+            return ref;
           } else if (type.world === 'field') {
             const fieldId = builder.fieldConst(value as number, type);
             const slot = builder.allocValueSlot(type);
             builder.registerFieldSlot(fieldId, slot);
-            return { k: "field", id: fieldId, slot } as ValueRefPacked;
+            const ref = { k: "field", id: fieldId, slot } as ValueRefPacked;
+            inputsById[inputPort.id] = ref;
+            return ref;
+          } else if (type.world === 'scalar') {
+            const constId = builder.allocConstId(value);
+            const ref = { k: "scalarConst", constId } as ValueRefPacked;
+            inputsById[inputPort.id] = ref;
+            return ref;
           }
         }
 
@@ -307,7 +342,7 @@ function lowerBlockInstance(
       };
 
       // Call lowering function
-      const result = blockType.lower({ ctx, inputs });
+      const result = blockType.lower({ ctx, inputs, inputsById });
 
       // Map outputs to port IDs
       result.outputs.forEach((ref, index) => {

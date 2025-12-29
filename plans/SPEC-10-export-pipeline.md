@@ -13,6 +13,16 @@ The export pipeline is a new feature not yet implemented. It enables exporting a
 
 ---
 
+## Backlog Checklist
+
+- [ ] Implement image sequence export (PNG/WebP/JPEG).
+- [ ] Implement video export (WebCodecs + muxer).
+- [ ] Implement GIF export (palette + dithering).
+- [ ] Implement standalone HTML player export.
+- [ ] Add deterministic replay support (seed + state serialization).
+
+---
+
 ## Feature 1: Frame Export to Image Sequence (HIGH)
 
 ### Current State

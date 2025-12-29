@@ -13,6 +13,16 @@ The type system has fragmentation between two TypeDesc definitions, missing conv
 
 ---
 
+## Backlog Checklist
+
+- [ ] Unify TypeDesc definition and update imports to canonical location.
+- [ ] Apply adapters during IR lowering (signal + field paths).
+- [ ] Apply lenses during IR lowering (wire-level transforms).
+- [ ] Complete coercion graph and path finding for conversions.
+- [ ] Define and implement world promotion rules (scalar→signal→field).
+
+---
+
 ## Gap 1: Duplicate TypeDesc Definitions (CRITICAL)
 
 ### Current State

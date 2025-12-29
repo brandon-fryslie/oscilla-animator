@@ -13,6 +13,17 @@ Signal runtime has gaps in stateful operation evaluation, time handling, and non
 
 ---
 
+## Backlog Checklist
+
+- [ ] Implement stateful signal evaluators (delayFrames, pulseDivider, envelopeAD, integrate).
+- [ ] Wire state allocation/buffer layout for stateful ops.
+- [ ] Fix time derivation (tAbsMs write, delta-based wrap detection).
+- [ ] Support non-numeric signal slots (vec2/vec3/color) in eval + allocation.
+- [ ] Treat wrap event as discrete trigger (event store integration).
+- [ ] Add ColorHSLToRGB kernel and ColorLFO IR lowering path.
+
+---
+
 ## Gap 1: Stateful Signal Evaluators (CRITICAL)
 
 ### Current State

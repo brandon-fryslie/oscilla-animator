@@ -13,6 +13,17 @@ The render pipeline has gaps in attribute handling, clipping/masking, material s
 
 ---
 
+## Backlog Checklist
+
+- [ ] Wire z-order into render assembly (static + slot-based).
+- [ ] Implement PostFX render passes (canvas filters/compositing).
+- [ ] Add extended per-instance attributes (rotation, scale, custom attrs).
+- [ ] Add clipping/masking passes in IR and renderer.
+- [ ] Expand material system (gradients/textures/procedural).
+- [ ] Implement curve flattening for path rendering.
+
+---
+
 ## Gap 1: Z-Order Not Applied (HIGH)
 
 ### Current State

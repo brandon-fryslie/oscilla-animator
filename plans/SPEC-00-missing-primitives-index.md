@@ -12,6 +12,13 @@ The Oscilla IR system has a well-designed schema but significant implementation 
 
 **Root Cause:** The system was designed for IR-first but implemented closure-first. The IR path was added incrementally, leaving gaps where closures handle what IR cannot.
 
+## Backlog Checklist
+- [ ] Phase 1: Make IR execute (Tier 0)
+- [ ] Phase 2: Core features (Tier 1a)
+- [ ] Phase 3: Complete features (Tier 1b)
+- [ ] Phase 4: Polish (Tier 2)
+- [ ] Phase 5: New features (Tier 3)
+
 ---
 
 ## Gap Categories

@@ -13,6 +13,17 @@ The field runtime has several unimplemented features that cause crashes or silen
 
 ---
 
+## Backlog Checklist
+
+- [ ] Implement transform chain evaluation in field materializer.
+- [ ] Add `fieldReduce` signal expression + evaluator wiring.
+- [ ] Support dynamic path fields (map/zip/combine/inputSlot).
+- [ ] Enable non-numeric field combine (vec2/vec3/color, layer compositing).
+- [ ] Add field-handle cache invalidation on schema changes.
+- [ ] Propagate stable domain element IDs for hash/field ops.
+
+---
+
 ## Gap 1: Transform Chain Evaluation (CRITICAL)
 
 ### Current State

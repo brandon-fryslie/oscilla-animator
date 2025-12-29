@@ -13,6 +13,16 @@ Time handling has critical gaps: TimeModel is hardcoded to infinite, wrap detect
 
 ---
 
+## Backlog Checklist
+
+- [ ] Extract TimeModel from TimeRoot in compiler passes and thread into IRBuilder.
+- [ ] Use real frame deltas for wrap detection and time derivation.
+- [ ] Align PhaseClock semantics with TimeRoot (phase ref + adjust kernel).
+- [ ] Add discrete event store for wrap/pulse events.
+- [ ] Add scrub/seek handling to suppress wrap and reset stateful ops.
+
+---
+
 ## Gap 1: TimeModel Hardcoded to Infinite (CRITICAL)
 
 ### Current State

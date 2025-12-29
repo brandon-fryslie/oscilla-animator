@@ -107,6 +107,8 @@ export type InternalDomain =
   | 'duration'     // Duration semantics
   | 'hsl'          // HSL color space
   | 'path'         // Path data
+  | 'expression'   // DSL expression source
+  | 'waveform'     // Oscillator waveform selector
   | 'wobble'       // Wobble modulator config
   | 'spiral'       // Spiral modulator config
   | 'wave'         // Wave modulator config
@@ -349,6 +351,8 @@ export type SlotType =
   | 'Field<path>'       // Per-element path expressions
   | 'Signal<vec3>'      // 3D position/vector
   | 'Scalar:string'     // Compile-time constant string
+  | 'Scalar:expression' // DSL expression (compile-time)
+  | 'Scalar:waveform'   // Waveform selector (compile-time)
   | 'Special:cameraRef'  // Camera resource reference (3D)
 
   | 'Signal<PhaseSample>' // Phase machine output
@@ -978,6 +982,8 @@ export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc> = {
   'Signal<string>': { world: 'signal', domain: 'string', category: 'core', busEligible: false, semantics: 'config-enum' },
   'Signal<vec3>': { world: 'signal', domain: 'vec3', category: 'core', busEligible: true, semantics: 'position3d' },
   'Scalar:string': { world: 'scalar', domain: 'string', category: 'core', busEligible: false, semantics: 'config-enum' },
+  'Scalar:expression': { world: 'scalar', domain: 'expression', category: 'internal', busEligible: false, semantics: 'dsl-expression' },
+  'Scalar:waveform': { world: 'scalar', domain: 'waveform', category: 'internal', busEligible: false, semantics: 'waveform' },
   'Signal<PhaseSample>': { world: 'signal', domain: 'phase', category: 'core', busEligible: true, semantics: 'sample' },
   'Event<string>': { world: 'signal', domain: 'trigger', category: 'core', busEligible: true, semantics: 'string' },
   'Event<any>': { world: 'signal', domain: 'trigger', category: 'core', busEligible: true },

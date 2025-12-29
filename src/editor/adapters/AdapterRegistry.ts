@@ -211,6 +211,18 @@ export function initAdapterRegistry(): void {
     from: scalarDuration,
     to: scalarNumber,
   });
+
+  const scalarExpression = makeTypeDesc('scalar', 'expression');
+  const scalarWaveform = makeTypeDesc('scalar', 'waveform');
+
+  adapterRegistry.register({
+    id: 'ExpressionToWaveform:scalar',
+    label: 'Expression → Waveform (scalar)',
+    policy: 'EXPLICIT',
+    cost: COST_HEAVY,
+    from: scalarExpression,
+    to: scalarWaveform,
+  });
 }
 
 initAdapterRegistry();

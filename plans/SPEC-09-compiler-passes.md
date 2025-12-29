@@ -13,6 +13,17 @@ Individual compiler passes have specific gaps that prevent correct IR generation
 
 ---
 
+## Backlog Checklist
+
+- [ ] Remove placeholder signal emission in pass6 (per-block lowering).
+- [ ] Remove placeholder field emission in pass6 (per-block lowering).
+- [ ] Complete pass8 link resolution and fail on unresolved references.
+- [ ] Implement pass3 TimeRoot extraction + time slot allocation.
+- [ ] Fix dependency graph construction in pass4 (wire/bus/time edges).
+- [ ] Improve SCC analysis in pass5 with feedback validation.
+
+---
+
 ## Gap 1: Pass 6 - Placeholder Signal Emission (CRITICAL)
 
 ### Current State

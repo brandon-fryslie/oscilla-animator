@@ -277,10 +277,12 @@ describe("Signal Math Operations", () => {
 
       const typePhase: TypeDesc = { world: "signal", domain: "phase01" };
       const typeNum: TypeDesc = { world: "signal", domain: "number" };
+      const typeWaveform: TypeDesc = { world: "scalar", domain: "waveform" };
 
       const phaseSignal = builder.sigConst(0.5, typePhase);
       const amplitudeSignal = builder.sigConst(1, typeNum);
       const biasSignal = builder.sigConst(0, typeNum);
+      const waveformConstId = builder.allocConstId("sine");
 
       const slotPhase = builder.allocValueSlot(typePhase);
       const slotAmp = builder.allocValueSlot(typeNum);
@@ -291,6 +293,7 @@ describe("Signal Math Operations", () => {
 
       const inputs: ValueRefPacked[] = [
         { k: "sig", id: phaseSignal, slot: slotPhase },
+        { k: "scalarConst", constId: waveformConstId },
         { k: "sig", id: amplitudeSignal, slot: slotAmp },
         { k: "sig", id: biasSignal, slot: slotBias },
       ];
@@ -299,14 +302,13 @@ describe("Signal Math Operations", () => {
         blockIdx: 0 as any,
         blockType: "Oscillator",
         instanceId: "test-osc-sine",
-        inTypes: [typePhase, typeNum, typeNum],
+        inTypes: [typePhase, typeWaveform, typeNum, typeNum],
         outTypes: [typeNum],
         b: builder,
         seedConstId: 0,
       };
 
-      const config = { shape: "sine" };
-      const result = irDecl!.lower({ ctx, inputs, config });
+      const result = irDecl!.lower({ ctx, inputs });
 
       expect(result.outputs).toHaveLength(1);
       expect(result.outputs[0].k).toBe("sig");
@@ -323,10 +325,12 @@ describe("Signal Math Operations", () => {
 
       const typePhase: TypeDesc = { world: "signal", domain: "phase01" };
       const typeNum: TypeDesc = { world: "signal", domain: "number" };
+      const typeWaveform: TypeDesc = { world: "scalar", domain: "waveform" };
 
       const phaseSignal = builder.sigConst(0.25, typePhase);
       const amplitudeSignal = builder.sigConst(2, typeNum);
       const biasSignal = builder.sigConst(0.5, typeNum);
+      const waveformConstId = builder.allocConstId("triangle");
 
       const slotPhase = builder.allocValueSlot(typePhase);
       const slotAmp = builder.allocValueSlot(typeNum);
@@ -337,6 +341,7 @@ describe("Signal Math Operations", () => {
 
       const inputs: ValueRefPacked[] = [
         { k: "sig", id: phaseSignal, slot: slotPhase },
+        { k: "scalarConst", constId: waveformConstId },
         { k: "sig", id: amplitudeSignal, slot: slotAmp },
         { k: "sig", id: biasSignal, slot: slotBias },
       ];
@@ -345,14 +350,13 @@ describe("Signal Math Operations", () => {
         blockIdx: 0 as any,
         blockType: "Oscillator",
         instanceId: "test-osc-tri",
-        inTypes: [typePhase, typeNum, typeNum],
+        inTypes: [typePhase, typeWaveform, typeNum, typeNum],
         outTypes: [typeNum],
         b: builder,
         seedConstId: 0,
       };
 
-      const config = { shape: "triangle" };
-      const result = irDecl!.lower({ ctx, inputs, config });
+      const result = irDecl!.lower({ ctx, inputs });
 
       expect(result.outputs).toHaveLength(1);
       expect(result.outputs[0].k).toBe("sig");
@@ -365,10 +369,12 @@ describe("Signal Math Operations", () => {
 
       const typePhase: TypeDesc = { world: "signal", domain: "phase01" };
       const typeNum: TypeDesc = { world: "signal", domain: "number" };
+      const typeWaveform: TypeDesc = { world: "scalar", domain: "waveform" };
 
       const phaseSignal = builder.sigConst(0.75, typePhase);
       const amplitudeSignal = builder.sigConst(1, typeNum);
       const biasSignal = builder.sigConst(0, typeNum);
+      const waveformConstId = builder.allocConstId("saw");
 
       const slotPhase = builder.allocValueSlot(typePhase);
       const slotAmp = builder.allocValueSlot(typeNum);
@@ -379,6 +385,7 @@ describe("Signal Math Operations", () => {
 
       const inputs: ValueRefPacked[] = [
         { k: "sig", id: phaseSignal, slot: slotPhase },
+        { k: "scalarConst", constId: waveformConstId },
         { k: "sig", id: amplitudeSignal, slot: slotAmp },
         { k: "sig", id: biasSignal, slot: slotBias },
       ];
@@ -387,14 +394,13 @@ describe("Signal Math Operations", () => {
         blockIdx: 0 as any,
         blockType: "Oscillator",
         instanceId: "test-osc-saw",
-        inTypes: [typePhase, typeNum, typeNum],
+        inTypes: [typePhase, typeWaveform, typeNum, typeNum],
         outTypes: [typeNum],
         b: builder,
         seedConstId: 0,
       };
 
-      const config = { shape: "saw" };
-      const result = irDecl!.lower({ ctx, inputs, config });
+      const result = irDecl!.lower({ ctx, inputs });
 
       expect(result.outputs).toHaveLength(1);
       expect(result.outputs[0].k).toBe("sig");

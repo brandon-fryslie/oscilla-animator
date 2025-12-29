@@ -13,6 +13,15 @@ The debug system has gaps in IR-compatible debugging, signal probing, and visual
 
 ---
 
+## Backlog Checklist
+
+- [ ] Add IR-compatible DebugDisplay with debug probe step + registry.
+- [ ] Add signal history buffer + waveform visualization UI.
+- [ ] Add field visualization modes (heatmap/histogram/scatter/list).
+- [ ] Add runtime state inspector (values/state/events snapshot).
+
+---
+
 ## Gap 1: DebugDisplay Not IR-Compatible (HIGH)
 
 ### Current State

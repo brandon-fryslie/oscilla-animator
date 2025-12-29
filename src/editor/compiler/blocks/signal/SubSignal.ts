@@ -15,8 +15,9 @@ type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 // IR Lowering (Phase 3 Migration)
 // =============================================================================
 
-const lowerSubSignal: BlockLowerFn = ({ ctx, inputs }) => {
-  const [a, b] = inputs;
+const lowerSubSignal: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
+  const a = inputsById?.a ?? inputs[0];
+  const b = inputsById?.b ?? inputs[1];
 
   if (a.k !== 'sig' || b.k !== 'sig') {
     throw new Error('SubSignal requires signal inputs');

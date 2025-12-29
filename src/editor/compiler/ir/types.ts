@@ -33,6 +33,8 @@ export type TypeDomain =
   | "number"
   | "boolean"
   | "string"
+  | "expression"
+  | "waveform"
   | "vec2"
   | "vec3"
   | "vec4"

@@ -1,0 +1,7 @@
+Agent: project-evaluator | 2025-12-29-001500
+Scope: module/port-catalog-lowering
+Completion: 50% | Gaps: 5 steps incomplete | Test Quality: BLOCKED (type errors)
+Reused: 0 findings | Fresh: 100% of findings
+Cache updated: [port-catalog-migration.md] in eval-cache/
+Ambiguities: 4 found | Workflow: PAUSE (type errors block compilation)
+Critical blockers: 3 (TypeDomain gaps, outputsById missing, optional access unsafe)
