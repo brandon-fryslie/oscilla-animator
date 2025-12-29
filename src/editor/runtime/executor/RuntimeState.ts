@@ -266,7 +266,7 @@ export function createFrameCache(
  * @returns true if schedule contains slot operations
  */
 function scheduleHasSlotOperations(program: CompiledProgramIR): boolean {
-  if (!program.schedule || !program.schedule.steps) {
+  if (program.schedule === undefined || program.schedule.steps === undefined) {
     return false;
   }
 
@@ -313,7 +313,7 @@ function scheduleHasSlotOperations(program: CompiledProgramIR): boolean {
  * @throws Error if slotMeta required but missing
  */
 function extractSlotMeta(program: CompiledProgramIR): SlotMeta[] {
-  const compilerMeta = program.slotMeta && program.slotMeta.length > 0
+  const compilerMeta = program.slotMeta !== undefined && program.slotMeta.length > 0
     ? [...program.slotMeta]
     : [];
   const inferred = inferSlotMetaFromSchedule(program);
@@ -359,7 +359,7 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
   const objectSlots = new Set<number>(); // Slots that hold objects (buffers, handles)
 
   // Guard against incomplete program objects (used in some tests)
-  if (!program.schedule || !program.schedule.steps) {
+  if (program.schedule === undefined || program.schedule.steps === undefined) {
     return [];
   }
 
@@ -446,7 +446,7 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
         if (step.pathBatchListSlot !== undefined) {
           objectSlots.add(step.pathBatchListSlot);
         }
-        if (step.instance2dBatches) {
+        if (step.instance2dBatches !== undefined) {
           for (const batch of step.instance2dBatches) {
             objectSlots.add(batch.domainSlot);
             objectSlots.add(batch.posXYSlot);
@@ -455,7 +455,7 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
             numericSlots.add(batch.opacitySlot);
           }
         }
-        if (step.pathBatches) {
+        if (step.pathBatches !== undefined) {
           for (const batch of step.pathBatches) {
             objectSlots.add(batch.cmdsSlot);
             objectSlots.add(batch.paramsSlot);
@@ -502,7 +502,7 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
     }
   }
 
-  if (program.schedule.initialSlotValues) {
+  if (program.schedule.initialSlotValues !== undefined) {
     for (const slotStr of Object.keys(program.schedule.initialSlotValues)) {
       const slot = Number(slotStr);
       if (!Number.isNaN(slot)) {
@@ -576,7 +576,7 @@ export function createRuntimeState(
 
   // Initialize slots with compile-time values from schedule
   // These include batch descriptor lists for render assembly
-  if (program.schedule?.initialSlotValues) {
+  if (program.schedule?.initialSlotValues !== undefined) {
     for (const [slotStr, value] of Object.entries(program.schedule.initialSlotValues)) {
       const slot = Number(slotStr);
       values.write(slot, value);
@@ -585,7 +585,7 @@ export function createRuntimeState(
 
   // Create StateBuffer with real implementation
   // Guard against incomplete program objects (used in some tests)
-  const stateLayout = program.stateLayout || {
+  const stateLayout = program.stateLayout ?? {
     cells: [],
     f64Size: 0,
     f32Size: 0,
@@ -594,7 +594,7 @@ export function createRuntimeState(
   const state = createStateBuffer(stateLayout);
 
   // Initialize state cells with values from const pool
-  const constPool = program.constants || {
+  const constPool = program.constants ?? {
     json: [],
     f64: new Float64Array([]),
     f32: new Float32Array([]),
@@ -617,15 +617,15 @@ export function createRuntimeState(
   const meshStore = new MeshStore();
 
   // Initialize camera and mesh tables if present in program
-  if (program.cameras) {
+  if (program.cameras !== undefined) {
     cameraStore.setCameraTable(program.cameras);
   }
-  if (program.meshes) {
+  if (program.meshes !== undefined) {
     meshStore.setMeshTable(program.meshes);
   }
 
   // Default viewport (1920x1080 @ 1x DPR)
-  const defaultViewport: ViewportInfo = viewport || {
+  const defaultViewport: ViewportInfo = viewport ?? {
     width: 1920,
     height: 1080,
     dpr: 1,

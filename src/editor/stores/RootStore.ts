@@ -169,7 +169,7 @@ export class RootStore {
         const blockIdToLabel = new Map<string, string>();
         for (const blockId of event.createdBlockIds) {
           const block = this.patchStore.blocks.find(b => b.id === blockId);
-          if (block) {
+          if (block !== null && block !== undefined) {
             blockIdToLabel.set(blockId, block.label);
           }
         }
@@ -228,17 +228,17 @@ export class RootStore {
       this.patchStore.connections = patch.connections.map(c => ({ ...c }));
 
       // Sync buses
-      if (patch.buses) {
+      if (patch.buses !== null && patch.buses !== undefined && patch.buses.length > 0) {
         this.busStore.buses = patch.buses.map(b => ({ ...b }));
       }
 
       // Sync publishers
-      if (patch.publishers) {
+      if (patch.publishers !== null && patch.publishers !== undefined && patch.publishers.length > 0) {
         this.busStore.publishers = patch.publishers.map(p => ({ ...p }));
       }
 
       // Sync listeners
-      if (patch.listeners) {
+      if (patch.listeners !== null && patch.listeners !== undefined && patch.listeners.length > 0) {
         this.busStore.listeners = patch.listeners.map(l => ({ ...l }));
       }
 

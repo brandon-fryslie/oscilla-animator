@@ -518,9 +518,9 @@ export function executeInstances3DProject(
     buffer.g[i] = inst.g;
     buffer.b[i] = inst.b;
     buffer.a[i] = inst.a;
-    if (buffer.s) buffer.s[i] = inst.size;
-    if (buffer.z) buffer.z[i] = inst.z;
-    if (buffer.alive) buffer.alive[i] = inst.alive;
+    if (buffer.s !== undefined) buffer.s[i] = inst.size;
+    if (buffer.z !== undefined) buffer.z[i] = inst.z;
+    if (buffer.alive !== undefined) buffer.alive[i] = inst.alive;
   }
 
   // 9. Write output to slot

@@ -318,7 +318,7 @@ export function executeRenderAssemble(
 
   // 1. Process Instance2D batches
   // Prefer embedded config (new path), fallback to slots (legacy/deprecated)
-  if (step.instance2dBatches && step.instance2dBatches.length > 0) {
+  if (step.instance2dBatches !== undefined && step.instance2dBatches.length > 0) {
     for (const batch of step.instance2dBatches) {
       passes.push(buildInstancesPass(batch, runtime));
     }
@@ -340,7 +340,7 @@ export function executeRenderAssemble(
 
   // 2. Process Path batches
   // Prefer embedded config (new path), fallback to slots (legacy/deprecated)
-  if (step.pathBatches && step.pathBatches.length > 0) {
+  if (step.pathBatches !== undefined && step.pathBatches.length > 0) {
     for (const batch of step.pathBatches) {
       passes.push(buildPathsPass(batch, runtime));
     }

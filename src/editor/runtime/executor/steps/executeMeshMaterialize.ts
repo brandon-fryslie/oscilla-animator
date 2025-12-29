@@ -94,10 +94,10 @@ export function executeMeshMaterialize(
   let bytesWritten = 0;
   if (!cacheHit) {
     bytesWritten += buffer.positions.byteLength;
-    if (buffer.normals) {
+    if (buffer.normals !== undefined) {
       bytesWritten += buffer.normals.byteLength;
     }
-    if (buffer.uvs) {
+    if (buffer.uvs !== undefined) {
       bytesWritten += buffer.uvs.byteLength;
     }
     bytesWritten += buffer.indices.byteLength;

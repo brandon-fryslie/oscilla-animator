@@ -125,7 +125,7 @@ function resolvePathExprFromField(
 ): PathExpr | PathExpr[] {
   const fieldId = parseFieldExprId(exprId);
   const fieldNode = program.fields.nodes[fieldId];
-  if (!fieldNode) {
+  if (fieldNode === undefined) {
     throw new Error(`executeMaterializePath: missing field expr ${exprId}`);
   }
 
@@ -239,7 +239,7 @@ export function executeMaterializePath(
 
   if (isPathExpr(pathValue)) {
     // Single path - replicate for all instances
-    paths = new Array(instanceCount).fill(pathValue);
+    paths = new Array<PathExpr>(instanceCount).fill(pathValue);
   } else if (isPathExprArray(pathValue)) {
     // Array of paths
     if (pathValue.length !== instanceCount) {
@@ -252,7 +252,7 @@ export function executeMaterializePath(
   } else if (isFieldExprHandle(pathValue)) {
     const resolved = resolvePathExprFromField(program, pathValue.exprId);
     if (isPathExpr(resolved)) {
-      paths = new Array(instanceCount).fill(resolved);
+      paths = new Array<PathExpr>(instanceCount).fill(resolved);
     } else if (isPathExprArray(resolved)) {
       if (resolved.length !== instanceCount) {
         throw new Error(

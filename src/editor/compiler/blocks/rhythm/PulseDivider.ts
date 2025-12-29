@@ -9,7 +9,6 @@ import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
 import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
-import type { TypeDesc } from '../../ir/types';
 import { isDefined } from '../../../types/helpers';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;

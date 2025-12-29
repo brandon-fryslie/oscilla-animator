@@ -7,9 +7,14 @@
  * Element IDs are stable across frames and recompiles for the same (n, seed) pair.
  */
 
-import type { BlockCompiler } from '../../types';
+import type { BlockCompiler, Artifact } from '../../types';
 import { createSimpleDomain } from '../../unified/Domain';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+
+interface DomainNParams {
+  n?: number;
+  seed?: number;
+}
 
 // =============================================================================
 // IR Lowering (Phase 3 Migration)
@@ -19,7 +24,7 @@ const lowerDomainN: BlockLowerFn = ({ ctx, inputs }) => {
   // Get n from input port (if connected) or default to 1
   let n = 1;
 
-  if (inputs[0]) {
+  if (inputs[0] !== undefined) {
     if (inputs[0].k === 'scalarConst') {
       // Read value from const pool using the existing constId
       const constPool = ctx.b.getConstPool();
@@ -87,16 +92,17 @@ export const DomainNBlock: BlockCompiler = {
 
   compile({ id, inputs, params }) {
     // Helper to extract numeric value from artifact with default fallback
-    const extractNumber = (artifact: any, defaultValue: number): number => {
-      if (!artifact) return defaultValue;
+    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:number') return Number(artifact.value);
       // Generic fallback for other artifact types
       return typeof artifact.value === 'function' ? Number(artifact.value(0, {})) : Number(artifact.value);
     };
 
     // Support both new (inputs) and old (params) parameter systems
-    const n = extractNumber(inputs.n, (params as any)?.n ?? 100);
-    const seed = extractNumber(inputs.seed, (params as any)?.seed ?? 0);
+    const paramsObj = params as DomainNParams | undefined;
+    const n = extractNumber(inputs.n, paramsObj?.n ?? 100);
+    const seed = extractNumber(inputs.seed, paramsObj?.seed ?? 0);
 
     // Create a stable domain ID based on block id, n, and seed
     const domainId = `domain-${id}-${n}-${seed}`;

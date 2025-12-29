@@ -9,7 +9,6 @@ import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
 import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
-import type { TypeDesc } from '../../ir/types';
 import { OSCILLATOR_IR_INPUTS, OSCILLATOR_IR_OUTPUTS } from '../../../blocks/oscillatorSpec';
 import { OpCode } from '../../ir/opcodes';
 

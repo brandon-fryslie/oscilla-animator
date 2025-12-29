@@ -1220,9 +1220,8 @@ const DefaultSourceControl = observer(function DefaultSourceControl({
     if (typeof ds.value === 'string') return ds.value;
     if (ds.value === null || ds.value === undefined) return '';
     if (typeof ds.value === 'object') return JSON.stringify(ds.value);
-    return String(ds.value);
+    return String(ds.value as string | number | boolean);
   })();
-                    '';
   return (
     <input
       type="text"

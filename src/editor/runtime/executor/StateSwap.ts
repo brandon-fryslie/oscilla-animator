@@ -175,7 +175,7 @@ function initializeStateCell(
     // Lookup value in const pool
     const constEntry = constPool.constIndex[cell.initialConstId];
 
-    if (constEntry) {
+    if (constEntry !== undefined) {
       // Read value from appropriate const pool storage
       switch (constEntry.k) {
         case "f64":
@@ -264,7 +264,7 @@ export function preserveState(
   for (const [stableKey, newCell] of newKeyMap.entries()) {
     const oldCell = oldKeyMap.get(stableKey);
 
-    if (oldCell && layoutMatches(oldCell, newCell)) {
+    if (oldCell !== undefined && layoutMatches(oldCell, newCell)) {
       // Matching cell - copy from old to new
       copyStateCells(oldRuntime.state, newRuntime.state, oldCell, newCell);
     } else {

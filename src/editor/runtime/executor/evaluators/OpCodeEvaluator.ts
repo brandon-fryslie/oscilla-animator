@@ -103,7 +103,7 @@ export function evaluateOp(
     case OpCode.Const: {
       // Constants are read from the constant pool.
       // The node.compilerTag holds the constId.
-      if (!program || !program.constants) {
+      if (program === undefined || program.constants === undefined) {
         console.warn("OpCode.Const: no program or constant pool available");
         return [0];
       }
@@ -113,7 +113,7 @@ export function evaluateOp(
 
       // Use constIndex to find the storage location
       if (
-        constPool.constIndex &&
+        constPool.constIndex !== undefined &&
         constId < constPool.constIndex.length
       ) {
         const entry = constPool.constIndex[constId];

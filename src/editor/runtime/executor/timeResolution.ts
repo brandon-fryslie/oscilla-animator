@@ -118,7 +118,7 @@ export function resolveTime(
         tModelMs = (tAbsMs % periodMs + periodMs) % periodMs;
 
         // Detect wrap using actual previous tModelMs (if available)
-        if (timeState && timeState.prevTModelMs !== null) {
+        if (timeState !== undefined && timeState.prevTModelMs !== null) {
           // Wrap occurred if current tModelMs < previous tModelMs
           // This handles both forward playback wraps and scrubbing backwards across wrap boundary
           if (tModelMs < timeState.prevTModelMs) {
@@ -127,7 +127,7 @@ export function resolveTime(
         }
 
         // Update time state for next frame
-        if (timeState) {
+        if (timeState !== undefined) {
           timeState.prevTModelMs = tModelMs;
         }
       } else {
@@ -139,7 +139,7 @@ export function resolveTime(
         tModelMs = isReverse ? periodMs - tInCycle : tInCycle;
 
         // Detect bounce using actual previous cycle count (derived from prevTModelMs)
-        if (timeState && timeState.prevTModelMs !== null) {
+        if (timeState !== undefined && timeState.prevTModelMs !== null) {
           // Derive previous cycle count from prevTModelMs and compare
           // For ping-pong, wrap occurs when direction changes
           const prevCycleCount = Math.floor((tAbsMs - (tModelMs - timeState.prevTModelMs)) / periodMs);
@@ -149,7 +149,7 @@ export function resolveTime(
         }
 
         // Update time state for next frame
-        if (timeState) {
+        if (timeState !== undefined) {
           timeState.prevTModelMs = tModelMs;
         }
       }
