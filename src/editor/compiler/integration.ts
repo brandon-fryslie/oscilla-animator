@@ -872,8 +872,8 @@ export function createCompilerService(store: RootStore): CompilerService {
         }
 
         const seed: Seed = store.uiStore.settings.seed;
-        const useIR = store.uiStore.settings.useNewCompiler;
-        const result = compilePatch(patch, registry, seed, ctx, { emitIR: useIR });
+        // Always emit IR - the new compiler is the only compiler for debugging
+        const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
 
         const durationMs = performance.now() - startTime;
 

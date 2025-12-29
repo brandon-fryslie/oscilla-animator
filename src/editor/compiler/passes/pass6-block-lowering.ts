@@ -253,8 +253,8 @@ function lowerBlockInstance(
     // Use registered lowering function
     try {
       // Collect input ValueRefs (need to resolve from wires/buses)
-      // For now, we'll collect placeholder inputs since wires aren't resolved yet
-      const inputs: ValueRefPacked[] = block.inputs.map((inputPort) => {
+      // For now, we'll collect inputs from compiled port map
+      const inputs: ValueRefPacked[] = block.inputs.map((inputPort, portIndex) => {
         const portKey = `${block.id}:${inputPort.id}`;
         const artifact = compiledPortMap.get(portKey);
 
@@ -265,12 +265,33 @@ function lowerBlockInstance(
           }
         }
 
-        // Default placeholder for missing input
-        const type: TypeDesc = { world: "signal", domain: "number" };
-        const sigId = builder.sigConst(0, type);
-        const slot = builder.allocValueSlot(type);
-        builder.registerSigSlot(sigId, slot);
-        return { k: "sig", id: sigId, slot } as ValueRefPacked;
+        // Check if the port has a registered default source
+        const portDecl = blockType.inputs[portIndex];
+        if (portDecl?.defaultSource !== undefined) {
+          // Port has a default source - create a constant from it
+          const type = portDecl.type;
+          const value = portDecl.defaultSource.value;
+          if (type.world === 'signal') {
+            // Signal constants must be numbers
+            const numValue = typeof value === 'number' ? value : Number(value) || 0;
+            const sigId = builder.sigConst(numValue, type);
+            const slot = builder.allocValueSlot(type);
+            builder.registerSigSlot(sigId, slot);
+            return { k: "sig", id: sigId, slot } as ValueRefPacked;
+          } else if (type.world === 'field') {
+            const fieldId = builder.fieldConst(value as number, type);
+            const slot = builder.allocValueSlot(type);
+            builder.registerFieldSlot(fieldId, slot);
+            return { k: "field", id: fieldId, slot } as ValueRefPacked;
+          }
+        }
+
+        // P0.5: No silent fallback - missing inputs without defaultSource are compile errors
+        throw new Error(
+          `Missing input "${inputPort.id}" for block "${block.type}" (${block.id}). ` +
+          `No wire, bus listener, or defaultSource provides a value. ` +
+          `Fix: Connect a wire, add a bus listener, or define a defaultSource for this port.`
+        );
       });
 
       // Build lowering context

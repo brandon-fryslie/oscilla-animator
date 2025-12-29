@@ -363,3 +363,9 @@ export type {
 } from "./patches";
 
 export { isBlockEval, isBusValue } from "./patches";
+
+// ============================================================================
+// Pass Results (for debug UI)
+// ============================================================================
+
+export type { LinkedGraphIR } from "../passes/pass8-link-resolution";

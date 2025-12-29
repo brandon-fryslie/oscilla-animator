@@ -87,7 +87,6 @@ export class UIStateStore {
     warnBeforeDisconnect: false, // Confirmation before removing connections
     filterByLane: false, // Filter library by lane compatibility
     filterByConnection: false, // Filter library by connection context
-    useNewCompiler: false, // Use IR-based compiler instead of legacy closure-based compiler
   };
 
   // Compiled program for preview (cached)
@@ -133,7 +132,6 @@ export class UIStateStore {
       setWarnBeforeDisconnect: action,
       setFilterByLane: action,
       setFilterByConnection: action,
-      setUseNewCompiler: action,
       setPreviewedDefinition: action,
       previewDefinition: action,
       setPlaying: action,
@@ -422,10 +420,6 @@ export class UIStateStore {
 
   setFilterByConnection(enabled: boolean): void {
     this.settings.filterByConnection = enabled;
-  }
-
-  setUseNewCompiler(enabled: boolean): void {
-    this.settings.useNewCompiler = enabled;
   }
 
   // =============================================================================

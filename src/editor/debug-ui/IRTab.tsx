@@ -386,7 +386,7 @@ export const IRTab = observer(function IRTab() {
                       <div className="ir-tab-bus-header">
                         <span className="ir-tab-bus-id">{bus.id}</span>
                         <span className="ir-tab-bus-name">{bus.name}</span>
-                        <span className="ir-tab-bus-type">{bus.valueType}</span>
+                        <span className="ir-tab-bus-type">{`${bus.type.world}:${bus.type.domain}`}</span>
                       </div>
                       {busPubs.length > 0 && (
                         <div className="ir-tab-bus-pubs">

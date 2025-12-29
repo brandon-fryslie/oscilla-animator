@@ -194,8 +194,8 @@ export interface InputSlot {
  */
 export type FieldExprIR =
   | { kind: 'const'; constId: number; type: TypeDesc }
-  | { kind: 'map'; fn: FnRef; src: FieldExprId; type: TypeDesc }
-  | { kind: 'zip'; fn: FnRef; a: FieldExprId; b: FieldExprId; type: TypeDesc }
+  | { kind: 'map'; fn: FnRef; src: FieldExprId; type: TypeDesc; params?: Record<string, unknown> }
+  | { kind: 'zip'; fn: FnRef; a: FieldExprId; b: FieldExprId; type: TypeDesc; params?: Record<string, unknown> }
   | { kind: 'select'; cond: FieldExprId; t: FieldExprId; f: FieldExprId; type: TypeDesc }
   | { kind: 'transform'; src: FieldExprId; chain: TransformChainId; type: TypeDesc }
   | { kind: 'sampleSignal'; signalSlot: SigExprId; domainId: number; type: TypeDesc }

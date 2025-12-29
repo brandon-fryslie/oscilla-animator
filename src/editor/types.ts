@@ -868,7 +868,6 @@ export interface Patch {
     warnBeforeDisconnect?: boolean;
     filterByLane?: boolean;
     filterByConnection?: boolean;
-    useNewCompiler?: boolean;
   };
 
   /** Composite definitions for this patch */

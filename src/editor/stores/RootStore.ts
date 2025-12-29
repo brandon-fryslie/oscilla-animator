@@ -89,7 +89,6 @@ export class RootStore {
         warnBeforeDisconnect: true,
         filterByLane: false,
         filterByConnection: false,
-        useNewCompiler: false,
       },
     };
     this.kernel = new Kernel(initialPatch);
@@ -332,7 +331,6 @@ export class RootStore {
       warnBeforeDisconnect: patch.settings.warnBeforeDisconnect ?? true,
       filterByLane: patch.settings.filterByLane ?? false,
       filterByConnection: patch.settings.filterByConnection ?? false,
-      useNewCompiler: patch.settings.useNewCompiler ?? false,
     };
 
     this.busStore.buses = patch.buses.map((bus) => ({ ...bus }));

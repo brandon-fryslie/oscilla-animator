@@ -117,22 +117,26 @@ export function evalFieldHandle(
 
     case 'map':
       // Unary operation on a field
+      // Merge fn.params and node.params, with node.params taking precedence
       handle = {
         kind: 'Op',
         op: fnRefToFieldOp(node.fn),
         args: [node.src],
         type: node.type,
+        params: { ...node.fn.params, ...node.params },
       };
       break;
 
     case 'zip':
       // Binary operation on two fields
+      // Merge fn.params and node.params, with node.params taking precedence
       handle = {
         kind: 'Zip',
         op: fnRefToFieldZipOp(node.fn),
         a: node.a,
         b: node.b,
         type: node.type,
+        params: { ...node.fn.params, ...node.params },
       };
       break;
 

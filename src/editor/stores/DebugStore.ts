@@ -24,6 +24,7 @@ import {
   getNumericValue,
 } from '../debug/types';
 import type { CompiledProgramIR } from '../compiler/ir';
+import type { CompileError } from '../compiler/types';
 
 // =============================================================================
 // Store Shape Types (for accessing root store)

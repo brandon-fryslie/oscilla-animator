@@ -341,10 +341,6 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleToggleCompiler = () => {
-    store.uiStore.setUseNewCompiler(!store.uiStore.settings.useNewCompiler);
-  };
-
   /**
    * Save current patch to a JSON file (download to disk).
    */
@@ -589,18 +585,6 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
 
         {/* Startup Macro Selector */}
         <StartupMacroDropdown />
-
-        {/* IR Compiler Toggle */}
-        <button
-          className={`toolbar-dropdown-trigger compiler-toggle ${store.uiStore.settings.useNewCompiler ? 'active' : ''}`}
-          onClick={handleToggleCompiler}
-          title={`Compiler: ${store.uiStore.settings.useNewCompiler ? 'IR (New)' : 'Legacy'}`}
-        >
-          <span className="dropdown-label">IR</span>
-          <span className={`compiler-status ${store.uiStore.settings.useNewCompiler ? 'on' : 'off'}`}>
-            {store.uiStore.settings.useNewCompiler ? 'On' : 'Off'}
-          </span>
-        </button>
 
       </div>
 
