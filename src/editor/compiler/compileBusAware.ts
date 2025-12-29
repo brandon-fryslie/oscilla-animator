@@ -856,7 +856,8 @@ function attachIR(
   return {
     ...result,
     ir,
-    compiledIR,
+    programIR: compiledIR,  // Primary field for IR runtime
+    compiledIR,             // Legacy alias
     debugIndex,
     // Attach SignalExpr data if extraction succeeded
     ...(extracted && {
