@@ -241,6 +241,9 @@ export const RenderInstances2DBlock: BlockCompiler = {
 
     const colorField: Field<unknown> = colorArtifact.value;
 
+    // Default runtime context for compile-time signal evaluation
+    const defaultCtx: RuntimeCtx = { viewport: { w: 1920, h: 1080, dpr: 1 } };
+
     // Helper to extract numeric value from Scalar or Signal artifacts
     // Signal artifacts have .value as a function, Scalar artifacts have .value as a number
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
@@ -248,10 +251,10 @@ export const RenderInstances2DBlock: BlockCompiler = {
       if (artifact.kind === 'Scalar:number') return Number(artifact.value);
       if (artifact.kind === 'Signal:number') {
         // Signal artifacts have .value as a function - call with t=0 for compile-time value
-        return Number(artifact.value(0, {}));
+        return Number(artifact.value(0, defaultCtx));
       }
       // Generic fallback for other artifact types that might have callable or direct values
-      return typeof artifact.value === 'function' ? Number((artifact.value as (t: number, ctx: unknown) => unknown)(0, {})) : Number(artifact.value);
+      return typeof artifact.value === 'function' ? Number((artifact.value as (t: number, ctx: RuntimeCtx) => unknown)(0, defaultCtx)) : Number(artifact.value);
     };
 
     // Helper to extract boolean from Scalar or Signal artifacts

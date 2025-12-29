@@ -5,7 +5,7 @@
  * Elements are laid out in rows and columns from the origin point.
  */
 
-import type { BlockCompiler, Vec2, Artifact } from '../../types';
+import type { BlockCompiler, Vec2, Artifact, RuntimeCtx } from '../../types';
 import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
@@ -161,15 +161,18 @@ export const PositionMapGridBlock: BlockCompiler = {
 
     const domain = domainArtifact.value;
 
+    // Default runtime context for compile-time signal evaluation
+    const defaultCtx: RuntimeCtx = { viewport: { w: 1920, h: 1080, dpr: 1 } };
+
     // Helper to extract numeric value from artifact with default fallback
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
       if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:number') return Number(artifact.value);
       if (artifact.kind === 'Signal:number') {
-        return Number(artifact.value(0, {}));
+        return Number(artifact.value(0, defaultCtx));
       }
       // For other types, try to convert to number (fallback for any other artifact type)
-      return typeof artifact.value === 'function' ? Number((artifact.value as (t: number, ctx: unknown) => unknown)(0, {})) : Number(artifact.value);
+      return typeof artifact.value === 'function' ? Number((artifact.value as (t: number, ctx: RuntimeCtx) => unknown)(0, defaultCtx)) : Number(artifact.value);
     };
 
     // Helper to extract string value from artifact with default fallback

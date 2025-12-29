@@ -54,8 +54,8 @@ describe('DebugUIStore', () => {
     });
 
     it('subscribes to RuntimeHealthSnapshot events', () => {
-      // Use bound method to avoid unbound-method error
-      expect(mockRootStore.events.on.bind(mockRootStore.events)).toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockRootStore.events.on).toHaveBeenCalledWith(
         'RuntimeHealthSnapshot',
         expect.any(Function)
       );
