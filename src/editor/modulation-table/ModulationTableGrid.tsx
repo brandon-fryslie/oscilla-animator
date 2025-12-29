@@ -34,7 +34,7 @@ interface ModulationTableGridProps {
  */
 function renderCellContent(cell: TableCell): React.ReactElement {
   if (cell.status === 'bound') {
-    if (cell.lensChain && cell.lensChain.length > 0) {
+    if (cell.lensChain != null && cell.lensChain.length > 0) {
       const lensText = cell.lensChain.map(l => l.type).join(' → ');
       return (
         <span
@@ -95,6 +95,16 @@ function getCellBackgroundColor(cell: TableCell): string {
 }
 
 /**
+ * Grid row data type with proper typing
+ */
+interface GridRowData {
+  id: RowKey;
+  rowLabel: string;
+  portType: string;
+  [busId: string]: unknown;
+}
+
+/**
  * Single block table - renders a DataGrid for one block's ports.
  */
 const BlockTable = observer(({
@@ -135,7 +145,7 @@ const BlockTable = observer(({
   // Build grid rows
   const gridRows = useMemo(() => {
     return blockRows.map(row => {
-      const rowData: Record<string, unknown> = {
+      const rowData: GridRowData = {
         id: row.key,
         rowLabel: row.label,
         portType: row.type.domain,
@@ -165,13 +175,14 @@ const BlockTable = observer(({
       sortable: false,
       disableColumnMenu: true,
       renderCell: (params: GridRenderCellParams) => {
-        const rowKey = params.row.id as RowKey;
+        const rowData = params.row as GridRowData;
+        const rowKey = rowData.id;
         const isFocused = focusedCell?.rowKey === rowKey;
 
         return (
           <div
             onClick={() => onRowClick(rowKey)}
-            title={`${params.value} (${params.row.portType})`}
+            title={`${params.value as string} (${rowData.portType})`}
             style={{
               width: '100%',
               height: '100%',
@@ -245,16 +256,17 @@ const BlockTable = observer(({
                   color: '#e5e5e5',
                 }}
               >
-                {params.colDef.headerName}
+                {params.colDef.headerName ?? ''}
               </div>
             </Tooltip>
           );
         },
         renderCell: (params: GridRenderCellParams) => {
           const cell = params.value as TableCell | undefined;
-          if (!cell) return null;
+          if (cell == null) return null;
 
-          const rowKey = params.row.id as RowKey;
+          const rowData = params.row as GridRowData;
+          const rowKey = rowData.id;
           const isFocused = focusedCell?.rowKey === rowKey && focusedCell?.busId === column.busId;
           const bgColor = getCellBackgroundColor(cell);
 

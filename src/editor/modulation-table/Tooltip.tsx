@@ -28,8 +28,8 @@ export function Tooltip({
   placement = 'top',
   delay = [300, 0],
   disabled = false,
-}: TooltipProps) {
-  if (disabled || !content) {
+}: TooltipProps): ReactElement {
+  if (disabled || content == null || content === '') {
     return children;
   }
 
@@ -57,7 +57,7 @@ export function formatCellTooltip(
   costClass?: string
 ): string {
   if (status === 'bound') {
-    if (lensChain && lensChain.length > 0) {
+    if (lensChain != null && lensChain.length > 0) {
       return `Bound via: ${lensChain.map((l) => l.type).join(' → ')}`;
     }
     return 'Direct binding';
