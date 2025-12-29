@@ -146,7 +146,6 @@ export class PatchStore {
   private isTimeRootBlock(blockType: string): boolean {
     return (
       blockType === 'FiniteTimeRoot' ||
-      blockType === 'CycleTimeRoot' ||
       blockType === 'InfiniteTimeRoot'
     );
   }

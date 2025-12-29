@@ -212,7 +212,7 @@ describe('Diagnostic Emission', () => {
       // With TimeRoot present, should correctly infer cyclic time
       expect(event.programMeta?.timeModelKind).toBe('cyclic');
       // timeRootKind should match the block type
-      expect(event.programMeta?.timeRootKind).toBe('CycleTimeRoot');
+      expect(event.programMeta?.timeRootKind).toBe('InfiniteTimeRoot');
     });
   });
 });

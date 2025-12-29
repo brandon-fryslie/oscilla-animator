@@ -231,7 +231,7 @@ function generateBusDiagnostics(
   for (const block of patch.blocks) {
     const blockId = block.id;
     // Skip TimeRoot blocks - they auto-publish to buses
-    if (block.type === 'FiniteTimeRoot' || block.type === 'CycleTimeRoot' || block.type === 'InfiniteTimeRoot') {
+    if (block.type === 'FiniteTimeRoot' || block.type === 'InfiniteTimeRoot') {
       continue;
     }
 
@@ -1028,10 +1028,9 @@ export function createCompilerService(store: RootStore): CompilerService {
 /**
  * Infer TimeRootKind from the compiled patch.
  */
-function inferTimeRootKind(patch: CompilerPatch): 'FiniteTimeRoot' | 'CycleTimeRoot' | 'InfiniteTimeRoot' | 'none' {
+function inferTimeRootKind(patch: CompilerPatch): 'FiniteTimeRoot' | 'InfiniteTimeRoot' | 'InfiniteTimeRoot' | 'none' {
   for (const block of patch.blocks.values()) {
     if (block.type === 'FiniteTimeRoot') return 'FiniteTimeRoot';
-    if (block.type === 'CycleTimeRoot') return 'CycleTimeRoot';
     if (block.type === 'InfiniteTimeRoot') return 'InfiniteTimeRoot';
   }
   return 'none';

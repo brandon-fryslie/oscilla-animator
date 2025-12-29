@@ -79,8 +79,8 @@ describe("pass3TimeTopology", () => {
       expect(timeResolved.timeRootIndex).toBe(0);
     });
 
-    it("discovers CycleTimeRoot block", () => {
-      const patch = createPatchWithTimeRoot("CycleTimeRoot");
+    it("discovers InfiniteTimeRoot block", () => {
+      const patch = createPatchWithTimeRoot("InfiniteTimeRoot");
       const timeResolved = pass3TimeTopology(patch);
 
       expect(timeResolved.timeModel.kind).toBe("cyclic");
@@ -106,7 +106,7 @@ describe("pass3TimeTopology", () => {
 
     it("throws MultipleTimeRoots error when multiple TimeRoot blocks exist", () => {
       const timeRoot1 = createBlock("tr1", "FiniteTimeRoot");
-      const timeRoot2 = createBlock("tr2", "CycleTimeRoot");
+      const timeRoot2 = createBlock("tr2", "InfiniteTimeRoot");
       const blockIndexMap = new Map<string, BlockIndex>();
       blockIndexMap.set(timeRoot1.id, 0 as BlockIndex);
       blockIndexMap.set(timeRoot2.id, 1 as BlockIndex);
@@ -123,7 +123,7 @@ describe("pass3TimeTopology", () => {
 
     it("includes TimeRoot IDs in MultipleTimeRoots error", () => {
       const timeRoot1 = createBlock("timeroot-alpha", "FiniteTimeRoot");
-      const timeRoot2 = createBlock("timeroot-beta", "CycleTimeRoot");
+      const timeRoot2 = createBlock("timeroot-beta", "InfiniteTimeRoot");
       const blockIndexMap = new Map<string, BlockIndex>();
       blockIndexMap.set(timeRoot1.id, 0 as BlockIndex);
       blockIndexMap.set(timeRoot2.id, 1 as BlockIndex);
@@ -163,8 +163,8 @@ describe("pass3TimeTopology", () => {
   });
 
   describe("TimeModel Extraction - Cyclic", () => {
-    it("extracts periodMs and mode from CycleTimeRoot params", () => {
-      const patch = createPatchWithTimeRoot("CycleTimeRoot", {
+    it("extracts periodMs and mode from InfiniteTimeRoot params", () => {
+      const patch = createPatchWithTimeRoot("InfiniteTimeRoot", {
         periodMs: 4000,
         mode: "pingpong",
       });

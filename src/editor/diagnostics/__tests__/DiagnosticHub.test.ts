@@ -13,11 +13,11 @@ import type { Block } from '../../types';
 
 /**
  * Create a minimal mock PatchStore for testing.
- * By default includes a CycleTimeRoot to avoid "Missing TimeRoot" authoring diagnostic.
+ * By default includes a InfiniteTimeRoot to avoid "Missing TimeRoot" authoring diagnostic.
  * Pass empty array explicitly to test missing TimeRoot scenarios.
  */
 function createMockPatchStore(
-  blocks: Block[] = [{ id: 'time-root', type: 'CycleTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' }]
+  blocks: Block[] = [{ id: 'time-root', type: 'InfiniteTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' }]
 ): PatchStore {
   // Create a mock that provides the full root structure needed by storeToPatchDocument
   const mockRoot = {
@@ -96,9 +96,9 @@ describe('DiagnosticHub', () => {
     });
 
     it('should not create missing TimeRoot diagnostic when TimeRoot exists', () => {
-      // Create a patchStore with a CycleTimeRoot block
+      // Create a patchStore with a InfiniteTimeRoot block
       patchStore = createMockPatchStore([
-        { id: 'block-1', type: 'CycleTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' },
+        { id: 'block-1', type: 'InfiniteTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' },
       ]);
       hub = new DiagnosticHub(events, patchStore);
 

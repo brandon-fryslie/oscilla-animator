@@ -13,7 +13,7 @@ import { describe, it, expect } from 'vitest';
 import type { CompileCtx, RuntimeCtx, GeometryCache } from '../../../types';
 import {
   FiniteTimeRootBlock,
-  CycleTimeRootBlock,
+  InfiniteTimeRootBlock,
   InfiniteTimeRootBlock,
   extractTimeRootAutoPublications,
 } from '../TimeRoot';
@@ -227,14 +227,14 @@ describe('TimeRoot WP1 Features', () => {
 
   describe('Auto-publications', () => {
     it('InfiniteTimeRoot returns correct auto-publications', () => {
-      const result = CycleTimeRootBlock.compile({
+      const result = InfiniteTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000 },
         inputs: {},
         ctx: mockCompileCtx,
       });
 
-      const autoPubs = extractTimeRootAutoPublications('CycleTimeRoot', result);
+      const autoPubs = extractTimeRootAutoPublications('InfiniteTimeRoot', result);
 
       expect(autoPubs).toEqual([
         { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
@@ -253,7 +253,7 @@ describe('TimeRoot WP1 Features', () => {
 
       const autoPubs = extractTimeRootAutoPublications('FiniteTimeRoot', result);
 
-      // FiniteTimeRoot does NOT publish to phaseA - only CycleTimeRoot owns that bus
+      // FiniteTimeRoot does NOT publish to phaseA - only InfiniteTimeRoot owns that bus
       expect(autoPubs).toEqual([
         { busName: 'progress', artifactKey: 'progress', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'end', sortKey: 0 },
@@ -271,7 +271,7 @@ describe('TimeRoot WP1 Features', () => {
 
       const autoPubs = extractTimeRootAutoPublications('InfiniteTimeRoot', result);
 
-      // InfiniteTimeRoot does NOT publish to phaseA - only CycleTimeRoot owns that bus
+      // InfiniteTimeRoot does NOT publish to phaseA - only InfiniteTimeRoot owns that bus
       expect(autoPubs).toEqual([
         { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
@@ -279,7 +279,7 @@ describe('TimeRoot WP1 Features', () => {
     });
 
     it('all auto-publications have sortKey=0 (highest priority)', () => {
-      const cycleResult = CycleTimeRootBlock.compile({
+      const cycleResult = InfiniteTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000 },
         inputs: {},
@@ -300,7 +300,7 @@ describe('TimeRoot WP1 Features', () => {
         ctx: mockCompileCtx,
       });
 
-      const cyclePubs = extractTimeRootAutoPublications('CycleTimeRoot', cycleResult);
+      const cyclePubs = extractTimeRootAutoPublications('InfiniteTimeRoot', cycleResult);
       const finitePubs = extractTimeRootAutoPublications('FiniteTimeRoot', finiteResult);
       const infinitePubs = extractTimeRootAutoPublications('InfiniteTimeRoot', infiniteResult);
 
@@ -313,7 +313,7 @@ describe('TimeRoot WP1 Features', () => {
 
   describe('Edge cases', () => {
     it('negative time does not trigger wrap or end events', () => {
-      const cycleResult = CycleTimeRootBlock.compile({
+      const cycleResult = InfiniteTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000, mode: 'loop' },
         inputs: {},

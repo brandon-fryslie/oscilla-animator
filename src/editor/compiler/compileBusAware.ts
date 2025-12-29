@@ -418,7 +418,7 @@ export function compileBusAwarePatch(
 
   for (const block of patch.blocks) {
     const blockId = block.id;
-    if (['FiniteTimeRoot', 'CycleTimeRoot', 'InfiniteTimeRoot'].includes(block.type)) {
+    if (['FiniteTimeRoot', 'InfiniteTimeRoot', 'InfiniteTimeRoot'].includes(block.type)) {
       // Compile the TimeRoot block to get its outputs
       const compiler = registry[block.type];
       if (compiler === undefined) {
@@ -948,7 +948,7 @@ function attachIR(
  *
  * TimeRoot types:
  * - FiniteTimeRoot → finite time model (one-shot animations)
- * - CycleTimeRoot → cyclic time model (looping animations)
+ * - InfiniteTimeRoot → cyclic time model (looping animations)
  * - InfiniteTimeRoot → infinite time model (generative/evolving)
  */
 function inferTimeModel(patch: CompilerPatch): TimeModel {
@@ -965,7 +965,7 @@ function inferTimeModel(patch: CompilerPatch): TimeModel {
       };
     }
 
-    if (block.type === 'CycleTimeRoot') {
+    if (block.type === 'InfiniteTimeRoot') {
       const periodMs = Number(block.params.periodMs ?? 3000);
       const modeParam = block.params.mode;
       const mode: 'loop' | 'pingpong' = (
@@ -992,7 +992,7 @@ function inferTimeModel(patch: CompilerPatch): TimeModel {
   // If we reach here, it means validation was bypassed or there's a bug.
   throw new Error(
     'E_TIME_ROOT_MISSING: No TimeRoot block found. ' +
-      'Every patch must have exactly one TimeRoot (FiniteTimeRoot, CycleTimeRoot, or InfiniteTimeRoot).'
+      'Every patch must have exactly one TimeRoot (FiniteTimeRoot, InfiniteTimeRoot, or InfiniteTimeRoot).'
   );
 }
 

@@ -82,7 +82,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include timeRootChanged in diffSummary for TimeRoot blocks', () => {
-      rootStore.patchStore.addBlock('CycleTimeRoot');
+      rootStore.patchStore.addBlock('InfiniteTimeRoot');
 
       // Transaction-based events include timeRootChanged field
       // (accurate detection requires SetTimeRoot ops in transaction)
@@ -121,7 +121,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include timeRootChanged in diffSummary when removing TimeRoot block', () => {
-      const blockId = rootStore.patchStore.addBlock('CycleTimeRoot');
+      const blockId = rootStore.patchStore.addBlock('InfiniteTimeRoot');
       events.length = 0;
 
       rootStore.patchStore.removeBlock(blockId);
@@ -228,8 +228,8 @@ describe('GraphCommitted Event', () => {
 
   describe('replaceBlock', () => {
     it('should emit GraphCommitted events with batched summary at end', () => {
-      // Use CycleTimeRoot which has defined inputs/outputs
-      const blockId = rootStore.patchStore.addBlock('CycleTimeRoot');
+      // Use InfiniteTimeRoot which has defined inputs/outputs
+      const blockId = rootStore.patchStore.addBlock('InfiniteTimeRoot');
       events.length = 0;
 
       // Replace with FiniteTimeRoot (similar block type for successful replacement)
@@ -242,7 +242,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should have blocksAdded=1 and blocksRemoved=1 in final event', () => {
-      const blockId = rootStore.patchStore.addBlock('CycleTimeRoot');
+      const blockId = rootStore.patchStore.addBlock('InfiniteTimeRoot');
       events.length = 0;
 
       const result = rootStore.patchStore.replaceBlock(blockId, 'FiniteTimeRoot');
@@ -255,7 +255,7 @@ describe('GraphCommitted Event', () => {
     });
 
     it('should include both old and new block IDs in affectedBlockIds of final event', () => {
-      const oldBlockId = rootStore.patchStore.addBlock('CycleTimeRoot');
+      const oldBlockId = rootStore.patchStore.addBlock('InfiniteTimeRoot');
       events.length = 0;
 
       const result = rootStore.patchStore.replaceBlock(oldBlockId, 'FiniteTimeRoot');

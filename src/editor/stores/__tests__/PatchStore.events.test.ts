@@ -402,12 +402,12 @@ describe('PatchStore - BlockReplaced Events', () => {
       const listener = vi.fn();
       root.events.on('BlockReplaced', listener);
 
-      // CycleTimeRoot outputs Signal<phase> on 'phase'
-      const block1 = root.patchStore.addBlock('CycleTimeRoot');
+      // InfiniteTimeRoot outputs Signal<phase> on 'phase'
+      const block1 = root.patchStore.addBlock('InfiniteTimeRoot');
       // Oscillator accepts Signal<phase> on 'phase' input
       const block2 = root.patchStore.addBlock('Oscillator');
 
-      // Connect CycleTimeRoot.phase -> Oscillator.phase (valid Signal<phase> connection)
+      // Connect InfiniteTimeRoot.phase -> Oscillator.phase (valid Signal<phase> connection)
       root.patchStore.connect(block1, 'phase', block2, 'phase');
 
       // Replace Oscillator with AddSignal which only accepts Signal<float> inputs

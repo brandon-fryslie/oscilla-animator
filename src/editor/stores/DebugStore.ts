@@ -270,14 +270,14 @@ export class DebugStore {
 
     // Find TimeRoot
     const timeRoot = blocks.find((b) =>
-      ['CycleTimeRoot', 'FiniteTimeRoot', 'InfiniteTimeRoot'].includes(b.type)
+      ['InfiniteTimeRoot', 'FiniteTimeRoot', 'InfiniteTimeRoot'].includes(b.type)
     );
 
     let timeMode: DebugOverview['timeMode'] = 'unknown';
     let period: number | undefined;
 
     if (timeRoot !== undefined) {
-      if (timeRoot.type === 'CycleTimeRoot') {
+      if (timeRoot.type === 'InfiniteTimeRoot') {
         timeMode = 'cyclic';
         period = Number(timeRoot.params?.periodMs ?? 3000);
       } else if (timeRoot.type === 'FiniteTimeRoot') {

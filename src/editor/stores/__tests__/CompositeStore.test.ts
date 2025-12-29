@@ -50,15 +50,15 @@ describe('Composite Validation', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should reject composite with CycleTimeRoot', () => {
+    it('should reject composite with InfiniteTimeRoot', () => {
       const composite: Composite = {
         id: 'bad-composite',
         name: 'Bad Composite',
         blocks: [
           {
             id: 'timeroot',
-            type: 'CycleTimeRoot',
-            label: 'CycleTimeRoot',
+            type: 'InfiniteTimeRoot',
+            label: 'InfiniteTimeRoot',
             category: 'TimeRoot',
             inputs: [],
             outputs: [{ id: 'phase', type: 'Signal<phase>', label: 'phase', direction: 'output' }],
@@ -82,7 +82,7 @@ describe('Composite Validation', () => {
       expect(result.ok).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('E_COMPOSITE_CONTAINS_TIMEROOT');
-      expect(result.errors[0].message).toContain('CycleTimeRoot');
+      expect(result.errors[0].message).toContain('InfiniteTimeRoot');
       expect(result.errors[0].blockId).toBe('timeroot');
     });
 
@@ -145,8 +145,8 @@ describe('Composite Validation', () => {
         blocks: [
           {
             id: 'timeroot1',
-            type: 'CycleTimeRoot',
-            label: 'CycleTimeRoot',
+            type: 'InfiniteTimeRoot',
+            label: 'InfiniteTimeRoot',
             category: 'TimeRoot',
             inputs: [],
             outputs: [{ id: 'phase', type: 'Signal<phase>', label: 'phase', direction: 'output' }],
@@ -180,8 +180,8 @@ describe('Composite Validation', () => {
         blocks: [
           {
             id: 'timeroot',
-            type: 'CycleTimeRoot',
-            label: 'CycleTimeRoot',
+            type: 'InfiniteTimeRoot',
+            label: 'InfiniteTimeRoot',
             category: 'TimeRoot',
             inputs: [],
             outputs: [{ id: 'phase', type: 'Signal<phase>', label: 'phase', direction: 'output' }],
@@ -197,7 +197,7 @@ describe('Composite Validation', () => {
         'Composite definitions cannot contain TimeRoot blocks'
       );
       expect(result.errors[0].message).toContain('My Animation Composite');
-      expect(result.errors[0].message).toContain('CycleTimeRoot');
+      expect(result.errors[0].message).toContain('InfiniteTimeRoot');
       expect(result.errors[0].message).toContain(
         'TimeRoot defines patch-level time topology and must be unique'
       );

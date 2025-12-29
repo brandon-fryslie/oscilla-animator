@@ -28,7 +28,7 @@ export { PathConstBlock } from './PathConst';
 // TimeRoot blocks (Phase 3: TimeRoot)
 export {
   FiniteTimeRootBlock,
-  CycleTimeRootBlock,
+  InfiniteTimeRootBlock,
   InfiniteTimeRootBlock,
 } from './TimeRoot';
 

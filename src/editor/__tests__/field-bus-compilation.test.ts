@@ -361,7 +361,7 @@ describe('Field Bus Compilation', () => {
 
   it('returns default field when bus has no publishers', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
     ];
 
@@ -401,7 +401,7 @@ describe('Field Bus Compilation', () => {
 
   it('supports "average" combine mode for Field buses', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 0 } },
       { id: 'source2', type: 'FieldNumberSource', params: { value: 10 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
@@ -450,7 +450,7 @@ describe('Field Bus Compilation', () => {
 
   it('supports "max" combine mode for Field buses', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 5 } },
       { id: 'source2', type: 'FieldNumberSource', params: { value: 0 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
@@ -499,7 +499,7 @@ describe('Field Bus Compilation', () => {
 
   it('supports "min" combine mode for Field buses', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 5 } },
       { id: 'source2', type: 'FieldNumberSource', params: { value: 0 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
@@ -570,7 +570,7 @@ describe('Mixed Signal and Field Buses', () => {
     };
 
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'phaseSource', type: 'PhaseSource', params: {} },
       { id: 'fieldSource', type: 'FieldNumberSource', params: { value: 10 } },
       { id: 'sink1', type: 'FieldSink', params: {} },

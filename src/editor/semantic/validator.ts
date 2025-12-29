@@ -112,7 +112,6 @@ export class Validator {
     const timeRootBlocks = patch.blocks.filter(
       (b) =>
         b.type === 'FiniteTimeRoot' ||
-        b.type === 'CycleTimeRoot' ||
         b.type === 'InfiniteTimeRoot'
     );
 
@@ -131,7 +130,7 @@ export class Validator {
           },
           title: 'Missing TimeRoot',
           message:
-            'Patch must contain exactly one TimeRoot block (FiniteTimeRoot, CycleTimeRoot, or InfiniteTimeRoot)',
+            'Patch must contain exactly one TimeRoot block (FiniteTimeRoot, or InfiniteTimeRoot)',
           patchRevision: this.patchRevision,
         })
       );
@@ -480,7 +479,6 @@ export class Validator {
     const timeRoot = patch.blocks.find(
       (b) =>
         b.type === 'FiniteTimeRoot' ||
-        b.type === 'CycleTimeRoot' ||
         b.type === 'InfiniteTimeRoot'
     );
 

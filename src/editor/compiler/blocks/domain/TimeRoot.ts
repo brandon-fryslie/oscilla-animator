@@ -27,7 +27,7 @@ export function extractTimeRootAutoPublications(
   _artifacts: CompiledOutputs
 ): AutoPublication[] {
   switch (blockType) {
-    case 'CycleTimeRoot':
+    case 'InfiniteTimeRoot':
       return [
         { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'wrap', sortKey: 0 },
@@ -35,7 +35,7 @@ export function extractTimeRootAutoPublications(
       ];
 
     case 'FiniteTimeRoot':
-      // FiniteTimeRoot does NOT publish to phaseA - only CycleTimeRoot owns that bus
+      // FiniteTimeRoot does NOT publish to phaseA - only InfiniteTimeRoot owns that bus
       return [
         { busName: 'progress', artifactKey: 'progress', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'end', sortKey: 0 },
@@ -43,7 +43,7 @@ export function extractTimeRootAutoPublications(
       ];
 
     case 'InfiniteTimeRoot':
-      // InfiniteTimeRoot does NOT publish to phaseA - only CycleTimeRoot owns that bus
+      // InfiniteTimeRoot does NOT publish to phaseA - only InfiniteTimeRoot owns that bus
       // It has ambient phase but that's not the primary coordinating phase
       return [
         { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
@@ -121,7 +121,7 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 };
 
 /**
- * Lower CycleTimeRoot block to IR.
+ * Lower InfiniteTimeRoot block to IR.
  *
  * Uses canonical time signals:
  * - sigTimeAbsMs() for systemTime
@@ -129,7 +129,7 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
  * - sigPhase01() for phase
  * - sigWrapEvent() for wrap
  */
-const lowerCycleTimeRoot: BlockLowerFn = ({ ctx, config }) => {
+const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const configData = (config != null && typeof config === 'object') ? config : {};
   const periodMs = 'periodMs' in configData ? Number(configData.periodMs) : 1000;
   const mode = 'mode' in configData && typeof configData.mode === 'string' ? configData.mode : 'loop';
@@ -273,7 +273,7 @@ registerBlockType({
 });
 
 registerBlockType({
-  type: 'CycleTimeRoot',
+  type: 'InfiniteTimeRoot',
   capability: 'time',
   inputs: [
     {
@@ -300,7 +300,7 @@ registerBlockType({
     { portId: 'cycleIndex', label: 'Cycle Index', dir: 'out', type: { world: 'signal', domain: 'int' } },
     { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'float' } },
   ],
-  lower: lowerCycleTimeRoot,
+  lower: lowerInfiniteTimeRoot,
 });
 
 registerBlockType({
@@ -387,7 +387,7 @@ export const FiniteTimeRootBlock: BlockCompiler = {
 };
 
 /**
- * CycleTimeRoot - Looping primary cycle.
+ * InfiniteTimeRoot - Looping primary cycle.
  *
  * Outputs:
  * - systemTime: Monotonic time in milliseconds
@@ -397,8 +397,8 @@ export const FiniteTimeRootBlock: BlockCompiler = {
  * - cycleIndex: Number of completed cycles
  * - energy: Constant 1.0 baseline
  */
-export const CycleTimeRootBlock: BlockCompiler = {
-  type: 'CycleTimeRoot',
+export const InfiniteTimeRootBlock: BlockCompiler = {
+  type: 'InfiniteTimeRoot',
 
   inputs: [],
 

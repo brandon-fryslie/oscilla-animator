@@ -170,14 +170,14 @@ describe('ActionExecutor', () => {
   });
 
   describe('createTimeRoot', () => {
-    it('should create a CycleTimeRoot', () => {
+    it('should create a InfiniteTimeRoot', () => {
       const result = actionExecutor.execute({
         kind: 'createTimeRoot',
         timeRootKind: 'Cycle',
       });
 
       expect(result).toBe(true);
-      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('CycleTimeRoot');
+      expect(mockPatchStore.addBlock).toHaveBeenCalledWith('InfiniteTimeRoot');
     });
 
     it('should create a FiniteTimeRoot', () => {
@@ -202,7 +202,7 @@ describe('ActionExecutor', () => {
 
     it('should remove existing TimeRoots before creating new one', () => {
       mockPatchStore.blocks = [
-        { id: 'block-1' as BlockId, type: 'CycleTimeRoot', label: 'Cycle', inputs: [], outputs: [], params: {}, category: 'Time', description: '' },
+        { id: 'block-1' as BlockId, type: 'InfiniteTimeRoot', label: 'Cycle', inputs: [], outputs: [], params: {}, category: 'Time', description: '' },
         { id: 'block-2' as BlockId, type: 'FiniteTimeRoot', label: 'Finite', inputs: [], outputs: [], params: {}, category: 'Time', description: '' },
       ];
 

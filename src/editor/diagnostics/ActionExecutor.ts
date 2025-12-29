@@ -259,7 +259,7 @@ export class ActionExecutor {
     const existingTimeRoots = this.patchStore.blocks.filter(
       (block) =>
         block.type === 'FiniteTimeRoot' ||
-        block.type === 'CycleTimeRoot' ||
+        block.type === 'InfiniteTimeRoot' ||
         block.type === 'InfiniteTimeRoot'
     );
 
@@ -274,7 +274,7 @@ export class ActionExecutor {
     const newBlockId = this.patchStore.addBlock(blockType);
 
     // Auto-publish to buses (handled by PatchStore.addBlock via processAutoBusConnections)
-    // CycleTimeRoot auto-publishes 'phase' -> 'phaseA' and 'wrap' -> 'pulse'
+    // InfiniteTimeRoot auto-publishes 'phase' -> 'phaseA' and 'wrap' -> 'pulse'
     // FiniteTimeRoot auto-publishes 'progress' -> 'progress'
 
     // Select the new TimeRoot

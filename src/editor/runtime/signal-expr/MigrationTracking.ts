@@ -95,7 +95,7 @@ export const MIGRATED_BLOCKS = new Set<string>([
   // ==========================================================================
   // Time Blocks - Migrated with time topology IR support
   // ==========================================================================
-  "CycleTimeRoot",
+  "InfiniteTimeRoot",
   "InfiniteTimeRoot",
   "FiniteTimeRoot",
   "PhaseClock",

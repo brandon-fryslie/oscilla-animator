@@ -71,7 +71,7 @@ export function validateTimeRootConstraint(patch: CompilerPatch): CompileError[]
   if (timeRootBlocks.length === 0) {
     errors.push({
       code: 'MissingTimeRoot',
-      message: 'Patch must contain exactly one TimeRoot block (FiniteTimeRoot, CycleTimeRoot, or InfiniteTimeRoot)',
+      message: 'Patch must contain exactly one TimeRoot block (FiniteTimeRoot, or InfiniteTimeRoot)',
     });
   }
 

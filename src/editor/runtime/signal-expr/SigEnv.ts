@@ -69,7 +69,7 @@ export interface SigEnv {
    * Model time in milliseconds (after time model transformation).
    *
    * For InfiniteTimeRoot: tModelMs = tAbsMs
-   * For CycleTimeRoot: tModelMs = (tAbsMs % period)
+   * For InfiniteTimeRoot: tModelMs = (tAbsMs % period)
    * For FiniteTimeRoot: tModelMs = mapped time
    *
    * Optional - defaults to tAbsMs if not provided.
@@ -79,7 +79,7 @@ export interface SigEnv {
   /**
    * Normalized phase [0..1) for cyclic time models.
    *
-   * For CycleTimeRoot: phase01 = (tModelMs % period) / period
+   * For InfiniteTimeRoot: phase01 = (tModelMs % period) / period
    * For non-cyclic time roots: phase01 = 0
    *
    * Optional - defaults to 0 if not provided.

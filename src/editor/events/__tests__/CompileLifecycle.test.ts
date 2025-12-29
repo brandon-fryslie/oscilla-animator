@@ -240,13 +240,13 @@ describe('CompileFinished Event Payload', () => {
       diagnostics: [],
       programMeta: {
         timeModelKind: 'cyclic',
-        timeRootKind: 'CycleTimeRoot',
+        timeRootKind: 'InfiniteTimeRoot',
       },
     };
 
     expect(event).toHaveProperty('programMeta');
     expect(event.programMeta?.timeModelKind).toBe('cyclic');
-    expect(event.programMeta?.timeRootKind).toBe('CycleTimeRoot');
+    expect(event.programMeta?.timeRootKind).toBe('InfiniteTimeRoot');
   });
 
   it('should support programMeta with all timeModelKind values', () => {
@@ -263,7 +263,7 @@ describe('CompileFinished Event Payload', () => {
         diagnostics: [],
         programMeta: {
           timeModelKind: kind,
-          timeRootKind: 'CycleTimeRoot',
+          timeRootKind: 'InfiniteTimeRoot',
         },
       };
 
@@ -272,9 +272,9 @@ describe('CompileFinished Event Payload', () => {
   });
 
   it('should support programMeta with all timeRootKind values', () => {
-    const timeRootKinds: Array<'FiniteTimeRoot' | 'CycleTimeRoot' | 'InfiniteTimeRoot' | 'none'> = [
+    const timeRootKinds: Array<'FiniteTimeRoot' | 'InfiniteTimeRoot' | 'InfiniteTimeRoot' | 'none'> = [
       'FiniteTimeRoot',
-      'CycleTimeRoot',
+      'InfiniteTimeRoot',
       'InfiniteTimeRoot',
       'none',
     ];
@@ -309,7 +309,7 @@ describe('CompileFinished Event Payload', () => {
       diagnostics: [],
       programMeta: {
         timeModelKind: 'cyclic',
-        timeRootKind: 'CycleTimeRoot',
+        timeRootKind: 'InfiniteTimeRoot',
         busUsageSummary: {
           phaseA: { publishers: 1, listeners: 3 },
           energy: { publishers: 2, listeners: 1 },
