@@ -8,7 +8,7 @@ import { lensInstanceToDefinition } from '../lenses/lensInstances';
 /**
  * Helper to set up a patch with composites and bus listeners
  * Recreates the structure of the old breathing-dots demo:
- * - CycleTimeRoot (2s period, publishes phase to phaseA)
+ * - InfiniteTimeRoot (2s period, publishes phase to phaseA)
  * - composite:GridPoints (5x5 grid)
  * - composite:DotsRenderer (listens to phaseA on radius with scale lens)
  */
@@ -16,8 +16,8 @@ function setupCompositeDemo(store: RootStore): void {
   // Clear any existing state
   store.clearPatch();
 
-  // Add CycleTimeRoot - will auto-publish phase to phaseA
-  store.patchStore.addBlock('CycleTimeRoot', { periodMs: 2000 });
+  // Add InfiniteTimeRoot - will auto-publish phase to phaseA
+  store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 2000 });
 
   // Add GridPoints composite
   const gridId = store.patchStore.addBlock('composite:GridPoints', {
@@ -163,7 +163,7 @@ describe('RewriteMap correctness (Test Matrix Section A)', () => {
 
     // Create a patch with composite:DotsRenderer that has a radius input
     // Add TimeRoot first (required for compilation)
-    store.patchStore.addBlock('CycleTimeRoot', { periodMs: 2000 });
+    store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 2000 });
 
     // Add GridPoints composite (provides domain + positions)
     const gridId = store.patchStore.addBlock('composite:GridPoints', {
@@ -215,7 +215,7 @@ describe('RewriteMap correctness (Test Matrix Section A)', () => {
     const store = new RootStore();
 
     // Add two GridPoints composites
-    store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+    store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
 
     const grid1 = store.patchStore.addBlock('composite:GridPoints', {
       count: 16,
@@ -267,7 +267,7 @@ describe('Bus bindings through composites (Test Matrix Section B)', () => {
     const store = new RootStore();
 
     // Create a patch with a composite that has a bus listener on its radius input
-    store.patchStore.addBlock('CycleTimeRoot', { periodMs: 2000 });
+    store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 2000 });
 
     // Add GridPoints composite
     const gridId = store.patchStore.addBlock('composite:GridPoints', {
@@ -327,7 +327,7 @@ describe('Bus bindings through composites (Test Matrix Section B)', () => {
     const store = new RootStore();
 
     // Create explicit scenario with scale lens (scale=12, offset=8)
-    store.patchStore.addBlock('CycleTimeRoot', { periodMs: 2000 });
+    store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 2000 });
 
     // Add GridPoints composite
     const gridId = store.patchStore.addBlock('composite:GridPoints', {
@@ -464,7 +464,7 @@ describe('Error handling (Test Matrix Section H)', () => {
     const store = new RootStore();
 
     // Add a composite and a bus binding to a non-existent port
-    const clockId = store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+    const clockId = store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
 
     // Add GridPoints composite (has domain, positions outputs but no "foobar" port)
     const gridId = store.patchStore.addBlock('composite:GridPoints', {

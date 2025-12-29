@@ -496,7 +496,7 @@ describe('Composite Compilation', () => {
 
   it('GridPoints composite compiles successfully', () => {
     const store = new RootStore();
-    store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+    store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
 
     // Add GridPoints composite
     const gridId = store.patchStore.addBlock('composite:GridPoints', {
@@ -535,7 +535,7 @@ describe('Composite Compilation', () => {
 
   it('CirclePoints composite compiles successfully', () => {
     const store = new RootStore();
-    store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+    store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
 
     // Add CirclePoints composite
     const circleId = store.patchStore.addBlock('composite:CirclePoints', {
@@ -567,7 +567,7 @@ describe('Composite Compilation', () => {
 
   it('DotsRenderer composite with bus-driven radius compiles', () => {
     const store = new RootStore();
-    const timeRootId = store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+    const timeRootId = store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
 
     // Add domain
     const domainId = store.patchStore.addBlock('DomainN', { n: 25, seed: 42 });

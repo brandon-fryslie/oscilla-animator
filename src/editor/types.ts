@@ -51,7 +51,6 @@ export type Capability = KernelCapability | 'pure';
 export type KernelId =
   // Time Authority (3)
   | 'FiniteTimeRoot'
-  | 'CycleTimeRoot'
   | 'InfiniteTimeRoot'
   // Identity Authority (3)
   | 'DomainN'

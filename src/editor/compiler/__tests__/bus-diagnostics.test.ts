@@ -28,7 +28,7 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot');
+      store.patchStore.addBlock('InfiniteTimeRoot');
       const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
@@ -72,7 +72,7 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
       const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
@@ -123,7 +123,7 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a TimeRoot
-      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
+      store.patchStore.addBlock('InfiniteTimeRoot',{ periodMs: 3000 });
 
       // Add two GridDomains, only connect one fully
       const domainBlock1 = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
@@ -158,8 +158,8 @@ describe('Bus Diagnostics', () => {
     it('should NOT emit W_GRAPH_UNUSED_OUTPUT for TimeRoot outputs', () => {
       const service = createCompilerService(store);
 
-      // Add just a CycleTimeRoot - its outputs (phase, wrap) are auto-published
-      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
+      // Add just a InfiniteTimeRoot - its outputs (phase, wrap) are auto-published
+      store.patchStore.addBlock('InfiniteTimeRoot',{ periodMs: 3000 });
       const domainBlock = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D',{});
 
@@ -185,7 +185,7 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete patch
-      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
+      store.patchStore.addBlock('InfiniteTimeRoot',{ periodMs: 3000 });
       const domainBlock = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D',{});
 

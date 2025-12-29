@@ -33,7 +33,6 @@ import {
   PathConstBlock,
   // TimeRoot blocks (Phase 3: TimeRoot)
   FiniteTimeRootBlock,
-  CycleTimeRootBlock,
   InfiniteTimeRootBlock,
   // Field manipulation blocks (Slices 4-8)
   FieldAddVec2Block,
@@ -99,7 +98,6 @@ export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
 
   // TimeRoot blocks (Phase 3: TimeRoot)
   FiniteTimeRoot: FiniteTimeRootBlock,
-  CycleTimeRoot: CycleTimeRootBlock,
   InfiniteTimeRoot: InfiniteTimeRootBlock,
 
   // Field manipulation blocks (Slices 4-8)

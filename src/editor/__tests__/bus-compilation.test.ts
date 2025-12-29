@@ -65,9 +65,9 @@ function createTestContext(): CompileCtx {
  */
 function createTestRegistry(): BlockRegistry {
   return {
-    // CycleTimeRoot - required for all patches (includes all standard outputs)
-    CycleTimeRoot: {
-      type: 'CycleTimeRoot',
+    // InfiniteTimeRoot - required for all patches (includes all standard outputs)
+    InfiniteTimeRoot: {
+      type: 'InfiniteTimeRoot',
       inputs: [],
       outputs: [
         { name: 'systemTime', type: { kind: 'Signal:Time' }, required: true },
@@ -140,7 +140,7 @@ function createTestRegistry(): BlockRegistry {
 describe('Bus Compilation - Happy Path', () => {
   it('compiles single Signal<float> bus with one publisher and one listener', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'NumberSource', params: { value: 42 } },
       { id: 'sink1', type: 'NumberSink', params: {} },
     ];
@@ -192,7 +192,7 @@ describe('Bus Compilation - Happy Path', () => {
 
   it('returns default value when bus has no publishers', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'sink1', type: 'NumberSink', params: {} },
     ];
 
@@ -236,7 +236,7 @@ describe('Bus Compilation - Happy Path', () => {
 
   it('combines multiple publishers with "last" mode - highest sortKey wins', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'NumberSource', params: { value: 10 } },
       { id: 'source2', type: 'NumberSource', params: { value: 20 } },
       { id: 'source3', type: 'NumberSource', params: { value: 30 } },
@@ -284,7 +284,7 @@ describe('Bus Compilation - Happy Path', () => {
 
   it('combines multiple publishers with "sum" mode', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'NumberSource', params: { value: 10 } },
       { id: 'source2', type: 'NumberSource', params: { value: 20 } },
       { id: 'source3', type: 'NumberSource', params: { value: 30 } },
@@ -338,7 +338,7 @@ describe('Bus Compilation - Happy Path', () => {
 describe('Bus Compilation - sortKey Determinism', () => {
   it('stable results with same sortKeys using id tie-breaker', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'NumberSource', params: { value: 100 } },
       { id: 'source2', type: 'NumberSource', params: { value: 200 } },
       { id: 'sink1', type: 'NumberSink', params: {} },
@@ -385,7 +385,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
 
   it('result changes when sortKeys swap', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'NumberSource', params: { value: 100 } },
       { id: 'source2', type: 'NumberSource', params: { value: 200 } },
       { id: 'sink1', type: 'NumberSink', params: {} },
@@ -468,7 +468,7 @@ describe('Bus Compilation - Error Handling', () => {
 
   it('rejects unsupported combine mode for Signal bus', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'sink1', type: 'NumberSink', params: {} },
     ];
 

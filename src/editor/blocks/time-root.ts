@@ -58,63 +58,6 @@ export const FiniteTimeRoot: KernelBlockDefinition = createBlock({
 }) as KernelBlockDefinition;
 
 /**
- * CycleTimeRoot - Looping primary cycle.
- *
- * Use for animations that loop indefinitely.
- * Phase signal wraps at period boundary (0..1).
- *
- * Produces TimeModel: { kind: 'cyclic', periodMs, mode }
- */
-export const CycleTimeRoot: KernelBlockDefinition = createBlock({
-  type: 'CycleTimeRoot',
-  label: 'Cycle Time',
-  description: 'Looping primary cycle',
-  capability: 'time',
-  kernelId: 'CycleTimeRoot',
-  inputs: [
-    input('periodMs', 'Period (ms)', 'Signal<float>', {
-      tier: 'primary',
-      defaultSource: {
-        value: 3000,
-        world: 'config', // Period changes should snap to pulse boundary
-        uiHint: { kind: 'slider', min: 100, max: 10000, step: 100 },
-      },
-    }),
-    input('mode', 'Mode', 'Signal<string>', {
-      tier: 'primary',
-      defaultSource: {
-        value: 'loop',
-        world: 'config',
-        uiHint: {
-          kind: 'select',
-          options: [
-            { value: 'loop', label: 'Loop' },
-            { value: 'pingpong', label: 'Ping-Pong' },
-          ],
-        },
-      },
-    }),
-  ],
-  outputs: [
-    output('systemTime', 'System Time', 'Signal<time>'),
-    output('cycleT', 'Cycle Time', 'Signal<time>'),
-    output('phase', 'Phase', 'Signal<phase>'),
-    output('wrap', 'Wrap Event', 'Event<any>'),
-    output('cycleIndex', 'Cycle Index', 'Signal<int>'),
-    output('energy', 'Energy', 'Signal<float>'),
-  ],
-  color: '#3b82f6', // Blue for cyclic
-  subcategory: 'TimeRoot',
-  priority: -9,
-  // Auto-publish TimeRoot outputs to canonical buses (per design-docs/3-Synthesized/03-Buses.md)
-  autoBusPublications: {
-    phase: 'phaseA',
-    wrap: 'pulse',
-    energy: 'energy',
-  },
-}) as KernelBlockDefinition;
-
-/**
  * InfiniteTimeRoot - Ambient, unbounded time (no primary cycle).
  *
  * Use for generative/ambient animations that run indefinitely.
@@ -168,6 +111,5 @@ export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
  */
 export const TIME_ROOT_BLOCKS = [
   FiniteTimeRoot,
-  CycleTimeRoot,
   InfiniteTimeRoot,
 ];

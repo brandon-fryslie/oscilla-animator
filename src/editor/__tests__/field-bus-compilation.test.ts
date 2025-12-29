@@ -62,9 +62,9 @@ function createTestContext(): CompileCtx {
  */
 function createFieldTestRegistry(): BlockRegistry {
   return {
-    // CycleTimeRoot - required for all patches (includes all standard outputs)
-    CycleTimeRoot: {
-      type: 'CycleTimeRoot',
+    // InfiniteTimeRoot - required for all patches (includes all standard outputs)
+    InfiniteTimeRoot: {
+      type: 'InfiniteTimeRoot',
       inputs: [],
       outputs: [
         { name: 'systemTime', type: { kind: 'Signal:Time' }, required: true },
@@ -204,7 +204,7 @@ function createFieldTestRegistry(): BlockRegistry {
 describe('Field Bus Compilation', () => {
   it('compiles single Field<float> bus with one publisher and one listener', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
     ];
@@ -265,7 +265,7 @@ describe('Field Bus Compilation', () => {
 
   it('combines multiple Field publishers with "sum" mode', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } },
       { id: 'source2', type: 'FieldNumberSource', params: { value: 100 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
@@ -314,7 +314,7 @@ describe('Field Bus Compilation', () => {
 
   it('combines multiple Field publishers with "last" mode - highest sortKey wins', () => {
     const blocks = [
-      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } },
       { id: 'source2', type: 'FieldNumberSource', params: { value: 100 } },
       { id: 'sink1', type: 'FieldSink', params: {} },

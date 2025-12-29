@@ -11,7 +11,6 @@ import type { RootStore } from './RootStore';
  */
 const TIME_ROOT_BLOCK_TYPES = new Set([
   'FiniteTimeRoot',
-  'CycleTimeRoot',
   'InfiniteTimeRoot',
 ]);
 

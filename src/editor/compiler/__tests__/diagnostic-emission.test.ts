@@ -30,7 +30,7 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a simple block to trigger compilation
-      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
 
       service.compile();
 
@@ -48,7 +48,7 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a simple block
-      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
 
       // Compile twice
       service.compile();
@@ -69,7 +69,7 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add a valid complete patch (TimeRoot + Domain + Render)
-      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
       const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
@@ -100,7 +100,7 @@ describe('Diagnostic Emission', () => {
     it('should include compileId matching CompileStarted', () => {
       const service = createCompilerService(store);
 
-      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
 
       service.compile();
 
@@ -115,7 +115,7 @@ describe('Diagnostic Emission', () => {
     it('should measure compilation duration', () => {
       const service = createCompilerService(store);
 
-      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
 
       service.compile();
 
@@ -169,7 +169,7 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Add two TimeRoot blocks (should trigger multiple TimeRoot error)
-      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
       store.patchStore.addBlock('FiniteTimeRoot', { durationMs: 5000 });
 
       service.compile();
@@ -194,7 +194,7 @@ describe('Diagnostic Emission', () => {
       const service = createCompilerService(store);
 
       // Create a complete, valid patch
-      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
       const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 

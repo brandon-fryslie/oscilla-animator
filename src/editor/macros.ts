@@ -96,7 +96,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Just a domain + renderer, no animations, uses test geometry internally
   'macro:testIR': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 3000 } },
       { ref: 'domain', type: 'DomainN', label: 'Domain',
         params: { n: 9, seed: 42 } },
@@ -128,7 +128,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 1. Simple Grid - Breathing grid with color cycling
   'macro:simpleGrid': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 3000 } }, // Default 3s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Breathe',
         params: { shape: 'sine', amplitude: 0.5, bias: 0.5 } },
@@ -158,7 +158,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 2. Animated Circle Ring - Circle layout with oscillating radius and rainbow colors
   'macro:animatedCircleRing': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Size Wave',
         params: { shape: 'sine', amplitude: 0.5, bias: 0.5 } },
@@ -191,7 +191,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 3. Line Wave - Line of dots with breathing size and color shift
   'macro:lineWave': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 4000 } },
       { ref: 'osc', type: 'Oscillator', label: 'Wave',
         params: { shape: 'sine', amplitude: 0.5, bias: 0.5 } },
@@ -225,7 +225,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Uses FieldFromExpression + FieldStringToColor chain for per-element rainbow colors
   'macro:rainbowGrid': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Pulse',
         params: { shape: 'sine', amplitude: 0.5, bias: 0.5 } },
@@ -259,7 +259,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 5. Pulsing Grid - Grid with pulse-driven radius and warm colors
   'macro:pulsingGrid': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'divider', type: 'PulseDivider', label: '4 Pulses',
         params: { divisions: 4 } },
@@ -292,7 +292,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 6. Drifting Circle - Circle layout with jitter motion and cool colors
   'macro:driftingCircle': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 8000 } }, // Default 8s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Breathe',
         params: { shape: 'sine', amplitude: 0.4, bias: 0.6 } },
@@ -335,7 +335,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 7. Multi-Ring - Multiple concentric circles with purple gradient
   'macro:multiRing': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'colorLfo', type: 'ColorLFO', label: 'Purple Shift',
         params: { base: '#9933FF', hueSpan: 60, sat: 0.85, light: 0.55 } },
@@ -369,7 +369,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 8. Breathing Line - Line with breathing animation and green tones
   'macro:breathingLine': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Breath',
         params: { shape: 'cosine', amplitude: 0.5, bias: 0.5 } },
@@ -405,7 +405,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 9. Color Pulse - Grid with animated color and breathing size
   'macro:colorPulse': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Breathe',
         params: { shape: 'sine', amplitude: 0.5, bias: 0.5 } },
@@ -436,7 +436,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 10. Rhythmic Dots - Grid with PulseDivider envelope and electric colors
   'macro:rhythmicDots': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'divider', type: 'PulseDivider', label: '8 Beats',
         params: { divisions: 8 } },
@@ -474,7 +474,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Uses FieldFromExpression + FieldStringToColor chain for Field<color> generation
   'macro:breathingDots': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 8000 } }, // Default 8s cycle
       { ref: 'domain', type: 'DomainN', label: 'Domain',
         params: { n: 25, seed: 42 } },
@@ -507,7 +507,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 1: Breathing Wave - Oscillator + Shaper for smooth breathing with teal color
   'macro:breathingWave': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Breathing Osc',
         params: { shape: 'cosine', amplitude: 0.5, bias: 0.5 } },
@@ -544,7 +544,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 2: Rhythmic Pulse - PulseDivider + EnvelopeAD with red accent
   'macro:rhythmicPulse': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'divider', type: 'PulseDivider', label: '4 Beats',
         params: { divisions: 4 } },
@@ -580,7 +580,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 3: Color Drift - ColorLFO for slow hue cycling with breathing radius
   'macro:colorDrift': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Breathe',
         params: { shape: 'sine', amplitude: 0.5, bias: 0.5 } },
@@ -614,7 +614,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 4: Stable Grid - GridDomain + StableIdHash with per-element color gradient
   'macro:stableGrid': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Breathe',
         params: { shape: 'sine', amplitude: 0.5, bias: 0.5 } },
@@ -646,7 +646,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 5: Phase Spread - FieldZipSignal for per-element phase offsets with gradient
   'macro:phaseSpread': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Wave',
         params: { shape: 'sine', amplitude: 1, bias: 0 } },
@@ -689,7 +689,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 6: Drifting Dots - JitterFieldVec2 + FieldAddVec2 with indigo colors
   'macro:driftingDots': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 8000 } }, // Default 8s cycle
       { ref: 'colorLfo', type: 'ColorLFO', label: 'Indigo Drift',
         params: { base: '#6366F1', hueSpan: 45, sat: 0.8, light: 0.55 } },
@@ -727,7 +727,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 7: Styled Elements - FieldColorize + FieldOpacity for visual variety
   'macro:styledElements': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'grid', type: 'GridDomain', label: 'Grid',
         params: { rows: 8, cols: 8, spacing: 45, originX: 200, originY: 100 } },
@@ -756,7 +756,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 8: Responsive Grid - ViewportInfo with breathing animation and cyan colors
   'macro:responsiveGrid': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 5000 } }, // Default 5s cycle
       { ref: 'osc', type: 'Oscillator', label: 'Breathe',
         params: { shape: 'sine', amplitude: 0.5, bias: 0.5 } },
@@ -787,7 +787,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // Slice 9: Golden Patch - Complete Breathing Constellation
   'macro:goldenPatch': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 8000 } }, // Default 8s cycle
       // Breathing energy (Slice 1)
       { ref: 'breathOsc', type: 'Oscillator', label: 'Breath Osc',
@@ -859,7 +859,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
   // 11. Full Showcase - Demonstrates multiple animated properties
   'macro:fullShowcase': {
     blocks: [
-      { ref: 'time', type: 'CycleTimeRoot', label: 'Time',
+      { ref: 'time', type: 'InfiniteTimeRoot', label: 'Time',
         params: { periodMs: 8000 } }, // Default 8s cycle for golden patch
       // Domain
       { ref: 'grid', type: 'GridDomain', label: 'Grid',
@@ -945,7 +945,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
 
       // 1. Time Root - The master clock. Everything starts here.
       //    Outputs: phase (0→1 cycle), cycleT (time within cycle), wrap (trigger each cycle)
-      { ref: 'timeRoot', type: 'CycleTimeRoot', label: '① Time Root',
+      { ref: 'timeRoot', type: 'InfiniteTimeRoot', label: '① Time Root',
         params: { periodMs: 2000 } },
 
       // 2. Oscillator - Converts phase into smooth waves
