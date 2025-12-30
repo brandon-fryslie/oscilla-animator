@@ -75,9 +75,6 @@ function artifactFromDefaultSource(source: DefaultSourceState): Artifact {
     if (type.domain === 'boolean') {
       return { kind: 'Signal:float', value: () => ((value as number !== 0) ? 1 : 0) };
     }
-    if (type.domain === 'phase') {
-      return { kind: 'Signal:phase', value: () => value as number };
-    }
   }
 
   return { kind: 'Error', message: `Unsupported default source type: ${type.world}:${type.domain}` };

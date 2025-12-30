@@ -107,10 +107,10 @@ describe('combineSignalArtifacts', () => {
   const mockCtx: RuntimeCtx = { viewport: { w: 1920, h: 1080, dpr: 1 } };
 
   describe('with no artifacts', () => {
-    it('returns default number as Signal:float', () => {
+    it('returns default integer as Signal:int', () => {
       const result = combineSignalArtifacts([], 'last', 42);
-      expect(result.kind).toBe('Signal:float');
-      if (result.kind === 'Signal:float') {
+      expect(result.kind).toBe('Signal:int');
+      if (result.kind === 'Signal:int') {
         expect(result.value(0, mockCtx)).toBe(42);
       }
     });
@@ -264,10 +264,10 @@ describe('combineFieldArtifacts', () => {
   const seed: Seed = 12345; // Seed is just a number
 
   describe('with no artifacts', () => {
-    it('returns constant field with default number', () => {
+    it('returns constant field with default integer', () => {
       const result = combineFieldArtifacts([], 'last', 42);
-      expect(result.kind).toBe('Field:float');
-      if (result.kind === 'Field:float') {
+      expect(result.kind).toBe('Field:int');
+      if (result.kind === 'Field:int') {
         const values = result.value(seed, 3, mockCtx);
         expect(values).toEqual([42, 42, 42]);
       }

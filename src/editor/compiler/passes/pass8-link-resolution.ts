@@ -126,7 +126,7 @@ function registerFieldSlots(
   blockOutputRoots: BlockOutputRootIR,
 ): void {
   for (const ref of blockOutputRoots.refs) {
-    if (ref !== null && ref.k === "field") {
+    if (ref !== undefined && ref.k === "field") {
       builder.registerFieldSlot(ref.id, ref.slot);
     }
   }

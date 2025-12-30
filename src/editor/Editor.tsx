@@ -36,6 +36,7 @@ import { ControlSurfaceStore, ControlSurfacePanel, generateSurfaceForMacro } fro
 import { useEditorLayout, PATCH_VIEW_MODES } from './useEditorLayout';
 import { useLaneDnd } from './lanes/useLaneDnd';
 import { isNonEmptyString } from './types/helpers';
+import type { BlockDefinition } from './blocks';
 import './Editor.css';
 import './mobile.css';
 import { HelpCenterModal, HelpPanel, type HelpCenterTopicId } from './HelpCenter';

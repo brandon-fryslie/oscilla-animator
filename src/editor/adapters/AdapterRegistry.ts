@@ -76,13 +76,18 @@ function isCoreDomain(domain: string): boolean {
   return CORE_DOMAINS.includes(domain as keyof typeof CORE_DOMAIN_DEFAULTS);
 }
 
-function makeTypeDesc(world: TypeDesc['world'], domain: TypeDesc['domain']): TypeDesc {
+function makeTypeDesc(
+  world: TypeDesc['world'],
+  domain: TypeDesc['domain'],
+  semantics?: TypeDesc['semantics']
+): TypeDesc {
   const category = isCoreDomain(domain) ? 'core' : 'internal';
   return {
     world,
     domain,
     category,
     busEligible: category === 'core' && world !== 'scalar' && world !== 'config',
+    ...(semantics !== undefined ? { semantics } : {}),
   };
 }
 
@@ -132,11 +137,11 @@ export function initAdapterRegistry(): void {
     });
   }
 
-  // Domain adapters: phase/number and duration/number
-  const signalNumber = makeTypeDesc('signal', 'number');
-  const signalPhase = makeTypeDesc('signal', 'phase');
-  const scalarNumber = makeTypeDesc('scalar', 'number');
-  const scalarPhase = makeTypeDesc('scalar', 'phase');
+  // Domain adapters: phase/float and duration/float
+  const signalFloat = makeTypeDesc('signal', 'float');
+  const signalPhase = makeTypeDesc('signal', 'float', 'phase(0..1)');
+  const scalarFloat = makeTypeDesc('scalar', 'float');
+  const scalarPhase = makeTypeDesc('scalar', 'float', 'phase(0..1)');
   const signalDuration = makeTypeDesc('signal', 'duration');
   const scalarDuration = makeTypeDesc('scalar', 'duration');
 
@@ -145,7 +150,7 @@ export function initAdapterRegistry(): void {
     label: 'Number → Phase (signal)',
     policy: 'SUGGEST',
     cost: COST_CHEAP,
-    from: signalNumber,
+    from: signalFloat,
     to: signalPhase,
   });
 
@@ -155,7 +160,7 @@ export function initAdapterRegistry(): void {
     policy: 'AUTO',
     cost: COST_CHEAP,
     from: signalPhase,
-    to: signalNumber,
+    to: signalFloat,
   });
 
   adapterRegistry.register({
@@ -163,7 +168,7 @@ export function initAdapterRegistry(): void {
     label: 'Number → Phase (scalar)',
     policy: 'SUGGEST',
     cost: COST_CHEAP,
-    from: scalarNumber,
+    from: scalarFloat,
     to: scalarPhase,
   });
 
@@ -173,7 +178,7 @@ export function initAdapterRegistry(): void {
     policy: 'AUTO',
     cost: COST_CHEAP,
     from: scalarPhase,
-    to: scalarNumber,
+    to: scalarFloat,
   });
 
   adapterRegistry.register({
@@ -181,7 +186,7 @@ export function initAdapterRegistry(): void {
     label: 'Number → Duration (signal)',
     policy: 'SUGGEST',
     cost: COST_CHEAP,
-    from: signalNumber,
+    from: signalFloat,
     to: signalDuration,
   });
 
@@ -191,7 +196,7 @@ export function initAdapterRegistry(): void {
     policy: 'AUTO',
     cost: COST_CHEAP,
     from: signalDuration,
-    to: signalNumber,
+    to: signalFloat,
   });
 
   adapterRegistry.register({
@@ -199,7 +204,7 @@ export function initAdapterRegistry(): void {
     label: 'Number → Duration (scalar)',
     policy: 'SUGGEST',
     cost: COST_CHEAP,
-    from: scalarNumber,
+    from: scalarFloat,
     to: scalarDuration,
   });
 
@@ -209,7 +214,7 @@ export function initAdapterRegistry(): void {
     policy: 'AUTO',
     cost: COST_CHEAP,
     from: scalarDuration,
-    to: scalarNumber,
+    to: scalarFloat,
   });
 
   const scalarExpression = makeTypeDesc('scalar', 'expression');

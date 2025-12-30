@@ -128,8 +128,9 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
  */
 const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const configData = (config != null && typeof config === 'object') ? config : {};
-  const periodMs = 'periodMs' in configData ? Number(configData.periodMs) : 1000;
-  const mode = 'mode' in configData && typeof configData.mode === 'string' ? configData.mode : 'loop';
+  // windowMs is for UI preview window, not used in IR directly (stored in TimeModel)
+  const windowMs = 'windowMs' in configData ? Number(configData.windowMs) : 10000;
+  const periodMs = 'periodMs' in configData ? Number(configData.periodMs) : 10000;
 
   // Allocate time-related slots upfront
   const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
@@ -159,12 +160,15 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   // Energy: constant 1.0
   const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'float' });
 
-  // Declare TimeModel
+  // Declare TimeModel - cyclic with period from periodMs
+  // Note: windowMs is a UI preview hint, not part of the time topology
+  // The CyclicTimeModel doesn't store windowMs, that's only for InfiniteTimeModel
+  void windowMs; // Used for editor config, not in TimeModel
   const timeModel: TimeModel = {
     kind: 'cyclic',
     periodMs,
     phaseDomain: '0..1',
-    mode: mode === 'pingpong' ? 'pingpong' : 'loop',
+    mode: 'loop',
   };
 
   return {
@@ -199,18 +203,18 @@ registerBlockType({
   capability: 'time',
   inputs: [
     {
-      portId: 'periodMs',
-      label: 'Period (ms)',
+      portId: 'windowMs',
+      label: 'Preview Window (ms)',
       dir: 'in',
       type: { world: 'scalar', domain: 'float' },
-      defaultSource: { value: 3000 },
+      defaultSource: { value: 10000 },
     },
     {
-      portId: 'mode',
-      label: 'Mode',
+      portId: 'periodMs',
+      label: 'Ambient Period (ms)',
       dir: 'in',
-      type: { world: 'scalar', domain: 'string' },
-      defaultSource: { value: 'loop' },
+      type: { world: 'scalar', domain: 'float' },
+      defaultSource: { value: 10000 },
     },
   ],
   outputs: [
@@ -294,6 +298,7 @@ export const FiniteTimeRootBlock: BlockCompiler = {
 
 /**
  * InfiniteTimeRoot - Ambient, unbounded time (no primary cycle).
+ * NEEDS REVIEW - DEPRECATED: currently uses cyclic phase/pulse behavior.
  *
  * Outputs:
  * - systemTime: Monotonic time in milliseconds
@@ -302,7 +307,10 @@ export const FiniteTimeRootBlock: BlockCompiler = {
 export const InfiniteTimeRootBlock: BlockCompiler = {
   type: 'InfiniteTimeRoot',
 
-  inputs: [],
+  inputs: [
+    { name: 'windowMs', type: { kind: 'Scalar:float' } },
+    { name: 'periodMs', type: { kind: 'Scalar:float' } },
+  ],
 
   outputs: [
     { name: 'systemTime', type: { kind: 'Signal:Time' } },

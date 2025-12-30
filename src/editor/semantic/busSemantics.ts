@@ -234,7 +234,7 @@ export function combineFieldArtifacts(
     };
   }
 
-  const fields = artifacts.map(a => (a as { kind: 'Field:float' | 'Field:int'; value: Field<float> | Field<int> }).value);
+  const fields = artifacts.map(a => (a as { kind: 'Field:float' | 'Field:int'; value: Field<float> }).value);
 
   if (mode === 'last') {
     // Highest sortKey wins (last in sorted array)
@@ -242,7 +242,7 @@ export function combineFieldArtifacts(
   }
 
   if (mode === 'sum') {
-    const combined: Field<float> | Field<int> = (seed: Seed, n: number, ctx: CompileCtx) => {
+    const combined: Field<float> = (seed: Seed, n: number, ctx: CompileCtx) => {
       const allValues = fields.map(f => f(seed, n, ctx));
       const result: float[] = [];
       for (let i = 0; i < n; i++) {
@@ -258,7 +258,7 @@ export function combineFieldArtifacts(
   }
 
   if (mode === 'average') {
-    const combined: Field<float> | Field<int> = (seed: Seed, n: number, ctx: CompileCtx) => {
+    const combined: Field<float> = (seed: Seed, n: number, ctx: CompileCtx) => {
       const allValues = fields.map(f => f(seed, n, ctx));
       const result: float[] = [];
       for (let i = 0; i < n; i++) {
@@ -274,7 +274,7 @@ export function combineFieldArtifacts(
   }
 
   if (mode === 'max') {
-    const combined: Field<float> | Field<int> = (seed: Seed, n: number, ctx: CompileCtx) => {
+    const combined: Field<float> = (seed: Seed, n: number, ctx: CompileCtx) => {
       const allValues = fields.map(f => f(seed, n, ctx));
       const result: float[] = [];
       for (let i = 0; i < n; i++) {
@@ -291,7 +291,7 @@ export function combineFieldArtifacts(
   }
 
   if (mode === 'min') {
-    const combined: Field<float> | Field<int> = (seed: Seed, n: number, ctx: CompileCtx) => {
+    const combined: Field<float> = (seed: Seed, n: number, ctx: CompileCtx) => {
       const allValues = fields.map(f => f(seed, n, ctx));
       const result: float[] = [];
       for (let i = 0; i < n; i++) {

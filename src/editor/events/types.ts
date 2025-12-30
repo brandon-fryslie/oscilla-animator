@@ -333,7 +333,7 @@ export interface CompiledProgramMeta {
   /** TimeModel kind */
   timeModelKind: 'finite' | 'cyclic' | 'infinite';
   /** Kind of TimeRoot used */
-  timeRootKind: 'FiniteTimeRoot' | 'InfiniteTimeRoot' | 'InfiniteTimeRoot' | 'none';
+  timeRootKind: 'FiniteTimeRoot' | 'InfiniteTimeRoot' | 'none';
   /** Optional bus usage summary */
   busUsageSummary?: Record<string, { publishers: number; listeners: number }>;
 }

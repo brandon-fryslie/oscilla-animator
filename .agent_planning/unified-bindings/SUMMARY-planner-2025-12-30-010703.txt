@@ -1,0 +1,9 @@
+Agent: status-planner | 2025-12-30-010703
+Topic: unified-bindings
+Files: PLAN-2025-12-30-010703.md, DOD-2025-12-30-010703.md
+Items: 4 sprints (P0: 2, P1: 1, P2: 1)
+Sprint 1: Foundation (1-2h) - types, read facade, write facade, BusStore fix
+Sprint 2: High-Value UI (2-3h) - ConnectionInspector, Inspector, PatchBay
+Sprint 3: Complete UI (1-2h) - BusInspector, BusPicker, PublishMenu
+Sprint 4: Validation (1h, optional) - Validator.canAddPublisher/Listener
+Total effort: 6-8 hours

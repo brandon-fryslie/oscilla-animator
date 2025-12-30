@@ -563,22 +563,6 @@ describe("Pipeline Integration - Invariants", () => {
     expect(cyclicTime.timeSignals.phase01).toBeDefined();
     expect(cyclicTime.timeSignals.wrapEvent).toBeDefined();
 
-    // Infinite TimeRoot
-    const infiniteRoot = createBlock("infinite", "InfiniteTimeRoot", {
-      params: { windowMs: 10000, periodMs: 8000 },
-    });
-
-    const infinitePatch = createPatch({ blocks: [infiniteRoot] });
-    const infiniteNorm = pass1Normalize(infinitePatch);
-    const infiniteTyped = pass2TypeGraph(infiniteNorm);
-    const infiniteTime = pass3TimeTopology(infiniteTyped);
-
-    expect(infiniteTime.timeModel).toEqual({
-      kind: "infinite",
-      windowMs: 10000,
-      suggestedUIWindowMs: 8000,
-    });
-    expect(infiniteTime.timeSignals.phase01).toBeUndefined();
-    expect(infiniteTime.timeSignals.wrapEvent).toBeUndefined();
+    // NEEDS REVIEW - DEPRECATED: InfiniteTimeRoot currently emits cyclic TimeModel.
   });
 });

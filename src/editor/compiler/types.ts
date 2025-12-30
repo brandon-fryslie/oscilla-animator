@@ -199,6 +199,7 @@ export type Field<T> = (seed: Seed, n: number, ctx: CompileCtx) => readonly T[];
 export type ValueKind =
   // Scalars (single values)
   | 'Scalar:float'
+  | 'Scalar:int'
   | 'Scalar:string'
   | 'Scalar:boolean'
   | 'Scalar:color'
@@ -207,6 +208,7 @@ export type ValueKind =
 
   // Fields (per-element arrays)
   | 'Field:float'
+  | 'Field:int'
   | 'Field:string'
   | 'Field:boolean'
   | 'Field:color'
@@ -222,6 +224,7 @@ export type ValueKind =
   // Signals
   | 'Signal:Time'
   | 'Signal:float'
+  | 'Signal:int'
   | 'Signal:Unit'
   | 'Signal:vec2'
   | 'Signal:phase'

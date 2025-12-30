@@ -33,18 +33,16 @@ function DefaultValueEditor({
   const value = bus.defaultValue;
 
   switch (domain) {
-    case 'number':
+    case 'float':
+    case 'int':
     case 'time':
-    case 'phase':
     case 'rate':
       return (
         <div className="default-value-editor">
           <input
             type="number"
             value={typeof value === 'number' ? value : 0}
-            step={domain === 'phase' ? 0.01 : domain === 'rate' ? 0.1 : 1}
-            min={domain === 'phase' ? 0 : undefined}
-            max={domain === 'phase' ? 1 : undefined}
+            step={domain === 'rate' ? 0.1 : 1}
             onChange={(e) => onUpdate(parseFloat(e.target.value) || 0)}
           />
           {domain === 'time' && <span className="value-unit">seconds</span>}

@@ -9,7 +9,6 @@ import { describe, it, expect } from 'vitest';
 import {
   FiniteTimeRootBlock,
   InfiniteTimeRootBlock,
-  InfiniteTimeRootBlock,
   extractTimeRootAutoPublications
 } from '../TimeRoot';
 import type { CompileCtx, RuntimeCtx } from '../../../types';
@@ -126,8 +125,11 @@ describe('InfiniteTimeRootBlock', () => {
     // expect(InfiniteTimeRootBlock.category).toBe('TimeRoot');
   });
 
-  it('should have no inputs', () => {
-    expect(InfiniteTimeRootBlock.inputs).toEqual([]);
+  it('should have expected inputs', () => {
+    expect(InfiniteTimeRootBlock.inputs).toEqual([
+      { name: 'windowMs', type: { kind: 'Scalar:float' } },
+      { name: 'periodMs', type: { kind: 'Scalar:float' } },
+    ]);
   });
 
   it('should have all expected outputs', () => {

@@ -25,14 +25,13 @@ export interface BusVizProps {
  */
 export function BusViz({ domain, defaultValue, size = 20 }: BusVizProps): React.ReactElement {
   switch (domain) {
-    case 'number':
+    case 'float':
+    case 'int':
       return <NumberViz value={defaultValue as number} size={size} />;
     case 'vec2':
       return <Vec2Viz value={defaultValue as { x: number; y: number }} size={size} />;
     case 'color':
       return <ColorViz value={defaultValue as { r: number; g: number; b: number; a: number }} size={size} />;
-    case 'phase':
-      return <PhaseViz value={defaultValue as number} size={size} />;
     case 'time':
       return <TimeViz size={size} />;
     case 'rate':
@@ -119,37 +118,6 @@ function ColorViz({ value, size }: { value: { r: number; g: number; b: number; a
 
       {/* Color swatch */}
       <rect x="2" y="2" width="16" height="16" fill={rgba} stroke="#333" strokeWidth="0.5" rx="2" />
-    </svg>
-  );
-}
-
-/**
- * Phase: Circular ring (static at 0°).
- */
-function PhaseViz({ value, size }: { value: number; size: number }): React.ReactElement {
-  // Phase is [0, 1] - convert to angle
-  const angle = value * 360;
-
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 20 20"
-      className="bus-viz bus-viz-phase"
-      aria-label={`Phase visualization (default: ${value.toFixed(3)})`}
-    >
-      {/* Outer ring */}
-      <circle cx="10" cy="10" r="7" fill="none" stroke="#333" strokeWidth="1.5" />
-
-      {/* Phase indicator (marker at 0° = top) */}
-      <circle
-        cx="10"
-        cy="3"
-        r="2"
-        fill="#4a9eff"
-        opacity="0.8"
-        transform={`rotate(${angle} 10 10)`}
-      />
     </svg>
   );
 }

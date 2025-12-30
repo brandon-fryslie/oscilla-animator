@@ -144,7 +144,7 @@ function parseValueKindFallback(kind: string): TypeDesc {
 }
 
 // =============================================================================
-// SlotType Conversion
+// SlotType Conversion (LEGACY)
 // =============================================================================
 
 /**
@@ -230,13 +230,11 @@ const DOMAIN_STRING_MAP: Record<string, TypeDomain> = {
   'Color': 'color',
   'Boolean': 'boolean',
   'Time': 'time',
-  'Phase': 'phase',
   'Rate': 'rate',
   'Trigger': 'trigger',
 
   // Special time variants
   'Unit': 'float',  // Unit is a float with unit(0..1) semantics
-  'unit': 'float',
 
   // Point/position variants
   'Point': 'vec2',

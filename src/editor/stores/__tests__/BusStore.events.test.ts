@@ -69,7 +69,9 @@ describe('BusStore - Event Emission', () => {
         expect(event.busId).toBe(busId);
         expect(event.name).toBe('customPhase');
         expect(event.busType.world).toBe('signal');
-        expect(event.busType.domain).toBe('phase');
+        // Phase is represented as float with semantics, not a separate domain
+        expect(event.busType.domain).toBe('float');
+        expect(event.busType.semantics).toBe('phase(0..1)');
       });
 
       it('emits BusCreated for each default bus at startup', () => {

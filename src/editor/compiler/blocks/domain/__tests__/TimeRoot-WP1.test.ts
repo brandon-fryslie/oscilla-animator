@@ -4,7 +4,7 @@
  * Tests for new WP1 TimeRoot features:
  * - Wrap events
  * - Energy outputs
- * - CycleIndex and cycleT
+ * - CycleIndex and cycleT (NEEDS REVIEW - DEPRECATED)
  * - End events for FiniteTimeRoot
  * - Auto-publications
  */

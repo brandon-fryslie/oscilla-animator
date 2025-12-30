@@ -163,20 +163,21 @@ describe('Validator', () => {
             id: 'source',
             type: 'NumberSource',
             inputs: [],
+            // Signal<float> is incompatible with Signal<Point> (vec2 domain)
             outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
           {
             id: 'target',
             type: 'Scale',
-            inputs: [{ id: 'phase', type: 'Signal<phase>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
+            inputs: [{ id: 'position', type: 'Signal<Point>' }],
+            outputs: [{ id: 'scaled', type: 'Signal<Point>' }],
           },
         ],
         connections: [
           {
             id: 'conn1',
             from: { blockId: 'source', slotId: 'value', direction: 'output' },
-            to: { blockId: 'target', slotId: 'phase', direction: 'input' },
+            to: { blockId: 'target', slotId: 'position', direction: 'input' },
           },
         ],
         buses: [],
@@ -191,7 +192,7 @@ describe('Validator', () => {
       expect(typeErrors).toHaveLength(1);
       expect(typeErrors[0]?.primaryTarget).toEqual({
         kind: 'port',
-        portRef: { blockId: 'target', slotId: 'phase', direction: 'input' },
+        portRef: { blockId: 'target', slotId: 'position', direction: 'input' },
       });
     });
 
@@ -412,8 +413,9 @@ describe('Validator', () => {
         (e) => e.code === 'E_RESERVED_BUS_TYPE_MISMATCH'
       );
       expect(typeMismatchErrors).toHaveLength(1);
+      // Phase is now represented as signal:float with semantics
       expect(typeMismatchErrors[0]?.message).toContain(
-        'must have type signal:phase'
+        'must have type signal:float'
       );
     });
 

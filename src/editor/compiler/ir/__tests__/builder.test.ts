@@ -422,7 +422,7 @@ describe("IRBuilder", () => {
 
       const domainSlot = builder.domainFromN(100);
 
-      expect(typeof domainSlot).toBe("float");
+      expect(typeof domainSlot).toBe("number");
       expect(domainSlot).toBe(0);
 
       const nextSlot = builder.allocValueSlot();

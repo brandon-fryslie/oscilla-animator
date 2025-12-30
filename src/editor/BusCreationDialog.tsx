@@ -11,7 +11,7 @@ import { observer } from 'mobx-react-lite';
 import { useState, useEffect, useCallback } from 'react';
 import { useStore } from './stores';
 import type { TypeDesc, BusCombineMode, CoreDomain } from './types';
-import type { RootStore } from './stores/RootStore';
+import type { RootStore } from './stores';
 import { isBusEligible } from './types';
 import { isNonEmptyString } from './types/helpers';
 import './BusCreationDialog.css';
@@ -273,7 +273,7 @@ export const BusCreationDialog = observer((props: BusCreationDialogProps): React
     if (suggestedType && isBusEligible(suggestedType)) {
       return suggestedType.domain as CoreDomain;
     }
-    return 'number';
+    return 'float';
   }, [suggestedType]);
 
   const [selectedDomain, setSelectedDomain] = useState<CoreDomain>(getInitialDomain());

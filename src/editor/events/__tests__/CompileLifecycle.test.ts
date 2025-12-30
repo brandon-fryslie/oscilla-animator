@@ -272,9 +272,8 @@ describe('CompileFinished Event Payload', () => {
   });
 
   it('should support programMeta with all timeRootKind values', () => {
-    const timeRootKinds: Array<'FiniteTimeRoot' | 'InfiniteTimeRoot' | 'InfiniteTimeRoot' | 'none'> = [
+    const timeRootKinds: Array<'FiniteTimeRoot' | 'InfiniteTimeRoot' | 'none'> = [
       'FiniteTimeRoot',
-      'InfiniteTimeRoot',
       'InfiniteTimeRoot',
       'none',
     ];

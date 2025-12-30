@@ -1028,7 +1028,7 @@ export function createCompilerService(store: RootStore): CompilerService {
 /**
  * Infer TimeRootKind from the compiled patch.
  */
-function inferTimeRootKind(patch: CompilerPatch): 'FiniteTimeRoot' | 'InfiniteTimeRoot' | 'InfiniteTimeRoot' | 'none' {
+function inferTimeRootKind(patch: CompilerPatch): 'FiniteTimeRoot' | 'InfiniteTimeRoot' | 'none' {
   for (const block of patch.blocks.values()) {
     if (block.type === 'FiniteTimeRoot') return 'FiniteTimeRoot';
     if (block.type === 'InfiniteTimeRoot') return 'InfiniteTimeRoot';

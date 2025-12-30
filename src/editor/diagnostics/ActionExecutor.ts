@@ -139,8 +139,8 @@ export class ActionExecutor {
    */
   insertBlock(
     blockType: string,
-    position?: 'before' | 'after',
-    nearBlockId?: string
+    _position?: 'before' | 'after',
+    _nearBlockId?: string
   ): boolean {
     // Add the block
     const newBlockId = this.patchStore.addBlock(blockType);
@@ -259,7 +259,6 @@ export class ActionExecutor {
     const existingTimeRoots = this.patchStore.blocks.filter(
       (block) =>
         block.type === 'FiniteTimeRoot' ||
-        block.type === 'InfiniteTimeRoot' ||
         block.type === 'InfiniteTimeRoot'
     );
 
@@ -268,7 +267,8 @@ export class ActionExecutor {
     }
 
     // Determine the block type to create
-    const blockType = `${timeRootKind}TimeRoot`;
+    // Map 'Cycle' and 'Infinite' both to InfiniteTimeRoot (CycleTimeRoot was removed)
+    const blockType = timeRootKind === 'Finite' ? 'FiniteTimeRoot' : 'InfiniteTimeRoot';
 
     // Add the new TimeRoot block
     const newBlockId = this.patchStore.addBlock(blockType);

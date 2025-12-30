@@ -364,10 +364,10 @@ describe('registry-validation', () => {
       expect(summary.io).toHaveLength(3);
     });
 
-    it('has exactly 20 total primitives (3 time + 3 identity + 5 state + 6 render + 3 io)', () => {
+    it('has exactly 19 total primitives (2 time + 3 identity + 5 state + 6 render + 3 io)', () => {
       const summary = getKernelPrimitivesSummary();
       const total = Object.values(summary).flat().length;
-      expect(total).toBe(20);
+      expect(total).toBe(19);
     });
   });
 });

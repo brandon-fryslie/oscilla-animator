@@ -22,7 +22,6 @@ export type {
   Slot,
   SlotType,
   Connection,
-  Lane,
   Patch,
   EditorUIState,
   Template,
