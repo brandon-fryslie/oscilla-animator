@@ -15,6 +15,7 @@ import { getIncomingBindingForInputPort, getOutgoingBindingsForOutputPort } from
 import { InspectorContainer } from './components/InspectorContainer';
 import { ConnectionInspector } from './ConnectionInspector';
 import { BusInspector } from './BusInspector';
+import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from './defaultSources/allowlist';
 import './Inspector.css';
 
 /**
@@ -1300,6 +1301,8 @@ const DiagnosticsSection = observer(({ block }: { block: Block }) => {
 
 /**
  * Default Sources section - shows editable controls for undriven inputs
+ * Sprint 12: Added provider type dropdown
+ *
  * Priority: Wire > Bus Listener > DefaultSource
  * Only show controls when input is NOT driven (no wire, no bus)
  */
@@ -1330,8 +1333,27 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
   // Only show if there are any default sources
   if (inputsWithDefaults.length === 0) return null;
 
-  const handleChange = (blockId: string, slotId: string, value: unknown) => {
+  const handleValueChange = (blockId: string, slotId: string, value: unknown) => {
     store.defaultSourceStore.setDefaultValueForInput(blockId, slotId, value);
+  };
+
+  // Sprint 12: Provider dropdown handler (currently disabled, used in Sprint 15)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleProviderChange = (blockId: string, slotId: string, _providerBlockType: string) => {
+    // For Sprint 12, only "Constant" is available, but wire up the infrastructure
+    // Get the slot to determine the type
+    const slot = block.inputs.find(s => s.id === slotId);
+    if (!slot) return;
+
+    // Create new attachment with selected provider type
+    const newAttachment = store.defaultSourceStore.createDefaultAttachmentForSlot(
+      blockId,
+      slotId,
+      slot.type
+    );
+
+    // Set the attachment
+    store.defaultSourceStore.setAttachmentForInput(blockId, slotId, newAttachment);
   };
 
   // Separate into primary (undriven) and secondary (driven) sections
@@ -1350,16 +1372,39 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
       {/* Active (undriven) inputs - editable */}
       {undrivenInputs.length > 0 && (
         <div className="param-grid">
-          {undrivenInputs.map(({ slot, ds }) => (
-            <div key={slot.id} className="param-row">
-              <label className="param-key">{slot.label}</label>
-              <DefaultSourceControl
-                ds={ds}
-                isDriven={false}
-                onChange={(val) => handleChange(block.id, slot.id, val)}
-              />
-            </div>
-          ))}
+          {undrivenInputs.map(({ slot, ds }) => {
+            // Get attachment to determine provider type
+            const attachment = store.defaultSourceStore.getAttachmentForInput(block.id, slot.id);
+            const providerLabel = attachment
+              ? DEFAULT_SOURCE_PROVIDER_BLOCKS.find(p => p.blockType === attachment.provider.blockType)?.label ?? 'Constant'
+              : 'Constant';
+
+            return (
+              <div key={slot.id} className="param-row">
+                <label className="param-key">{slot.label}</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                  {/* Provider Type Dropdown */}
+                  <select
+                    className="param-input"
+                    value={attachment?.provider.blockType ?? 'DSConstSignalFloat'}
+                    disabled={true} // Sprint 12: disabled since only one option
+                    onChange={(e) => handleProviderChange(block.id, slot.id, e.target.value)}
+                    style={{ fontSize: '10px', color: '#888' }}
+                  >
+                    <option value={attachment?.provider.blockType ?? 'DSConstSignalFloat'}>
+                      {providerLabel}
+                    </option>
+                  </select>
+                  {/* Value Control */}
+                  <DefaultSourceControl
+                    ds={ds}
+                    isDriven={false}
+                    onChange={(val) => handleValueChange(block.id, slot.id, val)}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
