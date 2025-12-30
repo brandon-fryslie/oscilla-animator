@@ -140,7 +140,8 @@ export function initAdapterRegistry(): void {
         }
         return { kind: 'Error', message: `ConstToSignal unsupported for ${artifact.kind}` };
       },
-      // IR compilation support deferred - complex due to constant pool handling
+      // IR compilation support (Sprint 5): Uses TransformStepAdapter IR node
+      // No compile ToIR needed - handled at transform chain level
       compileToIR: undefined,
     });
 

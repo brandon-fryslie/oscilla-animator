@@ -69,7 +69,11 @@ export type TransformStepIR =
   | TransformStepEase
 
   // Stateful transform (explicit state, no closure memory)
-  | TransformStepSlew;
+  | TransformStepSlew
+
+  // Adapter and Lens steps (Sprint 5 - Unified Transforms)
+  | TransformStepAdapter
+  | TransformStepLens;
 
 /** Type cast step - reinterpret type without computation */
 export interface TransformStepCast {
@@ -118,6 +122,34 @@ export interface TransformStepSlew {
   stateOffset: number;
   /** Slew rate */
   rate: number;
+}
+
+/**
+ * Adapter step - type world conversion (scalar → signal, signal → field, etc.)
+ *
+ * Sprint 5: Added for unified transform support in IR mode.
+ * References adapter by ID from AdapterRegistry.
+ */
+export interface TransformStepAdapter {
+  kind: "adapter";
+  /** Adapter ID from AdapterRegistry (e.g., "ConstToSignal:float") */
+  adapterId: string;
+  /** Adapter parameters (const pool references for dynamic params) */
+  params?: Record<string, number>;
+}
+
+/**
+ * Lens step - value transformation (scale, clamp, ease, etc.)
+ *
+ * Sprint 5: Added for unified transform support in IR mode.
+ * References lens by ID from LensRegistry.
+ */
+export interface TransformStepLens {
+  kind: "lens";
+  /** Lens ID from LensRegistry (e.g., "scale", "clamp") */
+  lensId: string;
+  /** Lens parameters (const pool references for dynamic params) */
+  params?: Record<string, number>;
 }
 
 // =============================================================================
