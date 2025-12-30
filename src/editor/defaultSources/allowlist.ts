@@ -45,7 +45,7 @@ export type DefaultSourceProviderBlockSpec = Readonly<{
  *
  * Currently includes:
  * - All const providers (9 types for Signal/Field/Scalar)
- * - Oscillator will be added in Sprint 15
+ * - Oscillator (Sprint 15)
  */
 export const DEFAULT_SOURCE_PROVIDER_BLOCKS: readonly DefaultSourceProviderBlockSpec[] =
   [
@@ -60,5 +60,12 @@ export const DEFAULT_SOURCE_PROVIDER_BLOCKS: readonly DefaultSourceProviderBlock
       })
     ),
 
-    // Advanced providers (Oscillator, etc.) will be added in Sprint 15
+    // Advanced providers (Sprint 15: Oscillator)
+    {
+      blockType: 'Oscillator',
+      label: 'Oscillator (Sine/LFO)',
+      outputPortId: 'out',
+      editableInputs: ['shape', 'amplitude', 'bias'],
+      busInputs: { phase: 'phaseA' },
+    },
   ];

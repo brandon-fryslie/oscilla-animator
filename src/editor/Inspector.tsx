@@ -1411,24 +1411,39 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
   if (inputsWithDefaults.length === 0) return null;
 
 
-  // Sprint 12: Provider dropdown handler (currently disabled, used in Sprint 15)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleProviderChange = (blockId: string, slotId: string, _providerBlockType: string) => {
-    // For Sprint 12, only "Constant" is available, but wire up the infrastructure
+  // Sprint 15: Provider dropdown handler - now supports multiple provider types
+  const handleProviderChange = (blockId: string, slotId: string, providerBlockType: string) => {
     // Get the slot to determine the type
     const slot = block.inputs.find(s => s.id === slotId);
     if (!slot) return;
 
     // Create new attachment with selected provider type
-    const newAttachment = store.defaultSourceStore.createDefaultAttachmentForSlot(
+    const newAttachment = store.defaultSourceStore.createAttachmentWithProvider(
       blockId,
       slotId,
+      providerBlockType,
       slot.type
     );
 
     // Set the attachment
     store.defaultSourceStore.setAttachmentForInput(blockId, slotId, newAttachment);
   };
+
+  // Sprint 15: Helper to get compatible provider options for a slot type
+  const getCompatibleProviders = useCallback((slotType: Slot['type']) => {
+    // Find the output type for the slot
+    return DEFAULT_SOURCE_PROVIDER_BLOCKS.filter(providerSpec => {
+      const providerDef = getBlockDefinition(providerSpec.blockType);
+      if (!providerDef) return false;
+      
+      // Find the provider's output slot
+      const outputSlot = providerDef.outputs.find(o => o.id === providerSpec.outputPortId);
+      if (!outputSlot) return false;
+      
+      // Check type compatibility (provider output must be compatible with target input)
+      return areTypesCompatible(outputSlot.type, slotType);
+    });
+  }, []);
 
   // Separate into primary (undriven) and secondary (driven) sections
   const undrivenInputs = inputsWithDefaults.filter((i) => i.isDriven === false);
@@ -1449,25 +1464,27 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
           {undrivenInputs.map(({ slot }) => {
             // Get attachment to determine provider type
             const attachment = store.defaultSourceStore.getAttachmentForInput(block.id, slot.id);
-            const providerLabel = attachment
-              ? DEFAULT_SOURCE_PROVIDER_BLOCKS.find(p => p.blockType === attachment.provider.blockType)?.label ?? 'Constant'
-              : 'Constant';
+            
+            // Get compatible providers for this slot type
+            const compatibleProviders = getCompatibleProviders(slot.type);
 
             return (
               <div key={slot.id} className="param-row">
                 <label className="param-key">{slot.label}</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                  {/* Provider Type Dropdown */}
+                  {/* Sprint 15: Provider Type Dropdown - enabled with multiple options */}
                   <select
                     className="param-input"
                     value={attachment?.provider.blockType ?? 'DSConstSignalFloat'}
-                    disabled={true} // Sprint 12: disabled since only one option
+                    disabled={compatibleProviders.length <= 1}
                     onChange={(e) => handleProviderChange(block.id, slot.id, e.target.value)}
                     style={{ fontSize: '10px', color: '#888' }}
                   >
-                    <option value={attachment?.provider.blockType ?? 'DSConstSignalFloat'}>
-                      {providerLabel}
-                    </option>
+                    {compatibleProviders.map(providerSpec => (
+                      <option key={providerSpec.blockType} value={providerSpec.blockType}>
+                        {providerSpec.label}
+                      </option>
+                    ))}
                   </select>
                   {/* Sprint 13: Provider Config Panel */}
                   {attachment && (
@@ -1496,9 +1513,9 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
           {drivenInputs.map(({ slot }) => {
             // Get attachment to determine provider type
             const attachment = store.defaultSourceStore.getAttachmentForInput(block.id, slot.id);
-            const providerLabel = attachment
-              ? DEFAULT_SOURCE_PROVIDER_BLOCKS.find(p => p.blockType === attachment.provider.blockType)?.label ?? 'Constant'
-              : 'Constant';
+            
+            // Get compatible providers for this slot type
+            const compatibleProviders = getCompatibleProviders(slot.type);
 
             return (
               <div key={slot.id} className="param-row param-row-driven">
@@ -1507,16 +1524,18 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
                   <span className="driven-badge">driven</span>
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                  {/* Provider Type Dropdown - disabled */}
+                  {/* Provider Type Dropdown - disabled when driven */}
                   <select
                     className="param-input"
                     value={attachment?.provider.blockType ?? 'DSConstSignalFloat'}
                     disabled={true}
                     style={{ fontSize: '10px', color: '#555' }}
                   >
-                    <option value={attachment?.provider.blockType ?? 'DSConstSignalFloat'}>
-                      {providerLabel}
-                    </option>
+                    {compatibleProviders.map(providerSpec => (
+                      <option key={providerSpec.blockType} value={providerSpec.blockType}>
+                        {providerSpec.label}
+                      </option>
+                    ))}
                   </select>
                   {/* Provider Config Panel - read-only */}
                   {attachment && (

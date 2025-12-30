@@ -15,6 +15,7 @@ import type { DefaultSourceState, TypeDesc, UIControlHint, Slot, BlockId, SlotWo
 import type { RootStore } from './RootStore';
 import type { DefaultSourceAttachment } from '../defaultSources/types';
 import { CONST_PROVIDER_MAPPING } from '../defaultSources/constProviders';
+import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from '../defaultSources/allowlist';
 import { getBlockDefinition } from '../blocks/registry';
 
 // =============================================================================
@@ -121,6 +122,7 @@ export class DefaultSourceStore {
       setAttachmentForInput: action,
       removeAttachmentForInput: action,
       createDefaultAttachmentForSlot: action,
+      createAttachmentWithProvider: action,
       rebuildAttachmentsFromBlocks: action,
     });
   }
@@ -212,6 +214,107 @@ export class DefaultSourceStore {
         editableInputSourceIds: {
           value: providerInputDefaultId,
         },
+      },
+    };
+
+    return attachment;
+  }
+
+  /**
+   * Create an attachment with a specific provider type.
+   *
+   * Sprint 15: Allows creating attachments for any allowlisted provider (not just Const).
+   * Used by UI to create attachments when user selects a provider type.
+   *
+   * @param blockId - The target block ID
+   * @param slotId - The target input slot ID
+   * @param providerBlockType - The provider block type (e.g., 'Oscillator', 'DSConstSignalFloat')
+   * @param slotType - The target slot type (for type checking and default values)
+   * @returns Complete DefaultSourceAttachment with specified provider
+   */
+  createAttachmentWithProvider(
+    blockId: string,
+    slotId: string,
+    providerBlockType: string,
+    slotType: string
+  ): DefaultSourceAttachment {
+    // Generate deterministic provider ID
+    const providerId = `dsprov:${blockId}:${slotId}`;
+
+    // Find provider spec from allowlist
+    const providerSpec = DEFAULT_SOURCE_PROVIDER_BLOCKS.find(
+      (spec) => spec.blockType === providerBlockType
+    );
+
+    if (!providerSpec) {
+      console.warn(
+        `Provider block type '${providerBlockType}' not found in allowlist, falling back to Const provider`
+      );
+      return this.createDefaultAttachmentForSlot(blockId, slotId, slotType);
+    }
+
+    // Get provider block definition to access default values for editable inputs
+    const providerDefinition = getBlockDefinition(providerBlockType);
+    if (!providerDefinition) {
+      console.warn(
+        `Provider block definition not found for '${providerBlockType}', falling back to Const provider`
+      );
+      return this.createDefaultAttachmentForSlot(blockId, slotId, slotType);
+    }
+
+    // Create default sources for all editable inputs
+    const editableInputSourceIds: Record<string, string> = {};
+
+    for (const inputId of providerSpec.editableInputs) {
+      const inputSlot = providerDefinition.inputs.find((s) => s.id === inputId);
+      if (!inputSlot || !inputSlot.defaultSource) {
+        console.warn(
+          `Provider '${providerBlockType}' input '${inputId}' not found or has no defaultSource, skipping`
+        );
+        continue;
+      }
+
+      // Generate deterministic ID for this provider input's default source
+      const providerInputDefaultId = `ds:prov:${providerId}:${inputId}`;
+      editableInputSourceIds[inputId] = providerInputDefaultId;
+
+      // Create the DefaultSource for this provider input if it doesn't exist
+      const existingSource = this.sources.get(providerInputDefaultId);
+      if (!existingSource) {
+        // Derive TypeDesc from input slot
+        const baseTypeDesc = inputSlot.type as unknown as TypeDesc;
+        const typeDesc: TypeDesc =
+          typeof baseTypeDesc === 'object' && 'world' in baseTypeDesc
+            ? baseTypeDesc
+            : {
+                world: slotWorldToTypeWorld(inputSlot.defaultSource.world),
+                domain: 'float', // fallback
+                category: 'core',
+                busEligible: false,
+              };
+
+        const newSource = new DefaultSource({
+          id: providerInputDefaultId,
+          type: typeDesc,
+          value: inputSlot.defaultSource.value,
+          uiHint: inputSlot.defaultSource.uiHint,
+        });
+
+        this.sources.set(providerInputDefaultId, newSource);
+      }
+    }
+
+    // Build attachment
+    const attachment: DefaultSourceAttachment = {
+      target: {
+        blockId,
+        slotId,
+      },
+      provider: {
+        providerId,
+        blockType: providerBlockType,
+        outputPortId: providerSpec.outputPortId,
+        editableInputSourceIds,
       },
     };
 
