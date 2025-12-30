@@ -11,7 +11,8 @@
  * 2. Read path expression/data from pathExprSlot
  * 3. Allocate command buffer (Uint16Array) and params buffer (Float32Array)
  * 4. Encode path commands and coordinates
- * 5. Store buffers in outCmdsSlot and outParamsSlot
+ * 5. Optional: Flatten curves to line segments using De Casteljau algorithm
+ * 6. Store buffers in outCmdsSlot and outParamsSlot
  *
  * Command encoding (u16):
  * - 0: MoveTo (consumes 2 params: x, y)
@@ -23,6 +24,7 @@
  * References:
  * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md §B4
  * - design-docs/13-Renderer/09-Materialization-Steps.md
+ * - plans/SPEC-04-render-pipeline.md Gap 6 (De Casteljau algorithm)
  */
 
 import type { StepMaterializePath, CompiledProgramIR } from "../../../compiler/ir";
@@ -146,7 +148,152 @@ function resolvePathExprFromField(
 }
 
 /**
- * Calculate buffer sizes needed for paths
+ * Flatten a cubic Bezier curve to line segments using recursive De Casteljau subdivision.
+ *
+ * Algorithm:
+ * - Check flatness using control point distance test
+ * - If flat enough or max depth reached: emit line segment
+ * - Otherwise: subdivide at midpoint and recurse on both halves
+ *
+ * @param x0 Start point x
+ * @param y0 Start point y
+ * @param x1 First control point x
+ * @param y1 First control point y
+ * @param x2 Second control point x
+ * @param y2 Second control point y
+ * @param x3 End point x
+ * @param y3 End point y
+ * @param tolerance Flatness tolerance in pixels (smaller = more segments)
+ * @returns Array of [x, y] coordinates for line segments (excluding start point)
+ */
+function flattenCubicBezier(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  x3: number,
+  y3: number,
+  tolerance: number,
+): number[] {
+  const points: number[] = [];
+
+  function subdivide(
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    cx: number,
+    cy: number,
+    dx: number,
+    dy: number,
+    depth: number,
+  ): void {
+    // Check flatness using control point distance from baseline
+    // This is a fast approximation: max distance of control points from line segment
+    const ux = 3 * bx - 2 * ax - dx;
+    const uy = 3 * by - 2 * ay - dy;
+    const vx = 3 * cx - ax - 2 * dx;
+    const vy = 3 * cy - ay - 2 * dy;
+    const flatness = Math.max(ux * ux + uy * uy, vx * vx + vy * vy);
+
+    // If flat enough or max depth reached: emit line segment
+    if (flatness <= tolerance * tolerance || depth > 10) {
+      points.push(dx, dy);
+      return;
+    }
+
+    // Subdivide at midpoint using De Casteljau
+    const abx = (ax + bx) / 2;
+    const aby = (ay + by) / 2;
+    const bcx = (bx + cx) / 2;
+    const bcy = (by + cy) / 2;
+    const cdx = (cx + dx) / 2;
+    const cdy = (cy + dy) / 2;
+    const abcx = (abx + bcx) / 2;
+    const abcy = (aby + bcy) / 2;
+    const bcdx = (bcx + cdx) / 2;
+    const bcdy = (bcy + cdy) / 2;
+    const midx = (abcx + bcdx) / 2;
+    const midy = (abcy + bcdy) / 2;
+
+    // Recurse on both halves
+    subdivide(ax, ay, abx, aby, abcx, abcy, midx, midy, depth + 1);
+    subdivide(midx, midy, bcdx, bcdy, cdx, cdy, dx, dy, depth + 1);
+  }
+
+  subdivide(x0, y0, x1, y1, x2, y2, x3, y3, 0);
+  return points;
+}
+
+/**
+ * Flatten a quadratic Bezier curve to line segments using recursive De Casteljau subdivision.
+ *
+ * Algorithm:
+ * - Check flatness using control point distance test
+ * - If flat enough or max depth reached: emit line segment
+ * - Otherwise: subdivide at midpoint and recurse on both halves
+ *
+ * @param x0 Start point x
+ * @param y0 Start point y
+ * @param cx Control point x
+ * @param cy Control point y
+ * @param x1 End point x
+ * @param y1 End point y
+ * @param tolerance Flatness tolerance in pixels (smaller = more segments)
+ * @returns Array of [x, y] coordinates for line segments (excluding start point)
+ */
+function flattenQuadraticBezier(
+  x0: number,
+  y0: number,
+  cx: number,
+  cy: number,
+  x1: number,
+  y1: number,
+  tolerance: number,
+): number[] {
+  const points: number[] = [];
+
+  function subdivide(
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    dx: number,
+    dy: number,
+    depth: number,
+  ): void {
+    // Check flatness using control point distance from baseline
+    const ux = 2 * bx - ax - dx;
+    const uy = 2 * by - ay - dy;
+    const flatness = ux * ux + uy * uy;
+
+    // If flat enough or max depth reached: emit line segment
+    if (flatness <= tolerance * tolerance || depth > 10) {
+      points.push(dx, dy);
+      return;
+    }
+
+    // Subdivide at midpoint using De Casteljau
+    const abx = (ax + bx) / 2;
+    const aby = (ay + by) / 2;
+    const bdx = (bx + dx) / 2;
+    const bdy = (by + dy) / 2;
+    const midx = (abx + bdx) / 2;
+    const midy = (aby + bdy) / 2;
+
+    // Recurse on both halves
+    subdivide(ax, ay, abx, aby, midx, midy, depth + 1);
+    subdivide(midx, midy, bdx, bdy, dx, dy, depth + 1);
+  }
+
+  subdivide(x0, y0, cx, cy, x1, y1, 0);
+  return points;
+}
+
+/**
+ * Calculate buffer sizes needed for paths (before flattening)
  */
 function calculateBufferSizes(paths: PathExpr[]): { cmdCount: number; paramCount: number } {
   let cmdCount = 0;
@@ -176,33 +323,14 @@ function calculateBufferSizes(paths: PathExpr[]): { cmdCount: number; paramCount
   return { cmdCount, paramCount };
 }
 
-/**
- * Encode command kind to opcode
- */
-function encodeCommandKind(kind: string): number {
-  switch (kind) {
-    case "M":
-      return PATH_CMD_MOVETO;
-    case "L":
-      return PATH_CMD_LINETO;
-    case "Q":
-      return PATH_CMD_QUADTO;
-    case "C":
-      return PATH_CMD_CUBICTO;
-    case "Z":
-      return PATH_CMD_CLOSE;
-    default:
-      throw new Error(`Unknown path command kind: ${kind}`);
-  }
-}
 
 /**
  * Execute MaterializePath step.
  *
- * Converts path expressions to command/param buffers.
+ * Converts path expressions to command/param buffers with optional curve flattening.
  *
  * @param step - MaterializePath step specification
- * @param _program - Compiled program (not used, included for consistency)
+ * @param program - Compiled program (for resolving field expressions)
  * @param runtime - Runtime state containing ValueStore
  *
  * @throws Error if domainSlot contains invalid domain
@@ -273,12 +401,20 @@ export function executeMaterializePath(
     );
   }
 
-  // 4. Calculate buffer sizes
+  // 4. Determine if we should flatten curves
+  const shouldFlatten = step.flattenTolerancePx !== undefined;
+  const tolerance = step.flattenTolerancePx ?? 0.5;
+
+  // 5. Calculate initial buffer sizes (may grow if flattening)
   const { cmdCount, paramCount } = calculateBufferSizes(paths);
 
-  // 5. Allocate buffers with minimum sizes
-  const minCmdSize = Math.max(cmdCount, 64);
-  const minParamSize = Math.max(paramCount, 128);
+  // Allocate with extra space if flattening (curves expand to many lines)
+  const estimatedCmdSize = shouldFlatten ? cmdCount * 10 : cmdCount;
+  const estimatedParamSize = shouldFlatten ? paramCount * 10 : paramCount;
+
+  // 6. Allocate buffers with minimum sizes
+  const minCmdSize = Math.max(estimatedCmdSize, 64);
+  const minParamSize = Math.max(estimatedParamSize, 128);
 
   const cmdsBuffer = runtime.values.ensureU16(step.outCmdsSlot, minCmdSize);
   const paramsBuffer = runtime.values.ensureF32(step.outParamsSlot, minParamSize);
@@ -287,9 +423,11 @@ export function executeMaterializePath(
   const pointStartBuffer = runtime.values.ensureU32(step.outPointStartSlot, instanceCount);
   const pointLenBuffer = runtime.values.ensureU32(step.outPointLenSlot, instanceCount);
 
-  // 6. Encode paths to buffers
+  // 7. Encode paths to buffers (with optional flattening)
   let cmdIdx = 0;
   let paramIdx = 0;
+  let currentX = 0;
+  let currentY = 0;
 
   for (let pathIndex = 0; pathIndex < paths.length; pathIndex++) {
     const path = paths[pathIndex];
@@ -298,33 +436,104 @@ export function executeMaterializePath(
     let pointCount = 0;
 
     for (const cmd of path.commands) {
-      cmdsBuffer[cmdIdx++] = encodeCommandKind(cmd.kind);
-
       switch (cmd.kind) {
         case "M":
-        case "L":
+          cmdsBuffer[cmdIdx++] = PATH_CMD_MOVETO;
           paramsBuffer[paramIdx++] = cmd.x;
           paramsBuffer[paramIdx++] = cmd.y;
           pointCount += 1;
+          currentX = cmd.x;
+          currentY = cmd.y;
           break;
+
+        case "L":
+          cmdsBuffer[cmdIdx++] = PATH_CMD_LINETO;
+          paramsBuffer[paramIdx++] = cmd.x;
+          paramsBuffer[paramIdx++] = cmd.y;
+          pointCount += 1;
+          currentX = cmd.x;
+          currentY = cmd.y;
+          break;
+
         case "Q":
-          paramsBuffer[paramIdx++] = cmd.cx;
-          paramsBuffer[paramIdx++] = cmd.cy;
-          paramsBuffer[paramIdx++] = cmd.x;
-          paramsBuffer[paramIdx++] = cmd.y;
-          pointCount += 2;
+          if (shouldFlatten) {
+            // Flatten quadratic bezier to line segments
+            const flatPoints = flattenQuadraticBezier(
+              currentX,
+              currentY,
+              cmd.cx,
+              cmd.cy,
+              cmd.x,
+              cmd.y,
+              tolerance,
+            );
+
+            // Emit line segments for flattened curve
+            for (let i = 0; i < flatPoints.length; i += 2) {
+              cmdsBuffer[cmdIdx++] = PATH_CMD_LINETO;
+              paramsBuffer[paramIdx++] = flatPoints[i];
+              paramsBuffer[paramIdx++] = flatPoints[i + 1];
+              pointCount += 1;
+            }
+
+            currentX = cmd.x;
+            currentY = cmd.y;
+          } else {
+            // Keep curve as-is
+            cmdsBuffer[cmdIdx++] = PATH_CMD_QUADTO;
+            paramsBuffer[paramIdx++] = cmd.cx;
+            paramsBuffer[paramIdx++] = cmd.cy;
+            paramsBuffer[paramIdx++] = cmd.x;
+            paramsBuffer[paramIdx++] = cmd.y;
+            pointCount += 2;
+            currentX = cmd.x;
+            currentY = cmd.y;
+          }
           break;
+
         case "C":
-          paramsBuffer[paramIdx++] = cmd.c1x;
-          paramsBuffer[paramIdx++] = cmd.c1y;
-          paramsBuffer[paramIdx++] = cmd.c2x;
-          paramsBuffer[paramIdx++] = cmd.c2y;
-          paramsBuffer[paramIdx++] = cmd.x;
-          paramsBuffer[paramIdx++] = cmd.y;
-          pointCount += 3;
+          if (shouldFlatten) {
+            // Flatten cubic bezier to line segments
+            const flatPoints = flattenCubicBezier(
+              currentX,
+              currentY,
+              cmd.c1x,
+              cmd.c1y,
+              cmd.c2x,
+              cmd.c2y,
+              cmd.x,
+              cmd.y,
+              tolerance,
+            );
+
+            // Emit line segments for flattened curve
+            for (let i = 0; i < flatPoints.length; i += 2) {
+              cmdsBuffer[cmdIdx++] = PATH_CMD_LINETO;
+              paramsBuffer[paramIdx++] = flatPoints[i];
+              paramsBuffer[paramIdx++] = flatPoints[i + 1];
+              pointCount += 1;
+            }
+
+            currentX = cmd.x;
+            currentY = cmd.y;
+          } else {
+            // Keep curve as-is
+            cmdsBuffer[cmdIdx++] = PATH_CMD_CUBICTO;
+            paramsBuffer[paramIdx++] = cmd.c1x;
+            paramsBuffer[paramIdx++] = cmd.c1y;
+            paramsBuffer[paramIdx++] = cmd.c2x;
+            paramsBuffer[paramIdx++] = cmd.c2y;
+            paramsBuffer[paramIdx++] = cmd.x;
+            paramsBuffer[paramIdx++] = cmd.y;
+            pointCount += 3;
+            currentX = cmd.x;
+            currentY = cmd.y;
+          }
           break;
+
         case "Z":
-          // No params for close
+          cmdsBuffer[cmdIdx++] = PATH_CMD_CLOSE;
+          // No params for close, and it doesn't change current position
           break;
       }
     }
@@ -335,20 +544,13 @@ export function executeMaterializePath(
     pointLenBuffer[pathIndex] = pointCount;
   }
 
-  // 7. Optional flattening (future work)
-  if (step.flattenTolerancePx !== undefined) {
-    console.warn(
-      `executeMaterializePath: Curve flattening not implemented yet. ` +
-        `Preserving curves. Tolerance=${step.flattenTolerancePx}px ignored.`
-    );
-  }
-
   // 8. Performance logging (debug mode)
   const cpuMs = performance.now() - startTime;
   if (cpuMs > 1.0) {
     console.debug(
       `MaterializePath: ${cpuMs.toFixed(2)}ms for ${instanceCount} paths, ` +
-        `${cmdCount} commands, ${paramCount} params`
+        `${cmdIdx} commands, ${paramIdx} params` +
+        (shouldFlatten ? ` (flattened, tolerance=${tolerance}px)` : " (curves preserved)")
     );
   }
 }
