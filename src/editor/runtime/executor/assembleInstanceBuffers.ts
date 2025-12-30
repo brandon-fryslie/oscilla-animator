@@ -6,7 +6,7 @@
  *
  * Design:
  * - Handles required buffer: posXY (Float32Array, length=count*2)
- * - Handles optional buffers: size, rot, colorRGBA, opacity
+ * - Handles optional buffers: size, rot, scaleXY, colorRGBA, opacity
  * - Supports scalar broadcasts (all instances same value) via ScalarF32IR/ScalarU32IR
  * - Allocates BufferRefIR from ValueStore
  *
@@ -43,6 +43,9 @@ export interface InstanceBufferSpec {
 
   /** Rotation in radians slot (scalar or per-instance) */
   rot?: ValueSlot;
+
+  /** Scale XY slot (scalar or per-instance, vec2) */
+  scaleXY?: ValueSlot;
 
   /** Color RGBA slot (scalar or per-instance, u8x4 premul RGBA) */
   colorRGBA?: ValueSlot;
@@ -174,6 +177,35 @@ export function assembleInstanceBuffers(
       throw new Error(
         `assembleInstanceBuffers: rot must be number or Float32Array, ` +
         `got ${rotValue?.constructor.name}`
+      );
+    }
+  }
+
+  // Scale XY (scalar f32 or buffer with interleaved xy pairs)
+  if (spec.scaleXY !== undefined) {
+    const scaleValue = runtime.values.read(spec.scaleXY);
+
+    if (typeof scaleValue === "number") {
+      // Scalar broadcast - uniform scale
+      bufferSet.scaleXY = { kind: "scalar:f32", value: scaleValue };
+    } else if (scaleValue instanceof Float32Array) {
+      // Per-instance scale - interleaved xy pairs (length = count*2)
+      if (scaleValue.length !== count * 2) {
+        throw new Error(
+          `assembleInstanceBuffers: scaleXY buffer length mismatch. ` +
+          `Expected ${count * 2} (vec2, count=${count}), got ${scaleValue.length}`
+        );
+      }
+
+      bufferSet.scaleXY = {
+        bufferId: spec.scaleXY,
+        type: "f32",
+        length: scaleValue.length,
+      };
+    } else {
+      throw new Error(
+        `assembleInstanceBuffers: scaleXY must be number or Float32Array, ` +
+        `got ${scaleValue?.constructor.name}`
       );
     }
   }

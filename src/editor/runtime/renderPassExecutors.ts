@@ -334,6 +334,7 @@ export function renderInstances2DPass(
     const opacity = optionalAttribute(pass.buffers.opacity, valueStore, 1.0); // fully opaque
     const shapeId = optionalAttribute(pass.buffers.shapeId, valueStore, 0); // circle
     const rot = optionalAttribute(pass.buffers.rot, valueStore, 0);
+    const scaleXY = optionalAttribute(pass.buffers.scaleXY, valueStore, 1); // uniform scale default
     const strokeWidth = optionalAttribute(pass.buffers.strokeWidth, valueStore, 0);
     const strokeColorRGBA = optionalAttribute(pass.buffers.strokeColorRGBA, valueStore, 0);
 
@@ -370,9 +371,17 @@ export function renderInstances2DPass(
           ctx.rotate(r);
         }
 
-        // Scale by size
-        if (s !== 1) {
-          ctx.scale(s, s);
+        // Apply scaleXY (per-instance or uniform scale)
+        const scaleX = scaleXY.isScalar 
+          ? scaleXY.value 
+          : (scaleXY.buffer as Float32Array)[i * 2 + 0];
+        const scaleY = scaleXY.isScalar
+          ? scaleXY.value
+          : (scaleXY.buffer as Float32Array)[i * 2 + 1];
+          
+        // Scale by size (uniform) and scaleXY (per-instance or uniform)
+        if (s !== 1 || scaleX !== 1 || scaleY !== 1) {
+          ctx.scale(s * scaleX, s * scaleY);
         }
 
         // Apply opacity

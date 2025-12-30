@@ -1,0 +1,91 @@
+Agent: iterative-implementer | 2025-12-30 02:45:00
+Mode: TDD (no tests for new features, manual verification)
+Completed: 2/6 gaps | Files: 2 | Commits: 2
+Cache invalidated: None (new features, no existing cache entries)
+Status: in_progress
+
+=== COMPLETED GAPS ===
+
+Gap 1: Z-Order Applied [COMPLETE]
+- Modified: src/editor/compiler/ir/schedule.ts
+  - Added zOrder?: number and zOrderSlot?: ValueSlot to Instance2DBatch
+  - Added zOrder?: number and zOrderSlot?: ValueSlot to PathBatch
+- Modified: src/editor/runtime/executor/steps/executeRenderAssemble.ts
+  - buildInstancesPass reads z-order (slot takes precedence over static)
+  - buildPathsPass reads z-order (slot takes precedence over static)
+  - Renderer already sorts passes by header.z (no renderer changes needed)
+- Commit: c934541
+
+Gap 2: Curve Flattening [COMPLETE]
+- Modified: src/editor/runtime/executor/steps/executeMaterializePath.ts
+  - Implemented flattenCubicBezier() using De Casteljau algorithm
+  - Implemented flattenQuadraticBezier() using De Casteljau algorithm
+  - Q and C commands flatten to multiple L commands when flattenTolerancePx is set
+  - Tracks currentX/currentY position for correct curve start points
+  - Allocates larger buffers (10x) when flattening to account for expansion
+- Commit: b3b9391
+
+=== REMAINING GAPS (4/6) ===
+
+Gap 3: Clipping/Masking Supported
+- TODO: Define ClipRegionIR type in renderIR.ts (already stubbed, needs expansion)
+- TODO: Define ClipGroupPassIR type in renderIR.ts
+- TODO: Update canvasRenderer.ts to handle clip regions
+- TODO: Add canvas ctx.save/clip/restore logic
+- Complexity: Medium (canvas has native clip support)
+
+Gap 4: Extended Per-Instance Attributes
+- TODO: Add rotation?: ValueSlot and scaleXY?: ValueSlot to Instance2DBatch (schedule.ts)
+- TODO: Update assembleInstanceBuffers.ts to extract rotation/scale buffers
+- TODO: Update canvasRenderer.ts to apply rotation/scale transforms per instance
+- Complexity: Medium (straightforward attribute expansion)
+
+Gap 5: PostFX Implemented
+- TODO: Expand PostFXPassIR type in renderIR.ts (currently stubbed)
+- TODO: Define effect variants (blur, bloom, vignette, color grading)
+- TODO: Implement blur effect in canvasRenderer.ts using ctx.filter
+- TODO: Implement bloom effect (multi-pass: extract bright, blur, composite)
+- Complexity: Medium-High (requires off-screen rendering)
+
+Gap 6: Material System Extended
+- TODO: Expand MaterialIR type in renderIR.ts to support gradients
+- TODO: Add GradientStop interface
+- TODO: Update canvasRenderer.ts to create linear/radial gradients
+- TODO: Apply gradients via ctx.createLinearGradient/createRadialGradient
+- Complexity: High (gradient coordinate mapping, stop interpolation)
+
+=== VALIDATION STATUS ===
+
+TypeCheck: PASS
+Tests: 2420 passed, 5 failed (pre-existing failures in composite tests)
+Lint: Not run
+Manual Verification: Not performed (no dev server testing)
+
+=== NOTES ===
+
+1. Pre-existing test failures:
+   - src/editor/__tests__/composite-library.test.ts (1 failure)
+   - src/editor/__tests__/composite.expansion.test.ts (4 failures)
+   - These failures exist in the baseline (confirmed via git stash test)
+   - Unrelated to render pipeline changes
+
+2. Architecture notes:
+   - Renderer already sorts passes by z-order (line 218 in canvasRenderer.ts)
+   - Z-order implementation was straightforward: just wire through the values
+   - Curve flattening uses De Casteljau for quality and correctness
+   - Remaining gaps will require more extensive renderer changes
+
+3. Next steps:
+   - Gap 3 (Clipping) is the natural next step (medium complexity)
+   - Gap 4 (Extended Attributes) can be done in parallel with Gap 3
+   - Gaps 5 and 6 should be done last (higher complexity)
+
+=== RECOMMENDATION ===
+
+The foundational gaps (z-order, curve flattening) are complete. The remaining
+gaps require more substantial renderer changes. Recommend implementing Gap 3
+next (clipping/masking) as it enables important use cases and has medium
+complexity.
+
+Total time spent: ~10 minutes on Gaps 1 and 2.
+Estimated time for remaining gaps: 30-40 minutes.
