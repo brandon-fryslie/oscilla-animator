@@ -152,7 +152,7 @@ export type DiagnosticCode =
   | 'E_BUS_COMBINE_MODE_INCOMPATIBLE'
   // Composite errors
   | 'E_COMPOSITE_CONTAINS_TIMEROOT'
-  // Default source errors (Sprint 17)
+  // Default source errors (Sprint 17-18)
   | 'E_INVALID_DEFAULT_SOURCE_PROVIDER'
   | 'E_MISSING_REQUIRED_BUS'
   // Internal errors
@@ -162,6 +162,8 @@ export type DiagnosticCode =
   | 'W_BUS_NO_PUBLISHERS'
   | 'W_BUS_COMBINE_CONFLICT'
   | 'W_BUS_MULTIPLE_PUBLISHERS_CONTROL'
+  // Default source warnings (Sprint 18)
+  | 'W_FEEDBACK_CYCLE'
   // Graph structure warnings
   | 'W_GRAPH_UNUSED_OUTPUT'
   | 'W_GRAPH_DISCONNECTED_BLOCK'
