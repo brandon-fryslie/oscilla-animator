@@ -1,5 +1,3 @@
-# Evaluation Cache Index
-
 | Topic | File | Cached | Source | Confidence |
 |-------|------|--------|--------|------------|
 | Lint Infrastructure | lint-infrastructure.md | 2025-12-25 17:48 | project-evaluator (lint-cleanup) | HIGH |

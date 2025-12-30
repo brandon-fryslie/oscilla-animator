@@ -10,6 +10,9 @@
 export * from './types/helpers';
 export * from './types/dnd';
 
+// Import default source attachment types
+import type { DefaultSourceAttachment } from './defaultSources/types';
+
 // =============================================================================
 // Bus Type System (Core/Internal Split)
 // =============================================================================
@@ -744,6 +747,9 @@ export interface Patch {
 
   /** Default sources for lens params and other implicit bindings */
   defaultSources: DefaultSourceState[];
+
+  /** Default source provider attachments (hidden blocks for undriven inputs) */
+  defaultSourceAttachments?: DefaultSourceAttachment[];
 
   /** Global settings (seed, speed, etc.) */
   settings: {
