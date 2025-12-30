@@ -432,10 +432,12 @@ function _makeProviderListenerId(
  * Returns new CompilerPatch with injected primitives. Does NOT mutate input patch.
  *
  * Sprint 10: Inject provider blocks and wires
+ * Sprint 10 Fix: Skip providers whose block types don't have both compiler AND block definition
  */
 export function injectDefaultSourceProviders(
   store: RootStore,
-  patch: CompilerPatch
+  patch: CompilerPatch,
+  registry: BlockRegistry
 ): CompilerPatch {
   const defaultSourceStore = store.defaultSourceStore;
 
@@ -457,6 +459,19 @@ export function injectDefaultSourceProviders(
     // Check if this input is undriven
     if (!_isInputUndriven(target.blockId, target.slotId, patch)) {
       // Input is driven by wire or listener - skip injection
+      continue;
+    }
+
+    // SPRINT 10 FIX: Check if BOTH compiler AND block definition exist
+    // Provider blocks need:
+    // 1. A compiler (for lowering to IR)
+    // 2. A block definition (for resolving defaultSource on provider's own inputs)
+    const hasCompiler = !!registry[provider.blockType];
+    const hasBlockDef = !!getBlockDefinition(provider.blockType);
+
+    if (!hasCompiler || !hasBlockDef) {
+      // No complete implementation - skip injection
+      // The target input will fall back to using its slot.defaultSource value directly
       continue;
     }
 
@@ -985,7 +1000,8 @@ export function createCompilerService(store: RootStore): CompilerService {
         patch = rewrittenPatch;
 
         // Step 3: Inject default source providers (Sprint 10)
-        patch = injectDefaultSourceProviders(store, patch);
+        // SPRINT 10 FIX: Pass registry so the function can check if compilers exist
+        patch = injectDefaultSourceProviders(store, patch, registry);
 
         store.logStore.debug(
           'compiler',
