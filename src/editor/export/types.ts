@@ -1,7 +1,7 @@
 /**
  * Export Types
  *
- * Type definitions for image sequence and video export functionality.
+ * Type definitions for image sequence, video, and GIF export functionality.
  */
 
 /**
@@ -18,6 +18,11 @@ export type VideoCodec = 'h264' | 'vp9';
  * Supported video container formats.
  */
 export type VideoFormat = 'mp4' | 'webm';
+
+/**
+ * Dithering modes for GIF export.
+ */
+export type DitheringMode = 'none' | 'floyd-steinberg' | 'ordered';
 
 /**
  * Configuration for image sequence export.
@@ -66,6 +71,30 @@ export interface VideoExportConfig {
 }
 
 /**
+ * Configuration for GIF export.
+ */
+export interface GifExportConfig {
+  /** Output width in pixels */
+  width: number;
+  /** Output height in pixels */
+  height: number;
+  /** Start frame (inclusive) */
+  startFrame: number;
+  /** End frame (inclusive) */
+  endFrame: number;
+  /** Frames per second */
+  fps: number;
+  /** Number of colors in palette (16-256) */
+  maxColors: number;
+  /** Dithering mode */
+  dithering: DitheringMode;
+  /** Loop count (0 = infinite, N = loop N times) */
+  loopCount: number;
+  /** Seed for deterministic randomness */
+  seed?: number;
+}
+
+/**
  * Progress callback for export operations.
  */
 export interface ExportProgress {
@@ -103,6 +132,18 @@ export interface VideoExportResult {
   durationMs: number;
   /** Video container format */
   format: VideoFormat;
+}
+
+/**
+ * GIF export result containing a single GIF blob.
+ */
+export interface GifExportResult {
+  /** Exported GIF blob */
+  blob: Blob;
+  /** Export configuration used */
+  config: GifExportConfig;
+  /** Total export time in milliseconds */
+  durationMs: number;
 }
 
 /**

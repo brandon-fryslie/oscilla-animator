@@ -1,21 +1,24 @@
 /**
  * ExportDialog Component
  *
- * Modal dialog for exporting animations as image sequences or video.
- * Supports PNG/WebP/JPEG formats and H.264/VP9 video codecs.
+ * Modal dialog for exporting animations as image sequences, video, or GIF.
+ * Supports PNG/WebP/JPEG formats, H.264/VP9 video codecs, and animated GIFs.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal } from '../Modal';
 import { ImageSequenceExporter } from '../export/ImageSequenceExporter';
 import { VideoExporter } from '../export/VideoExporter';
+import { GifExporter } from '../export/GifExporter';
 import { isWebCodecsSupported, getRecommendedBitrate } from '../export/codecs';
 import type {
   ImageSequenceExportConfig,
   VideoExportConfig,
+  GifExportConfig,
   ExportProgress,
   ImageFormat,
   VideoCodec,
+  DitheringMode,
 } from '../export/types';
 import type { CompiledProgramIR } from '../compiler/ir/program';
 import './ExportDialog.css';
@@ -30,7 +33,7 @@ interface ExportDialogProps {
   defaultHeight: number;
 }
 
-type ExportType = 'image' | 'video';
+type ExportType = 'image' | 'video' | 'gif';
 
 /**
  * Download blobs as individual files or zip (depending on browser support).
@@ -89,6 +92,25 @@ function downloadVideoBlob(blob: Blob, codec: VideoCodec): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Download GIF blob.
+ */
+function downloadGifBlob(blob: Blob): void {
+  const filename = 'animation.gif';
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+
+  // Cleanup
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export function ExportDialog({
   isOpen,
   onClose,
@@ -115,6 +137,11 @@ export function ExportDialog({
   const [codec, setCodec] = useState<VideoCodec>('h264');
   const [bitrate, setBitrate] = useState(5_000_000); // 5 Mbps default
 
+  // GIF-specific state
+  const [maxColors, setMaxColors] = useState(128);
+  const [dithering, setDithering] = useState<DitheringMode>('none');
+  const [loopCount, setLoopCount] = useState(0); // 0 = infinite
+
   // Export state
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState<ExportProgress | null>(null);
@@ -122,6 +149,7 @@ export function ExportDialog({
 
   const imageExporterRef = useRef<ImageSequenceExporter | null>(null);
   const videoExporterRef = useRef<VideoExporter | null>(null);
+  const gifExporterRef = useRef<GifExporter | null>(null);
 
   // Check WebCodecs support
   const webCodecsSupported = isWebCodecsSupported();
@@ -164,10 +192,11 @@ export function ExportDialog({
     fps > 0 &&
     totalFrames > 0 &&
     (exportType === 'image' ? frameStep > 0 : true) &&
-    (exportType === 'video' ? bitrate > 0 : true);
+    (exportType === 'video' ? bitrate > 0 : true) &&
+    (exportType === 'gif' ? (maxColors >= 2 && maxColors <= 256) : true);
 
   const canExport = isValidConfig && program !== null && !isExporting &&
-    (exportType === 'image' || webCodecsSupported);
+    (exportType === 'image' || exportType === 'gif' || webCodecsSupported);
 
   const handleImageExport = useCallback(async () => {
     if (!program || !canExport) return;
@@ -266,13 +295,64 @@ export function ExportDialog({
     }
   }, [program, canExport, webCodecsSupported, width, height, startFrame, endFrame, fps, codec, bitrate, onClose]);
 
+  const handleGifExport = useCallback(async () => {
+    if (!program || !canExport) return;
+
+    setIsExporting(true);
+    setError(null);
+    setProgress(null);
+
+    const config: GifExportConfig = {
+      width,
+      height,
+      startFrame,
+      endFrame,
+      fps,
+      maxColors,
+      dithering,
+      loopCount,
+    };
+
+    try {
+      const exporter = new GifExporter();
+      gifExporterRef.current = exporter;
+
+      const result = await exporter.export(
+        program,
+        config,
+        (p) => setProgress(p)
+      );
+
+      // Download GIF blob
+      downloadGifBlob(result.blob);
+
+      // Success - close dialog
+      onClose();
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message.includes('cancelled')) {
+          setError('Export cancelled');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Export failed');
+      }
+    } finally {
+      setIsExporting(false);
+      gifExporterRef.current = null;
+    }
+  }, [program, canExport, width, height, startFrame, endFrame, fps, maxColors, dithering, loopCount, onClose]);
+
   const handleExport = useCallback(() => {
     if (exportType === 'image') {
       void handleImageExport();
-    } else {
+    } else if (exportType === 'video') {
       void handleVideoExport();
+    } else {
+      void handleGifExport();
     }
-  }, [exportType, handleImageExport, handleVideoExport]);
+  }, [exportType, handleImageExport, handleVideoExport, handleGifExport]);
 
   const handleCancel = useCallback(() => {
     if (imageExporterRef.current) {
@@ -280,6 +360,9 @@ export function ExportDialog({
     }
     if (videoExporterRef.current) {
       videoExporterRef.current.cancel();
+    }
+    if (gifExporterRef.current) {
+      gifExporterRef.current.cancel();
     }
   }, []);
 
@@ -294,7 +377,11 @@ export function ExportDialog({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={exportType === 'image' ? 'Export Image Sequence' : 'Export Video'}
+      title={
+        exportType === 'image' ? 'Export Image Sequence' :
+        exportType === 'video' ? 'Export Video' :
+        'Export GIF'
+      }
       width="medium"
       footer={
         <>
@@ -338,13 +425,14 @@ export function ExportDialog({
                 <option value="video" disabled={!webCodecsSupported}>
                   Video {!webCodecsSupported ? '(not supported)' : ''}
                 </option>
+                <option value="gif">Animated GIF</option>
               </select>
             </div>
           </div>
           {exportType === 'video' && !webCodecsSupported && (
             <div className="export-dialog-warning">
               Video export requires WebCodecs API (Chrome 94+, Edge 94+, Safari 16.4+).
-              Please use image sequence export instead.
+              Please use image sequence or GIF export instead.
             </div>
           )}
         </div>
@@ -423,15 +511,30 @@ export function ExportDialog({
           <div className="export-dialog-row">
             <div className="export-dialog-field">
               <label htmlFor="export-fps">FPS</label>
-              <input
-                id="export-fps"
-                type="number"
-                value={fps}
-                onChange={(e) => setFps(Number(e.target.value))}
-                min={1}
-                max={120}
-                disabled={isExporting}
-              />
+              {exportType === 'gif' ? (
+                <select
+                  id="export-fps"
+                  value={fps}
+                  onChange={(e) => setFps(Number(e.target.value))}
+                  disabled={isExporting}
+                >
+                  <option value={10}>10 fps</option>
+                  <option value={15}>15 fps</option>
+                  <option value={24}>24 fps</option>
+                  <option value={30}>30 fps</option>
+                  <option value={60}>60 fps</option>
+                </select>
+              ) : (
+                <input
+                  id="export-fps"
+                  type="number"
+                  value={fps}
+                  onChange={(e) => setFps(Number(e.target.value))}
+                  min={1}
+                  max={120}
+                  disabled={isExporting}
+                />
+              )}
             </div>
           </div>
           <div className="export-dialog-info">
@@ -439,7 +542,7 @@ export function ExportDialog({
           </div>
         </div>
 
-        {/* Format (Image) or Codec (Video) */}
+        {/* Format (Image) or Codec (Video) or GIF Settings */}
         {exportType === 'image' ? (
           <div className="export-dialog-section">
             <h3 className="export-dialog-section-title">Format</h3>
@@ -480,7 +583,7 @@ export function ExportDialog({
               </div>
             )}
           </div>
-        ) : (
+        ) : exportType === 'video' ? (
           <div className="export-dialog-section">
             <h3 className="export-dialog-section-title">Video Settings</h3>
             <div className="export-dialog-row">
@@ -519,6 +622,69 @@ export function ExportDialog({
             </div>
             <div className="export-dialog-info">
               Recommended bitrate: {(getRecommendedBitrate(width, height) / 1_000_000).toFixed(1)} Mbps
+            </div>
+          </div>
+        ) : (
+          <div className="export-dialog-section">
+            <h3 className="export-dialog-section-title">GIF Settings</h3>
+
+            {/* Quality slider (max colors) */}
+            <div className="export-dialog-row">
+              <div className="export-dialog-field">
+                <label htmlFor="export-max-colors">
+                  Quality ({maxColors} colors)
+                </label>
+                <input
+                  id="export-max-colors"
+                  type="range"
+                  value={maxColors}
+                  onChange={(e) => setMaxColors(Number(e.target.value))}
+                  min={16}
+                  max={256}
+                  step={16}
+                  disabled={isExporting}
+                  className="export-dialog-slider"
+                />
+              </div>
+            </div>
+            <div className="export-dialog-info">
+              More colors = better quality but larger file size
+            </div>
+
+            {/* Dithering selector */}
+            <div className="export-dialog-row">
+              <div className="export-dialog-field">
+                <label htmlFor="export-dithering">Dithering</label>
+                <select
+                  id="export-dithering"
+                  value={dithering}
+                  onChange={(e) => setDithering(e.target.value as DitheringMode)}
+                  disabled={isExporting}
+                >
+                  <option value="none">None (fastest)</option>
+                  <option value="floyd-steinberg">Floyd-Steinberg (best quality)</option>
+                  <option value="ordered">Ordered (balanced)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Loop mode */}
+            <div className="export-dialog-row">
+              <div className="export-dialog-field">
+                <label htmlFor="export-loop-count">Loop Mode</label>
+                <select
+                  id="export-loop-count"
+                  value={loopCount}
+                  onChange={(e) => setLoopCount(Number(e.target.value))}
+                  disabled={isExporting}
+                >
+                  <option value={0}>Infinite</option>
+                  <option value={1}>Once</option>
+                  <option value={2}>2 times</option>
+                  <option value={3}>3 times</option>
+                  <option value={5}>5 times</option>
+                </select>
+              </div>
             </div>
           </div>
         )}

@@ -20,6 +20,7 @@
     "@mui/material": "^7.3.6",
     "@mui/x-data-grid": "^8.23.0",
     "@tippyjs/react": "^4.2.6",
+    "gifenc": "^1.0.3",
     "imagetracerjs": "^1.2.6",
     "mediabunny": "^1.27.2",
     "mobx": "^6.15.0",
