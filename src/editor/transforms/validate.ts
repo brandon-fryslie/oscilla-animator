@@ -94,15 +94,64 @@ export function validateTransformStack(
 /**
  * Validate transform stack for IR mode compatibility.
  *
- * Placeholder for Sprint 5 - will check that all transforms have compileToIR implementations.
+ * Sprint 5 implementation: checks that all transforms have compileToIR implementations.
+ * Adapters/lenses without IR support will cause clear compilation errors.
  */
 export function validateForIRMode(
-  _stack: TransformStack,
-  _errors: CompileError[]
+  stack: TransformStack,
+  errors: CompileError[]
 ): void {
-  // Implementation deferred to Sprint 5
-  // For now, return without validation (existing IR behavior: reject adapters, ignore lenses)
-  return;
+  for (const step of stack) {
+    if (!step.enabled) {
+      continue; // Skip disabled transforms
+    }
+
+    if (step.kind === 'adapter') {
+      const def = getAdapter(step.step.adapterId);
+      if (!def) {
+        errors.push({
+          code: 'UnsupportedAdapterInIRMode',
+          message: `Unknown adapter '${step.step.adapterId}' cannot be used in IR mode.`,
+        });
+        continue;
+      }
+
+      // Check if adapter has IR compilation support
+      if (!def.compileToIR) {
+        errors.push({
+          code: 'UnsupportedAdapterInIRMode',
+          message: `Adapter '${def.label}' is not yet supported in IR compilation mode. ` +
+                   `This adapter requires special runtime handling that hasn't been implemented in the IR compiler. ` +
+                   `To use this adapter, either:\n` +
+                   `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
+                   `  - Remove this adapter from your patch\n` +
+                   `  - Use an alternative adapter if available`,
+        });
+      }
+    } else {
+      const def = getLens(step.lens.lensId);
+      if (!def) {
+        errors.push({
+          code: 'UnsupportedLensInIRMode',
+          message: `Unknown lens '${step.lens.lensId}' cannot be used in IR mode.`,
+        });
+        continue;
+      }
+
+      // Check if lens has IR compilation support
+      if (!def.compileToIR) {
+        errors.push({
+          code: 'UnsupportedLensInIRMode',
+          message: `Lens '${def.label}' is not yet supported in IR compilation mode. ` +
+                   `This lens requires stateful operation or special runtime handling that hasn't been implemented in the IR compiler. ` +
+                   `To use this lens, either:\n` +
+                   `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
+                   `  - Remove this lens from your patch\n` +
+                   `  - Use an alternative lens with similar functionality`,
+        });
+      }
+    }
+  }
 }
 
 /**

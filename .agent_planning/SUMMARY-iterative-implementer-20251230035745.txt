@@ -1,0 +1,63 @@
+Agent: iterative-implementer | 2025-12-30-04:00:00
+Mode: tdd
+Completed: Sprint 3 - Centralized Transform Application | Files: 2 | Commits: 1
+Tests: 2425 passing, 0 failing
+Cache invalidated: None (no eval cache exists yet)
+Status: complete
+
+Sprint 3 Deliverable 4: Move Transform Logic to Facade - COMPLETE
+
+Implementation Details:
+1. Updated src/editor/transforms/apply.ts:
+   - Replaced placeholder wrappers with canonical implementations
+   - Moved applyAdapterStep from compileBusAware.ts
+   - Moved getArtifactType helper function
+   - Implemented applyAdapterChain with scope parameter
+   - Implemented applyLensStack with scope parameter and ParamResolutionContext
+   - applyTransformStack orchestrates both adapters and lenses
+
+2. Updated src/editor/compiler/compileBusAware.ts:
+   - Removed local applyAdapterChain (lines 1096-1118, ~23 lines)
+   - Removed local applyAdapterStep (lines 1119-1132, ~14 lines)
+   - Removed local applyLensStack (lines 1134-1200, ~67 lines)
+   - Removed local getArtifactType (lines 1202-1227, ~26 lines)
+   - Total removed: ~130 lines of local transform logic
+   - Added buildParamContext helper to construct ParamResolutionContext
+   - Updated applyPublisherStack to use centralized functions
+   - Updated all transform call sites with explicit scope parameters:
+     * Wire connections: scope='wire' (line 652)
+     * Bus listeners: scope='listener' (line 697)
+     * Bus publishers: scope='publisher' (line 1169)
+   - Import centralized functions from transforms/apply.ts
+
+3. lensResolution.ts: No changes needed
+   - ParamResolutionContext already defined
+   - resolveLensParam already uses context functions
+   - Depth limit already enforced (line 17: if depth > 3)
+   - Transform engine used indirectly through context
+
+Acceptance Criteria Met:
+✓ transforms/apply.ts contains canonical implementation (not wrappers)
+✓ All adapter and lens application goes through transform engine
+✓ Scope parameter is explicit at all call sites (no hidden wire special cases)
+✓ Lens param resolution uses same transform engine (recursive support intact)
+✓ Depth limit for lens param bindings enforced by validator (line 17)
+✓ All bus compilation tests pass (2425/2425)
+✓ Field bus compilation tests pass (included in suite)
+✓ just check passes (typecheck + lint + test)
+
+Manual Testing Not Required:
+- TDD mode: Tests define the contract
+- All 2425 tests passing validates end-to-end behavior
+- Bus compilation tests cover:
+  * Wire → Publisher → Listener transform chains
+  * Lens param bindings with adapters
+  * All 4 scopes (wire, publisher, listener, lensParam)
+
+Code Quality:
+- Net reduction: ~130 lines removed, ~60 lines added
+- Centralization: 3 local functions → 1 canonical engine
+- Explicit scopes: No hidden special cases
+- Clean separation: Transform logic in facade, compilation logic in compiler
+
+Commit: f99d825

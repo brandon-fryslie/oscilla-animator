@@ -1,6 +1,18 @@
 import type { AdapterCost, AdapterPolicy, TypeDesc } from '../types';
 import { CORE_DOMAIN_DEFAULTS } from '../types';
 import type { Artifact, CompileCtx } from '../compiler/types';
+import type { IRBuilder } from '../compiler/ir/IRBuilder';
+import type { ValueRefPacked } from '../compiler/passes/pass6-block-lowering';
+
+/**
+ * IR compilation context for adapters.
+ * Provides access to IRBuilder and compilation metadata.
+ */
+export interface AdapterIRCtx {
+  builder: IRBuilder;
+  adapterId: string;
+  params: Record<string, unknown>;
+}
 
 export interface AdapterDef {
   id: string;
@@ -11,6 +23,9 @@ export interface AdapterDef {
   to: TypeDesc;
   // Execution logic (Sprint 1 Deliverable 2)
   apply?: (artifact: Artifact, params: Record<string, unknown>, ctx: CompileCtx) => Artifact;
+  // IR compilation (Sprint 5 Deliverable 6)
+  // Returns null if the adapter cannot be compiled to IR
+  compileToIR?: (input: ValueRefPacked, ctx: AdapterIRCtx) => ValueRefPacked | null;
 }
 
 /**
@@ -125,6 +140,8 @@ export function initAdapterRegistry(): void {
         }
         return { kind: 'Error', message: `ConstToSignal unsupported for ${artifact.kind}` };
       },
+      // IR compilation support deferred - complex due to constant pool handling
+      compileToIR: undefined,
     });
 
     // BroadcastScalarToField adapter
@@ -162,6 +179,8 @@ export function initAdapterRegistry(): void {
         }
         return { kind: 'Error', message: `BroadcastScalarToField unsupported for ${artifact.kind}` };
       },
+      // IR compilation support deferred - requires constant to field broadcast
+      compileToIR: undefined,
     });
 
     // BroadcastSignalToField adapter
@@ -206,9 +225,11 @@ export function initAdapterRegistry(): void {
         }
         return { kind: 'Error', message: `BroadcastSignalToField unsupported for ${artifact.kind}` };
       },
+      // IR compilation support deferred - requires signal to field broadcast
+      compileToIR: undefined,
     });
 
-    // ReduceFieldToSignal adapter (not implemented yet)
+    // ReduceFieldToSignal adapter (not implemented - expensive)
     adapterRegistry.register({
       id: `ReduceFieldToSignal:${domain}`,
       label: `Field → Signal (${domain})`,
@@ -219,6 +240,8 @@ export function initAdapterRegistry(): void {
       apply: (_artifact, _params, _ctx) => {
         return { kind: 'Error', message: 'ReduceFieldToSignal requires runtime reduction context' };
       },
+      // No IR support - expensive operation
+      compileToIR: undefined,
     });
   }
 
@@ -249,6 +272,8 @@ export function initAdapterRegistry(): void {
       }
       return { kind: 'Error', message: `NormalizeToPhase unsupported for ${artifact.kind}` };
     },
+    // IR compilation support deferred - requires modulo operation
+    compileToIR: undefined,
   });
 
   adapterRegistry.register({
@@ -264,6 +289,8 @@ export function initAdapterRegistry(): void {
       }
       return { kind: 'Error', message: `PhaseToNumber unsupported for ${artifact.kind}` };
     },
+    // IR compilation support deferred - identity transformation
+    compileToIR: undefined,
   });
 
   adapterRegistry.register({
@@ -280,6 +307,8 @@ export function initAdapterRegistry(): void {
       }
       return { kind: 'Error', message: `NormalizeToPhase unsupported for ${artifact.kind}` };
     },
+    // IR compilation support deferred - constant folding
+    compileToIR: undefined,
   });
 
   adapterRegistry.register({
@@ -295,6 +324,8 @@ export function initAdapterRegistry(): void {
       }
       return { kind: 'Error', message: `PhaseToNumber unsupported for ${artifact.kind}` };
     },
+    // IR compilation support deferred - identity transformation
+    compileToIR: undefined,
   });
 
   adapterRegistry.register({

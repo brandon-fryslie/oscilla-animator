@@ -21,6 +21,9 @@ export interface LensDef {
 
   // Execution logic
   apply?: (value: Artifact, params: Record<string, Artifact>) => Artifact;
+  // IR compilation (Sprint 5 Deliverable 6)
+  // Returns null if the lens cannot be compiled to IR
+  compileToIR?: (input: import("../compiler/passes/pass6-block-lowering").ValueRefPacked, params: Record<string, import("../compiler/passes/pass6-block-lowering").ValueRefPacked>, ctx: { builder: import("../compiler/ir/IRBuilder").IRBuilder }) => import("../compiler/passes/pass6-block-lowering").ValueRefPacked | null;
 }
 
 const lenses = new Map<string, LensDef>();

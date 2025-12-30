@@ -1,0 +1,10 @@
+Agent: status-planner | 2025-12-30-024600
+Topic: unified-transforms
+Files: PLAN-2025-12-30-024600.md, DOD-2025-12-30-024600.md
+Items: 7 deliverables (P0: 6, Optional: 1)
+Sprints: 5 required + 1 optional
+Effort: 18-24 days (required), 21-28 days (complete)
+User Decisions Applied:
+  - Lens UI: Copy from worktrees or create new
+  - IR Strategy: FULL transform support
+  - Wire Scope: Allow all publisher+listener lenses
