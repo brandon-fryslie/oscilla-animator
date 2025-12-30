@@ -63,6 +63,7 @@ import { createDebugIndex } from '../debug';
 import { randomUUID } from '../crypto';
 // Domain support for default sources
 import { createSimpleDomain } from './unified/Domain';
+import { adapterRegistry } from '../adapters/AdapterRegistry';
 
 
 // =============================================================================
@@ -1105,118 +1106,19 @@ function applyAdapterChain(
 
   return current;
 }
-
 function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx): Artifact {
-  const [adapterName] = step.adapterId.split(':');
+  // Sprint 1 Deliverable 2: Use registry for adapter execution
+  const def = adapterRegistry.get(step.adapterId);
 
-  switch (adapterName) {
-    case 'ConstToSignal': {
-      if (artifact.kind === 'Scalar:float') {
-        return { kind: 'Signal:float', value: () => artifact.value };
-      }
-      if (artifact.kind === 'Scalar:vec2') {
-        return { kind: 'Signal:vec2', value: () => artifact.value };
-      }
-      if (artifact.kind === 'Scalar:color') {
-        return { kind: 'Signal:color', value: () => artifact.value as string };
-      }
-      if (artifact.kind === 'Scalar:boolean') {
-        return { kind: 'Signal:float', value: () => (artifact.value ? 1 : 0) };
-      }
-      return { kind: 'Error', message: `ConstToSignal unsupported for ${artifact.kind}` };
-    }
-    case 'BroadcastScalarToField': {
-      if (artifact.kind === 'Scalar:float') {
-        return {
-          kind: 'Field:float',
-          value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
-        };
-      }
-      if (artifact.kind === 'Scalar:vec2') {
-        return {
-          kind: 'Field:vec2',
-          value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
-        };
-      }
-      if (artifact.kind === 'Scalar:color') {
-        return {
-          kind: 'Field:color',
-          value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
-        };
-      }
-      if (artifact.kind === 'Scalar:boolean') {
-        return {
-          kind: 'Field:boolean',
-          value: (_seed, n) => Array.from({ length: n}, () => artifact.value),
-        };
-      }
-      return { kind: 'Error', message: `BroadcastScalarToField unsupported for ${artifact.kind}` };
-    }
-    case 'BroadcastSignalToField': {
-      const t = (ctx.env as { t?: number }).t ?? 0;
-      if (artifact.kind === 'Signal:float') {
-        return {
-          kind: 'Field:float',
-          value: (_seed, n, compileCtx) => {
-            const time = (compileCtx.env as { t?: number }).t ?? t;
-            const v = artifact.value(time, { viewport: { w: 0, h: 0, dpr: 1 } });
-            return Array.from({ length: n }, () => v);
-          },
-        };
-      }
-      if (artifact.kind === 'Signal:vec2') {
-        return {
-          kind: 'Field:vec2',
-          value: (_seed, n, compileCtx) => {
-            const time = (compileCtx.env as { t?: number }).t ?? t;
-            const v = artifact.value(time, { viewport: { w: 0, h: 0, dpr: 1 } });
-            return Array.from({ length: n }, () => v);
-          },
-        };
-      }
-      if (artifact.kind === 'Signal:color') {
-        return {
-          kind: 'Field:color',
-          value: (_seed, n, compileCtx) => {
-            const time = (compileCtx.env as { t?: number }).t ?? t;
-            const v = artifact.value(time, { viewport: { w: 0, h: 0, dpr: 1 } });
-            return Array.from({ length: n }, () => v);
-          },
-        };
-      }
-      return { kind: 'Error', message: `BroadcastSignalToField unsupported for ${artifact.kind}` };
-    }
-    case 'PhaseToNumber': {
-      if (artifact.kind === 'Signal:phase') {
-        return { kind: 'Signal:float', value: artifact.value };
-      }
-      if (artifact.kind === 'Scalar:float') {
-        return artifact;
-      }
-      return { kind: 'Error', message: `PhaseToNumber unsupported for ${artifact.kind}` };
-    }
-    case 'NormalizeToPhase': {
-      if (artifact.kind === 'Signal:float') {
-        return {
-          kind: 'Signal:phase',
-          value: (t, runtimeCtx) => {
-            const v = artifact.value(t, runtimeCtx);
-            return ((v % 1) + 1) % 1;
-          },
-        };
-      }
-      if (artifact.kind === 'Scalar:float') {
-        const v = artifact.value;
-        return { kind: 'Scalar:float', value: ((v % 1) + 1) % 1 };
-      }
-      return { kind: 'Error', message: `NormalizeToPhase unsupported for ${artifact.kind}` };
-    }
-    case 'ReduceFieldToSignal': {
-      return { kind: 'Error', message: 'ReduceFieldToSignal requires runtime reduction context' };
-    }
-    default:
-      return { kind: 'Error', message: `Unsupported adapter: ${step.adapterId}` };
+  if (!def) {
+    return { kind: 'Error', message: `Unknown adapter: ${step.adapterId}` };
   }
+
+  if (!def.apply) {
+    return { kind: 'Error', message: `Adapter ${step.adapterId} has no implementation` };
+  }
+
+  return def.apply(artifact, step.params, ctx);
 }
 
 function applyLensStack(

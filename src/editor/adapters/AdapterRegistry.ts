@@ -1,5 +1,6 @@
 import type { AdapterCost, AdapterPolicy, TypeDesc } from '../types';
 import { CORE_DOMAIN_DEFAULTS } from '../types';
+import type { Artifact, CompileCtx } from '../compiler/types';
 
 export interface AdapterDef {
   id: string;
@@ -8,7 +9,8 @@ export interface AdapterDef {
   cost: AdapterCost;
   from: TypeDesc;
   to: TypeDesc;
-  // Execution logic will be added in Phase 4
+  // Execution logic (Sprint 1 Deliverable 2)
+  apply?: (artifact: Artifact, params: Record<string, unknown>, ctx: CompileCtx) => Artifact;
 }
 
 /**
@@ -100,6 +102,7 @@ export function initAdapterRegistry(): void {
     const signal = makeTypeDesc('signal', domain);
     const field = makeTypeDesc('field', domain);
 
+    // ConstToSignal adapter
     adapterRegistry.register({
       id: `ConstToSignal:${domain}`,
       label: `Const → Signal (${domain})`,
@@ -107,8 +110,24 @@ export function initAdapterRegistry(): void {
       cost: COST_CHEAP,
       from: scalar,
       to: signal,
+      apply: (artifact, _params, _ctx) => {
+        if (artifact.kind === 'Scalar:float') {
+          return { kind: 'Signal:float', value: () => artifact.value };
+        }
+        if (artifact.kind === 'Scalar:vec2') {
+          return { kind: 'Signal:vec2', value: () => artifact.value };
+        }
+        if (artifact.kind === 'Scalar:color') {
+          return { kind: 'Signal:color', value: () => artifact.value as string };
+        }
+        if (artifact.kind === 'Scalar:boolean') {
+          return { kind: 'Signal:float', value: () => (artifact.value ? 1 : 0) };
+        }
+        return { kind: 'Error', message: `ConstToSignal unsupported for ${artifact.kind}` };
+      },
     });
 
+    // BroadcastScalarToField adapter
     adapterRegistry.register({
       id: `BroadcastScalarToField:${domain}`,
       label: `Const → Field (${domain})`,
@@ -116,8 +135,36 @@ export function initAdapterRegistry(): void {
       cost: COST_MEDIUM,
       from: scalar,
       to: field,
+      apply: (artifact, _params, _ctx) => {
+        if (artifact.kind === 'Scalar:float') {
+          return {
+            kind: 'Field:float',
+            value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
+          };
+        }
+        if (artifact.kind === 'Scalar:vec2') {
+          return {
+            kind: 'Field:vec2',
+            value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
+          };
+        }
+        if (artifact.kind === 'Scalar:color') {
+          return {
+            kind: 'Field:color',
+            value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
+          };
+        }
+        if (artifact.kind === 'Scalar:boolean') {
+          return {
+            kind: 'Field:boolean',
+            value: (_seed, n) => Array.from({ length: n }, () => artifact.value),
+          };
+        }
+        return { kind: 'Error', message: `BroadcastScalarToField unsupported for ${artifact.kind}` };
+      },
     });
 
+    // BroadcastSignalToField adapter
     adapterRegistry.register({
       id: `BroadcastSignalToField:${domain}`,
       label: `Signal → Field (${domain})`,
@@ -125,8 +172,43 @@ export function initAdapterRegistry(): void {
       cost: COST_MEDIUM,
       from: signal,
       to: field,
+      apply: (artifact, _params, ctx) => {
+        const t = (ctx.env as { t?: number }).t ?? 0;
+        if (artifact.kind === 'Signal:float') {
+          return {
+            kind: 'Field:float',
+            value: (_seed, n, compileCtx) => {
+              const time = (compileCtx.env as { t?: number }).t ?? t;
+              const v = artifact.value(time, { viewport: { w: 0, h: 0, dpr: 1 } });
+              return Array.from({ length: n }, () => v);
+            },
+          };
+        }
+        if (artifact.kind === 'Signal:vec2') {
+          return {
+            kind: 'Field:vec2',
+            value: (_seed, n, compileCtx) => {
+              const time = (compileCtx.env as { t?: number }).t ?? t;
+              const v = artifact.value(time, { viewport: { w: 0, h: 0, dpr: 1 } });
+              return Array.from({ length: n }, () => v);
+            },
+          };
+        }
+        if (artifact.kind === 'Signal:color') {
+          return {
+            kind: 'Field:color',
+            value: (_seed, n, compileCtx) => {
+              const time = (compileCtx.env as { t?: number }).t ?? t;
+              const v = artifact.value(time, { viewport: { w: 0, h: 0, dpr: 1 } });
+              return Array.from({ length: n }, () => v);
+            },
+          };
+        }
+        return { kind: 'Error', message: `BroadcastSignalToField unsupported for ${artifact.kind}` };
+      },
     });
 
+    // ReduceFieldToSignal adapter (not implemented yet)
     adapterRegistry.register({
       id: `ReduceFieldToSignal:${domain}`,
       label: `Field → Signal (${domain})`,
@@ -134,6 +216,9 @@ export function initAdapterRegistry(): void {
       cost: COST_HEAVY,
       from: field,
       to: signal,
+      apply: (_artifact, _params, _ctx) => {
+        return { kind: 'Error', message: 'ReduceFieldToSignal requires runtime reduction context' };
+      },
     });
   }
 
@@ -152,6 +237,18 @@ export function initAdapterRegistry(): void {
     cost: COST_CHEAP,
     from: signalFloat,
     to: signalPhase,
+    apply: (artifact, _params, _ctx) => {
+      if (artifact.kind === 'Signal:float') {
+        return {
+          kind: 'Signal:phase',
+          value: (t, runtimeCtx) => {
+            const v = artifact.value(t, runtimeCtx);
+            return ((v % 1) + 1) % 1;
+          },
+        };
+      }
+      return { kind: 'Error', message: `NormalizeToPhase unsupported for ${artifact.kind}` };
+    },
   });
 
   adapterRegistry.register({
@@ -161,6 +258,12 @@ export function initAdapterRegistry(): void {
     cost: COST_CHEAP,
     from: signalPhase,
     to: signalFloat,
+    apply: (artifact, _params, _ctx) => {
+      if (artifact.kind === 'Signal:phase') {
+        return { kind: 'Signal:float', value: artifact.value };
+      }
+      return { kind: 'Error', message: `PhaseToNumber unsupported for ${artifact.kind}` };
+    },
   });
 
   adapterRegistry.register({
@@ -170,6 +273,13 @@ export function initAdapterRegistry(): void {
     cost: COST_CHEAP,
     from: scalarFloat,
     to: scalarPhase,
+    apply: (artifact, _params, _ctx) => {
+      if (artifact.kind === 'Scalar:float') {
+        const v = artifact.value;
+        return { kind: 'Scalar:float', value: ((v % 1) + 1) % 1 };
+      }
+      return { kind: 'Error', message: `NormalizeToPhase unsupported for ${artifact.kind}` };
+    },
   });
 
   adapterRegistry.register({
@@ -179,6 +289,12 @@ export function initAdapterRegistry(): void {
     cost: COST_CHEAP,
     from: scalarPhase,
     to: scalarFloat,
+    apply: (artifact, _params, _ctx) => {
+      if (artifact.kind === 'Scalar:float') {
+        return artifact;
+      }
+      return { kind: 'Error', message: `PhaseToNumber unsupported for ${artifact.kind}` };
+    },
   });
 
   adapterRegistry.register({
@@ -188,6 +304,10 @@ export function initAdapterRegistry(): void {
     cost: COST_CHEAP,
     from: signalFloat,
     to: signalDuration,
+    apply: (_artifact, _params, _ctx) => {
+      // TODO: Implement duration conversion
+      return { kind: 'Error', message: 'NumberToDurationMs not implemented yet' };
+    },
   });
 
   adapterRegistry.register({
@@ -197,6 +317,10 @@ export function initAdapterRegistry(): void {
     cost: COST_CHEAP,
     from: signalDuration,
     to: signalFloat,
+    apply: (_artifact, _params, _ctx) => {
+      // TODO: Implement duration conversion
+      return { kind: 'Error', message: 'DurationToNumberMs not implemented yet' };
+    },
   });
 
   adapterRegistry.register({
@@ -206,6 +330,10 @@ export function initAdapterRegistry(): void {
     cost: COST_CHEAP,
     from: scalarFloat,
     to: scalarDuration,
+    apply: (_artifact, _params, _ctx) => {
+      // TODO: Implement duration conversion
+      return { kind: 'Error', message: 'NumberToDurationMs not implemented yet' };
+    },
   });
 
   adapterRegistry.register({
@@ -215,6 +343,10 @@ export function initAdapterRegistry(): void {
     cost: COST_CHEAP,
     from: scalarDuration,
     to: scalarFloat,
+    apply: (_artifact, _params, _ctx) => {
+      // TODO: Implement duration conversion
+      return { kind: 'Error', message: 'DurationToNumberMs not implemented yet' };
+    },
   });
 
   const scalarExpression = makeTypeDesc('scalar', 'expression');
@@ -227,6 +359,9 @@ export function initAdapterRegistry(): void {
     cost: COST_HEAVY,
     from: scalarExpression,
     to: scalarWaveform,
+    apply: (_artifact, _params, _ctx) => {
+      return { kind: 'Error', message: 'ExpressionToWaveform not implemented yet' };
+    },
   });
 }
 
