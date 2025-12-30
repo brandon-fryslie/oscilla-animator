@@ -159,6 +159,7 @@ function optionalAttribute(
  * Apply RenderPassHeaderIR to Canvas context.
  *
  * Sets up clipping, view transform, and blend mode based on header spec.
+ * Supports rect, circle, and path-based clipping.
  *
  * @param ctx - Canvas 2D context
  * @param header - Pass header specification
@@ -175,15 +176,34 @@ function applyPassHeader(
 
   // Apply clipping if specified
   if (header.clip !== undefined) {
-    if (header.clip.kind === "rect") {
-      const { x, y, w, h } = header.clip;
-      ctx.beginPath();
-      ctx.rect(x, y, w, h);
-      ctx.clip();
-    } else {
-      // Path-based clipping not implemented yet (requires path decoding)
-      console.warn("renderPassExecutors: path-based clipping not implemented");
+    ctx.beginPath();
+
+    switch (header.clip.kind) {
+      case "rect": {
+        const { x, y, w, h } = header.clip;
+        ctx.rect(x, y, w, h);
+        break;
+      }
+
+      case "circle": {
+        const { x, y, radius } = header.clip;
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        break;
+      }
+
+      case "path": {
+        // Path-based clipping not implemented yet (requires path decoding)
+        console.warn("renderPassExecutors: path-based clipping not implemented");
+        break;
+      }
+
+      default: {
+        const _exhaustive: never = header.clip;
+        throw new Error(`applyPassHeader: unknown clip kind ${(_exhaustive as any).kind}`);
+      }
     }
+
+    ctx.clip();
   }
 
   // Apply blend mode and opacity if specified

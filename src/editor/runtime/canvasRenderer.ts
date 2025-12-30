@@ -249,8 +249,11 @@ export class Canvas2DRenderer {
         renderPaths2DPass(pass, this.ctx, valueStore);
         break;
 
+      case 'clipGroup':
+        console.warn('Canvas2DRenderer: ClipGroup passes not fully implemented yet');
+        break;
+
       case 'postfx':
-        // PostFX not implemented yet - skip silently
         console.warn('Canvas2DRenderer: PostFX passes not implemented yet');
         break;
 

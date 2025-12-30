@@ -16,6 +16,7 @@
  * - Rust/WASM compatible encoding (u8x4 color, u16 path commands, LE byte order)
  *
  * References:
+ * - design-docs/spec/ (authoritative specification)
  * - design-docs/13-Renderer/01-RendererIR.md (authoritative specification)
  * - design-docs/13-Renderer/03-Decisions.md (encoding decisions)
  * - design-docs/13-Renderer/04-Decision-to-IR.md (buffer descriptors)
@@ -88,6 +89,7 @@ export interface RenderFrameMetaIR {
 export type RenderPassIR =
   | Instances2DPassIR
   | Paths2DPassIR
+  | ClipGroupPassIR
   | PostFXPassIR; // Future work, stubbed for completeness
 
 /**
@@ -153,11 +155,12 @@ export interface BlendSpecIR {
 /**
  * ClipSpecIR - Clipping region specification
  *
- * Supports rect and path-based clipping.
+ * Supports rect, circle, and path-based clipping.
  * Path variant creates forward reference to PathGeometryBufferIR.
  */
 export type ClipSpecIR =
   | { kind: "rect"; x: number; y: number; w: number; h: number }
+  | { kind: "circle"; x: number; y: number; radius: number }
   | { kind: "path"; geometry: PathGeometryBufferIR };
 
 // ============================================================================
@@ -206,10 +209,12 @@ export type InstanceMaterialIR =
   | {
       /** Shape2D: Render geometric primitives (circles, squares, stars) */
       kind: "shape2d";
-      /** Shading mode (flat only for now, future: gradient, etc.) */
-      shading: "flat";
+      /** Shading mode (flat or gradient) */
+      shading: "flat" | "gradient";
       /** Color space for interpretation (sRGB or linear) */
       colorSpace: "srgb" | "linear";
+      /** Gradient specification (only when shading = "gradient") */
+      gradient?: GradientSpecIR;
     }
   | {
       /** Sprite: Render textured quads */
@@ -225,6 +230,38 @@ export type InstanceMaterialIR =
       /** Font identifier */
       fontId: string;
     };
+
+/**
+ * GradientSpecIR - Gradient fill specification
+ *
+ * Defines linear or radial gradients for instance materials.
+ */
+export interface GradientSpecIR {
+  /** Gradient type */
+  type: "linear" | "radial";
+
+  /** Gradient stops (offset and color) */
+  stops: GradientStopIR[];
+
+  /** Gradient coordinates (context-specific interpretation) */
+  coords?: {
+    /** Start point (x, y) for linear or center (x, y) for radial */
+    start: [number, number];
+    /** End point (x, y) for linear or radius for radial */
+    end: [number, number] | number;
+  };
+}
+
+/**
+ * GradientStopIR - Single gradient stop
+ */
+export interface GradientStopIR {
+  /** Offset along gradient (0-1) */
+  offset: number;
+
+  /** Color as packed u32 RGBA */
+  colorRGBA: number;
+}
 
 /**
  * InstanceBufferSetIR - Per-instance attribute buffers
@@ -250,6 +287,9 @@ export interface InstanceBufferSetIR {
 
   /** Instance rotation in radians (scalar broadcast or per-instance buffer) */
   rot?: BufferRefIR | ScalarF32IR;
+
+  /** Instance scale XY (scalar broadcast or per-instance buffer) */
+  scaleXY?: BufferRefIR | ScalarF32IR;
 
   /**
    * Instance color as packed RGBA
@@ -492,21 +532,63 @@ export interface PathStyleIR {
 }
 
 // ============================================================================
+// ClipGroup Pass (Gap 3: Clipping/Masking)
+// ============================================================================
+
+/**
+ * ClipGroupPassIR - Hierarchical clipping pass
+ *
+ * Renders child passes within a clipping region. Supports rect, circle, and
+ * path-based clipping with save/restore semantics.
+ *
+ * Design: Clip region is applied before rendering children, then restored.
+ * Children can be any render pass type (instances2d, paths2d, nested clipGroups).
+ */
+export interface ClipGroupPassIR {
+  /** Pass type discriminator */
+  kind: "clipGroup";
+
+  /** Pass-level metadata and controls */
+  header: RenderPassHeaderIR;
+
+  /** Clipping region specification */
+  clip: ClipSpecIR;
+
+  /** Child passes to render within clip region */
+  children: RenderPassIR[];
+}
+
+// ============================================================================
 // PostFX Pass (Future Work, Stubbed)
 // ============================================================================
 
 /**
  * PostFXPassIR - Post-processing effects pass
  *
- * Future work. Defined now for union completeness.
- * Will support effects like blur, bloom, color grading applied to
- * framebuffer or intermediate textures.
+ * Applies post-processing effects to framebuffer or intermediate textures.
+ * Supports blur, bloom, color grading, vignette, etc.
  */
 export interface PostFXPassIR {
   kind: "postfx";
   header: RenderPassHeaderIR;
-  // Future: effect chain, shader refs, etc.
+
+  /** Effect specification */
+  effect: PostFXEffectIR;
+
+  /** Effect parameters (scalar or buffer) */
+  params?: Record<string, number | BufferRefIR>;
 }
+
+/**
+ * PostFXEffectIR - Post-processing effect specification
+ *
+ * Discriminated union of supported effects.
+ */
+export type PostFXEffectIR =
+  | { kind: "blur"; radiusX: number; radiusY: number }
+  | { kind: "bloom"; threshold: number; intensity: number; radius: number }
+  | { kind: "vignette"; intensity: number; softness: number }
+  | { kind: "colorGrade"; matrix: number[] };
 
 // ============================================================================
 // Buffer References (Doc 01 Section 5)
