@@ -142,9 +142,16 @@ function buildCameraSelection(cameras: readonly CameraIR[]): CameraSelectionResu
  * (numeric offsets).
  *
  * Process:
- * 1. Build stateId → offset map from state layout
- * 2. Patch all SignalExprStateful nodes with params.stateOffset
- * 3. Validate all state references are declared
+ * 1. Detect StateDeclConflict (same stateId with different sizes/alignment)
+ * 2. Build stateId → offset map from state layout (sequential array indices)
+ * 3. Patch all SignalExprStateful nodes with params.stateOffset
+ * 4. Validate all state references are declared
+ *
+ * State offset assignment (Sprint 1):
+ * - Offsets are sequential array indices: 0, 1, 2, ...
+ * - All state currently stored in Float64Array (env.state.f64)
+ * - alignment and sizeBytes fields are metadata for future buffer packing
+ * - Future: separate buffers (f32, i32) will use alignment for packing
  *
  * Deterministic ordering:
  * - State offsets are assigned sequentially from state layout
@@ -152,23 +159,48 @@ function buildCameraSelection(cameras: readonly CameraIR[]): CameraSelectionResu
  * - Same input → same offsets every compilation
  *
  * Error handling:
+ * - StateDeclConflict: Same stateId declared twice with different sizes/alignment
  * - StateRefMissingDecl: SignalExprStateful references unknown stateId
  *
  * @param signalNodes - Mutable array of signal IR nodes
  * @param stateLayout - State layout entries from IRBuilder
- * @throws Error if stateful node references undeclared stateId
+ * @throws Error if stateful node references undeclared stateId or conflict detected
  */
 function resolveStateOffsets(
   signalNodes: SignalExprIR[],
   stateLayout: readonly StateLayoutEntry[]
 ): void {
-  // Build stateId → offset map
+  // Step 1: Detect StateDeclConflict - same stateId with different sizes/alignment
+  const stateIdToEntry = new Map<StateId, StateLayoutEntry>();
+  for (const entry of stateLayout) {
+    const existing = stateIdToEntry.get(entry.stateId);
+    if (existing !== undefined) {
+      // Conflict detection: same ID with different properties
+      const existingSize = existing.sizeBytes ?? 4;
+      const entrySize = entry.sizeBytes ?? 4;
+      const existingAlign = existing.alignment ?? 4;
+      const entryAlign = entry.alignment ?? 4;
+
+      if (existingSize !== entrySize || existingAlign !== entryAlign) {
+        throw new Error(
+          `StateDeclConflict: stateId "${entry.stateId}" declared with conflicting properties. ` +
+          `First: {sizeBytes: ${existingSize}, alignment: ${existingAlign}}, ` +
+          `Second: {sizeBytes: ${entrySize}, alignment: ${entryAlign}}`
+        );
+      }
+    }
+    stateIdToEntry.set(entry.stateId, entry);
+  }
+
+  // Step 2: Build stateId → offset map (sequential array indices)
+  // NOTE: Currently all state is in Float64Array, so offsets are just 0, 1, 2, ...
+  // alignment and sizeBytes are metadata for future buffer packing optimization
   const stateOffsetMap = new Map<StateId, number>();
   stateLayout.forEach((entry, idx) => {
     stateOffsetMap.set(entry.stateId, idx);
   });
 
-  // Patch SignalExprStateful nodes
+  // Step 3: Patch SignalExprStateful nodes
   for (const node of signalNodes) {
     if (node.kind === 'stateful') {
       const offset = stateOffsetMap.get(node.stateId);

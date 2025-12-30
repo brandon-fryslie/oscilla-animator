@@ -55,12 +55,34 @@ export interface ReduceFn {
 
 /**
  * Entry in the state layout describing a piece of runtime state.
+ *
+ * Sprint 1: Added alignment and sizeBytes for proper state offset calculation.
+ * - alignment: Memory alignment requirement (4-byte for scalars, 16-byte for buffers)
+ * - sizeBytes: Size of the state value in bytes (4 for f32, 8+ for buffers)
  */
 export interface StateLayoutEntry {
   stateId: StateId;
   type: TypeDesc;
   initial?: unknown;
   debugName?: string;
+
+  /**
+   * Memory alignment requirement in bytes.
+   * - 4 bytes for scalar values (f32, i32)
+   * - 16 bytes for buffer types (ring buffers, delay lines)
+   *
+   * Default: 4 (scalar alignment)
+   */
+  alignment?: number;
+
+  /**
+   * Size of this state value in bytes.
+   * - 4 bytes for single f32
+   * - 8+ bytes for structured state (e.g., delay line metadata)
+   *
+   * Default: 4 (single f32)
+   */
+  sizeBytes?: number;
 }
 
 // =============================================================================
