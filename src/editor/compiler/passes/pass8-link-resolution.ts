@@ -21,6 +21,9 @@ import type { CompilerConnection, CompileError } from "../types";
 import { getBlockType } from "../ir/lowerTypes";
 import type { LowerCtx } from "../ir/lowerTypes";
 import type { TypeDesc } from "../ir/types";
+import { adapterRegistry } from "../../adapters/AdapterRegistry";
+import type { AdapterIRCtx } from "../../adapters/AdapterRegistry";
+import { getLens } from "../../lenses/LensRegistry";
 
 // =============================================================================
 // Types
@@ -387,6 +390,137 @@ function buildBlockOutputRoots(
 }
 
 /**
+ * Apply adapter chain to a value reference.
+ *
+ * Iterates through the adapter chain and applies each adapter's compileToIR.
+ * If any adapter doesn't support IR compilation, adds an error and returns the input unchanged.
+ */
+function applyAdapterChain(
+  valueRef: ValueRefPacked,
+  adapterChain: NonNullable<CompilerConnection['adapterChain']> | NonNullable<Listener['adapterChain']>,
+  builder: IRBuilder,
+  errors: CompileError[],
+  context: string
+): ValueRefPacked {
+  let result = valueRef;
+
+  for (const step of adapterChain) {
+    const adapterDef = adapterRegistry.get(step.adapterId);
+
+    if (!adapterDef) {
+      errors.push({
+        code: "UnsupportedAdapterInIRMode",
+        message: `Unknown adapter '${step.adapterId}' in ${context}. This adapter is not registered.`,
+      });
+      continue; // Skip unknown adapter, continue with original value
+    }
+
+    if (!adapterDef.compileToIR) {
+      errors.push({
+        code: "UnsupportedAdapterInIRMode",
+        message: `Adapter '${adapterDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
+                 `This adapter requires special runtime handling that hasn't been implemented in the IR compiler. ` +
+                 `To use this adapter, either:\n` +
+                 `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
+                 `  - Remove this adapter from your connection\n` +
+                 `  - Use an alternative adapter if available`,
+      });
+      continue; // Skip unsupported adapter, continue with original value
+    }
+
+    // Apply the adapter's IR compilation
+    const irCtx: AdapterIRCtx = {
+      builder,
+      adapterId: step.adapterId,
+      params: step.params,
+    };
+
+    const transformed = adapterDef.compileToIR(result, irCtx);
+    if (transformed === null) {
+      errors.push({
+        code: "UnsupportedAdapterInIRMode",
+        message: `Adapter '${adapterDef.label}' in ${context} failed to compile to IR. ` +
+                 `The input type may be incompatible with this adapter.`,
+      });
+      continue; // Skip failed adapter, continue with original value
+    }
+
+    result = transformed;
+  }
+
+  return result;
+}
+
+/**
+ * Apply lens stack to a value reference.
+ *
+ * Iterates through the lens stack and applies each lens's compileToIR.
+ * If any lens doesn't support IR compilation, adds an error and returns the input unchanged.
+ */
+function applyLensStack(
+  valueRef: ValueRefPacked,
+  lensStack: NonNullable<CompilerConnection['lensStack']> | NonNullable<Listener['lensStack']>,
+  builder: IRBuilder,
+  errors: CompileError[],
+  context: string
+): ValueRefPacked {
+  let result = valueRef;
+
+  for (const lensInstance of lensStack) {
+    const lensDef = getLens(lensInstance.lensId);
+
+    if (!lensDef) {
+      errors.push({
+        code: "UnsupportedLensInIRMode",
+        message: `Unknown lens '${lensInstance.lensId}' in ${context}. This lens is not registered.`,
+      });
+      continue; // Skip unknown lens, continue with original value
+    }
+
+    if (!lensDef.compileToIR) {
+      errors.push({
+        code: "UnsupportedLensInIRMode",
+        message: `Lens '${lensDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
+                 `This lens requires stateful operation or special runtime handling that hasn't been implemented in the IR compiler. ` +
+                 `To use this lens, either:\n` +
+                 `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
+                 `  - Remove this lens from your connection\n` +
+                 `  - Use an alternative lens with similar functionality`,
+      });
+      continue; // Skip unsupported lens, continue with original value
+    }
+
+    // Convert lens params to ValueRefPacked
+    const paramsMap: Record<string, ValueRefPacked> = {};
+    for (const [paramId, binding] of Object.entries(lensInstance.params)) {
+      if (binding.kind === 'literal') {
+        // Convert literal values to scalar constants
+        const constId = builder.allocConstId(binding.value);
+        paramsMap[paramId] = { k: 'scalarConst', constId };
+      }
+      // TODO: Handle other binding kinds (bus, wire, default) in future sprints
+      // For now, only literal bindings are supported in IR mode
+    }
+
+    // Apply the lens's IR compilation
+    const irCtx = { builder };
+    const transformed = lensDef.compileToIR(result, paramsMap, irCtx);
+    if (transformed === null) {
+      errors.push({
+        code: "UnsupportedLensInIRMode",
+        message: `Lens '${lensDef.label}' in ${context} failed to compile to IR. ` +
+                 `The input type may be incompatible with this lens, or the lens parameters are not yet supported.`,
+      });
+      continue; // Skip failed lens, continue with original value
+    }
+
+    result = transformed;
+  }
+
+  return result;
+}
+
+/**
  * Build BlockInputRootIR by resolving input sources.
  *
  * Resolution priority:
@@ -446,15 +580,6 @@ function buildBlockInputRoots(
       );
 
       if (wire !== undefined) {
-        // Validate no adapters on wires (unsupported in IR mode)
-        if (wire.adapterChain !== undefined && wire.adapterChain.length > 0) {
-          errors.push({
-            code: "UnsupportedAdapterInIRMode",
-            message: `Wire connection to ${block.type}.${input.id} uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
-          });
-        }
-        // Lens stacks are ignored in IR mode for now (no transform chain emission yet).
-
         // Resolve upstream block output
         const upstreamBlockIdx = blockIdToIndex.get(wire.from.block);
 
@@ -468,9 +593,31 @@ function buildBlockInputRoots(
         }
 
         const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
-        const ref = upstreamOutputs?.get(wire.from.port);
+        let ref = upstreamOutputs?.get(wire.from.port);
 
         if (ref !== undefined) {
+          // Apply adapter chain if present
+          if (wire.adapterChain !== undefined && wire.adapterChain.length > 0) {
+            ref = applyAdapterChain(
+              ref,
+              wire.adapterChain,
+              builder,
+              errors,
+              `wire to ${block.type}.${input.id}`
+            );
+          }
+
+          // Apply lens stack if present
+          if (wire.lensStack !== undefined && wire.lensStack.length > 0) {
+            ref = applyLensStack(
+              ref,
+              wire.lensStack,
+              builder,
+              errors,
+              `wire to ${block.type}.${input.id}`
+            );
+          }
+
           refs[flatIdx] = ref;
           continue; // Successfully resolved via wire
         }
@@ -487,15 +634,6 @@ function buildBlockInputRoots(
       );
 
       if (listener !== undefined) {
-        // Validate no adapters on listeners (unsupported in IR mode)
-        if (listener.adapterChain !== undefined && listener.adapterChain.length > 0) {
-          errors.push({
-            code: "UnsupportedAdapterInIRMode",
-            message: `Bus listener for ${block.type}.${input.id} uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
-          });
-        }
-        // Lens stacks are ignored in IR mode for now (no transform chain emission yet).
-
         const busIdx = busIdToIndex.get(listener.busId);
 
         if (busIdx === undefined) {
@@ -507,10 +645,31 @@ function buildBlockInputRoots(
           continue;
         }
 
-        const busRef = busRoots.get(busIdx);
+        let busRef = busRoots.get(busIdx);
 
         if (busRef !== undefined) {
-          // Adapters/lenses validated above - assume 1:1 mapping
+          // Apply adapter chain if present
+          if (listener.adapterChain !== undefined && listener.adapterChain.length > 0) {
+            busRef = applyAdapterChain(
+              busRef,
+              listener.adapterChain,
+              builder,
+              errors,
+              `bus listener for ${block.type}.${input.id}`
+            );
+          }
+
+          // Apply lens stack if present
+          if (listener.lensStack !== undefined && listener.lensStack.length > 0) {
+            busRef = applyLensStack(
+              busRef,
+              listener.lensStack,
+              builder,
+              errors,
+              `bus listener for ${block.type}.${input.id}`
+            );
+          }
+
           refs[flatIdx] = busRef;
           continue; // Successfully resolved via bus
         }
