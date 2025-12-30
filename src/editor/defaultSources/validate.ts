@@ -41,6 +41,12 @@ export function validateDefaultSourceAttachments(
   // Default to revision 0 - will be updated when integrated into semantic validator
   const patchRevision = 0;
 
+  // Skip validation if defaultSourceStore is unavailable (e.g., in tests with minimal mocks)
+  // If there's no store, there are no attachments to validate
+  if (!rootStore.defaultSourceStore) {
+    return diagnostics;
+  }
+
   // Get all attachments from store
   const attachments = Array.from(
     rootStore.defaultSourceStore.attachmentsByTarget.values()
