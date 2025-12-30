@@ -152,6 +152,9 @@ export type DiagnosticCode =
   | 'E_BUS_COMBINE_MODE_INCOMPATIBLE'
   // Composite errors
   | 'E_COMPOSITE_CONTAINS_TIMEROOT'
+  // Default source errors (Sprint 17)
+  | 'E_INVALID_DEFAULT_SOURCE_PROVIDER'
+  | 'E_MISSING_REQUIRED_BUS'
   // Internal errors
   | 'E_VALIDATION_FAILED'
   // Bus-related warnings

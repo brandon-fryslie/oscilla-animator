@@ -18,6 +18,7 @@ import { createDiagnostic } from './types';
 import type { PatchStore } from '../stores/PatchStore';
 import { Validator } from '../semantic';
 import { storeToPatchDocument } from '../semantic/patchAdapter';
+import { validateDefaultSourceAttachments } from '../defaultSources/validate';
 
 /**
  * Filter options for querying diagnostics.
@@ -304,7 +305,10 @@ export class DiagnosticHub {
    * - Type compatibility on all connections
    * - No cycles in the graph
    * - All connection endpoints exist
-   * - Empty bus warnings
+   * - Reserved bus validation
+   * - TimeRoot dependency validation
+   * - Combine mode compatibility
+   * - Default source attachments (Sprint 17)
    *
    * @param patchRevision - The revision to attach to diagnostics
    * @returns Array of authoring diagnostics (errors and warnings)
@@ -326,14 +330,25 @@ export class DiagnosticHub {
     }
 
     try {
+      const diagnostics: Diagnostic[] = [];
+
+      // Run semantic validation (graph structure, types, etc.)
       const patchDoc = storeToPatchDocument(this.patchStore.root);
       const validator = new Validator(patchDoc, patchRevision);
       const result = validator.validateAll(patchDoc);
 
-      // Return only errors for authoring diagnostics (fast feedback for blocking issues)
-      // Warnings like empty buses are better suited for compile diagnostics
+      // Sprint 17: Add default source attachment validation
+      // This validates allowlist membership, type compatibility, and required buses
+      const defaultSourceDiagnostics = validateDefaultSourceAttachments(
+        this.patchStore.root
+      );
+
+      // Collect all errors (warnings are for compile diagnostics)
+      diagnostics.push(...result.errors);
+      diagnostics.push(...defaultSourceDiagnostics.filter(d => d.severity === 'error'));
+
       // Transform domain to 'authoring' since Validator produces 'compile' by default
-      return result.errors.map((diag) => ({
+      return diagnostics.map((diag) => ({
         ...diag,
         domain: 'authoring' as const,
       }));

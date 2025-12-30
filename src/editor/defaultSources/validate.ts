@@ -2,10 +2,10 @@
  * Validation for default source attachments.
  *
  * This module validates that DefaultSourceAttachments are well-formed:
- * - Provider output types are compatible with target input types
+ * - Provider output types are compatible with target input types (Sprint 16)
  * - Provider block types are allowlisted (Sprint 17)
  * - Required buses exist (Sprint 17)
- * - No feedback cycles (Sprint 18)
+ * - No feedback cycles (Sprint 18 - future)
  *
  * Validation is performed during semantic validation and emits diagnostics
  * that appear in the diagnostic panel.
@@ -24,11 +24,11 @@ import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from './allowlist';
  * Validate all default source attachments in the patch.
  *
  * Checks:
- * - Type compatibility: provider output type matches target input type
+ * - Type compatibility: provider output type matches target input type (Sprint 16)
+ * - Provider is in allowlist (Sprint 17)
+ * - Required buses exist (Sprint 17)
  *
- * Future checks (Sprint 17+):
- * - Provider is in allowlist
- * - Required buses exist
+ * Future checks (Sprint 18):
  * - No feedback cycles
  *
  * @param rootStore - Root store containing patch state
@@ -54,6 +54,22 @@ export function validateDefaultSourceAttachments(
       patchRevision
     );
     diagnostics.push(...typeErrors);
+
+    // Sprint 17: Validate provider is allowlisted
+    const allowlistErrors = validateProviderAllowlisted(
+      attachment,
+      rootStore,
+      patchRevision
+    );
+    diagnostics.push(...allowlistErrors);
+
+    // Sprint 17: Validate required buses exist
+    const busErrors = validateRequiredBusesExist(
+      attachment,
+      rootStore,
+      patchRevision
+    );
+    diagnostics.push(...busErrors);
   }
 
   return diagnostics;
@@ -169,6 +185,153 @@ function validateTypeCompatibility(
         patchRevision,
       })
     );
+  }
+
+  return diagnostics;
+}
+
+/**
+ * Validate that provider block type is in the allowlist.
+ *
+ * Sprint 17: Only allowlisted blocks may be used as default source providers.
+ *
+ * @param attachment - The attachment to validate
+ * @param rootStore - Root store to look up block instances
+ * @param patchRevision - Current patch revision for diagnostic metadata
+ * @returns Array of diagnostics (empty if valid)
+ */
+function validateProviderAllowlisted(
+  attachment: DefaultSourceAttachment,
+  rootStore: RootStore,
+  patchRevision: number
+): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  const { target, provider } = attachment;
+
+  // Check if provider blockType is in allowlist
+  const isAllowed = DEFAULT_SOURCE_PROVIDER_BLOCKS.some(
+    (spec) => spec.blockType === provider.blockType
+  );
+
+  if (!isAllowed) {
+    // Get target block info for friendly error message
+    const targetBlockInstance = rootStore.patchStore.blocks.find(
+      (b) => b.id === target.blockId
+    );
+    const targetBlockDef = targetBlockInstance
+      ? getBlockDefinition(targetBlockInstance.type)
+      : null;
+    const targetBlockName = targetBlockDef?.label ?? targetBlockDef?.type ?? target.blockId;
+    const targetSlot = targetBlockDef?.inputs?.find((s) => s.id === target.slotId);
+    const targetInputName = targetSlot?.label ?? targetSlot?.id ?? target.slotId;
+
+    // Get list of allowed types for helpful error message
+    const allowedTypes = DEFAULT_SOURCE_PROVIDER_BLOCKS.map(
+      (spec) => spec.label ?? spec.blockType
+    ).join(', ');
+
+    diagnostics.push(
+      createDiagnostic({
+        code: 'E_INVALID_DEFAULT_SOURCE_PROVIDER',
+        severity: 'error',
+        domain: 'compile',
+        primaryTarget: {
+          kind: 'port',
+          portRef: {
+            blockId: target.blockId,
+            slotId: target.slotId,
+            direction: 'input',
+          },
+        },
+        title: 'Provider block type not allowlisted',
+        message: `Default provider for ${targetBlockName}.${targetInputName} uses block type '${provider.blockType}' which is not allowlisted. Allowed provider types: ${allowedTypes}`,
+        patchRevision,
+      })
+    );
+  }
+
+  return diagnostics;
+}
+
+/**
+ * Validate that all required buses exist in the patch.
+ *
+ * Sprint 17: Providers with busInputs require those buses to exist.
+ * Per user directive: fail compilation with clear error if bus is missing.
+ *
+ * @param attachment - The attachment to validate
+ * @param rootStore - Root store to look up buses
+ * @param patchRevision - Current patch revision for diagnostic metadata
+ * @returns Array of diagnostics (empty if valid)
+ */
+function validateRequiredBusesExist(
+  attachment: DefaultSourceAttachment,
+  rootStore: RootStore,
+  patchRevision: number
+): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  const { target, provider } = attachment;
+
+  // Get provider spec from allowlist
+  const spec = DEFAULT_SOURCE_PROVIDER_BLOCKS.find(
+    (s) => s.blockType === provider.blockType
+  );
+
+  if (!spec) {
+    // Provider not in allowlist - allowlist validation will catch this
+    return diagnostics;
+  }
+
+  // Check each required bus
+  if (spec.busInputs) {
+    for (const [inputId, busName] of Object.entries(spec.busInputs)) {
+      // Look up bus by name
+      const bus = rootStore.busStore.buses.find((b) => b.name === busName);
+
+      if (!bus) {
+        // Bus doesn't exist - emit error
+        // Get target block info for friendly error message
+        const targetBlockInstance = rootStore.patchStore.blocks.find(
+          (b) => b.id === target.blockId
+        );
+        const targetBlockDef = targetBlockInstance
+          ? getBlockDefinition(targetBlockInstance.type)
+          : null;
+        const targetBlockName = targetBlockDef?.label ?? targetBlockDef?.type ?? target.blockId;
+        const targetSlot = targetBlockDef?.inputs?.find((s) => s.id === target.slotId);
+        const targetInputName = targetSlot?.label ?? targetSlot?.id ?? target.slotId;
+
+        const providerLabel = spec.label ?? provider.blockType;
+
+        diagnostics.push(
+          createDiagnostic({
+            code: 'E_MISSING_REQUIRED_BUS',
+            severity: 'error',
+            domain: 'compile',
+            primaryTarget: {
+              kind: 'port',
+              portRef: {
+                blockId: target.blockId,
+                slotId: target.slotId,
+                direction: 'input',
+              },
+            },
+            title: 'Required bus does not exist',
+            message: `Default provider for ${targetBlockName}.${targetInputName} requires bus '${busName}' which does not exist. Create the bus or select a different provider.`,
+            patchRevision,
+            payload: {
+              kind: 'generic',
+              data: {
+                providerType: provider.blockType,
+                providerLabel,
+                busName,
+                inputId,
+              },
+            },
+          })
+        );
+      }
+    }
   }
 
   return diagnostics;
