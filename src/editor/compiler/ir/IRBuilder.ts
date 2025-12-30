@@ -121,12 +121,27 @@ export interface IRBuilder {
   setTimeSlots(slots: TimeSlots): void;
 
   /**
+   * Get time slots allocated by TimeRoot.
+   * Returns undefined if TimeRoot has not yet been lowered.
+   */
+  getTimeSlots(): TimeSlots | undefined;
+
+  /**
    * Set the time model for this patch.
    * Called by pass6 from Pass 3 output.
    *
    * @param timeModel - The time model from Pass 3
    */
   setTimeModel(timeModel: TimeModelIR): void;
+
+  /**
+   * Get the time model for this patch.
+   * Returns undefined if Pass 3 has not yet run.
+   *
+   * Block lowering functions can use this to access TimeModel for
+   * time-dependent calculations (e.g., PhaseClock period wrapping).
+   */
+  getTimeModel(): TimeModelIR | undefined;
 
   // =============================================================================
   // Signal Expressions

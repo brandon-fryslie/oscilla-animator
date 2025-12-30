@@ -255,6 +255,10 @@ export class IRBuilderImpl implements IRBuilder {
     this.timeModel = timeModel;
   }
 
+  getTimeModel(): TimeModelIR | undefined {
+    return this.timeModel;
+  }
+
   setTimeSlots(slots: TimeSlots): void {
     this.timeSlots = slots;
   }
