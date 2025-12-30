@@ -1,7 +1,7 @@
 /**
  * Export Types
  *
- * Type definitions for image sequence, video, and GIF export functionality.
+ * Type definitions for image sequence, video, GIF, and standalone player export functionality.
  */
 
 /**
@@ -23,6 +23,11 @@ export type VideoFormat = 'mp4' | 'webm';
  * Dithering modes for GIF export.
  */
 export type DitheringMode = 'none' | 'floyd-steinberg' | 'ordered';
+
+/**
+ * Runtime bundle mode for standalone player export.
+ */
+export type RuntimeBundleMode = 'inline' | 'cdn';
 
 /**
  * Configuration for image sequence export.
@@ -95,6 +100,24 @@ export interface GifExportConfig {
 }
 
 /**
+ * Configuration for standalone player export.
+ */
+export interface StandaloneExportConfig {
+  /** Output width in pixels */
+  width: number;
+  /** Output height in pixels */
+  height: number;
+  /** Include playback controls (play/pause, scrub, loop toggle) */
+  includeControls: boolean;
+  /** Runtime bundle mode (inline or CDN) */
+  bundleMode: RuntimeBundleMode;
+  /** CDN base URL (only used if bundleMode is 'cdn') */
+  cdnBaseUrl?: string;
+  /** Seed for deterministic randomness */
+  seed?: number;
+}
+
+/**
  * Progress callback for export operations.
  */
 export interface ExportProgress {
@@ -144,6 +167,20 @@ export interface GifExportResult {
   config: GifExportConfig;
   /** Total export time in milliseconds */
   durationMs: number;
+}
+
+/**
+ * Standalone player export result containing HTML file.
+ */
+export interface StandaloneExportResult {
+  /** Exported HTML blob */
+  blob: Blob;
+  /** Export configuration used */
+  config: StandaloneExportConfig;
+  /** Total export time in milliseconds */
+  durationMs: number;
+  /** HTML file size in bytes */
+  sizeBytes: number;
 }
 
 /**

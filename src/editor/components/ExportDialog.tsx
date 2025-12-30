@@ -1,8 +1,8 @@
 /**
  * ExportDialog Component
  *
- * Modal dialog for exporting animations as image sequences, video, or GIF.
- * Supports PNG/WebP/JPEG formats, H.264/VP9 video codecs, and animated GIFs.
+ * Modal dialog for exporting animations as image sequences, video, GIF, or standalone HTML player.
+ * Supports PNG/WebP/JPEG formats, H.264/VP9 video codecs, animated GIFs, and self-contained HTML export.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -10,15 +10,18 @@ import { Modal } from '../Modal';
 import { ImageSequenceExporter } from '../export/ImageSequenceExporter';
 import { VideoExporter } from '../export/VideoExporter';
 import { GifExporter } from '../export/GifExporter';
+import { StandaloneExporter } from '../export/StandaloneExporter';
 import { isWebCodecsSupported, getRecommendedBitrate } from '../export/codecs';
 import type {
   ImageSequenceExportConfig,
   VideoExportConfig,
   GifExportConfig,
+  StandaloneExportConfig,
   ExportProgress,
   ImageFormat,
   VideoCodec,
   DitheringMode,
+  RuntimeBundleMode,
 } from '../export/types';
 import type { CompiledProgramIR } from '../compiler/ir/program';
 import './ExportDialog.css';
@@ -33,7 +36,7 @@ interface ExportDialogProps {
   defaultHeight: number;
 }
 
-type ExportType = 'image' | 'video' | 'gif';
+type ExportType = 'image' | 'video' | 'gif' | 'standalone';
 
 /**
  * Download blobs as individual files or zip (depending on browser support).
@@ -111,6 +114,25 @@ function downloadGifBlob(blob: Blob): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Download standalone HTML blob.
+ */
+function downloadStandaloneBlob(blob: Blob): void {
+  const filename = 'animation.html';
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+
+  // Cleanup
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export function ExportDialog({
   isOpen,
   onClose,
@@ -141,6 +163,10 @@ export function ExportDialog({
   const [maxColors, setMaxColors] = useState(128);
   const [dithering, setDithering] = useState<DitheringMode>('none');
   const [loopCount, setLoopCount] = useState(0); // 0 = infinite
+
+  // Standalone-specific state
+  const [includeControls, setIncludeControls] = useState(true);
+  const [bundleMode, setBundleMode] = useState<RuntimeBundleMode>('cdn');
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -196,7 +222,7 @@ export function ExportDialog({
     (exportType === 'gif' ? (maxColors >= 2 && maxColors <= 256) : true);
 
   const canExport = isValidConfig && program !== null && !isExporting &&
-    (exportType === 'image' || exportType === 'gif' || webCodecsSupported);
+    (exportType === 'image' || exportType === 'gif' || exportType === 'standalone' || webCodecsSupported);
 
   const handleImageExport = useCallback(async () => {
     if (!program || !canExport) return;
@@ -344,15 +370,52 @@ export function ExportDialog({
     }
   }, [program, canExport, width, height, startFrame, endFrame, fps, maxColors, dithering, loopCount, onClose]);
 
+  const handleStandaloneExport = useCallback(async () => {
+    if (!program || !canExport) return;
+
+    setIsExporting(true);
+    setError(null);
+    setProgress(null);
+
+    const config: StandaloneExportConfig = {
+      width,
+      height,
+      includeControls,
+      bundleMode,
+      seed: program.seed,
+    };
+
+    try {
+      const exporter = new StandaloneExporter();
+      const result = await exporter.export(program, config);
+
+      // Download HTML blob
+      downloadStandaloneBlob(result.blob);
+
+      // Success - close dialog
+      onClose();
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Export failed');
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  }, [program, canExport, width, height, includeControls, bundleMode, onClose]);
+
   const handleExport = useCallback(() => {
     if (exportType === 'image') {
       void handleImageExport();
     } else if (exportType === 'video') {
       void handleVideoExport();
-    } else {
+    } else if (exportType === 'gif') {
       void handleGifExport();
+    } else {
+      void handleStandaloneExport();
     }
-  }, [exportType, handleImageExport, handleVideoExport, handleGifExport]);
+  }, [exportType, handleImageExport, handleVideoExport, handleGifExport, handleStandaloneExport]);
 
   const handleCancel = useCallback(() => {
     if (imageExporterRef.current) {
@@ -373,15 +436,21 @@ export function ExportDialog({
     onClose();
   }, [isExporting, handleCancel, onClose]);
 
+  const getTitle = () => {
+    switch (exportType) {
+      case 'image': return 'Export Image Sequence';
+      case 'video': return 'Export Video';
+      case 'gif': return 'Export GIF';
+      case 'standalone': return 'Export Standalone Player';
+      default: return 'Export';
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={
-        exportType === 'image' ? 'Export Image Sequence' :
-        exportType === 'video' ? 'Export Video' :
-        'Export GIF'
-      }
+      title={getTitle()}
       width="medium"
       footer={
         <>
@@ -426,6 +495,7 @@ export function ExportDialog({
                   Video {!webCodecsSupported ? '(not supported)' : ''}
                 </option>
                 <option value="gif">Animated GIF</option>
+                <option value="standalone">Standalone Player (HTML)</option>
               </select>
             </div>
           </div>
@@ -433,6 +503,11 @@ export function ExportDialog({
             <div className="export-dialog-warning">
               Video export requires WebCodecs API (Chrome 94+, Edge 94+, Safari 16.4+).
               Please use image sequence or GIF export instead.
+            </div>
+          )}
+          {exportType === 'standalone' && (
+            <div className="export-dialog-info">
+              Export as self-contained HTML file that can be opened in any browser.
             </div>
           )}
         </div>
@@ -468,81 +543,83 @@ export function ExportDialog({
           </div>
         </div>
 
-        {/* Frame Range */}
-        <div className="export-dialog-section">
-          <h3 className="export-dialog-section-title">Frame Range</h3>
-          <div className="export-dialog-row">
-            <div className="export-dialog-field">
-              <label htmlFor="export-start-frame">Start Frame</label>
-              <input
-                id="export-start-frame"
-                type="number"
-                value={startFrame}
-                onChange={(e) => setStartFrame(Number(e.target.value))}
-                min={0}
-                disabled={isExporting}
-              />
-            </div>
-            <div className="export-dialog-field">
-              <label htmlFor="export-end-frame">End Frame</label>
-              <input
-                id="export-end-frame"
-                type="number"
-                value={endFrame}
-                onChange={(e) => setEndFrame(Number(e.target.value))}
-                min={0}
-                disabled={isExporting}
-              />
-            </div>
-            {exportType === 'image' && (
+        {/* Frame Range (not for standalone) */}
+        {exportType !== 'standalone' && (
+          <div className="export-dialog-section">
+            <h3 className="export-dialog-section-title">Frame Range</h3>
+            <div className="export-dialog-row">
               <div className="export-dialog-field">
-                <label htmlFor="export-frame-step">Step</label>
+                <label htmlFor="export-start-frame">Start Frame</label>
                 <input
-                  id="export-frame-step"
+                  id="export-start-frame"
                   type="number"
-                  value={frameStep}
-                  onChange={(e) => setFrameStep(Number(e.target.value))}
-                  min={1}
+                  value={startFrame}
+                  onChange={(e) => setStartFrame(Number(e.target.value))}
+                  min={0}
                   disabled={isExporting}
                 />
               </div>
-            )}
-          </div>
-          <div className="export-dialog-row">
-            <div className="export-dialog-field">
-              <label htmlFor="export-fps">FPS</label>
-              {exportType === 'gif' ? (
-                <select
-                  id="export-fps"
-                  value={fps}
-                  onChange={(e) => setFps(Number(e.target.value))}
-                  disabled={isExporting}
-                >
-                  <option value={10}>10 fps</option>
-                  <option value={15}>15 fps</option>
-                  <option value={24}>24 fps</option>
-                  <option value={30}>30 fps</option>
-                  <option value={60}>60 fps</option>
-                </select>
-              ) : (
+              <div className="export-dialog-field">
+                <label htmlFor="export-end-frame">End Frame</label>
                 <input
-                  id="export-fps"
+                  id="export-end-frame"
                   type="number"
-                  value={fps}
-                  onChange={(e) => setFps(Number(e.target.value))}
-                  min={1}
-                  max={120}
+                  value={endFrame}
+                  onChange={(e) => setEndFrame(Number(e.target.value))}
+                  min={0}
                   disabled={isExporting}
                 />
+              </div>
+              {exportType === 'image' && (
+                <div className="export-dialog-field">
+                  <label htmlFor="export-frame-step">Step</label>
+                  <input
+                    id="export-frame-step"
+                    type="number"
+                    value={frameStep}
+                    onChange={(e) => setFrameStep(Number(e.target.value))}
+                    min={1}
+                    disabled={isExporting}
+                  />
+                </div>
               )}
             </div>
+            <div className="export-dialog-row">
+              <div className="export-dialog-field">
+                <label htmlFor="export-fps">FPS</label>
+                {exportType === 'gif' ? (
+                  <select
+                    id="export-fps"
+                    value={fps}
+                    onChange={(e) => setFps(Number(e.target.value))}
+                    disabled={isExporting}
+                  >
+                    <option value={10}>10 fps</option>
+                    <option value={15}>15 fps</option>
+                    <option value={24}>24 fps</option>
+                    <option value={30}>30 fps</option>
+                    <option value={60}>60 fps</option>
+                  </select>
+                ) : (
+                  <input
+                    id="export-fps"
+                    type="number"
+                    value={fps}
+                    onChange={(e) => setFps(Number(e.target.value))}
+                    min={1}
+                    max={120}
+                    disabled={isExporting}
+                  />
+                )}
+              </div>
+            </div>
+            <div className="export-dialog-info">
+              {totalFrames} frame{totalFrames !== 1 ? 's' : ''} ({durationSeconds.toFixed(2)}s)
+            </div>
           </div>
-          <div className="export-dialog-info">
-            {totalFrames} frame{totalFrames !== 1 ? 's' : ''} ({durationSeconds.toFixed(2)}s)
-          </div>
-        </div>
+        )}
 
-        {/* Format (Image) or Codec (Video) or GIF Settings */}
+        {/* Format (Image) or Codec (Video) or GIF Settings or Standalone Settings */}
         {exportType === 'image' ? (
           <div className="export-dialog-section">
             <h3 className="export-dialog-section-title">Format</h3>
@@ -624,7 +701,7 @@ export function ExportDialog({
               Recommended bitrate: {(getRecommendedBitrate(width, height) / 1_000_000).toFixed(1)} Mbps
             </div>
           </div>
-        ) : (
+        ) : exportType === 'gif' ? (
           <div className="export-dialog-section">
             <h3 className="export-dialog-section-title">GIF Settings</h3>
 
@@ -685,6 +762,48 @@ export function ExportDialog({
                   <option value={5}>5 times</option>
                 </select>
               </div>
+            </div>
+          </div>
+        ) : (
+          <div className="export-dialog-section">
+            <h3 className="export-dialog-section-title">Player Settings</h3>
+
+            {/* Include controls */}
+            <div className="export-dialog-row">
+              <div className="export-dialog-field">
+                <label htmlFor="export-include-controls">
+                  <input
+                    type="checkbox"
+                    id="export-include-controls"
+                    checked={includeControls}
+                    onChange={(e) => setIncludeControls(e.target.checked)}
+                    disabled={isExporting}
+                  />
+                  Include playback controls
+                </label>
+              </div>
+            </div>
+            <div className="export-dialog-info">
+              Controls include play/pause button, timeline scrubber, and loop toggle
+            </div>
+
+            {/* Bundle mode */}
+            <div className="export-dialog-row">
+              <div className="export-dialog-field">
+                <label htmlFor="export-bundle-mode">Runtime Bundle</label>
+                <select
+                  id="export-bundle-mode"
+                  value={bundleMode}
+                  onChange={(e) => setBundleMode(e.target.value as RuntimeBundleMode)}
+                  disabled={isExporting}
+                >
+                  <option value="cdn">CDN (smaller file, requires network)</option>
+                  <option value="inline" disabled>Inline (larger file, works offline) - Coming Soon</option>
+                </select>
+              </div>
+            </div>
+            <div className="export-dialog-info">
+              CDN mode links to external runtime. Inline mode embeds runtime in HTML (not yet implemented).
             </div>
           </div>
         )}
