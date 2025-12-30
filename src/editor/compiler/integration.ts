@@ -17,6 +17,7 @@ import { buildDecorations, emptyDecorations, type DecorationSet } from './error-
 import { getBlockDefinition } from '../blocks';
 import { registerAllComposites, getCompositeCompilers } from '../composite-bridge';
 import { createDiagnostic, type Diagnostic, type DiagnosticCode, type TargetRef } from '../diagnostics/types';
+import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from '../defaultSources/allowlist';
 
 // =============================================================================
 // Diagnostic Conversion
@@ -370,7 +371,7 @@ export interface CompositeExpansionResult {
 }
 
 // =============================================================================
-// Default Source Provider Injection (Sprint 9-10)
+// Default Source Provider Injection (Sprint 9-11)
 // =============================================================================
 
 /**
@@ -432,7 +433,7 @@ function _makeProviderListenerId(
  * Returns new CompilerPatch with injected primitives. Does NOT mutate input patch.
  *
  * Sprint 10: Inject provider blocks and wires
- * Sprint 10 Fix: Skip providers whose block types don't have both compiler AND block definition
+ * Sprint 11: Inject bus listeners for providers
  */
 export function injectDefaultSourceProviders(
   store: RootStore,
@@ -444,13 +445,11 @@ export function injectDefaultSourceProviders(
   // Track which providers we've already added (for deduplication)
   const addedProviders = new Set<string>();
 
-  // Collect injected blocks, wires, and default source values
+  // Collect injected blocks, wires, listeners, and default source values
   const injectedBlocks: BlockInstance[] = [];
   const injectedWires: CompilerConnection[] = [];
+  const injectedListeners: Listener[] = [];
   const extendedDefaultSourceValues: Record<string, unknown> = { ...patch.defaultSourceValues };
-
-  // Sprint 10: Only blocks and wires - bus listeners will be added in Sprint 11
-  void _makeProviderListenerId; // Suppress unused warning (used in Sprint 11)
 
   // Iterate through all attachments
   for (const [_key, attachment] of defaultSourceStore.attachmentsByTarget) {
@@ -462,7 +461,7 @@ export function injectDefaultSourceProviders(
       continue;
     }
 
-    // SPRINT 10 FIX: Check if BOTH compiler AND block definition exist
+    // Check if BOTH compiler AND block definition exist
     // Provider blocks need:
     // 1. A compiler (for lowering to IR)
     // 2. A block definition (for resolving defaultSource on provider's own inputs)
@@ -495,6 +494,50 @@ export function injectDefaultSourceProviders(
           extendedDefaultSourceValues[key] = defaultSource.value;
         }
       }
+
+      // 4. Inject bus listeners for provider busInputs (Sprint 11)
+      // Get provider spec from allowlist
+      const providerSpec = DEFAULT_SOURCE_PROVIDER_BLOCKS.find(
+        spec => spec.blockType === provider.blockType
+      );
+
+      if (providerSpec != null && providerSpec.busInputs != null) {
+        // For each busInput: { inputSlotId: busName }
+        for (const [inputSlotId, busName] of Object.entries(providerSpec.busInputs)) {
+          // Look up bus by name
+          const bus = store.busStore.buses.find(b => b.name === busName);
+
+          if (bus == null) {
+            // MISSING BUS ERROR - fail compilation with clear, actionable message
+            // Get friendly names for error message
+            const targetBlock = store.patchStore.blocks.find(b => b.id === target.blockId);
+            const blockName = targetBlock?.type ?? target.blockId;
+            const blockDef = getBlockDefinition(blockName);
+            const inputSlot = blockDef?.inputs?.find(i => i.id === target.slotId);
+            const inputName = inputSlot?.label ?? target.slotId;
+
+            throw new Error(
+              `Default provider for ${blockName}.${inputName} requires bus '${busName}' which does not exist. ` +
+              `Provider type: ${providerSpec.label}. ` +
+              `Create bus '${busName}' or select a different default source provider.`
+            );
+          }
+
+          // Create listener
+          const listener: Listener = {
+            id: _makeProviderListenerId(bus.id, provider.providerId, inputSlotId),
+            busId: bus.id,
+            to: {
+              blockId: provider.providerId,
+              slotId: inputSlotId,
+              direction: 'input' as const,
+            },
+            enabled: true,
+          };
+
+          injectedListeners.push(listener);
+        }
+      }
     }
 
     // 2. Inject wire from provider output to target input
@@ -512,6 +555,7 @@ export function injectDefaultSourceProviders(
     ...patch,
     blocks: [...patch.blocks, ...injectedBlocks],
     connections: [...patch.connections, ...injectedWires],
+    listeners: [...patch.listeners, ...injectedListeners],
     defaultSourceValues: extendedDefaultSourceValues,
   };
 }
@@ -999,8 +1043,7 @@ export function createCompilerService(store: RootStore): CompilerService {
 
         patch = rewrittenPatch;
 
-        // Step 3: Inject default source providers (Sprint 10)
-        // SPRINT 10 FIX: Pass registry so the function can check if compilers exist
+        // Step 3: Inject default source providers (Sprint 10 + Sprint 11)
         patch = injectDefaultSourceProviders(store, patch, registry);
 
         store.logStore.debug(
