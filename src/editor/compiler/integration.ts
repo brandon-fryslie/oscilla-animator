@@ -370,6 +370,85 @@ export interface CompositeExpansionResult {
 }
 
 // =============================================================================
+// Default Source Provider Injection (Sprint 9)
+// =============================================================================
+
+/**
+ * Helper: Check if an input is undriven (no wire AND no active listener).
+ * Only undriven inputs should get provider injection.
+ */
+function _isInputUndriven(
+  blockId: string,
+  slotId: string,
+  patch: CompilerPatch
+): boolean {
+  // Check for wire: any connection to this input
+  const hasWire = patch.connections.some(
+    c => c.to.block === blockId && c.to.port === slotId
+  );
+
+  // Check for listener: any enabled bus listener to this input
+  const hasListener = patch.listeners.some(
+    l => l.to?.blockId === blockId && l.to?.slotId === slotId && l.enabled
+  );
+
+  // Returns true only if BOTH checks are false (no wire AND no listener)
+  return !hasWire && !hasListener;
+}
+
+/**
+ * Helper: Generate stable ID for provider wire.
+ * Format: wire:ds:${providerId}->${targetBlockId}:${targetSlotId}
+ */
+function _makeProviderWireId(
+  providerId: string,
+  targetBlockId: string,
+  targetSlotId: string
+): string {
+  return `wire:ds:${providerId}->${targetBlockId}:${targetSlotId}`;
+}
+
+/**
+ * Helper: Generate stable ID for provider bus listener.
+ * Format: lis:ds:${busId}->${providerId}:${inputId}
+ */
+function _makeProviderListenerId(
+  busId: string,
+  providerId: string,
+  inputId: string
+): string {
+  return `lis:ds:${busId}->${providerId}:${inputId}`;
+}
+
+/**
+ * Inject default source provider blocks into CompilerPatch.
+ *
+ * For each attachment where the input is undriven:
+ * - Adds provider block to patch.blocks
+ * - Adds wire from provider output to target input
+ * - Adds bus listeners for provider busInputs (if any)
+ * - Extends defaultSourceValues with provider internal defaults
+ *
+ * Returns new CompilerPatch with injected primitives. Does NOT mutate input patch.
+ *
+ * Sprint 9: Infrastructure only - returns patch unchanged for now.
+ * Sprint 10: Actual injection logic will be implemented.
+ */
+export function injectDefaultSourceProviders(
+  _store: RootStore,
+  patch: CompilerPatch
+): CompilerPatch {
+  // Sprint 9: Infrastructure only - returns patch unchanged
+  // Sprint 10 will implement actual injection using these helpers:
+  void _isInputUndriven;       // Detects undriven inputs
+  void _makeProviderWireId;    // Generates stable wire IDs
+  void _makeProviderListenerId; // Generates stable listener IDs
+  
+  return patch;
+}
+
+
+// =============================================================================
 // Patch Conversion
 // =============================================================================
 
