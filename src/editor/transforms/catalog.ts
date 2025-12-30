@@ -43,17 +43,7 @@ export function listLensesFor(scope: TransformScope, typeDesc: TypeDesc): LensDe
       return false;
     }
 
-    // Check scope compatibility (will be implemented in Sprint 2)
-    // For now, accept publisher and listener scopes only
-    if (scope === 'wire' || scope === 'lensParam') {
-      // Wire and lensParam support will be added in Sprint 2
-      // For now, treat wire as publisher-compatible (current behavior)
-      if (scope === 'wire') {
-        return lens.allowedScopes.includes('publisher') || lens.allowedScopes.includes('listener');
-      }
-      return false;
-    }
-
+    // Check scope compatibility (Sprint 2 complete)
     return lens.allowedScopes.includes(scope);
   });
 }

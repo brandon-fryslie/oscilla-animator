@@ -9,13 +9,16 @@
  * - Parameter editing for each lens
  * - Compact chip display with expand
  * - Recently used lens tracking
+ * - Registry-driven lens catalog (Sprint 4)
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import Tippy from '@tippyjs/react';
 import type { LensDefinition, TypeDesc } from '../types';
 import { LENS_PRESETS, createLensFromPreset, type LensPreset } from '../lens-presets';
-import { getEasingNames } from '../lenses';
+import { getAllLenses, getLens } from '../lenses/LensRegistry';
+import { listLensesFor } from '../transforms/catalog';
+import type { TransformScope } from '../transforms/types';
 
 /**
  * Recently used lens storage
@@ -73,6 +76,8 @@ interface LensChainEditorProps {
   sourceType?: TypeDesc;
   /** Target type (port) */
   targetType?: TypeDesc;
+  /** Scope for filtering lenses (wire, publisher, listener) */
+  scope?: TransformScope;
   /** Close the editor (optional for inline mode) */
   onClose?: () => void;
   /** Inline mode - collapsible section, no popup controls */
@@ -80,8 +85,19 @@ interface LensChainEditorProps {
 }
 
 /**
- * Default params for each lens type
+ * Get default params for a lens from its registry definition
  */
+function getDefaultParamsForLens(lensId: string): Record<string, unknown> {
+  const def = getLens(lensId);
+  if (!def) return {};
+
+  const defaults: Record<string, unknown> = {};
+  for (const [key, spec] of Object.entries(def.params)) {
+    defaults[key] = spec.default;
+  }
+  return defaults;
+}
+
 // =============================================================================
 // Easing functions for curve preview (duplicated from lenses/index.ts for isolation)
 // =============================================================================
@@ -180,7 +196,7 @@ function getLensTransformFn(lens: LensDefinition): ((t: number) => number) | nul
     }
 
     case 'deadzone': {
-      const threshold = (params.threshold as number) ?? 0.05;
+      const threshold = (params.threshold as number) ?? (params.width as number) ?? 0.05;
       return (t) => Math.abs(t) < threshold ? 0 : t;
     }
 
@@ -195,11 +211,13 @@ function getLensTransformFn(lens: LensDefinition): ((t: number) => number) | nul
       };
     }
 
+    case 'phaseOffset':
     case 'PhaseOffset': {
       const off = (params.offset as number) ?? 0;
       return (t) => (t + off) % 1;
     }
 
+    case 'pingPong':
     case 'PingPong': {
       return (t) => t < 0.5 ? t * 2 : 2 - t * 2;
     }
@@ -217,10 +235,17 @@ function getLensTransformFn(lens: LensDefinition): ((t: number) => number) | nul
       };
     }
 
+    case 'hueShift':
     case 'HueShift':
+    case 'rotate2d':
     case 'Rotate2D': {
       const turns = (params.turns as number) ?? 0;
       return (t) => (t + turns) % 1;
+    }
+
+    case 'polarity': {
+      const invert = (params.invert as boolean) ?? false;
+      return (t) => invert ? -t : t;
     }
 
     // These lenses convert to fields or have no meaningful curve
@@ -402,42 +427,6 @@ function LensPreviewTooltip({
   );
 }
 
-const DEFAULT_LENS_PARAMS: Record<string, Record<string, unknown>> = {
-  ease: { easing: 'easeInOutSine' },
-  slew: { rate: 2.0 },
-  quantize: { steps: 4 },
-  scale: { scale: 1, offset: 0 },
-  warp: { power: 1 },
-  broadcast: {},
-  perElementOffset: { range: 1.0 },
-  clamp: { min: 0, max: 1 },
-  offset: { amount: 0 },
-  deadzone: { threshold: 0.05 },
-  mapRange: { inMin: 0, inMax: 1, outMin: 0, outMax: 1 },
-  Gain: { gain: 1, bias: 0 },
-  Clamp: { min: 0, max: 1 },
-  Ease: { amount: 1 },
-  Slew: { riseMs: 100, fallMs: 100 },
-  PhaseOffset: { offset: 0 },
-  PingPong: { enabled: true },
-  Rotate2D: { turns: 0 },
-  HueShift: { turns: 0 },
-};
-
-/**
- * Available lens types for adding
- */
-const LENS_TYPES: { value: string; label: string; description: string }[] = [
-  { value: 'ease', label: 'Ease', description: 'Apply easing curve' },
-  { value: 'slew', label: 'Slew', description: 'Smooth rate limiting' },
-  { value: 'quantize', label: 'Quantize', description: 'Snap to steps' },
-  { value: 'scale', label: 'Scale', description: 'Linear scale + offset' },
-  { value: 'warp', label: 'Warp', description: 'Phase warping' },
-  { value: 'broadcast', label: 'Broadcast', description: 'Signal to field' },
-  { value: 'perElementOffset', label: 'Per-Element Offset', description: 'Offset per element' },
-  { value: 'clamp', label: 'Clamp', description: 'Clamp to range' },
-];
-
 /**
  * Single lens item in the chain.
  */
@@ -531,7 +520,8 @@ function LensChainItem({
 }
 
 /**
- * Parameter editor for a single lens.
+ * Parameter editor for a single lens - now registry-driven!
+ * Renders params dynamically from LensDef.params schema using UIControlHint.
  */
 function LensParamsEditor({
   lens,
@@ -540,259 +530,138 @@ function LensParamsEditor({
   lens: LensDefinition;
   onChange: (key: string, value: unknown) => void;
 }) {
-  switch (lens.type) {
-    case 'ease':
-    case 'Ease':
-      if (lens.type === 'Ease') {
-        return (
-          <div className="lens-param-row">
-            <label className="lens-param-label">Amount</label>
-            <input
-              type="range"
-              className="lens-param-slider"
-              value={(lens.params.amount as number) ?? 1}
-              min={0}
-              max={1}
-              step={0.01}
-              onChange={(e) => onChange('amount', parseFloat(e.target.value))}
-            />
-            <span className="lens-param-value">
-              {((lens.params.amount as number) ?? 1).toFixed(2)}
-            </span>
-          </div>
-        );
-      }
-      return (
-        <div className="lens-param-row">
-          <label className="lens-param-label">Easing</label>
-          <select
-            className="lens-param-input"
-            value={(lens.params.easing as string) ?? 'easeInOutSine'}
-            onChange={(e) => onChange('easing', e.target.value)}
-          >
-            {getEasingNames().map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </div>
-      );
+  // Get lens definition from registry
+  const def = getLens(lens.type);
 
-    case 'slew':
-    case 'Slew':
-      if (lens.type === 'Slew') {
-        return (
-          <>
-            <div className="lens-param-row">
-              <label className="lens-param-label">Rise (ms)</label>
-              <input
-                type="number"
-                className="lens-param-input"
-                value={(lens.params.riseMs as number) ?? 100}
-                step={10}
-                min={0}
-                onChange={(e) => onChange('riseMs', parseFloat(e.target.value) || 100)}
-              />
-            </div>
-            <div className="lens-param-row">
-              <label className="lens-param-label">Fall (ms)</label>
-              <input
-                type="number"
-                className="lens-param-input"
-                value={(lens.params.fallMs as number) ?? 100}
-                step={10}
-                min={0}
-                onChange={(e) => onChange('fallMs', parseFloat(e.target.value) || 100)}
-              />
-            </div>
-          </>
-        );
-      }
-      return (
-        <div className="lens-param-row">
-          <label className="lens-param-label">Rate</label>
-          <input
-            type="number"
-            className="lens-param-input"
-            value={(lens.params.rate as number) ?? 2.0}
-            step={0.1}
-            min={0.01}
-            onChange={(e) => onChange('rate', parseFloat(e.target.value) || 2.0)}
-          />
-          <span className="lens-param-unit">/sec</span>
-        </div>
-      );
-
-    case 'quantize':
-      return (
-        <div className="lens-param-row">
-          <label className="lens-param-label">Steps</label>
-          <input
-            type="number"
-            className="lens-param-input"
-            value={(lens.params.steps as number) ?? 4}
-            step={1}
-            min={1}
-            max={32}
-            onChange={(e) => onChange('steps', parseInt(e.target.value, 10) || 4)}
-          />
-        </div>
-      );
-
-    case 'scale':
-    case 'Gain':
-      return (
-        <>
-          <div className="lens-param-row">
-            <label className="lens-param-label">{lens.type === 'Gain' ? 'Gain' : 'Scale'}</label>
-            <input
-              type="number"
-              className="lens-param-input"
-              value={(lens.params.scale as number) ?? (lens.params.gain as number) ?? 1}
-              step={0.1}
-              onChange={(e) =>
-                onChange(lens.type === 'Gain' ? 'gain' : 'scale', parseFloat(e.target.value) || 1)
-              }
-            />
-          </div>
-          <div className="lens-param-row">
-            <label className="lens-param-label">{lens.type === 'Gain' ? 'Bias' : 'Offset'}</label>
-            <input
-              type="number"
-              className="lens-param-input"
-              value={(lens.params.offset as number) ?? (lens.params.bias as number) ?? 0}
-              step={0.1}
-              onChange={(e) =>
-                onChange(lens.type === 'Gain' ? 'bias' : 'offset', parseFloat(e.target.value) || 0)
-              }
-            />
-          </div>
-        </>
-      );
-
-    case 'warp':
-      return (
-        <div className="lens-param-row">
-          <label className="lens-param-label">Power</label>
-          <input
-            type="number"
-            className="lens-param-input"
-            value={(lens.params.power as number) ?? 1}
-            step={0.1}
-            min={0.1}
-            onChange={(e) => onChange('power', parseFloat(e.target.value) || 1)}
-          />
-        </div>
-      );
-
-    case 'clamp':
-    case 'Clamp':
-      return (
-        <>
-          <div className="lens-param-row">
-            <label className="lens-param-label">Min</label>
-            <input
-              type="number"
-              className="lens-param-input"
-              value={(lens.params.min as number) ?? 0}
-              step={0.1}
-              onChange={(e) => onChange('min', parseFloat(e.target.value) || 0)}
-            />
-          </div>
-          <div className="lens-param-row">
-            <label className="lens-param-label">Max</label>
-            <input
-              type="number"
-              className="lens-param-input"
-              value={(lens.params.max as number) ?? 1}
-              step={0.1}
-              onChange={(e) => onChange('max', parseFloat(e.target.value) || 1)}
-            />
-          </div>
-        </>
-      );
-
-    case 'perElementOffset':
-      return (
-        <div className="lens-param-row">
-          <label className="lens-param-label">Range</label>
-          <input
-            type="number"
-            className="lens-param-input"
-            value={(lens.params.range as number) ?? 1.0}
-            step={0.1}
-            min={0}
-            onChange={(e) => onChange('range', parseFloat(e.target.value) || 1.0)}
-          />
-        </div>
-      );
-
-    case 'PhaseOffset':
-      return (
-        <div className="lens-param-row">
-          <label className="lens-param-label">Offset</label>
-          <input
-            type="range"
-            className="lens-param-slider"
-            value={(lens.params.offset as number) ?? 0}
-            min={0}
-            max={1}
-            step={0.01}
-            onChange={(e) => onChange('offset', parseFloat(e.target.value))}
-          />
-          <span className="lens-param-value">
-            {((lens.params.offset as number) ?? 0).toFixed(2)}
-          </span>
-        </div>
-      );
-
-    case 'PingPong':
-      return (
-        <div className="lens-param-row">
-          <label className="lens-param-label">Enabled</label>
-          <input
-            type="checkbox"
-            checked={(lens.params.enabled as boolean) ?? true}
-            onChange={(e) => onChange('enabled', e.target.checked)}
-          />
-        </div>
-      );
-
-    case 'Rotate2D':
-    case 'HueShift':
-      return (
-        <div className="lens-param-row">
-          <label className="lens-param-label">Turns</label>
-          <input
-            type="range"
-            className="lens-param-slider"
-            value={(lens.params.turns as number) ?? 0}
-            min={0}
-            max={1}
-            step={0.01}
-            onChange={(e) => onChange('turns', parseFloat(e.target.value))}
-          />
-          <span className="lens-param-value">
-            {((lens.params.turns as number) ?? 0).toFixed(2)}
-          </span>
-        </div>
-      );
-
-    case 'broadcast':
-      return (
-        <div className="lens-param-row lens-param-hint">
-          No parameters needed
-        </div>
-      );
-
-    default:
-      return (
-        <div className="lens-param-row lens-param-hint">
-          Unknown lens type: {lens.type}
-        </div>
-      );
+  if (!def || Object.keys(def.params).length === 0) {
+    return (
+      <div className="lens-param-row lens-param-hint">
+        No parameters available
+      </div>
+    );
   }
+
+  // Render each param based on its UIControlHint
+  return (
+    <>
+      {Object.entries(def.params).map(([key, spec]) => {
+        const value = lens.params[key] ?? spec.default;
+        const hint = spec.uiHint;
+
+        switch (hint.kind) {
+          case 'number':
+            return (
+              <div key={key} className="lens-param-row">
+                <label className="lens-param-label">{key}</label>
+                <input
+                  type="number"
+                  className="lens-param-input"
+                  value={value as number}
+                  step={hint.step ?? 1}
+                  min={hint.min}
+                  max={hint.max}
+                  onChange={(e) => onChange(key, parseFloat(e.target.value) || spec.default as number)}
+                />
+              </div>
+            );
+
+          case 'slider':
+            return (
+              <div key={key} className="lens-param-row">
+                <label className="lens-param-label">{key}</label>
+                <input
+                  type="range"
+                  className="lens-param-slider"
+                  value={value as number}
+                  min={hint.min ?? 0}
+                  max={hint.max ?? 1}
+                  step={hint.step ?? 0.01}
+                  onChange={(e) => onChange(key, parseFloat(e.target.value))}
+                />
+                <span className="lens-param-value">
+                  {(value as number).toFixed(2)}
+                </span>
+              </div>
+            );
+
+          case 'boolean':
+            return (
+              <div key={key} className="lens-param-row">
+                <label className="lens-param-label">{key}</label>
+                <input
+                  type="checkbox"
+                  checked={value as boolean}
+                  onChange={(e) => onChange(key, e.target.checked)}
+                />
+              </div>
+            );
+
+          case 'text':
+            return (
+              <div key={key} className="lens-param-row">
+                <label className="lens-param-label">{key}</label>
+                <input
+                  type="text"
+                  className="lens-param-input"
+                  value={value as string}
+                  onChange={(e) => onChange(key, e.target.value)}
+                />
+              </div>
+            );
+
+          case 'select':
+            return (
+              <div key={key} className="lens-param-row">
+                <label className="lens-param-label">{key}</label>
+                <select
+                  className="lens-param-input"
+                  value={value as string}
+                  onChange={(e) => onChange(key, e.target.value)}
+                >
+                  {hint.options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+
+          case 'xy':
+            return (
+              <div key={key} className="lens-param-row">
+                <label className="lens-param-label">{key}</label>
+                <div className="lens-param-xy">
+                  <input
+                    type="number"
+                    className="lens-param-input lens-param-xy-input"
+                    value={(value as { x: number; y: number }).x}
+                    step={0.1}
+                    onChange={(e) => onChange(key, { ...(value as { x: number; y: number }), x: parseFloat(e.target.value) })}
+                    placeholder="x"
+                  />
+                  <input
+                    type="number"
+                    className="lens-param-input lens-param-xy-input"
+                    value={(value as { x: number; y: number }).y}
+                    step={0.1}
+                    onChange={(e) => onChange(key, { ...(value as { x: number; y: number }), y: parseFloat(e.target.value) })}
+                    placeholder="y"
+                  />
+                </div>
+              </div>
+            );
+
+          default:
+            return (
+              <div key={key} className="lens-param-row lens-param-hint">
+                Unknown control type for {key}
+              </div>
+            );
+        }
+      })}
+    </>
+  );
 }
 
 /**
@@ -803,6 +672,7 @@ export function LensChainEditor({
   onChange,
   sourceType,
   targetType,
+  scope,
   onClose,
   inline = false,
 }: LensChainEditorProps): React.ReactElement {
@@ -829,6 +699,16 @@ export function LensChainEditor({
 
   // Recently used lenses
   const [recentLenses, setRecentLenses] = useState<RecentLens[]>([]);
+
+  // Get available lens types from registry, filtered by scope and domain
+  const availableLenses = useMemo(() => {
+    if (!scope || !targetType) {
+      // Fallback: all lenses
+      return getAllLenses();
+    }
+    // Use catalog filtering by scope and domain
+    return listLensesFor(scope, targetType);
+  }, [scope, targetType]);
 
   // Load recent lenses on mount
   useEffect(() => {
@@ -892,9 +772,9 @@ export function LensChainEditor({
   );
 
   const handleAddLens = useCallback(
-    (type: string) => {
-      const params = DEFAULT_LENS_PARAMS[type] ?? {};
-      const newLens: LensDefinition = { type, params };
+    (lensId: string) => {
+      const params = getDefaultParamsForLens(lensId);
+      const newLens: LensDefinition = { type: lensId, params };
       onChange([...lensChain, newLens]);
       setEnabledStates((prev) => [...prev, true]);
       addRecentLens(newLens);
@@ -931,9 +811,9 @@ export function LensChainEditor({
   );
 
   // Create preview lens for a given type
-  const getPreviewLensForType = useCallback((type: string): LensDefinition => {
-    const params = DEFAULT_LENS_PARAMS[type] ?? {};
-    return { type, params };
+  const getPreviewLensForType = useCallback((lensId: string): LensDefinition => {
+    const params = getDefaultParamsForLens(lensId);
+    return { type: lensId, params };
   }, []);
 
   // Create preview lens for a preset
@@ -1099,13 +979,13 @@ export function LensChainEditor({
           </div>
 
           <div className="lens-add-section">
-            <div className="lens-add-section-title">Custom</div>
+            <div className="lens-add-section-title">All Lenses</div>
             <div className="lens-type-list">
-              {LENS_TYPES.map((t) => {
-                const previewLens = getPreviewLensForType(t.value);
+              {availableLenses.map((def) => {
+                const previewLens = getPreviewLensForType(def.id);
                 return (
                   <Tippy
-                    key={t.value}
+                    key={def.id}
                     content={
                       <LensPreviewTooltip
                         existingChain={lensChain}
@@ -1119,9 +999,9 @@ export function LensChainEditor({
                   >
                     <button
                       className="lens-type-btn"
-                      onClick={() => handleAddLens(t.value)}
+                      onClick={() => handleAddLens(def.id)}
                     >
-                      {t.label}
+                      {def.label}
                     </button>
                   </Tippy>
                 );
@@ -1174,6 +1054,7 @@ export function LensChainEditorPopover({
   onChange,
   sourceType,
   targetType,
+  scope,
   onClose,
 }: LensChainEditorProps & {
   isOpen: boolean;
@@ -1196,6 +1077,7 @@ export function LensChainEditorPopover({
           onChange={onChange}
           sourceType={sourceType}
           targetType={targetType}
+          scope={scope}
           onClose={onClose}
         />
       </div>

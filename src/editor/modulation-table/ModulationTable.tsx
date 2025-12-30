@@ -936,6 +936,7 @@ export const ModulationTable = observer(({ store }: ModulationTableProps) => {
           sourceType={columns.find((c) => c.busId === lensEditor.busId)?.type}
           targetType={rows.find((r) => r.key === lensEditor.rowKey)?.type}
           onClose={closeLensEditor}
+          scope="listener"
         />
       )}
     </div>
