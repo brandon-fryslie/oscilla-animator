@@ -1,0 +1,91 @@
+Agent: iterative-implementer | 2025-12-30-050459
+Mode: manual
+Completed: Sprint 5 - Field Visualization (all 3 deliverables) | Files: 9 | Commits: 3
+Tests: 37 new tests passing (20 FieldStats, 17 integration)
+Cache invalidated: debug-ui-field-visualization.md added to INDEX
+Status: complete
+
+## Sprint 5: Field Visualization - COMPLETE
+
+### Deliverable 5.1: FieldStats Computation ✓
+File: src/editor/debug/FieldStats.ts (190 lines)
+Tests: src/editor/debug/__tests__/FieldStats.test.ts (20 tests, all passing)
+
+- computeFieldStats(Float32Array) returns {min, max, mean, stdDev, nanCount, infCount}
+- Welford's online algorithm for numerically stable variance
+- Handles NaN/Inf gracefully (filters from stats, counts them)
+- Performance: <10ms for 10,000 elements (verified in test)
+- Helper functions: isValidField(), formatFieldStats()
+
+Commit: d397a66
+
+### Deliverable 5.2: FieldHeatmap & FieldHistogram Components ✓
+Files:
+- src/editor/debug-ui/FieldHeatmap.tsx (242 lines)
+- src/editor/debug-ui/FieldHeatmap.css (67 lines)
+- src/editor/debug-ui/FieldHistogram.tsx (199 lines)
+- src/editor/debug-ui/FieldHistogram.css (60 lines)
+
+FieldHeatmap:
+- Turbo colormap (256-entry lookup table, blue→green→yellow→red)
+- Auto-detected square grid layout (sqrt(n) x sqrt(n))
+- Canvas-based rendering for performance
+- Hover tooltip showing (index, value, grid position)
+- Colorbar legend with min/max labels
+- Handles empty fields and special values
+
+FieldHistogram:
+- Auto-binning (default: 20 bins, configurable)
+- Bar chart visualization with hover tooltips
+- Bin range and count display
+- Handles empty fields with "no data" message
+
+Commit: 86a835a
+
+### Deliverable 5.3: Mode Selector and Integration ✓
+Files:
+- src/editor/debug-ui/FieldVisualizationMode.tsx (227 lines)
+- src/editor/debug-ui/FieldVisualizationMode.css (113 lines)
+- src/editor/debug-ui/__tests__/FieldVisualization.test.tsx (17 integration tests)
+
+Features:
+- Three modes: Text, Heatmap, Histogram
+- Text mode: Stats summary + first 5 values
+- Heatmap mode: FieldHeatmap component integration
+- Histogram mode: FieldHistogram component integration
+- Mode persists per probe via localStorage (key: oscilla.debug.field.<probeId>.mode)
+- Graceful handling of null/empty fields
+
+Integration tests cover:
+- Stats computation for heatmap (colormap range, uniform fields)
+- Histogram binning logic (edge cases, single bin)
+- Text mode formatting (stats, sample values, NaN/Inf)
+- Colormap mapping validation (Turbo blue→red gradient)
+- Mode persistence (unique keys per probe)
+- Performance (<10ms for 1000 elements, O(1) grid detection)
+
+Commit: bea8009
+
+## Test Results
+- All tests passing: 2538 passed, 10 skipped, 10 todo
+- TypeScript compiles without errors
+- No regressions in existing features
+
+## Files Created (9 total)
+1. src/editor/debug/FieldStats.ts
+2. src/editor/debug/__tests__/FieldStats.test.ts
+3. src/editor/debug-ui/FieldHeatmap.tsx
+4. src/editor/debug-ui/FieldHeatmap.css
+5. src/editor/debug-ui/FieldHistogram.tsx
+6. src/editor/debug-ui/FieldHistogram.css
+7. src/editor/debug-ui/FieldVisualizationMode.tsx
+8. src/editor/debug-ui/FieldVisualizationMode.css
+9. src/editor/debug-ui/__tests__/FieldVisualization.test.tsx
+
+## Files Modified
+- .agent_planning/eval-cache/INDEX.md (invalidated debug-ui-field-visualization.md)
+
+## Next Steps
+Sprint 5 is complete. Integration with ProbeCard for live field data display remains pending (requires field probe data from TraceController). The components are ready to be integrated when field probe data becomes available.
+
+Ready for evaluation: YES

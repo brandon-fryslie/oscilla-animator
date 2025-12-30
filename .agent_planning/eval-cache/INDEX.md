@@ -28,3 +28,4 @@
 - rendering-architecture.md (INVALIDATED 2025-12-26 11:25 - Player.setIRProgram added, IRRuntimeAdapter created, ScheduleExecutor rendering integration)
 - port-catalog-migration.md (INVALIDATED 2025-12-29 04:03 - Port catalog helper implemented, 4 blocks migrated to outputsById, strict-by-default enabled)
 - debug-export-workstream.md (INVALIDATED 2025-12-30 04:00 - TraceController API extended, ProbeCard updated, DebugReplPanel modified, executeDebugProbe updated)
+- debug-ui-field-visualization.md (INVALIDATED 2025-12-30 05:05 - FieldStats, FieldHeatmap, FieldHistogram, FieldVisualizationMode components added)
