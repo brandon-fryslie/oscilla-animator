@@ -10,6 +10,16 @@
 export type ImageFormat = 'png' | 'webp' | 'jpeg';
 
 /**
+ * Supported video codecs.
+ */
+export type VideoCodec = 'h264' | 'vp9';
+
+/**
+ * Supported video container formats.
+ */
+export type VideoFormat = 'mp4' | 'webm';
+
+/**
  * Configuration for image sequence export.
  */
 export interface ImageSequenceExportConfig {
@@ -29,6 +39,28 @@ export interface ImageSequenceExportConfig {
   format: ImageFormat;
   /** Quality (0-100) for JPEG/WebP, ignored for PNG */
   quality?: number;
+  /** Seed for deterministic randomness */
+  seed?: number;
+}
+
+/**
+ * Configuration for video export.
+ */
+export interface VideoExportConfig {
+  /** Output width in pixels */
+  width: number;
+  /** Output height in pixels */
+  height: number;
+  /** Start frame (inclusive) */
+  startFrame: number;
+  /** End frame (inclusive) */
+  endFrame: number;
+  /** Frames per second */
+  fps: number;
+  /** Video codec */
+  codec: VideoCodec;
+  /** Bitrate in bits per second (e.g., 5000000 = 5 Mbps) */
+  bitrate: number;
   /** Seed for deterministic randomness */
   seed?: number;
 }
@@ -60,6 +92,20 @@ export interface ExportResult {
 }
 
 /**
+ * Video export result containing a single video blob.
+ */
+export interface VideoExportResult {
+  /** Exported video blob */
+  blob: Blob;
+  /** Export configuration used */
+  config: VideoExportConfig;
+  /** Total export time in milliseconds */
+  durationMs: number;
+  /** Video container format */
+  format: VideoFormat;
+}
+
+/**
  * Export error types.
  */
 export class ExportError extends Error {
@@ -87,5 +133,17 @@ export class ExportCancelledError extends ExportError {
 export class InvalidExportConfigError extends ExportError {
   constructor(message: string) {
     super(message, 'INVALID_CONFIG');
+  }
+}
+
+/**
+ * Error thrown when browser doesn't support required features.
+ */
+export class UnsupportedFeatureError extends ExportError {
+  constructor(feature: string, message?: string) {
+    super(
+      message ?? `${feature} is not supported in this browser`,
+      'UNSUPPORTED_FEATURE'
+    );
   }
 }

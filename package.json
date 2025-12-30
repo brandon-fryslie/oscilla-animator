@@ -21,6 +21,7 @@
     "@mui/x-data-grid": "^8.23.0",
     "@tippyjs/react": "^4.2.6",
     "imagetracerjs": "^1.2.6",
+    "mediabunny": "^1.27.2",
     "mobx": "^6.15.0",
     "mobx-react-lite": "^4.1.1",
     "react": "^19.2.0",
