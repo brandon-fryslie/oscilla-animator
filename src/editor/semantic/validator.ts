@@ -19,7 +19,7 @@
 import type { PatchDocument, PortKey, ValidationResult } from './types';
 import { SemanticGraph } from './graph';
 import { createDiagnostic, type Diagnostic } from '../diagnostics/types';
-import { areSlotTypesCompatible, getTypeDesc, getTypeMismatchMessage } from './index';
+import { areSlotTypesCompatible } from './index';
 import type { SlotType } from '../types';
 import {
   RESERVED_BUS_CONTRACTS,
@@ -273,7 +273,7 @@ export class Validator {
               },
             ],
             title: 'Type mismatch',
-            message: getTypeMismatchMessage(getTypeDesc(fromSlot.type as SlotType)!, getTypeDesc(toSlot.type as SlotType)!),
+            message: `Cannot connect ${fromBlock.id}.${fromSlot.id} (${fromSlot.type}) to ${toBlock.id}.${toSlot.id} (${toSlot.type})`,
             patchRevision: this.patchRevision,
             payload: {
               kind: 'typeMismatch',
@@ -804,7 +804,7 @@ export class Validator {
             },
           },
           title: 'Type mismatch',
-          message: getTypeMismatchMessage(getTypeDesc(fromSlot.type as SlotType)!, getTypeDesc(toSlot.type as SlotType)!),
+          message: `Cannot connect ${fromBlock.id}.${fromSlot.id} (${fromSlot.type}) to ${toBlock.id}.${toSlot.id} (${toSlot.type})`,
           patchRevision: this.patchRevision,
           payload: {
             kind: 'typeMismatch',
