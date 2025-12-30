@@ -1,0 +1,6 @@
+Agent: status-planner | 2025-12-30-023625
+Topic: Default Sources as Hidden, Allowlisted Blocks
+Files: PLAN-2025-12-30-023625.md, DOD-2025-12-30-023625.md
+Items: 50 deliverables across 18 sprints (P0: 35, P1: 13, P2: 2)
+Phases: 6 (Blockers, Type System, Const Providers, Store/Persistence, Compiler, UI, Advanced)
+Estimated Duration: 11 weeks

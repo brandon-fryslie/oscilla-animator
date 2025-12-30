@@ -1,0 +1,8 @@
+Agent: project-evaluator | 2025-12-30-022454
+Scope: module/default-sources-hidden-blocks
+Completion: 0% | Gaps: 6 components (all phases) | Test Quality: N/A
+Reused: 0 findings | Fresh: All findings new
+Cache updated: [default-sources-current-state.md] in eval-cache/
+Ambiguities: 5 found | Workflow: PAUSE
+Critical: TypeScript compilation broken, 5 design questions need answers first
+-> Fix src/editor/__tests__/bus-compilation.test.ts:27, then answer ambiguities 1-5
