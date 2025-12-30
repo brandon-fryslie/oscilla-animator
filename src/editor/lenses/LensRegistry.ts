@@ -8,7 +8,7 @@ export interface LensParamSpec {
   uiHint: UIControlHint;
 }
 
-export type LensScope = 'publisher' | 'listener';
+export type LensScope = 'wire' | 'publisher' | 'listener' | 'lensParam';
 
 export interface LensDef {
   id: string;
@@ -40,6 +40,15 @@ export function getLens(id: string): LensDef | undefined {
 
 export function getAllLenses(): LensDef[] {
   return Array.from(lenses.values());
+}
+
+/**
+ * Check if a lens is allowed in a given scope.
+ */
+export function isLensAllowedInScope(lensId: string, scope: LensScope): boolean {
+  const def = getLens(lensId);
+  if (def === null || def === undefined) return false;
+  return def.allowedScopes.includes(scope);
 }
 
 // Helpers for params
@@ -146,12 +155,12 @@ export function initLensRegistry(): void {
   // 0) Domain: number
   // =========================================================================
 
-  // Gain (Pub + List)
+  // Gain (Wire + Pub + List)
   registerLens({
     id: 'scale',
     label: 'Gain',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -176,12 +185,12 @@ export function initLensRegistry(): void {
       }),
   });
 
-  // Polarity (Pub + List)
+  // Polarity (Wire + Pub + List)
   registerLens({
     id: 'polarity',
     label: 'Polarity',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -196,12 +205,12 @@ export function initLensRegistry(): void {
       }),
   });
 
-  // Clamp (Pub + List)
+  // Clamp (Wire + Pub + List)
   registerLens({
     id: 'clamp',
     label: 'Clamp',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -218,12 +227,12 @@ export function initLensRegistry(): void {
       }),
   });
 
-  // Softclip (Pub + List)
+  // Softclip (Wire + Pub + List)
   registerLens({
     id: 'softclip',
     label: 'Softclip',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'medium',
     stabilityHint: 'scrubSafe',
     params: {
@@ -256,12 +265,12 @@ export function initLensRegistry(): void {
       }),
   });
 
-  // Deadzone (Pub + List)
+  // Deadzone (Wire + Pub + List)
   registerLens({
     id: 'deadzone',
     label: 'Deadzone',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -276,12 +285,12 @@ export function initLensRegistry(): void {
       }),
   });
 
-  // Slew (Pub + List, stateful)
+  // Slew (Wire + Pub + List, stateful)
   registerLens({
     id: 'slew',
     label: 'Slew',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'medium',
     stabilityHint: 'transportOnly',
     params: {
@@ -328,12 +337,12 @@ export function initLensRegistry(): void {
     },
   });
 
-  // Quantize (Pub + List)
+  // Quantize (Wire + Pub + List)
   registerLens({
     id: 'quantize',
     label: 'Quantize',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -367,7 +376,7 @@ export function initLensRegistry(): void {
       }),
   });
 
-  // Ease (List only)
+  // Ease (List only - post-combine transformation)
   registerLens({
     id: 'ease',
     label: 'Ease',
@@ -397,7 +406,7 @@ export function initLensRegistry(): void {
     },
   });
 
-  // MapRange (List only)
+  // MapRange (List only - post-combine transformation)
   registerLens({
     id: 'mapRange',
     label: 'Map Range',
@@ -430,7 +439,7 @@ export function initLensRegistry(): void {
       }),
   });
 
-  // Hysteresis (List only)
+  // Hysteresis (List only - stateful, post-combine)
   registerLens({
     id: 'hysteresis',
     label: 'Hysteresis',
@@ -470,11 +479,12 @@ export function initLensRegistry(): void {
   // 1) Domain: float (phase semantics)
   // =========================================================================
 
+  // Phase Offset (Wire + Pub + List)
   registerLens({
     id: 'phaseOffset',
     label: 'Phase Offset',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -488,11 +498,12 @@ export function initLensRegistry(): void {
       }),
   });
 
+  // Ping Pong (Wire + Pub + List)
   registerLens({
     id: 'pingPong',
     label: 'Ping Pong',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -508,11 +519,12 @@ export function initLensRegistry(): void {
       }),
   });
 
+  // Phase Scale (Wire + Pub + List)
   registerLens({
     id: 'phaseScale',
     label: 'Phase Scale',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -526,11 +538,12 @@ export function initLensRegistry(): void {
       }),
   });
 
+  // Phase Quantize (Wire + Pub + List)
   registerLens({
     id: 'phaseQuantize',
     label: 'Phase Quantize',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -546,11 +559,12 @@ export function initLensRegistry(): void {
       }),
   });
 
+  // Wrap Mode (Wire + Pub + List)
   registerLens({
     id: 'wrapMode',
     label: 'Wrap Mode',
     domain: 'float',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -579,6 +593,7 @@ export function initLensRegistry(): void {
       }),
   });
 
+  // Phase Window (List only - post-combine transformation)
   registerLens({
     id: 'phaseWindow',
     label: 'Phase Window',
@@ -612,11 +627,12 @@ export function initLensRegistry(): void {
   // 2) Domain: vec2
   // =========================================================================
 
+  // Rotate (Wire + Pub + List)
   registerLens({
     id: 'rotate2d',
     label: 'Rotate',
     domain: 'vec2',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -624,11 +640,12 @@ export function initLensRegistry(): void {
     },
   });
 
+  // Vec2 Gain/Bias (Wire + Pub + List)
   registerLens({
     id: 'vec2GainBias',
     label: 'Vec2 Gain/Bias',
     domain: 'vec2',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -637,11 +654,12 @@ export function initLensRegistry(): void {
     },
   });
 
+  // Translate (Wire + Pub + List)
   registerLens({
     id: 'translate2d',
     label: 'Translate',
     domain: 'vec2',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -649,11 +667,12 @@ export function initLensRegistry(): void {
     },
   });
 
+  // Clamp Bounds (Wire + Pub + List)
   registerLens({
     id: 'clampBounds',
     label: 'Clamp Bounds',
     domain: 'vec2',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -662,11 +681,12 @@ export function initLensRegistry(): void {
     },
   });
 
+  // Swirl (Wire + Pub + List)
   registerLens({
     id: 'swirl',
     label: 'Swirl',
     domain: 'vec2',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'medium',
     stabilityHint: 'scrubSafe',
     params: {
@@ -675,6 +695,7 @@ export function initLensRegistry(): void {
     },
   });
 
+  // Normalize (List only - post-combine transformation)
   registerLens({
     id: 'normalize',
     label: 'Normalize',
@@ -685,6 +706,7 @@ export function initLensRegistry(): void {
     params: {},
   });
 
+  // Smooth Path (List only - stateful, post-combine)
   registerLens({
     id: 'smoothPath',
     label: 'Smooth Path',
@@ -701,11 +723,12 @@ export function initLensRegistry(): void {
   // 3) Domain: color
   // =========================================================================
 
+  // Hue Shift (Wire + Pub + List)
   registerLens({
     id: 'hueShift',
     label: 'Hue Shift',
     domain: 'color',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -713,11 +736,12 @@ export function initLensRegistry(): void {
     },
   });
 
+  // Color Gain (Wire + Pub + List)
   registerLens({
     id: 'colorGain',
     label: 'Color Gain',
     domain: 'color',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -726,11 +750,12 @@ export function initLensRegistry(): void {
     },
   });
 
+  // Saturate (Wire + Pub + List)
   registerLens({
     id: 'saturate',
     label: 'Saturate',
     domain: 'color',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -738,11 +763,12 @@ export function initLensRegistry(): void {
     },
   });
 
+  // Contrast (Wire + Pub + List)
   registerLens({
     id: 'contrast',
     label: 'Contrast',
     domain: 'color',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {
@@ -750,11 +776,12 @@ export function initLensRegistry(): void {
     },
   });
 
+  // Clamp Gamut (Wire + Pub + List)
   registerLens({
     id: 'clampGamut',
     label: 'Clamp Gamut',
     domain: 'color',
-    allowedScopes: ['publisher', 'listener'],
+    allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
     params: {},

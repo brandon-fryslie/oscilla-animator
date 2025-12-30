@@ -15,7 +15,7 @@ import { getAdapter, getLens } from './catalog';
 /**
  * Validate that a lens is allowed in the given scope.
  *
- * Will be fully implemented in Sprint 2 when lens scope is expanded.
+ * Fully implemented in Sprint 2 - validates all 4 scopes.
  */
 export function validateLensScope(
   lensId: string,
@@ -32,15 +32,12 @@ export function validateLensScope(
     return;
   }
 
-  // Scope validation will be implemented in Sprint 2
-  // For now, only validate publisher/listener scopes
-  if (scope === 'publisher' || scope === 'listener') {
-    if (!def.allowedScopes.includes(scope)) {
-      errors.push({
-        code: 'AdapterError',
-        message: `Lens '${def.label}' is not allowed in scope '${scope}'. Allowed scopes: ${def.allowedScopes.join(', ')}`,
-      });
-    }
+  // Validate scope compatibility for all 4 scopes
+  if (!def.allowedScopes.includes(scope)) {
+    errors.push({
+      code: 'AdapterError',
+      message: `Lens '${def.label}' is not allowed in scope '${scope}'. Allowed scopes: ${def.allowedScopes.join(', ')}`,
+    });
   }
 }
 

@@ -64,6 +64,10 @@ import { randomUUID } from '../crypto';
 // Domain support for default sources
 import { createSimpleDomain } from './unified/Domain';
 import { adapterRegistry } from '../adapters/AdapterRegistry';
+// Unified Transforms (Sprint 2)
+import { validateLensScope } from '../transforms/validate';
+import type { TransformScope } from '../transforms/types';
+
 
 
 // =============================================================================
@@ -634,7 +638,9 @@ export function compileBusAwarePatch(
                 buses,
                 publishers,
                 compiledPortMap,
-                errors
+                errors,
+                undefined, // depth
+                'wire' // scope
               );
             }
           }
@@ -669,7 +675,9 @@ export function compileBusAwarePatch(
             buses,
             publishers,
             compiledPortMap,
-            errors
+            errors,
+            undefined, // depth
+            'listener' // scope
           );
           inputs[p.name] = lensed;
         } else {
@@ -1079,7 +1087,9 @@ function applyPublisherStack(
     buses,
     publishers,
     compiledPortMap,
-    errors
+    errors,
+    undefined, // depth
+    'publisher' // scope
   );
 }
 
@@ -1110,11 +1120,11 @@ function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx
   // Sprint 1 Deliverable 2: Use registry for adapter execution
   const def = adapterRegistry.get(step.adapterId);
 
-  if (!def) {
+  if (def === null || def === undefined) {
     return { kind: 'Error', message: `Unknown adapter: ${step.adapterId}` };
   }
 
-  if (!def.apply) {
+  if (def.apply === null || def.apply === undefined) {
     return { kind: 'Error', message: `Adapter ${step.adapterId} has no implementation` };
   }
 
@@ -1130,13 +1140,17 @@ function applyLensStack(
   publishers: Publisher[],
   compiledPortMap: Map<string, Artifact>,
   errors: CompileError[],
-  depth: number = 0
+  depth: number = 0,
+  scope: TransformScope = 'lensParam'
 ): Artifact {
   if (lensStack === null || lensStack === undefined || lensStack.length === 0) return artifact;
   let current = artifact;
 
   for (const lens of lensStack) {
     if (lens.enabled === false) continue;
+    // Sprint 2: Validate lens scope compatibility
+    validateLensScope(lens.lensId, scope, errors);
+    
     const def = getLens(lens.lensId);
     if (def === null || def === undefined) continue;
 
