@@ -66,9 +66,17 @@ import {
   EnvelopeADBlock,
 } from './rhythm';
 
-// Default source provider blocks (Sprint 4+)
+// Default source provider blocks (Sprint 4-5)
 import {
   DSConstSignalFloatBlock,
+  DSConstSignalIntBlock,
+  DSConstSignalColorBlock,
+  DSConstSignalPointBlock,
+  DSConstFieldFloatBlock,
+  DSConstFieldVec2Block,
+  DSConstFieldColorBlock,
+  DSConstScalarStringBlock,
+  DSConstScalarWaveformBlock,
 } from './defaultSources';
 
 // =============================================================================
@@ -133,8 +141,16 @@ export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   PulseDivider: PulseDividerBlock,
   EnvelopeAD: EnvelopeADBlock,
 
-  // Default source provider blocks (Sprint 4+)
+  // Default source provider blocks (Sprint 4-5)
   DSConstSignalFloat: DSConstSignalFloatBlock,
+  DSConstSignalInt: DSConstSignalIntBlock,
+  DSConstSignalColor: DSConstSignalColorBlock,
+  DSConstSignalPoint: DSConstSignalPointBlock,
+  DSConstFieldFloat: DSConstFieldFloatBlock,
+  DSConstFieldVec2: DSConstFieldVec2Block,
+  DSConstFieldColor: DSConstFieldColorBlock,
+  DSConstScalarString: DSConstScalarStringBlock,
+  DSConstScalarWaveform: DSConstScalarWaveformBlock,
 };
 
 /**

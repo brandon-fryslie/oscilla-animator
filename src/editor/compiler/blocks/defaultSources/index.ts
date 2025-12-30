@@ -9,3 +9,11 @@
  */
 
 export { DSConstSignalFloatBlock } from './DSConstSignalFloat';
+export { DSConstSignalIntBlock } from './DSConstSignalInt';
+export { DSConstSignalColorBlock } from './DSConstSignalColor';
+export { DSConstSignalPointBlock } from './DSConstSignalPoint';
+export { DSConstFieldFloatBlock } from './DSConstFieldFloat';
+export { DSConstFieldVec2Block } from './DSConstFieldVec2';
+export { DSConstFieldColorBlock } from './DSConstFieldColor';
+export { DSConstScalarStringBlock } from './DSConstScalarString';
+export { DSConstScalarWaveformBlock } from './DSConstScalarWaveform';
