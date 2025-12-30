@@ -30,7 +30,7 @@ import type {
   TimeModel,
   Vec2,
 } from './types';
-import type { Bus, Publisher, Listener, LensInstance, AdapterStep, DefaultSourceState, PortRef } from '../types';
+import type { Bus, Publisher, Listener, DefaultSourceState, PortRef } from '../types';
 import { validateTimeRootConstraint } from './compile';
 import { extractTimeRootAutoPublications } from './blocks/domain/TimeRoot';
 // CRITICAL: Use busSemantics for ordering - single source of truth for UI and compiler
@@ -40,8 +40,6 @@ import {
   isReservedBusName,
 } from '../semantic/busContracts';
 import { getBlockDefinition } from '../blocks/registry';
-import { getLens } from '../lenses/LensRegistry';
-import { resolveLensParam } from '../lenses/lensResolution';
 // Sprint 2, P0-4: Dual-Emit IR Compilation passes
 import { validateIR, irErrorToCompileError } from './ir/validator';
 import {
@@ -63,10 +61,11 @@ import { createDebugIndex } from '../debug';
 import { randomUUID } from '../crypto';
 // Domain support for default sources
 import { createSimpleDomain } from './unified/Domain';
-import { adapterRegistry } from '../adapters/AdapterRegistry';
-// Unified Transforms (Sprint 2)
-import { validateLensScope } from '../transforms/validate';
-import type { TransformScope } from '../transforms/types';
+// Unified Transforms (Sprint 3)
+import {
+  applyAdapterChain as applyAdapterChainCentralized,
+  applyLensStack as applyLensStackCentralized,
+} from '../transforms/apply';
 
 
 
@@ -625,22 +624,30 @@ export function compileBusAwarePatch(
               message: `Missing upstream artifact for ${srcKey}`,
             };
           } else {
+            // Sprint 3: Apply transforms using centralized engine with explicit scope
+            // Build ParamResolutionContext for lens parameter resolution
+            const paramContext = buildParamContext(
+              ctx,
+              defaultSources,
+              buses,
+              publishers,
+              compiledPortMap,
+              errors,
+              0 // depth
+            );
+
             // Apply adapter chain first, then lens stack (matching bus listener pattern)
             if (wireConn.adapterChain != null && wireConn.adapterChain.length > 0) {
-              src = applyAdapterChain(src, wireConn.adapterChain, ctx, errors);
+              src = applyAdapterChainCentralized(src, wireConn.adapterChain, 'wire', ctx, errors);
             }
             if (wireConn.lensStack != null && wireConn.lensStack.length > 0) {
-              src = applyLensStack(
+              src = applyLensStackCentralized(
                 src,
                 wireConn.lensStack,
+                'wire', // Sprint 3: Explicit scope parameter
                 ctx,
-                defaultSources,
-                buses,
-                publishers,
-                compiledPortMap,
-                errors,
-                undefined, // depth
-                'wire' // scope
+                paramContext,
+                errors
               );
             }
           }
@@ -666,18 +673,26 @@ export function compileBusAwarePatch(
             (artifact, publisher) =>
               applyPublisherStack(artifact, publisher, ctx, defaultSources, buses, publishers, compiledPortMap, errors)
           );
-          const adapted = applyAdapterChain(busArtifact, busListener.adapterChain, ctx, errors);
-          const lensed = applyLensStack(
-            adapted,
-            busListener.lensStack,
+
+          // Sprint 3: Apply transforms using centralized engine with explicit scope
+          const paramContext = buildParamContext(
             ctx,
             defaultSources,
             buses,
             publishers,
             compiledPortMap,
             errors,
-            undefined, // depth
-            'listener' // scope
+            0 // depth
+          );
+
+          const adapted = applyAdapterChainCentralized(busArtifact, busListener.adapterChain, 'listener', ctx, errors);
+          const lensed = applyLensStackCentralized(
+            adapted,
+            busListener.lensStack,
+            'listener', // Sprint 3: Explicit scope parameter
+            ctx,
+            paramContext,
+            errors
           );
           inputs[p.name] = lensed;
         } else {
@@ -1068,6 +1083,59 @@ function getBusValue(
   }
 }
 
+// =============================================================================
+// Sprint 3: Unified Transform Application Helpers
+// =============================================================================
+
+/**
+ * Build ParamResolutionContext for lens parameter resolution.
+ * This helper centralizes the construction of the context object that's
+ * needed by the transform engine for lens param bindings.
+ */
+function buildParamContext(
+  ctx: CompileCtx,
+  defaultSources: Map<string, DefaultSourceState>,
+  buses: Bus[],
+  publishers: Publisher[],
+  compiledPortMap: Map<string, Artifact>,
+  errors: CompileError[],
+  depth: number
+): import('../lenses/lensResolution').ParamResolutionContext {
+  return {
+    resolveBus: (busId) =>
+      getBusValue(busId, buses, publishers, compiledPortMap, errors, (art, pub) =>
+        applyPublisherStack(art, pub, ctx, defaultSources, buses, publishers, compiledPortMap, errors)
+      ),
+    resolveWire: (blockId, slotId) =>
+      compiledPortMap.get(keyOf(blockId, slotId)) ?? {
+        kind: 'Error',
+        message: `Missing upstream artifact for ${blockId}.${slotId}`,
+        where: { blockId, port: slotId },
+      },
+    defaultSources,
+    compileCtx: ctx,
+    applyAdapterChain: (art, chain) => applyAdapterChainCentralized(art, chain, 'lensParam', ctx, errors),
+    applyLensStack: (art, stack) => {
+      const nestedParamContext = buildParamContext(
+        ctx,
+        defaultSources,
+        buses,
+        publishers,
+        compiledPortMap,
+        errors,
+        depth + 1
+      );
+      return applyLensStackCentralized(art, stack, 'lensParam', ctx, nestedParamContext, errors);
+    },
+    visited: new Set(),
+    depth: depth + 1,
+  };
+}
+
+/**
+ * Apply publisher transform stack (adapters + lenses).
+ * Sprint 3: Uses centralized transform engine with explicit scope.
+ */
 function applyPublisherStack(
   artifact: Artifact,
   publisher: Publisher,
@@ -1078,152 +1146,26 @@ function applyPublisherStack(
   compiledPortMap: Map<string, Artifact>,
   errors: CompileError[]
 ): Artifact {
-  const adapted = applyAdapterChain(artifact, publisher.adapterChain, ctx, errors);
-  return applyLensStack(
-    adapted,
-    publisher.lensStack,
+  // Sprint 3: Use centralized transform engine with explicit scope
+  const paramContext = buildParamContext(
     ctx,
     defaultSources,
     buses,
     publishers,
     compiledPortMap,
     errors,
-    undefined, // depth
-    'publisher' // scope
+    0 // depth
   );
-}
 
-function applyAdapterChain(
-  artifact: Artifact,
-  chain: AdapterStep[] | undefined,
-  ctx: CompileCtx,
-  errors: CompileError[]
-): Artifact {
-  if (chain === null || chain === undefined || chain.length === 0) return artifact;
-  let current = artifact;
-
-  for (const step of chain) {
-    const next = applyAdapterStep(current, step, ctx);
-    if (next.kind === 'Error') {
-      errors.push({
-        code: 'AdapterError',
-        message: next.message,
-      });
-      return next;
-    }
-    current = next;
-  }
-
-  return current;
-}
-function applyAdapterStep(artifact: Artifact, step: AdapterStep, ctx: CompileCtx): Artifact {
-  // Sprint 1 Deliverable 2: Use registry for adapter execution
-  const def = adapterRegistry.get(step.adapterId);
-
-  if (def === null || def === undefined) {
-    return { kind: 'Error', message: `Unknown adapter: ${step.adapterId}` };
-  }
-
-  if (def.apply === null || def.apply === undefined) {
-    return { kind: 'Error', message: `Adapter ${step.adapterId} has no implementation` };
-  }
-
-  return def.apply(artifact, step.params, ctx);
-}
-
-function applyLensStack(
-  artifact: Artifact,
-  lensStack: LensInstance[] | undefined,
-  ctx: CompileCtx,
-  defaultSources: Map<string, DefaultSourceState>,
-  buses: Bus[],
-  publishers: Publisher[],
-  compiledPortMap: Map<string, Artifact>,
-  errors: CompileError[],
-  depth: number = 0,
-  scope: TransformScope = 'lensParam'
-): Artifact {
-  if (lensStack === null || lensStack === undefined || lensStack.length === 0) return artifact;
-  let current = artifact;
-
-  for (const lens of lensStack) {
-    if (lens.enabled === false) continue;
-    // Sprint 2: Validate lens scope compatibility
-    validateLensScope(lens.lensId, scope, errors);
-    
-    const def = getLens(lens.lensId);
-    if (def === null || def === undefined) continue;
-
-    const type = getArtifactType(current);
-    // Domain compatibility check: exact domain match
-    const domainCompatible =
-      type !== null &&
-      type !== undefined &&
-      type.domain === def.domain;
-    if (!domainCompatible) {
-      errors.push({
-        code: 'AdapterError',
-        message: `Lens ${lens.lensId} is not type-preserving for ${current.kind}`,
-      });
-      return { kind: 'Error', message: `Lens type mismatch: ${lens.lensId}` };
-    }
-
-    const params: Record<string, Artifact> = {} as Record<string, Artifact>;
-    for (const [paramKey, binding] of Object.entries(lens.params)) {
-      params[paramKey] = resolveLensParam(binding, {
-        resolveBus: (busId) =>
-          getBusValue(busId, buses, publishers, compiledPortMap, errors, (art, pub) =>
-            applyPublisherStack(art, pub, ctx, defaultSources, buses, publishers, compiledPortMap, errors)
-          ),
-        resolveWire: (blockId, slotId) =>
-          compiledPortMap.get(keyOf(blockId, slotId)) ?? {
-            kind: 'Error',
-            message: `Missing upstream artifact for ${blockId}.${slotId}`,
-            where: { blockId, port: slotId },
-          },
-        defaultSources,
-        compileCtx: ctx,
-        applyAdapterChain: (art, chain) => applyAdapterChain(art, chain, ctx, errors),
-        applyLensStack: (art, stack) =>
-          applyLensStack(art, stack, ctx, defaultSources, buses, publishers, compiledPortMap, errors, depth + 1),
-        visited: new Set(),
-        depth: depth + 1,
-      });
-    }
-
-    if (def.apply !== null && def.apply !== undefined) {
-      current = def.apply(current, params);
-    }
-  }
-
-  return current;
-}
-
-function getArtifactType(artifact: Artifact): { world: 'signal' | 'field' | 'scalar'; domain: string } | null {
-  switch (artifact.kind) {
-    case 'Signal:float':
-      return { world: 'signal', domain: 'float' };
-    case 'Signal:vec2':
-      return { world: 'signal', domain: 'vec2' };
-    case 'Signal:phase':
-      return { world: 'signal', domain: 'float' };
-    case 'Signal:color':
-      return { world: 'signal', domain: 'color' };
-    case 'Field:float':
-      return { world: 'field', domain: 'float' };
-    case 'Field:vec2':
-      return { world: 'field', domain: 'vec2' };
-    case 'Field:color':
-      return { world: 'field', domain: 'color' };
-    case 'Scalar:float':
-      return { world: 'scalar', domain: 'float' };
-    case 'Scalar:vec2':
-      return { world: 'scalar', domain: 'vec2' };
-    case 'Scalar:boolean':
-      return { world: 'scalar', domain: 'boolean' };
-    default:
-      return null;
-  }
+  const adapted = applyAdapterChainCentralized(artifact, publisher.adapterChain, 'publisher', ctx, errors);
+  return applyLensStackCentralized(
+    adapted,
+    publisher.lensStack,
+    'publisher', // Sprint 3: Explicit scope parameter
+    ctx,
+    paramContext,
+    errors
+  );
 }
 
 // =============================================================================
