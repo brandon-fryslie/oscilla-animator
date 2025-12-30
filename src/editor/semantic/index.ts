@@ -128,14 +128,30 @@ function hasOneWayCompatibility(
 }
 
 /**
+ * Get the bundle arity for a TypeDesc, defaulting to 1 for backward compatibility.
+ *
+ * @param type - Type descriptor
+ * @returns Number of scalar components (defaults to 1)
+ */
+function getBundleArity(type: TypeDesc): number {
+  return type.bundleArity ?? 1;
+}
+
+/**
  * Check if one TypeDesc can be assigned to another.
  * This is the CANONICAL compatibility check used by both UI and compiler.
  *
  * Rules:
  * 1. Direct match: same world + same domain → always compatible
- * 2. Same world + compatible domain set → compatible
- * 3. One-way compatibility rules → compatible in that direction only
- * 4. Otherwise → not compatible
+ * 2. Bundle arity must match (explicit validation for clarity)
+ * 3. Same world + compatible domain set → compatible
+ * 4. One-way compatibility rules → compatible in that direction only
+ * 5. Otherwise → not compatible
+ *
+ * Sprint 2: Added explicit bundle arity validation (Rule 2).
+ * Even though domain compatibility often implies arity compatibility,
+ * this explicit check provides clearer error messages and future-proofs
+ * against edge cases where domain rules might evolve independently.
  *
  * @param from The source TypeDesc (output port / producer)
  * @param to The target TypeDesc (input port / consumer)
@@ -147,17 +163,26 @@ export function isAssignable(from: TypeDesc, to: TypeDesc): boolean {
     return true;
   }
 
-  // World must match for rules 2-3
+  // World must match for all remaining rules
   if (from.world !== to.world) {
     return false;
   }
 
-  // Rule 2: Compatible domain sets (bidirectional)
+  // Rule 2: Bundle arity must match (Sprint 2)
+  // This is technically redundant with domain validation in most cases,
+  // but provides explicit validation and clearer error messages.
+  const fromArity = getBundleArity(from);
+  const toArity = getBundleArity(to);
+  if (fromArity !== toArity) {
+    return false;
+  }
+
+  // Rule 3: Compatible domain sets (bidirectional)
   if (areDomainsInSameSet(from.domain, to.domain)) {
     return true;
   }
 
-  // Rule 3: One-way compatibility
+  // Rule 4: One-way compatibility
   if (hasOneWayCompatibility(from.domain, to.domain)) {
     return true;
   }
@@ -311,6 +336,59 @@ export function getCompatibilityHint(slotType: SlotType): string {
   return `Requires ${desc.world} type (${domainList})`;
 }
 
+/**
+ * Get a detailed type mismatch message for connection validation errors.
+ *
+ * Sprint 2: Enhanced with bundle arity information for clearer errors.
+ *
+ * @param from - Source TypeDesc
+ * @param to - Target TypeDesc
+ * @returns Human-readable error message explaining the mismatch
+ */
+export function getTypeMismatchMessage(from: TypeDesc, to: TypeDesc): string {
+  // World mismatch
+  if (from.world !== to.world) {
+    return `Cannot connect ${from.world}:${from.domain} to ${to.world}:${to.domain} (different worlds)`;
+  }
+
+  // Bundle arity mismatch (Sprint 2)
+  const fromArity = getBundleArity(from);
+  const toArity = getBundleArity(to);
+  if (fromArity !== toArity) {
+    const fromLabel = getArityLabel(from.domain, fromArity);
+    const toLabel = getArityLabel(to.domain, toArity);
+    return `Type mismatch: Cannot connect ${fromLabel} output (${fromArity} component${fromArity !== 1 ? 's' : ''}) to ${toLabel} input (${toArity} component${toArity !== 1 ? 's' : ''})`;
+  }
+
+  // Domain mismatch
+  return `Type mismatch: ${from.domain} cannot connect to ${to.domain}`;
+}
+
+/**
+ * Get a human-readable label for a domain with its arity.
+ *
+ * @param domain - Type domain
+ * @param arity - Bundle arity
+ * @returns Formatted label (e.g., "Vec3", "Scalar")
+ */
+function getArityLabel(domain: string, arity: number): string {
+  // Use domain name for well-known types
+  switch (domain) {
+    case 'vec2':
+      return 'Vec2';
+    case 'vec3':
+      return 'Vec3';
+    case 'color':
+      return 'Color/RGBA';
+    case 'float':
+    case 'int':
+      return 'Scalar';
+    default:
+      // Capitalize first letter for generic domains
+      return domain.charAt(0).toUpperCase() + domain.slice(1);
+  }
+}
+
 // =============================================================================
 // ValueKind Integration (Compiler Types)
 // =============================================================================
@@ -339,8 +417,8 @@ const VALUE_KIND_TO_TYPE_DESC: Partial<Record<ValueKind, TypeDesc>> = {
   'Field:boolean': { world: 'field', domain: 'boolean', category: 'internal', busEligible: false },
   'Field:color': { world: 'field', domain: 'color', category: 'core', busEligible: true },
   'Field:vec2': { world: 'field', domain: 'vec2', category: 'core', busEligible: true, semantics: 'position' },
-  'Field:Point': { world: 'field', domain: 'point', category: 'internal', busEligible: false, semantics: 'position' },
   'Field<Point>': { world: 'field', domain: 'point', category: 'internal', busEligible: false, semantics: 'position' },
+  'Field:Point': { world: 'field', domain: 'point', category: 'internal', busEligible: false, semantics: 'position' },
   'Field:Jitter': { world: 'field', domain: 'float', category: 'internal', busEligible: false, semantics: 'jitter' },
   'Field:Spiral': { world: 'field', domain: 'float', category: 'internal', busEligible: false, semantics: 'spiral' },
   'Field:Wave': { world: 'field', domain: 'float', category: 'internal', busEligible: false, semantics: 'wave' },
