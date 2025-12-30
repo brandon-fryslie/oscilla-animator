@@ -402,7 +402,7 @@ export class BusStore {
    *
    * P1-3 MIGRATED: Now uses runTx() for undo/redo support.
    */
-  updateListener(listenerId: string, updates: Partial<Pick<Listener, 'enabled' | 'lensStack'>>): void {
+  updateListener(listenerId: string, updates: Partial<Pick<Listener, 'enabled' | 'lensStack' | 'adapterChain'>>): void {
     runTx(this.root, { label: 'Update Listener' }, tx => {
       const existing = this.root.busStore.listeners.find(l => l.id === listenerId);
       if (existing === null || existing === undefined) {
