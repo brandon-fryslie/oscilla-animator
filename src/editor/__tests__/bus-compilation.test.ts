@@ -24,7 +24,7 @@ function createCanonicalBuses(): Bus[] {
       id: 'phaseA',
       name: 'phaseA',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(primary)' },
-’”      combineMode: 'last',
+      combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
     },

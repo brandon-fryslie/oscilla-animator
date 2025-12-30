@@ -16,6 +16,7 @@ import { findAdapterPath } from './adapters/autoAdapter';
 import { isDirectlyCompatible, SLOT_TYPE_TO_TYPE_DESC } from './types';
 import { LensChainEditor } from './modulation-table/LensChainEditor';
 import { lensInstanceToDefinition, createLensInstanceFromDefinition } from './lenses/lensInstances';
+import { resolveBinding, type BindingRef } from './bindings';
 import './ConnectionInspector.css';
 
 /**
@@ -699,60 +700,65 @@ export const ConnectionInspector = observer(() => {
   const store = useStore();
   const selectedConnection = store.uiStore.uiState.selectedConnection;
 
-  // Resolve connection data
+  // Resolve connection data using binding facade for wire/publisher/listener
   const resolved = useMemo((): ResolvedConnection | null => {
     if (selectedConnection === null) return null;
 
     const type = selectedConnection.type;
 
-    const id = type === "cell" ? null : selectedConnection.id;
-    if (type === 'wire') {
-      const connection = store.patchStore.connections.find(c => c.id === id);
-      if (connection === undefined) return null;
+    // Handle wire/publisher/listener using binding facade
+    if (type === 'wire' || type === 'publisher' || type === 'listener') {
+      const id = selectedConnection.id;
+      const ref: BindingRef = { kind: type, id };
+      const bindingResolution = resolveBinding(store, ref);
 
-      const sourceBlock = store.patchStore.blocks.find(b => b.id === connection.from.blockId);
-      const targetBlock = store.patchStore.blocks.find(b => b.id === connection.to.blockId);
-      if (sourceBlock === undefined || targetBlock === undefined) return null;
+      if (!bindingResolution.success) {
+        return null;
+      }
 
-      const sourceSlot = sourceBlock.outputs.find(s => s.id === connection.from.slotId);
-      const targetSlot = targetBlock.inputs.find(s => s.id === connection.to.slotId);
-      if (sourceSlot === undefined || targetSlot === undefined) return null;
+      const { binding, from, to } = bindingResolution;
 
-      return { kind: 'wire', connection, sourceBlock, sourceSlot, targetBlock, targetSlot };
+      if (binding.kind === 'wire') {
+        // Wire: both endpoints are ports
+        if (from.kind !== 'port' || to.kind !== 'port') {
+          return null;
+        }
+        return {
+          kind: 'wire',
+          connection: binding as Connection,
+          sourceBlock: from.block,
+          sourceSlot: from.slot,
+          targetBlock: to.block,
+          targetSlot: to.slot,
+        };
+      } else if (binding.kind === 'publisher') {
+        // Publisher: from is port, to is bus
+        if (from.kind !== 'port' || to.kind !== 'bus') {
+          return null;
+        }
+        return {
+          kind: 'publisher',
+          publisher: binding as Publisher,
+          sourceBlock: from.block,
+          sourceSlot: from.slot,
+          busName: to.bus.name,
+        };
+      } else {
+        // Listener: from is bus, to is port
+        if (from.kind !== 'bus' || to.kind !== 'port') {
+          return null;
+        }
+        return {
+          kind: 'listener',
+          listener: binding as Listener,
+          busName: from.bus.name,
+          targetBlock: to.block,
+          targetSlot: to.slot,
+        };
+      }
     }
 
-    if (type === 'publisher') {
-      const publisher = store.busStore.publishers.find(p => p.id === id);
-      if (publisher === undefined) return null;
-
-      const sourceBlock = store.patchStore.blocks.find(b => b.id === publisher.from.blockId);
-      if (sourceBlock === undefined) return null;
-
-      const sourceSlot = sourceBlock.outputs.find(s => s.id === publisher.from.slotId);
-      if (sourceSlot === undefined) return null;
-
-      const bus = store.busStore.buses.find(b => b.id === publisher.busId);
-      const busName = bus?.name ?? publisher.busId;
-
-      return { kind: 'publisher', publisher, sourceBlock, sourceSlot, busName };
-    }
-
-    if (type === 'listener') {
-      const listener = store.busStore.listeners.find(l => l.id === id);
-      if (listener === undefined) return null;
-
-      const targetBlock = store.patchStore.blocks.find(b => b.id === listener.to.blockId);
-      if (targetBlock === undefined) return null;
-
-      const targetSlot = targetBlock.inputs.find(s => s.id === listener.to.slotId);
-      if (targetSlot === undefined) return null;
-
-      const bus = store.busStore.buses.find(b => b.id === listener.busId);
-      const busName = bus?.name ?? listener.busId;
-
-      return { kind: 'listener', listener, busName, targetBlock, targetSlot };
-    }
-
+    // Handle cell selection (ModulationTable) - keep existing logic
     if (type === 'cell') {
       const { rowKey, busId, direction } = selectedConnection;
 
@@ -864,7 +870,7 @@ export const ConnectionInspector = observer(() => {
     }
 
     return null;
-  }, [selectedConnection, store.patchStore.connections, store.patchStore.blocks, store.busStore.publishers, store.busStore.listeners, store.busStore.buses]);
+  }, [selectedConnection, store]);
 
   // Handle back navigation
   const handleBack = useCallback(() => {

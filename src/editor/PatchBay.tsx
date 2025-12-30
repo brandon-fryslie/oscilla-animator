@@ -27,6 +27,7 @@ import {
   areTypesCompatible,
   describeSlotType,
 } from './portUtils';
+import { getIncomingBindingForInputPort, getOutgoingBindingsForOutputPort } from './bindings';
 import { isDefined } from './types/helpers';
 import './PatchBay.css';
 import { DiagnosticBadge } from './components/DiagnosticBadge';
@@ -425,7 +426,6 @@ const DraggablePatchBlock = observer(({
   // Get hovered/selected port state
   const hoveredPort = store.uiStore.uiState.hoveredPort;
   const selectedPort = store.uiStore.uiState.selectedPort;
-  const connections = store.patchStore.connections;
 
   // Check if we need to highlight compatible ports
   const sourcePort = hoveredPort ?? selectedPort;
@@ -441,8 +441,6 @@ const DraggablePatchBlock = observer(({
 
   // Get bus connection info for this block's ports
   const buses = store.busStore.buses;
-  const busListeners = store.busStore.listeners;
-  const publishers = store.busStore.publishers;
 
   // Helper to get port-level diagnostics
   const getPortDiagnostics = (slotId: string, direction: 'input' | 'output') => {
@@ -471,62 +469,66 @@ const DraggablePatchBlock = observer(({
     };
   };
 
-  // Helper to get connection info for a specific port
+  // Helper to get connection info for a specific port using binding facade
   const getConnectionInfo = (slotId: string, direction: 'input' | 'output'): ConnectionInfo => {
-    // Check for block-to-block connections
-    const hasBlockConnection = direction === 'input'
-      ? connections.some((c) => c.to.blockId === block.id && c.to.slotId === slotId)
-      : connections.some((c) => c.from.blockId === block.id && c.from.slotId === slotId);
-
-    // Get connected block label for block-to-block connections
-    let connectedBlockLabel: string | undefined;
-    if (hasBlockConnection) {
-      const conn = direction === 'input'
-        ? connections.find((c) => c.to.blockId === block.id && c.to.slotId === slotId)
-        : connections.find((c) => c.from.blockId === block.id && c.from.slotId === slotId);
-      if (conn) {
-        const otherBlockId = direction === 'input' ? conn.from.blockId : conn.to.blockId;
-        const otherBlock = store.patchStore.blocks.find((b) => b.id === otherBlockId);
-        connectedBlockLabel = otherBlock?.label;
-      }
-    }
-
-    // Check for bus connections
-    let hasBusConnection = false;
-    let busName: string | undefined;
-    let busColor: string | undefined;
-
     if (direction === 'input') {
-      // Input ports can have listeners (bus → input)
-      const busListener = busListeners.find(
-        (l) => l.to.blockId === block.id && l.to.slotId === slotId
-      );
-      if (busListener) {
-        hasBusConnection = true;
-        const bus = buses.find((b) => b.id === busListener.busId);
-        busName = bus?.name;
-        busColor = bus ? getBusDomainColor(bus) : undefined;
+      // Use binding facade for input ports
+      const binding = getIncomingBindingForInputPort(store, block.id, slotId);
+      
+      if (!binding) {
+        return {
+          hasBlockConnection: false,
+          hasBusConnection: false,
+        };
+      }
+
+      if (binding.kind === 'wire') {
+        // Wire connection
+        const otherBlock = store.patchStore.blocks.find((b) => b.id === binding.from.blockId);
+        return {
+          hasBlockConnection: true,
+          hasBusConnection: false,
+          connectedBlockLabel: otherBlock?.label,
+        };
+      } else {
+        // Listener connection
+        const bus = buses.find((b) => b.id === binding.busId);
+        return {
+          hasBlockConnection: false,
+          hasBusConnection: true,
+          busName: bus?.name,
+          busColor: bus ? getBusDomainColor(bus) : undefined,
+        };
       }
     } else {
-      // Output ports can have publishers (output → bus)
-      const publisher = publishers.find(
-        (p) => p.from.blockId === block.id && p.from.slotId === slotId
-      );
-      if (publisher) {
-        hasBusConnection = true;
-        const bus = buses.find((b) => b.id === publisher.busId);
+      // Use binding facade for output ports
+      const bindings = getOutgoingBindingsForOutputPort(store, block.id, slotId);
+      
+      const wireBinding = bindings.find(b => b.kind === 'wire');
+      const busBinding = bindings.find(b => b.kind === 'publisher');
+
+      let connectedBlockLabel: string | undefined;
+      if (wireBinding && wireBinding.kind === 'wire') {
+        const otherBlock = store.patchStore.blocks.find((b) => b.id === wireBinding.to.blockId);
+        connectedBlockLabel = otherBlock?.label;
+      }
+
+      let busName: string | undefined;
+      let busColor: string | undefined;
+      if (busBinding && busBinding.kind === 'publisher') {
+        const bus = buses.find((b) => b.id === busBinding.busId);
         busName = bus?.name;
         busColor = bus ? getBusDomainColor(bus) : undefined;
       }
-    }
 
-    return {
-      hasBlockConnection,
-      hasBusConnection,
-      busName,
-      busColor,
-      connectedBlockLabel,
-    };
+      return {
+        hasBlockConnection: wireBinding !== undefined,
+        hasBusConnection: busBinding !== undefined,
+        busName,
+        busColor,
+        connectedBlockLabel,
+      };
+    }
   };
 
   const style = transform

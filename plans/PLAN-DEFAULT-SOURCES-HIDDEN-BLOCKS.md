@@ -16,6 +16,13 @@ The implementation is designed to avoid special-case duplication:
 
 ---
 
+## Terminology (don’t rename)
+
+- In this repo, **“slot” == “port”**. A block’s ports are `block.inputs: Slot[]` and `block.outputs: Slot[]`.
+- `SlotType` is the **port type string** (e.g., `Signal<float>`). The name is legacy; do not rename it in this work.
+
+---
+
 ## 0) Goals (what “done” looks like)
 
 1) Any input slot that has a default can use an allowlisted **Default Source Provider** block (e.g., `Oscillator`) as its fallback when undriven.  

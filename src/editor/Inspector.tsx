@@ -8,9 +8,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
-import type { PortRef, Block, Slot, Connection, DefaultSourceState } from './types';
+import type { PortRef, Block, Slot, DefaultSourceState } from './types';
 import { getBlockDefinition, getBlockDefinitions, type BlockDefinition } from './blocks';
 import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint, isInputDriven } from './portUtils';
+import { getIncomingBindingForInputPort, getOutgoingBindingsForOutputPort } from './bindings';
 import { InspectorContainer } from './components/InspectorContainer';
 import { ConnectionInspector } from './ConnectionInspector';
 import { BusInspector } from './BusInspector';
@@ -619,14 +620,12 @@ const PortItem = observer(({
   slot,
   blockId,
   direction,
-  connections,
   blocks,
   onNavigate
 }: {
   slot: Slot;
   blockId: string;
   direction: 'input' | 'output';
-  connections: readonly Connection[];
   blocks: readonly Block[];
   onNavigate: (blockId: string) => void;
 }) => {
@@ -654,17 +653,23 @@ const PortItem = observer(({
   const hasError = portDiagnostics.some(d => d.severity === 'error' || d.severity === 'fatal');
   const hasWarning = portDiagnostics.some(d => d.severity === 'warn');
 
-  // Find wire connection for this port
-  const wireConnection = connections.find(c =>
-    direction === 'input'
-      ? (c.to.blockId === blockId && c.to.slotId === slot.id)
-      : (c.from.blockId === blockId && c.from.slotId === slot.id)
-  );
+  // Use binding facade to get incoming/outgoing bindings
+  const binding = direction === 'input'
+    ? getIncomingBindingForInputPort(store, blockId, slot.id)
+    : null;
+  
+  const outgoingBindings = direction === 'output'
+    ? getOutgoingBindingsForOutputPort(store, blockId, slot.id)
+    : [];
 
-  // Find bus connection for this port
+  // Extract wire and bus connections from bindings
+  const wireConnection = direction === 'input'
+    ? (binding?.kind === 'wire' ? binding : undefined)
+    : outgoingBindings.find(b => b.kind === 'wire');
+    
   const busConnection = direction === 'input'
-    ? store.busStore.listeners.find(l => l.to.blockId === blockId && l.to.slotId === slot.id)
-    : store.busStore.publishers.find(p => p.from.blockId === blockId && p.from.slotId === slot.id);
+    ? (binding?.kind === 'listener' ? binding : undefined)
+    : outgoingBindings.find(b => b.kind === 'publisher');
 
   const connectedBus = (busConnection !== undefined)
     ? store.busStore.buses.find(b => b.id === busConnection.busId)
@@ -1594,7 +1599,6 @@ export const Inspector = observer(() => {
                                   slot={slot}
                                   blockId={block.id}
                                   direction="input"
-                                  connections={store.patchStore.connections}
                                   blocks={store.patchStore.blocks}
                                   onNavigate={navigateToBlock}
                                 />
@@ -1611,7 +1615,6 @@ export const Inspector = observer(() => {
                                   slot={slot}
                                   blockId={block.id}
                                   direction="output"
-                                  connections={store.patchStore.connections}
                                   blocks={store.patchStore.blocks}
                                   onNavigate={navigateToBlock}
                                 />
