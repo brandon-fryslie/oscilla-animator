@@ -65,6 +65,14 @@ function slotWorldToTypeWorld(world: SlotWorld): 'signal' | 'field' | 'scalar' |
   return world;
 }
 
+/**
+ * Check if ID matches deterministic pattern for input defaults.
+ * Pattern: ds:input:${blockId}:${slotId}
+ */
+function isDeterministicInputId(id: string): boolean {
+  return /^ds:input:.+:.+$/.test(id);
+}
+
 export class DefaultSourceStore {
   // Store DefaultSource instances (which are self-observable via makeAutoObservable)
   // We use observable.shallow because the Map entries themselves are already observable
@@ -76,6 +84,9 @@ export class DefaultSourceStore {
    */
   private blockSlotIndex: Map<string, Map<string, string>> = new Map();
 
+  /**
+   * Root store reference - reserved for future features (provider attachments, Sprint 7+)
+   */
   private root: RootStore | null = null;
 
   // Revision counter to force updates even when structural equality checks might fail
@@ -99,9 +110,17 @@ export class DefaultSourceStore {
   /**
    * Set the root store reference.
    * Called after RootStore is constructed to avoid circular dependency.
+   * Reserved for future use in Sprint 7+.
    */
   setRoot(root: RootStore): void {
     this.root = root;
+  }
+
+  /**
+   * Get root store reference (reserved for future use in Sprint 7+).
+   */
+  get rootStore(): RootStore | null {
+    return this.root;
   }
 
   /**
@@ -187,8 +206,8 @@ export class DefaultSourceStore {
     for (const slot of inputs) {
       if (slot.defaultSource === null || slot.defaultSource === undefined) continue;
 
-      // Generate opaque ID
-      const dsId = (this.root !== null && this.root !== undefined) ? this.root.generateId('ds') : `ds-${Date.now()}-${Math.random()}`;
+      // Generate deterministic ID: ds:input:${blockId}:${slotId}
+      const dsId = `ds:input:${blockId}:${slot.id}`;
 
       // Derive TypeDesc from slot type and defaultSource world
       const baseTypeDesc = slotTypeToTypeDesc[slot.type];
@@ -235,11 +254,22 @@ export class DefaultSourceStore {
 
   /**
    * Load default sources from serialized state.
+   * Implements backward compatibility: regenerates non-deterministic IDs.
    */
   load(defaultSources: DefaultSourceState[]): void {
     // Create DefaultSource instances from serialized state
-    // DefaultSource class handles its own observability via makeAutoObservable
-    this.sources = new Map(defaultSources.map((source) => [source.id, new DefaultSource(source)]));
+    // Check for non-deterministic IDs and regenerate if needed
+    const regeneratedSources = defaultSources.map((source) => {
+      if (!isDeterministicInputId(source.id)) {
+        // Old-style random ID detected - need to regenerate deterministically
+        // We can't regenerate here without block context, so just load as-is
+        // The regeneration will happen in RootStore.loadPatch when we have block context
+        console.warn(`DefaultSource ${source.id} has non-deterministic ID - will be regenerated on next save`);
+      }
+      return new DefaultSource(source);
+    });
+
+    this.sources = new Map(regeneratedSources.map((source) => [source.id, source]));
     // Note: The blockSlotIndex must be rebuilt separately
     // by calling registerBlockSlotMapping for each block
     this.blockSlotIndex.clear();
@@ -248,14 +278,43 @@ export class DefaultSourceStore {
   /**
    * Register the mapping from block/slot to default source ID.
    * Used when loading a patch to rebuild the index.
+   *
+   * If the provided dsId is non-deterministic, this will regenerate it
+   * deterministically and update the source map.
    */
   registerBlockSlotMapping(blockId: BlockId, slotId: string, dsId: string): void {
+    let actualDsId = dsId;
+
+    // Check if ID is non-deterministic and needs regeneration
+    if (!isDeterministicInputId(dsId)) {
+      const newDsId = `ds:input:${blockId}:${slotId}`;
+      const oldSource = this.sources.get(dsId);
+
+      if (oldSource !== undefined) {
+        // Regenerate with deterministic ID, preserving value and metadata
+        console.warn(`Regenerating non-deterministic ID ${dsId} -> ${newDsId}`);
+
+        const newSource = new DefaultSource({
+          id: newDsId,
+          type: oldSource.type,
+          value: oldSource.value,
+          uiHint: oldSource.uiHint,
+          rangeHint: oldSource.rangeHint,
+        });
+
+        // Replace old source with new one
+        this.sources.delete(dsId);
+        this.sources.set(newDsId, newSource);
+        actualDsId = newDsId;
+      }
+    }
+
     let slotMap = this.blockSlotIndex.get(blockId);
     if (slotMap === null || slotMap === undefined) {
       slotMap = new Map();
       this.blockSlotIndex.set(blockId, slotMap);
     }
-    slotMap.set(slotId, dsId);
+    slotMap.set(slotId, actualDsId);
   }
 
   /**
