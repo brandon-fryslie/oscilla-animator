@@ -1,0 +1,10 @@
+Agent: status-planner | 2025-12-30-031559
+Topic: Signal Runtime + Stateful Ops
+Files: PLAN-2025-12-30-031559.md, DOD-2025-12-30-031559.md
+Items: 5 sprints (P0: 2, P1: 2, P2: 1)
+Sprint 1: State ID Resolution (P0, 11 criteria)
+Sprint 2: Bundle Type System (P0, 10 criteria)
+Sprint 3: Multi-Component Slot Evaluation (P1, 10 criteria)
+Sprint 4: ColorLFO Dynamic HSL Mode (P2, 10 criteria)
+Sprint 5: Integration Testing & Validation (P1, 20 criteria)
+Total: 60 acceptance criteria

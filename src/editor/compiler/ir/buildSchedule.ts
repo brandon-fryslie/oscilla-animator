@@ -20,7 +20,7 @@
  * - design-docs/13-Renderer/07-3d-Canonical.md (§7.2 - 3D projection)
  */
 
-import type { BuilderProgramIR, RenderSinkIR } from "./builderTypes";
+import type { BuilderProgramIR, RenderSinkIR, StateLayoutEntry } from "./builderTypes";
 import type {
   CompiledProgramIR,
   NodeTable,
@@ -41,6 +41,8 @@ import type {
   Instance2DBatch,
   PathBatch,
 } from "./index";
+import type { SignalExprIR } from "./signalExpr";
+import type { StateId } from "./types";
 import { randomUUID } from "../../crypto";
 import type { StepInstances3DProjectTo2D } from "../../runtime/executor/steps/executeInstances3DProject";
 import type { CameraTable, CameraId, CameraIR } from "./types3d";
@@ -128,6 +130,60 @@ function buildCameraSelection(cameras: readonly CameraIR[]): CameraSelectionResu
   };
 }
 
+// ============================================================================
+// State Offset Resolution (Sprint 1: State ID Resolution)
+// ============================================================================
+
+/**
+ * Resolve state IDs to numeric offsets in SignalExprStateful nodes.
+ *
+ * This function implements the critical stateId → stateOffset mapping that
+ * bridges compile-time state allocation (string IDs) to runtime state access
+ * (numeric offsets).
+ *
+ * Process:
+ * 1. Build stateId → offset map from state layout
+ * 2. Patch all SignalExprStateful nodes with params.stateOffset
+ * 3. Validate all state references are declared
+ *
+ * Deterministic ordering:
+ * - State offsets are assigned sequentially from state layout
+ * - State layout is already sorted by IRBuilder allocation order
+ * - Same input → same offsets every compilation
+ *
+ * Error handling:
+ * - StateRefMissingDecl: SignalExprStateful references unknown stateId
+ *
+ * @param signalNodes - Mutable array of signal IR nodes
+ * @param stateLayout - State layout entries from IRBuilder
+ * @throws Error if stateful node references undeclared stateId
+ */
+function resolveStateOffsets(
+  signalNodes: SignalExprIR[],
+  stateLayout: readonly StateLayoutEntry[]
+): void {
+  // Build stateId → offset map
+  const stateOffsetMap = new Map<StateId, number>();
+  stateLayout.forEach((entry, idx) => {
+    stateOffsetMap.set(entry.stateId, idx);
+  });
+
+  // Patch SignalExprStateful nodes
+  for (const node of signalNodes) {
+    if (node.kind === 'stateful') {
+      const offset = stateOffsetMap.get(node.stateId);
+      if (offset === undefined) {
+        throw new Error(
+          `StateRefMissingDecl: stateful node references unknown stateId '${node.stateId}'. ` +
+          `Available state IDs: ${Array.from(stateOffsetMap.keys()).join(', ')}`
+        );
+      }
+      // Patch params with stateOffset
+      node.params = { ...node.params, stateOffset: offset };
+    }
+  }
+}
+
 /**
  * Convert BuilderProgramIR to CompiledProgramIR.
  *
@@ -149,7 +205,15 @@ export function buildCompiledProgram(
   const emptyLensTable: LensTable = { lenses: [] };
   const emptyAdapterTable: AdapterTable = { adapters: [] };
   const fieldExprTable: FieldExprTable = { nodes: Array.from(builderIR.fieldIR.nodes) };
-  const signalTable = { nodes: Array.from(builderIR.signalIR.nodes) };
+
+  // Clone signal nodes (we'll mutate them during state offset resolution)
+  const signalNodes = builderIR.signalIR.nodes.map(node => ({ ...node }));
+
+  // SPRINT 1: Resolve state offsets before building schedule
+  // This patches SignalExprStateful nodes with params.stateOffset
+  resolveStateOffsets(signalNodes, builderIR.stateLayout);
+
+  const signalTable = { nodes: signalNodes };
 
   // Convert constants from simple array to packed format
   const constPool: ConstPool = {
