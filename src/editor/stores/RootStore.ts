@@ -158,7 +158,7 @@ export class RootStore {
         const blockIdToLabel = new Map<string, string>();
         for (const blockId of event.createdBlockIds) {
           const block = this.patchStore.blocks.find(b => b.id === blockId);
-          if (block !== null && block !== undefined) {
+          if (block != null) {
             blockIdToLabel.set(blockId, block.label);
           }
         }
@@ -311,7 +311,7 @@ export class RootStore {
     this.defaultSourceStore.load(patch.defaultSources);
 
     // Load default source attachments if present, otherwise rebuild from blocks
-    if (patch.defaultSourceAttachments) {
+    if (patch.defaultSourceAttachments != null) {
       for (const attachment of patch.defaultSourceAttachments) {
         this.defaultSourceStore.setAttachmentForInput(
           attachment.target.blockId,

@@ -194,7 +194,7 @@ export class DefaultSourceStore {
     // Select appropriate Const provider based on slot type
     const blockType = CONST_PROVIDER_MAPPING[slotType] ?? 'DSConstSignalFloat';
 
-    if (!CONST_PROVIDER_MAPPING[slotType]) {
+    if (CONST_PROVIDER_MAPPING[slotType] === undefined) {
       console.warn(`No const provider mapping for slot type '${slotType}', falling back to DSConstSignalFloat`);
     }
 
@@ -246,7 +246,7 @@ export class DefaultSourceStore {
       (spec) => spec.blockType === providerBlockType
     );
 
-    if (!providerSpec) {
+    if (providerSpec == null) {
       console.warn(
         `Provider block type '${providerBlockType}' not found in allowlist, falling back to Const provider`
       );
@@ -255,7 +255,7 @@ export class DefaultSourceStore {
 
     // Get provider block definition to access default values for editable inputs
     const providerDefinition = getBlockDefinition(providerBlockType);
-    if (!providerDefinition) {
+    if (providerDefinition == null) {
       console.warn(
         `Provider block definition not found for '${providerBlockType}', falling back to Const provider`
       );
@@ -267,7 +267,7 @@ export class DefaultSourceStore {
 
     for (const inputId of providerSpec.editableInputs) {
       const inputSlot = providerDefinition.inputs.find((s) => s.id === inputId);
-      if (!inputSlot || !inputSlot.defaultSource) {
+      if (inputSlot == null || inputSlot.defaultSource == null) {
         console.warn(
           `Provider '${providerBlockType}' input '${inputId}' not found or has no defaultSource, skipping`
         );
@@ -280,7 +280,7 @@ export class DefaultSourceStore {
 
       // Create the DefaultSource for this provider input if it doesn't exist
       const existingSource = this.sources.get(providerInputDefaultId);
-      if (!existingSource) {
+      if (existingSource == null) {
         // Derive TypeDesc from input slot
         const baseTypeDesc = inputSlot.type as unknown as TypeDesc;
         const typeDesc: TypeDesc =
@@ -331,7 +331,7 @@ export class DefaultSourceStore {
    * This preserves existing default values from the defaultSources map.
    */
   rebuildAttachmentsFromBlocks(): void {
-    if (!this.root) {
+    if (this.root == null) {
       console.warn('Cannot rebuild attachments: root store not set');
       return;
     }
@@ -342,13 +342,13 @@ export class DefaultSourceStore {
 
     for (const block of this.root.patchStore.blocks) {
       const definition = getBlockDefinition(block.type);
-      if (!definition) {
+      if (definition == null) {
         continue;
       }
 
       // Check each input slot for defaultSource metadata
       for (const input of definition.inputs) {
-        if (!input.defaultSource) {
+        if (input.defaultSource == null) {
           continue;
         }
 
@@ -357,7 +357,7 @@ export class DefaultSourceStore {
 
         // Get existing default source value if it exists
         const existingSource = this.getDefaultSourceForInput(block.id, input.id);
-        if (existingSource) {
+        if (existingSource != null) {
           // Create provider input default with existing value
           const providerInputDefaultId = attachment.provider.editableInputSourceIds.value;
           const providerInputDefault = new DefaultSource({
@@ -530,7 +530,7 @@ export class DefaultSourceStore {
 
       // Remove attachment and provider input defaults
       const attachment = this.getAttachmentForInput(blockId, slotId);
-      if (attachment) {
+      if (attachment != null) {
         // Remove provider input defaults
         for (const providerInputDefaultId of Object.values(attachment.provider.editableInputSourceIds)) {
           this.sources.delete(providerInputDefaultId);
