@@ -138,7 +138,6 @@ interface TypeDesc {
 | Type | Output | Use Case |
 |------|--------|----------|
 | `FiniteTimeRoot` | `progress: Signal<unit>` | Logo stingers, one-shot animations |
-
 | `InfiniteTimeRoot` | `t: Signal<time>` | Generative, evolving installations |
 
 ### TimeModel (Compiler Output)

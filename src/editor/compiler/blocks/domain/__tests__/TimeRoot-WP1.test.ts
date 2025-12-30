@@ -14,7 +14,6 @@ import type { CompileCtx, RuntimeCtx, GeometryCache } from '../../../types';
 import {
   FiniteTimeRootBlock,
   InfiniteTimeRootBlock,
-  InfiniteTimeRootBlock,
   extractTimeRootAutoPublications,
 } from '../TimeRoot';
 
@@ -108,10 +107,10 @@ describe('TimeRoot WP1 Features', () => {
         ctx: mockCompileCtx,
       });
 
-      expect(result.wrap).toBeDefined();
-      expect(result.wrap.kind).toBe('Event');
+      expect(result.pulse).toBeDefined();
+      expect(result.pulse.kind).toBe('Event');
 
-      const wrapEvent = getEventValue(result.wrap, 'Event');
+      const wrapEvent = getEventValue(result.pulse, 'Event');
 
       // Should not fire initially or mid-cycle
       expect(wrapEvent(0, -16, mockRuntimeCtx)).toBe(false);     // First frame
@@ -134,7 +133,7 @@ describe('TimeRoot WP1 Features', () => {
         ctx: mockCompileCtx,
       });
 
-      const wrapEvent = getEventValue(result.wrap, 'Event');
+      const wrapEvent = getEventValue(result.pulse, 'Event');
 
       // Forward (even cycle 0): no wrap at start
       expect(wrapEvent(0, -16, mockRuntimeCtx)).toBe(false);
@@ -152,7 +151,8 @@ describe('TimeRoot WP1 Features', () => {
       // Total: 2 wraps per period in pingpong mode
     });
 
-    it('cycleIndex increments correctly over multiple cycles', () => {
+    // NEEDS REVIEW - DEPRECATED: cycleIndex output removed from InfiniteTimeRoot.
+    it.skip('cycleIndex increments correctly over multiple cycles', () => {
       const result = InfiniteTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000, mode: 'loop' },
@@ -172,7 +172,8 @@ describe('TimeRoot WP1 Features', () => {
       expect(cycleIndex(3000, mockRuntimeCtx)).toBe(3);   // Cycle 3
     });
 
-    it('cycleT provides time within current cycle', () => {
+    // NEEDS REVIEW - DEPRECATED: cycleT output removed from InfiniteTimeRoot.
+    it.skip('cycleT provides time within current cycle', () => {
       const result = InfiniteTimeRootBlock.compile({
         id: 'test',
         params: { periodMs: 1000, mode: 'loop' },
@@ -238,7 +239,8 @@ describe('TimeRoot WP1 Features', () => {
 
       expect(autoPubs).toEqual([
         { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
-        { busName: 'pulse', artifactKey: 'wrap', sortKey: 0 },
+        { busName: 'phaseB', artifactKey: 'phase', sortKey: 0 },
+        { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
       ]);
     });
@@ -253,8 +255,9 @@ describe('TimeRoot WP1 Features', () => {
 
       const autoPubs = extractTimeRootAutoPublications('FiniteTimeRoot', result);
 
-      // FiniteTimeRoot does NOT publish to phaseA - only InfiniteTimeRoot owns that bus
       expect(autoPubs).toEqual([
+        { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
+        { busName: 'phaseB', artifactKey: 'phase', sortKey: 0 },
         { busName: 'progress', artifactKey: 'progress', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'end', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
@@ -271,8 +274,9 @@ describe('TimeRoot WP1 Features', () => {
 
       const autoPubs = extractTimeRootAutoPublications('InfiniteTimeRoot', result);
 
-      // InfiniteTimeRoot does NOT publish to phaseA - only InfiniteTimeRoot owns that bus
       expect(autoPubs).toEqual([
+        { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
+        { busName: 'phaseB', artifactKey: 'phase', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
       ]);
@@ -327,7 +331,7 @@ describe('TimeRoot WP1 Features', () => {
         ctx: mockCompileCtx,
       });
 
-      const cycleWrap = getEventValue(cycleResult.wrap, 'Event');
+      const cycleWrap = getEventValue(cycleResult.pulse, 'Event');
       const finiteEnd = getEventValue(finiteResult.end, 'Event');
 
       // Negative time should never trigger events

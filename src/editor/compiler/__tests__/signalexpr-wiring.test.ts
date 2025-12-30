@@ -25,7 +25,7 @@ describe("SignalExprTable Wiring", () => {
     // the compilation will fail and IR won't be attached (per design).
     const timeRoot: BlockInstance = {
       id: "timeroot",
-      type: "CycleTimeRoot",
+      type: "InfiniteTimeRoot",
       params: { periodMs: 3000, mode: "loop" },
     };
 
@@ -60,7 +60,7 @@ describe("SignalExprTable Wiring", () => {
   it("should not extract SignalExprTable when IR compilation is disabled", () => {
     const timeRoot: BlockInstance = {
       id: "timeroot",
-      type: "CycleTimeRoot",
+      type: "InfiniteTimeRoot",
       params: { periodMs: 3000, mode: "loop" },
     };
 

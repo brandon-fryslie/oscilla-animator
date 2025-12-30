@@ -177,15 +177,17 @@ describe('extractTimeRootAutoPublications', () => {
     const result = extractTimeRootAutoPublications('InfiniteTimeRoot', {});
     expect(result).toEqual([
       { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
-      { busName: 'pulse', artifactKey: 'wrap', sortKey: 0 },
+      { busName: 'phaseB', artifactKey: 'phase', sortKey: 0 },
+      { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
       { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
     ]);
   });
 
   it('should extract publications for FiniteTimeRoot', () => {
-    // FiniteTimeRoot does NOT publish to phaseA - only InfiniteTimeRoot owns that bus
     const result = extractTimeRootAutoPublications('FiniteTimeRoot', {});
     expect(result).toEqual([
+      { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
+      { busName: 'phaseB', artifactKey: 'phase', sortKey: 0 },
       { busName: 'progress', artifactKey: 'progress', sortKey: 0 },
       { busName: 'pulse', artifactKey: 'end', sortKey: 0 },
       { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
@@ -193,9 +195,10 @@ describe('extractTimeRootAutoPublications', () => {
   });
 
   it('should extract publications for InfiniteTimeRoot', () => {
-    // InfiniteTimeRoot does NOT publish to phaseA - only InfiniteTimeRoot owns that bus
     const result = extractTimeRootAutoPublications('InfiniteTimeRoot', {});
     expect(result).toEqual([
+      { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
+      { busName: 'phaseB', artifactKey: 'phase', sortKey: 0 },
       { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
       { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
     ]);

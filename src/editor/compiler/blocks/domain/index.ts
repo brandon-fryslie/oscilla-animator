@@ -29,7 +29,6 @@ export { PathConstBlock } from './PathConst';
 export {
   FiniteTimeRootBlock,
   InfiniteTimeRootBlock,
-  InfiniteTimeRootBlock,
 } from './TimeRoot';
 
 // Field manipulation blocks (Slices 4-8)

@@ -46,10 +46,9 @@ export type Capability = KernelCapability | 'pure';
 /**
  * The exhaustive list of kernel primitive IDs.
  * This union type provides COMPILE-TIME enforcement.
- * A developer cannot declare a new kernel primitive without editing this.
  */
 export type KernelId =
-  // Time Authority (3)
+  // Time Authority (2)
   | 'FiniteTimeRoot'
   | 'InfiniteTimeRoot'
   // Identity Authority (3)

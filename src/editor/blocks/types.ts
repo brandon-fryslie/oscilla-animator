@@ -124,7 +124,7 @@ interface BlockDefinitionBase {
    * When this block is added, these outputs automatically publish to the named buses.
    * Example: { out: 'energy' } means the 'out' output auto-publishes to 'energy' bus.
    */
-  readonly autoBusPublications?: Record<string, string>;
+  readonly autoBusPublications?: Record<string, string | string[]>;
 }
 
 /**

@@ -261,9 +261,12 @@ export class PatchStore {
 
     if (definition.autoBusPublications !== undefined) {
       for (const [outputPort, busName] of Object.entries(definition.autoBusPublications)) {
-        const bus = this.root.busStore.buses.find(b => b.name === busName);
-        if (bus !== undefined) {
-          this.root.busStore.addPublisher(bus.id, blockId, outputPort, undefined, undefined, busOptions);
+        const busNames = Array.isArray(busName) ? busName : [busName];
+        for (const name of busNames) {
+          const bus = this.root.busStore.buses.find(b => b.name === name);
+          if (bus !== undefined) {
+            this.root.busStore.addPublisher(bus.id, blockId, outputPort, undefined, undefined, busOptions);
+          }
         }
       }
     }

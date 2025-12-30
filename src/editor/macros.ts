@@ -944,7 +944,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       // ─────────────────────────────────────────────────────────────────────────
 
       // 1. Time Root - The master clock. Everything starts here.
-      //    Outputs: phase (0→1 cycle), cycleT (time within cycle), wrap (trigger each cycle)
+      //    Outputs: phase (0→1 cycle), pulse (trigger each cycle)
       { ref: 'timeRoot', type: 'InfiniteTimeRoot', label: '① Time Root',
         params: { periodMs: 2000 } },
 

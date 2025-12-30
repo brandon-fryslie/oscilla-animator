@@ -160,7 +160,7 @@ function getSortedBlocksForPass5<T extends Block>(
 describe("Pipeline Integration - Minimal Patch", () => {
   it("should compile a minimal patch with TimeRoot only", () => {
     // Create minimal patch: just a TimeRoot
-    const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
+    const timeRoot = createBlock("timeroot", "InfiniteTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
       inputs: [],
       outputs: [
@@ -212,7 +212,7 @@ describe("Pipeline Integration - Minimal Patch", () => {
   });
 
   it("should compile a simple chain: TimeRoot -> Oscillator", () => {
-    const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
+    const timeRoot = createBlock("timeroot", "InfiniteTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
       outputs: [createSlot("phase", "Signal<float>", "output")],
     });
@@ -247,7 +247,7 @@ describe("Pipeline Integration - Minimal Patch", () => {
   });
 
   it("should compile a patch with bus communication", () => {
-    const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
+    const timeRoot = createBlock("timeroot", "InfiniteTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
       outputs: [createSlot("phase", "Signal<float>", "output")],
     });
@@ -320,7 +320,7 @@ describe("Pipeline Integration - Error Cases", () => {
   });
 
   it("should fail with multiple TimeRoots", () => {
-    const timeRoot1 = createBlock("timeroot1", "CycleTimeRoot", {
+    const timeRoot1 = createBlock("timeroot1", "InfiniteTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
     });
 
@@ -340,7 +340,7 @@ describe("Pipeline Integration - Error Cases", () => {
   });
 
   it("should fail with type mismatch on wire", () => {
-    const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
+    const timeRoot = createBlock("timeroot", "InfiniteTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
       outputs: [createSlot("phase", "Signal<float>", "output")],
     });
@@ -364,7 +364,7 @@ describe("Pipeline Integration - Error Cases", () => {
   });
 
   it("should fail with dangling connection", () => {
-    const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
+    const timeRoot = createBlock("timeroot", "InfiniteTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
       outputs: [createSlot("phase", "Signal<float>", "output")],
     });
@@ -386,7 +386,7 @@ describe("Pipeline Integration - Error Cases", () => {
   });
 
   it("should fail with illegal cycle (no state boundary)", () => {
-    const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
+    const timeRoot = createBlock("timeroot", "InfiniteTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
       outputs: [createSlot("phase", "Signal<float>", "output")],
     });
@@ -427,7 +427,7 @@ describe("Pipeline Integration - Error Cases", () => {
   });
 
   it("should accept legal cycle with state boundary", () => {
-    const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
+    const timeRoot = createBlock("timeroot", "InfiniteTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
       outputs: [createSlot("phase", "Signal<float>", "output")],
     });
@@ -473,7 +473,7 @@ describe("Pipeline Integration - Error Cases", () => {
 
 describe("Pipeline Integration - Invariants", () => {
   it("should preserve block count through all passes", () => {
-    const timeRoot = createBlock("timeroot", "CycleTimeRoot", {
+    const timeRoot = createBlock("timeroot", "InfiniteTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
       outputs: [createSlot("phase", "Signal<float>", "output")],
     });
@@ -545,7 +545,7 @@ describe("Pipeline Integration - Invariants", () => {
     expect(finiteTime.timeSignals.wrapEvent).toBeUndefined();
 
     // Cyclic TimeRoot
-    const cyclicRoot = createBlock("cyclic", "CycleTimeRoot", {
+    const cyclicRoot = createBlock("cyclic", "InfiniteTimeRoot", {
       params: { periodMs: 3000, mode: "loop" },
     });
 

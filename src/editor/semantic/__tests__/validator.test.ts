@@ -712,7 +712,7 @@ describe('Validator', () => {
         blocks: [
           {
             id: 'time',
-            type: 'CycleTimeRoot',
+            type: 'InfiniteTimeRoot',
             inputs: [],
             outputs: [{ id: 'phase', type: 'Signal<phase>' }],
           },
@@ -755,7 +755,7 @@ describe('Validator', () => {
         blocks: [
           {
             id: 'time',
-            type: 'CycleTimeRoot',
+            type: 'InfiniteTimeRoot',
             inputs: [],
             outputs: [{ id: 'phase', type: 'Signal<phase>' }],
           },
@@ -803,7 +803,7 @@ describe('Validator', () => {
         blocks: [
           {
             id: 'time',
-            type: 'CycleTimeRoot',
+            type: 'InfiniteTimeRoot',
             inputs: [],
             outputs: [{ id: 'phase', type: 'Signal<phase>' }],
           },
@@ -873,7 +873,7 @@ describe('Validator', () => {
         blocks: [
           {
             id: 'time',
-            type: 'CycleTimeRoot',
+            type: 'InfiniteTimeRoot',
             inputs: [],
             outputs: [{ id: 'phase', type: 'Signal<phase>' }],
           },
@@ -977,7 +977,7 @@ describe('Validator', () => {
         blocks: [
           {
             id: 'time',
-            type: 'CycleTimeRoot',
+            type: 'InfiniteTimeRoot',
             inputs: [],
             outputs: [{ id: 'phase', type: 'Signal<phase>' }],
           },

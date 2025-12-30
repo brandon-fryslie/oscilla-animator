@@ -442,7 +442,7 @@ describe("migration tracking", () => {
     // Phase 4 complete: all major blocks are now migrated
     expect(isMigrated("AddSignal")).toBe(true);
     expect(isMigrated("Oscillator")).toBe(true);
-    expect(isMigrated("CycleTimeRoot")).toBe(true);
+    expect(isMigrated("InfiniteTimeRoot")).toBe(true);
     expect(isMigrated("RenderInstances2D")).toBe(true);
   });
 

@@ -199,7 +199,7 @@ describe('registry-validation', () => {
         expect(() => validateBlockDefinition(def)).toThrow(BlockDefinitionValidationError);
         expect(() => validateBlockDefinition(def)).toThrow(/not in KERNEL_PRIMITIVES/);
         expect(() => validateBlockDefinition(def)).toThrow(
-          /FiniteTimeRoot, CycleTimeRoot, InfiniteTimeRoot/
+          /FiniteTimeRoot, InfiniteTimeRoot/
         );
       });
 
@@ -228,8 +228,8 @@ describe('registry-validation', () => {
           type: 'FiniteTimeRoot',
           label: 'Finite Time',
           capability: 'time',
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-          kernelId: 'CycleTimeRoot' as any, // Wrong!
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+        kernelId: 'InfiniteTimeRoot' as any, // Wrong!
           description: 'Test',
           inputs: [],
           outputs: [],
@@ -335,9 +335,8 @@ describe('registry-validation', () => {
       const summary = getKernelPrimitivesSummary();
 
       expect(summary.time).toContain('FiniteTimeRoot');
-      expect(summary.time).toContain('CycleTimeRoot');
       expect(summary.time).toContain('InfiniteTimeRoot');
-      expect(summary.time).toHaveLength(3);
+      expect(summary.time).toHaveLength(2);
 
       expect(summary.identity).toContain('DomainN');
       expect(summary.identity).toContain('SVGSampleDomain');

@@ -523,7 +523,6 @@ export function runTx(
  */
 const TIME_ROOT_BLOCK_TYPES = new Set([
   'FiniteTimeRoot',
-  'CycleTimeRoot',
   'InfiniteTimeRoot',
 ]);
 

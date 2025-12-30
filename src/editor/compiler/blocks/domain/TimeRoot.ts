@@ -15,7 +15,6 @@ import type {
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 type SignalNumber = (tMs: number, ctx: RuntimeCtx) => float;
-type SignalInt = (tMs: number, ctx: RuntimeCtx) => int;
 type Event = (tMs: number, lastTMs: number, ctx: RuntimeCtx) => boolean;
 
 /**
@@ -27,25 +26,21 @@ export function extractTimeRootAutoPublications(
   _artifacts: CompiledOutputs
 ): AutoPublication[] {
   switch (blockType) {
-    case 'InfiniteTimeRoot':
+    case 'FiniteTimeRoot':
+      // NEEDS REVIEW - DEPRECATED: FiniteTimeRoot now publishes phase to phaseA/phaseB.
       return [
         { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
-        { busName: 'pulse', artifactKey: 'wrap', sortKey: 0 },
-        { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
-      ];
-
-    case 'FiniteTimeRoot':
-      // FiniteTimeRoot does NOT publish to phaseA - only InfiniteTimeRoot owns that bus
-      return [
+        { busName: 'phaseB', artifactKey: 'phase', sortKey: 0 },
         { busName: 'progress', artifactKey: 'progress', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'end', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
       ];
 
     case 'InfiniteTimeRoot':
-      // InfiniteTimeRoot does NOT publish to phaseA - only InfiniteTimeRoot owns that bus
-      // It has ambient phase but that's not the primary coordinating phase
+      // NEEDS REVIEW - DEPRECATED: phaseB mirrors phase (no dedicated secondary phase yet).
       return [
+        { busName: 'phaseA', artifactKey: 'phase', sortKey: 0 },
+        { busName: 'phaseB', artifactKey: 'phase', sortKey: 0 },
         { busName: 'pulse', artifactKey: 'pulse', sortKey: 0 },
         { busName: 'energy', artifactKey: 'energy', sortKey: 0 },
       ];
@@ -125,9 +120,11 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
  *
  * Uses canonical time signals:
  * - sigTimeAbsMs() for systemTime
- * - sigTimeModelMs() for cycleT
  * - sigPhase01() for phase
- * - sigWrapEvent() for wrap
+ * - sigWrapEvent() for pulse
+ *
+ * NEEDS REVIEW - DEPRECATED: InfiniteTimeRoot currently uses a cyclic TimeModel
+ * to synthesize phase/pulse (no dedicated secondary phase yet).
  */
 const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const configData = (config != null && typeof config === 'object') ? config : {};
@@ -141,9 +138,9 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const numberType = { world: 'signal' as const, domain: 'float' as const };
 
   const tAbsMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'tAbsMs');
-  const tModelMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'cycleT');
+  const tModelMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'tModelMs');
   const phase01Slot = ctx.b.allocValueSlot(phase01Type, 'phase');
-  const wrapEventSlot = ctx.b.allocValueSlot(triggerType, 'wrap');
+  const wrapEventSlot = ctx.b.allocValueSlot(triggerType, 'pulse');
 
   // Register time slots so schedule can reference them
   ctx.b.setTimeSlots({
@@ -156,24 +153,8 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
 
   // Canonical time signals from TimeModel
   const systemTimeId = ctx.b.sigTimeAbsMs();
-  const cycleTId = ctx.b.sigTimeModelMs(); // Modulo by period
   const phaseId = ctx.b.sigPhase01();
   const wrapId = ctx.b.sigWrapEvent();
-
-  // Cycle index: floor(systemTime / period)
-  const periodConst = ctx.b.sigConst(periodMs, { world: 'signal', domain: 'float' });
-  const cyclesId = ctx.b.sigZip(
-    systemTimeId,
-    periodConst,
-    { kind: 'opcode', opcode: 102 }, // OpCode.Div
-    { world: 'signal', domain: 'float' }
-  );
-  const countType = { world: 'signal' as const, domain: 'int' as const };
-  const cycleIndexId = ctx.b.sigMap(
-    cyclesId,
-    { kind: 'opcode', opcode: 121 }, // OpCode.Floor
-    countType
-  );
 
   // Energy: constant 1.0
   const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'float' });
@@ -189,67 +170,8 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   return {
     outputs: [
       { k: 'sig', id: systemTimeId, slot: tAbsMsSlot },           // systemTime
-      { k: 'sig', id: cycleTId, slot: tModelMsSlot },             // cycleT
       { k: 'sig', id: phaseId, slot: phase01Slot },               // phase
-      { k: 'sig', id: wrapId, slot: wrapEventSlot },              // wrap
-      { k: 'sig', id: cycleIndexId, slot: ctx.b.allocValueSlot(countType, 'cycleIndex') },
-      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot(numberType, 'energy') },
-    ],
-    declares: { timeModel },
-  };
-};
-
-/**
- * Lower InfiniteTimeRoot block to IR.
- *
- * Uses canonical time signals:
- * - sigTimeAbsMs() for systemTime
- * - sigPhase01() for ambient phase
- * - sigWrapEvent() for pulse
- */
-const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
-  const configData = (config != null && typeof config === 'object') ? config : {};
-  const periodMs = 'periodMs' in configData ? Number(configData.periodMs) : 1000;
-
-  // Allocate time-related slots upfront
-  const tAbsMsType = { world: 'signal' as const, domain: 'timeMs' as const };
-  const phase01Type = { world: 'signal' as const, domain: 'float' as const, semantics: 'phase(0..1)' as const };
-  const triggerType = { world: 'event' as const, domain: 'trigger' as const };
-  const numberType = { world: 'signal' as const, domain: 'float' as const };
-
-  const tAbsMsSlot = ctx.b.allocValueSlot(tAbsMsType, 'tAbsMs');
-  const phase01Slot = ctx.b.allocValueSlot(phase01Type, 'phase');
-  const wrapEventSlot = ctx.b.allocValueSlot(triggerType, 'pulse');
-
-  // Register time slots so schedule can reference them
-  // Note: InfiniteTimeRoot has no model time - tAbsMs is used directly
-  ctx.b.setTimeSlots({
-    systemTime: tAbsMsSlot,
-    tAbsMs: tAbsMsSlot,
-    tModelMs: tAbsMsSlot, // For infinite, model time = absolute time
-    phase01: phase01Slot,
-    wrapEvent: wrapEventSlot,
-  });
-
-  // Canonical time signals from TimeModel
-  const systemTimeId = ctx.b.sigTimeAbsMs();
-  const phaseId = ctx.b.sigPhase01();
-  const pulseId = ctx.b.sigWrapEvent();
-
-  // Energy: constant 1.0
-  const energyId = ctx.b.sigConst(1.0, { world: 'signal', domain: 'float' });
-
-  // Declare TimeModel
-  const timeModel: TimeModel = {
-    kind: 'infinite',
-    windowMs: periodMs,
-  };
-
-  return {
-    outputs: [
-      { k: 'sig', id: systemTimeId, slot: tAbsMsSlot },             // systemTime
-      { k: 'sig', id: phaseId, slot: phase01Slot },                 // phase
-      { k: 'sig', id: pulseId, slot: wrapEventSlot },               // pulse
+      { k: 'sig', id: wrapId, slot: wrapEventSlot },              // pulse
       { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot(numberType, 'energy') },
     ],
     declares: { timeModel },
@@ -291,22 +213,6 @@ registerBlockType({
       defaultSource: { value: 'loop' },
     },
   ],
-  outputs: [
-    { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
-    { portId: 'cycleT', label: 'Cycle T', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
-    { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' } },
-    // wrap is event<trigger>, NOT signal - discrete event on cycle boundary
-    { portId: 'wrap', label: 'Wrap', dir: 'out', type: { world: 'event', domain: 'trigger' } },
-    { portId: 'cycleIndex', label: 'Cycle Index', dir: 'out', type: { world: 'signal', domain: 'int' } },
-    { portId: 'energy', label: 'Energy', dir: 'out', type: { world: 'signal', domain: 'float' } },
-  ],
-  lower: lowerInfiniteTimeRoot,
-});
-
-registerBlockType({
-  type: 'InfiniteTimeRoot',
-  capability: 'time',
-  inputs: [],
   outputs: [
     { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: 'signal', domain: 'timeMs' } },
     { portId: 'phase', label: 'Phase', dir: 'out', type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' } },
@@ -387,99 +293,6 @@ export const FiniteTimeRootBlock: BlockCompiler = {
 };
 
 /**
- * InfiniteTimeRoot - Looping primary cycle.
- *
- * Outputs:
- * - systemTime: Monotonic time in milliseconds
- * - cycleT: Time within current cycle (0..period or pingpong)
- * - phase: 0..1 wrapped at period (sawtooth or triangle wave)
- * - wrap: Event that fires on cycle boundary or direction change
- * - cycleIndex: Number of completed cycles
- * - energy: Constant 1.0 baseline
- */
-export const InfiniteTimeRootBlock: BlockCompiler = {
-  type: 'InfiniteTimeRoot',
-
-  inputs: [],
-
-  outputs: [
-    { name: 'systemTime', type: { kind: 'Signal:Time' } },
-    { name: 'cycleT', type: { kind: 'Signal:Time' } },
-    { name: 'phase', type: { kind: 'Signal:phase' } },
-    { name: 'wrap', type: { kind: 'Event' } },
-    { name: 'cycleIndex', type: { kind: 'Signal:int' } },
-    { name: 'energy', type: { kind: 'Signal:float' } },
-  ],
-
-  compile({ params }): CompiledOutputs {
-    // Read from params - block configuration values
-    const periodMs = Number(params.periodMs ?? 3000);
-    const modeValue = params.mode ?? 'loop';
-    const mode = typeof modeValue === 'string' ? modeValue : 'loop';
-
-    // System time is identity
-    const systemTime: SignalNumber = (tMs) => tMs;
-
-    // Phase wraps at period
-    const phase: SignalNumber = (tMs) => {
-      if (tMs < 0) return 0;
-
-      const cycles = tMs / periodMs;
-      const phaseValue = cycles - Math.floor(cycles); // 0..1
-
-      if (mode === 'pingpong') {
-        // Triangle wave: 0→1→0→1...
-        const cycleNum = Math.floor(cycles);
-        return (cycleNum % 2 === 0) ? phaseValue : (1 - phaseValue);
-      }
-
-      // Default loop: sawtooth wave
-      return phaseValue;
-    };
-
-    // Time within current cycle
-    const cycleT: SignalNumber = (tMs) => {
-      if (tMs < 0) return 0;
-      return tMs % periodMs;
-    };
-
-    // Cycle index: number of completed cycles
-    const cycleIndex: SignalInt = (tMs) => {
-      if (tMs < 0) return 0;
-      return Math.floor(tMs / periodMs);
-    };
-
-    // Wrap event: fires on cycle boundary (loop) or direction change (pingpong)
-    const wrap: Event = (tMs, lastTMs) => {
-      if (tMs < 0 || lastTMs < 0) return false;
-
-      const currCycle = Math.floor(tMs / periodMs);
-      const lastCycle = Math.floor(lastTMs / periodMs);
-
-      if (mode === 'pingpong') {
-        // Wrap on direction change (even/odd cycle boundary)
-        return currCycle !== lastCycle;
-      }
-
-      // Wrap on cycle boundary (sawtooth)
-      return currCycle > lastCycle;
-    };
-
-    // Energy is constant 1.0 baseline (steady loops)
-    const energy: SignalNumber = (_tMs) => 1.0;
-
-    return {
-      systemTime: { kind: 'Signal:Time', value: systemTime },
-      cycleT: { kind: 'Signal:Time', value: cycleT },
-      phase: { kind: 'Signal:phase', value: phase },
-      wrap: { kind: 'Event', value: wrap },
-      cycleIndex: { kind: 'Signal:int', value: cycleIndex },
-      energy: { kind: 'Signal:float', value: energy },
-    };
-  },
-};
-
-/**
  * InfiniteTimeRoot - Ambient, unbounded time (no primary cycle).
  *
  * Outputs:
@@ -500,6 +313,7 @@ export const InfiniteTimeRootBlock: BlockCompiler = {
 
   compile({ params }): CompiledOutputs {
     // Read from params - block configuration values
+    // NEEDS REVIEW - DEPRECATED: InfiniteTimeRoot uses periodMs to synthesize phase/pulse.
     const periodMs = Number(params.periodMs ?? 8000);
 
     // System time is identity - just passes through the raw time

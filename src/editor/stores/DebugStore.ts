@@ -270,7 +270,7 @@ export class DebugStore {
 
     // Find TimeRoot
     const timeRoot = blocks.find((b) =>
-      ['InfiniteTimeRoot', 'FiniteTimeRoot', 'InfiniteTimeRoot'].includes(b.type)
+      ['InfiniteTimeRoot', 'FiniteTimeRoot'].includes(b.type)
     );
 
     let timeMode: DebugOverview['timeMode'] = 'unknown';
@@ -278,14 +278,12 @@ export class DebugStore {
 
     if (timeRoot !== undefined) {
       if (timeRoot.type === 'InfiniteTimeRoot') {
+        // NEEDS REVIEW - DEPRECATED: InfiniteTimeRoot treated as cyclic for now.
         timeMode = 'cyclic';
         period = Number(timeRoot.params?.periodMs ?? 3000);
       } else if (timeRoot.type === 'FiniteTimeRoot') {
         timeMode = 'finite';
         period = Number(timeRoot.params?.durationMs ?? 5000);
-      } else {
-        timeMode = 'infinite';
-        period = Number(timeRoot.params?.periodMs ?? 10000);
       }
     }
 

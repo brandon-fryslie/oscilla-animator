@@ -104,7 +104,7 @@ describe("Block Lowering Coverage", () => {
     });
 
     it("should have TimeRoot blocks registered", () => {
-      const timeRootBlocks = ["FiniteTimeRoot", "InfiniteTimeRoot", "CycleTimeRoot"];
+      const timeRootBlocks = ["FiniteTimeRoot", "InfiniteTimeRoot"];
 
       for (const blockType of timeRootBlocks) {
         const irDecl = getBlockType(blockType);
@@ -176,7 +176,7 @@ describe("Block Lowering Coverage", () => {
 
     it("should have consistent capability classifications", () => {
       const capabilities = {
-        time: ["FiniteTimeRoot", "InfiniteTimeRoot", "CycleTimeRoot"],
+        time: ["FiniteTimeRoot", "InfiniteTimeRoot"],
         identity: ["DomainN", "GridDomain"],
         pure: ["AddSignal", "Oscillator", "ColorLFO"],
         state: ["PulseDivider", "EnvelopeAD"],

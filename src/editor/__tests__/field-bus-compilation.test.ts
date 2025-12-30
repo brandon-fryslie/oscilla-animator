@@ -62,26 +62,22 @@ function createTestContext(): CompileCtx {
  */
 function createFieldTestRegistry(): BlockRegistry {
   return {
-    // InfiniteTimeRoot - required for all patches (includes all standard outputs)
+    // InfiniteTimeRoot - required for all patches (minimal outputs)
     InfiniteTimeRoot: {
       type: 'InfiniteTimeRoot',
       inputs: [],
       outputs: [
         { name: 'systemTime', type: { kind: 'Signal:Time' }, required: true },
-        { name: 'cycleT', type: { kind: 'Signal:Time' }, required: true },
         { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
-        { name: 'wrap', type: { kind: 'Event' }, required: true },
-        { name: 'cycleIndex', type: { kind: 'Signal:int' }, required: true },
+        { name: 'pulse', type: { kind: 'Event' }, required: true },
         { name: 'energy', type: { kind: 'Signal:float' }, required: true },
       ],
       compile: ({ params }: { params: Record<string, unknown> }) => {
         const periodMs = (params.periodMs as number) ?? 3000;
         return {
           systemTime: { kind: 'Signal:Time', value: (t: number) => t },
-          cycleT: { kind: 'Signal:Time', value: (t: number) => t % periodMs },
           phase: { kind: 'Signal:phase', value: (t: number) => (t / periodMs) % 1 },
-          wrap: { kind: 'Event', value: (t: number, lastT: number) => Math.floor(t / periodMs) > Math.floor(lastT / periodMs) },
-          cycleIndex: { kind: 'Signal:int', value: (t: number) => Math.floor(t / periodMs) },
+          pulse: { kind: 'Event', value: (t: number, lastT: number) => Math.floor(t / periodMs) > Math.floor(lastT / periodMs) },
           energy: { kind: 'Signal:float', value: () => 1.0 },
         };
       },

@@ -25,7 +25,6 @@ export const KERNEL_PRIMITIVES = {
   // These blocks create and manage the time axis.
   // Only one TimeRoot may exist per patch.
   'FiniteTimeRoot': 'time',
-  'CycleTimeRoot': 'time',
   'InfiniteTimeRoot': 'time',
 
   // ========================================================================

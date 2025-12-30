@@ -64,7 +64,6 @@ function isTimeRootBlock(block: Block): boolean {
   // For now, we'll check the block type directly
   return (
     block.type === "FiniteTimeRoot" ||
-    block.type === "InfiniteTimeRoot" ||
     block.type === "InfiniteTimeRoot"
   );
 }
@@ -83,6 +82,7 @@ function extractTimeModel(timeRoot: Block): TimeModelIR {
   }
 
   if (timeRoot.type === "InfiniteTimeRoot") {
+    // NEEDS REVIEW - DEPRECATED: InfiniteTimeRoot currently emits cyclic TimeModel.
     // Extract periodMs and mode from params
     const periodMs = extractParamValue(timeRoot, "periodMs", 3000) as number;
     const mode = extractParamValue(timeRoot, "mode", "loop") as
@@ -93,17 +93,6 @@ function extractTimeModel(timeRoot: Block): TimeModelIR {
       periodMs,
       mode,
       phaseDomain: "0..1",
-    };
-  }
-
-  if (timeRoot.type === "InfiniteTimeRoot") {
-    // Extract windowMs from params
-    const windowMs = extractParamValue(timeRoot, "windowMs", 10000) as number;
-    const periodMs = extractParamValue(timeRoot, "periodMs", 10000) as number | undefined;
-    return {
-      kind: "infinite",
-      windowMs,
-      suggestedUIWindowMs: periodMs,
     };
   }
 
@@ -179,7 +168,7 @@ export function pass3TimeTopology(
     errors.push({
       kind: "MissingTimeRoot",
       message:
-        "Patch must have exactly one TimeRoot block (FiniteTimeRoot, InfiniteTimeRoot, or InfiniteTimeRoot)",
+        "Patch must have exactly one TimeRoot block (FiniteTimeRoot or InfiniteTimeRoot)",
     });
   } else if (timeRoots.length > 1) {
     errors.push({

@@ -51,7 +51,7 @@ export const FiniteTimeRoot: KernelBlockDefinition = createBlock({
   priority: -10, // High priority to appear first
   // Auto-publish TimeRoot outputs to canonical buses (per design-docs/3-Synthesized/03-Buses.md)
   autoBusPublications: {
-    phase: 'phaseA',
+    phase: ['phaseA', 'phaseB'],
     progress: 'progress',
     energy: 'energy',
   },
@@ -100,7 +100,7 @@ export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
   priority: -8,
   // Auto-publish TimeRoot outputs to canonical buses (per design-docs/3-Synthesized/03-Buses.md)
   autoBusPublications: {
-    phase: 'phaseA',
+    phase: ['phaseA', 'phaseB'],
     pulse: 'pulse',
     energy: 'energy',
   },

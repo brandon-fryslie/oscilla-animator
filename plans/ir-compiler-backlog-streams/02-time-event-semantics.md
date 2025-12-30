@@ -34,7 +34,7 @@
 Steps:
 
 1. Review `src/editor/compiler/passes/pass3-time.ts:72-110` to ensure:
-   - CycleTimeRoot, FiniteTimeRoot, InfiniteTimeRoot map to TimeModel values specified in the design docs.
+   - FiniteTimeRoot and InfiniteTimeRoot map to TimeModel values specified in the design docs.
    - Error cases (missing/multiple TimeRoot) are hard failures.
 
 2. Confirm pass3 output is threaded into later passes.
@@ -98,4 +98,3 @@ Steps:
   - Play a cyclic patch, confirm wrap event occurs once per cycle.
   - Scrub backwards/forwards and confirm wrap event does not spam.
   - Toggle time root type and confirm UI/range changes match TimeModel.
-
