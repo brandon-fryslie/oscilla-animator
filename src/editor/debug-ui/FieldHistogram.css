@@ -1,0 +1,66 @@
+/**
+ * FieldHistogram Styles
+ */
+
+.field-histogram {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+}
+
+.field-histogram-canvas {
+  border: 1px solid var(--color-border, #ccc);
+  border-radius: 4px;
+  background: var(--color-bg, #fff);
+}
+
+.field-histogram-tooltip {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: var(--color-tooltip-bg, rgba(0, 0, 0, 0.85));
+  color: var(--color-tooltip-text, #fff);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.field-histogram-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.field-histogram-tooltip-row:last-child {
+  margin-bottom: 0;
+}
+
+.field-histogram-tooltip-label {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.field-histogram-tooltip-value {
+  font-family: monospace;
+  font-weight: 400;
+}
+
+.field-histogram-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--color-text-secondary, #666);
+}
+
+.field-histogram-stat {
+  font-family: monospace;
+  font-weight: 500;
+}
