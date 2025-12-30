@@ -10,11 +10,11 @@ import { observer } from 'mobx-react-lite';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from './stores';
-import type { RootStore } from './stores';
-import type { Bus, TypeDesc, PortRef, Listener, LensDefinition } from './types';
+import type { Bus, TypeDesc, PortRef, LensDefinition } from './types';
 import { SLOT_TYPE_TO_TYPE_DESC, isDirectlyCompatible } from './types';
 import { BusCreationDialog } from './BusCreationDialog';
 import { LensSelector } from './components/LensSelector';
+import { isPortSubscribedToBus } from './bindings';
 import './BusPicker.css';
 
 interface BusPickerProps {
@@ -31,20 +31,8 @@ type Stage = 'bus' | 'lens';
 /**
  * Get compatible buses for a port's type.
  */
-function getCompatibleBuses(store: RootStore, portType: TypeDesc): Bus[] {
-  return store.busStore.buses.filter((bus: Bus) => isDirectlyCompatible(bus.type, portType));
-}
-
-/**
- * Check if a port is already subscribed to a bus.
- */
-function isPortSubscribedToBus(store: RootStore, portRef: PortRef, busId: string): boolean {
-  return store.busStore.listeners.some(
-    (l: Listener) =>
-      l.busId === busId &&
-      l.to.blockId === portRef.blockId &&
-      l.to.slotId === portRef.slotId
-  );
+function getCompatibleBuses(buses: Bus[], portType: TypeDesc): Bus[] {
+  return buses.filter((bus: Bus) => isDirectlyCompatible(bus.type, portType));
 }
 
 /**
@@ -83,7 +71,7 @@ export const BusPicker = observer((props: BusPickerProps): React.ReactElement | 
     return null;
   }
 
-  const compatibleBuses = getCompatibleBuses(store, portTypeDesc);
+  const compatibleBuses = getCompatibleBuses(store.busStore.buses, portTypeDesc);
   const selectedBus = selectedBusId !== null && selectedBusId !== undefined ? store.busStore.getBusById(selectedBusId) : null;
 
   // Handle click outside to close

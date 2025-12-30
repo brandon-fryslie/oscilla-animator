@@ -8,11 +8,12 @@
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { useStore } from './stores';
-import type { Bus, Publisher, Listener, CoreDomain, BusCombineMode, LensDefinition } from './types';
+import type { Bus, CoreDomain, BusCombineMode, LensDefinition } from './types';
 import { formatTypeDesc, getCombineModesForDomain } from './semantic';
 import { LensSelector, LensBadge } from './components/LensSelector';
 import { InspectorContainer } from './components/InspectorContainer';
 import { createLensInstanceFromDefinition, lensInstanceToDefinition } from './lenses/lensInstances';
+import { getPublishersForBus, getListenersForBus, setBindingEnabled, type NormalizedBinding } from './bindings';
 import './BusInspector.css';
 
 interface BusInspectorProps {
@@ -115,119 +116,94 @@ function DefaultValueEditor({
 }
 
 /**
- * Publisher list item.
+ * Unified binding item component for both publishers and listeners.
+ * Supports enable/disable toggle, jump-to-block, and lens editing (listeners only).
  */
-const PublisherItem = observer(({
-  publisher,
+const BindingItem = observer(({
+  binding,
+  direction,
 }: {
-  publisher: Publisher;
-}) => {
-  const store = useStore();
-  const block = store.patchStore.blocks.find(b => b.id === publisher.from.blockId);
-  const blockName = block?.label ?? 'Unknown Block';
-  const portName = publisher.from.slotId;
-
-  const handleJumpToBlock = () => {
-    store.uiStore.selectBlock(publisher.from.blockId);
-    // TODO: Scroll PatchBay to show block
-  };
-
-  const handleToggleEnabled = () => {
-    store.busStore.updatePublisher(publisher.id, { enabled: !publisher.enabled });
-  };
-
-  return (
-    <li className={`bus-routing-item ${!publisher.enabled ? 'disabled' : ''}`}>
-      <div className="routing-item-info">
-        <span className="routing-block-name">{blockName}</span>
-        <span className="routing-port-name">{portName}</span>
-      </div>
-      <div className="routing-item-actions">
-        <button
-          className="routing-toggle-btn"
-          onClick={handleToggleEnabled}
-          title={publisher.enabled ? 'Disable' : 'Enable'}
-        >
-          {publisher.enabled ? '✓' : '○'}
-        </button>
-        <button
-          className="routing-jump-btn"
-          onClick={handleJumpToBlock}
-          title="Jump to block"
-        >
-          →
-        </button>
-      </div>
-    </li>
-  );
-});
-
-/**
- * Listener list item with lens display and editing.
- */
-const ListenerItem = observer(({
-  listener,
-}: {
-  listener: Listener;
+  binding: NormalizedBinding;
+  direction: 'input' | 'output';
 }) => {
   const store = useStore();
   const [isEditingLens, setIsEditingLens] = useState(false);
-  const block = store.patchStore.blocks.find(b => b.id === listener.to.blockId);
+
+  // Determine which endpoint to show (opposite of the bus)
+  const portRef = direction === 'output'
+    ? (binding.kind === 'publisher' ? binding.from : null)
+    : (binding.kind === 'listener' ? binding.to : null);
+
+  if (!portRef) {
+    return null;
+  }
+
+  const block = store.patchStore.blocks.find(b => b.id === portRef.blockId);
   const blockName = block?.label ?? 'Unknown Block';
-  const portName = listener.to.slotId;
-  const primaryLens = listener.lensStack?.[0];
+  const portName = portRef.slotId;
+
+  // For listeners, handle lens display and editing
+  const primaryLens = binding.kind === 'listener' && binding.lensStack.length > 0
+    ? binding.lensStack[0]
+    : undefined;
   const lensDefinition = primaryLens
     ? lensInstanceToDefinition(primaryLens, store.defaultSourceStore)
     : undefined;
 
   const handleJumpToBlock = () => {
-    store.uiStore.selectBlock(listener.to.blockId);
+    store.uiStore.selectBlock(portRef.blockId);
   };
 
   const handleToggleEnabled = () => {
-    store.busStore.updateListener(listener.id, { enabled: !listener.enabled });
+    setBindingEnabled(store, { kind: binding.kind, id: binding.id }, !binding.enabled);
   };
 
   const handleEditLens = () => {
+    if (binding.kind !== 'listener') return;
     setIsEditingLens(!isEditingLens);
   };
 
   const handleLensChange = (lens: LensDefinition | undefined) => {
+    if (binding.kind !== 'listener') return;
     if (!lens) {
-      store.busStore.updateListener(listener.id, { lensStack: undefined });
+      store.busStore.updateListener(binding.id, { lensStack: undefined });
       return;
     }
     const instance = createLensInstanceFromDefinition(
       lens,
-      listener.id,
+      binding.id,
       0,
       store.defaultSourceStore
     );
-    store.busStore.updateListener(listener.id, { lensStack: [instance] });
+    store.busStore.updateListener(binding.id, { lensStack: [instance] });
   };
 
+  const showLensControls = binding.kind === 'listener';
+
   return (
-    <li className={`bus-routing-item ${!listener.enabled ? 'disabled' : ''} ${isEditingLens ? 'expanded' : ''}`}>
+    <li className={`bus-routing-item ${!binding.enabled ? 'disabled' : ''} ${isEditingLens ? 'expanded' : ''}`}>
       <div className="routing-item-row">
         <div className="routing-item-info">
           <span className="routing-block-name">{blockName}</span>
           <span className="routing-port-name">{portName}</span>
-          <LensBadge lens={lensDefinition} />
+          {showLensControls && <LensBadge lens={lensDefinition} />}
         </div>
         <div className="routing-item-actions">
-          <button
-            className={`routing-lens-btn ${lensDefinition ? 'has-lens' : ''}`}
-            onClick={handleEditLens}
-            title={lensDefinition ? 'Edit lens' : 'Add lens'}
-          >
-            {lensDefinition ? '🔧' : '+🔧'}
-          </button>
+          {showLensControls && (
+            <button
+              className={`routing-lens-btn ${lensDefinition ? 'has-lens' : ''}`}
+              onClick={handleEditLens}
+              title={lensDefinition ? 'Edit lens' : 'Add lens'}
+            >
+              {lensDefinition ? '🔧' : '+🔧'}
+            </button>
+          )}
           <button
             className="routing-toggle-btn"
             onClick={handleToggleEnabled}
-            title={listener.enabled ? 'Disable' : 'Enable'}
+            title={binding.enabled ? 'Disable' : 'Enable'}
           >
-            {listener.enabled ? '✓' : '○'}
+            {binding.enabled ? '✓' : '○'}
           </button>
           <button
             className="routing-jump-btn"
@@ -238,7 +214,7 @@ const ListenerItem = observer(({
           </button>
         </div>
       </div>
-      {isEditingLens && (
+      {isEditingLens && showLensControls && (
         <div className="routing-item-lens-editor">
           <LensSelector
             value={lensDefinition}
@@ -276,8 +252,10 @@ export const BusInspector = observer(({ busId }: BusInspectorProps) => {
     );
   }
 
-  const allPublishers = store.busStore.publishers.filter(p => p.busId === busId);
-  const allListeners = store.busStore.listeners.filter(l => l.busId === busId);
+  // Use binding facade to get publishers and listeners
+  const allPublishers = getPublishersForBus(store, busId);
+  const allListeners = getListenersForBus(store, busId);
+
   const typeDisplay = formatTypeDesc(bus.type);
   const domain = bus.type.domain as CoreDomain;
   const availableCombineModes = getCombineModesForDomain(domain);
@@ -341,9 +319,15 @@ export const BusInspector = observer(({ busId }: BusInspectorProps) => {
           ) : (
             <ul className="bus-routing-list">
               {allPublishers
-                .sort((a: Publisher, b: Publisher) => a.sortKey - b.sortKey)
-                .map((pub: Publisher) => (
-                  <PublisherItem key={pub.id} publisher={pub} />
+                .sort((a, b) => {
+                  // Publishers have sortKey
+                  if (a.kind === 'publisher' && b.kind === 'publisher') {
+                    return a.sortKey - b.sortKey;
+                  }
+                  return 0;
+                })
+                .map((binding) => (
+                  <BindingItem key={binding.id} binding={binding} direction="output" />
                 ))}
             </ul>
           )}
@@ -359,8 +343,8 @@ export const BusInspector = observer(({ busId }: BusInspectorProps) => {
             <p className="inspector-hint">No listeners</p>
           ) : (
             <ul className="bus-routing-list">
-              {allListeners.map(listener => (
-                <ListenerItem key={listener.id} listener={listener} />
+              {allListeners.map(binding => (
+                <BindingItem key={binding.id} binding={binding} direction="input" />
               ))}
             </ul>
           )}

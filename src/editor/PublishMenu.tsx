@@ -10,11 +10,11 @@ import { observer } from 'mobx-react-lite';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from './stores';
-import type { RootStore } from './stores';
-import type { Bus, TypeDesc, PortRef, Publisher, Block, Slot } from './types';
+import type { Bus, TypeDesc, PortRef, Block, Slot } from './types';
 import { SLOT_TYPE_TO_TYPE_DESC, isDirectlyCompatible } from './types';
 import { BusCreationDialog } from './BusCreationDialog';
 import { isDefined } from './types/helpers';
+import { getOutgoingBindingsForOutputPort, isPortPublishingToBus } from './bindings';
 import './PublishMenu.css';
 
 interface PublishMenuProps {
@@ -29,31 +29,8 @@ interface PublishMenuProps {
 /**
  * Get compatible buses for a port's type.
  */
-function getCompatibleBuses(store: RootStore, portType: TypeDesc): Bus[] {
-  return store.busStore.buses.filter((bus: Bus) => isDirectlyCompatible(bus.type, portType));
-}
-
-/**
- * Get publishers from this port to any buses.
- */
-function getPortPublishers(store: RootStore, portRef: PortRef): Publisher[] {
-  return store.busStore.publishers.filter(
-    (p: Publisher) =>
-      p.from.blockId === portRef.blockId &&
-      p.from.slotId === portRef.slotId
-  );
-}
-
-/**
- * Check if a port is already publishing to a bus.
- */
-function isPortPublishingToBus(store: RootStore, portRef: PortRef, busId: string): boolean {
-  return store.busStore.publishers.some(
-    (p: Publisher) =>
-      p.busId === busId &&
-      p.from.blockId === portRef.blockId &&
-      p.from.slotId === portRef.slotId
-  );
+function getCompatibleBuses(buses: Bus[], portType: TypeDesc): Bus[] {
+  return buses.filter((bus: Bus) => isDirectlyCompatible(bus.type, portType));
 }
 
 /**
@@ -80,8 +57,11 @@ export const PublishMenu = observer((props: PublishMenuProps) => {
     return null;
   }
 
-  const compatibleBuses = getCompatibleBuses(store, portTypeDesc);
-  const currentPublishers = getPortPublishers(store, portRef);
+  const compatibleBuses = getCompatibleBuses(store.busStore.buses, portTypeDesc);
+
+  // Get publishers using binding facade
+  const currentPublishers = getOutgoingBindingsForOutputPort(store, portRef.blockId, portRef.slotId)
+    .filter(binding => binding.kind === 'publisher');
 
   // Handle click outside to close
   useEffect(() => {
@@ -196,7 +176,7 @@ export const PublishMenu = observer((props: PublishMenuProps) => {
         {currentPublishers.length > 0 && (
           <>
             <div className="publish-menu-separator" />
-            {currentPublishers.map((publisher: Publisher) => {
+            {currentPublishers.map((publisher) => {
               const bus = store.busStore.buses.find((b: Bus) => b.id === publisher.busId);
               const busName = isDefined(bus?.name) ? bus.name : 'Unknown';
               return (
