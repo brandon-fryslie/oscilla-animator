@@ -52,6 +52,9 @@ export class TraceController {
   /** Ring buffer for span records (used in 'timing' and 'full' modes) */
   readonly spanRing: SpanRing;
 
+  /** Mapping from probe ID to most recent value ring index */
+  private probeValueIndex: Map<string, number> = new Map();
+
   /** Last time we emitted UI update events (for throttling) */
   private lastUIEmitMs = 0;
 
@@ -110,13 +113,44 @@ export class TraceController {
    * Only writes if mode is 'full'.
    *
    * @param value - Value record to write
+   * @param probeId - Optional probe ID to associate with this value
    * @returns Index where value was written, or -1 if skipped
    */
-  writeValue(value: ValueRecord32): number {
+  writeValue(value: ValueRecord32, probeId?: string): number {
     if (this.mode !== 'full') {
       return -1;
     }
-    return this.valueRing.writeValue(value);
+    const idx = this.valueRing.writeValue(value);
+
+    // Update probe index mapping if probe ID provided
+    if (probeId !== undefined) {
+      this.probeValueIndex.set(probeId, idx);
+    }
+
+    return idx;
+  }
+
+  /**
+   * Get the most recent value for a specific probe.
+   *
+   * @param probeId - Probe identifier (e.g., "blockId:signal")
+   * @returns ValueRecord32 if available, undefined otherwise
+   */
+  getProbeValue(probeId: string): ValueRecord32 | undefined {
+    const idx = this.probeValueIndex.get(probeId);
+    if (idx === undefined) {
+      return undefined;
+    }
+    return this.valueRing.getValue(idx);
+  }
+
+  /**
+   * Get all active probe IDs.
+   *
+   * @returns Array of probe IDs that have recorded values
+   */
+  getActiveProbeIds(): string[] {
+    return Array.from(this.probeValueIndex.keys());
   }
 
   /**
@@ -149,12 +183,13 @@ export class TraceController {
   }
 
   /**
-   * Clear all ring buffers.
+   * Clear all ring buffers and probe mappings.
    * Called when switching modes or resetting debug state.
    */
   clearBuffers(): void {
     this.valueRing.clear();
     this.spanRing.clear();
+    this.probeValueIndex.clear();
   }
 
   // ===========================================================================

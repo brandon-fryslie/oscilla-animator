@@ -15,9 +15,12 @@ import { debugStore, type ConsoleLine } from '../stores/DebugStore';
 import {
   type Probe,
   type Sample,
+  type ValueSummary,
   formatValueSummary,
   getNumericValue,
 } from '../debug/types';
+import { TraceController } from '../debug/TraceController';
+import { valueRecordToSummary } from '../debug/valueRecordToSummary';
 import './DebugReplPanel.css';
 
 // =============================================================================
@@ -54,6 +57,14 @@ const OverviewTab = observer(() => {
     error: '#ef4444',
   }[overview.health];
 
+  // Get trace controller mode
+  const traceMode = TraceController.instance.getMode();
+  const traceModeLabel = {
+    off: 'Off (zero overhead)',
+    timing: 'Timing (spans only)',
+    full: 'Full (values + spans)',
+  }[traceMode];
+
   return (
     <div className="debug-overview">
       <div className="overview-section">
@@ -80,6 +91,27 @@ const OverviewTab = observer(() => {
             {overview.debuggedBlockIds.length > 3 && ` +${overview.debuggedBlockIds.length - 3} more`}
           </div>
         )}
+      </div>
+
+      <div className="overview-section">
+        <div className="overview-label">Trace Mode</div>
+        <div className="overview-value">{traceModeLabel}</div>
+        <div className="overview-controls">
+          <button
+            className={`trace-mode-btn ${traceMode === 'off' ? 'active' : ''}`}
+            onClick={() => TraceController.instance.setMode('off')}
+            title="Disable IR probes (zero overhead)"
+          >
+            Off
+          </button>
+          <button
+            className={`trace-mode-btn ${traceMode === 'full' ? 'active' : ''}`}
+            onClick={() => TraceController.instance.setMode('full')}
+            title="Enable IR probes (full tracing)"
+          >
+            Full
+          </button>
+        </div>
       </div>
 
       <div className="overview-hint">
@@ -141,18 +173,50 @@ function PhaseMeter({ value, width = 60 }: { value: number; width?: number }) {
 
 /**
  * Single Probe Card
+ *
+ * Supports both legacy DebugStore probes and IR TraceController probes.
+ * For IR probes, tries to read from TraceController first.
  */
 const ProbeCard = observer(({ probe }: { probe: Probe }) => {
-  const value = probe.currentSample !== undefined && probe.currentSample !== null
-    ? formatValueSummary(probe.currentSample.value)
-    : '—';
+  // Try to get value from IR TraceController first (for IR-compiled patches)
+  let irValue: ValueSummary | null = null;
+  const traceController = TraceController.instance;
+
+  if (traceController.getMode() === 'full' && probe.target.kind === 'block') {
+    // Probe IDs from IR follow pattern: blockId:portId (e.g., "someBlockId:signal")
+    const blockId = probe.target.blockId;
+
+    // Try common port IDs
+    const portIds = ['signal', 'phase', 'field'];
+    for (const portId of portIds) {
+      const probeId = `${blockId}:${portId}`;
+      const record = traceController.getProbeValue(probeId);
+      if (record !== undefined) {
+        irValue = valueRecordToSummary(record);
+        if (irValue !== null) {
+          break; // Use first available value
+        }
+      }
+    }
+  }
+
+  // Fall back to legacy DebugStore value if no IR value found
+  const legacyValue = probe.currentSample !== undefined && probe.currentSample !== null
+    ? probe.currentSample.value
+    : null;
+
+  const value = irValue !== null ? irValue : legacyValue;
+  const valueDisplay = value !== null ? formatValueSummary(value) : '—';
+
   const age = probe.currentSample !== undefined && probe.currentSample !== null
     ? Date.now() - probe.currentSample.timestamp
     : null;
-  const isPhase = probe.currentSample?.value.t === 'phase';
-  const numericValue = probe.currentSample !== undefined && probe.currentSample !== null
-    ? getNumericValue(probe.currentSample.value)
-    : null;
+  const isPhase = value?.t === 'phase';
+  const numericValue = value !== null ? getNumericValue(value) : null;
+
+  // Show indicator for IR vs legacy source
+  const isIRProbe = irValue !== null;
+  const sourceIndicator = isIRProbe ? 'IR' : 'Legacy';
 
   const handleRemove = () => {
     debugStore.removeProbe(probe.id);
@@ -162,6 +226,9 @@ const ProbeCard = observer(({ probe }: { probe: Probe }) => {
     <div className="probe-card">
       <div className="probe-header">
         <span className="probe-label">{probe.label}</span>
+        <span className="probe-source-indicator" title={`Data source: ${sourceIndicator}`}>
+          {isIRProbe ? '⚡' : '🔧'}
+        </span>
         <button className="probe-remove" onClick={handleRemove} title="Remove probe">×</button>
       </div>
 
@@ -169,7 +236,7 @@ const ProbeCard = observer(({ probe }: { probe: Probe }) => {
         {isPhase && numericValue !== null ? (
           <PhaseMeter value={numericValue} />
         ) : (
-          <div className="probe-value">{value}</div>
+          <div className="probe-value">{valueDisplay}</div>
         )}
 
         {probe.history.length > 1 && (

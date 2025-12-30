@@ -29,7 +29,7 @@ import { encodeScalar, encodeBoolean, encodeVec2, encodeColor, type ValueRecord3
  * 2. For each slot in step.probe.slots:
  *    - Read value from runtime.values
  *    - Convert to ValueRecord32 using type-specific encoding
- *    - Write to ValueRing
+ *    - Write to ValueRing with probe ID for later retrieval
  * 3. For 'timing' mode: record span begin/end to SpanRing (deferred)
  *
  * @param step - DebugProbe step specification
@@ -44,7 +44,7 @@ export function executeDebugProbe(step: StepDebugProbe, runtime: RuntimeState): 
   }
 
   const { probe } = step;
-  const { slots } = probe;
+  const { slots, id: probeId } = probe;
 
   // Record values for each probed slot
   for (const slot of slots) {
@@ -67,8 +67,9 @@ export function executeDebugProbe(step: StepDebugProbe, runtime: RuntimeState): 
     const record = summaryToValueRecord(summary, 0); // typeId=0 for now (Phase 7.2 will use TypeKeyTable)
 
     if (record !== null) {
-      // Write to ValueRing (zero-allocation, uses columnar storage)
-      controller.writeValue(record);
+      // Write to ValueRing with probe ID for retrieval
+      // This allows ProbeCard to read values by probe ID
+      controller.writeValue(record, probeId);
     }
   }
 }
