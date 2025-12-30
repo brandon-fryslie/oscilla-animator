@@ -1,6 +1,10 @@
 import type { TypeDesc, UIControlHint, CoreDomain } from '../types';
 import type { Artifact, RuntimeCtx } from '../compiler/types';
 import { getEasingFunction } from './easing';
+import type { ValueRefPacked } from '../compiler/passes/pass6-block-lowering';
+import type { IRBuilder } from '../compiler/ir/IRBuilder';
+import { OpCode } from '../compiler/ir/opcodes';
+import type { TypeDesc as IRTypeDesc } from '../compiler/ir/types';
 
 export interface LensParamSpec {
   type: TypeDesc; // Typically 'scalar:number' etc.
@@ -23,7 +27,7 @@ export interface LensDef {
   apply?: (value: Artifact, params: Record<string, Artifact>) => Artifact;
   // IR compilation (Sprint 5 Deliverable 6)
   // Returns null if the lens cannot be compiled to IR
-  compileToIR?: (input: import("../compiler/passes/pass6-block-lowering").ValueRefPacked, params: Record<string, import("../compiler/passes/pass6-block-lowering").ValueRefPacked>, ctx: { builder: import("../compiler/ir/IRBuilder").IRBuilder }) => import("../compiler/passes/pass6-block-lowering").ValueRefPacked | null;
+  compileToIR?: (input: ValueRefPacked, params: Record<string, ValueRefPacked>, ctx: { builder: IRBuilder }) => ValueRefPacked | null;
 }
 
 const lenses = new Map<string, LensDef>();
@@ -186,6 +190,51 @@ export function initLensRegistry(): void {
         const offset = resolveNumberParam(params.offset, time, runtime);
         return value * scale + offset;
       }),
+    compileToIR: (input, params, ctx) => {
+      // Only compile signal inputs
+      if (input.k !== 'sig') {
+        return null;
+      }
+
+      // Extract scale and offset parameters
+      const scaleParam = params.scale;
+      const offsetParam = params.offset;
+
+      // Both params must be scalar constants for now
+      if (scaleParam?.k !== 'scalarConst' || offsetParam?.k !== 'scalarConst') {
+        return null; // Dynamic params not yet supported
+      }
+
+      const scaleValue = ctx.builder.getConstPool()[scaleParam.constId] as number;
+      const offsetValue = ctx.builder.getConstPool()[offsetParam.constId] as number;
+
+      // Determine output type (same as input)
+      const outputType: IRTypeDesc = {
+        world: 'signal',
+        domain: 'float',
+      };
+
+      // Chain: multiply by scale, then add offset
+      let result = input.id;
+
+      // Apply scale if not 1
+      if (scaleValue !== 1) {
+        const scaleSigId = ctx.builder.sigConst(scaleValue, outputType);
+        result = ctx.builder.sigZip(result, scaleSigId, { kind: 'opcode', opcode: OpCode.Mul }, outputType);
+      }
+
+      // Apply offset if not 0
+      if (offsetValue !== 0) {
+        const offsetSigId = ctx.builder.sigConst(offsetValue, outputType);
+        result = ctx.builder.sigZip(result, offsetSigId, { kind: 'opcode', opcode: OpCode.Add }, outputType);
+      }
+
+      // Allocate slot for final result
+      const slot = ctx.builder.allocValueSlot(outputType);
+      ctx.builder.registerSigSlot(result, slot);
+
+      return { k: 'sig', id: result, slot };
+    },
   });
 
   // Polarity (Wire + Pub + List)
@@ -228,6 +277,49 @@ export function initLensRegistry(): void {
         const max = resolveNumberParam(params.max, time, runtime);
         return clamp(value, Math.min(min, max), Math.max(min, max));
       }),
+    compileToIR: (input, params, ctx) => {
+      // Only compile signal inputs
+      if (input.k !== 'sig') {
+        return null;
+      }
+
+      // Extract min and max parameters
+      const minParam = params.min;
+      const maxParam = params.max;
+
+      // Both params must be scalar constants for now
+      if (minParam?.k !== 'scalarConst' || maxParam?.k !== 'scalarConst') {
+        return null; // Dynamic params not yet supported
+      }
+
+      const minValue = ctx.builder.getConstPool()[minParam.constId] as number;
+      const maxValue = ctx.builder.getConstPool()[maxParam.constId] as number;
+
+      // Determine output type (same as input)
+      const outputType: IRTypeDesc = {
+        world: 'signal',
+        domain: 'float',
+      };
+
+      // Use OpCode.Clamp which takes (value, min, max)
+      const minSigId = ctx.builder.sigConst(Math.min(minValue, maxValue), outputType);
+      const maxSigId = ctx.builder.sigConst(Math.max(minValue, maxValue), outputType);
+
+      // Create sigMap with clamp operation
+      // For clamp, we need a ternary operation: clamp(value, min, max)
+      // We'll use sigMap with a special function that captures min and max
+      // Actually, OpCode.Clamp expects 3 inputs, so we need to create a custom node
+
+      // For now, implement clamp as: max(min(value, maxValue), minValue)
+      const maxClampSig = ctx.builder.sigZip(input.id, maxSigId, { kind: 'opcode', opcode: OpCode.Min }, outputType);
+      const result = ctx.builder.sigZip(maxClampSig, minSigId, { kind: 'opcode', opcode: OpCode.Max }, outputType);
+
+      // Allocate slot for result
+      const slot = ctx.builder.allocValueSlot(outputType);
+      ctx.builder.registerSigSlot(result, slot);
+
+      return { k: 'sig', id: result, slot };
+    },
   });
 
   // Softclip (Wire + Pub + List)

@@ -3,6 +3,7 @@ import { CORE_DOMAIN_DEFAULTS } from '../types';
 import type { Artifact, CompileCtx } from '../compiler/types';
 import type { IRBuilder } from '../compiler/ir/IRBuilder';
 import type { ValueRefPacked } from '../compiler/passes/pass6-block-lowering';
+import type { TypeDesc as IRTypeDesc } from '../compiler/ir/types';
 
 /**
  * IR compilation context for adapters.
@@ -140,9 +141,37 @@ export function initAdapterRegistry(): void {
         }
         return { kind: 'Error', message: `ConstToSignal unsupported for ${artifact.kind}` };
       },
-      // IR compilation support (Sprint 5): Uses TransformStepAdapter IR node
-      // No compile ToIR needed - handled at transform chain level
-      compileToIR: undefined,
+      // IR compilation support: Convert scalar constant to signal constant
+      compileToIR: (input, ctx) => {
+        // Input must be a scalar constant
+        if (input.k !== 'scalarConst') {
+          return null; // Cannot compile non-scalar inputs
+        }
+
+        // Get the constant value from the constant pool
+        const constValue = ctx.builder.getConstPool()[input.constId];
+
+        // Extract domain from adapter ID
+        const domainStr = ctx.adapterId.replace('ConstToSignal:', '');
+
+        // Determine the output type based on the adapter's domain
+        const outputType: IRTypeDesc = {
+          world: 'signal',
+          domain: domainStr as IRTypeDesc['domain'],
+        };
+
+        // Create a constant signal with the value
+        if (typeof constValue === 'number') {
+          const sigId = ctx.builder.sigConst(constValue, outputType);
+          const slot = ctx.builder.allocValueSlot(outputType);
+          ctx.builder.registerSigSlot(sigId, slot);
+          return { k: 'sig', id: sigId, slot };
+        }
+
+        // For non-number values (vec2, color, etc.), keep as scalar const
+        // The runtime will handle the constant value directly
+        return input;
+      },
     });
 
     // BroadcastScalarToField adapter
