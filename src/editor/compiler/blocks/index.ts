@@ -66,6 +66,11 @@ import {
   EnvelopeADBlock,
 } from './rhythm';
 
+// Default source provider blocks (Sprint 4+)
+import {
+  DSConstSignalFloatBlock,
+} from './defaultSources';
+
 // =============================================================================
 // Registry
 // =============================================================================
@@ -127,6 +132,9 @@ export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   // Rhythm primitives (Slice 2: Rhythmic Accent System)
   PulseDivider: PulseDividerBlock,
   EnvelopeAD: EnvelopeADBlock,
+
+  // Default source provider blocks (Sprint 4+)
+  DSConstSignalFloat: DSConstSignalFloatBlock,
 };
 
 /**
@@ -151,4 +159,5 @@ export function registerDynamicBlock(type: string, compiler: BlockCompiler): voi
 export * from './domain';
 export * from './signal';
 export * from './rhythm';
+export * from './defaultSources';
 export * from './helpers';

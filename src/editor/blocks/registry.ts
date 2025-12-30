@@ -19,6 +19,9 @@ import * as FieldPrimitiveBlocks from './field-primitives';
 // Import macro blocks (Slice demos)
 import * as MacroBlocks from './macros';
 
+// Import default source provider blocks (Sprint 4+)
+import * as DefaultSourceProviders from './default-source-providers';
+
 // Import composite bridge for optional composite support
 import { getCompositeBlockDefinitions } from '../composite-bridge';
 
@@ -32,6 +35,7 @@ const ALL_INDIVIDUAL_BLOCKS: BlockDefinition[] = [
   ...Object.values(RhythmBlocks),
   ...Object.values(FieldPrimitiveBlocks),
   ...Object.values(MacroBlocks),
+  ...Object.values(DefaultSourceProviders),
 ].filter((block): block is BlockDefinition => (block as BlockDefinition).type !== undefined);
 
 
