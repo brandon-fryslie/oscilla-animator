@@ -1308,20 +1308,23 @@ const DiagnosticsSection = observer(({ block }: { block: Block }) => {
  * Default Sources section - shows editable controls for undriven inputs
  * Sprint 12: Added provider type dropdown
  * Sprint 13: Added provider config panel
- * Sprint 12: Added provider type dropdown
+ * Sprint 14: Show provider config as read-only when driven
  *
  * Priority: Wire > Bus Listener > DefaultSource
- * Only show controls when input is NOT driven (no wire, no bus)
+ * Provider config is always shown but disabled when input is driven.
  */
 /**
  * Sprint 13: Provider Config Panel
  * Displays configuration UI for a default source provider.
  * Shows bus feeds (read-only) and editable inputs with controls.
+ * Sprint 14: Added isDriven prop to disable controls when input is driven.
  */
 const ProviderConfigPanel = observer(({
   attachment,
+  isDriven,
 }: {
   attachment: DefaultSourceAttachment;
+  isDriven: boolean;
 }) => {
   const store = useStore();
 
@@ -1371,7 +1374,7 @@ const ProviderConfigPanel = observer(({
           <DefaultSourceControl
             key={inputId}
             ds={ds}
-            isDriven={false}
+            isDriven={isDriven}
             onChange={(val) => store.defaultSourceStore.setDefaultValue(sourceId, val)}
           />
         );
@@ -1470,6 +1473,7 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
                   {attachment && (
                     <ProviderConfigPanel
                       attachment={attachment}
+                      isDriven={false}
                     />
                   )}
                 </div>
@@ -1479,7 +1483,7 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
         </div>
       )}
 
-      {/* Driven inputs - show what's overriding them */}
+      {/* Driven inputs - show provider config as read-only with "overridden" indicator */}
       {drivenInputs.length > 0 && undrivenInputs.length > 0 && (
         <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid #252525' }}>
           <span className="insp-section-title" style={{ fontSize: 8, color: '#444' }}>
@@ -1489,19 +1493,42 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
       )}
       {drivenInputs.length > 0 && (
         <div className="param-grid" style={{ marginTop: 4 }}>
-          {drivenInputs.map(({ slot, ds }) => (
-            <div key={slot.id} className="param-row param-row-driven">
-              <label className="param-key">
-                {slot.label}
-                <span className="driven-badge">driven</span>
-              </label>
-              <DefaultSourceControl
-                ds={ds}
-                isDriven={true}
-                onChange={() => {}}
-              />
-            </div>
-          ))}
+          {drivenInputs.map(({ slot }) => {
+            // Get attachment to determine provider type
+            const attachment = store.defaultSourceStore.getAttachmentForInput(block.id, slot.id);
+            const providerLabel = attachment
+              ? DEFAULT_SOURCE_PROVIDER_BLOCKS.find(p => p.blockType === attachment.provider.blockType)?.label ?? 'Constant'
+              : 'Constant';
+
+            return (
+              <div key={slot.id} className="param-row param-row-driven">
+                <label className="param-key">
+                  {slot.label}
+                  <span className="driven-badge">driven</span>
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                  {/* Provider Type Dropdown - disabled */}
+                  <select
+                    className="param-input"
+                    value={attachment?.provider.blockType ?? 'DSConstSignalFloat'}
+                    disabled={true}
+                    style={{ fontSize: '10px', color: '#555' }}
+                  >
+                    <option value={attachment?.provider.blockType ?? 'DSConstSignalFloat'}>
+                      {providerLabel}
+                    </option>
+                  </select>
+                  {/* Provider Config Panel - read-only */}
+                  {attachment && (
+                    <ProviderConfigPanel
+                      attachment={attachment}
+                      isDriven={true}
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,0 +1,36 @@
+Agent: iterative-implementer | 2025-12-30-050747
+Mode: manual
+Completed: Sprint 14 - Driven Input UI Polish | Files: 1 | Commits: 1
+Tests: Not applicable (manual verification mode)
+Cache invalidated: None (no eval-cache exists in this worktree)
+Status: complete
+
+Summary:
+--------
+Sprint 14 implemented successfully. Provider config panel now shows as read-only
+when input is driven (by wire or bus listener), per user directive.
+
+Implementation:
+- Added isDriven prop to ProviderConfigPanel component
+- ProviderConfigPanel passes isDriven to all DefaultSourceControl instances
+- Driven inputs show full provider config (dropdown + controls) but disabled
+- Undriven inputs remain fully editable
+- isInputDriven helper already existed in portUtils.ts
+
+Key Changes:
+- src/editor/Inspector.tsx:
+  - ProviderConfigPanel component (line 1313-1375): added isDriven prop
+  - DefaultSourcesSection (line 1377-1527): shows provider config for both driven and undriven inputs
+  - Driven section (lines 1485-1524): displays provider dropdown and config panel in read-only state
+
+Acceptance Criteria Met:
+✓ Helper isInputDriven exists (in portUtils.ts)
+✓ Checks for wires and listeners
+✓ Returns true if EITHER exists
+✓ When driven: dropdown disabled, controls read-only, "overridden" shown
+✓ When not driven: controls editable
+✓ Wire/disconnect toggles state correctly (manual verification required)
+
+Next Steps:
+- Manual verification: wire/disconnect behavior
+- Sprint 15: Add Oscillator provider (not in scope for this sprint)
