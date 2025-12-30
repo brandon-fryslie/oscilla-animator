@@ -1,0 +1,90 @@
+/**
+ * RuntimeStateTree Styles
+ */
+
+.runtime-state-tree {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary, #e0e0e0);
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+.runtime-state-tree-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-secondary, #999);
+}
+
+.runtime-state-tree-empty p {
+  margin: 8px 0;
+}
+
+/* Tree Node */
+.tree-node {
+  margin: 0;
+}
+
+.tree-node-label {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.tree-node-label:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.tree-node-label:active {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.tree-node-expand {
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+  margin-right: 4px;
+  font-size: 10px;
+  color: var(--text-secondary, #999);
+}
+
+.tree-node-expand-placeholder {
+  display: inline-block;
+  width: 16px;
+  margin-right: 4px;
+}
+
+.tree-node-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Node Type Styles */
+.tree-node-label.root {
+  font-weight: 600;
+  color: var(--accent-primary, #4a9eff);
+}
+
+.tree-node-label.category {
+  font-weight: 500;
+  color: var(--accent-secondary, #9b59b6);
+}
+
+.tree-node-label.slot {
+  color: var(--text-primary, #e0e0e0);
+}
+
+.tree-node-label.stateCell {
+  color: var(--text-primary, #e0e0e0);
+}
+
+/* Tree Node Children */
+.tree-node-children {
+  margin: 0;
+}

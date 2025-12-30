@@ -1,0 +1,91 @@
+/**
+ * RuntimeStateTab Styles
+ */
+
+.runtime-state-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  background: var(--bg-primary, #1e1e1e);
+  color: var(--text-primary, #e0e0e0);
+}
+
+.runtime-state-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.capture-button {
+  padding: 8px 16px;
+  background: var(--accent-primary, #4a9eff);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.capture-button:hover {
+  background: var(--accent-primary-hover, #3a8eef);
+}
+
+.capture-button:active {
+  background: var(--accent-primary-active, #2a7edf);
+}
+
+.search-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #2a2a2a);
+  color: var(--text-primary, #e0e0e0);
+  border: 1px solid var(--border-primary, #444);
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary, #999);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-primary, #4a9eff);
+}
+
+.runtime-state-error {
+  padding: 12px;
+  margin-bottom: 12px;
+  background: rgba(255, 77, 77, 0.1);
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  border-radius: 4px;
+  color: #ff9999;
+  font-size: 13px;
+}
+
+.runtime-state-metadata {
+  display: flex;
+  gap: 16px;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #2a2a2a);
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+}
+
+.runtime-state-metadata span {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+}
+
+.runtime-state-content {
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid var(--border-primary, #444);
+  border-radius: 4px;
+  background: var(--bg-secondary, #2a2a2a);
+}

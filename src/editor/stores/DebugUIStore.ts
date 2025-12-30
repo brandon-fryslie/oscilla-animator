@@ -24,7 +24,7 @@ export type ProbeTarget =
 /**
  * Debug drawer tab IDs
  */
-export type DebugDrawerTab = 'overview' | 'buses' | 'ir' | 'schedule' | 'signal-history';
+export type DebugDrawerTab = 'overview' | 'buses' | 'ir' | 'schedule' | 'signal-history' | 'runtime-state';
 
 /**
  * Cursor position for probe card
