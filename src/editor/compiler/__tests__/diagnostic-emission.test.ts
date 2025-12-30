@@ -78,12 +78,7 @@ describe('Diagnostic Emission', () => {
       // Connect: GridDomain.pos0 -> RenderInstances2D.positions (required)
       store.patchStore.connect(domainBlock, 'pos0', renderBlock, 'positions');
 
-      const result = service.compile();
-
-      // DEBUG: Log errors if compilation failed
-      if (!result.ok) {
-        console.error('Compilation failed with errors:', result.errors);
-      }
+      service.compile();
 
       const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
@@ -207,12 +202,7 @@ describe('Diagnostic Emission', () => {
       store.patchStore.connect(domainBlock, 'domain', renderBlock, 'domain');
       store.patchStore.connect(domainBlock, 'pos0', renderBlock, 'positions');
 
-      const result = service.compile();
-
-      // DEBUG: Log errors if compilation failed
-      if (!result.ok) {
-        console.error('Compilation failed with errors:', result.errors);
-      }
+      service.compile();
 
       const finishedEvents = events.filter((e) => e.type === 'CompileFinished');
       expect(finishedEvents).toHaveLength(1);
