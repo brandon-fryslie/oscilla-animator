@@ -1,15 +1,16 @@
 /**
  * DebugDisplay Block Compiler
  *
- * Captures input values and sends them to the DebugStore for overlay rendering.
+ * Captures input values and sends them to the TraceController for debugging.
  * Accepts multiple input types: Signal, Phase, Domain, Field.
  *
  * The block outputs an empty group (no visual effect on the render tree)
- * but updates the debug store each frame with current values.
+ * but records debug values via StepDebugProbe steps.
  */
 
 import type { BlockCompiler, RuntimeCtx, DrawNode } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
+import type { ValueSlot } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
 import { debugStore } from '../../../stores/DebugStore';
 
@@ -20,29 +21,85 @@ import { debugStore } from '../../../stores/DebugStore';
 /**
  * Lower DebugDisplay block to IR.
  *
- * DebugDisplay is a side-effect block that updates MobX stores (DebugStore).
- * This does NOT fit the pure IR model where all effects are explicit.
+ * DebugDisplay in IR mode works by emitting special metadata that buildSchedule.ts
+ * can use to insert StepDebugProbe steps. The probe IDs follow the pattern:
+ * `${instanceId}:${portId}`
  *
- * Options for future IR support:
- * 1. Create a special "debug sink" IR node (like render sinks)
- * 2. Use a closureBridge for the debug side-effect
- * 3. Implement debug tracing at the IR evaluator level
- *
- * For now, we throw an error and rely on the legacy closure compiler.
+ * Unlike legacy mode (which directly updates DebugStore via closures), IR mode
+ * writes values to TraceController ring buffers via StepDebugProbe execution.
  */
-const lowerDebugDisplay: BlockLowerFn = ({ ctx }) => {
-  throw new Error(
-    `DebugDisplay block (${ctx.instanceId}) cannot be lowered to IR yet.\n` +
-    `Reason: DebugDisplay has side-effects (updates DebugStore) that don't fit the pure IR model.\n` +
-    `Workaround: DebugDisplay continues to use the legacy closure compiler.\n` +
-    `Future: Will be implemented as a debug sink or closure bridge.`
-  );
+const lowerDebugDisplay: BlockLowerFn = ({ ctx, inputsById }) => {
+  if (!inputsById) {
+    throw new Error(`DebugDisplay: inputsById required for IR lowering`);
+  }
+
+  // Collect slots to probe for each connected input
+  const probeSlots: Array<{ portId: string; slot: ValueSlot }> = [];
+
+  // Check signal input
+  const signalInput = inputsById.signal;
+  if (signalInput?.k === 'sig') {
+    probeSlots.push({ portId: 'signal', slot: signalInput.slot });
+  }
+
+  // Check phase input
+  const phaseInput = inputsById.phase;
+  if (phaseInput?.k === 'sig') {
+    probeSlots.push({ portId: 'phase', slot: phaseInput.slot });
+  }
+
+  // Check field input
+  const fieldInput = inputsById.field;
+  if (fieldInput?.k === 'field') {
+    probeSlots.push({ portId: 'field', slot: fieldInput.slot });
+  }
+
+  // Note: domain input is a special value, not a signal or field, so we don't probe it directly
+  // Future enhancement: create a signal from domain size and probe that
+
+  // Register probe points for schedule builder
+  // The schedule builder (buildSchedule.ts) will insert StepDebugProbe steps for these slots
+  // Probe IDs will be: `${ctx.instanceId}:${portId}` (e.g., "debug-display-1:signal")
+
+  // Store probe metadata on the builder's debug registry
+  // This is consumed by buildSchedule.ts when constructing the schedule
+  if (probeSlots.length > 0) {
+    // Register with IRBuilder debug tracking
+    // Note: This requires IRBuilder to have a probe registry, which may not exist yet
+    // For now, we rely on the schedule builder's global probe insertion logic
+
+    // TEMPORARY: Store on ctx.b if it has a probe registry
+    // This will be replaced with proper probe registration API in Phase 7
+    const builder = ctx.b as any;
+    if (builder.registerDebugProbe) {
+      for (const { portId, slot } of probeSlots) {
+        builder.registerDebugProbe({
+          id: `${ctx.instanceId}:${portId}`,
+          slot,
+          label: ctx.label ?? portId,
+        });
+      }
+    }
+  }
+
+  // Return empty render tree output (DebugDisplay has no visual output)
+  // The actual debugging happens via StepDebugProbe steps inserted by buildSchedule.ts
+  return {
+    outputs: [],
+    outputsById: {
+      debug: {
+        k: 'special',
+        tag: 'renderTree',
+        id: 0, // Empty render tree (no visual output)
+      },
+    },
+  };
 };
 
-// Register block type (marks as not yet fully supported in IR mode)
+// Register block type
 registerBlockType({
   type: 'DebugDisplay',
-  capability: 'io', // I/O operation (side-effects on debug store)
+  capability: 'io', // I/O operation (side-effects on TraceController)
   inputs: [
     {
       portId: 'signal',

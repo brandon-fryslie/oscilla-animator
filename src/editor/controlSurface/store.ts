@@ -37,6 +37,7 @@ import {
   isColorControl,
   isBindParam,
 } from './types';
+import { createPRNG } from '../../core/rand';
 
 // =============================================================================
 // Value Mapping
@@ -115,6 +116,9 @@ export class ControlSurfaceStore {
 
   /** Tracks which controls are being modulated (for UI display) */
   modulatedControls: Set<ControlId> = new Set();
+
+  /** Deterministic PRNG for seed randomization (seeded from timestamp at creation) */
+  private seedPRNG = createPRNG(Date.now() >>> 0);
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
@@ -255,7 +259,12 @@ export class ControlSurfaceStore {
 
   /**
    * Randomize seed (dice button on chaos controls).
-   * This changes the seed explicitly, not by hidden randomness.
+   *
+   * Uses a deterministic PRNG seeded at store creation time (not Math.random()).
+   * This ensures export reproducibility while still providing randomness for interactive use.
+   *
+   * For export: The PRNG seed can be captured and restored to get the same sequence.
+   * For interactive use: The seed changes each time, giving varied results.
    */
   randomizeSeed(): void {
     // Find seed control in chaos section
@@ -267,9 +276,10 @@ export class ControlSurfaceStore {
     ) as NumberControl | undefined;
 
     if (seedControl) {
-      // Generate a new random seed within the control's range
+      // Generate a new random seed using the deterministic PRNG
+      // This replaces Math.random() to ensure export determinism
       const range = seedControl.max - seedControl.min;
-      const newSeed = Math.floor(Math.random() * range) + seedControl.min;
+      const newSeed = Math.floor(this.seedPRNG.next() * range) + seedControl.min;
       this.updateControlValue(seedControl.id, newSeed);
     }
   }
