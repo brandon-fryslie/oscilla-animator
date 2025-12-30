@@ -279,6 +279,7 @@ export class RootStore {
       publishers: this.busStore.publishers.map((p) => ({ ...p })),
       listeners: this.busStore.listeners.map((l) => ({ ...l })),
       defaultSources: Array.from(this.defaultSourceStore.sources.values()).map((s) => ({ ...s })),
+      defaultSourceAttachments: Array.from(this.defaultSourceStore.attachmentsByTarget.values()),
       settings: {
         ...this.uiStore.settings,
       },
@@ -308,6 +309,20 @@ export class RootStore {
     this.busStore.listeners = patch.listeners.map((listener) => ({ ...listener }));
 
     this.defaultSourceStore.load(patch.defaultSources);
+
+    // Load default source attachments if present, otherwise rebuild from blocks
+    if (patch.defaultSourceAttachments) {
+      for (const attachment of patch.defaultSourceAttachments) {
+        this.defaultSourceStore.setAttachmentForInput(
+          attachment.target.blockId,
+          attachment.target.slotId,
+          attachment
+        );
+      }
+    } else {
+      // Backward compatibility - rebuild attachments from blocks
+      this.defaultSourceStore.rebuildAttachmentsFromBlocks();
+    }
 
     // Create default buses if none exist in loaded patch
     this.busStore.createDefaultBuses();

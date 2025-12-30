@@ -15,6 +15,7 @@ import type { DefaultSourceState, TypeDesc, UIControlHint, Slot, BlockId, SlotWo
 import type { RootStore } from './RootStore';
 import type { DefaultSourceAttachment } from '../defaultSources/types';
 import { CONST_PROVIDER_MAPPING } from '../defaultSources/constProviders';
+import { getBlockDefinition } from '../blocks/registry';
 
 // =============================================================================
 // DefaultSource Class (Observable)
@@ -120,6 +121,7 @@ export class DefaultSourceStore {
       setAttachmentForInput: action,
       removeAttachmentForInput: action,
       createDefaultAttachmentForSlot: action,
+      rebuildAttachmentsFromBlocks: action,
     });
   }
 
@@ -214,6 +216,65 @@ export class DefaultSourceStore {
     };
 
     return attachment;
+  }
+
+  /**
+   * Rebuild attachments from existing blocks.
+   *
+   * Used for backward compatibility when loading old patches that don't have
+   * defaultSourceAttachments field. Iterates through all blocks and creates
+   * Const provider attachments for any inputs with defaultSource metadata.
+   *
+   * This preserves existing default values from the defaultSources map.
+   */
+  rebuildAttachmentsFromBlocks(): void {
+    if (!this.root) {
+      console.warn('Cannot rebuild attachments: root store not set');
+      return;
+    }
+
+    console.info('Rebuilding default source attachments from blocks (backward compatibility)');
+
+    let attachmentsCreated = 0;
+
+    for (const block of this.root.patchStore.blocks) {
+      const definition = getBlockDefinition(block.type);
+      if (!definition) {
+        continue;
+      }
+
+      // Check each input slot for defaultSource metadata
+      for (const input of definition.inputs) {
+        if (!input.defaultSource) {
+          continue;
+        }
+
+        // Create attachment with appropriate Const provider
+        const attachment = this.createDefaultAttachmentForSlot(block.id, input.id, input.type);
+
+        // Get existing default source value if it exists
+        const existingSource = this.getDefaultSourceForInput(block.id, input.id);
+        if (existingSource) {
+          // Create provider input default with existing value
+          const providerInputDefaultId = attachment.provider.editableInputSourceIds.value;
+          const providerInputDefault = new DefaultSource({
+            id: providerInputDefaultId,
+            type: existingSource.type,
+            value: existingSource.value,
+            uiHint: existingSource.uiHint,
+            rangeHint: existingSource.rangeHint,
+          });
+
+          this.sources.set(providerInputDefaultId, providerInputDefault);
+        }
+
+        // Store attachment
+        this.setAttachmentForInput(block.id, input.id, attachment);
+        attachmentsCreated++;
+      }
+    }
+
+    console.info(`Rebuilt ${attachmentsCreated} default source attachments`);
   }
 
   /**
