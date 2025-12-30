@@ -17,3 +17,5 @@ export { DSConstFieldVec2Block } from './DSConstFieldVec2';
 export { DSConstFieldColorBlock } from './DSConstFieldColor';
 export { DSConstScalarStringBlock } from './DSConstScalarString';
 export { DSConstScalarWaveformBlock } from './DSConstScalarWaveform';
+export { DSConstScalarIntBlock } from './DSConstScalarInt';
+export { DSConstScalarFloatBlock } from './DSConstScalarFloat';

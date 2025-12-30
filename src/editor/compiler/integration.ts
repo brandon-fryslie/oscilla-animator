@@ -370,7 +370,7 @@ export interface CompositeExpansionResult {
 }
 
 // =============================================================================
-// Default Source Provider Injection (Sprint 9)
+// Default Source Provider Injection (Sprint 9-10)
 // =============================================================================
 
 /**
@@ -431,20 +431,74 @@ function _makeProviderListenerId(
  *
  * Returns new CompilerPatch with injected primitives. Does NOT mutate input patch.
  *
- * Sprint 9: Infrastructure only - returns patch unchanged for now.
- * Sprint 10: Actual injection logic will be implemented.
+ * Sprint 10: Inject provider blocks and wires
  */
 export function injectDefaultSourceProviders(
-  _store: RootStore,
+  store: RootStore,
   patch: CompilerPatch
 ): CompilerPatch {
-  // Sprint 9: Infrastructure only - returns patch unchanged
-  // Sprint 10 will implement actual injection using these helpers:
-  void _isInputUndriven;       // Detects undriven inputs
-  void _makeProviderWireId;    // Generates stable wire IDs
-  void _makeProviderListenerId; // Generates stable listener IDs
-  
-  return patch;
+  const defaultSourceStore = store.defaultSourceStore;
+
+  // Track which providers we've already added (for deduplication)
+  const addedProviders = new Set<string>();
+
+  // Collect injected blocks, wires, and default source values
+  const injectedBlocks: BlockInstance[] = [];
+  const injectedWires: CompilerConnection[] = [];
+  const extendedDefaultSourceValues: Record<string, unknown> = { ...patch.defaultSourceValues };
+
+  // Sprint 10: Only blocks and wires - bus listeners will be added in Sprint 11
+  void _makeProviderListenerId; // Suppress unused warning (used in Sprint 11)
+
+  // Iterate through all attachments
+  for (const [_key, attachment] of defaultSourceStore.attachmentsByTarget) {
+    const { target, provider } = attachment;
+
+    // Check if this input is undriven
+    if (!_isInputUndriven(target.blockId, target.slotId, patch)) {
+      // Input is driven by wire or listener - skip injection
+      continue;
+    }
+
+    // 1. Inject provider block (if not already added)
+    if (!addedProviders.has(provider.providerId)) {
+      const providerBlock: BlockInstance = {
+        id: provider.providerId,
+        type: provider.blockType,
+        params: {},
+        position: 0, // Hidden blocks have no position
+      };
+
+      injectedBlocks.push(providerBlock);
+      addedProviders.add(provider.providerId);
+
+      // 3. Extend defaultSourceValues with provider internal defaults
+      for (const [inputId, sourceId] of Object.entries(provider.editableInputSourceIds)) {
+        const defaultSource = defaultSourceStore.getDefaultSource(sourceId);
+        if (defaultSource) {
+          const key = `${provider.providerId}:${inputId}`;
+          extendedDefaultSourceValues[key] = defaultSource.value;
+        }
+      }
+    }
+
+    // 2. Inject wire from provider output to target input
+    const wire: CompilerConnection = {
+      id: _makeProviderWireId(provider.providerId, target.blockId, target.slotId),
+      from: { block: provider.providerId, port: provider.outputPortId },
+      to: { block: target.blockId, port: target.slotId },
+    };
+
+    injectedWires.push(wire);
+  }
+
+  // Return new patch with injected primitives (pure function - no mutation)
+  return {
+    ...patch,
+    blocks: [...patch.blocks, ...injectedBlocks],
+    connections: [...patch.connections, ...injectedWires],
+    defaultSourceValues: extendedDefaultSourceValues,
+  };
 }
 
 
@@ -929,6 +983,10 @@ export function createCompilerService(store: RootStore): CompilerService {
         }
 
         patch = rewrittenPatch;
+
+        // Step 3: Inject default source providers (Sprint 10)
+        patch = injectDefaultSourceProviders(store, patch);
+
         store.logStore.debug(
           'compiler',
           `Patch has ${patch.blocks.length} blocks and ${patch.connections.length} connections`

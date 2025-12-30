@@ -42,10 +42,13 @@ export type ConstProviderSpec = Readonly<{
  * - Field<color> → DSConstFieldColor
  *
  * Scalar types:
+ * - Scalar:int → DSConstScalarInt
+ * - Scalar:float → DSConstScalarFloat
  * - Scalar:string → DSConstScalarString
  * - Scalar:waveform → DSConstScalarWaveform
  */
 export const DEFAULT_CONST_PROVIDER_BLOCKS: readonly ConstProviderSpec[] = [
+  // Signal providers
   {
     blockType: 'DSConstSignalFloat',
     label: 'Constant (Signal<float>)',
@@ -70,6 +73,7 @@ export const DEFAULT_CONST_PROVIDER_BLOCKS: readonly ConstProviderSpec[] = [
     outputPortId: 'out',
     editableInputs: ['value'],
   },
+  // Field providers
   {
     blockType: 'DSConstFieldFloat',
     label: 'Constant (Field<float>)',
@@ -85,6 +89,19 @@ export const DEFAULT_CONST_PROVIDER_BLOCKS: readonly ConstProviderSpec[] = [
   {
     blockType: 'DSConstFieldColor',
     label: 'Constant (Field<color>)',
+    outputPortId: 'out',
+    editableInputs: ['value'],
+  },
+  // Scalar providers
+  {
+    blockType: 'DSConstScalarInt',
+    label: 'Constant (Scalar:int)',
+    outputPortId: 'out',
+    editableInputs: ['value'],
+  },
+  {
+    blockType: 'DSConstScalarFloat',
+    label: 'Constant (Scalar:float)',
     outputPortId: 'out',
     editableInputs: ['value'],
   },
@@ -111,13 +128,23 @@ export const DEFAULT_CONST_PROVIDER_BLOCKS: readonly ConstProviderSpec[] = [
 export const CONST_PROVIDER_MAPPING: Readonly<
   Record<string, string>
 > = Object.freeze({
+  // Signal types
   'Signal<float>': 'DSConstSignalFloat',
   'Signal<int>': 'DSConstSignalInt',
   'Signal<color>': 'DSConstSignalColor',
   'Signal<vec2>': 'DSConstSignalVec2',
+  'Signal<string>': 'DSConstSignalString',
+  'Signal<Unit>': 'DSConstSignalUnit',
+  'Signal<phase>': 'DSConstSignalPhase',
+
+  // Field types
   'Field<float>': 'DSConstFieldFloat',
   'Field<vec2>': 'DSConstFieldVec2',
   'Field<color>': 'DSConstFieldColor',
+
+  // Scalar types
+  'Scalar:int': 'DSConstScalarInt',
+  'Scalar:float': 'DSConstScalarFloat',
   'Scalar:string': 'DSConstScalarString',
   'Scalar:waveform': 'DSConstScalarWaveform',
 });

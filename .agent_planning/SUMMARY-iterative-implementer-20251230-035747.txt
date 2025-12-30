@@ -1,0 +1,47 @@
+Agent: iterative-implementer | 20251230-035747
+Mode: manual
+Completed: Sprint 8 - Patch Persistence | Files: 2 | Commits: 1
+Tests: All passing
+Cache invalidated: None (no cache exists yet for this feature)
+Status: complete
+
+## Sprint 8: Patch Persistence - COMPLETE
+
+### Implemented:
+
+1. **toJSON() Serialization** (RootStore.ts)
+   - Added defaultSourceAttachments field to serialized patch
+   - Converts attachmentsByTarget Map to array
+   - Preserves all existing fields
+
+2. **loadPatch() Deserialization** (RootStore.ts)
+   - Loads defaultSourceAttachments if present
+   - Populates DefaultSourceStore.attachmentsByTarget map
+   - Falls back to rebuildAttachmentsFromBlocks() if missing (backward compat)
+
+3. **rebuildAttachmentsFromBlocks()** (DefaultSourceStore.ts)
+   - Iterates all blocks in patch
+   - For each input with slot.defaultSource metadata:
+     - Creates DefaultSourceAttachment with appropriate Const provider
+     - Preserves existing default values from sources map
+     - Creates provider input defaults
+   - Logs info messages about rebuild process
+   - Returns count of attachments created
+
+### Files Modified:
+- /Users/bmf/code/oscilla-animator_codex/.worktrees/redflags-schedule-runtime/src/editor/stores/RootStore.ts (+15 lines)
+- /Users/bmf/code/oscilla-animator_codex/.worktrees/redflags-schedule-runtime/src/editor/stores/DefaultSourceStore.ts (+61 lines)
+
+### Commits:
+- e7ca213: feat(default-sources): Implement patch persistence for default source attachments (Sprint 8)
+
+### Verification:
+- just typecheck: PASS
+- just test: PASS (all tests passing)
+- No regressions detected
+
+### Next Sprint:
+Sprint 9: Compiler Injection Infrastructure
+- Create injectDefaultSourceProviders() function
+- Implement undriven input detection
+- Generate stable IDs for injected primitives

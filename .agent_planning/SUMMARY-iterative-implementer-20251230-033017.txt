@@ -1,0 +1,75 @@
+Agent: iterative-implementer | 2025-12-30-033017
+Mode: manual
+Completed: Sprint 7 - Store Refactoring for Attachments | Files: 1 | Commits: 1
+Tests: N/A (no TDD tests exist for this feature - manual verification required in Sprint 8)
+Cache invalidated: None (no existing cache entries for default sources)
+Status: complete
+
+## Sprint 7 Summary
+
+Implemented attachment storage in DefaultSourceStore to manage hidden provider blocks.
+
+### Completed Work
+
+1. **Attachment Storage**: Added `attachmentsByTarget: Map<string, DefaultSourceAttachment>`
+   - MobX observable.shallow for reactivity
+   - Key format: `${blockId}:${slotId}` (deterministic)
+
+2. **Attachment Management Methods**:
+   - `getAttachmentForInput(blockId, slotId)` - retrieve attachment
+   - `setAttachmentForInput(blockId, slotId, attachment)` - store/update attachment
+   - `removeAttachmentForInput(blockId, slotId)` - delete attachment
+   - `targetKey(blockId, slotId)` - private helper for key generation
+   - All marked as MobX actions
+
+3. **Attachment Factory**:
+   - `createDefaultAttachmentForSlot(blockId, slotId, slotType)` - creates attachment
+   - Generates deterministic provider ID: `dsprov:${blockId}:${slotId}`
+   - Selects Const provider via CONST_PROVIDER_MAPPING based on slot type
+   - Creates editableInputSourceIds map for provider's 'value' input
+   - Provider input default ID: `ds:prov:${providerId}:value`
+
+4. **Refactored createDefaultSourcesForBlock()**:
+   - Now creates THREE things per input with defaultSource metadata:
+     1. DefaultSourceState for input (id: `ds:input:${blockId}:${slotId}`)
+     2. DefaultSourceAttachment with Const provider
+     3. DefaultSourceState for provider's 'value' input (id: `ds:prov:${providerId}:value`)
+   - All use deterministic IDs (no random generation)
+
+5. **Updated cleanup**:
+   - `removeDefaultSourcesForBlock()` now removes attachments + provider input defaults
+   - `clear()` now clears attachmentsByTarget
+
+### Files Modified
+
+- src/editor/stores/DefaultSourceStore.ts
+  - Added imports for DefaultSourceAttachment and CONST_PROVIDER_MAPPING
+  - Added attachmentsByTarget field (+96 lines new code)
+  - Updated constructor to observe new methods
+  - Updated cleanup methods
+
+### Verification
+
+- `just typecheck`: PASS (no TypeScript errors)
+- `just test`: PASS (all 1067 tests passing)
+- No existing tests for default source attachments (Sprint 8+ will add manual verification)
+
+### Acceptance Criteria (from DOD)
+
+- [x] `attachmentsByTarget: Map<string, DefaultSourceAttachment>` exists
+- [x] Helper `targetKey(blockId, slotId)` exists
+- [x] Methods: getAttachmentForInput, setAttachmentForInput, removeAttachmentForInput
+- [x] All methods are MobX actions
+- [x] Map is MobX observable
+- [x] `createDefaultAttachmentForSlot()` creates proper attachment
+- [x] `createDefaultSourcesForBlock()` creates both DefaultSourceState AND attachment
+
+All Sprint 7 acceptance criteria met.
+
+### Next Steps
+
+Sprint 8: Patch Persistence
+- Add defaultSourceAttachments field to Patch serialization
+- Update RootStore.toJSON() to save attachments
+- Update RootStore.loadPatch() to load attachments
+- Implement backward compatibility rebuild for old patches

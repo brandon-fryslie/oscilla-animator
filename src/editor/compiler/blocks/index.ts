@@ -77,6 +77,8 @@ import {
   DSConstFieldColorBlock,
   DSConstScalarStringBlock,
   DSConstScalarWaveformBlock,
+  DSConstScalarIntBlock,
+  DSConstScalarFloatBlock,
 } from './defaultSources';
 
 // =============================================================================
@@ -149,6 +151,8 @@ export const DEFAULT_BLOCK_REGISTRY: BlockRegistry = {
   DSConstFieldFloat: DSConstFieldFloatBlock,
   DSConstFieldVec2: DSConstFieldVec2Block,
   DSConstFieldColor: DSConstFieldColorBlock,
+  DSConstScalarInt: DSConstScalarIntBlock,
+  DSConstScalarFloat: DSConstScalarFloatBlock,
   DSConstScalarString: DSConstScalarStringBlock,
   DSConstScalarWaveform: DSConstScalarWaveformBlock,
 };
