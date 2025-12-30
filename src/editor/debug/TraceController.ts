@@ -9,12 +9,14 @@
  *
  * Mode persists across hot reloads via localStorage.
  *
- * Also manages ring buffers for value and span storage.
+ * Also manages ring buffers for value and span storage, plus signal history for visualization.
  */
 
 import { ValueRing, DEFAULT_VALUE_CAPACITY } from './ValueRing';
 import { SpanRing, DEFAULT_SPAN_CAPACITY } from './SpanRing';
+import { SignalHistoryBuffer, DEFAULT_HISTORY_CAPACITY } from './SignalHistoryBuffer';
 import type { ValueRecord32 } from './ValueRecord';
+import { ValueTag, decodeScalar } from './ValueRecord';
 import type { SpanData } from './SpanTypes';
 
 export type TraceMode = 'off' | 'timing' | 'full';
@@ -54,6 +56,12 @@ export class TraceController {
 
   /** Mapping from probe ID to most recent value ring index */
   private probeValueIndex: Map<string, number> = new Map();
+
+  /** Signal history buffers per probe ID (for waveform visualization) */
+  private signalHistory: Map<string, SignalHistoryBuffer> = new Map();
+
+  /** Track which probes should record history */
+  private historyEnabled: Set<string> = new Set();
 
   /** Last time we emitted UI update events (for throttling) */
   private lastUIEmitMs = 0;
@@ -114,9 +122,10 @@ export class TraceController {
    *
    * @param value - Value record to write
    * @param probeId - Optional probe ID to associate with this value
+   * @param timestamp - Optional timestamp in seconds (for signal history)
    * @returns Index where value was written, or -1 if skipped
    */
-  writeValue(value: ValueRecord32, probeId?: string): number {
+  writeValue(value: ValueRecord32, probeId?: string, timestamp?: number): number {
     if (this.mode !== 'full') {
       return -1;
     }
@@ -125,6 +134,11 @@ export class TraceController {
     // Update probe index mapping if probe ID provided
     if (probeId !== undefined) {
       this.probeValueIndex.set(probeId, idx);
+
+      // Record to signal history if enabled for this probe
+      if (this.historyEnabled.has(probeId) && timestamp !== undefined) {
+        this.recordToHistory(probeId, timestamp, value);
+      }
     }
 
     return idx;
@@ -190,6 +204,87 @@ export class TraceController {
     this.valueRing.clear();
     this.spanRing.clear();
     this.probeValueIndex.clear();
+    this.signalHistory.clear();
+    this.historyEnabled.clear();
+  }
+
+  // ===========================================================================
+  // Signal History Operations
+  // ===========================================================================
+
+  /**
+   * Enable signal history recording for a specific probe.
+   *
+   * @param probeId - Probe identifier
+   * @param capacity - History buffer capacity (default: 1000 samples)
+   */
+  enableHistory(probeId: string, capacity: number = DEFAULT_HISTORY_CAPACITY): void {
+    if (!this.signalHistory.has(probeId)) {
+      this.signalHistory.set(probeId, new SignalHistoryBuffer(capacity));
+    }
+    this.historyEnabled.add(probeId);
+  }
+
+  /**
+   * Disable signal history recording for a specific probe.
+   *
+   * @param probeId - Probe identifier
+   */
+  disableHistory(probeId: string): void {
+    this.historyEnabled.delete(probeId);
+  }
+
+  /**
+   * Check if history recording is enabled for a probe.
+   *
+   * @param probeId - Probe identifier
+   * @returns True if history enabled
+   */
+  isHistoryEnabled(probeId: string): boolean {
+    return this.historyEnabled.has(probeId);
+  }
+
+  /**
+   * Get the signal history buffer for a probe.
+   *
+   * @param probeId - Probe identifier
+   * @returns SignalHistoryBuffer if available, undefined otherwise
+   */
+  getHistory(probeId: string): SignalHistoryBuffer | undefined {
+    return this.signalHistory.get(probeId);
+  }
+
+  /**
+   * Get all probes that have history buffers.
+   *
+   * @returns Array of probe IDs with history
+   */
+  getProbesWithHistory(): string[] {
+    return Array.from(this.signalHistory.keys());
+  }
+
+  /**
+   * Record a value to signal history (internal).
+   *
+   * @param probeId - Probe identifier
+   * @param timestamp - Time in seconds
+   * @param value - Value record to extract scalar from
+   */
+  private recordToHistory(probeId: string, timestamp: number, value: ValueRecord32): void {
+    let buffer = this.signalHistory.get(probeId);
+    if (!buffer) {
+      buffer = new SignalHistoryBuffer();
+      this.signalHistory.set(probeId, buffer);
+    }
+
+    // Extract scalar value from ValueRecord32
+    // Currently only supports scalar numbers (ValueTag.Number)
+    if (value.tag === ValueTag.Number) {
+      const scalarValue = decodeScalar(value);
+      if (scalarValue !== null) {
+        buffer.addSample(timestamp, scalarValue);
+      }
+    }
   }
 
   // ===========================================================================

@@ -1,0 +1,69 @@
+/**
+ * SignalGraph Component Styles
+ */
+
+.signal-graph-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signal-graph-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  padding-left: 4px;
+}
+
+.signal-graph-canvas-wrapper {
+  position: relative;
+  display: inline-block;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+
+.signal-graph-canvas-wrapper canvas {
+  display: block;
+}
+
+/* Crosshair lines */
+.signal-graph-crosshair-v,
+.signal-graph-crosshair-h {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.signal-graph-crosshair-v {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-0.5px);
+}
+
+.signal-graph-crosshair-h {
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+/* Tooltip */
+.signal-graph-tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.85);
+  color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: monospace;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 100;
+  line-height: 1.4;
+}
+
+.signal-graph-tooltip div {
+  margin: 0;
+}

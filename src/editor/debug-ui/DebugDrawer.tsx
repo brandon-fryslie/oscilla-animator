@@ -7,6 +7,7 @@
  * - Buses tab: Live bus values with meters
  * - IR tab: Compiled IR structure visualization
  * - Schedule tab: Execution schedule visualization
+ * - Signal History tab: Waveform visualization for probed signals
  */
 
 import { observer } from 'mobx-react-lite';
@@ -15,6 +16,7 @@ import { OverviewTab } from './OverviewTab';
 import { BusesTab } from './BusesTab';
 import { IRTab } from './IRTab';
 import { ScheduleTab } from './ScheduleTab';
+import { SignalHistoryTab } from './SignalHistoryTab';
 import './DebugDrawer.css';
 
 /**
@@ -60,6 +62,13 @@ export const DebugDrawer = observer(function DebugDrawer() {
           >
             Schedule
           </button>
+          <button
+            className={`debug-drawer-tab ${activeTab === 'signal-history' ? 'active' : ''}`}
+            onClick={() => debugUIStore.setActiveTab('signal-history')}
+            type="button"
+          >
+            Signal History
+          </button>
         </div>
 
         <button
@@ -77,6 +86,7 @@ export const DebugDrawer = observer(function DebugDrawer() {
         {activeTab === 'buses' && <BusesTab />}
         {activeTab === 'ir' && <IRTab />}
         {activeTab === 'schedule' && <ScheduleTab />}
+        {activeTab === 'signal-history' && <SignalHistoryTab />}
       </div>
     </div>
   );
