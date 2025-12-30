@@ -5,7 +5,7 @@ import { useStore } from './stores';
 import { ALL_SUBCATEGORIES } from './types';
 import type { BlockSubcategory, BlockForm } from './types';
 import type { BlockDefinition } from './blocks/types';
-import { getBlockDefinitions, getBlockTags, getBlockForm, isBlockHidden } from './blocks';
+import { getBlockDefinitions, getBlockTags, getBlockForm } from './blocks';, isBlockHidden
 import './BlockLibrary.css';
 
 import { listCompositeDefinitions } from './composites';
@@ -46,10 +46,10 @@ function sortBlocksForDisplay(a: BlockDefinition, b: BlockDefinition): number {
 function groupBlocksByForm(blocks: readonly BlockDefinition[]): FormGroup[] {
   const formMap = new Map<BlockForm, Map<BlockSubcategory, BlockDefinition[]>>();
 
+  for (const block of blocks) {
   // Filter out hidden blocks before grouping
   const visibleBlocks = blocks.filter(def => !isBlockHidden(def));
 
-  for (const block of visibleBlocks) {
     const form = getBlockForm(block);
     let subcategoryMap = formMap.get(form);
     if (!subcategoryMap) {
@@ -156,8 +156,6 @@ function DraggableBlockItem({ definition, isSelected, onSelect, onDoubleClickAdd
 
 /**
  * BlockLibrary displays available blocks by category with search.
- *
- * Hidden blocks (tagged with `hidden: true`) are filtered out and do not appear.
  */
 export const BlockLibrary = observer(() => {
   const store = useStore();
@@ -183,14 +181,11 @@ export const BlockLibrary = observer(() => {
     store.patchStore.addBlock(definition.type, definition.defaultParams);
   };
 
-  // Filter by search term (also exclude hidden blocks from search)
+  // Filter by search term
   const searchFilteredBlocks = useMemo(() => {
     if (!search.trim()) return null;
     const term = search.toLowerCase();
     return blockDefs.filter((b) => {
-      // Exclude hidden blocks from search results
-      if (isBlockHidden(b)) return false;
-
       const labelsMatch =
         b.label.toLowerCase().includes(term) ||
         b.description.toLowerCase().includes(term) ||

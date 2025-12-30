@@ -57,6 +57,27 @@ export function getBlockTags(definition: BlockDefinition): BlockTags {
   return tags;
 }
 
+/**
+ * Check if a block should be hidden from user-facing UI.
+ *
+ * Hidden blocks (e.g., default source providers) are tagged with `hidden: true`.
+ * They should not appear in:
+ * - Block palette (BlockLibrary)
+ * - Context menu replacements
+ * - Search results
+ * - Any user-facing block lists
+ *
+ * They may intentionally appear in:
+ * - Debug/diagnostic UIs
+ * - Internal system listings
+ *
+ * @param definition - Block definition to check
+ * @returns true if block should be hidden from UI
+ */
+export function isBlockHidden(definition: BlockDefinition): boolean {
+  return getBlockTags(definition).hidden === true;
+}
+
 export function getBlockDefinitions(includeComposites: boolean = false): readonly BlockDefinition[] {
   const coreBlocks = ALL_INDIVIDUAL_BLOCKS.map(normalizeDefinition);
 

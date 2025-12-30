@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
-import { getBlockDefinitions } from './blocks/registry';
+import { getBlockDefinitions, isBlockHidden } from './blocks/registry';
 import { findCompatibleReplacements } from './replaceUtils';
 import { SaveCompositeDialog } from './components/SaveCompositeDialog';
 import { registerComposite as registerCompositeDefinition } from './composites';
@@ -21,6 +21,8 @@ import './BlockContextMenu.css';
  * BlockContextMenu renders a right-click menu for block operations.
  * Shows "Replace with..." submenu with compatible block types.
  * Shows "Save as Composite" option when multiple blocks are selected.
+ *
+ * Hidden blocks (tagged with `hidden: true`) are filtered from replacement options.
  */
 export const BlockContextMenu = observer(() => {
   const store = useStore();
@@ -81,12 +83,13 @@ export const BlockContextMenu = observer(() => {
     return null;
   }
 
-  // Find compatible replacement blocks
+  // Find compatible replacement blocks (excluding hidden blocks)
   const allDefinitions = getBlockDefinitions(true);
+  const visibleDefinitions = allDefinitions.filter(def => !isBlockHidden(def));
   const compatibleBlocks = findCompatibleReplacements(
     block,
     store.patchStore.connections,
-    allDefinitions
+    visibleDefinitions
   );
 
   // Group by subcategory for better organization

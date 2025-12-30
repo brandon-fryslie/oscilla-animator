@@ -1,58 +1,36 @@
-Agent: iterative-implementer | 2025-12-30-031816
-Mode: manual
-Completed: Sprint 4 - First Const Provider Block (DSConstSignalFloat) | Files: 6 | Commits: 1
-Tests: All passing
-Cache invalidated: None (new infrastructure, no stale cache entries)
+Agent: iterative-implementer | 2025-12-30T03:18:16Z
+Mode: manual (no tests for this feature)
+Completed: Sprint 5 - Complete Const Provider Family | Files: 11 | Commits: 1
 Status: complete
 
-=== Sprint 4 Implementation Complete ===
+=== Sprint 5 Summary ===
 
-**Created Files:**
-1. src/editor/blocks/default-source-providers.ts
-   - DSConstSignalFloat editor block definition
-   - Tagged as hidden (never shown in palette)
-   - Tagged with role: 'defaultSourceProvider'
-   - Input: 'value' (Signal<float>) with defaultSource metadata
-   - Output: 'out' (Signal<float>)
+Implemented 8 additional const provider blocks following the DSConstSignalFloat pattern:
+1. DSConstSignalInt - Signal<int> constant provider
+2. DSConstSignalColor - Signal<color> constant provider
+3. DSConstSignalPoint - Signal<Point> constant provider (for vec2 types)
+4. DSConstFieldFloat - Field<float> constant provider
+5. DSConstFieldVec2 - Field<vec2> constant provider
+6. DSConstFieldColor - Field<color> constant provider
+7. DSConstScalarString - Scalar:string constant provider
+8. DSConstScalarWaveform - Scalar:waveform constant provider
 
-2. src/editor/compiler/blocks/defaultSources/DSConstSignalFloat.ts
-   - Trivial pass-through compiler: out = value
-   - Implements both IR lowering and legacy compiler
-   - Properly registered with registerBlockType
+All 9 DSConst* blocks (including the reference DSConstSignalFloat from Sprint 4) are now:
+- Defined in src/editor/blocks/default-source-providers.ts
+- Compiled in src/editor/compiler/blocks/defaultSources/
+- Registered in block registry and compiler registry
+- Tagged as hidden (never appear in palette)
+- Implement trivial pass-through: out = value
 
-3. src/editor/compiler/blocks/defaultSources/index.ts
-   - Index file for default source provider compilers
+Key Implementation Details:
+- Signal and Field blocks use sig/field IR references (runtime values)
+- Scalar blocks use scalarConst IR references (compile-time constants)
+- Used Signal:vec2 for legacy compiler (not Signal:Point)
+- UI hints: xy for vec2, select for waveform, color/text/slider for others
 
-**Modified Files:**
-1. src/editor/blocks/registry.ts
-   - Imported DefaultSourceProviders module
-   - Added to ALL_INDIVIDUAL_BLOCKS array
-   - Block now appears in BLOCK_DEFS_BY_TYPE map
+Validation:
+- TypeScript compilation: PASS
+- Test suite: ALL PASS (73 test suites)
+- No eval cache invalidation needed (new files only)
 
-2. src/editor/compiler/blocks/index.ts
-   - Imported DSConstSignalFloatBlock
-   - Added to DEFAULT_BLOCK_REGISTRY
-   - Re-exported defaultSources module
-
-**Verification:**
-- TypeScript: ✓ (just typecheck passes)
-- Tests: ✓ (just test - all 1000+ tests pass)
-- Block Registry: ✓ (appears in IR-Ready blocks list)
-- Hidden Tag: ✓ (getBlockTags recognizes hidden: true)
-
-**All Sprint 4 Acceptance Criteria Met:**
-✓ File src/editor/blocks/default-source-providers.ts created
-✓ DSConstSignalFloat block definition exported
-✓ Block has input slot: value (Signal<float>, with defaultSource metadata)
-✓ Block has output slot: out (Signal<float>)
-✓ Block tagged: tags: { role: 'defaultSourceProvider', hidden: true }
-✓ Block has friendly label: "Constant (Signal<float>)"
-✓ Directory src/editor/compiler/blocks/defaultSources/ created
-✓ Compiler file DSConstSignalFloat.ts created
-✓ Compiler implements pass-through: outputs.out = inputs.value
-✓ Registered in compiler block index
-✓ Block appears in BLOCK_DEFS_BY_TYPE map
-
-**Commit:** ebd04e6 - feat(default-sources): Add DSConstSignalFloat provider block (Sprint 4)
-
-**Next Steps:** Sprint 5 - Complete Const Provider Family (8 remaining blocks)
+Next: Sprint 6 - Hide Provider Blocks from UI (filtering)
