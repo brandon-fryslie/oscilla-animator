@@ -390,18 +390,49 @@ export function renderInstances2DPass(
         }
 
         // Prepare fill and stroke styles
-        let fillStyle: string | null = null;
+        let fillStyle: string | CanvasGradient | null = null;
         let strokeStyle: string | null = null;
 
-        // Fill color
-        if (!colorRGBA.isScalar || colorRGBA.value !== 0) {
-          if (colorRGBA.isScalar) {
-            fillStyle = unpackColorU32(colorRGBA.value);
-          } else if (colorRGBA.buffer instanceof Uint8Array) {
-            fillStyle = unpackColorU8(colorRGBA.buffer, i * 4);
+        // Check if gradient shading is enabled
+        if (pass.material.kind === "shape2d" && pass.material.shading === "gradient" && pass.material.gradient) {
+          // Create gradient based on type
+          const gradSpec = pass.material.gradient;
+          
+          if (gradSpec.type === "linear") {
+            // Linear gradient
+            const start = gradSpec.coords?.start || [-0.5, 0];
+            const end = gradSpec.coords?.end as [number, number] || [0.5, 0];
+            const gradient = ctx.createLinearGradient(start[0], start[1], end[0], end[1]);
+            
+            // Add color stops
+            for (const stop of gradSpec.stops) {
+              gradient.addColorStop(stop.offset, unpackColorU32(stop.colorRGBA));
+            }
+            
+            fillStyle = gradient;
+          } else if (gradSpec.type === "radial") {
+            // Radial gradient
+            const center = gradSpec.coords?.start || [0, 0];
+            const radius = typeof gradSpec.coords?.end === "number" ? gradSpec.coords.end : 0.5;
+            const gradient = ctx.createRadialGradient(center[0], center[1], 0, center[0], center[1], radius);
+            
+            // Add color stops
+            for (const stop of gradSpec.stops) {
+              gradient.addColorStop(stop.offset, unpackColorU32(stop.colorRGBA));
+            }
+            
+            fillStyle = gradient;
+          }
+        } else {
+          // Flat shading - use solid color
+          if (!colorRGBA.isScalar || colorRGBA.value !== 0) {
+            if (colorRGBA.isScalar) {
+              fillStyle = unpackColorU32(colorRGBA.value);
+            } else if (colorRGBA.buffer instanceof Uint8Array) {
+              fillStyle = unpackColorU8(colorRGBA.buffer, i * 4);
+            }
           }
         }
-
         // Stroke color and width
         if (!strokeColorRGBA.isScalar || strokeColorRGBA.value !== 0) {
           if (strokeColorRGBA.isScalar) {
