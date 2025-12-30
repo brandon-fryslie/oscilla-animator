@@ -1,0 +1,196 @@
+/**
+ * ExportDialog Styles
+ */
+
+.export-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.export-dialog-warning {
+  padding: 12px;
+  background: rgba(255, 165, 0, 0.1);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-radius: 6px;
+  color: #ffb84d;
+  font-size: 14px;
+}
+
+.export-dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.export-dialog-section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.export-dialog-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.export-dialog-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.export-dialog-field label {
+  font-size: 13px;
+  color: #999;
+  font-weight: 500;
+}
+
+.export-dialog-field input[type="number"],
+.export-dialog-field select {
+  padding: 8px 10px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e8e8e8;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.export-dialog-field input[type="number"]:focus,
+.export-dialog-field select:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.export-dialog-field input[type="number"]:disabled,
+.export-dialog-field select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.export-dialog-slider {
+  width: 100%;
+  height: 6px;
+  background: #2a2a2a;
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.export-dialog-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4a9eff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.export-dialog-slider::-webkit-slider-thumb:hover {
+  background: #5fa8ff;
+}
+
+.export-dialog-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4a9eff;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s ease;
+}
+
+.export-dialog-slider::-moz-range-thumb:hover {
+  background: #5fa8ff;
+}
+
+.export-dialog-slider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.export-dialog-info {
+  font-size: 13px;
+  color: #777;
+  font-style: italic;
+}
+
+.export-dialog-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+.export-dialog-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a9eff, #5fa8ff);
+  transition: width 0.2s ease;
+  border-radius: 3px;
+}
+
+.export-dialog-progress-text {
+  font-size: 13px;
+  color: #999;
+  text-align: center;
+}
+
+.export-dialog-error {
+  padding: 12px;
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 6px;
+  color: #ff6b6b;
+  font-size: 14px;
+}
+
+.export-dialog-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.export-dialog-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.export-dialog-button--secondary {
+  background: #222;
+  border-color: #333;
+  color: #aaa;
+}
+
+.export-dialog-button--secondary:hover:not(:disabled) {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #ccc;
+}
+
+.export-dialog-button--primary {
+  background: #4a9eff;
+  color: #fff;
+}
+
+.export-dialog-button--primary:hover:not(:disabled) {
+  background: #5fa8ff;
+}
+
+.export-dialog-button--primary:disabled {
+  background: #2a4a6a;
+}

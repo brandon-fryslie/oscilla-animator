@@ -643,6 +643,7 @@ export const Editor = observer(() => {
           showHelpNudge={showHelpNudge}
           onDesignerView={applyDesignerView}
           onPerformanceView={applyPerformanceView}
+          compilerService={compilerService}
         />
 
         <div className="editor-main" style={{ gridTemplateColumns }}>

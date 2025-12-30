@@ -12,6 +12,8 @@ import { useStore } from './stores';
 import { getAllMacroKeys, getMacroDisplayName } from './macros';
 import { isDefined } from './types/helpers';
 import type { Patch } from './types';
+import type { CompilerService } from './compiler';
+import { ExportDialog } from './components/ExportDialog';
 import './SettingsToolbar.css';
 
 const STARTUP_MACRO_KEY = 'oscilla-startup-macro';
@@ -23,6 +25,7 @@ interface SettingsToolbarProps {
   showHelpNudge?: boolean;
   onDesignerView?: () => void;
   onPerformanceView?: () => void;
+  compilerService?: CompilerService;
 }
 
 /**
@@ -320,9 +323,18 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(n
 /**
  * Settings Toolbar component.
  */
-export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModalOpen, showHelpNudge, onDesignerView, onPerformanceView }: SettingsToolbarProps): React.ReactElement => {
+export const SettingsToolbar = observer(({
+  onShowHelp,
+  onOpenPaths,
+  isPathsModalOpen,
+  showHelpNudge,
+  onDesignerView,
+  onPerformanceView,
+  compilerService
+}: SettingsToolbarProps): React.ReactElement => {
   const store = useStore();
   const [error, setError] = useState<string | null>(null);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /**
@@ -351,6 +363,13 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
    */
   const handleLoadPatch = useCallback(() => {
     fileInputRef.current?.click();
+  }, []);
+
+  /**
+   * Open export dialog.
+   */
+  const handleOpenExport = useCallback(() => {
+    setIsExportDialogOpen(true);
   }, []);
 
   /**
@@ -447,6 +466,10 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
 
   const shortcutKey = IS_MAC ? 'Cmd' : 'Ctrl';
 
+  // Get compiled program and viewport from compiler service
+  const compiledProgram = compilerService?.getLatestResult()?.programIR ?? null;
+  const viewport = compilerService?.getViewport() ?? { width: 800, height: 600 };
+
   return (
     <div className="settings-toolbar">
       {/* Error toast */}
@@ -461,6 +484,15 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
         accept=".json,.oscilla.json"
         style={{ display: 'none' }}
         onChange={handleFileChange}
+      />
+
+      {/* Export dialog */}
+      <ExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        program={compiledProgram}
+        defaultWidth={viewport.width}
+        defaultHeight={viewport.height}
       />
 
       <div className="toolbar-left">
@@ -590,8 +622,8 @@ export const SettingsToolbar = observer(({ onShowHelp, onOpenPaths, isPathsModal
         </button>
         <button
           className="toolbar-action-btn"
-          disabled
-          title="Export animation (Phase 6)"
+          onClick={handleOpenExport}
+          title="Export image sequence"
         >
           Export
         </button>
