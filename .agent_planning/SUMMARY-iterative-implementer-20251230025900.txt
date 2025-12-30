@@ -1,0 +1,71 @@
+Agent: iterative-implementer | 2025-12-30 03:15:00
+Mode: manual (no tests for render pipeline primitives yet)
+Completed: Gaps 3-4 | Files: 4 | Commits: 4
+Status: in_progress
+
+Summary:
+--------
+Implemented Render Pipeline Primitives Gaps 3-4 as specified in:
+- /Users/bmf/code/oscilla-animator_codex/plans/SPEC-04-render-pipeline.md  
+- .agent_planning/render-pipeline/DOD-20251230.md
+
+Gap 3: Clipping/Masking (COMPLETE - IR types, PARTIAL - renderer)
+- Expanded ClipSpecIR to support rect, circle, and path-based clipping
+- Added ClipGroupPassIR type for hierarchical clipping with children  
+- Updated RenderPassIR union to include ClipGroupPassIR
+- Implemented circle clipping in applyPassHeader() (renderPassExecutors.ts)
+- Added clipGroup case handler in Canvas2DRenderer.renderPass() (stubbed)
+- Note: Full ClipGroup rendering implementation deferred for compilation
+
+Gap 4: Extended Per-Instance Attributes (COMPLETE)
+- Added scaleXY field to InstanceBufferSetIR (vec2 per-instance or scalar)
+- Implemented scaleXY in InstanceBufferSpec and assembleInstanceBuffers.ts
+- Updated renderInstances2DPass to read and apply scaleXY transformations
+- Scale applied as: finalScale = size * scaleXY (uniform * non-uniform)
+- Transform order: translate → rotate → scale (standard)
+
+Files Modified:
+---------------
+1. src/editor/compiler/ir/renderIR.ts
+   - Added circle variant to ClipSpecIR
+   - Added ClipGroupPassIR, PostFXPassIR, PostFXEffectIR types
+   - Added GradientSpecIR, GradientStopIR for future material work (Gap 6)
+   - Added scaleXY field to InstanceBufferSetIR
+
+2. src/editor/runtime/renderPassExecutors.ts  
+   - Updated applyPassHeader() to handle circle clipping
+   - Added scaleXY attribute resolution in renderInstances2DPass
+   - Implemented per-instance scaleXY application in transform loop
+
+3. src/editor/runtime/executor/assembleInstanceBuffers.ts
+   - Added scaleXY to InstanceBufferSpec
+   - Implemented scaleXY buffer assembly (scalar or vec2 buffer)
+   - Validation for interleaved xy pairs (length = count*2)
+
+4. src/editor/runtime/canvasRenderer.ts
+   - Updated renderPass() switch to handle clipGroup case (stubbed)
+   - Added ClipGroupPassIR import
+
+Remaining Work (Gaps 5-6):
+--------------------------
+Gap 5: PostFX (MEDIUM-HIGH complexity)
+- PostFXPassIR types defined but not implemented in renderer
+- Need to implement blur, bloom, vignette, colorGrade effects
+- Requires offscreen rendering and compositing
+
+Gap 6: Material System Extended (HIGH complexity)
+- GradientSpecIR types defined but not wired up
+- Need to implement gradient material support in renderer
+- Linear/radial gradients with stop support
+
+Next Steps:
+-----------
+1. Implement Gap 5 (PostFX rendering)
+2. Implement Gap 6 (Gradient materials)
+3. Complete ClipGroup rendering in canvasRenderer.ts
+4. Add tests for new functionality (manual verification for now)
+5. Update planning docs when all gaps complete
+
+Cache Invalidated:
+------------------
+None (no eval cache entries for render pipeline yet)

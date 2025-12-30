@@ -30,7 +30,8 @@ import type {
 import { colorToCss, unpackToColorRGBA } from './renderCmd';
 import type { RenderFrameIR } from '../compiler/ir/renderIR';
 import type { ValueStore } from '../compiler/ir/stores';
-import { renderInstances2DPass, renderPaths2DPass } from './renderPassExecutors';
+import { renderInstances2DPass, renderPaths2DPass } from "./renderPassExecutors";
+import { renderPostFXPass } from "./renderPostFX";
 
 // =============================================================================
 // Types
@@ -236,7 +237,7 @@ export class Canvas2DRenderer {
   /**
    * Render a single pass by dispatching on pass.kind.
    *
-   * @param pass - RenderPassIR (Instances2D, Paths2D, or PostFX)
+   * @param pass - RenderPassIR (Instances2D, Paths2D, PostFX, or ClipGroup)
    * @param valueStore - ValueStore for buffer reads
    */
   private renderPass(pass: RenderFrameIR['passes'][0], valueStore: ValueStore): void {
@@ -254,7 +255,7 @@ export class Canvas2DRenderer {
         break;
 
       case 'postfx':
-        console.warn('Canvas2DRenderer: PostFX passes not implemented yet');
+        renderPostFXPass(pass, this.ctx, valueStore);
         break;
 
       default: {
