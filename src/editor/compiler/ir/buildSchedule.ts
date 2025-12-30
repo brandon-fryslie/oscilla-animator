@@ -562,6 +562,24 @@ function buildSchedule(
     maybeInsertProbe('signal', 'step-signal-eval', signalSlots);
   }
 
+  // Step 1c: Insert debug probes from DebugDisplay blocks
+  // Collect probes registered during block lowering and emit StepDebugProbe steps
+  if (builderIR.debugProbes.length > 0) {
+    for (const probe of builderIR.debugProbes) {
+      const probeStep: StepDebugProbe = {
+        kind: 'debugProbe',
+        id: `step-debug-probe-${probe.id}`,
+        deps: ['step-signal-eval'], // Depend on signal evaluation
+        probe: {
+          id: probe.id,
+          slots: [probe.slot],
+          mode: probe.mode,
+        },
+      };
+      steps.push(probeStep);
+    }
+  }
+
   // Step 2: Process render sinks and emit materialization steps
   // Batch descriptors are compile-time config, not slot values
   const instance2dBatches: Instance2DBatch[] = [];

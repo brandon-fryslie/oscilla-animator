@@ -1,0 +1,121 @@
+Agent: project-evaluator | 2025-12-30-030600
+Scope: flow/debug-export-workstream
+Completion: 40% | Gaps: 10 | Test Quality: 4/5
+Reused: 0 findings | Fresh: All findings
+Cache updated: [debug-export-workstream.md] in eval-cache/
+Ambiguities: 4 found | Workflow: CONTINUE
+-> Implement DebugDisplay IR lowering (2-4 hours) to unblock IR debugging
+
+=== CRITICAL FINDINGS ===
+
+1. DEBUG INFRASTRUCTURE COMPLETE (75%)
+   - StepDebugProbe type EXISTS (schedule.ts:682-710)
+   - executeDebugProbe IMPLEMENTED (156 lines, integrated in ScheduleExecutor)
+   - TraceController + ring buffers WORKING (121 tests passing)
+   - Debug UI components EXIST (18 files in debug-ui/)
+
+2. DEBUGDISPLAY IR LOWERING BLOCKED (HIGH PRIORITY)
+   - File: src/editor/compiler/blocks/debug/DebugDisplay.ts:34
+   - Status: Explicitly throws error "cannot be lowered to IR yet"
+   - Impact: Users cannot debug IR-compiled patches
+   - Fix: Replace throw with StepDebugProbe emission (2-4 hours)
+   - All infrastructure exists, just needs wiring
+
+3. EXPORT PIPELINE NOT STARTED (0%)
+   - No export code exists (image sequence, video, GIF, standalone)
+   - Canvas2DRenderer.renderFrame() EXISTS and ready to use
+   - OffscreenCanvas API available
+   - State serialization MISSING
+
+4. DETERMINISTIC REPLAY PARTIAL
+   - Seeded PRNG EXISTS (core/rand.ts, Mulberry32 algorithm)
+   - Math.random() audit: 3 uses found (1 needs fix in controlSurface/store.ts)
+   - Risk: LOW (only affects random seed generation)
+
+5. TESTS PASSING (2425/2445)
+   - 129/131 test files pass
+   - Debug infrastructure: 121 tests
+   - Runtime stable
+   - Export tests: None (not implemented)
+
+=== GAPS SUMMARY ===
+
+High Priority:
+1. DebugDisplay IR lowering (BLOCKED - throws error)
+2. Deterministic replay verification (Math.random() in controlSurface)
+3. Image sequence export (first export feature)
+
+Medium Priority:
+4. Signal history visualization (waveform display)
+5. Field visualization (heatmap/histogram)
+6. Video export (WebCodecs + muxer)
+
+Low Priority:
+7. Runtime state inspector (slot/state viewer)
+8. GIF export
+9. Standalone player export
+10. Compile diagnostics enhancement
+
+=== DEPENDENCIES ===
+
+DebugDisplay IR:
+  - StepDebugProbe type ✅ (exists)
+  - executeDebugProbe ✅ (exists)
+  - lowerDebugDisplay ❌ (blocked)
+
+Export Pipeline:
+  - Deterministic replay ⚠️ (needs verification)
+  - Canvas renderer ✅ (ready)
+  - OffscreenCanvas ✅ (browser API)
+  - State serialization ❌ (missing)
+
+=== AMBIGUITIES REQUIRING RESOLUTION ===
+
+A1: DebugDisplay IR Side-Effects Strategy
+    - Recommended: Emit StepDebugProbe, migrate UI to TraceController
+    - Impact: Determines debug system architecture going forward
+
+A2: Export UI Integration Point
+    - Needs user input: File menu vs dedicated panel vs player controls
+    - Impact: Export workflow discoverability
+
+A3: Export Determinism Guarantee
+    - Recommended: Strict determinism (fix all Math.random() uses)
+    - Impact: Reproducibility of exported output
+
+A4: Video Export Codec Selection
+    - Recommended: H.264 (default) + VP9 (advanced option)
+    - Impact: Export quality and browser compatibility
+
+=== RECOMMENDED ACTION SEQUENCE ===
+
+1. DebugDisplay IR lowering (2-4 hours) - UNBLOCKS IR DEBUGGING
+2. Deterministic replay verification (2 hours) - PREREQUISITE FOR EXPORT
+3. Image sequence export (8-12 hours) - VALIDATES EXPORT INFRASTRUCTURE
+4. Signal history visualization (6-8 hours) - USER-FACING DEBUG FEATURE
+5. Video export (12-16 hours) - MOST REQUESTED FORMAT
+
+Total estimated effort: 60-80 hours for complete workstream
+
+=== KEY FILES ===
+
+Blocked:
+  - src/editor/compiler/blocks/debug/DebugDisplay.ts:34 (throws error)
+
+Ready to use:
+  - src/editor/compiler/ir/schedule.ts:682-710 (StepDebugProbe type)
+  - src/editor/runtime/executor/steps/executeDebugProbe.ts (executor)
+  - src/editor/runtime/canvasRenderer.ts:189-234 (renderFrame)
+  - src/core/rand.ts:26-75 (seeded PRNG)
+
+Missing (needs creation):
+  - src/editor/export/ (directory doesn't exist)
+  - src/editor/export/ImageSequenceExporter.ts
+  - src/editor/export/VideoExporter.ts
+  - src/editor/export/GifExporter.ts
+  - src/editor/export/StandaloneExporter.ts
+
+=== WORKFLOW STATUS ===
+
+CONTINUE - Gaps are clear, dependencies exist or implementable
+Next: Implement DebugDisplay IR lowering to unblock IR debugging

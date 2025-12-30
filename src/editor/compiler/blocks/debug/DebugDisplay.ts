@@ -10,7 +10,6 @@
 
 import type { BlockCompiler, RuntimeCtx, DrawNode } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
-import type { ValueSlot } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
 import { debugStore } from '../../../stores/DebugStore';
 
@@ -21,9 +20,11 @@ import { debugStore } from '../../../stores/DebugStore';
 /**
  * Lower DebugDisplay block to IR.
  *
- * DebugDisplay in IR mode works by emitting special metadata that buildSchedule.ts
- * can use to insert StepDebugProbe steps. The probe IDs follow the pattern:
- * `${instanceId}:${portId}`
+ * DebugDisplay in IR mode works by registering debug probes with the IRBuilder.
+ * The probe IDs follow the pattern: `${instanceId}:${portId}`
+ *
+ * The schedule builder (buildSchedule.ts) collects these probes and inserts
+ * StepDebugProbe steps after signal evaluation steps.
  *
  * Unlike legacy mode (which directly updates DebugStore via closures), IR mode
  * writes values to TraceController ring buffers via StepDebugProbe execution.
@@ -33,54 +34,47 @@ const lowerDebugDisplay: BlockLowerFn = ({ ctx, inputsById }) => {
     throw new Error(`DebugDisplay: inputsById required for IR lowering`);
   }
 
-  // Collect slots to probe for each connected input
-  const probeSlots: Array<{ portId: string; slot: ValueSlot }> = [];
-
   // Check signal input
   const signalInput = inputsById.signal;
   if (signalInput?.k === 'sig') {
-    probeSlots.push({ portId: 'signal', slot: signalInput.slot });
+    ctx.b.registerDebugProbe({
+      id: `${ctx.instanceId}:signal`,
+      instanceId: ctx.instanceId,
+      portId: 'signal',
+      slot: signalInput.slot,
+      mode: 'value',
+      label: ctx.label ?? 'signal',
+    });
   }
 
   // Check phase input
   const phaseInput = inputsById.phase;
   if (phaseInput?.k === 'sig') {
-    probeSlots.push({ portId: 'phase', slot: phaseInput.slot });
+    ctx.b.registerDebugProbe({
+      id: `${ctx.instanceId}:phase`,
+      instanceId: ctx.instanceId,
+      portId: 'phase',
+      slot: phaseInput.slot,
+      mode: 'value',
+      label: ctx.label ?? 'phase',
+    });
   }
 
   // Check field input
   const fieldInput = inputsById.field;
   if (fieldInput?.k === 'field') {
-    probeSlots.push({ portId: 'field', slot: fieldInput.slot });
+    ctx.b.registerDebugProbe({
+      id: `${ctx.instanceId}:field`,
+      instanceId: ctx.instanceId,
+      portId: 'field',
+      slot: fieldInput.slot,
+      mode: 'value',
+      label: ctx.label ?? 'field',
+    });
   }
 
   // Note: domain input is a special value, not a signal or field, so we don't probe it directly
   // Future enhancement: create a signal from domain size and probe that
-
-  // Register probe points for schedule builder
-  // The schedule builder (buildSchedule.ts) will insert StepDebugProbe steps for these slots
-  // Probe IDs will be: `${ctx.instanceId}:${portId}` (e.g., "debug-display-1:signal")
-
-  // Store probe metadata on the builder's debug registry
-  // This is consumed by buildSchedule.ts when constructing the schedule
-  if (probeSlots.length > 0) {
-    // Register with IRBuilder debug tracking
-    // Note: This requires IRBuilder to have a probe registry, which may not exist yet
-    // For now, we rely on the schedule builder's global probe insertion logic
-
-    // TEMPORARY: Store on ctx.b if it has a probe registry
-    // This will be replaced with proper probe registration API in Phase 7
-    const builder = ctx.b as any;
-    if (builder.registerDebugProbe) {
-      for (const { portId, slot } of probeSlots) {
-        builder.registerDebugProbe({
-          id: `${ctx.instanceId}:${portId}`,
-          slot,
-          label: ctx.label ?? portId,
-        });
-      }
-    }
-  }
 
   // Return empty render tree output (DebugDisplay has no visual output)
   // The actual debugging happens via StepDebugProbe steps inserted by buildSchedule.ts

@@ -53,6 +53,23 @@ export interface IRBuilder {
    */
   setCurrentBlockId(blockId: string | undefined): void;
 
+  /**
+   * Register a debug probe for a value slot.
+   *
+   * Used by DebugDisplay blocks to register probe points during lowering.
+   * The schedule builder will insert StepDebugProbe steps for these probes.
+   *
+   * @param spec - Debug probe specification
+   */
+  registerDebugProbe(spec: {
+    id: string;
+    instanceId: string;
+    portId: string;
+    slot: ValueSlot;
+    mode?: 'value' | 'trace' | 'breakpoint';
+    label?: string;
+  }): void;
+
   // =============================================================================
   // ID Allocation
   // =============================================================================

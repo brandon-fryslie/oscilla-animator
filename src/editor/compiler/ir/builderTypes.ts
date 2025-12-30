@@ -150,6 +150,36 @@ export interface BuilderDebugIndex {
 }
 
 // =============================================================================
+// Debug Probes (Phase 7)
+// =============================================================================
+
+/**
+ * Debug probe registration from block lowering.
+ *
+ * DebugDisplay blocks register probes during lowering. The schedule builder
+ * converts these into StepDebugProbe steps at appropriate insertion points.
+ */
+export interface DebugProbeSpec {
+  /** Unique probe identifier (format: ${instanceId}:${portId}) */
+  id: string;
+
+  /** Block instance ID that registered this probe */
+  instanceId: string;
+
+  /** Port ID being probed */
+  portId: string;
+
+  /** Value slot to probe */
+  slot: ValueSlot;
+
+  /** Probe mode */
+  mode: 'value' | 'trace' | 'breakpoint';
+
+  /** Optional human-readable label */
+  label?: string;
+}
+
+// =============================================================================
 // Slot Metadata (emitted during lowering)
 // =============================================================================
 
@@ -278,6 +308,9 @@ export interface BuilderProgramIR {
 
   /** Debug index for provenance tracking */
   debugIndex: BuilderDebugIndex;
+
+  /** Debug probes registered during lowering (Phase 7) */
+  debugProbes: readonly DebugProbeSpec[];
 
   /** Time model from TimeRoot */
   timeModel: TimeModelIR;

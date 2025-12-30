@@ -32,6 +32,7 @@ import type {
   BuilderProgramIR,
   SlotMetaEntry,
   TimeSlots,
+  DebugProbeSpec,
 } from "./builderTypes";
 import type { CameraIR } from "./types3d";
 import type { TimeModelIR } from "./schedule";
@@ -100,6 +101,9 @@ export class IRBuilderImpl implements IRBuilder {
   /** Map value slots to source port */
   private slotSourceMap: Map<ValueSlot, { blockId: string; slotId: string }> = new Map();
 
+  /** Debug probes registered during lowering (Phase 7) */
+  private debugProbes: DebugProbeSpec[] = [];
+
   /**
    * Set the current block ID for debug tracking.
    * Called by the compiler before lowering each block.
@@ -108,6 +112,32 @@ export class IRBuilderImpl implements IRBuilder {
    */
   setCurrentBlockId(blockId: string | undefined): void {
     this.currentBlockId = blockId;
+  }
+
+  /**
+   * Register a debug probe for a value slot.
+   *
+   * Used by DebugDisplay blocks to register probe points during lowering.
+   * The schedule builder will insert StepDebugProbe steps for these probes.
+   *
+   * @param spec - Debug probe specification
+   */
+  registerDebugProbe(spec: {
+    id: string;
+    instanceId: string;
+    portId: string;
+    slot: ValueSlot;
+    mode?: 'value' | 'trace' | 'breakpoint';
+    label?: string;
+  }): void {
+    this.debugProbes.push({
+      id: spec.id,
+      instanceId: spec.instanceId,
+      portId: spec.portId,
+      slot: spec.slot,
+      mode: spec.mode ?? 'value',
+      label: spec.label,
+    });
   }
 
   /**
@@ -750,6 +780,7 @@ export class IRBuilderImpl implements IRBuilder {
         eventExprSource: this.eventExprSourceMap,
         slotSource: this.slotSourceMap,
       },
+      debugProbes: this.debugProbes,
       timeModel: this.timeModel ?? {
         kind: "infinite",
         windowMs: 30000,
