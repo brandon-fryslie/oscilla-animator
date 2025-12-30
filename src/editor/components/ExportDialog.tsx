@@ -1,18 +1,21 @@
 /**
  * ExportDialog Component
  *
- * Modal dialog for exporting animations as image sequences.
- * Supports PNG/WebP/JPEG formats with configurable resolution,
- * frame range, and quality settings.
+ * Modal dialog for exporting animations as image sequences or video.
+ * Supports PNG/WebP/JPEG formats and H.264/VP9 video codecs.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal } from '../Modal';
 import { ImageSequenceExporter } from '../export/ImageSequenceExporter';
+import { VideoExporter } from '../export/VideoExporter';
+import { isWebCodecsSupported, getRecommendedBitrate } from '../export/codecs';
 import type {
   ImageSequenceExportConfig,
+  VideoExportConfig,
   ExportProgress,
   ImageFormat,
+  VideoCodec,
 } from '../export/types';
 import type { CompiledProgramIR } from '../compiler/ir/program';
 import './ExportDialog.css';
@@ -26,6 +29,8 @@ interface ExportDialogProps {
   defaultWidth: number;
   defaultHeight: number;
 }
+
+type ExportType = 'image' | 'video';
 
 /**
  * Download blobs as individual files or zip (depending on browser support).
@@ -64,6 +69,26 @@ async function downloadBlobs(
   }
 }
 
+/**
+ * Download single video blob.
+ */
+function downloadVideoBlob(blob: Blob, codec: VideoCodec): void {
+  const ext = codec === 'h264' ? 'mp4' : 'webm';
+  const filename = `animation.${ext}`;
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+
+  // Cleanup
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export function ExportDialog({
   isOpen,
   onClose,
@@ -71,28 +96,49 @@ export function ExportDialog({
   defaultWidth,
   defaultHeight,
 }: ExportDialogProps): React.ReactElement {
-  // Form state
+  // Export type selection
+  const [exportType, setExportType] = useState<ExportType>('image');
+
+  // Form state (shared)
   const [width, setWidth] = useState(defaultWidth);
   const [height, setHeight] = useState(defaultHeight);
   const [startFrame, setStartFrame] = useState(0);
   const [endFrame, setEndFrame] = useState(60);
-  const [frameStep, setFrameStep] = useState(1);
   const [fps, setFps] = useState(60);
+
+  // Image-specific state
+  const [frameStep, setFrameStep] = useState(1);
   const [format, setFormat] = useState<ImageFormat>('png');
   const [quality, setQuality] = useState(90);
+
+  // Video-specific state
+  const [codec, setCodec] = useState<VideoCodec>('h264');
+  const [bitrate, setBitrate] = useState(5_000_000); // 5 Mbps default
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const exporterRef = useRef<ImageSequenceExporter | null>(null);
+  const imageExporterRef = useRef<ImageSequenceExporter | null>(null);
+  const videoExporterRef = useRef<VideoExporter | null>(null);
+
+  // Check WebCodecs support
+  const webCodecsSupported = isWebCodecsSupported();
 
   // Update defaults when props change
   useEffect(() => {
     setWidth(defaultWidth);
     setHeight(defaultHeight);
   }, [defaultWidth, defaultHeight]);
+
+  // Update recommended bitrate when resolution changes
+  useEffect(() => {
+    if (exportType === 'video') {
+      const recommended = getRecommendedBitrate(width, height);
+      setBitrate(recommended);
+    }
+  }, [width, height, exportType]);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -104,7 +150,9 @@ export function ExportDialog({
   }, [isOpen]);
 
   // Calculate derived values
-  const totalFrames = Math.floor((endFrame - startFrame) / frameStep) + 1;
+  const totalFrames = exportType === 'image'
+    ? Math.floor((endFrame - startFrame) / frameStep) + 1
+    : endFrame - startFrame + 1;
   const durationSeconds = (endFrame - startFrame) / fps;
 
   // Validation
@@ -113,13 +161,15 @@ export function ExportDialog({
     height > 0 &&
     startFrame >= 0 &&
     endFrame >= startFrame &&
-    frameStep > 0 &&
     fps > 0 &&
-    totalFrames > 0;
+    totalFrames > 0 &&
+    (exportType === 'image' ? frameStep > 0 : true) &&
+    (exportType === 'video' ? bitrate > 0 : true);
 
-  const canExport = isValidConfig && program !== null && !isExporting;
+  const canExport = isValidConfig && program !== null && !isExporting &&
+    (exportType === 'image' || webCodecsSupported);
 
-  const handleExport = useCallback(async () => {
+  const handleImageExport = useCallback(async () => {
     if (!program || !canExport) return;
 
     setIsExporting(true);
@@ -139,7 +189,7 @@ export function ExportDialog({
 
     try {
       const exporter = new ImageSequenceExporter();
-      exporterRef.current = exporter;
+      imageExporterRef.current = exporter;
 
       const result = await exporter.export(
         program,
@@ -164,13 +214,72 @@ export function ExportDialog({
       }
     } finally {
       setIsExporting(false);
-      exporterRef.current = null;
+      imageExporterRef.current = null;
     }
   }, [program, canExport, width, height, startFrame, endFrame, frameStep, fps, format, quality, onClose]);
 
+  const handleVideoExport = useCallback(async () => {
+    if (!program || !canExport || !webCodecsSupported) return;
+
+    setIsExporting(true);
+    setError(null);
+    setProgress(null);
+
+    const config: VideoExportConfig = {
+      width,
+      height,
+      startFrame,
+      endFrame,
+      fps,
+      codec,
+      bitrate,
+    };
+
+    try {
+      const exporter = new VideoExporter();
+      videoExporterRef.current = exporter;
+
+      const result = await exporter.export(
+        program,
+        config,
+        (p) => setProgress(p)
+      );
+
+      // Download video blob
+      downloadVideoBlob(result.blob, codec);
+
+      // Success - close dialog
+      onClose();
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message.includes('cancelled')) {
+          setError('Export cancelled');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Export failed');
+      }
+    } finally {
+      setIsExporting(false);
+      videoExporterRef.current = null;
+    }
+  }, [program, canExport, webCodecsSupported, width, height, startFrame, endFrame, fps, codec, bitrate, onClose]);
+
+  const handleExport = useCallback(() => {
+    if (exportType === 'image') {
+      void handleImageExport();
+    } else {
+      void handleVideoExport();
+    }
+  }, [exportType, handleImageExport, handleVideoExport]);
+
   const handleCancel = useCallback(() => {
-    if (exporterRef.current) {
-      exporterRef.current.cancel();
+    if (imageExporterRef.current) {
+      imageExporterRef.current.cancel();
+    }
+    if (videoExporterRef.current) {
+      videoExporterRef.current.cancel();
     }
   }, []);
 
@@ -185,7 +294,7 @@ export function ExportDialog({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Export Image Sequence"
+      title={exportType === 'image' ? 'Export Image Sequence' : 'Export Video'}
       width="medium"
       footer={
         <>
@@ -212,6 +321,33 @@ export function ExportDialog({
             No compiled program available. Make sure your patch compiles successfully before exporting.
           </div>
         )}
+
+        {/* Export Type Selector */}
+        <div className="export-dialog-section">
+          <h3 className="export-dialog-section-title">Export Type</h3>
+          <div className="export-dialog-row">
+            <div className="export-dialog-field">
+              <label htmlFor="export-type">Type</label>
+              <select
+                id="export-type"
+                value={exportType}
+                onChange={(e) => setExportType(e.target.value as ExportType)}
+                disabled={isExporting}
+              >
+                <option value="image">Image Sequence</option>
+                <option value="video" disabled={!webCodecsSupported}>
+                  Video {!webCodecsSupported ? '(not supported)' : ''}
+                </option>
+              </select>
+            </div>
+          </div>
+          {exportType === 'video' && !webCodecsSupported && (
+            <div className="export-dialog-warning">
+              Video export requires WebCodecs API (Chrome 94+, Edge 94+, Safari 16.4+).
+              Please use image sequence export instead.
+            </div>
+          )}
+        </div>
 
         {/* Resolution */}
         <div className="export-dialog-section">
@@ -270,17 +406,19 @@ export function ExportDialog({
                 disabled={isExporting}
               />
             </div>
-            <div className="export-dialog-field">
-              <label htmlFor="export-frame-step">Step</label>
-              <input
-                id="export-frame-step"
-                type="number"
-                value={frameStep}
-                onChange={(e) => setFrameStep(Number(e.target.value))}
-                min={1}
-                disabled={isExporting}
-              />
-            </div>
+            {exportType === 'image' && (
+              <div className="export-dialog-field">
+                <label htmlFor="export-frame-step">Step</label>
+                <input
+                  id="export-frame-step"
+                  type="number"
+                  value={frameStep}
+                  onChange={(e) => setFrameStep(Number(e.target.value))}
+                  min={1}
+                  disabled={isExporting}
+                />
+              </div>
+            )}
           </div>
           <div className="export-dialog-row">
             <div className="export-dialog-field">
@@ -301,46 +439,89 @@ export function ExportDialog({
           </div>
         </div>
 
-        {/* Format */}
-        <div className="export-dialog-section">
-          <h3 className="export-dialog-section-title">Format</h3>
-          <div className="export-dialog-row">
-            <div className="export-dialog-field">
-              <label htmlFor="export-format">Image Format</label>
-              <select
-                id="export-format"
-                value={format}
-                onChange={(e) => setFormat(e.target.value as ImageFormat)}
-                disabled={isExporting}
-              >
-                <option value="png">PNG (lossless)</option>
-                <option value="webp">WebP (lossy/lossless)</option>
-                <option value="jpeg">JPEG (lossy)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Quality slider (hidden for PNG) */}
-          {format !== 'png' && (
+        {/* Format (Image) or Codec (Video) */}
+        {exportType === 'image' ? (
+          <div className="export-dialog-section">
+            <h3 className="export-dialog-section-title">Format</h3>
             <div className="export-dialog-row">
               <div className="export-dialog-field">
-                <label htmlFor="export-quality">
-                  Quality ({quality}%)
+                <label htmlFor="export-format">Image Format</label>
+                <select
+                  id="export-format"
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value as ImageFormat)}
+                  disabled={isExporting}
+                >
+                  <option value="png">PNG (lossless)</option>
+                  <option value="webp">WebP (lossy/lossless)</option>
+                  <option value="jpeg">JPEG (lossy)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Quality slider (hidden for PNG) */}
+            {format !== 'png' && (
+              <div className="export-dialog-row">
+                <div className="export-dialog-field">
+                  <label htmlFor="export-quality">
+                    Quality ({quality}%)
+                  </label>
+                  <input
+                    id="export-quality"
+                    type="range"
+                    value={quality}
+                    onChange={(e) => setQuality(Number(e.target.value))}
+                    min={1}
+                    max={100}
+                    disabled={isExporting}
+                    className="export-dialog-slider"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="export-dialog-section">
+            <h3 className="export-dialog-section-title">Video Settings</h3>
+            <div className="export-dialog-row">
+              <div className="export-dialog-field">
+                <label htmlFor="export-codec">Codec</label>
+                <select
+                  id="export-codec"
+                  value={codec}
+                  onChange={(e) => setCodec(e.target.value as VideoCodec)}
+                  disabled={isExporting}
+                >
+                  <option value="h264">H.264 (MP4)</option>
+                  <option value="vp9">VP9 (WebM)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Bitrate slider */}
+            <div className="export-dialog-row">
+              <div className="export-dialog-field">
+                <label htmlFor="export-bitrate">
+                  Bitrate ({(bitrate / 1_000_000).toFixed(1)} Mbps)
                 </label>
                 <input
-                  id="export-quality"
+                  id="export-bitrate"
                   type="range"
-                  value={quality}
-                  onChange={(e) => setQuality(Number(e.target.value))}
-                  min={1}
-                  max={100}
+                  value={bitrate}
+                  onChange={(e) => setBitrate(Number(e.target.value))}
+                  min={1_000_000}
+                  max={20_000_000}
+                  step={500_000}
                   disabled={isExporting}
                   className="export-dialog-slider"
                 />
               </div>
             </div>
-          )}
-        </div>
+            <div className="export-dialog-info">
+              Recommended bitrate: {(getRecommendedBitrate(width, height) / 1_000_000).toFixed(1)} Mbps
+            </div>
+          </div>
+        )}
 
         {/* Progress */}
         {isExporting && progress && (
