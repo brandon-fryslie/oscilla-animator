@@ -19,6 +19,7 @@ import type {
   TransformChainId,
   BusIndex,
 } from "./types";
+import { getTypeArity } from "./types";
 import type { SignalExprIR, StatefulSignalOp, EventExprIR, EventCombineMode } from "./signalExpr";
 import type { FieldExprIR } from "./fieldExpr";
 import type { TransformStepIR, PureFnRef } from "./transforms";
@@ -166,8 +167,27 @@ export class IRBuilderImpl implements IRBuilder {
     return this.addConst(value);
   }
 
+  /**
+   * Allocate value slot(s) respecting bundle arity.
+   *
+   * Sprint 2: Bundle type system
+   * - Scalar types (arity=1) allocate 1 slot
+   * - Bundle types (arity>1) allocate N consecutive slots
+   * - Example: vec2 at slot 5 uses slots [5, 6]
+   * - Example: vec3 at slot 7 uses slots [7, 8, 9]
+   *
+   * @param type - Type descriptor (determines bundle arity)
+   * @param debugName - Optional debug name for slot metadata
+   * @returns Starting slot index (bundles use [slot, slot+arity))
+   */
   allocValueSlot(type?: TypeDesc, debugName?: string): ValueSlot {
-    const slot = this.nextValueSlot++;
+    const slot = this.nextValueSlot;
+
+    // Get bundle arity (defaults to 1 for scalar)
+    const arity = type !== undefined ? getTypeArity(type) : 1;
+
+    // Allocate N consecutive slots for bundle types
+    this.nextValueSlot += arity;
 
     // Register slot metadata if type provided
     if (type !== undefined) {
