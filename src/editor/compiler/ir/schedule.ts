@@ -631,6 +631,10 @@ export interface Instance2DBatch {
   colorRGBASlot: ValueSlot;
   /** Slot containing opacity scalar or buffer */
   opacitySlot: ValueSlot;
+  /** Static z-order value (default: 0) */
+  zOrder?: number;
+  /** Runtime z-order from signal (takes precedence over static zOrder) */
+  zOrderSlot?: ValueSlot;
 }
 
 /**
@@ -674,6 +678,11 @@ export interface PathBatch {
   lineJoin?: "miter" | "round" | "bevel";
   miterLimit?: number;
   dash?: { pattern: number[]; offset?: number } | null;
+
+  /** Static z-order value (default: 0) */
+  zOrder?: number;
+  /** Runtime z-order from signal (takes precedence over static zOrder) */
+  zOrderSlot?: ValueSlot;
 }
 
 // ============================================================================

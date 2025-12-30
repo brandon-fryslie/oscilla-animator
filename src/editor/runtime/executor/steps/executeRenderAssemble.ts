@@ -38,6 +38,8 @@ interface Instance2DBatchDescriptor {
   sizeSlot: number;
   colorRGBASlot: number;
   opacitySlot: number;
+  zOrder?: number;
+  zOrderSlot?: number;
 }
 
 /**
@@ -70,6 +72,8 @@ interface PathBatchDescriptor {
   lineJoin?: "miter" | "round" | "bevel";
   miterLimit?: number;
   dash?: { pattern: number[]; offset?: number } | null;
+  zOrder?: number;
+  zOrderSlot?: number;
 }
 
 /**
@@ -115,11 +119,20 @@ function buildInstancesPass(
     }
   }
 
+  // Read z-order from slot if dynamic, else use static value
+  let z = batch.zOrder ?? 0;
+  if (batch.zOrderSlot !== undefined) {
+    const zValue = runtime.values.read(batch.zOrderSlot);
+    if (typeof zValue === "number") {
+      z = zValue;
+    }
+  }
+
   return {
     kind: "instances2d",
     header: {
       id: `instances2d-${batch.domainSlot}`,
-      z: 0,
+      z,
       enabled: true,
     },
     count,
@@ -283,11 +296,20 @@ function buildPathsPass(
     }
   }
 
+  // Read z-order from slot if dynamic, else use static value
+  let z = batch.zOrder ?? 0;
+  if (batch.zOrderSlot !== undefined) {
+    const zValue = runtime.values.read(batch.zOrderSlot);
+    if (typeof zValue === "number") {
+      z = zValue;
+    }
+  }
+
   return {
     kind: "paths2d",
     header: {
       id: `paths2d-${batch.domainSlot}`,
-      z: 0,
+      z,
       enabled: true,
     },
     geometry,
