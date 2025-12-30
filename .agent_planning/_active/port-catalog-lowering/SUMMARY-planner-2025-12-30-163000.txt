@@ -1,0 +1,5 @@
+Agent: status-planner | 2025-12-30-163000
+Topic: Port Catalog + Lowering Migration (P2/P3 Sprint)
+Files: PLAN-2025-12-30-P2P3.md, DOD-2025-12-30-P2P3.md
+Items: 3 (P2-2: REQUIRED, P3-2: REQUIRED, P2-1: OPTIONAL)
+Deferred: 2 (P2-3: test improvements, P3-1: math block catalogs)
