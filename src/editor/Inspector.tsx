@@ -8,7 +8,12 @@
 import { useState, useMemo, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
+<<<<<<< HEAD
 import type { PortRef, Block, Slot, DefaultSourceState } from './types';
+=======
+import type { PortRef, Block, Slot, Connection, DefaultSourceState } from './types';
+import type { DefaultSourceAttachment } from './defaultSources/types';
+>>>>>>> f3aeb74 (feat(defaultSources): Add provider config panel UI (Sprint 13))
 import { getBlockDefinition, getBlockDefinitions, type BlockDefinition } from './blocks';
 import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint, isInputDriven } from './portUtils';
 import { getIncomingBindingForInputPort, getOutgoingBindingsForOutputPort } from './bindings';
@@ -1302,10 +1307,79 @@ const DiagnosticsSection = observer(({ block }: { block: Block }) => {
 /**
  * Default Sources section - shows editable controls for undriven inputs
  * Sprint 12: Added provider type dropdown
+ * Sprint 13: Added provider config panel
+ * Sprint 12: Added provider type dropdown
  *
  * Priority: Wire > Bus Listener > DefaultSource
  * Only show controls when input is NOT driven (no wire, no bus)
  */
+/**
+ * Sprint 13: Provider Config Panel
+ * Displays configuration UI for a default source provider.
+ * Shows bus feeds (read-only) and editable inputs with controls.
+ */
+const ProviderConfigPanel = observer(({
+  attachment,
+}: {
+  attachment: DefaultSourceAttachment;
+}) => {
+  const store = useStore();
+
+  // Get provider spec from allowlist
+  const providerSpec = DEFAULT_SOURCE_PROVIDER_BLOCKS.find(
+    spec => spec.blockType === attachment.provider.blockType
+  );
+
+  if (!providerSpec) {
+    return <div style={{ color: '#888', fontSize: '10px' }}>Unknown provider type</div>;
+  }
+
+  // For Const providers: only show value control
+  const isConstProvider = providerSpec.blockType.startsWith('DSConst');
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      {/* Bus feeds section - read-only (for non-Const providers like Oscillator) */}
+      {!isConstProvider && Object.keys(providerSpec.busInputs).length > 0 && (
+        <div style={{ marginBottom: '4px' }}>
+          {Object.entries(providerSpec.busInputs).map(([inputId, busName]) => (
+            <div
+              key={inputId}
+              style={{
+                fontSize: '10px',
+                color: '#888',
+                fontStyle: 'italic',
+                padding: '2px 0',
+              }}
+            >
+              {inputId} ← bus {busName}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Editable inputs section */}
+      {providerSpec.editableInputs.map(inputId => {
+        // Get the default source for this provider input
+        const sourceId = attachment.provider.editableInputSourceIds[inputId];
+        if (!sourceId) return null;
+
+        const ds = store.defaultSourceStore.sources.get(sourceId);
+        if (!ds) return null;
+
+        return (
+          <DefaultSourceControl
+            key={inputId}
+            ds={ds}
+            isDriven={false}
+            onChange={(val) => store.defaultSourceStore.setDefaultValue(sourceId, val)}
+          />
+        );
+      })}
+    </div>
+  );
+});
+
 const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
   const store = useStore();
   const connections = store.patchStore.connections;
@@ -1333,9 +1407,6 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
   // Only show if there are any default sources
   if (inputsWithDefaults.length === 0) return null;
 
-  const handleValueChange = (blockId: string, slotId: string, value: unknown) => {
-    store.defaultSourceStore.setDefaultValueForInput(blockId, slotId, value);
-  };
 
   // Sprint 12: Provider dropdown handler (currently disabled, used in Sprint 15)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1372,7 +1443,7 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
       {/* Active (undriven) inputs - editable */}
       {undrivenInputs.length > 0 && (
         <div className="param-grid">
-          {undrivenInputs.map(({ slot, ds }) => {
+          {undrivenInputs.map(({ slot }) => {
             // Get attachment to determine provider type
             const attachment = store.defaultSourceStore.getAttachmentForInput(block.id, slot.id);
             const providerLabel = attachment
@@ -1395,12 +1466,12 @@ const DefaultSourcesSection = observer(({ block }: { block: Block }) => {
                       {providerLabel}
                     </option>
                   </select>
-                  {/* Value Control */}
-                  <DefaultSourceControl
-                    ds={ds}
-                    isDriven={false}
-                    onChange={(val) => handleValueChange(block.id, slot.id, val)}
-                  />
+                  {/* Sprint 13: Provider Config Panel */}
+                  {attachment && (
+                    <ProviderConfigPanel
+                      attachment={attachment}
+                    />
+                  )}
                 </div>
               </div>
             );

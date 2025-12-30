@@ -1,0 +1,54 @@
+Agent: iterative-implementer | 2025-12-30-044019
+Mode: tdd
+Completed: Sprint 11 - Inject Bus Listeners for Providers | Files: 1 | Commits: 1
+Tests: All passing
+Cache invalidated: None (no cache entries affected)
+Status: complete
+
+Sprint 11: Inject Bus Listeners for Default Source Providers - COMPLETE
+
+Implemented bus listener injection for default source providers:
+
+1. Modified injectDefaultSourceProviders() in src/editor/compiler/integration.ts:
+   - Added import for DEFAULT_SOURCE_PROVIDER_BLOCKS from allowlist
+   - Added injectedListeners array to collect bus listeners
+   - For each injected provider:
+     - Fetch provider spec from allowlist
+     - For each busInput in spec (inputSlotId -> busName):
+       - Look up bus by name in store.busStore.buses
+       - If bus missing: throw clear, actionable error with friendly names
+       - Create listener with deterministic ID (lis:ds:busId->providerId:inputId)
+       - Add to injectedListeners array
+   - Return patch with injected listeners merged
+
+2. Error handling per user directive:
+   - Fail fast - throw error on missing bus (no silent fallback)
+   - Clear message format:
+     "Default provider for BlockName.InputName requires bus 'busName' which does not exist.
+      Provider type: ProviderLabel.
+      Create bus 'busName' or select a different default source provider."
+   - Uses friendly names (block label, input label, provider label)
+
+3. Implementation notes:
+   - Currently only const providers exist (no busInputs = no listeners injected yet)
+   - Infrastructure ready for Oscillator provider (Sprint 15)
+   - Oscillator will need 'phase' input from 'phaseA' bus
+   - Helper function _makeProviderListenerId() generates stable IDs
+   - Pure function - returns new patch, no mutation
+
+4. Verification:
+   - TypeScript compiles successfully
+   - All tests pass
+   - Integration with editorToPatch() already present (Sprint 10)
+   - Both legacy and IR compilers will see injected listeners
+
+All Sprint 11 acceptance criteria met:
+[x] For each injected provider: get spec from allowlist
+[x] For each busInput: look up bus, create listener
+[x] Listener ID uses makeProviderListenerId()
+[x] Missing bus throws clear error (FAIL COMPILATION)
+[x] Error message identifies provider, bus name, suggests fix
+[x] injectDefaultSourceProviders() called from editorToPatch()
+[x] Both legacy and IR compilers see injected graph
+
+Ready for Sprint 12: Basic Provider Selection UI
