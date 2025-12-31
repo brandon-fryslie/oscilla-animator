@@ -4,65 +4,47 @@
  * This module defines the foundational type descriptors and indexing types
  * used throughout the IR system.
  *
+ * **Type System Migration (2025-12-31):**
+ * - TypeDesc now imports from src/core/types.ts (unified contract)
+ * - TypeWorld imports from core (no more 'special', use 'config' instead)
+ * - Domain imports from core (replaces local TypeDomain)
+ * - BundleKind/bundleArity deprecated in favor of lanes
+ * - Migration helpers provided for backward compatibility
+ *
  * References:
  * - design-docs/12-Compiler-Final/02-IR-Schema.md §1-2
  * - design-docs/12-Compiler-Final/14-Compiled-IR-Program-Contract.md §3
+ * - .agent_planning/type-contracts-ir-plumbing/DOD-2025-12-31-045033.md
  */
 
 // ============================================================================
-// Core Type System (02-IR-Schema.md §1.1)
+// Unified Type System (imported from core)
 // ============================================================================
 
-/**
- * Top-level categorization of values in the Oscilla system.
- *
- * - `signal`: Time-varying values (functions of time)
- * - `field`: Domain-varying values (functions over element domains)
- * - `scalar`: Simple immediate values
- * - `event`: Discrete event streams
- * - `special`: Domain handles, render trees, etc.
- */
-export type TypeWorld = "signal" | "field" | "scalar" | "event" | "special";
+import type {
+  TypeWorld,
+  Domain,
+  TypeCategory,
+  TypeDesc,
+} from '../../../core/types';
+
+import { getTypeArity, inferBundleLanes } from '../../../core/types';
 
 /**
- * Domain-specific type classifications.
+ * TypeDomain is now an alias for Domain from core.
+ * Kept for backward compatibility during migration.
  *
- * Describes the semantic domain of a value (e.g., number, color, vec2).
+ * @deprecated Use Domain from core/types instead
  */
-export type TypeDomain =
-  | "float"
-  | "int"
-  | "boolean"
-  | "string"
-  | "expression"
-  | "waveform"
-  | "vec2"
-  | "vec3"
-  | "vec4"
-  | "quat" // Quaternion for 3D rotations (x, y, z, w)
-  | "color"
-  | "bounds"
-  | "timeMs"
-  | "trigger" // discrete event-ish signal
-  | "domain" // element identity handle
-  | "renderTree"
-  | "renderNode"
-  | "renderCmds"
-  | "canvasRender"
-  | "mesh"
-  | "camera"
-  | "mat4"
-  | "path"
-  | "strokeStyle"
-  | "filterDef"
-  | "phaseSample"
-  | "phaseMachine"
-  | "scene"
-  | "sceneTargets"
-  | "sceneStrokes"
-  | "program"
-  | "unknown";
+export type TypeDomain = Domain;
 
+// Re-export for convenience
+export type { TypeWorld, Domain, TypeCategory, TypeDesc };
+export { getTypeArity, inferBundleLanes };
+
+// ============================================================================
+// Bundle Type System (DEPRECATED - use lanes in TypeDesc instead)
+// ============================================================================
 // ============================================================================
 // Bundle Type System (Sprint 2)
 // ============================================================================
@@ -159,97 +141,62 @@ export function inferBundleKind(domain: TypeDomain): BundleKind {
   }
 }
 
-/**
- * Complete type descriptor for a value.
- *
- * TypeDesc is the unified type system across all Oscilla IR.
- * It combines world (signal/field/scalar), domain (number/vec2/color),
- * and optional semantic/unit annotations.
- *
- * Sprint 2 extension: Added bundle type system support.
- */
-export interface TypeDesc {
-  /** Top-level world classification */
-  world: TypeWorld;
 
-  /** Domain-specific type */
-  domain: TypeDomain;
-
-  /**
-   * Bundle kind - how many scalar slots this type occupies.
-   * Defaults to Scalar (arity=1) if not specified.
-   *
-   * Sprint 2: Bundle type system
-   */
-  bundleKind?: BundleKind;
-
-  /**
-   * Bundle arity - number of consecutive scalar slots.
-   * Derived from bundleKind.
-   *
-   * Examples:
-   * - Scalar: arity=1 (single slot)
-   * - Vec2: arity=2 (slots [N, N+1])
-   * - Vec3: arity=3 (slots [N, N+1, N+2])
-   * - RGBA: arity=4 (slots [N, N+1, N+2, N+3])
-   * - Mat4: arity=16 (slots [N..N+15])
-   *
-   * Sprint 2: Bundle type system
-   */
-  bundleArity?: number;
-
-  /** Optional semantic annotation (e.g., "point", "hsl", "linearRGB", "bpm") */
-  semantics?: string;
-
-  /** Optional unit annotation (e.g., "px", "deg", "ms") */
-  unit?: string;
-}
+// =============================================================================
+// Migration Helper: BundleKind → lanes
+// =============================================================================
 
 /**
- * Create a TypeDesc with automatic bundle inference.
+ * Convert legacy BundleKind to lanes array format.
  *
- * Convenience function that infers bundleKind and bundleArity from domain.
+ * This helper supports migration from the old bundleKind/bundleArity system
+ * to the new lanes-based system in unified TypeDesc.
  *
- * @param world - Type world
- * @param domain - Type domain
- * @param options - Optional semantic/unit annotations
- * @returns Complete TypeDesc with bundle information
+ * @param kind - Legacy bundle kind
+ * @returns Lanes array (e.g., [3] for vec3, [4] for rgba)
+ *
+ * @deprecated Use inferBundleLanes() from core/types instead
  */
-export function createTypeDesc(
-  world: TypeWorld,
-  domain: TypeDomain,
-  options?: {
-    semantics?: string;
-    unit?: string;
-    bundleKind?: BundleKind; // Override auto-inference if needed
+export function bundleKindToLanes(kind: BundleKind): number[] {
+  switch (kind) {
+    case BundleKind.Scalar:
+      return [1];
+    case BundleKind.Vec2:
+      return [2];
+    case BundleKind.Vec3:
+      return [3];
+    case BundleKind.RGBA:
+    case BundleKind.Quat:
+    case BundleKind.Vec4:
+      return [4];
+    case BundleKind.Mat4:
+      return [16];
   }
-): TypeDesc {
-  const bundleKind = options?.bundleKind ?? inferBundleKind(domain);
-  const bundleArity = getBundleArity(bundleKind);
-
-  return {
-    world,
-    domain,
-    bundleKind,
-    bundleArity,
-    semantics: options?.semantics,
-    unit: options?.unit,
-  };
 }
 
 /**
- * Get the bundle arity for a TypeDesc.
+ * Convert legacy bundleKind/bundleArity to lanes array.
+ * Handles edge cases where bundleArity might not match bundleKind.
  *
- * Returns 1 for scalar types, N for bundle types.
- * Safe accessor that handles missing bundleArity field.
+ * @param bundleKind - Legacy bundle kind
+ * @param bundleArity - Legacy bundle arity (fallback if kind is undefined)
+ * @returns Lanes array
  *
- * @param type - Type descriptor
- * @returns Number of scalar slots (defaults to 1)
+ * @deprecated Use inferBundleLanes() from core/types instead
  */
-export function getTypeArity(type: TypeDesc): number {
-  return type.bundleArity ?? 1;
+export function migrateBundleToLanes(
+  bundleKind?: BundleKind,
+  bundleArity?: number
+): number[] | undefined {
+  if (bundleKind) {
+    return bundleKindToLanes(bundleKind);
+  }
+  if (bundleArity && bundleArity !== 1) {
+    return [bundleArity];
+  }
+  // Scalar - no explicit lanes
+  return undefined;
 }
-
 // ============================================================================
 // Value Kinds (02-IR-Schema.md §1.2)
 // ============================================================================
@@ -366,4 +313,114 @@ export type TransformChainId = number;
 export interface TypeTable {
   /** Array of interned TypeDesc instances */
   typeIds: TypeDesc[];
+}
+
+// ============================================================================
+// Backward Compatibility Helpers
+// ============================================================================
+
+/**
+ * Create a TypeDesc with defaults for category and busEligible.
+ *
+ * This helper provides backward compatibility for code that doesn't yet
+ * specify category/busEligible. New code should use createTypeDesc from
+ * core/types with explicit values.
+ *
+ * Defaults:
+ * - category: 'internal' (conservative - assumes internal until proven core)
+ * - busEligible: false (conservative - most types shouldn't use buses)
+ *
+ * @param world - Type world
+ * @param domain - Type domain
+ * @param options - Optional fields
+ * @returns TypeDesc with defaults applied
+ *
+ * @deprecated Specify category and busEligible explicitly
+ */
+export function createTypeDescCompat(
+  world: TypeWorld,
+  domain: Domain,
+  options?: {
+    category?: TypeCategory;
+    busEligible?: boolean;
+    lanes?: number[];
+    semantics?: string;
+    unit?: string;
+  }
+): TypeDesc {
+  const category = options?.category ?? 'internal';
+  const busEligible = options?.busEligible ?? false;
+  const lanes = options?.lanes ?? inferBundleLanes(domain);
+
+  return {
+    world,
+    domain,
+    category,
+    busEligible,
+    lanes,
+    semantics: options?.semantics,
+    unit: options?.unit,
+  };
+}
+
+/**
+ * Helper to quickly create TypeDesc from partial objects in tests.
+ * Fills in required fields with sensible defaults.
+ *
+ * @param partial - Partial TypeDesc
+ * @returns Complete TypeDesc
+ *
+ * @deprecated Use createTypeDesc with explicit values
+ */
+export function completeTypeDesc(partial: {
+  world: TypeWorld;
+  domain: Domain;
+  category?: TypeCategory;
+  busEligible?: boolean;
+  lanes?: number[];
+  semantics?: string;
+  unit?: string;
+}): TypeDesc {
+  return createTypeDescCompat(
+    partial.world,
+    partial.domain,
+    {
+      category: partial.category,
+      busEligible: partial.busEligible,
+      lanes: partial.lanes,
+      semantics: partial.semantics,
+      unit: partial.unit,
+    }
+  );
+}
+
+/**
+ * Type assertion helper for partial TypeDesc literals in tests.
+ * Satisfies TypeScript that a partial object is a complete TypeDesc
+ * by filling in missing required fields with defaults.
+ *
+ * @example
+ * const t = asTypeDesc({ world: 'signal', domain: 'float' });
+ * // Equivalent to: { world: 'signal', domain: 'float', category: 'internal', busEligible: false }
+ *
+ * @deprecated Use createTypeDescCompat or specify all fields explicitly
+ */
+export function asTypeDesc(partial: {
+  world: TypeWorld;
+  domain: Domain;
+  category?: TypeCategory;
+  busEligible?: boolean;
+  lanes?: number[];
+  semantics?: string;
+  unit?: string;
+}): TypeDesc {
+  return {
+    world: partial.world,
+    domain: partial.domain,
+    category: partial.category ?? 'internal',
+    busEligible: partial.busEligible ?? false,
+    lanes: partial.lanes ?? inferBundleLanes(partial.domain),
+    semantics: partial.semantics,
+    unit: partial.unit,
+  };
 }
