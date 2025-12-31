@@ -16,7 +16,6 @@ import type {
 } from "../../../types";
 import type { TypedPatch, BlockIndex } from "../../ir";
 import type { TypeDesc } from "../../ir/types";
-import { asTypeDesc } from "../../ir/types";
 
 // Helper to create a minimal typed patch
 function createTypedPatch(
@@ -289,7 +288,7 @@ describe("pass3TimeTopology", () => {
   describe("Pass-through Fields", () => {
     it("preserves all fields from TypedPatch", () => {
       const busTypes = new Map<string, TypeDesc>();
-      busTypes.set("bus1", asTypeDesc({ world: "signal", domain: "float" }));
+      busTypes.set("bus1", { world: "signal", domain: "float" });
 
       const patch = createPatchWithTimeRoot("FiniteTimeRoot");
       Object.assign(patch, { busTypes });
