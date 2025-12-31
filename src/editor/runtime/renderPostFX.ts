@@ -177,12 +177,90 @@ function applyVignetteEffect(
   ctx.restore();
 }
 
+/**
+ * Apply color grading matrix transformation to canvas.
+ *
+ * Uses ImageData pixel manipulation to apply a color transformation matrix.
+ * Matrix format: 3x3 (RGB only) or 4x4/5x4 (RGBA with offset).
+ *
+ * For 3x3 matrix (9 elements):
+ *   R' = m[0]*R + m[1]*G + m[2]*B
+ *   G' = m[3]*R + m[4]*G + m[5]*B
+ *   B' = m[6]*R + m[7]*G + m[8]*B
+ *
+ * For 5x4 matrix (20 elements, with offset column):
+ *   R' = m[0]*R + m[1]*G + m[2]*B + m[3]*A + m[4]
+ *   G' = m[5]*R + m[6]*G + m[7]*B + m[8]*A + m[9]
+ *   B' = m[10]*R + m[11]*G + m[12]*B + m[13]*A + m[14]
+ *   A' = m[15]*R + m[16]*G + m[17]*B + m[18]*A + m[19]
+ *
+ * @param ctx - Canvas rendering context
+ * @param matrix - Color transformation matrix (9 or 20 elements)
+ */
 function applyColorGradeEffect(
-  _ctx: CanvasRenderingContext2D,
-  _matrix: number[]
+  ctx: CanvasRenderingContext2D,
+  matrix: number[]
 ): void {
-  console.warn(
-    'applyColorGradeEffect: color matrix transformation not implemented yet. ' +
-    'Requires pixel-level manipulation via ImageData.'
-  );
+  if (matrix.length === 0) {
+    // Empty matrix - no transformation
+    return;
+  }
+
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+
+  if (w === 0 || h === 0) {
+    // Empty canvas - nothing to process
+    return;
+  }
+
+  // Get image data from canvas
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const data = imageData.data; // Uint8ClampedArray [r,g,b,a, r,g,b,a, ...]
+
+  // Determine matrix format
+  const is3x3 = matrix.length === 9;
+  const is5x4 = matrix.length === 20;
+
+  if (!is3x3 && !is5x4) {
+    console.warn(
+      `applyColorGradeEffect: invalid matrix length ${matrix.length}. ` +
+      `Expected 9 (3x3) or 20 (5x4). Using identity transform.`
+    );
+    return;
+  }
+
+  // Apply color matrix to each pixel
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i + 0];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const a = data[i + 3];
+
+    if (is3x3) {
+      // 3x3 matrix (RGB only, preserve alpha)
+      const rNew = matrix[0] * r + matrix[1] * g + matrix[2] * b;
+      const gNew = matrix[3] * r + matrix[4] * g + matrix[5] * b;
+      const bNew = matrix[6] * r + matrix[7] * g + matrix[8] * b;
+
+      data[i + 0] = Math.max(0, Math.min(255, rNew));
+      data[i + 1] = Math.max(0, Math.min(255, gNew));
+      data[i + 2] = Math.max(0, Math.min(255, bNew));
+      // Alpha unchanged
+    } else {
+      // 5x4 matrix (RGBA with offset)
+      const rNew = matrix[0] * r + matrix[1] * g + matrix[2] * b + matrix[3] * a + matrix[4];
+      const gNew = matrix[5] * r + matrix[6] * g + matrix[7] * b + matrix[8] * a + matrix[9];
+      const bNew = matrix[10] * r + matrix[11] * g + matrix[12] * b + matrix[13] * a + matrix[14];
+      const aNew = matrix[15] * r + matrix[16] * g + matrix[17] * b + matrix[18] * a + matrix[19];
+
+      data[i + 0] = Math.max(0, Math.min(255, rNew));
+      data[i + 1] = Math.max(0, Math.min(255, gNew));
+      data[i + 2] = Math.max(0, Math.min(255, bNew));
+      data[i + 3] = Math.max(0, Math.min(255, aNew));
+    }
+  }
+
+  // Put modified image data back to canvas
+  ctx.putImageData(imageData, 0, 0);
 }
