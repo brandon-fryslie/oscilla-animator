@@ -312,8 +312,13 @@ describe("pass2TypeGraph", () => {
     it("rejects config buses (not bus-eligible)", () => {
       const patch = createNormalizedPatch({
         buses: [
+<<<<<<< HEAD
           createBus("bus1", "configBus", asTypeDesc({
     world: "config",
+=======
+          createBus("bus1", "specialBus", asTypeDesc({
+    world: "special",
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
     domain: "renderTree",
   })),
         ],
@@ -537,7 +542,11 @@ describe("pass2TypeGraph", () => {
 
     it("returns false for config types", () => {
       expect(
+<<<<<<< HEAD
         isBusEligible(asTypeDesc({ world: "config", domain: "renderTree" }))
+=======
+        isBusEligible(asTypeDesc({ world: "special", domain: "renderTree" }))
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
       ).toBe(false);
     });
   });

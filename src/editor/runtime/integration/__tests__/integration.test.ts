@@ -9,8 +9,12 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
+<<<<<<< HEAD
 import type { TypeDesc as CompilerTypeDesc } from "../../../compiler/ir/types";
 import { asTypeDesc } from "../../../compiler/ir/types";
+=======
+import type { TypeDesc as CompilerTypeDesc , asTypeDesc} from "../../../compiler/ir/types";
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 import {
   compilerToRuntimeType,
   canBroadcastToField,

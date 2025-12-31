@@ -11,7 +11,11 @@
  * - Empty domain handling
  */
 
+<<<<<<< HEAD
 import { asTypeDesc } from "../../../../compiler/ir/types";
+=======
+import { asTypeDesc } from "../../../compiler/ir/types";
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   executeInstances3DProject,

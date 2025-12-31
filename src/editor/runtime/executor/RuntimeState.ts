@@ -36,6 +36,7 @@ import type { ViewportInfo } from "../camera/evaluateCamera";
 import { createTimeState, type TimeState } from "./timeResolution";
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { EventStore } from "./EventStore";
 =======
 import { asTypeDesc } from "../../compiler/ir/types";
@@ -46,6 +47,9 @@ import { asTypeDesc } from "../../compiler/ir/types";
 import { EventStore } from "./EventStore";
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+=======
+import { asTypeDesc } from "../../compiler/ir/types";
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 
 // ============================================================================
 // RuntimeState Interface
