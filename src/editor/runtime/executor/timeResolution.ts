@@ -149,6 +149,7 @@ export function createTimeState(): TimeState {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
@@ -160,6 +161,8 @@ export function createTimeState(): TimeState {
 >>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 4d76ba9 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> d7582f6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
@@ -198,14 +201,28 @@ export function createTimeState(): TimeState {
 >>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
 =======
 =======
+=======
+>>>>>>> ce5d8a5 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> e7be57f (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> 4d76ba9 (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+=======
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> ce5d8a5 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> d7582f6 (feat(events): Implement EventStore for discrete event semantics)
  *
  * @param tAbsMs - Absolute time in milliseconds
  * @param timeModel - Time model specification
@@ -269,16 +286,24 @@ export function resolveTime(
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
 =======
+=======
+>>>>>>> d7582f6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 =======
 =======
 >>>>>>> e7be57f (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> 4d76ba9 (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+>>>>>>> ce5d8a5 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> d7582f6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 <<<<<<< HEAD
 =======
@@ -345,8 +370,20 @@ export function resolveTime(
 =======
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> e7be57f (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> 4d76ba9 (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+=======
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> ce5d8a5 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> d7582f6 (feat(events): Implement EventStore for discrete event semantics)
     }
     timeState.prevTAbsMs = tAbsMs;
   }
@@ -396,6 +433,7 @@ export function resolveTime(
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
@@ -407,6 +445,8 @@ export function resolveTime(
 >>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 4d76ba9 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> d7582f6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
@@ -445,14 +485,28 @@ export function resolveTime(
 >>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
 =======
 =======
+=======
+>>>>>>> ce5d8a5 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> e7be57f (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> 4d76ba9 (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+=======
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> ce5d8a5 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> d7582f6 (feat(events): Implement EventStore for discrete event semantics)
   switch (timeModel.kind) {
     case "finite": {
       // Clamp to duration
