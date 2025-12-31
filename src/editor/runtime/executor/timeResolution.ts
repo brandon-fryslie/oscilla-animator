@@ -104,11 +104,14 @@ export function createTimeState(): TimeState {
  * - Works correctly under variable frame rates and scrubbing
  * - Tracks wrap count and deltaMs for event payloads
 <<<<<<< HEAD
+<<<<<<< HEAD
  *
  * Scrub Detection (P2):
  * - Scrub detected when: mode === 'scrub' OR |deltaMs| > 1000 OR deltaMs < 0
  * - When scrub detected: wrapEvent suppressed (set to 0.0)
  * - Prevents phantom wrap events during non-monotonic time changes
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
  *
@@ -126,6 +129,7 @@ export function resolveTime(
 ): EffectiveTime {
   // Calculate frame delta for event payloads
 <<<<<<< HEAD
+<<<<<<< HEAD
   let deltaMs = 0;
   if (timeState !== undefined) {
     if (timeState.prevTAbsMs !== null) {
@@ -136,15 +140,23 @@ export function resolveTime(
     if (timeState.prevTAbsMs !== null) {
       timeState.lastDeltaMs = tAbsMs - timeState.prevTAbsMs;
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+=======
+  if (timeState !== undefined) {
+    if (timeState.prevTAbsMs !== null) {
+      timeState.lastDeltaMs = tAbsMs - timeState.prevTAbsMs;
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
     }
     timeState.prevTAbsMs = tAbsMs;
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Detect scrub mode (P2)
   // Scrub if: explicit mode OR backward time OR large jump (>1s)
   const isScrub = mode === 'scrub' || deltaMs < 0 || Math.abs(deltaMs) > 1000;
 
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
   switch (timeModel.kind) {
