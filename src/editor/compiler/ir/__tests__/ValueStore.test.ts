@@ -11,16 +11,23 @@ import { createValueStore } from "../stores";
 import type { SlotMeta } from "../stores";
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 import type { TypeDesc } from "../types";
 import { asTypeDesc } from "../types";
 =======
 import type { TypeDesc } from } from "../types";;
 import { asTypeDesc } from
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 import type { TypeDesc } from } from "../types";;
 import { asTypeDesc } from
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
 // Helper to create a simple TypeDesc
 function makeType(world: "signal" | "field", domain: string): TypeDesc {

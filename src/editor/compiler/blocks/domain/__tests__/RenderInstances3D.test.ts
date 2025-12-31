@@ -13,16 +13,23 @@ import { IRBuilderImpl } from "../../../ir/IRBuilderImpl";
 import { buildCompiledProgram } from "../../../ir/buildSchedule";
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 import type { TypeDesc } from "../../../ir/types";
 import { asTypeDesc } from "../../../ir/types";
 =======
 import type { TypeDesc } from } from "../../../ir/types";;
 import { asTypeDesc } from
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 import type { TypeDesc } from } from "../../../ir/types";;
 import { asTypeDesc } from
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
 // Helper to create a TypeDesc
 function makeType(world: TypeDesc["world"], domain: string): TypeDesc {
