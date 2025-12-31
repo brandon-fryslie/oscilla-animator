@@ -502,7 +502,7 @@ export type CompileErrorCode =
 export interface CompileError {
   code: CompileErrorCode;
   message: string;
-  where?: { blockId?: string; port?: string; connection?: CompilerConnection; busId?: string; blockType?: string; outputType?: any };
+  where?: { blockId?: string; port?: string; connection?: CompilerConnection; busId?: string; blockType?: string; outputType?: unknown };
 }
 
 // Import LinkedGraphIR for dual-emit support (Sprint 2, P0-4)

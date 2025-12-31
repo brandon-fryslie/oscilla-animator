@@ -763,7 +763,7 @@ function validateOutputSlots(
 
         errors.push({
           code: "MissingOutputRegistration",
-          message: `Block '${block.label || block.id}' output '${output.label || output.id}' (type: ${ref.k}) has no slot registration. ` +
+          message: `Block '${block.label !== "" ? block.label : block.id}' output '${output.label !== "" ? output.label : output.id}' (type: ${ref.k}) has no slot registration. ` +
                    `This indicates a compiler bug - the block lowering function should call registerSigSlot() or registerFieldSlot().`,
           where: {
             blockId: block.id,
