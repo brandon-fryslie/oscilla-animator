@@ -1,0 +1,26 @@
+Agent: project-evaluator | 2025-12-31-01:45:00
+Scope: module/type-contracts-ir-plumbing
+Completion: 40% | Gaps: 3 critical | Test Quality: N/A (tests broken)
+Reused: 0 findings | Fresh: all findings
+Cache updated: [2 files] type-contracts-divergence.md, adapter-application-status.md
+Ambiguities: 3 found | Workflow: PAUSE (3 questions need answers first)
+
+CRITICAL FINDING: Type system divergence WORSE than plan describes.
+- Editor TypeDesc and IR TypeDesc are structurally incompatible
+- Different worlds: 'config' vs 'special'
+- Different fields: editor has category/busEligible, IR has bundleKind/bundleArity
+- Different domain enums: 90+ vs 30, partial overlap
+- Silent bugs: defaultSource materialization broken for 'config' types
+
+BLOCKING ISSUES:
+1. TypeDesc unification impossible without architectural decision
+2. 'config' vs 'special' world mismatch breaks defaultSource
+3. Adapter application timing unclear (Plan says Pass 6, code has Pass 8)
+
+DELIVERABLE STATUS:
+1. Unify TypeDesc: NOT STARTED (blocked by architectural decision)
+2. Adapter/lens in Pass 6: PARTIAL (only in Pass 8, missing from Pass 6)
+3. DefaultSource consistency: PARTIAL (works for numeric, broken for 'config')
+4. Pass 8 hardening: COMPLETE (strong error handling exists)
+
+NEXT ACTION REQUIRED: User must answer 3 architectural questions before work can proceed.
