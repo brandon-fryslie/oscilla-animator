@@ -14,6 +14,7 @@ export * from './types/dnd';
 import type { DefaultSourceAttachment } from './defaultSources/types';
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 <<<<<<< HEAD
@@ -21,6 +22,8 @@ import type { DefaultSourceAttachment } from './defaultSources/types';
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 // =============================================================================
 // Bus Type System (Core/Internal Split)
 // =============================================================================
@@ -35,6 +38,7 @@ import type { DefaultSourceAttachment } from './defaultSources/types';
  */
 export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 // Import for use within this file AND re-export for consumers
 import type {
@@ -68,6 +72,11 @@ export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
 
 
+=======
+// =============================================================================
+// Kernel Capabilities (Primitive Enforcement)
+// =============================================================================
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 
 /**
  * Kernel capabilities - the five authorities that define primitives.
@@ -114,6 +123,9 @@ export type KernelId =
   | 'ImageSource'
   | 'DebugDisplay';
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 
 /**
  * Compile kind for pure blocks - determines what AST they can produce.
@@ -123,6 +135,7 @@ export type KernelId =
  */
 export type PureCompileKind = 'operator' | 'composite' | 'spec';
 
+<<<<<<< HEAD
 // =============================================================================
 // Bus Type System
 // =============================================================================
@@ -189,6 +202,56 @@ export type InternalDomain =
   | 'cameraRef';   // Camera resource reference (for 3D rendering)
 
 /**
+=======
+/**
+ * Core domains - what users see in the bus system.
+ * These are the learnable creative vocabulary.
+ */
+export type CoreDomain =
+  | 'float'    // Floating-point values
+  | 'int'      // Integer values
+  | 'vec2'     // 2D positions/vectors
+  | 'vec3'     // 3D positions/vectors
+  | 'color'    // Color values
+  | 'boolean'  // True/false values
+  | 'time'     // Time values (always in seconds)
+  | 'rate'     // Rate/multiplier values
+  | 'trigger'; // Pulse/event signals
+
+/**
+ * Internal domains - engine plumbing, not bus-eligible by default.
+ */
+export type InternalDomain =
+  | 'point'        // Point semantics
+  | 'duration'     // Duration semantics
+  | 'hsl'          // HSL color space
+  | 'path'         // Path data
+  | 'expression'   // DSL expression source
+  | 'waveform'     // Oscillator waveform selector
+  | 'phaseSample'  // PhaseMachine sample payload
+  | 'phaseMachine' // PhaseMachine instance payload
+  | 'wobble'       // Wobble modulator config
+  | 'spiral'       // Spiral modulator config
+  | 'wave'         // Wave modulator config
+  | 'jitter'       // Jitter modulator config
+  | 'program'      // Compiled program
+  | 'renderTree'   // Render tree output
+  | 'renderNode'   // Single render node
+  | 'filterDef'    // SVG filter definition
+  | 'strokeStyle'  // Stroke configuration
+  | 'elementCount' // Number of elements
+  | 'scene'        // Scene data
+  | 'sceneTargets' // Scene target points
+  | 'sceneStrokes' // Scene stroke paths
+  | 'event'        // Generic events
+  | 'string'       // String values (labels, etc.)
+  | 'bounds'       // Bounding box / bounds
+  | 'spec'         // Spec types (config that compiles to programs)
+  | 'canvasRender'  // Canvas 2D render commands
+  | 'cameraRef';   // Camera resource reference (for 3D rendering)
+
+/**
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
  * All domains (core + internal).
  */
 export type Domain = CoreDomain | InternalDomain;
@@ -229,10 +292,13 @@ export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer
 
 /**
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
  * Format a TypeDesc for display.
  */
 // MOVED TO SEMANTIC KERNEL

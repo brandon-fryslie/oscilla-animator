@@ -11,6 +11,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import type { TypeDesc as CompilerTypeDesc } from "../../../compiler/ir/types";
 import { asTypeDesc } from "../../../compiler/ir/types";
 =======
@@ -28,6 +29,9 @@ import { asTypeDesc } from
 import type { TypeDesc as CompilerTypeDesc , asTypeDesc} from "../../../compiler/ir/types";
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+=======
+import type { TypeDesc as CompilerTypeDesc , asTypeDesc} from "../../../compiler/ir/types";
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 import {
   compilerToRuntimeType,
   canBroadcastToField,
