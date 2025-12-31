@@ -4,12 +4,15 @@
  * Floating popup that displays information about a hovered element
  * when in Probe Mode. Shows:
  * - For buses: name, type, current value, publisher/listener counts, sparkline
- * - For blocks: type, label, placeholder for future value display
+ * - For blocks: type, label, probe values from TraceController
  */
 
 import { observer } from 'mobx-react-lite';
 import { useStore } from '../stores';
 import { BusValueMeter } from './BusValueMeter';
+import { TraceController } from '../debug/TraceController';
+import { valueRecordToSummary } from '../debug/valueRecordToSummary';
+import { formatValueSummary } from '../debug/types';
 import './ProbeCard.css';
 
 /**
@@ -100,6 +103,29 @@ export const ProbeCard = observer(function ProbeCard({ target, position }: Probe
       return null;
     }
 
+    // Get TraceController to read probe values
+    const traceController = TraceController.instance;
+
+    // Common port IDs to check for probes (based on DebugDisplay ports)
+    // In reality, any block input port could have a probe if registered
+    const commonPorts = ['signal', 'phase', 'field', 'domain', 'value', 'input'];
+
+    // Collect probe values for this block
+    const probeValues: Array<{ portId: string; value: string }> = [];
+
+    for (const portId of commonPorts) {
+      const probeId = `${block.id}:${portId}`;
+      const valueRecord = traceController.getProbeValue(probeId);
+
+      if (valueRecord !== undefined) {
+        const summary = valueRecordToSummary(valueRecord);
+        if (summary !== null) {
+          const formattedValue = formatValueSummary(summary);
+          probeValues.push({ portId, value: formattedValue });
+        }
+      }
+    }
+
     return (
       <div className="probe-card" style={style}>
         <div className="probe-card-header">
@@ -113,9 +139,22 @@ export const ProbeCard = observer(function ProbeCard({ target, position }: Probe
             <span className="probe-card-value">{block.type}</span>
           </div>
 
-          <div className="probe-card-placeholder">
-            Block probe coming soon
-          </div>
+          {probeValues.length === 0 && (
+            <div className="probe-card-placeholder">
+              No probes registered for this block
+            </div>
+          )}
+
+          {probeValues.length > 0 && (
+            <>
+              {probeValues.map(({ portId, value }) => (
+                <div key={portId} className="probe-card-row">
+                  <span className="probe-card-label">{portId}:</span>
+                  <span className="probe-card-value">{value}</span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       </div>
     );
