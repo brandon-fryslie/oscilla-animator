@@ -35,7 +35,11 @@ import { MeshStore } from "../mesh/MeshStore";
 import type { ViewportInfo } from "../camera/evaluateCamera";
 import { createTimeState, type TimeState } from "./timeResolution";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { asTypeDesc } from "../../compiler/ir/types";
+=======
+import { EventStore } from "./EventStore";
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 =======
 import { EventStore } from "./EventStore";
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
