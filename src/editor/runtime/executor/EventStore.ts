@@ -139,6 +139,78 @@ export class EventStore {
   }
 
   /**
+   * Consume an event - check if triggered and return payload in one call.
+   *
+   * This is a convenience method that combines check() and getPayload().
+   * Returns the payload if the event was triggered, undefined otherwise.
+   *
+   * @param slot - Event slot index
+   * @returns Event payload if triggered, undefined otherwise
+   *
+   * @example
+   * ```typescript
+   * // BEFORE: separate check + getPayload
+   * if (runtime.events.check(slot)) {
+   *   const payload = runtime.events.getPayload(slot);
+   *   // use payload...
+   * }
+   *
+   * // AFTER: single consume() call
+   * const payload = runtime.events.consume(slot);
+   * if (payload) {
+   *   // use payload...
+   * }
+   * ```
+   */
+  public consume(slot: number): EventSlotValue["payload"] | undefined {
+    const event = this.events.get(slot);
+    return event?.triggered ? event.payload : undefined;
+  }
+
+  /**
+   * Check if any events were triggered this frame.
+   *
+   * Quick check for "did anything happen this frame?" without
+   * needing to check individual slots.
+   *
+   * @returns true if at least one event was triggered, false otherwise
+   *
+   * @example
+   * ```typescript
+   * if (runtime.events.hasEvents()) {
+   *   console.log("At least one event fired this frame");
+   * }
+   * ```
+   */
+  public hasEvents(): boolean {
+    return this.events.size > 0;
+  }
+
+  /**
+   * Get all triggered event slots for this frame.
+   *
+   * Returns an array of slot indices that have been triggered.
+   * Useful for debugging or iterating over all active events.
+   *
+   * @returns Array of triggered slot indices
+   *
+   * @example
+   * ```typescript
+   * const triggered = runtime.events.getTriggered();
+   * console.log(`Events fired: ${triggered.join(', ')}`);
+   *
+   * // Process all events
+   * for (const slot of triggered) {
+   *   const payload = runtime.events.getPayload(slot);
+   *   console.log(`Event ${slot}: ${JSON.stringify(payload)}`);
+   * }
+   * ```
+   */
+  public getTriggered(): number[] {
+    return Array.from(this.events.keys());
+  }
+
+  /**
    * Reset all events (clear triggered flags).
    *
    * Called at the start of each frame to clear previous frame's events.
