@@ -15,8 +15,13 @@ import type {
   Bus,
 } from "../../../types";
 import type { TypedPatch, BlockIndex } from "../../ir";
+<<<<<<< HEAD
 import type { TypeDesc } from "../../ir/types";
 import { asTypeDesc } from "../../ir/types";
+=======
+import type { TypeDesc } from } from "../../ir/types";;
+import { asTypeDesc } from
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
 // Helper to create a minimal typed patch
 function createTypedPatch(
