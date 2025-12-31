@@ -4,6 +4,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Agent: project-evaluator | 2025-12-31
 Scope: render-pipeline (6 gaps: z-order, curves, clipping, transforms, postfx, materials)
 Completion: 90% (5.5/6 gaps functional) | Critical Issues: 1 (ClipGroup stubbed)
@@ -51,6 +52,8 @@ Files Created:
 >>>>>>> 1741b0d (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 =======
 >>>>>>> 110c016 (fix(test): Add missing debugProbes field to test mocks)
+=======
+>>>>>>> 4b9afc4 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 Agent: project-evaluator | 2025-12-31 01:27:00
 Scope: project/type-contracts-ir-plumbing
 Completion: 50% | Gaps: 4 deliverables (1 blocked, 1 complete, 2 partial) | Test Quality: Cannot assess (typecheck fails)
@@ -72,6 +75,8 @@ Ambiguities: 4 found | Workflow: PAUSE
 >>>>>>> 19246ce (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 =======
 >>>>>>> eb0c6a7 (fix(test): Add missing debugProbes field to test mocks)
+=======
+>>>>>>> d84c835 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 Agent: project-evaluator | 2025-12-31
 Scope: render-pipeline (6 gaps: z-order, curves, clipping, transforms, postfx, materials)
 Completion: 90% (5.5/6 gaps functional) | Critical Issues: 1 (ClipGroup stubbed)
@@ -123,6 +128,8 @@ Files Created:
 =======
 =======
 =======
+=======
+>>>>>>> f5d5a76 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 Agent: project-evaluator | 2025-12-31 01:27:00
 Scope: project/type-contracts-ir-plumbing
 Completion: 50% | Gaps: 4 deliverables (1 blocked, 1 complete, 2 partial) | Test Quality: Cannot assess (typecheck fails)
@@ -132,6 +139,53 @@ Ambiguities: 4 found | Workflow: PAUSE
   -> CRITICAL: TypeDesc unification blocked by incompatible definitions
   -> Need decision on unified type contract strategy (Options A/B/C)
   -> 4 questions for user before implementation can proceed
+<<<<<<< HEAD
 >>>>>>> 1dc1a6e (fix(test): Add missing debugProbes field to test mocks)
+<<<<<<< HEAD
 >>>>>>> eb0c6a7 (fix(test): Add missing debugProbes field to test mocks)
+<<<<<<< HEAD
 >>>>>>> 110c016 (fix(test): Add missing debugProbes field to test mocks)
+=======
+=======
+=======
+=======
+Agent: project-evaluator | 2025-12-31
+Scope: render-pipeline (6 gaps: z-order, curves, clipping, transforms, postfx, materials)
+Completion: 90% (5.5/6 gaps functional) | Critical Issues: 1 (ClipGroup stubbed)
+Reused: 0 findings | Fresh: 6 gap evaluations
+Cache updated: render-pipeline-status.md in eval-cache/
+Ambiguities: 3 found | Workflow: PAUSE
+
+Gaps Status:
+  ✅ Gap 1 (Z-Order): COMPLETE - functional
+  ✅ Gap 2 (Curve Flattening): COMPLETE - De Casteljau algorithm implemented
+  ⚠️ Gap 3 (Clipping): PARTIAL - types complete, ClipGroup rendering stubbed (logs warning)
+  ✅ Gap 4 (Transforms): COMPLETE - rotation + scaleXY functional
+  ⚠️ Gap 5 (PostFX): PARTIAL - 3/4 effects (blur, bloom, vignette), ColorGrade stubbed
+  ✅ Gap 6 (Gradients): COMPLETE - linear/radial gradients functional
+
+Critical Findings:
+  1. ClipGroup passes do not render children (canvasRenderer.ts:253-255 logs warning)
+  2. ColorGrade effect stubbed (renderPostFX.ts:180-188 logs warning)
+  3. No persistent tests exist for any render features (validation by code inspection only)
+  4. Type errors in state-offset-resolution.test.ts block test execution
+
+Ambiguities Requiring Clarification:
+  1. What does "COMPLETE" mean for stubbed features? (ClipGroup, ColorGrade)
+     - Options: (A) Full impl required, (B) Stubs acceptable, (C) New "STUBBED" status
+  2. Is runtime verification required for "COMPLETE"?
+     - Options: (A) Tests/manual verify required, (B) Code inspection sufficient, (C) Automated tests only
+  3. Should type errors be fixed before declaring render pipeline complete?
+     - Options: (A) Fix first, (B) Track separately, (C) Block pipeline until fixed
+
+Next Action: User should answer 3 clarification questions OR choose to CONTINUE accepting ambiguities.
+
+Files Created:
+  - .agent_planning/render-pipeline/STATUS-20251231.md (comprehensive evaluation)
+  - .agent_planning/eval-cache/render-pipeline-status.md (stable knowledge cache)
+  - .agent_planning/eval-cache/INDEX.md (updated with new cache entry)
+  - .agent_planning/SUMMARY-project-evaluator-20251231.txt (this file)
+>>>>>>> 19246ce (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
+>>>>>>> f5d5a76 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
+>>>>>>> d84c835 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
+>>>>>>> 4b9afc4 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
