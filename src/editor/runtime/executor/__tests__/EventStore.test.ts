@@ -238,6 +238,164 @@ describe("EventStore", () => {
   });
 
   // =========================================================================
+  // Convenience Methods (Ergonomics)
+  // =========================================================================
+
+  describe("consume (check + getPayload combined)", () => {
+    it("returns payload when event is triggered", () => {
+      const slot = 42;
+      const payload = { phase: 0.95, count: 3, deltaMs: 16.67 };
+
+      store.trigger(slot, payload);
+
+      // consume() should return payload
+      const consumed = store.consume(slot);
+      expect(consumed).toEqual(payload);
+    });
+
+    it("returns undefined when event is not triggered", () => {
+      const slot = 42;
+
+      // Never triggered
+      const consumed = store.consume(slot);
+      expect(consumed).toBeUndefined();
+    });
+
+    it("returns undefined for triggered event without payload", () => {
+      const slot = 42;
+
+      // Trigger without payload
+      store.trigger(slot);
+
+      // consume() returns undefined (no payload, even though triggered)
+      const consumed = store.consume(slot);
+      expect(consumed).toBeUndefined();
+    });
+
+    it("returns undefined after reset", () => {
+      const slot = 42;
+      const payload = { phase: 0.5, count: 1, deltaMs: 16.67 };
+
+      store.trigger(slot, payload);
+      store.reset();
+
+      // After reset, consume() returns undefined
+      const consumed = store.consume(slot);
+      expect(consumed).toBeUndefined();
+    });
+
+    it("works as expected in typical usage pattern", () => {
+      const wrapSlot = 100;
+
+      // Frame 1: No wrap
+      let payload = store.consume(wrapSlot);
+      expect(payload).toBeUndefined();
+
+      // Frame 2: Wrap happens
+      store.trigger(wrapSlot, { phase: 0.95, count: 1, deltaMs: 16.67 });
+      payload = store.consume(wrapSlot);
+      expect(payload).toBeDefined();
+      expect(payload!.count).toBe(1);
+
+      // Frame 3: Reset, no wrap
+      store.reset();
+      payload = store.consume(wrapSlot);
+      expect(payload).toBeUndefined();
+    });
+  });
+
+  describe("hasEvents (quick check for any events)", () => {
+    it("returns false when no events triggered", () => {
+      expect(store.hasEvents()).toBe(false);
+    });
+
+    it("returns true when at least one event triggered", () => {
+      store.trigger(42);
+      expect(store.hasEvents()).toBe(true);
+    });
+
+    it("returns true when multiple events triggered", () => {
+      store.trigger(42);
+      store.trigger(43);
+      store.trigger(44);
+
+      expect(store.hasEvents()).toBe(true);
+    });
+
+    it("returns false after reset", () => {
+      store.trigger(42);
+      expect(store.hasEvents()).toBe(true);
+
+      store.reset();
+      expect(store.hasEvents()).toBe(false);
+    });
+
+    it("returns true even for events without payload", () => {
+      store.trigger(42); // No payload
+      expect(store.hasEvents()).toBe(true);
+    });
+  });
+
+  describe("getTriggered (enumerate all triggered slots)", () => {
+    it("returns empty array when no events triggered", () => {
+      const triggered = store.getTriggered();
+      expect(triggered).toEqual([]);
+    });
+
+    it("returns single slot when one event triggered", () => {
+      store.trigger(42);
+
+      const triggered = store.getTriggered();
+      expect(triggered).toEqual([42]);
+    });
+
+    it("returns all triggered slots when multiple events fired", () => {
+      store.trigger(42);
+      store.trigger(100);
+      store.trigger(5);
+
+      const triggered = store.getTriggered();
+      expect(triggered).toHaveLength(3);
+      expect(triggered).toContain(42);
+      expect(triggered).toContain(100);
+      expect(triggered).toContain(5);
+    });
+
+    it("returns empty array after reset", () => {
+      store.trigger(42);
+      store.trigger(43);
+
+      store.reset();
+
+      const triggered = store.getTriggered();
+      expect(triggered).toEqual([]);
+    });
+
+    it("handles slot index 0 correctly", () => {
+      store.trigger(0);
+      store.trigger(1);
+
+      const triggered = store.getTriggered();
+      expect(triggered).toContain(0);
+      expect(triggered).toContain(1);
+    });
+
+    it("can be used to iterate over all events", () => {
+      // Trigger multiple events with payloads
+      store.trigger(42, { phase: 0.5, count: 1, deltaMs: 16.67 });
+      store.trigger(100, { phase: 0.8, count: 2, deltaMs: 16.67 });
+
+      // Iterate over all triggered events
+      const triggered = store.getTriggered();
+      const payloads = triggered.map((slot) => store.getPayload(slot));
+
+      expect(payloads).toHaveLength(2);
+      expect(payloads[0]).toBeDefined();
+      expect(payloads[1]).toBeDefined();
+    });
+  });
+
+  // =========================================================================
   // Edge Cases
   // =========================================================================
 
