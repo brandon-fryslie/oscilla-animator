@@ -1,0 +1,7 @@
+Agent: work-evaluator | 2025-12-30-084119
+Scope: work/sprint2-bundle-types
+Verdict: INCOMPLETE
+Criteria: 5/10 working | Breaks found: 0 | Ambiguities: 1
+Previous issues: none (first evaluation)
+Missing checks: 0 specified
+Cache updated: runtime-bundle-types.md

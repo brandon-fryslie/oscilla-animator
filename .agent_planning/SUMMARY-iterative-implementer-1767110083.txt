@@ -1,0 +1,34 @@
+Agent: iterative-implementer | 1767110083
+Mode: manual
+Completed: Bundle split/merge operations | Files: 5 | Commits: 1 (bac2361)
+Tests: 2487 passing (18 new for bundle operations)
+Cache invalidated: runtime-bundle-types.md (IR operations added)
+Status: complete - Sprint 2 gaps partially filled
+
+Implementation Summary:
+- Added SignalExprBundleSplit IR node for extracting bundle components
+- Added SignalExprBundleMerge IR node for constructing bundles from scalars
+- Implemented IRBuilder.sigBundleSplit() - returns array of component signals
+- Implemented IRBuilder.sigBundleMerge() - validates arity, constructs bundle
+- Created 18 comprehensive tests covering all bundle kinds (Scalar through Mat4)
+
+What Works:
+- Split any bundle kind into N scalar signals (N = arity)
+- Merge N scalar signals into any bundle kind
+- Arity validation (throws error on mismatch)
+- Round-trip: split → modify components → merge
+- Mix components from different bundles
+
+Remaining Sprint 2 Gaps (from evaluation):
+1. Port type distinction (PortScalar vs PortBundle) - NOT IMPLEMENTED
+2. Port mismatch validation (compile error) - NOT IMPLEMENTED
+
+These require:
+- Extending Slot type in src/editor/types.ts with bundle metadata
+- Adding port connection validation in compiler passes
+- Wire validation during connection resolution
+
+Next Steps:
+The bundle operations foundation is complete and tested. Port validation
+is a separate concern that touches the editor's type system and connection
+logic, not just the IR layer. This should be tackled as a separate task.
