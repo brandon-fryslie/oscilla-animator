@@ -260,6 +260,42 @@ export interface IRBuilder {
   broadcastSigToField(sig: SigExprId, domainSlot: ValueSlot, outputType: TypeDesc): FieldExprId;
 
   /**
+   * Indexed field map - generate field values from element index.
+   *
+   * Creates a field where each element is computed from its index and domain size.
+   * Signals are evaluated once and passed to the function.
+   *
+   * @param domainSlot - Domain slot providing element count n
+   * @param fn - Pure function: fn(i, n, ...sigValues) → T
+   * @param outputType - Output type of the field
+   * @param signals - Optional signals to evaluate once and pass to function
+   */
+  fieldMapIndexed(
+    domainSlot: ValueSlot,
+    fn: PureFnRef,
+    outputType: TypeDesc,
+    signals?: SigExprId[]
+  ): FieldExprId;
+
+  /**
+   * Zip field with signals - combine per-element field values with scalar signals.
+   *
+   * Creates a field where each element combines a field value with signal values.
+   * Signals are evaluated once per frame; field is evaluated per-element.
+   *
+   * @param field - Field input (per-element)
+   * @param signals - Signals to evaluate once per frame
+   * @param fn - Pure function: fn(fieldValue, sig1, sig2, ...) → T
+   * @param outputType - Output type of the field
+   */
+  fieldZipSig(
+    field: FieldExprId,
+    signals: SigExprId[],
+    fn: PureFnRef,
+    outputType: TypeDesc
+  ): FieldExprId;
+
+  /**
    * Reduce a field to a signal.
    */
   reduceFieldToSig(field: FieldExprId, fn: ReduceFn): SigExprId;

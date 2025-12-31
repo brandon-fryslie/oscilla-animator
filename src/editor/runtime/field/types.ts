@@ -161,7 +161,13 @@ export type FieldHandle =
   | { kind: 'Combine'; mode: CombineMode; terms: readonly FieldExprId[]; type: TypeDesc }
 
   // Source field from domain
-  | { kind: 'Source'; sourceTag: string; domainId: number; type: TypeDesc };
+  | { kind: 'Source'; sourceTag: string; domainId: number; type: TypeDesc }
+
+  // Indexed map operation - generate values from element index
+  | { kind: 'MapIndexed'; domainSlot: number; fn: string; signals?: readonly SigExprId[]; type: TypeDesc }
+
+  // Zip field with signals - combine per-element values with scalar signals
+  | { kind: 'ZipSig'; field: FieldExprId; fn: string; signals: readonly SigExprId[]; type: TypeDesc };
 
 // =============================================================================
 // FieldExprIR: IR Node Representation
@@ -201,7 +207,10 @@ export type FieldExprIR =
   | { kind: 'sampleSignal'; signalSlot: SigExprId; domainId: number; type: TypeDesc }
   | { kind: 'busCombine'; combine: BusCombine; terms: readonly FieldExprId[]; type: TypeDesc }
   | { kind: 'inputSlot'; slot: InputSlot; type: TypeDesc }
-  | { kind: 'source'; sourceTag: string; domainId: number; type: TypeDesc };
+  | { kind: 'source'; sourceTag: string; domainId: number; type: TypeDesc }
+  // Indexed and signal-combining operations
+  | { kind: 'mapIndexed'; fn: FnRef; domainSlot: number; signals?: readonly SigExprId[]; type: TypeDesc }
+  | { kind: 'zipSig'; fn: FnRef; field: FieldExprId; signals: readonly SigExprId[]; type: TypeDesc };
 
 // =============================================================================
 // Field Environment

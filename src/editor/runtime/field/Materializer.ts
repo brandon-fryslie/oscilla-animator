@@ -469,6 +469,14 @@ function fillBuffer(
       fillBufferSource(handle, out, env);
       break;
 
+    case 'MapIndexed':
+      fillBufferMapIndexed(handle, out, N, env);
+      break;
+
+    case 'ZipSig':
+      fillBufferZipSig(handle, out, N, env);
+      break;
+
     default: {
       const _exhaustive: never = handle;
       throw new Error(`Unknown handle kind: ${(_exhaustive as { kind: string }).kind}`);
@@ -781,6 +789,238 @@ function fillBufferSource(
   const outArr = new Uint8Array(out.buffer, out.byteOffset, out.byteLength);
   const srcArr = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
   outArr.set(srcArr);
+}
+
+/**
+ * Fill buffer with MapIndexed operation.
+ *
+ * Evaluates fn(i, n, ...sigValues) for each element index i.
+ * Signals are evaluated once and passed to each element.
+ */
+function fillBufferMapIndexed(
+  handle: Extract<FieldHandle, { kind: 'MapIndexed' }>,
+  out: ArrayBufferView,
+  N: number,
+  env: MaterializerEnv
+): void {
+  // Evaluate signals once (they're uniform across elements)
+  const sigValues: number[] = [];
+  if (handle.signals !== undefined) {
+    for (const sigId of handle.signals) {
+      sigValues.push(evalSig(sigId, env.sigEnv, env.sigNodes));
+    }
+  }
+
+  const outArr = out as Float32Array;
+
+  // Apply indexed kernel based on function name
+  switch (handle.fn) {
+    case 'linearInterp':
+      // Linear interpolation: lerp(start, end, i/(n-1))
+      {
+        const start = sigValues[0] ?? 0;
+        const end = sigValues[1] ?? 1;
+        for (let i = 0; i < N; i++) {
+          const t = N > 1 ? i / (N - 1) : 0;
+          outArr[i] = start + (end - start) * t;
+        }
+      }
+      break;
+
+    case 'normalizedIndex':
+      // Normalized index: i / (n - 1)
+      for (let i = 0; i < N; i++) {
+        outArr[i] = N > 1 ? i / (N - 1) : 0;
+      }
+      break;
+
+    case 'hueGradient':
+      // Hue gradient: (hueOffset + (i/n) * spread) mod 1
+      {
+        const hueOffset = sigValues[0] ?? 0;
+        const spread = sigValues[1] ?? 1;
+        for (let i = 0; i < N; i++) {
+          const t = N > 0 ? i / N : 0;
+          const hue = (hueOffset + t * spread) % 1;
+          outArr[i] = hue < 0 ? hue + 1 : hue;
+        }
+      }
+      break;
+
+    default:
+      // Generic fallback - just return normalized index
+      for (let i = 0; i < N; i++) {
+        outArr[i] = N > 1 ? i / (N - 1) : 0;
+      }
+      break;
+  }
+}
+
+/**
+ * Fill buffer with ZipSig operation.
+ *
+ * Evaluates fn(field[i], sig1, sig2, ...) for each element.
+ * Field is materialized; signals are evaluated once.
+ */
+function fillBufferZipSig(
+  handle: Extract<FieldHandle, { kind: 'ZipSig' }>,
+  out: ArrayBufferView,
+  N: number,
+  env: MaterializerEnv
+): void {
+  // Evaluate signals once (they're uniform across elements)
+  const sigValues: number[] = [];
+  for (const sigId of handle.signals) {
+    sigValues.push(evalSig(sigId, env.sigEnv, env.sigNodes));
+  }
+
+  // Materialize the field input
+  const fieldBuffer = materialize(
+    {
+      fieldId: handle.field,
+      domainId: env.fieldEnv.domainId,
+      format: handle.type.kind === 'vec2' ? 'vec2f32' : 'f32',
+      layout: handle.type.kind === 'vec2' ? 'vec2' : 'scalar',
+      usageTag: 'zipSig-input',
+    },
+    env
+  ) as Float32Array;
+
+  const outArr = out as Float32Array;
+
+  // Apply kernel based on function name and type
+  if (handle.type.kind === 'vec2') {
+    applyZipSigVec2(handle.fn, fieldBuffer, sigValues, outArr, N, env);
+  } else {
+    applyZipSigScalar(handle.fn, fieldBuffer, sigValues, outArr, N);
+  }
+}
+
+/**
+ * Apply ZipSig kernel for scalar values
+ */
+function applyZipSigScalar(
+  fn: string,
+  field: Float32Array,
+  signals: number[],
+  out: Float32Array,
+  N: number
+): void {
+  switch (fn) {
+    case 'Add':
+      for (let i = 0; i < N; i++) {
+        out[i] = field[i] + (signals[0] ?? 0);
+      }
+      break;
+
+    case 'Mul':
+      for (let i = 0; i < N; i++) {
+        out[i] = field[i] * (signals[0] ?? 1);
+      }
+      break;
+
+    case 'Sub':
+      for (let i = 0; i < N; i++) {
+        out[i] = field[i] - (signals[0] ?? 0);
+      }
+      break;
+
+    case 'Div':
+      for (let i = 0; i < N; i++) {
+        out[i] = field[i] / (signals[0] ?? 1);
+      }
+      break;
+
+    default:
+      // Identity fallback
+      for (let i = 0; i < N; i++) {
+        out[i] = field[i];
+      }
+      break;
+  }
+}
+
+/**
+ * Apply ZipSig kernel for vec2 values
+ */
+function applyZipSigVec2(
+  fn: string,
+  field: Float32Array,
+  signals: number[],
+  out: Float32Array,
+  N: number,
+  env: MaterializerEnv
+): void {
+  switch (fn) {
+    case 'jitterVec2':
+      // jitter(pos, time, amplitudeX, amplitudeY)
+      {
+        const time = signals[0] ?? 0;
+        const ampX = signals[1] ?? 1;
+        const ampY = signals[2] ?? ampX;
+        for (let i = 0; i < N; i++) {
+          const x = field[i * 2];
+          const y = field[i * 2 + 1];
+          // Use element ID for stable random offset
+          const elementId = env.domainElements?.[i] ?? String(i);
+          const randX = hash01ById(elementId + '-x', Math.floor(time));
+          const randY = hash01ById(elementId + '-y', Math.floor(time));
+          out[i * 2] = x + (randX - 0.5) * ampX;
+          out[i * 2 + 1] = y + (randY - 0.5) * ampY;
+        }
+      }
+      break;
+
+    case 'vec2Rotate':
+      // rotate(pos, angle, centerX, centerY)
+      {
+        const angle = signals[0] ?? 0;
+        const cx = signals[1] ?? 0;
+        const cy = signals[2] ?? 0;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        for (let i = 0; i < N; i++) {
+          const x = field[i * 2] - cx;
+          const y = field[i * 2 + 1] - cy;
+          out[i * 2] = x * cos - y * sin + cx;
+          out[i * 2 + 1] = x * sin + y * cos + cy;
+        }
+      }
+      break;
+
+    case 'vec2Scale':
+      // scale(pos, scaleX, scaleY, centerX, centerY)
+      {
+        const sx = signals[0] ?? 1;
+        const sy = signals[1] ?? sx;
+        const cx = signals[2] ?? 0;
+        const cy = signals[3] ?? 0;
+        for (let i = 0; i < N; i++) {
+          out[i * 2] = (field[i * 2] - cx) * sx + cx;
+          out[i * 2 + 1] = (field[i * 2 + 1] - cy) * sy + cy;
+        }
+      }
+      break;
+
+    case 'vec2Translate':
+      // translate(pos, dx, dy)
+      {
+        const dx = signals[0] ?? 0;
+        const dy = signals[1] ?? 0;
+        for (let i = 0; i < N; i++) {
+          out[i * 2] = field[i * 2] + dx;
+          out[i * 2 + 1] = field[i * 2 + 1] + dy;
+        }
+      }
+      break;
+
+    default:
+      // Identity fallback
+      for (let i = 0; i < N * 2; i++) {
+        out[i] = field[i];
+      }
+      break;
+  }
 }
 
 /**

@@ -500,6 +500,42 @@ export class IRBuilderImpl implements IRBuilder {
     return id;
   }
 
+  fieldMapIndexed(
+    domainSlot: ValueSlot,
+    fn: PureFnRef,
+    outputType: TypeDesc,
+    signals?: SigExprId[]
+  ): FieldExprId {
+    const id = this.fieldExprs.length;
+    this.fieldExprs.push({
+      kind: "mapIndexed",
+      domainSlot,
+      fn,
+      signals,
+      type: outputType,
+    });
+    this.trackFieldExprSource(id);
+    return id;
+  }
+
+  fieldZipSig(
+    field: FieldExprId,
+    signals: SigExprId[],
+    fn: PureFnRef,
+    outputType: TypeDesc
+  ): FieldExprId {
+    const id = this.fieldExprs.length;
+    this.fieldExprs.push({
+      kind: "zipSig",
+      field,
+      signals,
+      fn,
+      type: outputType,
+    });
+    this.trackFieldExprSource(id);
+    return id;
+  }
+
   fieldTransform(src: FieldExprId, chain: TransformChainId): FieldExprId {
     const id = this.fieldExprs.length;
     const chainDef = this.transformChains[chain];
