@@ -106,6 +106,7 @@ export function createTimeState(): TimeState {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
  *
@@ -128,6 +129,8 @@ export function createTimeState(): TimeState {
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
  *
  * @param tAbsMs - Absolute time in milliseconds
  * @param timeModel - Time model specification
@@ -142,6 +145,7 @@ export function resolveTime(
   mode: 'playback' | 'scrub' = 'playback'
 ): EffectiveTime {
   // Calculate frame delta for event payloads
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -173,10 +177,16 @@ export function resolveTime(
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
+=======
+  if (timeState !== undefined) {
+    if (timeState.prevTAbsMs !== null) {
+      timeState.lastDeltaMs = tAbsMs - timeState.prevTAbsMs;
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
     }
     timeState.prevTAbsMs = tAbsMs;
   }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -201,6 +211,8 @@ export function resolveTime(
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
   switch (timeModel.kind) {
     case "finite": {
       // Clamp to duration

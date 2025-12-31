@@ -42,6 +42,7 @@ import { createTimeState, type TimeState } from "./timeResolution";
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { EventStore } from "./EventStore";
 =======
 import { asTypeDesc } from "../../compiler/ir/types";
@@ -99,6 +100,12 @@ import { EventStore } from "./EventStore";
 =======
 import { asTypeDesc } from "../../compiler/ir/types";
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+import { asTypeDesc } from "../../compiler/ir/types";
+=======
+import { EventStore } from "./EventStore";
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 
 // ============================================================================
 // RuntimeState Interface
