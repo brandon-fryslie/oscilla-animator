@@ -255,6 +255,38 @@ export function initLensRegistry(): void {
         const invert = resolveBooleanParam(params.invert, time, runtime);
         return invert ? -value : value;
       }),
+    compileToIR: (input, params, ctx) => {
+      // Only compile signal inputs
+      if (input.k !== 'sig') {
+        return null;
+      }
+
+      // Extract invert parameter
+      const invertParam = params.invert;
+      if (invertParam?.k !== 'scalarConst') {
+        return null; // Dynamic params not yet supported
+      }
+
+      const invertValue = ctx.builder.getConstPool()[invertParam.constId] as boolean;
+      const outputType: IRTypeDesc = {
+        world: 'signal',
+        domain: 'float',
+      };
+
+      // If not inverted, return input unchanged (identity)
+      if (!invertValue) {
+        return input;
+      }
+
+      // Invert: multiply by -1
+      const negOneSig = ctx.builder.sigConst(-1, outputType);
+      const result = ctx.builder.sigZip(input.id, negOneSig, { kind: 'opcode', opcode: OpCode.Mul }, outputType);
+
+      const slot = ctx.builder.allocValueSlot(outputType);
+      ctx.builder.registerSigSlot(result, slot);
+
+      return { k: 'sig', id: result, slot };
+    },
   });
 
   // Clamp (Wire + Pub + List)
