@@ -110,6 +110,7 @@ export function createTimeState(): TimeState {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
 =======
@@ -120,6 +121,12 @@ export function createTimeState(): TimeState {
 =======
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 1094b2e (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
  *
  * Scrub Detection (P2):
  * - Scrub detected when: mode === 'scrub' OR |deltaMs| > 1000 OR deltaMs < 0
@@ -143,6 +150,7 @@ export function createTimeState(): TimeState {
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 <<<<<<< HEAD
 >>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
@@ -157,6 +165,7 @@ export function createTimeState(): TimeState {
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 =======
@@ -167,6 +176,12 @@ export function createTimeState(): TimeState {
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 1094b2e (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
  *
  * @param tAbsMs - Absolute time in milliseconds
  * @param timeModel - Time model specification
@@ -188,6 +203,7 @@ export function resolveTime(
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
 =======
@@ -198,6 +214,12 @@ export function resolveTime(
 =======
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 1094b2e (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
   let deltaMs = 0;
   if (timeState !== undefined) {
     if (timeState.prevTAbsMs !== null) {
@@ -217,20 +239,32 @@ export function resolveTime(
 =======
 >>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 1094b2e (feat(events): Implement EventStore for discrete event semantics)
 =======
   if (timeState !== undefined) {
     if (timeState.prevTAbsMs !== null) {
       timeState.lastDeltaMs = tAbsMs - timeState.prevTAbsMs;
+<<<<<<< HEAD
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 <<<<<<< HEAD
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
 =======
+=======
+<<<<<<< HEAD
+>>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
 =======
@@ -258,6 +292,11 @@ export function resolveTime(
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 1094b2e (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
     }
     timeState.prevTAbsMs = tAbsMs;
   }
@@ -269,6 +308,7 @@ export function resolveTime(
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
 =======
@@ -279,6 +319,12 @@ export function resolveTime(
 =======
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 1094b2e (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
   // Detect scrub mode (P2)
   // Scrub if: explicit mode OR backward time OR large jump (>1s)
   const isScrub = mode === 'scrub' || deltaMs < 0 || Math.abs(deltaMs) > 1000;
@@ -301,6 +347,7 @@ export function resolveTime(
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 <<<<<<< HEAD
 >>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
@@ -315,6 +362,7 @@ export function resolveTime(
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 =======
@@ -325,6 +373,12 @@ export function resolveTime(
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 1094b2e (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
   switch (timeModel.kind) {
     case "finite": {
       // Clamp to duration
