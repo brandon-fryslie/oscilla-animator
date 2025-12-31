@@ -250,9 +250,54 @@ export class Canvas2DRenderer {
         renderPaths2DPass(pass, this.ctx, valueStore);
         break;
 
-      case 'clipGroup':
-        console.warn('Canvas2DRenderer: ClipGroup passes not fully implemented yet');
+      case 'clipGroup': {
+        // Save canvas state before applying clip
+        this.ctx.save();
+
+        try {
+          // Apply clipping region
+          this.ctx.beginPath();
+
+          switch (pass.clip.kind) {
+            case "rect": {
+              const { x, y, w, h } = pass.clip;
+              this.ctx.rect(x, y, w, h);
+              break;
+            }
+
+            case "circle": {
+              const { x, y, radius } = pass.clip;
+              this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+              break;
+            }
+
+            case "path": {
+              // Path-based clipping requires path decoding (deferred to future sprint)
+              throw new Error(
+                "Canvas2DRenderer: path-based clipping not implemented. " +
+                "Use rect or circle clip, or implement path decoding for ClipGroup."
+              );
+            }
+
+            default: {
+              const _exhaustive: never = pass.clip;
+              throw new Error(`Canvas2DRenderer: unknown clip kind ${(_exhaustive as any).kind}`);
+            }
+          }
+
+          // Apply the clip region
+          this.ctx.clip();
+
+          // Recursively render all child passes within the clip region
+          for (const child of pass.children) {
+            this.renderPass(child, valueStore);
+          }
+        } finally {
+          // Restore canvas state after rendering children
+          this.ctx.restore();
+        }
         break;
+      }
 
       case 'postfx':
         renderPostFXPass(pass, this.ctx, valueStore);
