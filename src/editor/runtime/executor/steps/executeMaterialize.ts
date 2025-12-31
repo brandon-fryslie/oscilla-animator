@@ -128,16 +128,22 @@ export function executeMaterialize(
 ): void {
   const mat = step.materialization;
 
-  // 1. Read domain count from ValueStore
+  // 1. Read domain count and element IDs from ValueStore
   const domainValue = runtime.values.read(mat.domainSlot);
-  const domainCount =
-    typeof domainValue === "number"
-      ? domainValue
-      : typeof domainValue === "object" &&
-          domainValue !== null &&
-          (domainValue as { kind?: string; count?: number }).kind === "domain"
-        ? (domainValue as { count: number }).count
-        : undefined;
+  let domainCount: number | undefined;
+  let domainElements: readonly string[] | undefined;
+
+  if (typeof domainValue === "number") {
+    domainCount = domainValue;
+  } else if (
+    typeof domainValue === "object" &&
+    domainValue !== null &&
+    (domainValue as { kind?: string; count?: number }).kind === "domain"
+  ) {
+    const dv = domainValue as { count: number; elementIds?: readonly string[] };
+    domainCount = dv.count;
+    domainElements = dv.elementIds;
+  }
 
   if (typeof domainCount !== "number" || domainCount <= 0) {
     throw new Error(
@@ -172,7 +178,7 @@ export function executeMaterialize(
   };
 
   // 4. Build MaterializerEnv from program and runtime
-  const env = buildMaterializerEnv(program, runtime, domainCount, effectiveTime);
+  const env = buildMaterializerEnv(program, runtime, domainCount, effectiveTime, domainElements);
   env.fieldEnv.domainId = mat.domainSlot;
 
   // 5. Materialize the field
@@ -236,6 +242,7 @@ function parseFieldId(fieldExprId: string): number {
  * @param program - Compiled program
  * @param runtime - Runtime state
  * @param domainCount - Number of elements in the domain
+ * @param domainElements - Stable element IDs for hash-based operations
  * @returns MaterializerEnv ready for materialization
  */
 function buildMaterializerEnv(
@@ -243,6 +250,7 @@ function buildMaterializerEnv(
   runtime: RuntimeState,
   domainCount: number,
   effectiveTime: { tAbsMs: number; tModelMs?: number; phase01?: number; wrapEvent?: number },
+  domainElements?: readonly string[],
 ): MaterializerEnv {
   // Create buffer pool
   const pool = new FieldBufferPool();
@@ -354,6 +362,7 @@ function buildMaterializerEnv(
     constants,
     sources,
     getDomainCount,
+    domainElements,
   };
 }
 
@@ -447,6 +456,35 @@ function convertFieldNodes(nodes: CompilerFieldExprIR[]): RuntimeFieldExprIR[] {
           combine: { mode: node.combine.mode },
           terms: node.terms,
         };
+      case "mapIndexed": {
+        const fnRef = node.fn.kind === "opcode"
+          ? { opcode: opcodeToName(node.fn.opcode) }
+          : { opcode: node.fn.kind === "kernel" ? node.fn.kernelId : "identity" };
+        return {
+          kind: "mapIndexed",
+          type,
+          domainSlot: node.domainSlot,
+          fn: fnRef,
+          signals: node.signals,
+        };
+      }
+      case "zipSig": {
+        const fnRef = node.fn.kind === "opcode"
+          ? { opcode: opcodeToName(node.fn.opcode) }
+          : { opcode: node.fn.kind === "kernel" ? node.fn.kernelId : "identity" };
+        return {
+          kind: "zipSig",
+          type,
+          field: node.field,
+          fn: fnRef,
+          signals: node.signals,
+        };
+      }
+      default: {
+        // Exhaustiveness check - compiler will error if a case is missing
+        const _exhaustive: never = node;
+        throw new Error(`Unknown field node kind: ${(_exhaustive as { kind: string }).kind}`);
+      }
     }
   });
 }

@@ -18,6 +18,21 @@ type PositionField = (seed: number, n: number) => readonly Vec2[];
 // IR Lowering (Phase 3 Migration)
 // =============================================================================
 
+/**
+ * Generate a short random ID from a seed.
+ * Uses a simple hash to produce deterministic 8-character alphanumeric IDs.
+ */
+function seededId(seed: number): string {
+  // Simple mulberry32 PRNG
+  let t = (seed + 0x6d2b79f5) | 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  const hash = ((t ^ (t >>> 14)) >>> 0);
+
+  // Convert to base36 and take 8 chars
+  return hash.toString(36).padStart(8, '0').slice(-8);
+}
+
 const lowerGridDomain: BlockLowerFn = ({ ctx, config }) => {
   // GridDomain uses config for grid parameters (compile-time constants)
   const configData = config as {
@@ -36,19 +51,23 @@ const lowerGridDomain: BlockLowerFn = ({ ctx, config }) => {
 
   const elementCount: int = rows * cols;
 
-  // Create domain value slot
-  const domainSlot = ctx.b.domainFromN(elementCount);
-
-  // Compute grid positions at compile time
+  // Create stable element IDs using seeded random strings
+  // Seed is based on grid config to ensure stability across recompiles
+  const baseSeed = rows * 10000 + cols;
+  const elementIds: string[] = [];
   const positions: Vec2[] = [];
   for (let i = 0; i < elementCount; i++) {
     const row: int = Math.floor(i / cols);
     const col: int = i % cols;
+    elementIds.push(seededId(baseSeed + i));
     positions.push({
       x: originX + col * spacing,
       y: originY + row * spacing,
     });
   }
+
+  // Create domain value slot with stable element IDs
+  const domainSlot = ctx.b.domainFromN(elementCount, elementIds);
 
   // Create position field as const
   const posField = ctx.b.fieldConst(positions, { world: "field", domain: "vec2", category: "core", busEligible: true });

@@ -55,6 +55,10 @@ export type FieldExprIR =
   | FieldExprZip
   | FieldExprSelect
 
+  // Indexed and signal-combining operations
+  | FieldExprMapIndexed
+  | FieldExprZipSig
+
   // Transforms
   | FieldExprTransform
 
@@ -106,6 +110,50 @@ export interface FieldExprSelect {
   cond: FieldExprId;
   t: FieldExprId;
   f: FieldExprId;
+}
+
+/**
+ * Indexed map operation - generate field values from element index.
+ *
+ * Semantics: fn(i, n, ...sigValues) for each element index i in domain of size n.
+ * The function receives element index and domain count, plus any signals evaluated once.
+ *
+ * Use cases:
+ * - FieldHueGradient: hue = hueOffset + (i/n) * spread
+ * - Linear interpolation fields
+ * - Index-based patterns (waves, gradients)
+ */
+export interface FieldExprMapIndexed {
+  kind: "mapIndexed";
+  type: TypeDesc;
+  /** Domain slot - provides element count n */
+  domainSlot: ValueSlot;
+  /** Pure function: fn(i, n, ...sigValues) → T */
+  fn: PureFnRef;
+  /** Optional signals to evaluate once and pass to function */
+  signals?: SigExprId[];
+}
+
+/**
+ * Zip field with signals - combine per-element field values with scalar signals.
+ *
+ * Semantics: fn(field[i], sig1, sig2, ...) for each element.
+ * Signals are evaluated once; field is evaluated per-element.
+ *
+ * Use cases:
+ * - JitterFieldVec2: jitter(pos, time, amplitude)
+ * - FieldMapVec2: transform(pos, angle, scale, ...)
+ * - Any field + animated signal combination
+ */
+export interface FieldExprZipSig {
+  kind: "zipSig";
+  type: TypeDesc;
+  /** Field input - evaluated per-element */
+  field: FieldExprId;
+  /** Signals to evaluate once per frame */
+  signals: SigExprId[];
+  /** Pure function: fn(fieldValue, sig1, sig2, ...) → T */
+  fn: PureFnRef;
 }
 
 /** Transform chain application */
