@@ -4,6 +4,7 @@ import type { Artifact, CompileCtx } from '../compiler/types';
 import type { IRBuilder } from '../compiler/ir/IRBuilder';
 import type { ValueRefPacked } from '../compiler/passes/pass6-block-lowering';
 import type { TypeDesc as IRTypeDesc } from '../compiler/ir/types';
+import { asTypeDesc } from '../compiler/ir/types';
 
 /**
  * IR compilation context for adapters.
@@ -169,10 +170,22 @@ export function initAdapterRegistry(): void {
         // Extract domain from adapter ID
         const domainStr = ctx.adapterId.replace('ConstToSignal:', '');
 
-        // Determine the output type based on the adapter's domain
-        const outputType: IRTypeDesc = {
+        const outputType: IRTypeDesc = asTypeDesc({
           world: 'signal',
           domain: domainStr as IRTypeDesc['domain'],
+        });
+        const outputType: IRTypeDesc = asTypeDesc({
+          world: 'signal',
+          domain: domainStr as IRTypeDesc['domain'],
+        });
+        const outputType: IRTypeDesc = asTypeDesc({
+          world: 'signal',
+          domain: domainStr as IRTypeDesc['domain'],
+        });
+        const outputType: IRTypeDesc = asTypeDesc({
+          world: 'signal',
+          domain: domainStr as IRTypeDesc['domain'],
+        });
         };
 
         // Convert value to number based on domain
