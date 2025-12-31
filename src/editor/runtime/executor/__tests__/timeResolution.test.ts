@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { resolveTime, createTimeState } from "../timeResolution";
 import type { TimeModelIR } from "../../../compiler/ir";
+import { EventStore } from "../EventStore";
 
 describe("resolveTime", () => {
   // =========================================================================
@@ -245,6 +246,256 @@ describe("resolveTime", () => {
       // Second frame: 16.67ms (no mode specified)
       const time = resolveTime(16.67, cyclicModel, timeState);
       expect(time.isScrub).toBe(false);
+    });
+  });
+
+  // =========================================================================
+  // EventStore Integration Tests
+  // =========================================================================
+
+  describe("EventStore integration", () => {
+    const cyclicModel: TimeModelIR = {
+      kind: "cyclic",
+      periodMs: 1000,
+      mode: "loop",
+      phaseDomain: "0..1",
+    };
+
+    /**
+     * Per DOD lines 63-68:
+     * Test: Cyclic model (periodMs: 1000), frame sequence 900→1100→1200ms
+     * - Frame 1 (900ms): no wrap event
+     * - Frame 2 (1100ms): wrap event fires (check returns true)
+     * - Frame 3 (1200ms): no wrap event (reset worked)
+     */
+    it("wrap event fires exactly once per cycle with EventStore", () => {
+      const timeState = createTimeState();
+      const eventStore = new EventStore();
+      const wrapSlot = 42;
+
+      // Frame 1: t=900ms → no wrap
+      eventStore.reset();
+      const time1 = resolveTime(900, cyclicModel, timeState, 'playback');
+
+      // Simulate executeTimeDerive writing to EventStore
+      if (time1.wrapEvent && time1.wrapEvent > 0 && !time1.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time1.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+
+      expect(eventStore.check(wrapSlot)).toBe(false); // No wrap yet
+
+      // Frame 2: t=1100ms → wrap fires
+      eventStore.reset();
+      const time2 = resolveTime(1100, cyclicModel, timeState, 'playback');
+
+      if (time2.wrapEvent && time2.wrapEvent > 0 && !time2.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time2.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+
+      expect(eventStore.check(wrapSlot)).toBe(true); // Wrap fired
+      expect(time2.wrapEvent).toBe(1.0);
+
+      // Verify payload
+      const payload = eventStore.getPayload(wrapSlot);
+      expect(payload).toBeDefined();
+      expect(payload!.count).toBeGreaterThan(0); // Wrap count incremented
+
+      // Frame 3: t=1200ms → no wrap (reset worked)
+      eventStore.reset();
+      const time3 = resolveTime(1200, cyclicModel, timeState, 'playback');
+
+      if (time3.wrapEvent && time3.wrapEvent > 0 && !time3.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time3.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+
+      expect(eventStore.check(wrapSlot)).toBe(false); // No wrap this frame
+      expect(time3.wrapEvent).toBe(0.0);
+    });
+
+    /**
+     * Test: Multiple cycles increment wrap count in payload
+     */
+    it("multiple cycles increment wrap count in payload", () => {
+      const timeState = createTimeState();
+      const eventStore = new EventStore();
+      const wrapSlot = 42;
+
+      // Cycle 1: 0ms → 950ms → 1050ms (crosses wrap)
+      resolveTime(0, cyclicModel, timeState, 'playback');
+      resolveTime(950, cyclicModel, timeState, 'playback');
+
+      eventStore.reset();
+      const time1 = resolveTime(1050, cyclicModel, timeState, 'playback');
+      if (time1.wrapEvent && time1.wrapEvent > 0 && !time1.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time1.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+
+      const payload1 = eventStore.getPayload(wrapSlot);
+      expect(payload1).toBeDefined();
+      const firstWrapCount = payload1!.count;
+
+      // Cycle 2: 1050ms → 1950ms → 2050ms (crosses wrap again)
+      resolveTime(1950, cyclicModel, timeState, 'playback');
+
+      eventStore.reset();
+      const time2 = resolveTime(2050, cyclicModel, timeState, 'playback');
+      if (time2.wrapEvent && time2.wrapEvent > 0 && !time2.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time2.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+
+      const payload2 = eventStore.getPayload(wrapSlot);
+      expect(payload2).toBeDefined();
+      expect(payload2!.count).toBe(firstWrapCount + 1); // Count incremented
+
+      // Cycle 3: 2050ms → 2950ms → 3050ms (crosses wrap again)
+      resolveTime(2950, cyclicModel, timeState, 'playback');
+
+      eventStore.reset();
+      const time3 = resolveTime(3050, cyclicModel, timeState, 'playback');
+      if (time3.wrapEvent && time3.wrapEvent > 0 && !time3.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time3.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+
+      const payload3 = eventStore.getPayload(wrapSlot);
+      expect(payload3).toBeDefined();
+      expect(payload3!.count).toBe(firstWrapCount + 2); // Count incremented again
+    });
+
+    /**
+     * Test: Wrap event does not fire continuously
+     */
+    it("wrap event does not fire continuously after wrap", () => {
+      const timeState = createTimeState();
+      const eventStore = new EventStore();
+      const wrapSlot = 42;
+
+      // Frame 1: 950ms (before wrap)
+      resolveTime(950, cyclicModel, timeState, 'playback');
+
+      // Frame 2: 1050ms (crosses wrap boundary)
+      eventStore.reset();
+      const time2 = resolveTime(1050, cyclicModel, timeState, 'playback');
+      if (time2.wrapEvent && time2.wrapEvent > 0 && !time2.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time2.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+      expect(eventStore.check(wrapSlot)).toBe(true); // Wrap fires
+
+      // Frame 3: 1100ms (still in cycle after wrap)
+      eventStore.reset();
+      const time3 = resolveTime(1100, cyclicModel, timeState, 'playback');
+      if (time3.wrapEvent && time3.wrapEvent > 0 && !time3.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time3.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+      expect(eventStore.check(wrapSlot)).toBe(false); // No wrap
+
+      // Frame 4: 1500ms (middle of cycle)
+      eventStore.reset();
+      const time4 = resolveTime(1500, cyclicModel, timeState, 'playback');
+      if (time4.wrapEvent && time4.wrapEvent > 0 && !time4.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time4.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+      expect(eventStore.check(wrapSlot)).toBe(false); // Still no wrap
+    });
+
+    /**
+     * Test: Scrubbing does not trigger wrap event in EventStore
+     */
+    it("scrubbing does not trigger wrap event in EventStore", () => {
+      const timeState = createTimeState();
+      const eventStore = new EventStore();
+      const wrapSlot = 42;
+
+      // Frame 1: 1500ms (after first wrap)
+      resolveTime(1500, cyclicModel, timeState, 'playback');
+
+      // Frame 2: 500ms (backward scrub across wrap boundary)
+      eventStore.reset();
+      const time2 = resolveTime(500, cyclicModel, timeState, 'scrub');
+
+      // Should NOT trigger event due to scrub
+      if (time2.wrapEvent && time2.wrapEvent > 0 && !time2.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time2.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+
+      expect(time2.isScrub).toBe(true);
+      expect(eventStore.check(wrapSlot)).toBe(false); // No wrap event triggered
+    });
+
+    /**
+     * Test: EventStore payload includes correct phase, count, deltaMs
+     */
+    it("EventStore payload includes correct phase, count, deltaMs", () => {
+      const timeState = createTimeState();
+      const eventStore = new EventStore();
+      const wrapSlot = 42;
+
+      // Frame 1: 950ms
+      resolveTime(950, cyclicModel, timeState, 'playback');
+
+      // Frame 2: 1050ms (crosses wrap)
+      eventStore.reset();
+      const time2 = resolveTime(1050, cyclicModel, timeState, 'playback');
+      if (time2.wrapEvent && time2.wrapEvent > 0 && !time2.isScrub) {
+        eventStore.trigger(wrapSlot, {
+          phase: time2.phase01 ?? 0,
+          count: timeState.wrapCount,
+          deltaMs: timeState.lastDeltaMs,
+        });
+      }
+
+      const payload = eventStore.getPayload(wrapSlot);
+      expect(payload).toBeDefined();
+
+      // Phase should be close to 0.0 (just wrapped)
+      expect(payload!.phase).toBeGreaterThanOrEqual(0.0);
+      expect(payload!.phase).toBeLessThan(0.2); // Should be early in cycle
+
+      // Count should be positive
+      expect(payload!.count).toBeGreaterThan(0);
+
+      // DeltaMs should be reasonable (100ms delta: 1050 - 950)
+      expect(payload!.deltaMs).toBeGreaterThan(0);
+      expect(payload!.deltaMs).toBeLessThan(200); // Sanity check
     });
   });
 });
