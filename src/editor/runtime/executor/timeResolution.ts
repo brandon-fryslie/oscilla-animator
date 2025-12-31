@@ -1,25 +1,23 @@
 /**
- * Time Resolution - Derive Time Signals from Absolute Time
+ * Time Resolution - Convert Absolute Time to Effective Time
  *
- * Computes effective time values from absolute time (tAbsMs) and TimeModel.
+ * Resolves absolute time (tAbsMs) into effective time signals based on the time model.
  *
  * References:
- * - HANDOFF.md Topic 3 (ScheduleExecutor - Time Resolution)
- * - design-docs/12-Compiler-Final/02-IR-Schema.md §4
+ * - design-docs/spec/SPEC-05-time-architecture.md (Time Models)
+ * - .agent_planning/time-event-semantics/PLAN-2025-12-31-013758.md (Event Payloads)
  */
 
 import type { TimeModelIR } from "../../compiler/ir";
 
 // ============================================================================
-// Effective Time
+// EffectiveTime Interface
 // ============================================================================
 
 /**
- * EffectiveTime - Resolved Time Values
+ * EffectiveTime - Resolved time signals for a frame
  *
- * Contains all derived time signals computed from tAbsMs + TimeModel.
- *
- * These values are written to well-known slots by StepTimeDerive.
+ * Contains all time-derived signals computed from the time model.
  */
 export interface EffectiveTime {
   /** Absolute time in milliseconds (input) */
@@ -47,12 +45,26 @@ export interface EffectiveTime {
 /**
  * TimeState - Persistent time state for wrap detection
  *
- * Stores previous tModelMs to enable accurate wrap/bounce detection.
+ * Stores previous tModelMs to enable accurate wrap/bounce detection,
+ * plus wrap count and frame delta for event payloads.
+ *
  * This state should be maintained across frames in RuntimeState.
+ *
+ * References:
+ * - .agent_planning/time-event-semantics/PLAN-2025-12-31-013758.md (P1)
  */
 export interface TimeState {
   /** Previous tModelMs (for wrap detection) */
   prevTModelMs: number | null;
+
+  /** Previous tAbsMs (for deltaMs calculation) */
+  prevTAbsMs: number | null;
+
+  /** Total wrap count since animation start */
+  wrapCount: number;
+
+  /** Last frame delta (ms) - for event payloads */
+  lastDeltaMs: number;
 }
 
 /**
@@ -61,6 +73,9 @@ export interface TimeState {
 export function createTimeState(): TimeState {
   return {
     prevTModelMs: null,
+    prevTAbsMs: null,
+    wrapCount: 0,
+    lastDeltaMs: 0,
   };
 }
 
@@ -83,6 +98,7 @@ export function createTimeState(): TimeState {
  * - Detects wrap when tModelMs < prevTModelMs (for loop mode)
  * - Detects bounce when cycleCount changes (for ping-pong mode)
  * - Works correctly under variable frame rates and scrubbing
+ * - Tracks wrap count and deltaMs for event payloads
  *
  * @param tAbsMs - Absolute time in milliseconds
  * @param timeModel - Time model specification
@@ -94,6 +110,14 @@ export function resolveTime(
   timeModel: TimeModelIR,
   timeState?: TimeState
 ): EffectiveTime {
+  // Calculate frame delta for event payloads
+  if (timeState !== undefined) {
+    if (timeState.prevTAbsMs !== null) {
+      timeState.lastDeltaMs = tAbsMs - timeState.prevTAbsMs;
+    }
+    timeState.prevTAbsMs = tAbsMs;
+  }
+
   switch (timeModel.kind) {
     case "finite": {
       // Clamp to duration
@@ -123,6 +147,7 @@ export function resolveTime(
           // This handles both forward playback wraps and scrubbing backwards across wrap boundary
           if (tModelMs < timeState.prevTModelMs) {
             wrapEvent = 1.0;
+            timeState.wrapCount++;
           }
         }
 
@@ -145,6 +170,7 @@ export function resolveTime(
           const prevCycleCount = Math.floor((tAbsMs - (tModelMs - timeState.prevTModelMs)) / periodMs);
           if (cycleCount !== prevCycleCount) {
             wrapEvent = 1.0;
+            timeState.wrapCount++;
           }
         }
 

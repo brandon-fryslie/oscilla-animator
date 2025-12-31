@@ -6,6 +6,7 @@
  * Contains:
  * - ValueStore: per-frame slot-based value storage
  * - StateBuffer: cross-frame persistent state
+ * - EventStore: discrete event trigger storage
  * - FrameCache: memoization cache with signal/field caches
  * - frameId: monotonic frame counter
  * - timeState: persistent time state for wrap detection
@@ -16,6 +17,7 @@
  * - HANDOFF.md Topic 3 (ScheduleExecutor)
  * - design-docs/12-Compiler-Final/17-Scheduler-Full.md §8
  * - .agent_planning/scheduled-runtime/PLAN-2025-12-26-092613.md (Phase 6 Sprint 2)
+ * - .agent_planning/time-event-semantics/PLAN-2025-12-31-013758.md (P1 EventStore)
  */
 
 import type { ValueStore, StateBuffer } from "../../compiler/ir";
@@ -32,6 +34,7 @@ import { CameraStore } from "../camera/CameraStore";
 import { MeshStore } from "../mesh/MeshStore";
 import type { ViewportInfo } from "../camera/evaluateCamera";
 import { createTimeState, type TimeState } from "./timeResolution";
+import { EventStore } from "./EventStore";
 
 // ============================================================================
 // RuntimeState Interface
@@ -53,6 +56,9 @@ export interface RuntimeState {
 
   /** Persistent state storage (cross-frame) */
   state: StateBuffer;
+
+  /** Discrete event trigger storage (per-frame, resets each frame) */
+  events: EventStore;
 
   /** Frame cache (per-frame memoization) */
   frameCache: FrameCache;
@@ -612,6 +618,9 @@ export function createRuntimeState(
   // Create time state for wrap detection
   const timeState = createTimeState();
 
+  // Create EventStore for discrete event triggers
+  const events = new EventStore();
+
   // Create 3D stores
   const cameraStore = new CameraStore();
   const meshStore = new MeshStore();
@@ -634,6 +643,7 @@ export function createRuntimeState(
   const runtimeState: RuntimeState = {
     values,
     state,
+    events,
     frameCache,
     frameId: 0,
     timeState,
@@ -658,6 +668,8 @@ export function createRuntimeState(
       newRuntime.frameCache.invalidate();
       newRuntime.cameraStore.invalidateAll();
       newRuntime.meshStore.invalidateAll();
+
+      // EventStore does not need preservation (resets each frame)
 
       return newRuntime;
     },
