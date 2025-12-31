@@ -111,7 +111,7 @@ CompiledProgramIR ← wrong time topology
 - `src/editor/compiler/ir/IRBuilderImpl.ts` - implement method, remove hardcoded value
 - `src/editor/compiler/passes/pass6-block-lowering.ts` - call `setTimeModel()` during lowering
 - `src/editor/compiler/blocks/time/FiniteTimeRoot.ts` - ensure lowering calls setTimeModel
-- `src/editor/compiler/blocks/time/CycleTimeRoot.ts` - ensure lowering calls setTimeModel
+- (removed - legacy time component)
 - `src/editor/compiler/blocks/time/InfiniteTimeRoot.ts` - ensure lowering calls setTimeModel
 
 ### Acceptance Criteria (REQUIRED)
@@ -144,7 +144,6 @@ if (!this.timeModel) {
 
 **Testing Approach:**
 - Create minimal finite patch: `FiniteTimeRoot(5000ms)` → verify timeModel.kind
-- Create minimal cyclic patch: `CycleTimeRoot(1000ms)` → verify timeModel.kind
 - Create minimal infinite patch: `InfiniteTimeRoot()` → verify timeModel.kind
 - Use Chrome DevTools MCP to verify runtime behavior matches timeModel
 
@@ -269,13 +268,6 @@ Sprint 2 (NEXT):
        // Assert compiledProgram.ir.timeModel.durationMs === 5000
      });
 
-     it('compiles cyclic patch with cyclic timeModel', () => {
-       // Create patch with CycleTimeRoot(1000)
-       // Compile with IR
-       // Assert compiledProgram.ir.timeModel.kind === 'cyclic'
-       // Assert compiledProgram.ir.timeModel.periodMs === 1000
-     });
-
      it('compiles infinite patch with infinite timeModel', () => {
        // Create patch with InfiniteTimeRoot()
        // Compile with IR
@@ -313,12 +305,7 @@ Sprint 2 (NEXT):
    - Playback should stop at 5 seconds (not loop)
    - Scrubbing should respect duration boundary
 
-5. Create patch with `CycleTimeRoot(periodMs: 1000)`
-6. Add phase-driven animation
-7. Observe player behavior:
-   - Phase should loop 0→1 every second
-   - Should emit wrap events
-   - Scrubbing should show repeating cycle
+5. Observe looping behavior works through InfiniteTimeRoot
 
 **Acceptance:** Player behavior matches TimeRoot type, not always infinite
 

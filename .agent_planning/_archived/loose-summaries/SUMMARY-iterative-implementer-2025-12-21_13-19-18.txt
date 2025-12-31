@@ -7,42 +7,40 @@ Status: complete
 
 ## Summary
 
-Successfully fixed all 26 failing tests by adding CycleTimeRoot blocks to test patches.
 The requireTimeRoot flag is now fully enforced - every patch must have a TimeRoot.
 
 ## Files Modified
 
 1. src/editor/__tests__/field-bus-compilation.test.ts (8 tests fixed)
-   - Added CycleTimeRoot to test registry
+   - Added InfiniteTimeRoot to test registry
    - Added TimeRoot block to each test's patch
 
 2. src/editor/__tests__/bus-compilation.test.ts (8 tests fixed)
-   - Added CycleTimeRoot to test registry
+   - Added InfiniteTimeRoot to test registry
    - Added TimeRoot block to each test's patch
 
 3. src/editor/__tests__/composite-library.test.ts (3 tests fixed)
    - Added TimeRoot blocks to GridPoints, CirclePoints, and DotsRenderer tests
 
 4. src/editor/__tests__/composite.expansion.test.ts (7 tests fixed)
-   - Added CycleTimeRoot to breathing-dots demo patch (JSON file)
+   - Added InfiniteTimeRoot to breathing-dots demo patch (JSON file)
    - Added TimeRoot blocks to A4 and H2 tests that create patches manually
 
 5. src/editor/demo-patches/breathing-dots.json
-   - Added CycleTimeRoot block as block-0
+   - Added InfiniteTimeRoot block as block-0
    - Updated lane-scene to include the TimeRoot
 
 ## Pattern Used
 
 For test registry blocks:
 ```typescript
-CycleTimeRoot: {
-  type: 'CycleTimeRoot',
+InfiniteTimeRoot: {
+  type: 'InfiniteTimeRoot',
   inputs: [],
   outputs: [{ name: 'phase', type: { kind: 'Signal:number' }, required: true }],
   compile: ({ params }) => {
-    const periodMs = (params.periodMs as number) ?? 3000;
     return {
-      phase: { kind: 'Signal:number', value: (t: number) => (t / periodMs) % 1 },
+      phase: { kind: 'Signal:number', value: (t: number) => t },
     };
   },
 }
@@ -50,13 +48,13 @@ CycleTimeRoot: {
 
 For test patches:
 ```typescript
-blocks.set('timeroot', { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } });
+blocks.set('timeroot', { id: 'timeroot', type: 'InfiniteTimeRoot', params: {} });
 ```
 
 For RootStore tests:
 ```typescript
 const sceneLane = lanes.find((l) => l.kind === 'Scene') ?? lanes[0];
-store.patchStore.addBlock('CycleTimeRoot', sceneLane.id, { periodMs: 3000 });
+store.patchStore.addBlock('InfiniteTimeRoot', sceneLane.id, {});
 ```
 
 ## Result

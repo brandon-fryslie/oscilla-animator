@@ -36,9 +36,5 @@ This change corrects the architectural layering:
 - **Before**: Two sources of truth (Player wrapped time, TimeRoot derived phase)
 - **After**: Single source of truth (Player provides monotonic time, TimeRoot derives all topology)
 
-TimeRoot blocks like CycleTimeRoot already use modulo arithmetic, so they correctly handle monotonic time:
-```typescript
-const phase = (tMs / periodMs) - Math.floor(tMs / periodMs); // 0..1
-```
 
 This works whether tMs is 3000 or 303000 for a 3000ms period.

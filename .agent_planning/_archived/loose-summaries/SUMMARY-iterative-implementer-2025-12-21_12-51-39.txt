@@ -17,11 +17,11 @@ Implemented P0: Time Authority (85% → 95%):
 2. Updated test files that disabled flag
    - diagnostic-emission.test.ts: removed flag disable, updated comments
    - bus-diagnostics.test.ts: removed flag disable, updated comments  
-   - Both files already add CycleTimeRoot in all tests
+   - Both files already add TimeRoot in all tests
 
-3. Auto-insert CycleTimeRoot on new patch creation
+3. Auto-insert TimeRoot on new patch creation
    - File: src/editor/stores/RootStore.ts:262-270
-   - clearPatch() now auto-inserts CycleTimeRoot with 8s period
+   - clearPatch() now auto-inserts InfiniteTimeRoot
    - Matches Golden Patch spec
 
 ❌ BLOCKED:

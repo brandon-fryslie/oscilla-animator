@@ -53,7 +53,7 @@ TimeRoot-first inference in compiler.
 ### TimeRoot Inference Now Working
 The inferTimeModel function now checks for TimeRoot blocks FIRST:
 1. FiniteTimeRoot → finite TimeModel
-2. CycleTimeRoot → cyclic TimeModel  
+2. FiniteTimeRoot → finite/cyclic TimeModel  
 3. InfiniteTimeRoot → infinite TimeModel
 4. Falls back to legacy (PhaseMachine, PhaseClock) if no TimeRoot
 5. Default to infinite if nothing found

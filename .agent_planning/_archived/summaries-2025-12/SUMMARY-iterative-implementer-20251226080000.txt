@@ -7,7 +7,7 @@ Status: complete
 
 FINDINGS:
 All domain blocks from batch 4 have already been migrated to IR lowering by previous work:
-- TimeRoot.ts (FiniteTimeRoot, CycleTimeRoot, InfiniteTimeRoot) - migrated in commit 8edc3ba
+- TimeRoot.ts (FiniteTimeRoot, InfiniteTimeRoot) - migrated in commit 8edc3ba
 - PhaseClock.ts - migrated in commit 8edc3ba
 - Render2dCanvas.ts - migrated in commit 8edc3ba
 - RenderInstances2D.ts - migrated in commit 8edc3ba

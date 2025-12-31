@@ -13,7 +13,7 @@ The core need is **explicit, typed metadata** for numeric range behavior — wit
 - No ad‑hoc string matching like `semantics.startsWith('phase')`.
 - No components inventing meaning from loose string values.
 - The IR compiler is the canonical compiler; no re‑enabling legacy compiler.
-- CycleTimeRoot behavior is removed; only requirement is to publish two phases on buses.
+- Only requirement is to publish two phases on buses.
 
 ## What I considered
 ### Option A: Encode phase via `semantics` strings

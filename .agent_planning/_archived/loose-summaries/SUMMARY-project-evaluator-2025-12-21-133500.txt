@@ -14,7 +14,7 @@ Blocking Issues:
 3. Dependency order violated: WP1 implemented before WP0 completion
 
 Missing Features (HIGH priority):
-- CycleTimeRoot missing outputs: wrap (Event), cycleT, cycleIndex
+- TimeRoot missing outputs: wrap (Event), cycleT, cycleIndex
 - Bus auto-publication (phase->phaseA, wrap->pulse) not implemented
 - Optional inputs (phaseOffset, drift) not implemented
 

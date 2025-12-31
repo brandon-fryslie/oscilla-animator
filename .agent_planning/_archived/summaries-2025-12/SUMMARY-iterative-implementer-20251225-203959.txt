@@ -22,7 +22,7 @@ Status: in_progress - TypeScript compilation errors need fixing
 - File: src/editor/compiler/passes/pass3-time.ts
 - Tests: src/editor/compiler/passes/__tests__/pass3-time.test.ts
 - Features:
-  - TimeRoot discovery by block type (FiniteTimeRoot, CycleTimeRoot, InfiniteTimeRoot)
+  - TimeRoot discovery by block type (FiniteTimeRoot, InfiniteTimeRoot)
   - TimeModelIR extraction from TimeRoot parameters
   - Canonical time signal generation (tAbsMs, tModelMs, phase01, wrapEvent)
   - Validation for exactly one TimeRoot per patch

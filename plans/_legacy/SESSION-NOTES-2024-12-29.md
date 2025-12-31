@@ -2,23 +2,23 @@
 
 ## Context
 - Working in `oscilla-animator_codex` editor/compiler codebase.
-- Primary goals today: remove legacy `CycleTimeRoot`, keep IR compiler, and stabilize tests/typecheck after refactors.
+- Primary goals today: keep IR compiler and stabilize tests/typecheck after refactors.
 
 ## Decisions & Agreements
-- **CycleTimeRoot is removed** from the system; all direct references should be obliterated.
+- **Legacy time components removed** from the system.
 - **IR compiler remains**; re-enabling legacy compiler is not an option.
-- **TimeRoot behavior**: you do not need to maintain CycleTimeRoot behavior. The only required behavior is **publishing two phases on buses** (phaseA + phaseB). Anything else that depended on CycleTimeRoot can be marked `NEEDS REVIEW - DEPRECATED` and commented out or minimally adjusted to pass tests/lint.
+- **TimeRoot behavior**: The only required behavior is **publishing two phases on buses** (phaseA + phaseB). Legacy time components can be marked `NEEDS REVIEW - DEPRECATED` and commented out or minimally adjusted to pass tests/lint.
 - **DefaultSource requirement**: every input on every block must have a `defaultSource` (mentioned earlier); approach is manual, no automation. (Not implemented yet.)
 - **Lane removal**: lanes should exist only in PatchBay + a view controller; all other systems should not depend on lanes. (Large refactor completed earlier.)
 - **Phase semantics**: avoid ad‑hoc string matching. No “detective” behavior from components; explicit metadata should drive UI behavior.
 
 ## Implemented Changes (selected)
-- **CycleTimeRoot references removed** from code/tests; updated tests to use `InfiniteTimeRoot` where needed.
+- **Legacy time references removed** from code/tests; updated tests to use `InfiniteTimeRoot` where needed.
 - **TimeRoot compiler** cleaned: removed duplicate `InfiniteTimeRoot` lowering/registration; outputs now use `pulse` instead of `wrap`; removed cycleT/cycleIndex from InfiniteTimeRoot; marked deprecated behavior where applicable.
 - **Auto publications** updated to publish `phase` to **both** `phaseA` and `phaseB`.
 - **PatchStore auto‑publication** updated to support multiple bus names per output.
 - **Tests adjusted** to reflect new behavior; cyclic-only expectations marked `NEEDS REVIEW - DEPRECATED` and skipped where appropriate.
-- **Backups removed** that reintroduced CycleTimeRoot strings.
+- **Backups removed** that reintroduced legacy time references.
 
 ## Open Items / Known Failures
 - `just test` fails at TypeScript compile due to:

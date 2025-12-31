@@ -267,7 +267,6 @@ export class ActionExecutor {
     }
 
     // Determine the block type to create
-    // Map 'Cycle' and 'Infinite' both to InfiniteTimeRoot (CycleTimeRoot was removed)
     const blockType = timeRootKind === 'Finite' ? 'FiniteTimeRoot' : 'InfiniteTimeRoot';
 
     // Add the new TimeRoot block

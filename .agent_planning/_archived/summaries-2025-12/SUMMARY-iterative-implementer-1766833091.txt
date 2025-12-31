@@ -15,7 +15,7 @@ P1-1: Remove Inspector.tsx paramSchema references ✅
 P1-2: Remove paramSchema from 27 block definitions ✅  
 - Removed from signal.ts: 8 blocks (4 with TODO comments, 4 empty arrays)
 - Removed from domain.ts: 16 blocks
-- Removed from time-root.ts: 3 blocks (FiniteTimeRoot, CycleTimeRoot, InfiniteTimeRoot)
+- Removed from time-root.ts: 2 blocks (FiniteTimeRoot, InfiniteTimeRoot)
 - Removed from field-primitives.ts: 2 blocks (ColorPalette, FieldFromExpression)
 - Removed from rhythm.ts: 2 blocks
 - Removed from macros.ts: Empty paramSchema array

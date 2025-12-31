@@ -1,9 +1,8 @@
-
-import { makeObservable, observable, action, reaction, makeAutoObservable } from 'mobx';
+import { makeObservable, observable, action, reaction } from 'mobx';
+import { test } from 'vitest';
 
 // --- Mocks & Simplified Classes ---
 
-// Mock Block ID type
 type SlotWorld = 'signal' | 'field' | 'scalar' | 'config';
 
 interface TypeDesc {
@@ -17,59 +16,35 @@ interface DefaultSourceState {
   id: string;
   type: TypeDesc;
   value: unknown;
-  uiHint?: Record<string, unknown>;
-  rangeHint?: Record<string, unknown>;
+  uiHint?: any;
+  rangeHint?: any;
 }
 
-// 1. Copy of DefaultSource from DefaultSourceStore.ts
-class DefaultSource implements DefaultSourceState {
-  id: string;
-  type: TypeDesc;
-  value: unknown;
-  uiHint?: Record<string, unknown>;
-  rangeHint?: Record<string, unknown>;
+// 1. Plain Object (no makeAutoObservable)
+interface DefaultSource extends DefaultSourceState {}
 
-  constructor(init: {
-    id: string;
-    type: TypeDesc;
-    value: unknown;
-    uiHint?: Record<string, unknown>;
-    rangeHint?: Record<string, unknown>;
-  }) {
-    this.id = init.id;
-    this.type = init.type;
-    this.value = init.value;
-    this.uiHint = init.uiHint;
-    this.rangeHint = init.rangeHint;
-
-    // Make this instance observable - all property mutations are tracked
-    makeAutoObservable(this);
-  }
-}
-
-// 2. Simplified DefaultSourceStore
+// 2. Simplified DefaultSourceStore with Deep Observable Map
 class DefaultSourceStore {
-  sources: Map<string, DefaultSource> = new Map();
-  valueRevision = 0;
+  // Deep observable map by default if we use 'observable'
+  sources = new Map<string, DefaultSource>();
 
   constructor() {
     makeObservable(this, {
-      sources: observable.shallow,
-      valueRevision: observable,
+      sources: observable, // Deep observation
       ensureDefaultSource: action,
       setDefaultValue: action,
     });
   }
 
-  ensureDefaultSource(id: string, spec: Record<string, unknown>): DefaultSource {
+  ensureDefaultSource(id: string, spec: any): DefaultSource {
     const existing = this.sources.get(id);
     if (existing !== undefined) return existing;
 
-    const created = new DefaultSource({
+    const created: DefaultSource = {
       id,
-      type: spec.type as TypeDesc,
+      type: spec.type,
       value: spec.value,
-    });
+    };
     this.sources.set(id, created);
     return created;
   }
@@ -77,8 +52,10 @@ class DefaultSourceStore {
   setDefaultValue(id: string, value: unknown): void {
     const existing = this.sources.get(id);
     if (existing === undefined) return;
+    
+    // IMPORTANT: With deep observable map, 'existing' is a proxy.
+    // Modifying it triggers observers.
     existing.value = value;
-    this.valueRevision++;
   }
 }
 
@@ -99,12 +76,8 @@ class RootStore {
   defaultSourceStore = new DefaultSourceStore();
 }
 
-interface CompileService {
-  compile: () => { ok: boolean; errors: unknown[] };
-}
-
 // 4. Simplified Service
-const service: CompileService = {
+const service = {
   compile: () => {
     console.log('[Service] Compile triggered!');
     return { ok: true, errors: [] };
@@ -112,40 +85,41 @@ const service: CompileService = {
 };
 
 // 5. Setup AutoCompile (Logic from integration.ts)
-function setupAutoCompile(store: RootStore, svc: CompileService): () => void {
+function setupAutoCompile(store: RootStore, service: any) {
+  let compileCount = 0;
+
   reaction(
     () => {
       console.log('[Reaction] Data expression running...');
+      // Simulate how integration.ts tracks values
       return {
-        // blockCount: store.patchStore.blocks.length,
-        // seed: store.uiStore.settings.seed,
-        // Default sources - track value changes to trigger recompilation
-        defaultSourceRevision: store.defaultSourceStore.valueRevision,
+        defaultSourceValues: Array.from(store.defaultSourceStore.sources.values()).map(ds => 
+          `${ds.id}:${JSON.stringify(ds.value)}`
+        ),
       };
     },
     (data) => {
-      console.log(`[Reaction] Effect triggered! Revision: ${data.defaultSourceRevision}`);
-      svc.compile();
+      console.log(`[Reaction] Effect triggered! Values: ${data.defaultSourceValues}`);
+      compileCount++;
+      service.compile();
     },
     { fireImmediately: false }
   );
-
+  
   return () => {};
 }
 
-import { test } from 'vitest';
-
 // --- Test ---
 
-test('MobX Reproduction', () => {
-  console.log('--- Starting Reproduction Test ---');
+test('MobX Reproduction - Deep Map', async () => {
+  console.log('--- Starting Reproduction Test (Deep Map) ---');
   const store = new RootStore();
   const dsId = 'ds-1';
-
+  
   // 1. Create a default source
   console.log('1. Creating Default Source...');
   store.defaultSourceStore.ensureDefaultSource(dsId, {
-    type: { world: 'signal', domain: 'float' },
+    type: { world: 'signal', domain: 'number' },
     value: 10
   });
 
@@ -160,6 +134,6 @@ test('MobX Reproduction', () => {
   // 4. Change Value Again
   console.log('4. Changing Value to 30...');
   store.defaultSourceStore.setDefaultValue(dsId, 30);
-
+  
   console.log('--- Test Complete ---');
 });

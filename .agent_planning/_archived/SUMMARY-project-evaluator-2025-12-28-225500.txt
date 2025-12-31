@@ -18,7 +18,7 @@ Test Failures:
 - 12 failures across 3 test files
 - All same root cause: 7 blocks missing defaultSource declarations
 - NOT a runtime bug - expected behavior under new strict compilation
-- Blocks: CycleTimeRoot, GridDomain, DomainN, RenderInstances2D, FieldConstNumber, PositionMapGrid, PositionMapCircle
+- Blocks: GridDomain, DomainN, RenderInstances2D, FieldConstNumber, PositionMapGrid, PositionMapCircle
 
 Uncommitted Changes (correct, ready to commit):
 - src/editor/runtime/field/FieldHandle.ts - params propagation

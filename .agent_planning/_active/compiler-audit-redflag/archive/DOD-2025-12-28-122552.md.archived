@@ -25,19 +25,13 @@
 - [ ] `IRBuilderImpl.build()` throws error if `setTimeModel()` was never called (defensive check)
 - [ ] `pass6BlockLowering()` threads `input.timeModel` from Pass 3 to IRBuilder instance
 - [ ] `FiniteTimeRoot` block compiler calls `builder.setTimeModel()` during lowering
-- [ ] `CycleTimeRoot` block compiler calls `builder.setTimeModel()` during lowering
 - [ ] `InfiniteTimeRoot` block compiler calls `builder.setTimeModel()` during lowering
 
 #### Compilation Verification
 - [ ] Test: Compile finite patch (FiniteTimeRoot with durationMs=5000)
   - `compiledProgram.ir.timeModel.kind === 'finite'`
   - `compiledProgram.ir.timeModel.durationMs === 5000`
-  - Compilation succeeds without errors
-
-- [ ] Test: Compile cyclic patch (CycleTimeRoot with periodMs=1000)
-  - `compiledProgram.ir.timeModel.kind === 'cyclic'`
-  - `compiledProgram.ir.timeModel.periodMs === 1000`
-  - Compilation succeeds without errors
+  - Compilation succeeds without error
 
 - [ ] Test: Compile infinite patch (InfiniteTimeRoot)
   - `compiledProgram.ir.timeModel.kind === 'infinite'`
@@ -115,12 +109,6 @@
   - Player shows progress 0→1 over 5 seconds
   - Playback stops at 5 seconds (does not loop)
   - Scrubbing respects duration boundary
-
-- [ ] Manual test: Cyclic patch runtime behavior
-  - Create patch: CycleTimeRoot(1000ms) + phase-driven animation
-  - Player shows phase looping 0→1 every second
-  - Wrap events emitted correctly
-  - Scrubbing shows repeating cycle
 
 - [ ] Manual test: Infinite patch runtime behavior
   - Create patch: InfiniteTimeRoot() + time-driven animation

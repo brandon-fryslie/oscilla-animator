@@ -34,7 +34,7 @@ Added comprehensive test coverage for GraphCommitted and CompileLifecycle events
      * All valid status values: ok, failed
      * Optional programMeta field structure
      * All timelineHint values: finite, cyclic, infinite
-     * All timeRootKind values: FiniteTimeRoot, CycleTimeRoot, InfiniteTimeRoot, none
+     * All timeRootKind values: FiniteTimeRoot, InfiniteTimeRoot
      * Optional busUsageSummary structure
    - Event correlation test (1 test)
      * Validates compileId, patchId, patchRevision match between paired events

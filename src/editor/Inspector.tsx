@@ -8,12 +8,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
-<<<<<<< HEAD
 import type { PortRef, Block, Slot, DefaultSourceState } from './types';
-=======
-import type { PortRef, Block, Slot, Connection, DefaultSourceState } from './types';
 import type { DefaultSourceAttachment } from './defaultSources/types';
->>>>>>> f3aeb74 (feat(defaultSources): Add provider config panel UI (Sprint 13))
 import { getBlockDefinition, getBlockDefinitions, type BlockDefinition } from './blocks';
 import { findCompatiblePorts, getConnectionsForPort, areTypesCompatible, describeSlotType, formatSlotType, slotCompatibilityHint, isInputDriven } from './portUtils';
 import { getIncomingBindingForInputPort, getOutgoingBindingsForOutputPort } from './bindings';
