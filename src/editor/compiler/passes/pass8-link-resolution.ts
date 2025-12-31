@@ -184,7 +184,7 @@ function createDefaultRef(
     return { k: "scalarConst", constId };
   }
 
-  if (type.world === "special" && type.domain === "domain") {
+  if (type.world === "config" && type.domain === "domain") {
     const count = typeof defaultValue === "number" ? defaultValue : Number(defaultValue);
     const safeCount = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
     const domainSlot = builder.domainFromN(safeCount);
