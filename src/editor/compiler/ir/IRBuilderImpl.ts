@@ -735,6 +735,7 @@ export class IRBuilderImpl implements IRBuilder {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   domainFromN(n: number): ValueSlot {
     const slot = this.allocValueSlot({ world: "scalar", domain: "domain", category: "internal", busEligible: false }, `domain_n${n}`);
 =======
@@ -746,14 +747,21 @@ export class IRBuilderImpl implements IRBuilder {
 >>>>>>> 4adba76 (Add file(s): .agent_planning/eval-cache/INDEX.md src/editor/compiler/ir/IRBuilder.ts src/editor/compiler/ir/IRBuilderImpl.ts src/editor/compiler/ir/__tests__/state-offset-resolution.test.ts src/editor/compiler/ir/builderTypes.ts .agent_planning/SUMMARY-project-evaluator-2025-12-31-013739.txt .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/STATUS-2025-12-31-013739.md .agent_planning/_active/field-runtime-redflag/SUMMARY-planner-2025-12-31-105854.txt .agent_planning/_active/field-runtime-redflag/USER-RESPONSE-2025-12-31-110600.md .agent_planning/eval-cache/workstream-alignment.md)
 =======
 =======
+>>>>>>> 7678955 (Add file(s): .agent_planning/eval-cache/INDEX.md src/editor/compiler/ir/IRBuilder.ts src/editor/compiler/ir/IRBuilderImpl.ts src/editor/compiler/ir/__tests__/state-offset-resolution.test.ts src/editor/compiler/ir/builderTypes.ts .agent_planning/SUMMARY-project-evaluator-2025-12-31-013739.txt .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/STATUS-2025-12-31-013739.md .agent_planning/_active/field-runtime-redflag/SUMMARY-planner-2025-12-31-105854.txt .agent_planning/_active/field-runtime-redflag/USER-RESPONSE-2025-12-31-110600.md .agent_planning/eval-cache/workstream-alignment.md)
+=======
 >>>>>>> d7cbd5f (Add file(s): .agent_planning/eval-cache/INDEX.md src/editor/compiler/ir/IRBuilder.ts src/editor/compiler/ir/IRBuilderImpl.ts src/editor/compiler/ir/__tests__/state-offset-resolution.test.ts src/editor/compiler/ir/builderTypes.ts .agent_planning/SUMMARY-project-evaluator-2025-12-31-013739.txt .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/STATUS-2025-12-31-013739.md .agent_planning/_active/field-runtime-redflag/SUMMARY-planner-2025-12-31-105854.txt .agent_planning/_active/field-runtime-redflag/USER-RESPONSE-2025-12-31-110600.md .agent_planning/eval-cache/workstream-alignment.md)
 =======
 >>>>>>> 0079307 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
   domainFromN(n: number, elementIds?: readonly string[]): ValueSlot {
     const slot = this.allocValueSlot({ world: "scalar", domain: "domain" }, `domain_n${n}`);
 >>>>>>> 63bcac0 (Add file(s): .agent_planning/eval-cache/INDEX.md src/editor/compiler/ir/IRBuilder.ts src/editor/compiler/ir/IRBuilderImpl.ts src/editor/compiler/ir/__tests__/state-offset-resolution.test.ts src/editor/compiler/ir/builderTypes.ts .agent_planning/SUMMARY-project-evaluator-2025-12-31-013739.txt .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/STATUS-2025-12-31-013739.md .agent_planning/_active/field-runtime-redflag/SUMMARY-planner-2025-12-31-105854.txt .agent_planning/_active/field-runtime-redflag/USER-RESPONSE-2025-12-31-110600.md .agent_planning/eval-cache/workstream-alignment.md)
 =======
+=======
+=======
+>>>>>>> 5d3ab6d (Add file(s): .agent_planning/eval-cache/INDEX.md src/editor/compiler/ir/IRBuilder.ts src/editor/compiler/ir/IRBuilderImpl.ts src/editor/compiler/ir/__tests__/state-offset-resolution.test.ts src/editor/compiler/ir/builderTypes.ts .agent_planning/SUMMARY-project-evaluator-2025-12-31-013739.txt .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/STATUS-2025-12-31-013739.md .agent_planning/_active/field-runtime-redflag/SUMMARY-planner-2025-12-31-105854.txt .agent_planning/_active/field-runtime-redflag/USER-RESPONSE-2025-12-31-110600.md .agent_planning/eval-cache/workstream-alignment.md)
+>>>>>>> 7678955 (Add file(s): .agent_planning/eval-cache/INDEX.md src/editor/compiler/ir/IRBuilder.ts src/editor/compiler/ir/IRBuilderImpl.ts src/editor/compiler/ir/__tests__/state-offset-resolution.test.ts src/editor/compiler/ir/builderTypes.ts .agent_planning/SUMMARY-project-evaluator-2025-12-31-013739.txt .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/STATUS-2025-12-31-013739.md .agent_planning/_active/field-runtime-redflag/SUMMARY-planner-2025-12-31-105854.txt .agent_planning/_active/field-runtime-redflag/USER-RESPONSE-2025-12-31-110600.md .agent_planning/eval-cache/workstream-alignment.md)
   domainFromN(n: number, elementIds?: readonly string[]): ValueSlot {
     const slot = this.allocValueSlot({ world: "scalar", domain: "domain" }, `domain_n${n}`);
 =======
@@ -764,6 +772,7 @@ export class IRBuilderImpl implements IRBuilder {
   domainFromN(n: number): ValueSlot {
     const slot = this.allocValueSlot({ world: "scalar", domain: "domain", category: "internal", busEligible: false }, `domain_n${n}`);
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
@@ -775,6 +784,16 @@ export class IRBuilderImpl implements IRBuilder {
     const slot = this.allocValueSlot({ world: "scalar", domain: "domain", category: "internal", busEligible: false }, `domain_n${n}`);
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+  domainFromN(n: number): ValueSlot {
+    const slot = this.allocValueSlot({ world: "scalar", domain: "domain", category: "internal", busEligible: false }, `domain_n${n}`);
+=======
+  domainFromN(n: number, elementIds?: readonly string[]): ValueSlot {
+    const slot = this.allocValueSlot({ world: "scalar", domain: "domain" }, `domain_n${n}`);
+>>>>>>> 63bcac0 (Add file(s): .agent_planning/eval-cache/INDEX.md src/editor/compiler/ir/IRBuilder.ts src/editor/compiler/ir/IRBuilderImpl.ts src/editor/compiler/ir/__tests__/state-offset-resolution.test.ts src/editor/compiler/ir/builderTypes.ts .agent_planning/SUMMARY-project-evaluator-2025-12-31-013739.txt .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/STATUS-2025-12-31-013739.md .agent_planning/_active/field-runtime-redflag/SUMMARY-planner-2025-12-31-105854.txt .agent_planning/_active/field-runtime-redflag/USER-RESPONSE-2025-12-31-110600.md .agent_planning/eval-cache/workstream-alignment.md)
+>>>>>>> f6d8a9e (Add file(s): .agent_planning/eval-cache/INDEX.md src/editor/compiler/ir/IRBuilder.ts src/editor/compiler/ir/IRBuilderImpl.ts src/editor/compiler/ir/__tests__/state-offset-resolution.test.ts src/editor/compiler/ir/builderTypes.ts .agent_planning/SUMMARY-project-evaluator-2025-12-31-013739.txt .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/STATUS-2025-12-31-013739.md .agent_planning/_active/field-runtime-redflag/SUMMARY-planner-2025-12-31-105854.txt .agent_planning/_active/field-runtime-redflag/USER-RESPONSE-2025-12-31-110600.md .agent_planning/eval-cache/workstream-alignment.md)
+>>>>>>> 7678955 (Add file(s): .agent_planning/eval-cache/INDEX.md src/editor/compiler/ir/IRBuilder.ts src/editor/compiler/ir/IRBuilderImpl.ts src/editor/compiler/ir/__tests__/state-offset-resolution.test.ts src/editor/compiler/ir/builderTypes.ts .agent_planning/SUMMARY-project-evaluator-2025-12-31-013739.txt .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/DOD-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-105854.md .agent_planning/_active/field-runtime-redflag/PLAN-2025-12-31-110500.md .agent_planning/_active/field-runtime-redflag/STATUS-2025-12-31-013739.md .agent_planning/_active/field-runtime-redflag/SUMMARY-planner-2025-12-31-105854.txt .agent_planning/_active/field-runtime-redflag/USER-RESPONSE-2025-12-31-110600.md .agent_planning/eval-cache/workstream-alignment.md)
     this.domains.push({
       slot,
       count: n,
