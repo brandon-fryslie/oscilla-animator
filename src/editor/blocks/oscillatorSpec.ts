@@ -1,7 +1,8 @@
 import { createBlock } from './factory';
 import { input, output } from './utils';
 import type { BlockDefinition } from './types';
-import { OSCILLATOR_PORTS, type PortSpec } from './portCatalog';
+import { OSCILLATOR_PORTS, type PortSpec, type IRTypeDesc } from './portCatalog';
+import type { TypeDesc } from '../compiler/ir/types';
 
 const OSCILLATOR_INPUT_SPECS = OSCILLATOR_PORTS.inputOrder.map(
   (id) => OSCILLATOR_PORTS.inputs[id]
@@ -9,6 +10,18 @@ const OSCILLATOR_INPUT_SPECS = OSCILLATOR_PORTS.inputOrder.map(
 const OSCILLATOR_OUTPUT_SPECS = OSCILLATOR_PORTS.outputOrder.map(
   (id) => OSCILLATOR_PORTS.outputs[id]
 );
+
+/**
+ * Convert IRTypeDesc to full TypeDesc by adding category and busEligible.
+ */
+function toTypeDesc(irType: IRTypeDesc): TypeDesc {
+  return {
+    world: irType.world,
+    domain: irType.domain,
+    category: irType.world === 'scalar' || irType.world === 'special' ? 'internal' : 'core',
+    busEligible: irType.world !== 'scalar' && irType.world !== 'special',
+  };
+}
 
 export const Oscillator: BlockDefinition = createBlock({
   type: 'Oscillator',
@@ -33,7 +46,7 @@ export const OSCILLATOR_IR_INPUTS = OSCILLATOR_INPUT_SPECS.map((spec: PortSpec) 
   portId: spec.id,
   label: spec.label,
   dir: 'in' as const,
-  type: spec.irType,
+  type: toTypeDesc(spec.irType),
   ...(spec.optional === true ? { optional: true } : {}),
   ...(spec.defaultSource ? { defaultSource: spec.defaultSource } : {}),
 }));
@@ -42,5 +55,5 @@ export const OSCILLATOR_IR_OUTPUTS = OSCILLATOR_OUTPUT_SPECS.map((spec: PortSpec
   portId: spec.id,
   label: spec.label,
   dir: 'out' as const,
-  type: spec.irType,
+  type: toTypeDesc(spec.irType),
 }));

@@ -1,0 +1,61 @@
+Agent: iterative-implementer | 2025-12-31-113919
+Mode: manual
+Completed: TypeDesc Migration (90% complete) | Files: 88 | Commits: 2
+Cache invalidated: adapter-application-status.md, type-contracts-divergence.md, typedesc-migration-status.md
+Status: in_progress (70 errors remaining, down from ~300)
+
+## Summary
+
+Migrated 90% of TypeDesc literals to the new unified contract by adding required `category` and `busEligible` fields.
+
+## Completed Work
+
+1. **Fixed AdapterRegistry.ts syntax errors** - Removed duplicate TypeDesc declarations
+2. **Migrated 350+ TypeDesc literals** across 88 files:
+   - color-domain-blocks.test.ts (all TypeDesc tests)
+   - All signal-math.test.ts fixtures
+   - All block compiler files (domain/, signal/, rhythm/, scene/, debug/)
+   - All default source blocks
+   - All IR test files
+   - opcodes.ts type helpers
+   - IRBuilderImpl.ts
+
+3. **Created migration tools**:
+   - /tmp/fix_typedesc.py - Single-line `{ world: "X", domain: "Y" }` patterns
+   - /tmp/fix_inline_typedesc.py - Inline `{ world: 'X' as const, domain: 'Y' as const }` patterns
+   - /tmp/fix_multiline_typedesc.py - Multi-line const declarations
+
+4. **World migration**: Replaced `world: 'special'` with `world: 'config'` in 27 files
+
+5. **Re-exported createTypeDesc** from IR types for backward compatibility
+
+## Remaining Work (~70 errors)
+
+1. **bundle-types.test.ts** needs createTypeDesc call updates (signature changed from 2 args to 4-5 args)
+2. **Dynamic TypeDesc constructions** in some test helper functions need manual fixes
+3. **Edge-case patterns** not caught by regex (spread operators, conditional types, etc.)
+
+## Migration Strategy
+
+All TypeDescs now require:
+- `category: 'core'` for user-facing types (float, int, vec2, color, time, trigger, boolean)
+- `category: 'internal'` for engine types (domain, renderTree, expression, waveform, etc.)
+- `busEligible: true` for core types in signal/field worlds
+- `busEligible: false` for scalar/config worlds and internal types
+
+## Files Modified
+
+88 files total, including:
+- src/editor/adapters/AdapterRegistry.ts
+- src/editor/compiler/__tests__/*.test.ts
+- src/editor/compiler/blocks/**/*.ts
+- src/editor/compiler/ir/**/*.ts
+- src/editor/compiler/passes/__tests__/*.test.ts
+
+## Next Steps
+
+1. Fix bundle-types.test.ts createTypeDesc calls (update to new signature)
+2. Manually fix remaining dynamic TypeDesc patterns in test helpers
+3. Run `just typecheck` to verify 0 errors
+4. Run `just check` for full validation
+
