@@ -51,7 +51,6 @@ export type {
 export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
 
 
-export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
 
 /**
  * Kernel capabilities - the five authorities that define primitives.

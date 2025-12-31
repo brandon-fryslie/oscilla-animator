@@ -269,10 +269,10 @@ export function initLensRegistry(): void {
       }
 
       const invertValue = ctx.builder.getConstPool()[invertParam.constId] as boolean;
-      const outputType: IRTypeDesc = {
+      const outputType: IRTypeDesc = asTypeDesc({
         world: 'signal',
         domain: 'float',
-      };
+      });
 
       // If not inverted, return input unchanged (identity)
       if (!invertValue) {
