@@ -3,7 +3,8 @@
 | Lint Infrastructure | lint-infrastructure.md | 2025-12-25 17:48 | project-evaluator (lint-cleanup) | HIGH |
 | IR Primitives Status | ir-primitives-status.md | 2025-12-30 02:31 | project-evaluator (spec analysis) | HIGH |
 | Default Sources Current State | default-sources-current-state.md | 2025-12-30 02:24 | project-evaluator (default-sources-hidden-blocks) | HIGH |
-| Unified Transforms IR Support | unified-transforms-status.md | 2025-12-31 | project-evaluator (unified-transforms) | HIGH |
+| Type Contracts Divergence | type-contracts-divergence.md | 2025-12-31 01:45 | project-evaluator (type-contracts-ir-plumbing) | HIGH |
+| Adapter Application Status | adapter-application-status.md | 2025-12-31 01:45 | project-evaluator (type-contracts-ir-plumbing) | HIGH |
 
 ## Cache Freshness Guidelines
 - **FRESH**: < 1 hour - trust fully
@@ -15,7 +16,8 @@
 - **lint-infrastructure.md**: ESLint config, two-tier rules (critical vs non-critical), auto-fixable rules
 - **ir-primitives-status.md**: 74 IR gaps across 11 specs, 20-sprint roadmap, dependency analysis, risk assessment
 - **default-sources-current-state.md**: Current constant-only default source implementation (store/UI/compiler/types)
-- **unified-transforms-status.md**: IR transform coverage (3/41 = 7%), implementation tiers, phased roadmap, patterns
+- **type-contracts-divergence.md**: Editor vs IR TypeDesc incompatibility (world: config vs special, different fields, domain mismatches)
+- **adapter-application-status.md**: Adapter/lens application happens in Pass 8 (not Pass 6), block lowering sees unadapted types
 
 ## Not Yet Cached
 - project-structure.md (directory layout, entry points)

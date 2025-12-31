@@ -14,6 +14,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Agent: project-evaluator | 2025-12-31
 Scope: render-pipeline (6 gaps: z-order, curves, clipping, transforms, postfx, materials)
 Completion: 90% (5.5/6 gaps functional) | Critical Issues: 1 (ClipGroup stubbed)
@@ -81,6 +82,8 @@ Files Created:
 >>>>>>> 7cf1eac (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 =======
 >>>>>>> eb94e57 (fix(test): Add missing debugProbes field to test mocks)
+=======
+>>>>>>> c3aa167 (fix(test): Add missing debugProbes field to test mocks)
 Agent: project-evaluator | 2025-12-31 01:27:00
 Scope: project/type-contracts-ir-plumbing
 Completion: 50% | Gaps: 4 deliverables (1 blocked, 1 complete, 2 partial) | Test Quality: Cannot assess (typecheck fails)
@@ -116,6 +119,12 @@ Ambiguities: 4 found | Workflow: PAUSE
 =======
 >>>>>>> 6aef24c (fix(test): Add missing debugProbes field to test mocks)
 >>>>>>> c115be2 (fix(test): Add missing debugProbes field to test mocks)
+=======
+=======
+>>>>>>> 6aef24c (fix(test): Add missing debugProbes field to test mocks)
+=======
+>>>>>>> b190713 (fix(test): Add missing debugProbes field to test mocks)
+>>>>>>> 1b4b923 (fix(test): Add missing debugProbes field to test mocks)
 Agent: project-evaluator | 2025-12-31
 Scope: render-pipeline (6 gaps: z-order, curves, clipping, transforms, postfx, materials)
 Completion: 90% (5.5/6 gaps functional) | Critical Issues: 1 (ClipGroup stubbed)
@@ -175,6 +184,7 @@ Files Created:
 >>>>>>> f5d5a76 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> eb0c6a7 (fix(test): Add missing debugProbes field to test mocks)
 =======
@@ -184,6 +194,12 @@ Files Created:
 =======
 >>>>>>> 6aef24c (fix(test): Add missing debugProbes field to test mocks)
 >>>>>>> c115be2 (fix(test): Add missing debugProbes field to test mocks)
+=======
+>>>>>>> 6aef24c (fix(test): Add missing debugProbes field to test mocks)
+=======
+>>>>>>> 1dc1a6e (fix(test): Add missing debugProbes field to test mocks)
+>>>>>>> b190713 (fix(test): Add missing debugProbes field to test mocks)
+>>>>>>> 1b4b923 (fix(test): Add missing debugProbes field to test mocks)
 Agent: project-evaluator | 2025-12-31 01:27:00
 Scope: project/type-contracts-ir-plumbing
 Completion: 50% | Gaps: 4 deliverables (1 blocked, 1 complete, 2 partial) | Test Quality: Cannot assess (typecheck fails)
@@ -356,6 +372,15 @@ Files Created:
 =======
 =======
 >>>>>>> 1dc1a6e (fix(test): Add missing debugProbes field to test mocks)
+<<<<<<< HEAD
 >>>>>>> 6aef24c (fix(test): Add missing debugProbes field to test mocks)
+<<<<<<< HEAD
 >>>>>>> c115be2 (fix(test): Add missing debugProbes field to test mocks)
+<<<<<<< HEAD
 >>>>>>> eb94e57 (fix(test): Add missing debugProbes field to test mocks)
+=======
+=======
+=======
+>>>>>>> b190713 (fix(test): Add missing debugProbes field to test mocks)
+>>>>>>> 1b4b923 (fix(test): Add missing debugProbes field to test mocks)
+>>>>>>> c3aa167 (fix(test): Add missing debugProbes field to test mocks)
