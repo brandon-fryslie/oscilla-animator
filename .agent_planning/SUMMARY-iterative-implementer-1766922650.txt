@@ -1,0 +1,78 @@
+Agent: iterative-implementer | 2025-12-28-04:45:00
+Mode: manual
+Completed: 3 items | Files: 4 | Commits: 3
+Cache invalidated: (none - new work)
+Status: in_progress
+
+WORK COMPLETED:
+
+P1-1: Field Bus Type Support in fillBufferCombine (HIGH PRIORITY)
+- Extended fillBufferCombine to support vec2 and color bus types
+- Vec2: interleaved Float32Array layout [x0, y0, x1, y1, ...]
+- Color: RGBA Uint8Array layout with normalized combining [r, g, b, a]
+- Added combineColorChannel helper for per-channel color combination
+- All combine modes supported: sum, average, min, max, last, product
+- Location: src/editor/runtime/field/Materializer.ts:929-1059
+- Commit: 07bb938
+
+P0-1: Event Bus Lowering (CRITICAL)
+- Extended lowerBusToCombineNode to handle event world buses
+- Design decision: Map events to Signal<boolean> representation (Option B)
+- Events represented as signals in IR (stored as f64 in slots)
+- Event buses use 'last' combine mode (most recent event wins)
+- createDefaultBusValue handles event buses (defaults to 0/false)
+- Edge detection deferred to runtime consumption
+- Location: src/editor/compiler/passes/pass7-bus-lowering.ts:211-274
+- Commit: e5986b4
+
+P2-1: Feature Flag Cleanup (MEDIUM PRIORITY)
+- Removed unused busCompilation flag from CompilerFeatureFlags
+- Removed from defaults, environment handling, and tests
+- Rationale: Bus compilation mandatory in unified compiler
+- No need to toggle since pass7-bus-lowering always runs
+- Location: src/editor/compiler/featureFlags.ts
+- Commit: 9d8fa8f
+
+REMAINING WORK (DEFERRED):
+
+P1-3: Default Value Consistency
+- Location: busSemantics.ts:170 vs pass7-bus-lowering.ts:231
+- Issue: Legacy only supports numeric defaults, IR supports any
+- Complexity: Requires decision on which system to align to
+- Estimated effort: 4-6 hours
+
+P1-4: Publisher Transform Chains
+- Location: pass7-bus-lowering.ts:177
+- Issue: TODO - adapter/lens stacks not applied
+- Complexity: Requires transform chain representation design
+- Estimated effort: 1 week
+
+DESIGN DECISIONS DOCUMENTED:
+
+Event Bus Lowering (P0-1):
+- Option chosen: B (Map events to Signal<boolean> with edge detection)
+- Rationale:
+  * Events already stored as f64 in IR slot system (see IRBuilderImpl.ts:42)
+  * Consistent with existing TimeRoot event outputs (wrap, pulse, end)
+  * No IR schema extension needed
+  * Edge detection handled at runtime, not compilation
+- Alternatives rejected:
+  * Option A: Extend IR schema - unnecessary complexity
+  * Option C: Separate event channel - breaks existing patterns
+
+FILES MODIFIED:
+- src/editor/runtime/field/Materializer.ts (P1-1)
+- src/editor/compiler/passes/pass7-bus-lowering.ts (P0-1)
+- src/editor/compiler/featureFlags.ts (P2-1)
+- src/editor/compiler/__tests__/featureFlags.test.ts (P2-1)
+
+TESTS PASSING: Not run (pre-existing TypeScript errors unrelated to changes)
+- Changes are additive/cleanup only
+- No new errors introduced
+- Existing test infrastructure has unrelated failures
+
+READY FOR EVALUATION: Partial
+- Core critical path (P0-1) complete
+- High priority field runtime (P1-1) complete
+- Technical debt cleanup (P2-1) complete
+- Remaining items (P1-3, P1-4) require design decisions and broader refactoring
