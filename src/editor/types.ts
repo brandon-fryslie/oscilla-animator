@@ -13,157 +13,36 @@ export * from './types/dnd';
 // Import default source attachment types
 import type { DefaultSourceAttachment } from './defaultSources/types';
 
+
 // =============================================================================
-// Bus Type System (Core/Internal Split)
+// Unified Type System (Re-exported from Core)
 // =============================================================================
 
 /**
- * World categories for type system.
- * - signal: Continuous time-indexed values
- * - event: Discrete impulses/triggers (sparse, edge-triggered)
- * - field: Per-element values
- * - scalar: Compile-time constants
- * - config: Configuration values
+ * The editor uses the unified type system defined in src/core/types.ts.
+ * This ensures consistent TypeDesc contracts across editor and compiler.
+ *
+ * Sprint: Type Contracts + IR Plumbing (2025-12-31)
+ * References:
+ * - .agent_planning/type-contracts-ir-plumbing/DOD-2025-12-31-045033.md
+ * - .agent_planning/type-contracts-ir-plumbing/PLAN-2025-12-31-045033.md
  */
-export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
+
+// Re-export unified type system from core
+export type {
+  TypeWorld,
+  CoreDomain,
+  InternalDomain,
+  Domain,
+  TypeCategory,
+  TypeDesc,
+} from '../core/types';
+
+export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
 
 // =============================================================================
 // Kernel Capabilities (Primitive Enforcement)
 // =============================================================================
-
-/**
- * Kernel capabilities - the five authorities that define primitives.
- * These represent the different kinds of "special powers" a block can have.
- *
- * Only blocks listed in KERNEL_PRIMITIVES may claim non-pure capabilities.
- */
-export type KernelCapability = 'time' | 'identity' | 'state' | 'render' | 'io';
-
-/**
- * Full capability type including pure.
- * - 'pure': Block has no special authority, compiles to pure expressions
- * - KernelCapability: Block has kernel-level authority (time/identity/state/render/io)
- */
-export type Capability = KernelCapability | 'pure';
-
-/**
- * The exhaustive list of kernel primitive IDs.
- * This union type provides COMPILE-TIME enforcement.
- */
-export type KernelId =
-  // Time Authority (2)
-  | 'FiniteTimeRoot'
-  | 'InfiniteTimeRoot'
-  // Identity Authority (3)
-  | 'DomainN'
-  | 'SVGSampleDomain'
-  | 'GridDomain'
-  // State Authority (5)
-  | 'IntegrateBlock'
-  | 'HistoryBlock'
-  | 'TriggerOnWrap'
-  | 'PulseDivider'
-  | 'EnvelopeAD'
-  // Render Authority (6)
-  | 'RenderInstances'
-  | 'RenderStrokes'
-  | 'RenderProgramStack'
-  | 'RenderInstances2D'
-  | 'RenderPaths2D'
-  | 'Render2dCanvas'
-  // External IO Authority (3)
-  | 'TextSource'
-  | 'ImageSource'
-  | 'DebugDisplay';
-
-/**
- * Compile kind for pure blocks - determines what AST they can produce.
- * - 'operator': Must compile to SignalExpr/FieldExpr AST nodes (not closures)
- * - 'composite': Black-box combination of primitives
- * - 'spec': Declarative specification (config that compiles to programs)
- */
-export type PureCompileKind = 'operator' | 'composite' | 'spec';
-
-/**
- * Core domains - what users see in the bus system.
- * These are the learnable creative vocabulary.
- */
-export type CoreDomain =
-  | 'float'    // Floating-point values
-  | 'int'      // Integer values
-  | 'vec2'     // 2D positions/vectors
-  | 'vec3'     // 3D positions/vectors
-  | 'color'    // Color values
-  | 'boolean'  // True/false values
-  | 'time'     // Time values (always in seconds)
-  | 'rate'     // Rate/multiplier values
-  | 'trigger'; // Pulse/event signals
-
-/**
- * Internal domains - engine plumbing, not bus-eligible by default.
- */
-export type InternalDomain =
-  | 'point'        // Point semantics
-  | 'duration'     // Duration semantics
-  | 'hsl'          // HSL color space
-  | 'path'         // Path data
-  | 'expression'   // DSL expression source
-  | 'waveform'     // Oscillator waveform selector
-  | 'phaseSample'  // PhaseMachine sample payload
-  | 'phaseMachine' // PhaseMachine instance payload
-  | 'wobble'       // Wobble modulator config
-  | 'spiral'       // Spiral modulator config
-  | 'wave'         // Wave modulator config
-  | 'jitter'       // Jitter modulator config
-  | 'program'      // Compiled program
-  | 'renderTree'   // Render tree output
-  | 'renderNode'   // Single render node
-  | 'filterDef'    // SVG filter definition
-  | 'strokeStyle'  // Stroke configuration
-  | 'elementCount' // Number of elements
-  | 'scene'        // Scene data
-  | 'sceneTargets' // Scene target points
-  | 'sceneStrokes' // Scene stroke paths
-  | 'event'        // Generic events
-  | 'string'       // String values (labels, etc.)
-  | 'bounds'       // Bounding box / bounds
-  | 'spec'         // Spec types (config that compiles to programs)
-  | 'canvasRender'  // Canvas 2D render commands
-  | 'cameraRef';   // Camera resource reference (for 3D rendering)
-
-/**
- * All domains (core + internal).
- */
-export type Domain = CoreDomain | InternalDomain;
-
-/**
- * Category for type filtering.
- */
-export type TypeCategory = 'core' | 'internal';
-
-/**
- * Type descriptor for bus typing system.
- * Separates user-facing core types from internal resource types.
- */
-export interface TypeDesc {
-  /** World: signal=continuous time, field=per-element */
-  readonly world: TypeWorld;
-
-  /** Domain: what type of value */
-  readonly domain: Domain;
-
-  /** Category: core (user-facing) or internal (engine) */
-  readonly category: TypeCategory;
-
-  /** Whether this type can be used for buses */
-  readonly busEligible: boolean;
-
-  /** Optional semantic information for precise matching */
-  readonly semantics?: string;
-
-  /** Optional unit information (e.g., "seconds", "beats") */
-  readonly unit?: string;
-}
 
 /**
  * Bus combination modes for multiple publishers.
