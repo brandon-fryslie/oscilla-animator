@@ -34,7 +34,11 @@ import { CameraStore } from "../camera/CameraStore";
 import { MeshStore } from "../mesh/MeshStore";
 import type { ViewportInfo } from "../camera/evaluateCamera";
 import { createTimeState, type TimeState } from "./timeResolution";
+<<<<<<< HEAD
 import { EventStore } from "./EventStore";
+=======
+import { asTypeDesc } from "../../compiler/ir/types";
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 
 // ============================================================================
 // RuntimeState Interface
@@ -526,10 +530,10 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
       slot,
       storage: "f64",
       offset: slot, // Dense allocation: offset = slot index
-      type: {
+      type: asTypeDesc({
         world: "signal",
         domain: "float",
-      },
+      }),
     });
   }
 
@@ -542,11 +546,11 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
       slot,
       storage: "object",
       offset: slot, // Dense allocation: offset = slot index
-      type: {
+      type: asTypeDesc({
         // Field buffers and render trees are "special" world objects
         world: "config",
         domain: "renderTree", // Generic object domain for buffers/trees
-      },
+      }),
     });
   }
 

@@ -5,6 +5,7 @@ import type { ValueRefPacked } from '../compiler/passes/pass6-block-lowering';
 import type { IRBuilder } from '../compiler/ir/IRBuilder';
 import { OpCode } from '../compiler/ir/opcodes';
 import type { TypeDesc as IRTypeDesc } from '../compiler/ir/types';
+import { asTypeDesc } from '../compiler/ir/types';
 
 export interface LensParamSpec {
   type: TypeDesc; // Typically 'scalar:number' etc.
@@ -209,10 +210,10 @@ export function initLensRegistry(): void {
       const offsetValue = ctx.builder.getConstPool()[offsetParam.constId] as number;
 
       // Determine output type (same as input)
-      const outputType: IRTypeDesc = {
+      const outputType: IRTypeDesc = asTypeDesc({
         world: 'signal',
         domain: 'float',
-      };
+      });
 
       // Chain: multiply by scale, then add offset
       let result = input.id;
@@ -328,10 +329,10 @@ export function initLensRegistry(): void {
       const maxValue = ctx.builder.getConstPool()[maxParam.constId] as number;
 
       // Determine output type (same as input)
-      const outputType: IRTypeDesc = {
+      const outputType: IRTypeDesc = asTypeDesc({
         world: 'signal',
         domain: 'float',
-      };
+      });
 
       // Use OpCode.Clamp which takes (value, min, max)
       const minSigId = ctx.builder.sigConst(Math.min(minValue, maxValue), outputType);
