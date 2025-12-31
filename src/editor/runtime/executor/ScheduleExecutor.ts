@@ -93,12 +93,14 @@ export class ScheduleExecutor {
    * @param program - Compiled program IR
    * @param runtime - Runtime state (values, state, events, caches, timeState)
    * @param tMs - Absolute time in milliseconds
+   * @param mode - Optional playback mode ('playback' | 'scrub', defaults to 'playback')
    * @returns RenderFrameIR for this frame
    */
   public executeFrame(
     program: CompiledProgramIR,
     runtime: RuntimeState,
     tMs: number,
+    mode: 'playback' | 'scrub' = 'playback',
   ): RenderFrameIR {
     // 1. New frame lifecycle
     runtime.frameCache.newFrame();
@@ -106,8 +108,8 @@ export class ScheduleExecutor {
     runtime.events.reset(); // Clear event triggers from previous frame
     runtime.frameId++;
 
-    // 2. Compute effective time (pass timeState for wrap detection)
-    const effectiveTime = resolveTime(tMs, program.timeModel, runtime.timeState);
+    // 2. Compute effective time (pass timeState and mode for wrap/scrub detection)
+    const effectiveTime = resolveTime(tMs, program.timeModel, runtime.timeState, mode);
 
     // 3. Execute each step in schedule order
     for (const step of program.schedule.steps) {

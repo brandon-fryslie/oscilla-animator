@@ -36,6 +36,10 @@ export interface EffectiveTime {
   // Finite model outputs
   /** Progress 0..1 (finite models only) */
   progress01?: number;
+
+  // Scrub detection (P2)
+  /** True if this frame is a scrub (non-monotonic or large jump) */
+  isScrub: boolean;
 }
 
 // ============================================================================
@@ -100,23 +104,36 @@ export function createTimeState(): TimeState {
  * - Works correctly under variable frame rates and scrubbing
  * - Tracks wrap count and deltaMs for event payloads
  *
+ * Scrub Detection (P2):
+ * - Scrub detected when: mode === 'scrub' OR |deltaMs| > 1000 OR deltaMs < 0
+ * - When scrub detected: wrapEvent suppressed (set to 0.0)
+ * - Prevents phantom wrap events during non-monotonic time changes
+ *
  * @param tAbsMs - Absolute time in milliseconds
  * @param timeModel - Time model specification
  * @param timeState - Optional time state for wrap detection (modified in place)
+ * @param mode - Optional playback mode ('playback' | 'scrub', defaults to 'playback')
  * @returns Effective time with all derived signals
  */
 export function resolveTime(
   tAbsMs: number,
   timeModel: TimeModelIR,
-  timeState?: TimeState
+  timeState?: TimeState,
+  mode: 'playback' | 'scrub' = 'playback'
 ): EffectiveTime {
   // Calculate frame delta for event payloads
+  let deltaMs = 0;
   if (timeState !== undefined) {
     if (timeState.prevTAbsMs !== null) {
-      timeState.lastDeltaMs = tAbsMs - timeState.prevTAbsMs;
+      deltaMs = tAbsMs - timeState.prevTAbsMs;
+      timeState.lastDeltaMs = deltaMs;
     }
     timeState.prevTAbsMs = tAbsMs;
   }
+
+  // Detect scrub mode (P2)
+  // Scrub if: explicit mode OR backward time OR large jump (>1s)
+  const isScrub = mode === 'scrub' || deltaMs < 0 || Math.abs(deltaMs) > 1000;
 
   switch (timeModel.kind) {
     case "finite": {
@@ -128,6 +145,7 @@ export function resolveTime(
         tAbsMs,
         tModelMs,
         progress01,
+        isScrub,
       };
     }
 
@@ -142,7 +160,8 @@ export function resolveTime(
         tModelMs = (tAbsMs % periodMs + periodMs) % periodMs;
 
         // Detect wrap using actual previous tModelMs (if available)
-        if (timeState !== undefined && timeState.prevTModelMs !== null) {
+        // Suppress wrap event during scrub (P2)
+        if (timeState !== undefined && timeState.prevTModelMs !== null && !isScrub) {
           // Wrap occurred if current tModelMs < previous tModelMs
           // This handles both forward playback wraps and scrubbing backwards across wrap boundary
           if (tModelMs < timeState.prevTModelMs) {
@@ -164,7 +183,8 @@ export function resolveTime(
         tModelMs = isReverse ? periodMs - tInCycle : tInCycle;
 
         // Detect bounce using actual previous cycle count (derived from prevTModelMs)
-        if (timeState !== undefined && timeState.prevTModelMs !== null) {
+        // Suppress wrap event during scrub (P2)
+        if (timeState !== undefined && timeState.prevTModelMs !== null && !isScrub) {
           // Derive previous cycle count from prevTModelMs and compare
           // For ping-pong, wrap occurs when direction changes
           const prevCycleCount = Math.floor((tAbsMs - (tModelMs - timeState.prevTModelMs)) / periodMs);
@@ -187,6 +207,7 @@ export function resolveTime(
         tModelMs,
         phase01,
         wrapEvent,
+        isScrub,
       };
     }
 
@@ -195,6 +216,7 @@ export function resolveTime(
       return {
         tAbsMs,
         tModelMs: tAbsMs,
+        isScrub,
       };
     }
 
