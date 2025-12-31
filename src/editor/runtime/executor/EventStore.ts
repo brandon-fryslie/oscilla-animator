@@ -164,7 +164,7 @@ export class EventStore {
    */
   public consume(slot: number): EventSlotValue["payload"] | undefined {
     const event = this.events.get(slot);
-    return event?.triggered ? event.payload : undefined;
+    return event?.triggered === true ? event.payload : undefined;
   }
 
   /**
