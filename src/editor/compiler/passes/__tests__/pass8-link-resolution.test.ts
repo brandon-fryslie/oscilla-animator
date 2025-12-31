@@ -183,4 +183,182 @@ describe("Pass 8: Link Resolution", () => {
       expect(result.errors[0].code).toBe("BusLoweringFailed");
     });
   });
+
+  describe("P1 Validation: Output Slot Registration", () => {
+    it("should NOT emit error for properly registered signal output", () => {
+      const ir = createIRWithBusRoots();
+
+      // Create a signal and register its slot properly
+      const sigId = ir.builder.sigConst(42, asTypeDesc({ world: "signal", domain: "float" }));
+      const slot = ir.builder.allocValueSlot();
+      ir.builder.registerSigSlot(sigId, slot);
+
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sigId, slot }]]));
+
+      const blocks: Block[] = [createBlock("b1", 0, 1)];
+
+      const result = pass8LinkResolution(ir, blocks, [], []);
+
+      // Should NOT have MissingOutputRegistration error
+      const outputErrors = result.errors.filter(e => e.code === "MissingOutputRegistration");
+      expect(outputErrors.length).toBe(0);
+    });
+
+    it("should emit error for unregistered signal output", () => {
+      const ir = createIRWithBusRoots();
+
+      // Create a signal but DON'T register its slot
+      const sigId = ir.builder.sigConst(42, asTypeDesc({ world: "signal", domain: "float" }));
+      const slot = ir.builder.allocValueSlot();
+      // Missing: ir.builder.registerSigSlot(sigId, slot);
+
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sigId, slot }]]));
+
+      const blocks: Block[] = [createBlock("b1", 0, 1)];
+
+      const result = pass8LinkResolution(ir, blocks, [], []);
+
+      // Should have MissingOutputRegistration error
+      const outputErrors = result.errors.filter(e => e.code === "MissingOutputRegistration");
+      expect(outputErrors.length).toBeGreaterThan(0);
+
+      // Check error message quality
+      const error = outputErrors[0];
+      expect(error.message).toContain("Block 'Block b1'");
+      expect(error.message).toContain("output 'Output 0'");
+      expect(error.message).toContain("registerSigSlot");
+    });
+
+    it("should NOT emit error for properly registered field output", () => {
+      const ir = createIRWithBusRoots();
+
+      // Create a field and register its slot properly
+      const fieldId = ir.builder.fieldConst(1.5, asTypeDesc({ world: "field", domain: "float" }));
+      const slot = ir.builder.allocValueSlot();
+      ir.builder.registerFieldSlot(fieldId, slot);
+
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "field", id: fieldId, slot }]]));
+
+      const blocks: Block[] = [createBlock("b1", 0, 1)];
+
+      const result = pass8LinkResolution(ir, blocks, [], []);
+
+      // Should NOT have MissingOutputRegistration error
+      const outputErrors = result.errors.filter(e => e.code === "MissingOutputRegistration");
+      expect(outputErrors.length).toBe(0);
+    });
+
+    it("should emit error for unregistered field output", () => {
+      const ir = createIRWithBusRoots();
+
+      // Create a field but DON'T register its slot
+      const fieldId = ir.builder.fieldConst(1.5, asTypeDesc({ world: "field", domain: "float" }));
+      const slot = ir.builder.allocValueSlot();
+      // Missing: ir.builder.registerFieldSlot(fieldId, slot);
+
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "field", id: fieldId, slot }]]));
+
+      const blocks: Block[] = [createBlock("b1", 0, 1)];
+
+      const result = pass8LinkResolution(ir, blocks, [], []);
+
+      // Should have MissingOutputRegistration error
+      const outputErrors = result.errors.filter(e => e.code === "MissingOutputRegistration");
+      expect(outputErrors.length).toBeGreaterThan(0);
+
+      // Check error message quality
+      const error = outputErrors[0];
+      expect(error.message).toContain("Block 'Block b1'");
+      expect(error.message).toContain("output 'Output 0'");
+      expect(error.message).toContain("registerFieldSlot");
+    });
+
+    it("should NOT emit error for scalarConst output", () => {
+      const ir = createIRWithBusRoots();
+
+      // Create a scalar constant (automatically registered in const pool)
+      const constId = ir.builder.allocConstId(42);
+
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "scalarConst", constId }]]));
+
+      const blocks: Block[] = [createBlock("b1", 0, 1)];
+
+      const result = pass8LinkResolution(ir, blocks, [], []);
+
+      // Should NOT have MissingOutputRegistration error
+      const outputErrors = result.errors.filter(e => e.code === "MissingOutputRegistration");
+      expect(outputErrors.length).toBe(0);
+    });
+
+    it("should NOT emit error for special output", () => {
+      const ir = createIRWithBusRoots();
+
+      // Create a special output (domain handle, no slot registration needed)
+      const domainSlot = ir.builder.domainFromN(100);
+
+      ir.blockOutputs.set(0 as BlockIndex, createOutputMap([
+        ["out0", { k: "special", tag: "domain", id: domainSlot }]
+      ]));
+
+      const blocks: Block[] = [createBlock("b1", 0, 1)];
+
+      const result = pass8LinkResolution(ir, blocks, [], []);
+
+      // Should NOT have MissingOutputRegistration error
+      const outputErrors = result.errors.filter(e => e.code === "MissingOutputRegistration");
+      expect(outputErrors.length).toBe(0);
+    });
+  });
+
+  describe("P1 Validation: Null ValueRef Documentation", () => {
+    it("should document that event port null is expected (not an error)", () => {
+      const ir = createIRWithBusRoots();
+
+      // Block b1 has an output, but it's an event (no IR representation)
+      ir.blockOutputs.set(0 as BlockIndex, new Map()); // Empty - no output ref
+
+      const blocks: Block[] = [
+        createBlock("b1", 0, 1),
+        createBlock("b2", 1, 0),
+      ];
+
+      const wires: CompilerConnection[] = [
+        {
+          from: { block: "b1", port: "out0" },
+          to: { block: "b2", port: "in0" },
+        },
+      ];
+
+      const result = pass8LinkResolution(ir, blocks, wires, []);
+
+      // Wire exists but upstream has no ref - this is expected for events
+      // Should NOT emit an error for this case
+      const danglingErrors = result.errors.filter(e => e.code === "DanglingConnection");
+      expect(danglingErrors.length).toBe(0);
+    });
+  });
+
+  describe("P1 Validation: Bus Publisher Validation", () => {
+    // Note: Bus publisher validation is documented as TODO in the implementation.
+    // It requires modifying pass7 to track publisher counts.
+    // For now, we rely on pass7's existing validation logic for empty buses.
+
+    it("should handle buses with publishers (no error)", () => {
+      const ir = createIRWithBusRoots();
+
+      // Add a bus root (implicitly has publishers from pass7)
+      const sigId = ir.builder.sigConst(42, asTypeDesc({ world: "signal", domain: "float" }));
+      const slot = ir.builder.allocValueSlot();
+      ir.builder.registerSigSlot(sigId, slot);
+      ir.busRoots.set(0, { k: "sig", id: sigId, slot });
+
+      const blocks: Block[] = [];
+
+      const result = pass8LinkResolution(ir, blocks, [], []);
+
+      // Should NOT have BusWithoutPublisher error (validation not yet implemented)
+      const busErrors = result.errors.filter(e => e.code === "BusWithoutPublisher");
+      expect(busErrors.length).toBe(0);
+    });
+  });
 });
