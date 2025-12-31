@@ -12,7 +12,7 @@
  * - PLAN-2025-12-25-200731.md P0-3: Pass 8 - Link Resolution
  */
 
-import type { Block, Listener } from "../../types";
+import type { Block, Listener, AdapterStep, LensInstance } from "../../types";
 import type { BlockIndex } from "../ir/patches";
 import type { BusIndex } from "../ir/types";
 import type { IRBuilder } from "../ir/IRBuilder";
@@ -397,7 +397,7 @@ function buildBlockOutputRoots(
  */
 function applyAdapterChain(
   valueRef: ValueRefPacked,
-  adapterChain: NonNullable<CompilerConnection['adapterChain']> | NonNullable<Listener['adapterChain']>,
+  adapterChain: readonly AdapterStep[],
   builder: IRBuilder,
   errors: CompileError[],
   context: string
@@ -407,7 +407,7 @@ function applyAdapterChain(
   for (const step of adapterChain) {
     const adapterDef = adapterRegistry.get(step.adapterId);
 
-    if (!adapterDef) {
+    if (adapterDef === undefined) {
       errors.push({
         code: "UnsupportedAdapterInIRMode",
         message: `Unknown adapter '${step.adapterId}' in ${context}. This adapter is not registered.`,
@@ -415,7 +415,7 @@ function applyAdapterChain(
       continue; // Skip unknown adapter, continue with original value
     }
 
-    if (!adapterDef.compileToIR) {
+    if (adapterDef.compileToIR === undefined) {
       errors.push({
         code: "UnsupportedAdapterInIRMode",
         message: `Adapter '${adapterDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
@@ -459,7 +459,7 @@ function applyAdapterChain(
  */
 function applyLensStack(
   valueRef: ValueRefPacked,
-  lensStack: NonNullable<CompilerConnection['lensStack']> | NonNullable<Listener['lensStack']>,
+  lensStack: readonly LensInstance[],
   builder: IRBuilder,
   errors: CompileError[],
   context: string
@@ -469,7 +469,7 @@ function applyLensStack(
   for (const lensInstance of lensStack) {
     const lensDef = getLens(lensInstance.lensId);
 
-    if (!lensDef) {
+    if (lensDef === undefined) {
       errors.push({
         code: "UnsupportedLensInIRMode",
         message: `Unknown lens '${lensInstance.lensId}' in ${context}. This lens is not registered.`,
@@ -477,7 +477,7 @@ function applyLensStack(
       continue; // Skip unknown lens, continue with original value
     }
 
-    if (!lensDef.compileToIR) {
+    if (lensDef.compileToIR === undefined) {
       errors.push({
         code: "UnsupportedLensInIRMode",
         message: `Lens '${lensDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
