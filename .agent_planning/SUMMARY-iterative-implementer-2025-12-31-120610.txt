@@ -1,0 +1,56 @@
+Agent: iterative-implementer | 2025-12-31-120000
+Mode: manual
+Completed: Fixed 5 IR test files | Files: 5 | Commits: 1
+Cache invalidated: none (no cache exists yet in this worktree)
+Status: in_progress
+
+WORK COMPLETED:
+===============
+1. Fixed TypeDesc test helpers in:
+   - src/editor/compiler/ir/__tests__/builder.test.ts
+   - src/editor/compiler/ir/__tests__/buildSchedule.test.ts  
+   - src/editor/compiler/ir/__tests__/ValueStore.test.ts
+   - src/editor/compiler/ir/__tests__/bundle-types.test.ts
+   - src/editor/compiler/blocks/domain/__tests__/RenderInstances3D.test.ts
+
+2. Updated bundle-types.test.ts to use new lanes-based API instead of deprecated bundleKind/bundleArity
+
+FIX PATTERN APPLIED:
+===================
+```typescript
+// Before:
+function makeType(world: "signal" | "field", domain: string): TypeDesc {
+  return { world, domain: domain as TypeDesc["domain"] };
+}
+
+// After:
+import { asTypeDesc } from "../types";
+function makeType(world: "signal" | "field", domain: string): TypeDesc {
+  return asTypeDesc({ world, domain: domain as TypeDesc["domain"] });
+}
+```
+
+REMAINING WORK:
+===============
+The following files have TypeDesc errors but are OUT OF SCOPE due to broader refactoring issues:
+- src/editor/compiler/passes/__tests__/pass2-types.test.ts (has Connection/Publisher/Listener missing errors)
+- src/editor/compiler/passes/__tests__/pass3-time.test.ts (has Connection/Publisher/Listener missing errors)
+- All files in src/editor/__tests__/ (broader type contract changes)
+
+The following files are IN SCOPE but have many errors (~174 total):
+- src/editor/runtime/integration/__tests__/integration.test.ts (~13 errors)
+- src/editor/runtime/integration/__tests__/typeAdapter.test.ts (~161 errors)
+
+These files need the same fix pattern - wrapping partial TypeDesc literals with asTypeDesc().
+
+RECOMMENDATION:
+==============
+The integration test files have a very repetitive pattern that could be fixed with a script or batch operation. However, given time constraints, this work should be continued in a future session or by another agent with fresh context.
+
+ERROR COUNT REDUCTION:
+=====================
+- Starting: 185 errors (in IR test files scope)
+- After fixes: Down to ~174 errors (remaining in integration tests)
+- Reduction: ~11 errors fixed (primarily helper functions)
+- Note: Total project errors are 1450+ but most are out of scope for this task
+
