@@ -17,7 +17,12 @@ import type {
   Slot,
 } from "../../../types";
 import type { NormalizedPatch, BlockIndex } from "../../ir";
+<<<<<<< HEAD
 import type { TypeDesc } from "../../ir/types"; import { asTypeDesc } from "../../ir/types";
+=======
+import type { TypeDesc } from } from "../../ir/types";;
+import { asTypeDesc } from
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
 // Helper to create a minimal normalized patch
 function createNormalizedPatch(
@@ -500,21 +505,33 @@ describe("pass2TypeGraph", () => {
   describe("isBusEligible helper", () => {
     it("returns true for signal types", () => {
       expect(
+<<<<<<< HEAD
         isBusEligible(asTypeDesc({ world: "signal", domain: "float" }))
       ).toBe(true);
       expect(
         isBusEligible(asTypeDesc({ world: "signal", domain: "color" }))
+=======
+        isBusEligible({ world: "signal", domain: "float", category: "core", busEligible: true })
+      ).toBe(true);
+      expect(
+        isBusEligible({ world: "signal", domain: "color", category: "core", busEligible: true })
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(true);
     });
 
     it("returns true for event types", () => {
       expect(
+<<<<<<< HEAD
         isBusEligible(asTypeDesc({ world: "event", domain: "trigger" }))
+=======
+        isBusEligible({ world: "event", domain: "trigger", category: "core", busEligible: true })
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(true);
     });
 
     it("returns true for field types with scalar domains", () => {
       expect(
+<<<<<<< HEAD
         isBusEligible(asTypeDesc({ world: "field", domain: "float" }))
       ).toBe(true);
       expect(
@@ -522,21 +539,41 @@ describe("pass2TypeGraph", () => {
       ).toBe(true);
       expect(
         isBusEligible(asTypeDesc({ world: "field", domain: "color" }))
+=======
+        isBusEligible({ world: "field", domain: "float", category: "core", busEligible: true })
+      ).toBe(true);
+      expect(
+        isBusEligible({ world: "field", domain: "boolean", category: "core", busEligible: true })
+      ).toBe(true);
+      expect(
+        isBusEligible({ world: "field", domain: "color", category: "core", busEligible: true })
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(true);
     });
 
     it("returns false for field types with non-scalar domains", () => {
       expect(
+<<<<<<< HEAD
         isBusEligible(asTypeDesc({ world: "field", domain: "vec2" }))
       ).toBe(false);
       expect(
         isBusEligible(asTypeDesc({ world: "field", domain: "vec3" }))
+=======
+        isBusEligible({ world: "field", domain: "vec2", category: "core", busEligible: true })
+      ).toBe(false);
+      expect(
+        isBusEligible({ world: "field", domain: "vec3", category: "core", busEligible: true })
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(false);
     });
 
     it("returns false for scalar types", () => {
       expect(
+<<<<<<< HEAD
         isBusEligible(asTypeDesc({ world: "scalar", domain: "float" }))
+=======
+        isBusEligible({ world: "scalar", domain: "float", category: "core", busEligible: true })
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(false);
     });
 
@@ -545,8 +582,13 @@ describe("pass2TypeGraph", () => {
 <<<<<<< HEAD
         isBusEligible(asTypeDesc({ world: "config", domain: "renderTree" }))
 =======
+<<<<<<< HEAD
         isBusEligible(asTypeDesc({ world: "special", domain: "renderTree" }))
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+        isBusEligible({ world: "special", domain: "renderTree", category: "internal", busEligible: false })
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6bf4024 (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(false);
     });
   });

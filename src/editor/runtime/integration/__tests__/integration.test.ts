@@ -13,8 +13,14 @@ import { describe, it, expect, beforeEach } from "vitest";
 import type { TypeDesc as CompilerTypeDesc } from "../../../compiler/ir/types";
 import { asTypeDesc } from "../../../compiler/ir/types";
 =======
+<<<<<<< HEAD
 import type { TypeDesc as CompilerTypeDesc , asTypeDesc} from "../../../compiler/ir/types";
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+import type { TypeDesc } from as CompilerTypeDesc } from "../../../compiler/ir/types";;
+import { asTypeDesc } from
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6bf4024 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 import {
   compilerToRuntimeType,
   canBroadcastToField,
@@ -48,7 +54,11 @@ describe("Integration: Type Adapter + SignalBridge", () => {
 
   describe("Type conversion for field materialization", () => {
     it("should convert compiler field type to runtime type", () => {
+<<<<<<< HEAD
       const compilerType = makeType("field", "float");
+=======
+      const compilerType: CompilerTypeDesc = { world: "field", domain: "float", category: "core", busEligible: true };
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
       const runtimeType = compilerToRuntimeType(compilerType);
 
@@ -56,7 +66,11 @@ describe("Integration: Type Adapter + SignalBridge", () => {
     });
 
     it("should convert compiler signal type for broadcast", () => {
+<<<<<<< HEAD
       const compilerType = makeType("signal", "float");
+=======
+      const compilerType: CompilerTypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
       expect(canBroadcastToField(compilerType)).toBe(true);
 
@@ -314,7 +328,11 @@ describe("Integration: Type Adapter + SignalBridge", () => {
   describe("End-to-end: Compiler type → Runtime materialization", () => {
     it("should materialize a field with compiler-converted type", () => {
       // Start with compiler type
+<<<<<<< HEAD
       const compilerType = makeType("signal", "float");
+=======
+      const compilerType: CompilerTypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
       // Convert to runtime type
       const runtimeType = compilerToRuntimeType(compilerType);
@@ -497,7 +515,11 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
     it("should evaluate constant signal via SigEvaluator", () => {
       // Create SignalExprIR nodes
       const sigNodes: SignalExprIR[] = [
+<<<<<<< HEAD
         { kind: "const", type: makeType("signal", "float"), constId: 0 },
+=======
+        { kind: "const", type: { world: "signal", domain: "float", category: "core", busEligible: true }, constId: 0 },
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ];
 
       // Create proper SigEnv for IR evaluation
@@ -577,18 +599,30 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
     it("should evaluate sin(t) signal via SigEvaluator", () => {
       // Create SignalExprIR nodes: sin(t / 1000)
       const sigNodes: SignalExprIR[] = [
+<<<<<<< HEAD
         { kind: "timeAbsMs", type: makeType("signal", "float") },
         { kind: "const", type: makeType("signal", "float"), constId: 0 },
         {
           kind: "zip",
           type: makeType("signal", "float"),
+=======
+        { kind: "timeAbsMs", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
+        { kind: "const", type: { world: "signal", domain: "float", category: "core", busEligible: true }, constId: 0 },
+        {
+          kind: "zip",
+          type: { world: "signal", domain: "float", category: "core", busEligible: true },
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
           a: 0,
           b: 1,
           fn: { kind: "opcode", opcode: OpCode.Div },
         },
         {
           kind: "map",
+<<<<<<< HEAD
           type: makeType("signal", "float"),
+=======
+          type: { world: "signal", domain: "float", category: "core", busEligible: true },
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
           src: 2,
           fn: { kind: "opcode", opcode: OpCode.Sin },
         },
@@ -670,7 +704,11 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
     it("should prefer IR evaluation over SignalBridge when both available", () => {
       // Create a simple constant node
       const sigNodes: SignalExprIR[] = [
+<<<<<<< HEAD
         { kind: "const", type: makeType("signal", "float"), constId: 0 },
+=======
+        { kind: "const", type: { world: "signal", domain: "float", category: "core", busEligible: true }, constId: 0 },
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ];
 
       // IR says value is 100
