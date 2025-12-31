@@ -139,6 +139,7 @@ export class EventStore {
   }
 
   /**
+<<<<<<< HEAD
    * Consume an event - check if triggered and return payload in one call.
    *
    * This is a convenience method that combines check() and getPayload().
@@ -211,6 +212,8 @@ export class EventStore {
   }
 
   /**
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
    * Reset all events (clear triggered flags).
    *
    * Called at the start of each frame to clear previous frame's events.

@@ -103,11 +103,14 @@ export function createTimeState(): TimeState {
  * - Detects bounce when cycleCount changes (for ping-pong mode)
  * - Works correctly under variable frame rates and scrubbing
  * - Tracks wrap count and deltaMs for event payloads
+<<<<<<< HEAD
  *
  * Scrub Detection (P2):
  * - Scrub detected when: mode === 'scrub' OR |deltaMs| > 1000 OR deltaMs < 0
  * - When scrub detected: wrapEvent suppressed (set to 0.0)
  * - Prevents phantom wrap events during non-monotonic time changes
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
  *
  * @param tAbsMs - Absolute time in milliseconds
  * @param timeModel - Time model specification
@@ -122,19 +125,28 @@ export function resolveTime(
   mode: 'playback' | 'scrub' = 'playback'
 ): EffectiveTime {
   // Calculate frame delta for event payloads
+<<<<<<< HEAD
   let deltaMs = 0;
   if (timeState !== undefined) {
     if (timeState.prevTAbsMs !== null) {
       deltaMs = tAbsMs - timeState.prevTAbsMs;
       timeState.lastDeltaMs = deltaMs;
+=======
+  if (timeState !== undefined) {
+    if (timeState.prevTAbsMs !== null) {
+      timeState.lastDeltaMs = tAbsMs - timeState.prevTAbsMs;
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
     }
     timeState.prevTAbsMs = tAbsMs;
   }
 
+<<<<<<< HEAD
   // Detect scrub mode (P2)
   // Scrub if: explicit mode OR backward time OR large jump (>1s)
   const isScrub = mode === 'scrub' || deltaMs < 0 || Math.abs(deltaMs) > 1000;
 
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
   switch (timeModel.kind) {
     case "finite": {
       // Clamp to duration
