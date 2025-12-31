@@ -1,6 +1,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Agent: project-evaluator | 2025-12-31
 Scope: render-pipeline (6 gaps: z-order, curves, clipping, transforms, postfx, materials)
 Completion: 90% (5.5/6 gaps functional) | Critical Issues: 1 (ClipGroup stubbed)
@@ -42,6 +43,8 @@ Files Created:
 >>>>>>> f5d5a76 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 =======
 >>>>>>> 1dc1a6e (fix(test): Add missing debugProbes field to test mocks)
+=======
+>>>>>>> f5d5a76 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 Agent: project-evaluator | 2025-12-31 01:27:00
 Scope: project/type-contracts-ir-plumbing
 Completion: 50% | Gaps: 4 deliverables (1 blocked, 1 complete, 2 partial) | Test Quality: Cannot assess (typecheck fails)
@@ -53,8 +56,11 @@ Ambiguities: 4 found | Workflow: PAUSE
   -> 4 questions for user before implementation can proceed
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 1dc1a6e (fix(test): Add missing debugProbes field to test mocks)
 =======
+=======
+>>>>>>> f5d5a76 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 =======
 Agent: project-evaluator | 2025-12-31
 Scope: render-pipeline (6 gaps: z-order, curves, clipping, transforms, postfx, materials)
@@ -93,6 +99,9 @@ Files Created:
   - .agent_planning/eval-cache/INDEX.md (updated with new cache entry)
   - .agent_planning/SUMMARY-project-evaluator-20251231.txt (this file)
 >>>>>>> 19246ce (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
+<<<<<<< HEAD
 >>>>>>> f5d5a76 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
 =======
 >>>>>>> 1dc1a6e (fix(test): Add missing debugProbes field to test mocks)
+=======
+>>>>>>> f5d5a76 (fix(tests): Add missing debugProbes field to mock BuilderProgramIR objects)
