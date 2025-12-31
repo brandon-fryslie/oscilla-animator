@@ -15,6 +15,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { asTypeDesc } from "../../../../compiler/ir/types";
 =======
 import { asTypeDesc } from "../../../compiler/ir/types";
@@ -29,6 +30,8 @@ import { asTypeDesc } from "../../../compiler/ir/types";
 =======
 =======
 >>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
 import { asTypeDesc } from "../../../../compiler/ir/types";
 =======
 import { asTypeDesc } from "../../../compiler/ir/types";
@@ -39,7 +42,16 @@ import { asTypeDesc } from "../../../compiler/ir/types";
 =======
 import { asTypeDesc } from "../../../compiler/ir/types";
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+import { asTypeDesc } from "../../../../compiler/ir/types";
+=======
+import { asTypeDesc } from "../../../compiler/ir/types";
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   executeInstances3DProject,

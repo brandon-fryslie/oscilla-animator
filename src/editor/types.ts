@@ -17,6 +17,7 @@ import type { DefaultSourceAttachment } from './defaultSources/types';
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 <<<<<<< HEAD
@@ -32,12 +33,22 @@ import type { DefaultSourceAttachment } from './defaultSources/types';
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
 =======
+=======
+>>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
 
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+
+=======
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
 // =============================================================================
 // Bus Type System (Core/Internal Split)
 // =============================================================================
@@ -56,10 +67,15 @@ export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+>>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
 // Import for use within this file AND re-export for consumers
 import type {
   TypeWorld,
@@ -87,6 +103,7 @@ export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
 // =============================================================================
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
@@ -94,6 +111,12 @@ export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
 
 
 =======
@@ -154,6 +177,7 @@ export type KernelId =
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 =======
@@ -162,6 +186,12 @@ export type KernelId =
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
 
 /**
  * Compile kind for pure blocks - determines what AST they can produce.
@@ -240,8 +270,11 @@ export type InternalDomain =
 /**
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
 =======
 /**
  * Core domains - what users see in the bus system.
@@ -297,7 +330,12 @@ export type InternalDomain =
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+>>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
  * All domains (core + internal).
  */
 export type Domain = CoreDomain | InternalDomain;
@@ -341,6 +379,7 @@ export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
@@ -353,6 +392,14 @@ export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
  * Format a TypeDesc for display.
  */
 // MOVED TO SEMANTIC KERNEL
