@@ -18,7 +18,6 @@ import type {
 } from "../../../types";
 import type { NormalizedPatch, BlockIndex } from "../../ir";
 import type { TypeDesc } from "../../ir/types";
-import { asTypeDesc } from "../../ir/types";
 
 // Helper to create a minimal normalized patch
 function createNormalizedPatch(
@@ -497,49 +496,49 @@ describe("pass2TypeGraph", () => {
   describe("isBusEligible helper", () => {
     it("returns true for signal types", () => {
       expect(
-        isBusEligible({ world: "signal", domain: "float", category: "core", busEligible: true })
+        isBusEligible({ world: "signal", domain: "float" })
       ).toBe(true);
       expect(
-        isBusEligible({ world: "signal", domain: "color", category: "core", busEligible: true })
+        isBusEligible({ world: "signal", domain: "color" })
       ).toBe(true);
     });
 
     it("returns true for event types", () => {
       expect(
-        isBusEligible({ world: "event", domain: "trigger", category: "core", busEligible: true })
+        isBusEligible({ world: "event", domain: "trigger" })
       ).toBe(true);
     });
 
     it("returns true for field types with scalar domains", () => {
       expect(
-        isBusEligible({ world: "field", domain: "float", category: "core", busEligible: true })
+        isBusEligible({ world: "field", domain: "float" })
       ).toBe(true);
       expect(
-        isBusEligible({ world: "field", domain: "boolean", category: "core", busEligible: true })
+        isBusEligible({ world: "field", domain: "boolean" })
       ).toBe(true);
       expect(
-        isBusEligible({ world: "field", domain: "color", category: "core", busEligible: true })
+        isBusEligible({ world: "field", domain: "color" })
       ).toBe(true);
     });
 
     it("returns false for field types with non-scalar domains", () => {
       expect(
-        isBusEligible({ world: "field", domain: "vec2", category: "core", busEligible: true })
+        isBusEligible({ world: "field", domain: "vec2" })
       ).toBe(false);
       expect(
-        isBusEligible({ world: "field", domain: "vec3", category: "core", busEligible: true })
+        isBusEligible({ world: "field", domain: "vec3" })
       ).toBe(false);
     });
 
     it("returns false for scalar types", () => {
       expect(
-        isBusEligible({ world: "scalar", domain: "float", category: "core", busEligible: true })
+        isBusEligible({ world: "scalar", domain: "float" })
       ).toBe(false);
     });
 
     it("returns false for special types", () => {
       expect(
-        isBusEligible({ world: "special", domain: "renderTree", category: "internal", busEligible: false })
+        isBusEligible({ world: "special", domain: "renderTree" })
       ).toBe(false);
     });
   });

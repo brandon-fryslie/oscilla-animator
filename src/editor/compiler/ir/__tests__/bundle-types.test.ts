@@ -4,6 +4,9 @@
  * Tests for the bundle type system extension to TypeDesc and slot allocation.
  * Verifies that multi-component signals (vec2, vec3, rgba, mat4) allocate
  * correct number of consecutive slots.
+ *
+ * NOTE: This test suite has been updated for the new TypeDesc contract
+ * which uses `lanes` instead of `bundleKind`/`bundleArity`.
  */
 
 import { describe, it, expect } from "vitest";
@@ -87,74 +90,76 @@ describe("Bundle Type System", () => {
 
   describe("createTypeDesc automatic bundle inference", () => {
     it("creates scalar TypeDesc with arity 1", () => {
-      const type = createTypeDesc("signal", "float");
-      expect(type.bundleKind).toBe(BundleKind.Scalar);
-      expect(type.bundleArity).toBe(1);
+      const type = createTypeDesc("signal", "float", "internal", false);
+      expect(getTypeArity(type)).toBe(1);
       expect(type.world).toBe("signal");
       expect(type.domain).toBe("float");
+      expect(type.lanes).toBeUndefined(); // Scalar has no explicit lanes
     });
 
     it("creates vec2 TypeDesc with arity 2", () => {
-      const type = createTypeDesc("signal", "vec2");
-      expect(type.bundleKind).toBe(BundleKind.Vec2);
-      expect(type.bundleArity).toBe(2);
+      const type = createTypeDesc("signal", "vec2", "internal", false);
+      expect(getTypeArity(type)).toBe(2);
       expect(type.world).toBe("signal");
       expect(type.domain).toBe("vec2");
+      expect(type.lanes).toEqual([2]);
     });
 
     it("creates vec3 TypeDesc with arity 3", () => {
-      const type = createTypeDesc("signal", "vec3");
-      expect(type.bundleKind).toBe(BundleKind.Vec3);
-      expect(type.bundleArity).toBe(3);
+      const type = createTypeDesc("signal", "vec3", "internal", false);
+      expect(getTypeArity(type)).toBe(3);
+      expect(type.lanes).toEqual([3]);
     });
 
     it("creates RGBA TypeDesc with arity 4", () => {
-      const type = createTypeDesc("signal", "color");
-      expect(type.bundleKind).toBe(BundleKind.RGBA);
-      expect(type.bundleArity).toBe(4);
+      const type = createTypeDesc("signal", "color", "internal", false);
+      expect(getTypeArity(type)).toBe(4);
+      expect(type.lanes).toEqual([4]);
     });
 
     it("creates mat4 TypeDesc with arity 16", () => {
-      const type = createTypeDesc("signal", "mat4");
-      expect(type.bundleKind).toBe(BundleKind.Mat4);
-      expect(type.bundleArity).toBe(16);
+      const type = createTypeDesc("signal", "mat4", "internal", false);
+      expect(getTypeArity(type)).toBe(16);
+      expect(type.lanes).toEqual([16]);
     });
 
     it("preserves optional semantic/unit annotations", () => {
-      const type = createTypeDesc("signal", "float", {
+      const type = createTypeDesc("signal", "float", "internal", false, {
         semantics: "hue",
         unit: "deg",
       });
       expect(type.semantics).toBe("hue");
       expect(type.unit).toBe("deg");
-      expect(type.bundleArity).toBe(1);
+      expect(getTypeArity(type)).toBe(1);
     });
 
-    it("allows override of bundleKind", () => {
-      const type = createTypeDesc("signal", "float", {
-        bundleKind: BundleKind.Vec3,
+    it("allows override of lanes", () => {
+      const type = createTypeDesc("signal", "float", "internal", false, {
+        lanes: [3],
       });
-      expect(type.bundleKind).toBe(BundleKind.Vec3);
-      expect(type.bundleArity).toBe(3);
+      expect(type.lanes).toEqual([3]);
+      expect(getTypeArity(type)).toBe(3);
     });
   });
 
   describe("getTypeArity safe accessor", () => {
-    it("returns bundleArity if present", () => {
-      const type = createTypeDesc("signal", "vec3");
+    it("returns correct arity for vec3", () => {
+      const type = createTypeDesc("signal", "vec3", "internal", false);
       expect(getTypeArity(type)).toBe(3);
     });
 
-    it("returns 1 for legacy TypeDesc without bundleArity", () => {
+    it("returns 1 for legacy TypeDesc without lanes", () => {
       const legacyType = {
         world: "signal" as const,
         domain: "float" as const,
+        category: "internal" as const,
+        busEligible: false,
       };
       expect(getTypeArity(legacyType)).toBe(1);
     });
 
     it("returns 1 for scalar types", () => {
-      const type = createTypeDesc("signal", "float");
+      const type = createTypeDesc("signal", "float", "internal", false);
       expect(getTypeArity(type)).toBe(1);
     });
   });
@@ -162,7 +167,7 @@ describe("Bundle Type System", () => {
   describe("IRBuilder slot allocation respects bundle arity", () => {
     it("allocates 1 slot for scalar signal", () => {
       const builder = new IRBuilderImpl();
-      const type = createTypeDesc("signal", "float");
+      const type = createTypeDesc("signal", "float", "internal", false);
 
       const slot = builder.allocValueSlot(type, "hue");
 
@@ -175,7 +180,7 @@ describe("Bundle Type System", () => {
 
     it("allocates 2 consecutive slots for vec2 signal", () => {
       const builder = new IRBuilderImpl();
-      const type = createTypeDesc("signal", "vec2");
+      const type = createTypeDesc("signal", "vec2", "internal", false);
 
       const slot = builder.allocValueSlot(type, "position");
 
@@ -183,7 +188,7 @@ describe("Bundle Type System", () => {
 
       // Verify next allocation starts at slot 2 (0+2)
       const nextSlot = builder.allocValueSlot(
-        createTypeDesc("signal", "float"),
+        createTypeDesc("signal", "float", "internal", false),
         "alpha"
       );
       expect(nextSlot).toBe(2);
@@ -191,7 +196,7 @@ describe("Bundle Type System", () => {
 
     it("allocates 3 consecutive slots for vec3 signal", () => {
       const builder = new IRBuilderImpl();
-      const type = createTypeDesc("signal", "vec3");
+      const type = createTypeDesc("signal", "vec3", "internal", false);
 
       const slot = builder.allocValueSlot(type, "rgb");
 
@@ -199,7 +204,7 @@ describe("Bundle Type System", () => {
 
       // Verify next allocation starts at slot 3 (0+3)
       const nextSlot = builder.allocValueSlot(
-        createTypeDesc("signal", "float"),
+        createTypeDesc("signal", "float", "internal", false),
         "alpha"
       );
       expect(nextSlot).toBe(3);
@@ -207,7 +212,7 @@ describe("Bundle Type System", () => {
 
     it("allocates 4 consecutive slots for RGBA signal", () => {
       const builder = new IRBuilderImpl();
-      const type = createTypeDesc("signal", "color");
+      const type = createTypeDesc("signal", "color", "internal", false);
 
       const slot = builder.allocValueSlot(type, "color");
 
@@ -215,7 +220,7 @@ describe("Bundle Type System", () => {
 
       // Verify next allocation starts at slot 4 (0+4)
       const nextSlot = builder.allocValueSlot(
-        createTypeDesc("signal", "float"),
+        createTypeDesc("signal", "float", "internal", false),
         "scalar"
       );
       expect(nextSlot).toBe(4);
@@ -223,7 +228,7 @@ describe("Bundle Type System", () => {
 
     it("allocates 16 consecutive slots for mat4 signal", () => {
       const builder = new IRBuilderImpl();
-      const type = createTypeDesc("signal", "mat4");
+      const type = createTypeDesc("signal", "mat4", "internal", false);
 
       const slot = builder.allocValueSlot(type, "transform");
 
@@ -231,7 +236,7 @@ describe("Bundle Type System", () => {
 
       // Verify next allocation starts at slot 16 (0+16)
       const nextSlot = builder.allocValueSlot(
-        createTypeDesc("signal", "float"),
+        createTypeDesc("signal", "float", "internal", false),
         "scalar"
       );
       expect(nextSlot).toBe(16);
@@ -242,35 +247,35 @@ describe("Bundle Type System", () => {
 
       // Allocate: scalar (slot 0)
       const slot0 = builder.allocValueSlot(
-        createTypeDesc("signal", "float"),
+        createTypeDesc("signal", "float", "internal", false),
         "hue"
       );
       expect(slot0).toBe(0);
 
       // Allocate: vec3 (slots 1, 2, 3)
       const slot1 = builder.allocValueSlot(
-        createTypeDesc("signal", "vec3"),
+        createTypeDesc("signal", "vec3", "internal", false),
         "rgb"
       );
       expect(slot1).toBe(1);
 
       // Allocate: scalar (slot 4)
       const slot4 = builder.allocValueSlot(
-        createTypeDesc("signal", "float"),
+        createTypeDesc("signal", "float", "internal", false),
         "alpha"
       );
       expect(slot4).toBe(4);
 
       // Allocate: vec2 (slots 5, 6)
       const slot5 = builder.allocValueSlot(
-        createTypeDesc("signal", "vec2"),
+        createTypeDesc("signal", "vec2", "internal", false),
         "position"
       );
       expect(slot5).toBe(5);
 
       // Next slot should be 7
       const slot7 = builder.allocValueSlot(
-        createTypeDesc("signal", "float"),
+        createTypeDesc("signal", "float", "internal", false),
         "scale"
       );
       expect(slot7).toBe(7);
@@ -288,7 +293,7 @@ describe("Bundle Type System", () => {
 
       // Mix with typed allocation
       const slot2 = builder.allocValueSlot(
-        createTypeDesc("signal", "vec2"),
+        createTypeDesc("signal", "vec2", "internal", false),
         "pos"
       );
       expect(slot2).toBe(2);
@@ -300,7 +305,7 @@ describe("Bundle Type System", () => {
 
     it("tracks slot metadata for bundle types", () => {
       const builder = new IRBuilderImpl();
-      const vec3Type = createTypeDesc("signal", "vec3");
+      const vec3Type = createTypeDesc("signal", "vec3", "internal", false);
 
       builder.allocValueSlot(vec3Type, "rgb");
 
@@ -310,16 +315,16 @@ describe("Bundle Type System", () => {
       expect(result.slotMeta).toHaveLength(1);
       expect(result.slotMeta[0].slot).toBe(0);
       expect(result.slotMeta[0].debugName).toBe("rgb");
-      expect(result.slotMeta[0].type.bundleArity).toBe(3);
+      expect(getTypeArity(result.slotMeta[0].type)).toBe(3);
       expect(result.slotMeta[0].storage).toBe("f64");
     });
 
     it("correctly tracks nextValueSlot in build output", () => {
       const builder = new IRBuilderImpl();
 
-      builder.allocValueSlot(createTypeDesc("signal", "float"), "s1");
-      builder.allocValueSlot(createTypeDesc("signal", "vec3"), "v3");
-      builder.allocValueSlot(createTypeDesc("signal", "vec2"), "v2");
+      builder.allocValueSlot(createTypeDesc("signal", "float", "internal", false), "s1");
+      builder.allocValueSlot(createTypeDesc("signal", "vec3", "internal", false), "v3");
+      builder.allocValueSlot(createTypeDesc("signal", "vec2", "internal", false), "v2");
 
       const result = builder.build();
 
@@ -331,7 +336,7 @@ describe("Bundle Type System", () => {
   describe("Integration: bundle slots in signal expressions", () => {
     it("vec2 signal allocates 2 consecutive slots", () => {
       const builder = new IRBuilderImpl();
-      const vec2Type = createTypeDesc("signal", "vec2");
+      const vec2Type = createTypeDesc("signal", "vec2", "internal", false);
 
       const slot = builder.allocValueSlot(vec2Type, "position");
 
@@ -343,7 +348,7 @@ describe("Bundle Type System", () => {
 
     it("vec3 signal allocates 3 consecutive slots", () => {
       const builder = new IRBuilderImpl();
-      const vec3Type = createTypeDesc("signal", "vec3");
+      const vec3Type = createTypeDesc("signal", "vec3", "internal", false);
 
       const slot = builder.allocValueSlot(vec3Type, "rgb");
 
@@ -357,25 +362,25 @@ describe("Bundle Type System", () => {
       const builder = new IRBuilderImpl();
 
       const scalarSlot = builder.allocValueSlot(
-        createTypeDesc("signal", "float"),
+        createTypeDesc("signal", "float", "internal", false),
         "scalar"
       );
       expect(scalarSlot).toBe(0);
 
       const vec2Slot = builder.allocValueSlot(
-        createTypeDesc("signal", "vec2"),
+        createTypeDesc("signal", "vec2", "internal", false),
         "vec2"
       );
       expect(vec2Slot).toBe(1); // Starts at 1
 
       const vec3Slot = builder.allocValueSlot(
-        createTypeDesc("signal", "vec3"),
+        createTypeDesc("signal", "vec3", "internal", false),
         "vec3"
       );
       expect(vec3Slot).toBe(3); // Starts at 3 (1 + 2)
 
       const rgbaSlot = builder.allocValueSlot(
-        createTypeDesc("signal", "color"),
+        createTypeDesc("signal", "color", "internal", false),
         "rgba"
       );
       expect(rgbaSlot).toBe(6); // Starts at 6 (3 + 3)

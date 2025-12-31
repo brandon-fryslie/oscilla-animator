@@ -9,15 +9,15 @@
 import { describe, it, expect } from "vitest";
 import { createValueStore } from "../stores";
 import type { SlotMeta } from "../stores";
-import type { TypeDesc } from } from "../types";;
-import { asTypeDesc } from
+import type { TypeDesc } from "../types";
+import { asTypeDesc } from "../types";
 
 // Helper to create a simple TypeDesc
 function makeType(world: "signal" | "field", domain: string): TypeDesc {
-  return {
+  return asTypeDesc({
     world,
     domain: domain as TypeDesc["domain"],
-  };
+  });
 }
 
 describe("ValueStore", () => {

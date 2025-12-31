@@ -7,16 +7,16 @@
 import { describe, it, expect } from "vitest";
 import { IRBuilderImpl } from "../IRBuilderImpl";
 import { buildCompiledProgram } from "../buildSchedule";
-import type { TypeDesc } from } from "../types";;
-import { asTypeDesc } from
+import type { TypeDesc } from "../types";
+import { asTypeDesc } from "../types";
 import type { BuilderProgramIR } from "../builderTypes";
 
 // Helper to create a simple TypeDesc
 function makeType(world: "signal" | "field", domain: string): TypeDesc {
-  return {
+  return asTypeDesc({
     world,
     domain: domain as TypeDesc["domain"],
-  };
+  });
 }
 
 /**
