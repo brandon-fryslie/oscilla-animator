@@ -36,3 +36,4 @@
 - debug-export-workstream.md (INVALIDATED 2025-12-30 04:00 - TraceController API extended, ProbeCard updated, DebugReplPanel modified, executeDebugProbe updated)
 - debug-ui-field-visualization.md (INVALIDATED 2025-12-30 05:05 - FieldStats, FieldHeatmap, FieldHistogram, FieldVisualizationMode components added)
 - type-contracts-divergence.md (INVALIDATED 2025-12-31 11:05 - Unified TypeDesc created in src/core/types.ts, editor/compiler migration in progress)
+| TypeDesc Migration Status | typedesc-migration-status.md | 2025-12-31 11:20 | work-evaluator (type-contracts-ir-plumbing) | FRESH |

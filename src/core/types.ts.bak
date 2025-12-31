@@ -456,7 +456,7 @@ export const PhaseMachines = {
  * - `scalar`: Compile-time constants (immediate values)
  * - `config`: Configuration values (not runtime-evaluated, used for setup)
  */
-export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config' | 'special'; // DEPRECATED: 'special' → use 'config' instead
+export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
 
 /**
  * Core domains - user-facing types in the bus system.

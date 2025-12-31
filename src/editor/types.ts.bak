@@ -96,7 +96,7 @@ export type PureCompileKind = 'operator' | 'composite' | 'spec';
 // =============================================================================
 // Bus Type System
 // =============================================================================
-/**
+ * Bus combination modes for multiple publishers.
  */
 export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer';
 
