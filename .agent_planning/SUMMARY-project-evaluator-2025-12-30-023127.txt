@@ -1,0 +1,17 @@
+Agent: project-evaluator | 2025-12-30-023127
+Scope: project/ir-primitives-complete
+Completion: ~30% | Gaps: 74 defined across 11 specs | Test Quality: Good (infrastructure exists)
+Reused: 1 RECENT (time-architecture) | Fresh: 11 SPEC files analyzed
+Cache updated: ir-primitives-status.md in eval-cache/
+Ambiguities: 2 found (TimeModel usage, BusEval emission) | Workflow: CONTINUE
+-> Start Sprint 1 (Time Architecture Foundation) after verifying TimeModel/BusEval gaps
+
+Summary:
+- Analyzed 11 SPEC files defining 74 IR implementation gaps
+- Infrastructure exists (types, schedule building) but primitives missing
+- Organized into 5 tiers: Tier 0 (critical), Tier 1a/b (features), Tier 2 (polish), Tier 3 (new)
+- Created 20-sprint roadmap: 71-90 days total, 22-27 days for critical path
+- Identified dependencies and parallelization opportunities
+- No blockers to starting work
+- Tests passing, recent work on bindings (not IR)
+- Recommended start: Sprint 1 (TimeRoot extraction + wrap detection)

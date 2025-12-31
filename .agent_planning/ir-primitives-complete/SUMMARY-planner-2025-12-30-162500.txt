@@ -1,0 +1,4 @@
+Agent: status-planner | 2025-12-30-162500
+Topic: ir-primitives-complete
+Files: PLAN-2025-12-30-162500.md, DOD-2025-12-30-162500.md
+Items: 74 gaps across 20 sprints (P0: 11, P1: 21, P2: 42)

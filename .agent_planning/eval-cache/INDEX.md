@@ -1,6 +1,7 @@
 | Topic | File | Cached | Source | Confidence |
 |-------|------|--------|--------|------------|
 | Lint Infrastructure | lint-infrastructure.md | 2025-12-25 17:48 | project-evaluator (lint-cleanup) | HIGH |
+| IR Primitives Status | ir-primitives-status.md | 2025-12-30 02:31 | project-evaluator (spec analysis) | HIGH |
 
 ## Cache Freshness Guidelines
 - **FRESH**: < 1 hour - trust fully
@@ -10,6 +11,7 @@
 
 ## What's Cached
 - **lint-infrastructure.md**: ESLint config, two-tier rules (critical vs non-critical), auto-fixable rules
+- **ir-primitives-status.md**: 74 IR gaps across 11 specs, 20-sprint roadmap, dependency analysis, risk assessment
 
 ## Not Yet Cached
 - project-structure.md (directory layout, entry points)
