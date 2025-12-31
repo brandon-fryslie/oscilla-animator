@@ -178,7 +178,7 @@ describe('RuntimeSnapshot', () => {
       expect(json).toBeDefined();
       expect(json.length).toBeGreaterThan(0);
 
-      const parsed = JSON.parse(json);
+      const parsed = JSON.parse(json) as { metadata: { frameId: number }; valueStore: { slots: unknown[] } };
       expect(parsed.metadata.frameId).toBe(0);
       expect(parsed.valueStore.slots).toHaveLength(3);
     });

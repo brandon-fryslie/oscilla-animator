@@ -68,9 +68,9 @@ class MockOffscreenCanvas {
     return null;
   }
 
-  async convertToBlob(_options?: { type?: string; quality?: number }): Promise<Blob> {
+  convertToBlob(_options?: { type?: string; quality?: number }): Promise<Blob> {
     const content = `mock-frame-${this.width}x${this.height}`;
-    return new Blob([content], { type: _options?.type ?? 'image/png' });
+    return Promise.resolve(new Blob([content], { type: _options?.type ?? 'image/png' }));
   }
 }
 

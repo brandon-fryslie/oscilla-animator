@@ -175,7 +175,7 @@ describe('IR Serialization', () => {
       expect(json.length).toBeGreaterThan(0);
 
       // Should be valid JSON
-      expect(() => JSON.parse(json)).not.toThrow();
+      expect(() => { JSON.parse(json); }).not.toThrow();
     });
 
     it('should support pretty printing', () => {
@@ -187,8 +187,8 @@ describe('IR Serialization', () => {
       expect(pretty.length).toBeGreaterThan(compact.length);
 
       // Both should be valid JSON
-      expect(() => JSON.parse(compact)).not.toThrow();
-      expect(() => JSON.parse(pretty)).not.toThrow();
+      expect(() => { JSON.parse(compact); }).not.toThrow();
+      expect(() => { JSON.parse(pretty); }).not.toThrow();
 
       // Both should deserialize to same program
       const fromCompact = deserializeProgramFromJSON(compact);

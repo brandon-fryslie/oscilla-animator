@@ -95,7 +95,7 @@ export function renderPostFXPass(
         break;
       default: {
         const _exhaustive: never = pass.effect;
-        console.warn(`renderPostFXPass: unknown effect kind ${(_exhaustive as any).kind}`);
+        console.warn(`renderPostFXPass: unknown effect kind ${(_exhaustive as { kind: string }).kind}`);
       }
     }
   } finally {
@@ -115,7 +115,7 @@ function applyBlurEffect(
   tempCanvas.width = ctx.canvas.width;
   tempCanvas.height = ctx.canvas.height;
   const tempCtx = tempCanvas.getContext('2d');
-  if (!tempCtx) {
+  if (tempCtx == null) {
     console.warn('applyBlurEffect: failed to create temporary canvas context');
     return;
   }
@@ -137,7 +137,7 @@ function applyBloomEffect(
   tempCanvas.width = ctx.canvas.width;
   tempCanvas.height = ctx.canvas.height;
   const tempCtx = tempCanvas.getContext('2d');
-  if (!tempCtx) {
+  if (tempCtx == null) {
     console.warn('applyBloomEffect: failed to create temporary canvas context');
     return;
   }

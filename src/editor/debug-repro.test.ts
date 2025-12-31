@@ -16,8 +16,8 @@ interface DefaultSourceState {
   id: string;
   type: TypeDesc;
   value: unknown;
-  uiHint?: any;
-  rangeHint?: any;
+  uiHint?: unknown;
+  rangeHint?: unknown;
 }
 
 // 1. Plain Object (no makeAutoObservable)
@@ -36,7 +36,7 @@ class DefaultSourceStore {
     });
   }
 
-  ensureDefaultSource(id: string, spec: any): DefaultSource {
+  ensureDefaultSource(id: string, spec: { type: TypeDesc; value: unknown }): DefaultSource {
     const existing = this.sources.get(id);
     if (existing !== undefined) return existing;
 
@@ -85,33 +85,33 @@ const service = {
 };
 
 // 5. Setup AutoCompile (Logic from integration.ts)
-function setupAutoCompile(store: RootStore, service: any) {
-  let compileCount = 0;
+function setupAutoCompile(store: RootStore, svc: { compile: () => { ok: boolean; errors: unknown[] } }) {
+  let _compileCount = 0;
 
   reaction(
     () => {
       console.log('[Reaction] Data expression running...');
       // Simulate how integration.ts tracks values
       return {
-        defaultSourceValues: Array.from(store.defaultSourceStore.sources.values()).map(ds => 
+        defaultSourceValues: Array.from(store.defaultSourceStore.sources.values()).map(ds =>
           `${ds.id}:${JSON.stringify(ds.value)}`
         ),
       };
     },
     (data) => {
-      console.log(`[Reaction] Effect triggered! Values: ${data.defaultSourceValues}`);
-      compileCount++;
-      service.compile();
+      console.log(`[Reaction] Effect triggered! Values: ${data.defaultSourceValues.join(', ')}`);
+      _compileCount++;
+      svc.compile();
     },
     { fireImmediately: false }
   );
-  
+
   return () => {};
 }
 
 // --- Test ---
 
-test('MobX Reproduction - Deep Map', async () => {
+test('MobX Reproduction - Deep Map', () => {
   console.log('--- Starting Reproduction Test (Deep Map) ---');
   const store = new RootStore();
   const dsId = 'ds-1';
@@ -119,7 +119,7 @@ test('MobX Reproduction - Deep Map', async () => {
   // 1. Create a default source
   console.log('1. Creating Default Source...');
   store.defaultSourceStore.ensureDefaultSource(dsId, {
-    type: { world: 'signal', domain: 'number' },
+    type: { world: 'signal', domain: 'number', category: 'test', busEligible: false },
     value: 10
   });
 

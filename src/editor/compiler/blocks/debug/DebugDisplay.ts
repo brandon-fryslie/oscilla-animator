@@ -30,7 +30,7 @@ import { debugStore } from '../../../stores/DebugStore';
  * writes values to TraceController ring buffers via StepDebugProbe execution.
  */
 const lowerDebugDisplay: BlockLowerFn = ({ ctx, inputsById }) => {
-  if (!inputsById) {
+  if (inputsById == null) {
     throw new Error(`DebugDisplay: inputsById required for IR lowering`);
   }
 

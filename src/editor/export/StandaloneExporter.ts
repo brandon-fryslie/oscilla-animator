@@ -337,6 +337,9 @@ export class StandaloneExporter {
     // Validate configuration
     this.validateConfig(config);
 
+    // Note: Currently synchronous, but async for API consistency
+    await Promise.resolve();
+
     const startTime = performance.now();
 
     // Get runtime code for inline mode

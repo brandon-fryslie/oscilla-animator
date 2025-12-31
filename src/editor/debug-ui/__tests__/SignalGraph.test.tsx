@@ -39,7 +39,7 @@ describe('SignalGraph', () => {
       font: '',
       textAlign: 'start' as CanvasTextAlign,
       textBaseline: 'alphabetic' as CanvasTextBaseline,
-    })) as any;
+    })) as unknown as typeof HTMLCanvasElement.prototype.getContext;
   });
 
   describe('SignalHistoryBuffer integration', () => {

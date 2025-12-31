@@ -1,0 +1,9 @@
+Agent: status-planner | 2025-12-31-050644
+Topic: unified-transforms
+Files: PLAN-2025-12-31-050644.md, DOD-2025-12-31-050644.md
+Items: 22 transforms across 8 deliverables (P0: 8, P1: 6, P2: 8)
+Sprint 1 (Quick Wins): 8 transforms - ConstToSignal variants, phase identity, simple math
+Sprint 2 (Phase Transforms): 6 transforms - phase normalization, offset, scale, quantize, pingPong
+Sprint 3 (Math Transforms): 8 transforms - duration adapters, advanced math, color lenses
+Coverage: 3/41 (7%) → 25/41 (61%)
+Effort: 6-8 days total (2-3 days per sprint)

@@ -199,7 +199,7 @@ function applyPassHeader(
 
       default: {
         const _exhaustive: never = header.clip;
-        throw new Error(`applyPassHeader: unknown clip kind ${(_exhaustive as any).kind}`);
+        throw new Error(`applyPassHeader: unknown clip kind ${(_exhaustive as { kind: string }).kind}`);
       }
     }
 
@@ -394,25 +394,25 @@ export function renderInstances2DPass(
         let strokeStyle: string | null = null;
 
         // Check if gradient shading is enabled
-        if (pass.material.kind === "shape2d" && pass.material.shading === "gradient" && pass.material.gradient) {
+        if (pass.material.kind === "shape2d" && pass.material.shading === "gradient" && pass.material.gradient != null) {
           // Create gradient based on type
           const gradSpec = pass.material.gradient;
-          
+
           if (gradSpec.type === "linear") {
             // Linear gradient
-            const start = gradSpec.coords?.start || [-0.5, 0];
-            const end = gradSpec.coords?.end as [number, number] || [0.5, 0];
+            const start = gradSpec.coords?.start ?? [-0.5, 0];
+            const end = gradSpec.coords?.end as [number, number] | undefined ?? [0.5, 0];
             const gradient = ctx.createLinearGradient(start[0], start[1], end[0], end[1]);
-            
+
             // Add color stops
             for (const stop of gradSpec.stops) {
               gradient.addColorStop(stop.offset, unpackColorU32(stop.colorRGBA));
             }
-            
+
             fillStyle = gradient;
           } else if (gradSpec.type === "radial") {
             // Radial gradient
-            const center = gradSpec.coords?.start || [0, 0];
+            const center = gradSpec.coords?.start ?? [0, 0];
             const radius = typeof gradSpec.coords?.end === "number" ? gradSpec.coords.end : 0.5;
             const gradient = ctx.createRadialGradient(center[0], center[1], 0, center[0], center[1], radius);
             

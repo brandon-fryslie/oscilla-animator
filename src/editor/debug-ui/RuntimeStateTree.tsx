@@ -105,19 +105,19 @@ interface TreeNodeViewProps {
 
 function TreeNodeView({ node, expandedNodes, onToggle, depth }: TreeNodeViewProps) {
   const isExpanded = expandedNodes.has(node.id);
-  const hasChildren = node.children && node.children.length > 0;
+  const hasChildren = (node.children?.length ?? 0) > 0;
 
   return (
     <div className="tree-node">
       <div
         className={`tree-node-label ${node.type}`}
         style={{ paddingLeft: `${depth * 20}px` }}
-        onClick={() => hasChildren && onToggle(node.id)}
+        onClick={() => { if (hasChildren) onToggle(node.id); }}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
-            hasChildren && onToggle(node.id);
+            if (hasChildren) onToggle(node.id);
           }
         }}
       >

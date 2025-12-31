@@ -465,8 +465,8 @@ export function injectDefaultSourceProviders(
     // Provider blocks need:
     // 1. A compiler (for lowering to IR)
     // 2. A block definition (for resolving defaultSource on provider's own inputs)
-    const hasCompiler = !!registry[provider.blockType];
-    const hasBlockDef = !!getBlockDefinition(provider.blockType);
+    const hasCompiler = registry[provider.blockType] != null;
+    const hasBlockDef = getBlockDefinition(provider.blockType) != null;
 
     if (!hasCompiler || !hasBlockDef) {
       // No complete implementation - skip injection
@@ -489,7 +489,7 @@ export function injectDefaultSourceProviders(
       // 3. Extend defaultSourceValues with provider internal defaults
       for (const [inputId, sourceId] of Object.entries(provider.editableInputSourceIds)) {
         const defaultSource = defaultSourceStore.getDefaultSource(sourceId);
-        if (defaultSource) {
+        if (defaultSource != null) {
           const key = `${provider.providerId}:${inputId}`;
           extendedDefaultSourceValues[key] = defaultSource.value;
         }

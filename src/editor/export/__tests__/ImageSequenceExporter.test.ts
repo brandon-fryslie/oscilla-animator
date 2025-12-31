@@ -33,11 +33,11 @@ class MockOffscreenCanvas {
     };
   }
 
-  async convertToBlob(_options?: { type?: string }): Promise<Blob> {
+  convertToBlob(_options?: { type?: string }): Promise<Blob> {
     // Generate deterministic blob content based on seed and frame counter
     // This simulates how the actual renderer would produce different frames
     const content = `mock-seed${currentProgramSeed}-frame${this.frameCounter++}-${this.width}x${this.height}`;
-    return new Blob([content], { type: _options?.type ?? 'image/png' });
+    return Promise.resolve(new Blob([content], { type: _options?.type ?? 'image/png' }));
   }
 }
 

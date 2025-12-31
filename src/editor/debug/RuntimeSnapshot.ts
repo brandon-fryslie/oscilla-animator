@@ -310,6 +310,7 @@ function serializeValue(value: unknown): unknown {
     };
   }
 
-  // Fallback
-  return String(value);
+  // Fallback for remaining types (symbol, etc.)
+  // Use typeof to provide a meaningful representation
+  return `[${typeof value}]`;
 }

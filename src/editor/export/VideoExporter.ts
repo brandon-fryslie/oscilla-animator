@@ -121,11 +121,11 @@ export class VideoExporter {
 
     // Calculate frame range
     const totalFrames = config.endFrame - config.startFrame + 1;
-    let encodedFrames = 0;
+    let _encodedFrames = 0;
 
     // Create encoder with output callback
     const encoder = await this.createEncoder(encoderConfig, muxer, () => {
-      encodedFrames++;
+      _encodedFrames++;
     });
 
     try {
@@ -305,7 +305,7 @@ export class VideoExporter {
         encoder.configure(config);
         resolve(encoder);
       } catch (error) {
-        reject(error);
+        reject(error instanceof Error ? error : new Error(String(error)));
       }
     });
   }

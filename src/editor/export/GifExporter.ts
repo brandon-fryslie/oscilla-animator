@@ -89,6 +89,9 @@ export class GifExporter {
     // Validate configuration
     this.validateConfig(config);
 
+    // Note: Currently synchronous, but async for API consistency
+    await Promise.resolve();
+
     const startTime = performance.now();
     this.cancelled = false;
 

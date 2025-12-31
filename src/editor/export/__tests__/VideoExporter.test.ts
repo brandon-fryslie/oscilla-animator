@@ -36,10 +36,10 @@ class MockOffscreenCanvas {
     };
   }
 
-  async convertToBlob(_options?: { type?: string }): Promise<Blob> {
+  convertToBlob(_options?: { type?: string }): Promise<Blob> {
     // Generate deterministic blob content based on seed and frame counter
     const content = `mock-seed${currentProgramSeed}-frame${this.frameCounter++}-${this.width}x${this.height}`;
-    return new Blob([content], { type: _options?.type ?? 'image/png' });
+    return Promise.resolve(new Blob([content], { type: _options?.type ?? 'image/png' }));
   }
 }
 
@@ -114,9 +114,9 @@ class MockVideoEncoder {
     this.frameCount++;
   }
 
-  async flush() {
+  flush(): Promise<void> {
     if (this.closed) {
-      throw new Error('Encoder is closed');
+      return Promise.reject(new Error('Encoder is closed'));
     }
 
     // Process all queued frames
@@ -124,20 +124,21 @@ class MockVideoEncoder {
       // Generate mock encoded chunk
       const chunkData = new Uint8Array(1024); // Mock 1KB chunk
       const chunk = new MockEncodedVideoChunk({
-        type: options?.keyFrame ? 'key' : 'delta',
+        type: options?.keyFrame === true ? 'key' : 'delta',
         timestamp: frame.timestamp,
         duration: frame.duration ?? null,
         data: chunkData,
       });
 
       // Call output callback
-      if (this.outputCallback) {
+      if (this.outputCallback !== null) {
         this.outputCallback(chunk);
       }
     }
 
     // Clear queue
     this.encodeQueue = [];
+    return Promise.resolve();
   }
 
   close() {
@@ -145,10 +146,10 @@ class MockVideoEncoder {
     this.encodeQueue = [];
   }
 
-  static async isConfigSupported(config: VideoEncoderConfig): Promise<{ supported: boolean; config?: VideoEncoderConfig }> {
+  static isConfigSupported(config: VideoEncoderConfig): Promise<{ supported: boolean; config?: VideoEncoderConfig }> {
     // Mock support check - support h264 and vp9
     const supported = config.codec === 'avc1.42001f' || config.codec === 'vp09.00.10.08';
-    return { supported, config: supported ? config : undefined };
+    return Promise.resolve({ supported, config: supported ? config : undefined });
   }
 }
 
