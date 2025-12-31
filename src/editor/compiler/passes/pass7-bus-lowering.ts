@@ -82,10 +82,13 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 =======
 =======
 >>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 <<<<<<< HEAD
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
@@ -107,7 +110,16 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
 =======
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 86a62f7 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
   });
 }
 

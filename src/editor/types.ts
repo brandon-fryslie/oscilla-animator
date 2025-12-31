@@ -46,9 +46,19 @@ import type { DefaultSourceAttachment } from './defaultSources/types';
 =======
 
 =======
+<<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 86a62f7 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
 // =============================================================================
 // Bus Type System (Core/Internal Split)
 // =============================================================================
@@ -104,6 +114,7 @@ export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
@@ -112,11 +123,22 @@ export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
 =======
+=======
+>>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 86a62f7 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
 
 
 =======
@@ -380,6 +402,7 @@ export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
@@ -393,13 +416,24 @@ export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
 =======
+=======
+>>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 =======
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> 86a62f7 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
  * Format a TypeDesc for display.
  */
 // MOVED TO SEMANTIC KERNEL
