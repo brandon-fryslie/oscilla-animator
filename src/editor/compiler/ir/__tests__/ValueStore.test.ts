@@ -10,8 +10,13 @@ import { describe, it, expect } from "vitest";
 import { createValueStore } from "../stores";
 import type { SlotMeta } from "../stores";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import type { TypeDesc } from "../types";
 import { asTypeDesc } from "../types";
+=======
+import type { TypeDesc } from } from "../types";;
+import { asTypeDesc } from
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 import type { TypeDesc } from } from "../types";;
 import { asTypeDesc } from

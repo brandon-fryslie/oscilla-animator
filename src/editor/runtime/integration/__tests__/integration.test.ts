@@ -14,6 +14,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import type { TypeDesc as CompilerTypeDesc } from "../../../compiler/ir/types";
 import { asTypeDesc } from "../../../compiler/ir/types";
 =======
@@ -37,6 +38,8 @@ import type { TypeDesc as CompilerTypeDesc , asTypeDesc} from "../../../compiler
 =======
 =======
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> df0d5fe (feat(types): Migrate 90% of TypeDesc literals to new contract)
 import type { TypeDesc as CompilerTypeDesc } from "../../../compiler/ir/types";
 import { asTypeDesc } from "../../../compiler/ir/types";
 =======
@@ -49,7 +52,14 @@ import { asTypeDesc } from
 =======
 import type { TypeDesc as CompilerTypeDesc , asTypeDesc} from "../../../compiler/ir/types";
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+import type { TypeDesc } from as CompilerTypeDesc } from "../../../compiler/ir/types";;
+import { asTypeDesc } from
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> df0d5fe (feat(types): Migrate 90% of TypeDesc literals to new contract)
 import {
   compilerToRuntimeType,
   canBroadcastToField,
@@ -84,7 +94,11 @@ describe("Integration: Type Adapter + SignalBridge", () => {
   describe("Type conversion for field materialization", () => {
     it("should convert compiler field type to runtime type", () => {
 <<<<<<< HEAD
+<<<<<<< HEAD
       const compilerType = makeType("field", "float");
+=======
+      const compilerType: CompilerTypeDesc = { world: "field", domain: "float", category: "core", busEligible: true };
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       const compilerType: CompilerTypeDesc = { world: "field", domain: "float", category: "core", busEligible: true };
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
@@ -96,7 +110,11 @@ describe("Integration: Type Adapter + SignalBridge", () => {
 
     it("should convert compiler signal type for broadcast", () => {
 <<<<<<< HEAD
+<<<<<<< HEAD
       const compilerType = makeType("signal", "float");
+=======
+      const compilerType: CompilerTypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       const compilerType: CompilerTypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
@@ -358,7 +376,11 @@ describe("Integration: Type Adapter + SignalBridge", () => {
     it("should materialize a field with compiler-converted type", () => {
       // Start with compiler type
 <<<<<<< HEAD
+<<<<<<< HEAD
       const compilerType = makeType("signal", "float");
+=======
+      const compilerType: CompilerTypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       const compilerType: CompilerTypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
@@ -545,7 +567,11 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
       // Create SignalExprIR nodes
       const sigNodes: SignalExprIR[] = [
 <<<<<<< HEAD
+<<<<<<< HEAD
         { kind: "const", type: makeType("signal", "float"), constId: 0 },
+=======
+        { kind: "const", type: { world: "signal", domain: "float", category: "core", busEligible: true }, constId: 0 },
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
         { kind: "const", type: { world: "signal", domain: "float", category: "core", busEligible: true }, constId: 0 },
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
@@ -629,11 +655,19 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
       // Create SignalExprIR nodes: sin(t / 1000)
       const sigNodes: SignalExprIR[] = [
 <<<<<<< HEAD
+<<<<<<< HEAD
         { kind: "timeAbsMs", type: makeType("signal", "float") },
         { kind: "const", type: makeType("signal", "float"), constId: 0 },
         {
           kind: "zip",
           type: makeType("signal", "float"),
+=======
+        { kind: "timeAbsMs", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
+        { kind: "const", type: { world: "signal", domain: "float", category: "core", busEligible: true }, constId: 0 },
+        {
+          kind: "zip",
+          type: { world: "signal", domain: "float", category: "core", busEligible: true },
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
         { kind: "timeAbsMs", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
         { kind: "const", type: { world: "signal", domain: "float", category: "core", busEligible: true }, constId: 0 },
@@ -648,7 +682,11 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
         {
           kind: "map",
 <<<<<<< HEAD
+<<<<<<< HEAD
           type: makeType("signal", "float"),
+=======
+          type: { world: "signal", domain: "float", category: "core", busEligible: true },
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
           type: { world: "signal", domain: "float", category: "core", busEligible: true },
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
@@ -734,7 +772,11 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
       // Create a simple constant node
       const sigNodes: SignalExprIR[] = [
 <<<<<<< HEAD
+<<<<<<< HEAD
         { kind: "const", type: makeType("signal", "float"), constId: 0 },
+=======
+        { kind: "const", type: { world: "signal", domain: "float", category: "core", busEligible: true }, constId: 0 },
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
         { kind: "const", type: { world: "signal", domain: "float", category: "core", busEligible: true }, constId: 0 },
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)

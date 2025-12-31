@@ -732,6 +732,7 @@ export class IRBuilderImpl implements IRBuilder {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   domainFromN(n: number): ValueSlot {
     const slot = this.allocValueSlot({ world: "scalar", domain: "domain", category: "internal", busEligible: false }, `domain_n${n}`);
 =======
@@ -743,10 +744,17 @@ export class IRBuilderImpl implements IRBuilder {
 =======
   domainFromN(n: number, elementIds?: readonly string[]): ValueSlot {
     const slot = this.allocValueSlot({ world: "scalar", domain: "domain" }, `domain_n${n}`);
+=======
+  domainFromN(n: number, elementIds?: readonly string[]): ValueSlot {
+    const slot = this.allocValueSlot({ world: "scalar", domain: "domain" }, `domain_n${n}`);
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
   domainFromN(n: number): ValueSlot {
     const slot = this.allocValueSlot({ world: "scalar", domain: "domain", category: "internal", busEligible: false }, `domain_n${n}`);
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
     this.domains.push({
       slot,
