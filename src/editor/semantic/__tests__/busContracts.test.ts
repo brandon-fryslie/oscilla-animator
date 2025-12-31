@@ -10,6 +10,7 @@ import {
   RESERVED_BUS_CONTRACTS,
   validateReservedBus,
   validateCombineModeCompatibility,
+  validateBusIRSupport,
   isReservedBusName,
 } from '../busContracts';
 
@@ -160,6 +161,118 @@ describe('Bus Contracts', () => {
       const sumError = validateCombineModeCompatibility('vec2', 'sum');
       expect(sumError).not.toBeNull();
       expect(sumError!.expected).toEqual(['last']);
+    });
+  });
+
+  describe('Bus IR Support Validation (Sprint 19 P1)', () => {
+    it('should accept numeric signal buses', () => {
+      const floatBus: TypeDesc = {
+        world: 'signal',
+        domain: 'float',
+        category: 'core',
+        busEligible: true,
+      };
+      expect(validateBusIRSupport('testBus', floatBus)).toBeNull();
+
+      const intBus: TypeDesc = {
+        world: 'signal',
+        domain: 'int',
+        category: 'core',
+        busEligible: true,
+      };
+      expect(validateBusIRSupport('testBus', intBus)).toBeNull();
+
+      const booleanBus: TypeDesc = {
+        world: 'signal',
+        domain: 'boolean',
+        category: 'core',
+        busEligible: true,
+      };
+      expect(validateBusIRSupport('testBus', booleanBus)).toBeNull();
+    });
+
+    it('should reject vec2 signal buses', () => {
+      const vec2Bus: TypeDesc = {
+        world: 'signal',
+        domain: 'vec2',
+        category: 'core',
+        busEligible: true,
+      };
+      const error = validateBusIRSupport('vec2Bus', vec2Bus);
+      expect(error).not.toBeNull();
+      expect(error!.code).toBe('E_BUS_UNSUPPORTED_IR_TYPE');
+      expect(error!.message).toContain('Non-numeric buses (vec2/vec3/color) not yet supported in IR mode');
+      expect(error!.message).toContain("Bus 'vec2Bus'");
+      expect(error!.message).toContain("type 'vec2'");
+      expect(error!.busId).toBe('vec2Bus');
+      expect(error!.domain).toBe('vec2');
+    });
+
+    it('should reject vec3 signal buses', () => {
+      const vec3Bus: TypeDesc = {
+        world: 'signal',
+        domain: 'vec3',
+        category: 'core',
+        busEligible: true,
+      };
+      const error = validateBusIRSupport('vec3Bus', vec3Bus);
+      expect(error).not.toBeNull();
+      expect(error!.code).toBe('E_BUS_UNSUPPORTED_IR_TYPE');
+      expect(error!.message).toContain('vec3Bus');
+      expect(error!.domain).toBe('vec3');
+    });
+
+    it('should reject color signal buses', () => {
+      const colorBus: TypeDesc = {
+        world: 'signal',
+        domain: 'color',
+        category: 'core',
+        busEligible: true,
+      };
+      const error = validateBusIRSupport('colorBus', colorBus);
+      expect(error).not.toBeNull();
+      expect(error!.code).toBe('E_BUS_UNSUPPORTED_IR_TYPE');
+      expect(error!.message).toContain('colorBus');
+      expect(error!.domain).toBe('color');
+    });
+
+    it('should reject non-numeric field buses', () => {
+      const vec2FieldBus: TypeDesc = {
+        world: 'field',
+        domain: 'vec2',
+        category: 'core',
+        busEligible: true,
+      };
+      const error = validateBusIRSupport('vec2FieldBus', vec2FieldBus);
+      expect(error).not.toBeNull();
+      expect(error!.code).toBe('E_BUS_UNSUPPORTED_IR_TYPE');
+      expect(error!.domain).toBe('vec2');
+    });
+
+    it('should accept event buses (handled separately)', () => {
+      const eventBus: TypeDesc = {
+        world: 'event',
+        domain: 'trigger',
+        category: 'core',
+        busEligible: true,
+      };
+      // Event buses are skipped in this validation (handled by event bus system)
+      expect(validateBusIRSupport('eventBus', eventBus)).toBeNull();
+    });
+
+    it('should include bus ID and domain in error message', () => {
+      const vec2Bus: TypeDesc = {
+        world: 'signal',
+        domain: 'vec2',
+        category: 'core',
+        busEligible: true,
+      };
+      const error = validateBusIRSupport('myCustomVec2Bus', vec2Bus);
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain('myCustomVec2Bus');
+      expect(error!.message).toContain('vec2');
+      expect(error!.busId).toBe('myCustomVec2Bus');
+      expect(error!.domain).toBe('vec2');
     });
   });
 });

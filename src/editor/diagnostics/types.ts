@@ -150,6 +150,8 @@ export type DiagnosticCode =
   | 'E_RESERVED_BUS_TYPE_MISMATCH'
   | 'E_RESERVED_BUS_COMBINE_MODE_MISMATCH'
   | 'E_BUS_COMBINE_MODE_INCOMPATIBLE'
+  // Bus IR support errors (Sprint 19 P1)
+  | 'E_BUS_UNSUPPORTED_IR_TYPE'
   // Composite errors
   | 'E_COMPOSITE_CONTAINS_TIMEROOT'
   // Default source errors (Sprint 17-18)

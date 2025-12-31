@@ -1,0 +1,4 @@
+Agent: status-planner | 2025-12-31-014721
+Topic: bus-system-execution
+Files: PLAN-20251231-014721.md, DOD-20251231-014721.md
+Items: 3 (P0: 1, P1: 1, P2: 1)
