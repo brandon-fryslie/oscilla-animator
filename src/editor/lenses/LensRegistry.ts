@@ -270,16 +270,22 @@ export function initLensRegistry(): void {
 
       const invertValue = ctx.builder.getConstPool()[invertParam.constId] as boolean;
 <<<<<<< HEAD
+<<<<<<< HEAD
       const outputType: IRTypeDesc = asTypeDesc({
         world: 'signal',
         domain: 'float',
       });
 =======
+=======
+>>>>>>> 7f98a5f (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
       const outputType: IRTypeDesc = {
         world: 'signal',
         domain: 'float',
       };
+<<<<<<< HEAD
 >>>>>>> 97d451a (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
+=======
+>>>>>>> 7f98a5f (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 
       // If not inverted, return input unchanged (identity)
       if (!invertValue) {
