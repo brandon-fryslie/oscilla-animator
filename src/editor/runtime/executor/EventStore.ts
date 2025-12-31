@@ -218,12 +218,19 @@ export class EventStore {
   /**
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
    * Reset all events (clear triggered flags).
    *
    * Called at the start of each frame to clear previous frame's events.
