@@ -182,7 +182,7 @@ export class RootStore {
 
     // BlockReplaced → Update selection if replaced block was selected
     this.events.on('BlockReplaced', (event) => {
-      if (this.uiStore.uiState.selectedBlockId === event.oldBlockId) {
+      if (event.wasSelected) {
         this.uiStore.selectBlock(event.newBlockId);
       }
     });

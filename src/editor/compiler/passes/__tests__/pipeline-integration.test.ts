@@ -287,10 +287,10 @@ describe("Pipeline Integration - Minimal Patch", () => {
     expect(normalized.blockIndexMap.size).toBe(3);
     expect(normalized.publishers).toHaveLength(1);
     expect(normalized.listeners).toHaveLength(1);
-    expect(typed.busTypes.get("bus1")).toEqual({
+    expect(typed.busTypes.get("bus1")).toEqual(expect.objectContaining({
       world: "signal",
       domain: "float",
-    });
+    }));
     expect(depGraphWithTime.graph.nodes).toHaveLength(4); // 3 blocks + 1 bus
     expect(depGraphWithTime.graph.edges).toHaveLength(3); // 1 wire + 1 publisher + 1 listener
     expect(validated.errors).toHaveLength(0);

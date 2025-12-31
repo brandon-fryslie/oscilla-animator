@@ -139,40 +139,6 @@ export class EventStore {
   }
 
   /**
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> 0f6bb08 (feat(events): Implement EventStore for discrete event semantics)
-=======
-=======
->>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
-=======
-=======
->>>>>>> 4d76ba9 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> 1094b2e (feat(events): Implement EventStore for discrete event semantics)
-<<<<<<< HEAD
->>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
-=======
-=======
-=======
->>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> e7be57f (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> 4d76ba9 (feat(events): Implement EventStore for discrete event semantics)
    * Consume an event - check if triggered and return payload in one call.
    *
    * This is a convenience method that combines check() and getPayload().
@@ -245,87 +211,6 @@ export class EventStore {
   }
 
   /**
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
-=======
-=======
->>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> 4d76ba9 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> d7582f6 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
-<<<<<<< HEAD
->>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
-<<<<<<< HEAD
->>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
-<<<<<<< HEAD
->>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
-<<<<<<< HEAD
->>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
-=======
-=======
->>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> 0f6bb08 (feat(events): Implement EventStore for discrete event semantics)
-=======
-=======
->>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> 3cfa545 (feat(events): Implement EventStore for discrete event semantics)
-=======
-=======
-=======
->>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> 1094b2e (feat(events): Implement EventStore for discrete event semantics)
-<<<<<<< HEAD
->>>>>>> 2a13648 (feat(events): Implement EventStore for discrete event semantics)
-=======
-=======
-=======
->>>>>>> ce5d8a5 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
-<<<<<<< HEAD
->>>>>>> e7be57f (feat(events): Implement EventStore for discrete event semantics)
-<<<<<<< HEAD
->>>>>>> 4d76ba9 (feat(events): Implement EventStore for discrete event semantics)
-=======
-=======
-=======
->>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
-=======
->>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> ce5d8a5 (feat(events): Implement EventStore for discrete event semantics)
->>>>>>> d7582f6 (feat(events): Implement EventStore for discrete event semantics)
    * Reset all events (clear triggered flags).
    *
    * Called at the start of each frame to clear previous frame's events.

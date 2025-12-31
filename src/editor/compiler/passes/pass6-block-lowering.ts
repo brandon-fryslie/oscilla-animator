@@ -355,12 +355,24 @@ function lowerBlockInstance(
             });
             continue;
           }
+          // Register slot for signal/field outputs (required for pass8 validation)
+          if (ref.k === 'sig') {
+            builder.registerSigSlot(ref.id, ref.slot);
+          } else if (ref.k === 'field') {
+            builder.registerFieldSlot(ref.id, ref.slot);
+          }
           outputRefs.set(portId, ref);
         }
       } else {
         // Legacy path: Use positional outputs array
         result.outputs.forEach((ref, index) => {
           if (index < block.outputs.length) {
+            // Register slot for signal/field outputs (required for pass8 validation)
+            if (ref.k === 'sig') {
+              builder.registerSigSlot(ref.id, ref.slot);
+            } else if (ref.k === 'field') {
+              builder.registerFieldSlot(ref.id, ref.slot);
+            }
             outputRefs.set(block.outputs[index].id, ref);
           }
         });

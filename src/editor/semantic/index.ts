@@ -259,7 +259,7 @@ export function getConvertiblePaths(
  * Only core types that are explicitly marked can be published to buses.
  */
 export function isBusEligible(typeDesc: TypeDesc): boolean {
-  return typeDesc.busEligible && typeDesc.category === 'core';
+  return typeDesc.busEligible === true && typeDesc.category === 'core';
 }
 
 /**

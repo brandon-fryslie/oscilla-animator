@@ -13,52 +13,6 @@ export * from './types/dnd';
 // Import default source attachment types
 import type { DefaultSourceAttachment } from './defaultSources/types';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-=======
-<<<<<<< HEAD
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
-
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
-
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
-<<<<<<< HEAD
->>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
-
-=======
-<<<<<<< HEAD
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-<<<<<<< HEAD
->>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
-<<<<<<< HEAD
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> 86a62f7 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
 // =============================================================================
 // Bus Type System (Core/Internal Split)
 // =============================================================================
@@ -73,83 +27,9 @@ import type { DefaultSourceAttachment } from './defaultSources/types';
  */
 export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
-// Import for use within this file AND re-export for consumers
-import type {
-  TypeWorld,
-  CoreDomain,
-  InternalDomain,
-  Domain,
-  TypeCategory,
-  TypeDesc,
-} from '../core/types';
-
-// Re-export for consumers
-export type {
-  TypeWorld,
-  CoreDomain,
-  InternalDomain,
-  Domain,
-  TypeCategory,
-  TypeDesc,
-};
-
-export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
-=======
 // =============================================================================
 // Kernel Capabilities (Primitive Enforcement)
 // =============================================================================
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
-<<<<<<< HEAD
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> 86a62f7 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
-
-
-=======
-// =============================================================================
-// Kernel Capabilities (Primitive Enforcement)
-// =============================================================================
-<<<<<<< HEAD
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
 
 /**
  * Kernel capabilities - the five authorities that define primitives.
@@ -195,44 +75,6 @@ export type KernelId =
   | 'TextSource'
   | 'ImageSource'
   | 'DebugDisplay';
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
-
-/**
- * Compile kind for pure blocks - determines what AST they can produce.
- * - 'operator': Must compile to SignalExpr/FieldExpr AST nodes (not closures)
- * - 'composite': Black-box combination of primitives
- * - 'spec': Declarative specification (config that compiles to programs)
- */
-export type PureCompileKind = 'operator' | 'composite' | 'spec';
-
-<<<<<<< HEAD
-// =============================================================================
-// Bus Type System
-// =============================================================================
-/**
- */
-export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer';
-
-/**
-=======
 
 /**
  * Compile kind for pure blocks - determines what AST they can produce.
@@ -290,74 +132,6 @@ export type InternalDomain =
   | 'cameraRef';   // Camera resource reference (for 3D rendering)
 
 /**
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
-=======
-/**
- * Core domains - what users see in the bus system.
- * These are the learnable creative vocabulary.
- */
-export type CoreDomain =
-  | 'float'    // Floating-point values
-  | 'int'      // Integer values
-  | 'vec2'     // 2D positions/vectors
-  | 'vec3'     // 3D positions/vectors
-  | 'color'    // Color values
-  | 'boolean'  // True/false values
-  | 'time'     // Time values (always in seconds)
-  | 'rate'     // Rate/multiplier values
-  | 'trigger'; // Pulse/event signals
-
-/**
- * Internal domains - engine plumbing, not bus-eligible by default.
- */
-export type InternalDomain =
-  | 'point'        // Point semantics
-  | 'duration'     // Duration semantics
-  | 'hsl'          // HSL color space
-  | 'path'         // Path data
-  | 'expression'   // DSL expression source
-  | 'waveform'     // Oscillator waveform selector
-  | 'phaseSample'  // PhaseMachine sample payload
-  | 'phaseMachine' // PhaseMachine instance payload
-  | 'wobble'       // Wobble modulator config
-  | 'spiral'       // Spiral modulator config
-  | 'wave'         // Wave modulator config
-  | 'jitter'       // Jitter modulator config
-  | 'program'      // Compiled program
-  | 'renderTree'   // Render tree output
-  | 'renderNode'   // Single render node
-  | 'filterDef'    // SVG filter definition
-  | 'strokeStyle'  // Stroke configuration
-  | 'elementCount' // Number of elements
-  | 'scene'        // Scene data
-  | 'sceneTargets' // Scene target points
-  | 'sceneStrokes' // Scene stroke paths
-  | 'event'        // Generic events
-  | 'string'       // String values (labels, etc.)
-  | 'bounds'       // Bounding box / bounds
-  | 'spec'         // Spec types (config that compiles to programs)
-  | 'canvasRender'  // Canvas 2D render commands
-  | 'cameraRef';   // Camera resource reference (for 3D rendering)
-
-/**
-<<<<<<< HEAD
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
-<<<<<<< HEAD
->>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
  * All domains (core + internal).
  */
 export type Domain = CoreDomain | InternalDomain;
@@ -379,10 +153,10 @@ export interface TypeDesc {
   readonly domain: Domain;
 
   /** Category: core (user-facing) or internal (engine) */
-  readonly category: TypeCategory;
+  readonly category?: TypeCategory;
 
   /** Whether this type can be used for buses */
-  readonly busEligible: boolean;
+  readonly busEligible?: boolean;
 
   /** Optional semantic information for precise matching */
   readonly semantics?: string;
@@ -397,43 +171,6 @@ export interface TypeDesc {
 export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer';
 
 /**
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
-<<<<<<< HEAD
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> 86a62f7 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
  * Format a TypeDesc for display.
  */
 // MOVED TO SEMANTIC KERNEL
@@ -1182,7 +919,7 @@ export function isDirectlyCompatible(a: TypeDesc, b: TypeDesc): boolean {
  * Check if a type is eligible for bus routing.
  */
 export function isBusEligible(typeDesc: TypeDesc): boolean {
-  return typeDesc.busEligible && typeDesc.category === 'core';
+  return typeDesc.busEligible === true && typeDesc.category === 'core';
 }
 
 /**

@@ -350,4 +350,25 @@ export interface BuilderProgramIR {
    */
   /** Time slots (from TimeRoot) */
   timeSlots?: TimeSlots;
+
+  /**
+   * Bus roots created during Pass7 lowering.
+   * Maps bus indices to their root value references.
+   * Note: This is populated by pass7BusLowering, not by the builder itself.
+   */
+  busRoots: readonly BusRootEntry[];
+}
+
+/**
+ * Entry representing a bus root value reference.
+ */
+export interface BusRootEntry {
+  /** Bus index */
+  busIdx: number;
+
+  /** Value reference kind ('sig' or 'field') */
+  k: 'sig' | 'field';
+
+  /** Value slot index */
+  slot: number;
 }

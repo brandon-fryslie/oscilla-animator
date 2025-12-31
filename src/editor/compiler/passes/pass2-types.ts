@@ -140,7 +140,7 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
  * - event world: bus-eligible (for event buses)
  * - special world: not bus-eligible
  */
-export function isBusEligible(type: TypeDesc): boolean {
+export function isBusEligible(type: Pick<TypeDesc, 'world' | 'domain'>): boolean {
   if (type.world === "signal") {
     return true;
   }
@@ -344,7 +344,8 @@ export function pass2TypeGraph(
   const busTypes = new Map<string, TypeDesc>();
 
   for (const bus of normalized.buses) {
-    const busType = bus.type;
+    // Convert editor TypeDesc to core TypeDesc
+    const busType = asTypeDesc(bus.type);
 
     // Validate bus eligibility
     if (!isBusEligible(busType)) {

@@ -332,86 +332,6 @@ export class PatchStore {
       throw new Error(`Cannot add macro block "${type}" directly. Macros must have an expansion in MACRO_REGISTRY.`);
     }
 
-<<<<<<< Updated upstream
-    // Generate block ID before transaction
-=======
-    let blockId: BlockId = '';
-
-    runTx(this.root, { label: 'Add Block' }, (tx) => {
-      const definition = getBlockDefinition(type);
-      if (definition === undefined) {
-        throw new Error(`Block type "${type}" not found in registry`);
-      }
-
-      const id = this.generateBlockId();
-      const rawParams = params ?? definition.defaultParams ?? {};
-      const migratedParams = migrateBlockParams(type, rawParams);
-
-      const block: Block = {
-        id,
-        type,
-        label: definition.label ?? type,
-        inputs: definition.inputs ?? [],
-        outputs: definition.outputs ?? [],
-        params: migratedParams,
-        category: definition.subcategory ?? 'Other',
-        description: definition.description ?? `${type} block`,
-      };
-
-      tx.add('blocks', block);
-      blockId = id;
-
-      // Side effects (not part of transaction system yet):
-      // - Lane management
-      // - Default sources
-      // - Auto-bus connections
-      // - Events (BlockAdded)
-      // These will be handled after commit by MobX reactions or separate systems
-    });
-
-    // Post-transaction side effects
-    const block = this.blocks.find(b => b.id === blockId);
-    if (block) {
-      this.root.defaultSourceStore.createDefaultSourcesForBlock(
-        blockId,
-        block.inputs,
-        SLOT_TYPE_TO_TYPE_DESC,
-        block.params
-      );
-
-      this.processAutoBusConnections(blockId, type);
-
-      this.root.events.emit({
-        type: 'BlockAdded',
-        blockId,
-        blockType: type,
-        laneId: '',
-      });
-    }
-
-    return blockId;
-  }
-
-  /**
-   * Add a block at a specific index within a lane.
-   * Used when dropping blocks at a precise position.
-   */
-  addBlockAtIndex(type: BlockType, laneId: LaneId, index: number, params?: Record<string, unknown>): BlockId {
-    // Check if this is a macro that should expand
-    const macroKey = getMacroKey(type, params);
-    if (macroKey !== null && macroKey !== undefined && macroKey !== '') {
-      const expansion = getMacroExpansion(macroKey);
-      if (expansion !== null && expansion !== undefined) {
-        return this.expandMacro(expansion, macroKey);
-      }
-      throw new Error(`Macro "${macroKey}" has no expansion registered in MACRO_REGISTRY`);
-    }
-
-    if (type.startsWith('macro:')) {
-      throw new Error(`Cannot add macro block "${type}" directly. Macros must have an expansion in MACRO_REGISTRY.`);
-    }
-
->>>>>>> Stashed changes
     const id = this.generateBlockId();
     const definition = getBlockDefinition(type);
 
@@ -662,15 +582,9 @@ export class PatchStore {
    * P0-3 MIGRATED: Now uses runTx() for undo/redo support.
    */
   updateBlock(id: BlockId, updates: Partial<Block>): void {
-<<<<<<< Updated upstream
     runTx(this.root, { label: 'Update Block' }, tx => {
-      const block = this.root.patchStore.blocks.find(b => b.id === id);
+      const block = this.blocks.find(b => b.id === id);
       if (block === undefined) return; // Silently ignore if block not found
-=======
-    runTx(this.root, { label: 'Update Block' }, (tx) => {
-      const block = this.blocks.find((b) => b.id === id);
-      if (block === undefined || block === null) return;
->>>>>>> Stashed changes
 
       const next = { ...block, ...updates };
       tx.replace('blocks', id, next);
@@ -689,7 +603,6 @@ export class PatchStore {
     const block = this.blocks.find((b) => b.id === id);
     const blockType = block?.type ?? 'unknown';
 
-<<<<<<< Updated upstream
     // Capture connections involving this block BEFORE deletion (for WireRemoved events)
     const connectionsToRemove = this.connections.filter(
       (c) => c.from.blockId === id || c.to.blockId === id
@@ -710,13 +623,6 @@ export class PatchStore {
     }
 
     // Emit BlockRemoved event AFTER state changes committed
-=======
-    runTx(this.root, { label: 'Remove Block', historyStore: options?.suppressGraphCommitted ? null : undefined }, (tx) => {
-      tx.removeBlockCascade(id);
-    });
-
-    // Post-transaction side effects
->>>>>>> Stashed changes
     this.root.events.emit({
       type: 'BlockRemoved',
       blockId: id,
@@ -760,34 +666,13 @@ export class PatchStore {
     // Copy compatible parameters
     const newParams = copyCompatibleParams(oldBlock.params, newDef);
 
-<<<<<<< Updated upstream
-    // Create new block for replacement
-=======
-    // Create new block
->>>>>>> Stashed changes
-    const newBlockId = this.generateBlockId();
-    const newBlock: Block = {
-      id: newBlockId,
-      type: newBlockType,
-      label: newDef.label,
-      inputs: newDef.inputs,
-      outputs: newDef.outputs,
-      params: newParams,
-      category: newDef.subcategory ?? 'Other',
-      description: newDef.description,
-    };
+    // Add new block (suppress GraphCommitted - we emit one at the end)
+    // NOTE: _createBlock returns the actual block ID it created
+    const newBlockId = this._createBlock(newBlockType, newParams);
 
-    let result: ReplacementResult = {
-      success: false,
-      preservedConnections: 0,
-      droppedConnections: [],
-    };
+    // Get the newly created block for slot lookups
+    const newBlock = this.blocks.find(b => b.id === newBlockId)!;
 
-    runTx(this.root, { label: 'Replace Block' }, (tx) => {
-      // Add new block
-      tx.add('blocks', newBlock);
-
-<<<<<<< Updated upstream
     // Remap preserved connections (suppress GraphCommitted - we emit one at the end)
     for (const preserved of mapping.preserved) {
       const fromId = preserved.fromBlockId === oldBlockId ? newBlockId : preserved.fromBlockId;
@@ -806,23 +691,9 @@ export class PatchStore {
         if (newSlot !== undefined && newSlot !== null) {
           this.root.busStore.addPublisher(oldPub.busId, newBlockId, newSlot.id, oldPub.adapterChain, oldPub.lensStack, { suppressGraphCommitted: true });
         }
-=======
-      // Add preserved connections
-      for (const preserved of mapping.preserved) {
-        const fromId = preserved.fromBlockId === oldBlockId ? newBlockId : preserved.fromBlockId;
-        const toId = preserved.toBlockId === oldBlockId ? newBlockId : preserved.toBlockId;
-
-        const connId = this.generateConnectionId();
-        const connection: Connection = {
-          id: connId,
-          from: { blockId: fromId, slotId: preserved.fromSlot, direction: 'output' },
-          to: { blockId: toId, slotId: preserved.toSlot, direction: 'input' },
-        };
-        tx.add('connections', connection);
->>>>>>> Stashed changes
       }
+    }
 
-<<<<<<< Updated upstream
     // Handle bus listeners
     const oldListeners = this.root.busStore.listeners.filter((l) => l.to.blockId === oldBlockId);
     for (const oldLis of oldListeners) {
@@ -842,78 +713,47 @@ export class PatchStore {
         }
       }
     }
-=======
-      // Remove old block cascade
-      tx.removeBlockCascade(oldBlockId);
->>>>>>> Stashed changes
 
-      result = {
-        success: true,
-        newBlockId,
-        preservedConnections: mapping.preserved.length,
-        droppedConnections: mapping.dropped,
-      };
+    // Capture selection state before any changes
+    const wasSelected = this.root.uiStore.uiState.selectedBlockId === oldBlockId;
+
+    // Emit BlockReplaced event BEFORE removing old block
+    // This allows listeners to see both blocks during the event
+    this.root.events.emit({
+      type: 'BlockReplaced',
+      oldBlockId,
+      oldBlockType: oldBlock.type,
+      newBlockId,
+      newBlockType,
+      preservedConnections: mapping.preserved.length,
+      droppedConnections: mapping.dropped,
+      wasSelected,
     });
 
-    // Post-transaction side effects
-    if (result.success && result.newBlockId) {
-      // Add to lane at same position
-      const oldIndex = lane.blockIds.indexOf(oldBlockId);
-      if (oldIndex !== -1) {
-        lane.blockIds = [...lane.blockIds];
-        lane.blockIds.splice(oldIndex, 0, result.newBlockId);
-      }
+    // Remove old block (suppress GraphCommitted - we emit one at the end)
+    this.removeBlock(oldBlockId, { suppressGraphCommitted: true });
 
-      // Create default sources
-      this.root.defaultSourceStore.createDefaultSourcesForBlock(
-        result.newBlockId,
-        newBlock.inputs,
-        SLOT_TYPE_TO_TYPE_DESC,
-        newParams
-      );
+    // Emit GraphCommitted for diagnostics
+    const hasTimeRoot = this.isTimeRootBlock(newBlockType);
+    this.emitGraphCommitted(
+      'userEdit',
+      {
+        blocksAdded: 1,
+        blocksRemoved: 1,
+        busesAdded: 0,
+        busesRemoved: 0,
+        bindingsChanged: oldPublishers.length + oldListeners.length,
+        timeRootChanged: hasTimeRoot,
+      },
+      [oldBlockId, newBlockId]  // Include both old and new block IDs
+    );
 
-      // Handle bus publishers and listeners
-      const oldPublishers = this.root.busStore.publishers.filter((p) => p.from.blockId === oldBlockId);
-      for (const oldPub of oldPublishers) {
-        const oldSlot = oldBlock.outputs.find((s) => s.id === oldPub.from.slotId);
-        if (oldSlot !== undefined && oldSlot !== null) {
-          const newSlot = newBlock.outputs.find((s) => s.type === oldSlot.type);
-          if (newSlot !== undefined && newSlot !== null) {
-            this.root.busStore.addPublisher(oldPub.busId, result.newBlockId, newSlot.id, oldPub.adapterChain);
-          }
-        }
-      }
-
-      const oldListeners = this.root.busStore.listeners.filter((l) => l.to.blockId === oldBlockId);
-      for (const oldLis of oldListeners) {
-        const oldSlot = oldBlock.inputs.find((s) => s.id === oldLis.to.slotId);
-        if (oldSlot !== undefined && oldSlot !== null) {
-          const newSlot = newBlock.inputs.find((s) => s.type === oldSlot.type);
-          if (newSlot !== undefined && newSlot !== null) {
-            this.root.busStore.addListener(
-              oldLis.busId,
-              result.newBlockId,
-              newSlot.id,
-              oldLis.adapterChain,
-              oldLis.lensStack
-            );
-          }
-        }
-      }
-
-      // Emit BlockReplaced event
-      this.root.events.emit({
-        type: 'BlockReplaced',
-        oldBlockId,
-        oldBlockType: oldBlock.type,
-        newBlockId: result.newBlockId,
-        newBlockType,
-        preservedConnections: mapping.preserved.length,
-        droppedConnections: mapping.dropped,
-      });
-    }
-
-    return result;
+    return {
+      success: true,
+      newBlockId,
+      preservedConnections: mapping.preserved.length,
+      droppedConnections: mapping.dropped,
+    };
   }
 
   /**
@@ -922,21 +762,12 @@ export class PatchStore {
    * P0-3 MIGRATED: Now uses runTx() for undo/redo support.
    */
   updateBlockParams(blockId: BlockId, params: Record<string, unknown>): void {
-<<<<<<< Updated upstream
     runTx(this.root, { label: 'Update Params' }, tx => {
-      const block = this.root.patchStore.blocks.find(b => b.id === blockId);
+      const block = this.blocks.find(b => b.id === blockId);
       if (block === undefined) return; // Silently ignore if block not found
 
       const next = { ...block, params: { ...block.params, ...params } };
       tx.replace('blocks', blockId, next);
-=======
-    runTx(this.root, { label: 'Update Block Params' }, (tx) => {
-      const block = this.blocks.find((b) => b.id === blockId);
-      if (block !== null && block !== undefined) {
-        const next = { ...block, params: { ...block.params, ...params } };
-        tx.replace('blocks', blockId, next);
-      }
->>>>>>> Stashed changes
     });
   }
 
@@ -1035,7 +866,6 @@ export class PatchStore {
       to: { blockId: toBlockId, slotId: toSlotId, direction: 'input' },
     };
 
-<<<<<<< Updated upstream
     // Conservative migration: check if this is an internal call
     if (options?.suppressGraphCommitted === true) {
       // Direct mutation for internal use (not yet migrated)
@@ -1064,19 +894,6 @@ export class PatchStore {
         to: connection.to,
       });
     }
-=======
-    runTx(this.root, { label: 'Connect', historyStore: options?.suppressGraphCommitted ? null : undefined }, (tx) => {
-      tx.add('connections', connection);
-    });
-
-    // Post-transaction events
-    this.root.events.emit({
-      type: 'WireAdded',
-      wireId: connection.id,
-      from: connection.from,
-      to: connection.to,
-    });
->>>>>>> Stashed changes
   }
 
   /**
@@ -1098,7 +915,6 @@ export class PatchStore {
     const connection = this.connections.find((c) => c.id === connectionId);
     if (connection === null || connection === undefined) return;
 
-<<<<<<< Updated upstream
     // Conservative migration: check if this is an internal call
     if (options?.suppressGraphCommitted === true) {
       // Direct mutation for internal use (not yet migrated)
@@ -1127,19 +943,6 @@ export class PatchStore {
         to: connection.to,
       });
     }
-=======
-    runTx(this.root, { label: 'Disconnect', historyStore: options?.suppressGraphCommitted ? null : undefined }, (tx) => {
-      tx.remove('connections', connectionId);
-    });
-
-    // Post-transaction events
-    this.root.events.emit({
-      type: 'WireRemoved',
-      wireId: connection.id,
-      from: connection.from,
-      to: connection.to,
-    });
->>>>>>> Stashed changes
   }
 
   /**

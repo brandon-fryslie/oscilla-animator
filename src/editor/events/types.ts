@@ -110,6 +110,8 @@ export interface BlockReplacedEvent {
   preservedConnections: number;
   /** Connections that were dropped (incompatible or slots not present on new block) with reasons */
   droppedConnections: Array<{ connectionId: string; reason: string }>;
+  /** Whether the replaced block was selected in the UI at the time of replacement */
+  wasSelected: boolean;
 }
 
 /**

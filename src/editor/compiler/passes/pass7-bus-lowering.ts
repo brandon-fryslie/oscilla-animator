@@ -61,65 +61,8 @@ export interface IRWithBusRoots {
  */
 function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
   return asTypeDesc({
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
     world: busType.world,
     domain: busType.domain,
-=======
-    world: busType.world as TypeDesc["world"],
-    domain: busType.domain as TypeDesc["domain"],
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
-<<<<<<< HEAD
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
-    world: busType.world as TypeDesc["world"],
-    domain: busType.domain as TypeDesc["domain"],
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
-    world: busType.world as TypeDesc["world"],
-    domain: busType.domain as TypeDesc["domain"],
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
-<<<<<<< HEAD
->>>>>>> c8569eb (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
-<<<<<<< HEAD
->>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
-=======
-=======
->>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
-=======
->>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> 86a62f7 (fix(types): Complete TypeDesc contract migration for production code)
->>>>>>> b891517 (fix(types): Complete TypeDesc contract migration for production code)
   });
 }
 
