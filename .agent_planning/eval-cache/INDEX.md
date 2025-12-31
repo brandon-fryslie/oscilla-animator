@@ -3,7 +3,6 @@
 | Lint Infrastructure | lint-infrastructure.md | 2025-12-25 17:48 | project-evaluator (lint-cleanup) | HIGH |
 | IR Primitives Status | ir-primitives-status.md | 2025-12-30 02:31 | project-evaluator (spec analysis) | HIGH |
 | Default Sources Current State | default-sources-current-state.md | 2025-12-30 02:24 | project-evaluator (default-sources-hidden-blocks) | HIGH |
-| Render Pipeline Status | render-pipeline-status.md | 2025-12-31 | project-evaluator (render-pipeline) | HIGH |
 
 ## Cache Freshness Guidelines
 - **FRESH**: < 1 hour - trust fully
@@ -15,7 +14,6 @@
 - **lint-infrastructure.md**: ESLint config, two-tier rules (critical vs non-critical), auto-fixable rules
 - **ir-primitives-status.md**: 74 IR gaps across 11 specs, 20-sprint roadmap, dependency analysis, risk assessment
 - **default-sources-current-state.md**: Current constant-only default source implementation (store/UI/compiler/types)
-- **render-pipeline-status.md**: 6 render gaps (z-order, curves, clipping, transforms, postfx, materials), implementation status, known stubs (ClipGroup, ColorGrade)
 
 ## Not Yet Cached
 - project-structure.md (directory layout, entry points)
@@ -35,6 +33,3 @@
 - port-catalog-migration.md (INVALIDATED 2025-12-29 04:03 - Port catalog helper implemented, 4 blocks migrated to outputsById, strict-by-default enabled)
 - debug-export-workstream.md (INVALIDATED 2025-12-30 04:00 - TraceController API extended, ProbeCard updated, DebugReplPanel modified, executeDebugProbe updated)
 - debug-ui-field-visualization.md (INVALIDATED 2025-12-30 05:05 - FieldStats, FieldHeatmap, FieldHistogram, FieldVisualizationMode components added)
-- type-contracts-divergence.md (INVALIDATED 2025-12-31 11:05 - Unified TypeDesc created in src/core/types.ts, editor/compiler migration in progress)
-- typedesc-migration-status.md (INVALIDATED 2025-12-31 11:45 - TypeDesc literals migrated to new contract, ~350 fixes across 60+ files)
-- adapter-application-status.md (INVALIDATED 2025-12-31 11:45 - Type system migration changes adapter handling)

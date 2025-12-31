@@ -278,11 +278,14 @@ export function initLensRegistry(): void {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> fdebc66 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 =======
 >>>>>>> 267efc4 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 =======
+=======
+>>>>>>> e9b0b79 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 =======
 >>>>>>> 951f918 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 >>>>>>> fbe850f (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
@@ -318,6 +321,7 @@ export function initLensRegistry(): void {
 >>>>>>> 97d451a (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 =======
 >>>>>>> 951f918 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
+<<<<<<< HEAD
 >>>>>>> fbe850f (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 =======
 >>>>>>> 7f98a5f (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
@@ -333,6 +337,10 @@ export function initLensRegistry(): void {
 =======
 >>>>>>> 951f918 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 >>>>>>> fbe850f (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
+=======
+=======
+>>>>>>> 97d451a (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
+>>>>>>> e9b0b79 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
       const outputType: IRTypeDesc = {
         world: 'signal',
         domain: 'float',
@@ -345,13 +353,17 @@ export function initLensRegistry(): void {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> e9b0b79 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 >>>>>>> 97d451a (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 >>>>>>> fbe850f (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 =======
 =======
 >>>>>>> 951f918 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 >>>>>>> 97d451a (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
+<<<<<<< HEAD
 >>>>>>> 267efc4 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 =======
 >>>>>>> 97d451a (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
@@ -373,6 +385,10 @@ export function initLensRegistry(): void {
 =======
 >>>>>>> 97d451a (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 >>>>>>> fdebc66 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
+=======
+=======
+>>>>>>> 97d451a (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
+>>>>>>> e9b0b79 (feat(ir): Add compileToIR for ConstToSignal variants and phase adapters (Sprint 1 partial))
 
       // If not inverted, return input unchanged (identity)
       if (!invertValue) {
