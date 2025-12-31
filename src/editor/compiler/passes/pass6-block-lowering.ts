@@ -20,6 +20,7 @@ import type { Block } from "../../types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import { IRBuilderImpl } from "../ir/IRBuilderImpl";
 import type { TypeDesc } from "../ir/types";
+import { asTypeDesc } from "../ir/types";
 import type { CompileError } from "../types";
 import type { ValueRefPacked, LowerCtx } from "../ir/lowerTypes";
 import { getBlockType } from "../ir/lowerTypes";
@@ -147,10 +148,10 @@ function artifactToValueRef(
 
   // Scalar: create constant signal
   if (kind === "Scalar:float" || kind === "Scalar:int") {
-    const type: TypeDesc = {
+    const type: TypeDesc = asTypeDesc({
       world: "signal",
       domain: kind === "Scalar:int" ? "int" : "float",
-    };
+    });
     const sigId = builder.sigConst(artifact.value, type);
     const slot = builder.allocValueSlot(type);
     builder.registerSigSlot(sigId, slot);

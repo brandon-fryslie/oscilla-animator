@@ -24,6 +24,7 @@ import type {
 import type { TypeDesc, TypeDomain } from "../ir/types";
 import type { NormalizedPatch, TypedPatch } from "../ir";
 import { domainFromString } from "../../ir/types/typeConversion";
+import { asTypeDesc } from "../ir/types";
 
 /**
  * Error types emitted by Pass 2.
@@ -87,10 +88,10 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
     // Use canonical domain mapping from typeConversion.ts
     const domain = domainFromString(domainStr);
 
-    return {
+    return asTypeDesc({
       world: world as "signal" | "field" | "event",
       domain: domain as TypeDomain,
-    };
+    });
   }
 
   // Pattern: Scalar:domain
@@ -98,10 +99,10 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
   if (scalarMatch !== null) {
     const domainStr = scalarMatch[1];
     const domain = domainFromString(domainStr);
-    return {
+    return asTypeDesc({
       world: "scalar",
       domain: domain as TypeDomain,
-    };
+    });
   }
 
   // Special types without generic syntax

@@ -17,6 +17,7 @@
 
 import type { Bus, Publisher, Block } from "../../types";
 import type { BusIndex, TypeDesc, EventExprId } from "../ir/types";
+import { asTypeDesc } from "../ir/types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
 import type { CompileError } from "../types";
@@ -59,10 +60,10 @@ export interface IRWithBusRoots {
  * For Sprint 2, we just extract world and domain.
  */
 function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
-  return {
+  return asTypeDesc({
     world: busType.world as TypeDesc["world"],
     domain: busType.domain as TypeDesc["domain"],
-  };
+  });
 }
 
 // =============================================================================

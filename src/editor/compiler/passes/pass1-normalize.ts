@@ -30,6 +30,7 @@ import type {
   DefaultSourceAttachment,
 } from "../ir/patches";
 import type { TypeWorld } from "../ir/types";
+import { asTypeDesc } from "../ir/types";
 
 /**
  * Convert editor SlotWorld to IR TypeWorld.
@@ -85,10 +86,10 @@ export function pass1Normalize(
           blockId: block.id,
           slotId: input.id,
           constId: constIdCounter++ as ConstId,
-          type: {
+          type: asTypeDesc({
             world: slotWorldToTypeWorld(input.defaultSource.world),
             domain: "float", // Simplified for now - could be derived from slot type
-          },
+          }),
         });
       }
     }

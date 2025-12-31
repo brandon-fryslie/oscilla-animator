@@ -14,6 +14,7 @@
  */
 
 import type { TypeDesc as CompilerTypeDesc } from "../../compiler/ir/types";
+import { asTypeDesc } from "../../compiler/ir/types";
 import type { TypeDesc as RuntimeTypeDesc } from "../field/types";
 
 // =============================================================================
@@ -188,19 +189,19 @@ export function runtimeToCompilerType(
   // Map runtime kind to compiler domain
   switch (runtimeType.kind) {
     case "number":
-      return { world, domain: "float" };
+      return asTypeDesc({ world, domain: "float" });
     case "vec2":
-      return { world, domain: "vec2" };
+      return asTypeDesc({ world, domain: "vec2" });
     case "vec3":
-      return { world, domain: "vec3" };
+      return asTypeDesc({ world, domain: "vec3" });
     case "vec4":
-      return { world, domain: "vec4" };
+      return asTypeDesc({ world, domain: "vec4" });
     case "color":
-      return { world, domain: "color" };
+      return asTypeDesc({ world, domain: "color" });
     case "boolean":
-      return { world, domain: "boolean" };
+      return asTypeDesc({ world, domain: "boolean" });
     case "string":
-      return { world, domain: "string" };
+      return asTypeDesc({ world, domain: "string" });
     default:
       throw new RuntimeTypeConversionError(
         runtimeType,

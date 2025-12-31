@@ -13,39 +13,23 @@ export * from './types/dnd';
 // Import default source attachment types
 import type { DefaultSourceAttachment } from './defaultSources/types';
 
-// Import types used locally in this file
-import type {
-  TypeDesc,
-  CoreDomain,
-  Domain,
-} from '../core/types';
-
-
 // =============================================================================
-// Unified Type System (Re-exported from Core)
+// Bus Type System (Core/Internal Split)
 // =============================================================================
 
 /**
- * The editor uses the unified type system defined in src/core/types.ts.
- * This ensures consistent TypeDesc contracts across editor and compiler.
- *
- * Sprint: Type Contracts + IR Plumbing (2025-12-31)
- * References:
- * - .agent_planning/type-contracts-ir-plumbing/DOD-2025-12-31-045033.md
- * - .agent_planning/type-contracts-ir-plumbing/PLAN-2025-12-31-045033.md
+ * World categories for type system.
+ * - signal: Continuous time-indexed values
+ * - event: Discrete impulses/triggers (sparse, edge-triggered)
+ * - field: Per-element values
+ * - scalar: Compile-time constants
+ * - config: Configuration values
  */
+export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
 
-// Re-export unified type system from core
-export type {
-  TypeWorld,
-  CoreDomain,
-  InternalDomain,
-  Domain,
-  TypeCategory,
-  TypeDesc,
-} from '../core/types';
-
-export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
+// =============================================================================
+// Kernel Capabilities (Primitive Enforcement)
+// =============================================================================
 
 /**
  * Kernel capabilities - the five authorities that define primitives.
@@ -56,54 +40,148 @@ export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
 export type KernelCapability = 'time' | 'identity' | 'state' | 'render' | 'io';
 
 /**
- * Block compiler interface.
- * Each block must implement a compiler to generate IR.
+ * Full capability type including pure.
+ * - 'pure': Block has no special authority, compiles to pure expressions
+ * - KernelCapability: Block has kernel-level authority (time/identity/state/render/io)
  */
-export type BlockCompiler = {
-  /**
-   * Compile this block to IR.
-   * @param block - The block to compile
-   * @param builder - The IR builder to use
-   */
-  compile(
-    block: Block,
-    builder: unknown, // Will be typed as IRBuilder when available
-    ctx: unknown,     // Will be typed as CompileContext when available
-  ): void;
-};
-
-// =============================================================================
-// Patch State
-// =============================================================================
+export type Capability = KernelCapability | 'pure';
 
 /**
- * A Patch is the root container for an animation.
- * It contains blocks, buses, and a time model.
+ * The exhaustive list of kernel primitive IDs.
+ * This union type provides COMPILE-TIME enforcement.
  */
-export interface Patch {
-  /** Unique identifier */
-  readonly id: string;
+export type KernelId =
+  // Time Authority (2)
+  | 'FiniteTimeRoot'
+  | 'InfiniteTimeRoot'
+  // Identity Authority (3)
+  | 'DomainN'
+  | 'SVGSampleDomain'
+  | 'GridDomain'
+  // State Authority (5)
+  | 'IntegrateBlock'
+  | 'HistoryBlock'
+  | 'TriggerOnWrap'
+  | 'PulseDivider'
+  | 'EnvelopeAD'
+  // Render Authority (6)
+  | 'RenderInstances'
+  | 'RenderStrokes'
+  | 'RenderProgramStack'
+  | 'RenderInstances2D'
+  | 'RenderPaths2D'
+  | 'Render2dCanvas'
+  // External IO Authority (3)
+  | 'TextSource'
+  | 'ImageSource'
+  | 'DebugDisplay';
 
-  /** Human-readable name */
-  name: string;
+/**
+ * Compile kind for pure blocks - determines what AST they can produce.
+ * - 'operator': Must compile to SignalExpr/FieldExpr AST nodes (not closures)
+ * - 'composite': Black-box combination of primitives
+ * - 'spec': Declarative specification (config that compiles to programs)
+ */
+export type PureCompileKind = 'operator' | 'composite' | 'spec';
 
-  /** All blocks in this patch */
-  blocks: Map<string, Block>;
+/**
+ * Core domains - what users see in the bus system.
+ * These are the learnable creative vocabulary.
+ */
+export type CoreDomain =
+  | 'float'    // Floating-point values
+  | 'int'      // Integer values
+  | 'vec2'     // 2D positions/vectors
+  | 'vec3'     // 3D positions/vectors
+  | 'color'    // Color values
+  | 'boolean'  // True/false values
+  | 'time'     // Time values (always in seconds)
+  | 'rate'     // Rate/multiplier values
+  | 'trigger'; // Pulse/event signals
 
-  /** All buses in this patch */
-  buses: Map<string, Bus>;
+/**
+ * Internal domains - engine plumbing, not bus-eligible by default.
+ */
+export type InternalDomain =
+  | 'point'        // Point semantics
+  | 'duration'     // Duration semantics
+  | 'hsl'          // HSL color space
+  | 'path'         // Path data
+  | 'expression'   // DSL expression source
+  | 'waveform'     // Oscillator waveform selector
+  | 'phaseSample'  // PhaseMachine sample payload
+  | 'phaseMachine' // PhaseMachine instance payload
+  | 'wobble'       // Wobble modulator config
+  | 'spiral'       // Spiral modulator config
+  | 'wave'         // Wave modulator config
+  | 'jitter'       // Jitter modulator config
+  | 'program'      // Compiled program
+  | 'renderTree'   // Render tree output
+  | 'renderNode'   // Single render node
+  | 'filterDef'    // SVG filter definition
+  | 'strokeStyle'  // Stroke configuration
+  | 'elementCount' // Number of elements
+  | 'scene'        // Scene data
+  | 'sceneTargets' // Scene target points
+  | 'sceneStrokes' // Scene stroke paths
+  | 'event'        // Generic events
+  | 'string'       // String values (labels, etc.)
+  | 'bounds'       // Bounding box / bounds
+  | 'spec'         // Spec types (config that compiles to programs)
+  | 'canvasRender'  // Canvas 2D render commands
+  | 'cameraRef';   // Camera resource reference (for 3D rendering)
 
-  /** Time model (infinite or bounded) */
-  timeModel: TimeModel;
+/**
+ * All domains (core + internal).
+ */
+export type Domain = CoreDomain | InternalDomain;
+
+/**
+ * Category for type filtering.
+ */
+export type TypeCategory = 'core' | 'internal';
+
+/**
+ * Type descriptor for bus typing system.
+ * Separates user-facing core types from internal resource types.
+ */
+export interface TypeDesc {
+  /** World: signal=continuous time, field=per-element */
+  readonly world: TypeWorld;
+
+  /** Domain: what type of value */
+  readonly domain: Domain;
+
+  /** Category: core (user-facing) or internal (engine) */
+  readonly category: TypeCategory;
+
+  /** Whether this type can be used for buses */
+  readonly busEligible: boolean;
+
+  /** Optional semantic information for precise matching */
+  readonly semantics?: string;
+
+  /** Optional unit information (e.g., "seconds", "beats") */
+  readonly unit?: string;
 }
 
-// =============================================================================
-// Bus System
-// =============================================================================
+/**
+ * Bus combination modes for multiple publishers.
+ */
+export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer';
 
 /**
- * A Bus is a shared communication channel between blocks.
- * Multiple blocks can publish to a bus, and subscribers receive the combined value.
+ * Format a TypeDesc for display.
+ */
+// MOVED TO SEMANTIC KERNEL
+
+/**
+ * Get available combine modes for a given domain.
+ */
+// MOVED TO SEMANTIC KERNEL
+
+/**
+ * Bus interface - central typed signal distributors.
  */
 export interface Bus {
   /** Unique identifier for this bus */
@@ -123,360 +201,795 @@ export interface Bus {
 
   /** Sort key for deterministic publisher ordering */
   sortKey: number;
+
+  /** Origin: built-in (auto-created defaults) or user (user-created) */
+  readonly origin?: 'built-in' | 'user';
 }
 
 /**
- * How to combine multiple publishers on a bus.
+ * Adapter step for type conversions.
  */
-export type BusCombineMode =
-  | 'sum'      // Add all publisher values
-  | 'mult'     // Multiply all publisher values
-  | 'min'      // Take minimum
-  | 'max'      // Take maximum
-  | 'last';    // Last publisher wins (deterministic by sortKey)
+export interface AdapterStep {
+  /** Identifier for the adapter function */
+  readonly adapterId: string;
 
-// =============================================================================
-// Time Model
-// =============================================================================
-
-/**
- * Time model for a patch.
- */
-export type TimeModel =
-  | { kind: 'infinite' }  // No wrapping, infinite timeline
-  | { kind: 'loop'; durationMs: number };  // Loop after durationMs
-
-// =============================================================================
-// Block System
-// =============================================================================
-
-/**
- * A Block is a node in the signal flow graph.
- * Blocks have inputs (slots) and outputs (slots).
- */
-export interface Block {
-  /** Unique identifier */
-  readonly id: string;
-
-  /** Block type (determines behavior) */
-  readonly kind: string;
-
-  /** Human-readable name */
-  name: string;
-
-  /** Input slots */
-  readonly inputs: Map<string, Slot>;
-
-  /** Output slots */
-  readonly outputs: Map<string, Slot>;
-
-  /** Configuration parameters (block-specific) */
-  params: Map<string, ParamValue>;
-
-  /** Kernel capabilities this block requires */
-  readonly capabilities?: readonly KernelCapability[];
-
-  /** Position in editor UI */
-  position: { x: number; y: number };
-
-  /** Default source attachment (if any) */
-  defaultSourceAttachment?: DefaultSourceAttachment;
+  /** Parameters for the adapter */
+  readonly params: Record<string, unknown>;
 }
 
 /**
- * A Slot is an input or output on a block.
- * Slots have a type and may be connected to other slots via links.
+ * Adapter policy levels.
  */
-export interface Slot {
-  /** Unique identifier (within the block) */
-  readonly id: string;
+export type AdapterPolicy = 'AUTO' | 'SUGGEST' | 'EXPLICIT' | 'FORBIDDEN';
 
-  /** Human-readable name */
-  name: string;
+/**
+ * Adapter cost (lower is better).
+ */
+export type AdapterCost = number;
 
-  /** Direction: input or output */
+/**
+ * Lens definition for transforming bus values.
+ */
+export interface LensDefinition {
+  type: string;
+  label?: string;
+  params: Record<string, unknown>;
+}
+
+export type LensParamBinding =
+  | { kind: 'default'; defaultSourceId: string }
+  | { kind: 'wire'; from: PortRef; adapterChain?: AdapterStep[]; lensStack?: LensInstance[] }
+  | { kind: 'bus'; busId: string; adapterChain?: AdapterStep[]; lensStack?: LensInstance[] }
+  | { kind: 'literal'; value: unknown };
+
+export interface LensInstance {
+  lensId: string;
+  params: Record<string, LensParamBinding>;
+  enabled: boolean;
+  sortKey?: number;
+}
+
+/**
+ * Identifies a specific port on a specific block.
+ * Canonical port identity format across UI, compiler, and diagnostics.
+ */
+export interface PortRef {
+  readonly blockId: BlockId;
+  readonly slotId: string;
   readonly direction: 'input' | 'output';
-
-  /** Type descriptor for this slot */
-  readonly type: TypeDesc;
-
-  /** Whether this slot must be connected */
-  required: boolean;
-
-  /** Default value (for optional inputs) */
-  defaultValue?: unknown;
 }
 
 /**
- * A Link connects two slots (an output to an input).
+ * Publisher - connects an output to a bus.
  */
-export interface Link {
+export interface Publisher {
   /** Unique identifier */
   readonly id: string;
 
-  /** Source block ID */
-  readonly sourceBlockId: string;
+  /** Bus ID being published to */
+  readonly busId: string;
 
-  /** Source slot ID (within source block) */
-  readonly sourceSlotId: string;
+  /** Source output endpoint */
+  readonly from: PortRef;
 
-  /** Target block ID */
-  readonly targetBlockId: string;
+  /** Optional adapter chain */
+  readonly adapterChain?: AdapterStep[];
 
-  /** Target slot ID (within target block) */
-  readonly targetSlotId: string;
+  /** Optional lens stack applied before bus combine */
+  readonly lensStack?: LensInstance[];
+
+  /** Whether this publisher is active */
+  enabled: boolean;
+
+  /** Optional weight for weighted combine modes */
+  readonly weight?: number;
+
+  /** Sort key for deterministic ordering within bus */
+  sortKey: number;
 }
 
 /**
- * Parameter value types.
+ * Listener - connects a bus to an input.
  */
-export type ParamValue =
-  | number
-  | string
-  | boolean
-  | { kind: 'dropdown'; value: string }
-  | { kind: 'curve'; points: Array<{ x: number; y: number }> }
-  | { kind: 'json'; value: unknown };
+export interface Listener {
+  /** Unique identifier */
+  readonly id: string;
+
+  /** Bus ID being subscribed to */
+  readonly busId: string;
+
+  /** Target input endpoint */
+  readonly to: PortRef;
+
+  /** Optional adapter chain */
+  readonly adapterChain?: AdapterStep[];
+
+  /** Whether this listener is active */
+  enabled: boolean;
+
+  /** Optional lens stack - multiple lenses applied in sequence (replaces single lens) */
+  readonly lensStack?: LensInstance[];
+}
+
+/**
+ * Default Source state for implicit lens params.
+ */
+export interface DefaultSourceState {
+  id: string;
+  type: TypeDesc;
+  value: unknown;
+  uiHint?: UIControlHint;
+  rangeHint?: { min?: number; max?: number; step?: number; log?: boolean };
+}
+
+// =============================================================================
+// Slot Types (what can connect to what)
+// =============================================================================
+
+/**
+ * Slot types define what can connect to what in the patch bay.
+ * Start loose (strings), tighten to branded types in Phase 3.
+ */
+export type SlotType =
+  | 'Scene'
+  | 'SceneTargets'      // Sampled points from scene
+  | 'SceneStrokes'      // Path segments for line drawing
+  | 'Domain'            // Per-element identity (Phase 3)
+  | 'Scalar:float'      // Compile-time constant float
+  | 'Scalar:int'        // Compile-time constant integer
+  | 'Scalar:vec2'       // Compile-time constant vec2
+  | 'Field<Point>'      // Per-element positions
+  | 'Field<vec2>'       // Per-element positions (alias)
+  | 'Field<float>'      // Per-element scalars (radius, opacity)
+  | 'Field<int>'        // Per-element integer scalars
+  | 'Field<color>'      // Per-element colors
+  | 'Field<string>'     // Per-element strings (colors, easing names)
+  | 'Signal<Point>'     // Time-varying position
+  | 'Signal<float>'     // Time-varying scalar
+  | 'Signal<int>'       // Time-varying integer scalar
+  | 'Signal<Unit>'      // Time-varying progress [0,1]
+  | 'Signal<Time>'      // Time-varying time value (for local time)
+  | 'Signal<time>'      // Monotonic system time (TimeRoot output)
+  | 'Signal<phase>'     // Phase value 0..1 (TimeRoot output)
+  | 'Signal<color>'     // Time-varying color
+  | 'Signal<string>'    // Time-varying string (config enums, etc.)
+  | 'Field<path>'       // Per-element path expressions
+  | 'Signal<vec3>'      // 3D position/vector
+  | 'Scalar:string'     // Compile-time constant string
+  | 'Scalar:expression' // DSL expression (compile-time)
+  | 'Scalar:waveform'   // Waveform selector (compile-time)
+  | 'Special:cameraRef'  // Camera resource reference (3D)
+
+  | 'Signal<PhaseSample>' // Phase machine output
+  | 'Event<string>'     // Discrete text events (typewriter)
+  | 'Event<any>'        // Generic events
+  | 'Program'           // Compiled animation program
+  | 'Render'            // Final render output (user-facing unified type)
+  | 'RenderTree'        // Final render output (internal)
+  | 'CanvasRender'      // Canvas 2D render output
+  | 'RenderNode'        // Single render node
+  | 'RenderNode[]'      // Array of render nodes
+  | 'FilterDef'         // SVG filter definition
+  | 'StrokeStyle'       // Stroke styling configuration
+  | 'ElementCount';     // Number of elements (from scene)
+
+// =============================================================================
+// Slot World System (Default Source Support)
+// =============================================================================
+
+/**
+ * World classification for slots.
+ * Determines evaluation timing and hot-swap behavior.
+ *
+ * This extends TypeWorld with additional categories for the
+ * "Remove Parameters" refactor where all params become inputs.
+ *
+ * @see design-docs/10-Refactor-for-UI-prep/14-RemoveParams.md
+ */
+export type SlotWorld =
+  | 'signal'    // Time-indexed, continuous, per-frame evaluation
+  | 'field'     // Per-element, lazy, bulk evaluation
+  | 'scalar'    // Compile-time constant (for domain size, seed, etc.)
+  | 'config';   // Compile-time selection (enum/bool), stepwise changes only
+
+/**
+ * UI presentation tier for inputs.
+ * Controls visibility and layout in Inspector.
+ *
+ * - 'primary': Always visible on block face (main creative parameters)
+ * - 'secondary': Tucked under "More" / "Advanced" (refinement parameters)
+ */
+export type SlotTier =
+  | 'primary'    // Always visible on block face
+  | 'secondary'; // Tucked under "More" / "Advanced"
+
+/**
+ * UI control hint for rendering inline input controls.
+ * Determines widget type when slot is in Default Source mode.
+ *
+ * These hints are used by the Inspector to generate appropriate
+ * inline controls for editing default values.
+ */
+export type UIControlHint =
+  | { readonly kind: 'slider'; readonly min: number; readonly max: number; readonly step: number }
+  | { readonly kind: 'number'; readonly min?: number; readonly max?: number; readonly step?: number }
+  | { readonly kind: 'select'; readonly options: readonly { readonly value: string; readonly label: string }[] }
+  | { readonly kind: 'color' }
+  | { readonly kind: 'boolean' }
+  | { readonly kind: 'text' }
+  | { readonly kind: 'xy' }
+  | { readonly kind: 'vec3' };
+
+/**
+ * Default Source definition for an input slot.
+ * Represents the implicit constant value when nothing is connected.
+ *
+ * This is the core of the "Remove Parameters" refactor:
+ * - Former params become inputs with defaultSource metadata
+ * - UI generates controls from uiHint instead of ParamSchema
+ * - Compiler uses value when no wire/bus is connected
+ *
+ * @see design-docs/10-Refactor-for-UI-prep/14-RemoveParams.md
+ */
+export interface DefaultSource {
+  /** The constant value (typed per SlotType) */
+  readonly value: unknown;
+
+  /** UI control metadata for inline editing */
+  readonly uiHint?: UIControlHint;
+
+  /**
+   * World classification - determines:
+   * - Evaluation timing (compile vs runtime)
+   * - Hot-swap behavior (topology change vs parameter change)
+   *
+   * | World   | Trigger         | Hot-Swap Strategy                    |
+   * |---------|-----------------|--------------------------------------|
+   * | signal  | Parameter edit  | Smooth transition, no recompile      |
+   * | field   | Parameter edit  | Smooth transition, no recompile      |
+   * | scalar  | Parameter edit  | Recompile (domain size changed)      |
+   * | config  | Parameter edit  | Topology change (crossfade/freeze)   |
+   */
+  readonly world: SlotWorld;
+
+  /**
+   * Optional bus name to auto-connect when block is created.
+   * If specified, a bus listener will be added automatically.
+   * The value field is still used as fallback if the bus doesn't exist.
+   */
+  readonly defaultBus?: string;
+}
 
 // =============================================================================
 // Block Definitions
 // =============================================================================
 
 /**
- * A BlockDefinition describes a block type (what it does, what slots it has).
+ * Unique identifier for a block instance.
+ * Phase 1: Simple incrementing IDs. Phase 3+: UUIDs for stability.
  */
-export interface BlockDefinition {
-  /** Block type identifier */
-  readonly kind: string;
+export type BlockId = string;
 
-  /** Category for UI grouping */
-  readonly category: string;
+/**
+ * Block type identifies the block's behavior (used to look up factory in registry).
+ */
+export type BlockType = string; // e.g., 'RadialOrigin', 'PhaseMachine', 'ParticleRenderer'
 
-  /** Human-readable name */
-  readonly name: string;
+// =============================================================================
+// Block Form System (Primitives, Compounds, Macros)
+// =============================================================================
 
-  /** Description for documentation */
-  readonly description: string;
+/**
+ * Block form defines the fundamental nature of a block.
+ *
+ * - 'primitive': Irreducible atomic operations (implemented in TypeScript)
+ * - 'composite': Built from primitives, behaves as single block in UI
+ * - 'macro': Expands into visible blocks when added to patch
+ */
+export type BlockForm = 'primitive' | 'composite' | 'macro';
 
-  /** Kernel capabilities required */
-  readonly capabilities?: readonly KernelCapability[];
+/**
+ * Top-level block categories (form groupings).
+ */
+export const BLOCK_FORMS = ['Macros', 'Composites', 'Primitives'] as const;
+export type BlockFormCategory = (typeof BLOCK_FORMS)[number];
 
-  /** Input slot definitions */
-  readonly inputs: readonly SlotDefinition[];
+/**
+ * Subcategories within each form.
+ * These organize blocks by domain/function.
+ */
+export const ALL_SUBCATEGORIES = [
+  // Macro subcategories
+  'Quick Start',    // Simple, beginner-friendly starter macros
+  'Animation Styles',
+  'Effects',
+  'Slice Demos',    // Demonstrates individual slice capabilities
 
-  /** Output slot definitions */
-  readonly outputs: readonly SlotDefinition[];
+  // Compound/Primitive subcategories (shared)
+  'Sources',        // Data entry points (SVG, Text)
+  'Fields',         // Per-element values
+  'Timing',         // Delays, durations, staggers
+  'Spatial',        // Positions, transforms
+  'Style',          // Colors, sizes, opacity
+  'Behavior',       // Motion parameters (wobble, spiral)
+  'Math',           // Arithmetic operations
+  'Vector',         // Point/Vec2 operations
+  'Time',           // Clock, phase, easing
+  'TimeRoot',       // Time topology blocks (Phase 3: TimeRoot)
+  'Compose',        // Combining operations
+  'Render',         // Drawing primitives
+  'FX',             // Filters and effects
+  'Adapters',       // Type conversions
+  'Output',         // Final sinks
+  'Other',          // Fallback for blocks without subcategory
+] as const;
 
-  /** Parameter definitions */
-  readonly params: readonly ParamDefinition[];
+export type BlockSubcategory = (typeof ALL_SUBCATEGORIES)[number];
 
-  /** Compiler for this block type */
-  readonly compiler: BlockCompiler;
+/**
+ * Block category for library organization.
+ */
+export type BlockCategory = BlockSubcategory;
+
+/**
+ * A Slot is a typed connection point on a block.
+ *
+ * Extended for the "Remove Parameters" refactor to support Default Sources.
+ * Input slots can optionally carry default value and UI metadata.
+ *
+ * @see design-docs/10-Refactor-for-UI-prep/14-RemoveParams.md
+ */
+export interface Slot {
+  /** Unique identifier for this slot (unique within block) */
+  readonly id: string;
+
+  /** Human-readable label */
+  readonly label: string;
+
+  /** Type of value this slot accepts/produces */
+  readonly type: SlotType;
+
+  /** Input or output? */
+  readonly direction: 'input' | 'output';
+
+  // === NEW FIELDS (Phase 1: optional, Phase 3+: required for inputs) ===
+
+  /**
+   * Default Source for input slots.
+   * Provides the constant value when nothing is connected.
+   *
+   * Input resolution priority: Wire > Bus Listener > Default Source
+   *
+   * MUST be undefined for output slots.
+   * SHOULD be defined for input slots (required in future phases).
+   *
+   * @example
+   * ```ts
+   * defaultSource: {
+   *   value: 1.0,
+   *   world: 'signal',
+   *   uiHint: { kind: 'slider', min: 0, max: 10, step: 0.1 }
+   * }
+   * ```
+   */
+  readonly defaultSource?: DefaultSource;
+
+  /**
+   * UI presentation tier (primary vs secondary).
+   * Controls visibility in Inspector UI.
+   *
+   * - 'primary': Always visible on block face
+   * - 'secondary': Tucked under "More" / "Advanced"
+   *
+   * Only meaningful for input slots.
+   * Defaults to 'primary' if not specified.
+   */
+  readonly tier?: SlotTier;
 }
 
 /**
- * Definition of a slot (input or output).
+ * Block parameters (user-editable values).
+ * Phase 1: Any object. Phase 3+: Validated schemas.
  */
-export interface SlotDefinition {
-  /** Slot identifier (unique within block) */
+export type BlockParams = Record<string, unknown>;
+
+/**
+ * A Block is a functional unit in the patch bay.
+ * This is the data representation (serializable to JSON).
+ */
+export interface Block {
+  /** Unique ID for this block instance */
+  readonly id: BlockId;
+
+  /** Type of block (maps to behavior in registry) */
+  readonly type: BlockType;
+
+  /** Human-readable label (defaults to type, user can override) */
+  label: string;
+
+  /** Input slots */
+  readonly inputs: readonly Slot[];
+
+  /** Output slots */
+  readonly outputs: readonly Slot[];
+
+  /** User-editable parameters */
+  params: BlockParams;
+
+  /** Category for library organization */
+  readonly category: BlockCategory;
+
+  /** Optional description for inspector */
+  readonly description?: string;
+}
+
+// =============================================================================
+// Connections
+// =============================================================================
+
+/**
+ * A Connection links an output slot to an input slot.
+ * Supports optional lens transformations and adapter chains for type conversion.
+ */
+export interface Connection {
+  /** Unique ID for this connection */
   readonly id: string;
 
-  /** Human-readable name */
-  readonly name: string;
+  /** Source block + slot */
+  readonly from: PortRef;
 
-  /** Type descriptor */
-  readonly type: TypeDesc;
+  /** Destination block + slot */
+  readonly to: PortRef;
 
-  /** Whether this slot must be connected */
-  readonly required: boolean;
+  /** Optional lens stack for value transformation (applied after adapters) */
+  readonly lensStack?: LensInstance[];
 
-  /** Default value (for optional inputs) */
-  readonly defaultValue?: unknown;
+  /** Optional adapter chain for type conversion (applied before lenses) */
+  readonly adapterChain?: AdapterStep[];
+
+  /** Whether this connection is enabled (default: true) */
+  readonly enabled?: boolean;
 }
 
 /**
- * Definition of a parameter.
+ * Composite - a saved group of blocks and connections that can be instantiated.
+ * Similar to a "macro" or "subgraph" in other node editors.
  */
-export interface ParamDefinition {
-  /** Parameter identifier (unique within block) */
+export interface Composite {
+  /** Unique identifier */
   readonly id: string;
 
   /** Human-readable name */
-  readonly name: string;
+  name: string;
 
-  /** Parameter type */
-  readonly type: 'number' | 'string' | 'boolean' | 'dropdown' | 'curve' | 'json';
+  /** Blocks within this composite */
+  blocks: Block[];
 
-  /** Default value */
-  readonly defaultValue: ParamValue;
+  /** Internal connections between blocks */
+  connections: CompositeConnection[];
 
-  /** Options (for dropdown type) */
-  readonly options?: readonly string[];
+  /** Optional description */
+  description?: string;
 
-  /** Validation constraints */
-  readonly constraints?: {
-    min?: number;
-    max?: number;
-    step?: number;
-    pattern?: string;
+  /** Optional subcategory for organization */
+  subcategory?: string;
+
+  /** Exposed parameters - maps composite-level params to internal block params */
+  exposedParams?: ExposedParam[];
+}
+
+/**
+ * Connection within a composite.
+ */
+export interface CompositeConnection {
+  /** Connection identifier */
+  readonly id: string;
+
+  /** Source endpoint */
+  readonly from: {
+    readonly blockId: BlockId;
+    readonly slotId: string;
+    readonly direction: 'output';
+  };
+
+  /** Destination endpoint */
+  readonly to: {
+    readonly blockId: BlockId;
+    readonly slotId: string;
+    readonly direction: 'input';
   };
 }
 
+
+/**
+ * Exposed parameter mapping - maps a composite-level parameter to an internal block parameter.
+ * Used for parameter forwarding in user-created composites.
+ */
+export interface ExposedParam {
+  /** Composite-level parameter ID (unique within composite) */
+  readonly id: string;
+
+  /** Composite-level display name */
+  readonly label: string;
+
+  /** Internal block ID that owns this parameter */
+  readonly blockId: BlockId;
+
+  /** Internal parameter key on the block */
+  readonly paramKey: string;
+}
 // =============================================================================
-// Execution Context
+// Patch (Complete Editor State)
 // =============================================================================
 
 /**
- * Context passed to signal functions during execution.
+ * A Patch is the complete editor state (serializable to JSON).
+ * This is what gets saved/loaded.
  */
-export interface ExecutionContext {
-  /** Current time in milliseconds */
-  readonly t: number;
+export interface Patch {
+  /** Format version for serialization */
+  readonly version: number;
 
-  /** Time model (for phase calculation) */
-  readonly timeModel: TimeModel;
+  /** All blocks in the patch */
+  blocks: Block[];
 
-  /** Element index (for field evaluation) */
-  readonly elementIndex?: number;
+  /** All connections between blocks */
+  connections: Connection[];
 
-  /** Total element count (for field evaluation) */
-  readonly elementCount?: number;
+  /** Bus definitions */
+  buses: Bus[];
+
+  /** Bus routing - publishers from blocks to buses */
+  publishers: Publisher[];
+
+  /** Bus routing - listeners from buses to blocks */
+  listeners: Listener[];
+
+  /** Default sources for lens params and other implicit bindings */
+  defaultSources: DefaultSourceState[];
+
+  /** Default source provider attachments (hidden blocks for undriven inputs) */
+  defaultSourceAttachments?: DefaultSourceAttachment[];
+
+  /** Global settings (seed, speed, etc.) */
+  settings: {
+    seed: number;
+    speed: number;
+    autoConnect?: boolean;
+    showTypeHints?: boolean;
+    highlightCompatible?: boolean;
+    warnBeforeDisconnect?: boolean;
+    filterByConnection?: boolean;
+  };
+
+  /** Composite definitions for this patch */
+  composites?: import('./composites').CompositeDefinition[];
 }
 
 // =============================================================================
-// Kernel Registry
+// Editor UI State (Non-Serializable)
 // =============================================================================
 
 /**
- * Primitive blocks with special kernel powers.
- * Only these blocks may claim non-pure capabilities.
+ * Editor UI state (selection, drag, etc.).
+ * Not part of Patch (UI-only state).
  */
-export const KERNEL_PRIMITIVES = new Set([
-  'TimeRoot',
-  'Identity',
-  'StateBlock',
-  'RenderSink',
-  'IOBlock',
-]);
-
-// =============================================================================
-// Validation
-// =============================================================================
-
 /**
- * Validation error.
+ * Context menu state for right-click actions.
  */
-export interface ValidationError {
-  /** Error severity */
-  severity: 'error' | 'warning';
-
-  /** Error message */
-  message: string;
-
-  /** Block ID (if error is block-specific) */
-  blockId?: string;
-
-  /** Slot ID (if error is slot-specific) */
-  slotId?: string;
+export interface ContextMenuState {
+  /** Is the context menu open? */
+  isOpen: boolean;
+  /** Screen position */
+  x: number;
+  y: number;
+  /** The port this context menu is for */
+  portRef: PortRef | null;
 }
 
-/**
- * Validation result.
- */
-export interface ValidationResult {
-  /** Whether validation passed */
-  valid: boolean;
+export interface EditorUIState {
+  /** Currently selected block (for inspector) */
+  selectedBlockId: BlockId | null;
 
-  /** Errors and warnings */
-  errors: ValidationError[];
+  /** Currently dragging block type (from library) */
+  draggingBlockType: BlockType | null;
+
+  /** Currently hovered port (for compatible highlighting) */
+  hoveredPort: PortRef | null;
+
+  /** Currently selected port (for wiring via inspector) */
+  selectedPort: PortRef | null;
+
+  /** Context menu state */
+  contextMenu: ContextMenuState;
+
+  /** Playback state */
+  isPlaying: boolean;
 }
 
 // =============================================================================
-// Editor State
+// Template Definitions
 // =============================================================================
 
 /**
- * Editor selection state.
+ * A Template is a pre-wired patch (archetype).
  */
-export interface SelectionState {
-  /** Selected block IDs */
-  selectedBlocks: Set<string>;
+export interface Template {
+  readonly name: string;
+  readonly description: string;
+  readonly archetype: 'Particles' | 'LineDrawing' | 'Typewriter';
 
-  /** Selected link IDs */
-  selectedLinks: Set<string>;
-}
-
-/**
- * Editor viewport state.
- */
-export interface ViewportState {
-  /** Pan offset */
-  offset: { x: number; y: number };
-
-  /** Zoom level (1.0 = 100%) */
-  zoom: number;
+  /** Generate a patch for this template */
+  createPatch: () => Patch;
 }
 
 // =============================================================================
-// Type Guards
+// Bus Type Utilities
 // =============================================================================
 
 /**
- * Check if a domain is a core domain (user-facing).
+ * Adapter path information for type conversions.
  */
-export function isCoreDomain(domain: Domain): domain is CoreDomain {
-  const coreDomains: readonly CoreDomain[] = [
-    'float',
-    'int',
-    'vec2',
-    'vec3',
-    'color',
-    'boolean',
-    'time',
-    'rate',
-    'trigger',
-  ];
-  return coreDomains.includes(domain as CoreDomain);
+export interface AdapterPath {
+  /** Source type */
+  readonly from: TypeDesc;
+  /** Target type */
+  readonly to: TypeDesc;
+  /** Required adapter steps */
+  readonly adapters: AdapterStep[];
+  /** Whether this is a "heavy" conversion (e.g., reduce) */
+  readonly isHeavy?: boolean;
 }
 
 /**
- * Check if two type descriptors are compatible for assignment.
+ * Mapping from SlotType to TypeDesc with proper categorization.
  */
-export function areTypesCompatible(source: TypeDesc, target: TypeDesc): boolean {
-  // Exact match
-  if (source.world === target.world && source.domain === target.domain) {
-    return true;
+export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc> = {
+  // Core types (bus-eligible)
+  'Scalar:float': { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'scalar' },
+  'Scalar:int': { world: 'signal', domain: 'int', category: 'core', busEligible: true, semantics: 'scalar' },
+  'Scalar:vec2': { world: 'signal', domain: 'vec2', category: 'core', busEligible: true, semantics: 'scalar' },
+  'Field<float>': { world: 'field', domain: 'float', category: 'core', busEligible: true },
+  'Field<int>': { world: 'field', domain: 'int', category: 'core', busEligible: true },
+  'Field<vec2>': { world: 'field', domain: 'vec2', category: 'core', busEligible: true, semantics: 'position' },
+  'Field<color>': { world: 'field', domain: 'color', category: 'core', busEligible: true },
+  'Field<path>': { world: 'field', domain: 'path', category: 'internal', busEligible: false },
+
+  'Field<string>': { world: 'field', domain: 'color', category: 'core', busEligible: true, semantics: 'hex-color' },
+  'Signal<float>': { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+  'Signal<int>': { world: 'signal', domain: 'int', category: 'core', busEligible: true },
+  'Signal<Point>': { world: 'signal', domain: 'vec2', category: 'core', busEligible: true, semantics: 'point' },
+  'Signal<Unit>': { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'unit(0..1)' },
+  'Signal<Time>': { world: 'signal', domain: 'time', category: 'core', busEligible: true, unit: 'seconds' },
+  'Signal<time>': { world: 'signal', domain: 'time', category: 'core', busEligible: true, unit: 'ms', semantics: 'system-time' },
+  'Signal<phase>': { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+  'Signal<color>': { world: 'signal', domain: 'color', category: 'core', busEligible: true },
+  'Signal<string>': { world: 'signal', domain: 'string', category: 'core', busEligible: false, semantics: 'config-enum' },
+  'Signal<vec3>': { world: 'signal', domain: 'vec3', category: 'core', busEligible: true, semantics: 'position3d' },
+  'Scalar:string': { world: 'scalar', domain: 'string', category: 'core', busEligible: false, semantics: 'config-enum' },
+  'Scalar:expression': { world: 'scalar', domain: 'expression', category: 'internal', busEligible: false, semantics: 'dsl-expression' },
+  'Scalar:waveform': { world: 'scalar', domain: 'waveform', category: 'internal', busEligible: false, semantics: 'waveform' },
+  'Signal<PhaseSample>': { world: 'signal', domain: 'phaseSample', category: 'internal', busEligible: false, semantics: 'sample' },
+  'Event<string>': { world: 'signal', domain: 'trigger', category: 'core', busEligible: true, semantics: 'string' },
+  'Event<any>': { world: 'signal', domain: 'trigger', category: 'core', busEligible: true },
+  'ElementCount': { world: 'signal', domain: 'int', category: 'core', busEligible: true, semantics: 'count' },
+
+  // Special types (Phase 3)
+  'Domain': { world: 'field', domain: 'elementCount', category: 'internal', busEligible: false, semantics: 'domain' },
+
+  // Internal types (not bus-eligible - structural/container types)
+  'Field<Point>': { world: 'field', domain: 'point', category: 'internal', busEligible: false, semantics: 'position' },
+  'Program': { world: 'signal', domain: 'program', category: 'internal', busEligible: false },
+  'Render': { world: 'field', domain: 'renderTree', category: 'internal', busEligible: false },
+  'RenderTree': { world: 'field', domain: 'renderTree', category: 'internal', busEligible: false },
+  'RenderNode': { world: 'field', domain: 'renderNode', category: 'internal', busEligible: false },
+  'RenderNode[]': { world: 'field', domain: 'renderNode', category: 'internal', busEligible: false, semantics: 'array' },
+  'FilterDef': { world: 'field', domain: 'filterDef', category: 'internal', busEligible: false },
+  'StrokeStyle': { world: 'field', domain: 'strokeStyle', category: 'internal', busEligible: false },
+  'Scene': { world: 'field', domain: 'scene', category: 'internal', busEligible: false },
+  'SceneTargets': { world: 'field', domain: 'sceneTargets', category: 'internal', busEligible: false },
+  'SceneStrokes': { world: 'field', domain: 'sceneStrokes', category: 'internal', busEligible: false },
+  'Special:cameraRef': { world: 'field', domain: 'cameraRef', category: 'internal', busEligible: false, semantics: 'resource-ref' },
+  'CanvasRender': { world: 'field', domain: 'canvasRender', category: 'internal', busEligible: false },
+};
+
+/**
+ * Default values for core domains (JSON-serializable).
+ */
+export const CORE_DOMAIN_DEFAULTS: Record<CoreDomain, unknown> = {
+  float: 0,
+  int: 0,
+  vec2: { x: 0, y: 0 },
+  vec3: { x: 0, y: 0, z: 0 },
+  color: '#000000',
+  boolean: false,
+  time: 0.0, // Always seconds!
+  rate: 1.0,
+  trigger: false, // Pulse state
+};
+
+/**
+ * Check if two types are directly compatible (no adapters needed).
+ */
+export function isDirectlyCompatible(a: TypeDesc, b: TypeDesc): boolean {
+  return a.world === b.world && a.domain === b.domain;
+}
+
+/**
+ * Check if a type is eligible for bus routing.
+ */
+export function isBusEligible(typeDesc: TypeDesc): boolean {
+  return typeDesc.busEligible && typeDesc.category === 'core';
+}
+
+/**
+ * Get adapter paths for type conversion.
+ * For now, returns empty if directly compatible.
+ * Phase 2 will populate with actual adapter logic.
+ */
+export function getConvertiblePaths(from: TypeDesc, to: TypeDesc): AdapterPath[] {
+  if (isDirectlyCompatible(from, to)) {
+    return [{
+      from,
+      to,
+      adapters: [],
+      isHeavy: false
+    }];
   }
 
-  // Auto-promotion rules
-  // Signal can be broadcast to Field (via broadcastSig)
-  if (source.world === 'signal' && target.world === 'field' && source.domain === target.domain) {
-    return true;
-  }
-
-  // Scalar can be lifted to Signal (via const)
-  if (source.world === 'scalar' && target.world === 'signal' && source.domain === target.domain) {
-    return true;
-  }
-
-  // No other auto-conversions
-  return false;
+  // Phase 2: Implement adapter registry lookup
+  // For now, return empty to indicate no conversion path
+  return [];
 }
 
 /**
- * Check if a type is bus-eligible (can be published/subscribed).
+ * Validate a default value against a TypeDesc.
  */
-export function isBusEligible(type: TypeDesc): boolean {
-  return type.busEligible;
+export function validateDefaultValue(typeDesc: TypeDesc, value: unknown): boolean {
+  if (!isBusEligible(typeDesc)) {
+    return false; // Internal types shouldn't have user-visible defaults
+  }
+
+  const domainDefault = CORE_DOMAIN_DEFAULTS[typeDesc.domain as CoreDomain];
+  if (domainDefault === undefined) {
+    return false;
+  }
+
+  // Basic type checking - could be enhanced
+  switch (typeDesc.domain) {
+    case 'float':
+      return typeof value === 'number';
+    case 'int':
+      return typeof value === 'number' && Number.isInteger(value);
+    case 'time':
+    case 'rate':
+      return typeof value === 'number';
+    case 'boolean':
+    case 'trigger':
+      return typeof value === 'boolean';
+    case 'vec2':
+      return typeof value === 'object' && value !== null && 'x' in value && 'y' in value;
+    case 'color':
+      return typeof value === 'string';
+    default:
+      return false;
+  }
 }
 
 /**
- * Get the runtime arity (number of scalar lanes) for a type.
+ * Normalize time units to seconds.
+ * Phase 2: Handle more complex unit conversions.
  */
-export function getRuntimeArity(type: TypeDesc): number {
-  if (type.lanes) {
-    return type.lanes.reduce((sum, count) => sum + count, 0);
+export function normalizeTimeUnit(value: number, fromUnit: 'ms' | 'seconds' | 'beats'): number {
+  switch (fromUnit) {
+    case 'ms':
+      return value / 1000;
+    case 'seconds':
+      return value;
+    case 'beats':
+      // Assuming 120 BPM by default
+      return value * 0.5;
+    default:
+      return value;
   }
-  // Default to 1 for scalar types
-  return 1;
 }

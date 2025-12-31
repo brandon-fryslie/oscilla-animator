@@ -2,6 +2,7 @@
  * Tests for Pass 8: Link Resolution
  */
 
+import { asTypeDesc } from "../../ir/types";
 import { describe, it, expect } from "vitest";
 import { pass8LinkResolution } from "../pass8-link-resolution";
 import { IRBuilderImpl } from "../../ir/IRBuilderImpl";

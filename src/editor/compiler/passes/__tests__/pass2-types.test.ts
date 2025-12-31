@@ -17,7 +17,7 @@ import type {
   Slot,
 } from "../../../types";
 import type { NormalizedPatch, BlockIndex } from "../../ir";
-import type { TypeDesc } from "../../ir/types";
+import type { TypeDesc } from "../../ir/types"; import { asTypeDesc } from "../../ir/types";
 
 // Helper to create a minimal normalized patch
 function createNormalizedPatch(
@@ -232,10 +232,10 @@ describe("pass2TypeGraph", () => {
     it("accepts signal buses (always eligible)", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("bus1", "testBus", {
-            world: "signal",
-            domain: "float",
-          }),
+          createBus("bus1", "testBus", asTypeDesc({
+    world: "signal",
+    domain: "float",
+  })),
         ],
       });
 
@@ -250,10 +250,10 @@ describe("pass2TypeGraph", () => {
     it("accepts event buses (always eligible)", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("bus1", "pulseBus", {
-            world: "event",
-            domain: "trigger",
-          }),
+          createBus("bus1", "pulseBus", asTypeDesc({
+    world: "event",
+    domain: "trigger",
+  })),
         ],
       });
 
@@ -264,18 +264,18 @@ describe("pass2TypeGraph", () => {
     it("accepts field buses with scalar domains (float, boolean, color)", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("bus1", "fieldNumber", {
-            world: "field",
-            domain: "float",
-          }),
-          createBus("bus2", "fieldBoolean", {
-            world: "field",
-            domain: "boolean",
-          }),
-          createBus("bus3", "fieldColor", {
-            world: "field",
-            domain: "color",
-          }),
+          createBus("bus1", "fieldNumber", asTypeDesc({
+    world: "field",
+    domain: "float",
+  })),
+          createBus("bus2", "fieldBoolean", asTypeDesc({
+    world: "field",
+    domain: "boolean",
+  })),
+          createBus("bus3", "fieldColor", asTypeDesc({
+    world: "field",
+    domain: "color",
+  })),
         ],
       });
 
@@ -286,10 +286,10 @@ describe("pass2TypeGraph", () => {
     it("rejects field buses with non-scalar domains (vec2, vec3)", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("bus1", "fieldVec2", {
-            world: "field",
-            domain: "vec2",
-          }),
+          createBus("bus1", "fieldVec2", asTypeDesc({
+    world: "field",
+    domain: "vec2",
+  })),
         ],
       });
 
@@ -300,10 +300,10 @@ describe("pass2TypeGraph", () => {
     it("rejects scalar buses (compile-time only)", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("bus1", "scalarBus", {
-            world: "scalar",
-            domain: "float",
-          }),
+          createBus("bus1", "scalarBus", asTypeDesc({
+    world: "scalar",
+    domain: "float",
+  })),
         ],
       });
 
@@ -313,10 +313,10 @@ describe("pass2TypeGraph", () => {
     it("rejects special buses (not bus-eligible)", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("bus1", "specialBus", {
-            world: "special",
-            domain: "renderTree",
-          }),
+          createBus("bus1", "specialBus", asTypeDesc({
+    world: "special",
+    domain: "renderTree",
+  })),
         ],
       });
 
@@ -326,10 +326,10 @@ describe("pass2TypeGraph", () => {
     it("includes bus name in BusIneligibleType error", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("bus-123", "myInvalidBus", {
-            world: "scalar",
-            domain: "float",
-          }),
+          createBus("bus-123", "myInvalidBus", asTypeDesc({
+    world: "scalar",
+    domain: "float",
+  })),
         ],
       });
 
@@ -342,10 +342,10 @@ describe("pass2TypeGraph", () => {
     it("accepts phaseA bus with Signal<phase> type", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("phaseA", "phaseA", {
-            world: "signal",
-            domain: "float",
-          }),
+          createBus("phaseA", "phaseA", asTypeDesc({
+    world: "signal",
+    domain: "float",
+  })),
         ],
       });
 
@@ -356,10 +356,10 @@ describe("pass2TypeGraph", () => {
     it("rejects phaseA bus with wrong type", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("phaseA", "phaseA", {
-            world: "signal",
-            domain: "color",
-          }),
+          createBus("phaseA", "phaseA", asTypeDesc({
+    world: "signal",
+    domain: "color",
+  })),
         ],
       });
 
@@ -373,10 +373,10 @@ describe("pass2TypeGraph", () => {
     it("accepts pulse bus with Event<trigger> type", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("pulse", "pulse", {
-            world: "event",
-            domain: "trigger",
-          }),
+          createBus("pulse", "pulse", asTypeDesc({
+    world: "event",
+    domain: "trigger",
+  })),
         ],
       });
 
@@ -387,10 +387,10 @@ describe("pass2TypeGraph", () => {
     it("rejects pulse bus with wrong type", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("pulse", "pulse", {
-            world: "signal",
-            domain: "float",
-          }),
+          createBus("pulse", "pulse", asTypeDesc({
+    world: "signal",
+    domain: "float",
+  })),
         ],
       });
 
@@ -403,10 +403,10 @@ describe("pass2TypeGraph", () => {
     it("accepts energy bus with Signal<float> type", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("energy", "energy", {
-            world: "signal",
-            domain: "float",
-          }),
+          createBus("energy", "energy", asTypeDesc({
+    world: "signal",
+    domain: "float",
+  })),
         ],
       });
 
@@ -417,10 +417,10 @@ describe("pass2TypeGraph", () => {
     it("accepts palette bus with Signal<color> type", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("palette", "palette", {
-            world: "signal",
-            domain: "color",
-          }),
+          createBus("palette", "palette", asTypeDesc({
+    world: "signal",
+    domain: "color",
+  })),
         ],
       });
 
@@ -496,49 +496,49 @@ describe("pass2TypeGraph", () => {
   describe("isBusEligible helper", () => {
     it("returns true for signal types", () => {
       expect(
-        isBusEligible({ world: "signal", domain: "float" })
+        isBusEligible(asTypeDesc({ world: "signal", domain: "float" }))
       ).toBe(true);
       expect(
-        isBusEligible({ world: "signal", domain: "color" })
+        isBusEligible(asTypeDesc({ world: "signal", domain: "color" }))
       ).toBe(true);
     });
 
     it("returns true for event types", () => {
       expect(
-        isBusEligible({ world: "event", domain: "trigger" })
+        isBusEligible(asTypeDesc({ world: "event", domain: "trigger" }))
       ).toBe(true);
     });
 
     it("returns true for field types with scalar domains", () => {
       expect(
-        isBusEligible({ world: "field", domain: "float" })
+        isBusEligible(asTypeDesc({ world: "field", domain: "float" }))
       ).toBe(true);
       expect(
-        isBusEligible({ world: "field", domain: "boolean" })
+        isBusEligible(asTypeDesc({ world: "field", domain: "boolean" }))
       ).toBe(true);
       expect(
-        isBusEligible({ world: "field", domain: "color" })
+        isBusEligible(asTypeDesc({ world: "field", domain: "color" }))
       ).toBe(true);
     });
 
     it("returns false for field types with non-scalar domains", () => {
       expect(
-        isBusEligible({ world: "field", domain: "vec2" })
+        isBusEligible(asTypeDesc({ world: "field", domain: "vec2" }))
       ).toBe(false);
       expect(
-        isBusEligible({ world: "field", domain: "vec3" })
+        isBusEligible(asTypeDesc({ world: "field", domain: "vec3" }))
       ).toBe(false);
     });
 
     it("returns false for scalar types", () => {
       expect(
-        isBusEligible({ world: "scalar", domain: "float" })
+        isBusEligible(asTypeDesc({ world: "scalar", domain: "float" }))
       ).toBe(false);
     });
 
     it("returns false for special types", () => {
       expect(
-        isBusEligible({ world: "special", domain: "renderTree" })
+        isBusEligible(asTypeDesc({ world: "special", domain: "renderTree" }))
       ).toBe(false);
     });
   });

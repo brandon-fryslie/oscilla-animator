@@ -11,6 +11,7 @@
  * - Empty domain handling
  */
 
+import { asTypeDesc } from "../../../compiler/ir/types";
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   executeInstances3DProject,

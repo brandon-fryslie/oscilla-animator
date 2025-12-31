@@ -19,6 +19,7 @@
  */
 
 import type { SignalExprIR } from "../../compiler/ir/signalExpr";
+import { asTypeDesc } from "../../compiler/ir/types";
 import type { SigExprId, TypeDesc } from "../../compiler/ir/types";
 import type { PureFnRef } from "../../compiler/ir/transforms";
 import type { OpCode } from "../../compiler/ir/opcodes";
@@ -139,10 +140,10 @@ class SignalExprBuilderImpl implements SignalExprBuilder {
   private constMap = new Map<number, number>(); // value -> constId (dedup)
 
   // Standard number type for signals
-  private readonly numberType: TypeDesc = {
+  private readonly numberType: TypeDesc = asTypeDesc({
     world: "signal",
     domain: "float",
-  };
+  });
 
   sigConst(value: number): SigExprId {
     // Deduplicate constants
@@ -170,10 +171,10 @@ class SignalExprBuilderImpl implements SignalExprBuilder {
     const id = this.nodes.length;
     this.nodes.push({
       kind: "timeAbsMs",
-      type: {
+      type: asTypeDesc({
         world: "signal",
         domain: "timeMs",
-      },
+      }),
     });
     return id;
   }

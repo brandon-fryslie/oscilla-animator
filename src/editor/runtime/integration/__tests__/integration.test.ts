@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import type { TypeDesc as CompilerTypeDesc } from "../../../compiler/ir/types";
+import type { TypeDesc as CompilerTypeDesc , asTypeDesc} from "../../../compiler/ir/types";
 import {
   compilerToRuntimeType,
   canBroadcastToField,
