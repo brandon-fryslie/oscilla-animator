@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { resolveTime } from "../timeResolution";
+import { resolveTime, createTimeState } from "../timeResolution";
 import type { TimeModelIR } from "../../../compiler/ir";
 
 describe("resolveTime", () => {
@@ -143,6 +143,108 @@ describe("resolveTime", () => {
       };
       const time = resolveTime(100, zeroModel);
       expect(time.phase01).toBe(0); // Avoid divide by zero
+    });
+  });
+
+  // =========================================================================
+  // P2: Scrub Mode Detection
+  // =========================================================================
+
+  describe("scrub mode detection", () => {
+    const cyclicModel: TimeModelIR = {
+      kind: "cyclic",
+      periodMs: 1000,
+      mode: "loop",
+      phaseDomain: "0..1",
+    };
+
+    it("detects scrub when mode === 'scrub'", () => {
+      const timeState = createTimeState();
+      const time = resolveTime(500, cyclicModel, timeState, 'scrub');
+      expect(time.isScrub).toBe(true);
+    });
+
+    it("detects scrub when deltaMs < 0 (backward scrub)", () => {
+      const timeState = createTimeState();
+
+      // First frame: 1500ms
+      resolveTime(1500, cyclicModel, timeState, 'playback');
+
+      // Second frame: 500ms (backward scrub across wrap boundary)
+      const time = resolveTime(500, cyclicModel, timeState, 'playback');
+      expect(time.isScrub).toBe(true);
+    });
+
+    it("detects scrub when |deltaMs| > 1000 (large jump)", () => {
+      const timeState = createTimeState();
+
+      // First frame: 0ms
+      resolveTime(0, cyclicModel, timeState, 'playback');
+
+      // Second frame: 2000ms (large forward jump)
+      const time = resolveTime(2000, cyclicModel, timeState, 'playback');
+      expect(time.isScrub).toBe(true);
+    });
+
+    it("does NOT detect scrub for normal playback", () => {
+      const timeState = createTimeState();
+
+      // First frame: 0ms
+      resolveTime(0, cyclicModel, timeState, 'playback');
+
+      // Second frame: 16.67ms (60fps)
+      const time = resolveTime(16.67, cyclicModel, timeState, 'playback');
+      expect(time.isScrub).toBe(false);
+    });
+
+    it("suppresses wrapEvent during backward scrub", () => {
+      const timeState = createTimeState();
+
+      // First frame: 1500ms (tModelMs = 500ms)
+      const time1 = resolveTime(1500, cyclicModel, timeState, 'playback');
+      expect(time1.wrapEvent).toBe(0.0); // No wrap yet
+
+      // Second frame: 500ms (backward scrub, crosses wrap boundary)
+      // tModelMs goes from 500ms -> 500ms (no actual wrap in tModelMs)
+      const time2 = resolveTime(500, cyclicModel, timeState, 'playback');
+      expect(time2.isScrub).toBe(true);
+      expect(time2.wrapEvent).toBe(0.0); // Suppressed due to scrub
+    });
+
+    it("suppresses wrapEvent during large forward jump", () => {
+      const timeState = createTimeState();
+
+      // First frame: 0ms
+      resolveTime(0, cyclicModel, timeState, 'playback');
+
+      // Second frame: 2500ms (large jump, crosses multiple wraps)
+      const time = resolveTime(2500, cyclicModel, timeState, 'playback');
+      expect(time.isScrub).toBe(true);
+      expect(time.wrapEvent).toBe(0.0); // Suppressed due to scrub
+    });
+
+    it("fires wrapEvent during normal playback wrap", () => {
+      const timeState = createTimeState();
+
+      // First frame: 950ms
+      const time1 = resolveTime(950, cyclicModel, timeState, 'playback');
+      expect(time1.wrapEvent).toBe(0.0); // No wrap yet
+
+      // Second frame: 1010ms (normal playback, crosses wrap)
+      const time2 = resolveTime(1010, cyclicModel, timeState, 'playback');
+      expect(time2.isScrub).toBe(false);
+      expect(time2.wrapEvent).toBe(1.0); // Wrap event fires
+    });
+
+    it("defaults to playback mode when mode not specified", () => {
+      const timeState = createTimeState();
+
+      // First frame: 0ms
+      resolveTime(0, cyclicModel, timeState);
+
+      // Second frame: 16.67ms (no mode specified)
+      const time = resolveTime(16.67, cyclicModel, timeState);
+      expect(time.isScrub).toBe(false);
     });
   });
 });
