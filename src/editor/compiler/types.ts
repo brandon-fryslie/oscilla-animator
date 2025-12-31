@@ -494,12 +494,15 @@ export type CompileErrorCode =
   | 'PureBlockViolation'
   // Type system red flag fixes
   | 'UnsupportedAdapterInIRMode'
-  | 'UnsupportedLensInIRMode';
+  | 'UnsupportedLensInIRMode'
+  // P1: Pass 8 hardening (type-contracts-ir-plumbing)
+  | 'MissingOutputRegistration'
+  | 'BusWithoutPublisher';
 
 export interface CompileError {
   code: CompileErrorCode;
   message: string;
-  where?: { blockId?: string; port?: string; connection?: CompilerConnection; busId?: string };
+  where?: { blockId?: string; port?: string; connection?: CompilerConnection; busId?: string; blockType?: string; outputType?: any };
 }
 
 // Import LinkedGraphIR for dual-emit support (Sprint 2, P0-4)
