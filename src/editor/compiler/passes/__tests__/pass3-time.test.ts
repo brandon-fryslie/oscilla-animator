@@ -58,6 +58,7 @@ import type { TypeDesc } from "../../ir/types";
 import { asTypeDesc } from "../../ir/types";
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 import type { TypeDesc } from } from "../../ir/types";;
 import { asTypeDesc } from
 <<<<<<< HEAD
@@ -96,8 +97,23 @@ import type { TypeDesc , asTypeDesc} from "../../ir/types";
 import type { TypeDesc , asTypeDesc} from "../../ir/types";
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> f5d7ece (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+=======
+import type { TypeDesc , asTypeDesc} from "../../ir/types";
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+import type { TypeDesc } from } from "../../ir/types";;
+import { asTypeDesc } from
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6bf4024 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> f986fdc (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
 // Helper to create a minimal typed patch
 function createTypedPatch(

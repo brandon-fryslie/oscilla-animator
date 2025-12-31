@@ -42,6 +42,7 @@ import type { TypeDesc } from "../../ir/types"; import { asTypeDesc } from "../.
 import type { TypeDesc } from } from "../../ir/types";;
 import { asTypeDesc } from
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -75,7 +76,16 @@ import type { TypeDesc } from "../../ir/types"; import { asTypeDesc } from "../.
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> ab90c94 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> f986fdc (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
 // Helper to create a minimal normalized patch
 function createNormalizedPatch(
@@ -655,6 +665,7 @@ describe("pass2TypeGraph", () => {
       expect(
         isBusEligible({ world: "signal", domain: "color", category: "core", busEligible: true })
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -686,7 +697,16 @@ describe("pass2TypeGraph", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> ab90c94 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> f986fdc (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(true);
     });
 
@@ -746,9 +766,19 @@ describe("pass2TypeGraph", () => {
         isBusEligible(asTypeDesc({ world: "event", domain: "trigger" }))
 =======
         isBusEligible({ world: "event", domain: "trigger", category: "core", busEligible: true })
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> ab90c94 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> f986fdc (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(true);
     });
 
@@ -817,6 +847,7 @@ describe("pass2TypeGraph", () => {
       expect(
         isBusEligible({ world: "field", domain: "color", category: "core", busEligible: true })
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -851,7 +882,16 @@ describe("pass2TypeGraph", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> ab90c94 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> f986fdc (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(true);
     });
 
@@ -914,6 +954,7 @@ describe("pass2TypeGraph", () => {
       expect(
         isBusEligible({ world: "field", domain: "vec3", category: "core", busEligible: true })
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -945,7 +986,16 @@ describe("pass2TypeGraph", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> ab90c94 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> f986fdc (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(false);
     });
 
@@ -1005,9 +1055,19 @@ describe("pass2TypeGraph", () => {
         isBusEligible(asTypeDesc({ world: "scalar", domain: "float" }))
 =======
         isBusEligible({ world: "scalar", domain: "float", category: "core", busEligible: true })
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> ab90c94 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> f986fdc (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(false);
     });
 
@@ -1077,6 +1137,7 @@ describe("pass2TypeGraph", () => {
         isBusEligible(asTypeDesc({ world: "config", domain: "renderTree" }))
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
         isBusEligible({ world: "special", domain: "renderTree", category: "internal", busEligible: false })
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 <<<<<<< HEAD
@@ -1089,8 +1150,22 @@ describe("pass2TypeGraph", () => {
         isBusEligible(asTypeDesc({ world: "special", domain: "renderTree" }))
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> f5d7ece (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> cbecc82 (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 >>>>>>> 94bb084 (fix(types): Complete TypeDesc contract migration for production code)
+=======
+=======
+=======
+        isBusEligible(asTypeDesc({ world: "special", domain: "renderTree" }))
+>>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+        isBusEligible({ world: "special", domain: "renderTree", category: "internal", busEligible: false })
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6bf4024 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> f986fdc (feat(types): Migrate 90% of TypeDesc literals to new contract)
       ).toBe(false);
     });
   });

@@ -22,6 +22,7 @@ import { asTypeDesc } from "../../../ir/types";
 import type { TypeDesc } from } from "../../../ir/types";;
 import { asTypeDesc } from
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 import type { TypeDesc } from } from "../../../ir/types";;
@@ -30,6 +31,12 @@ import { asTypeDesc } from
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
 // Helper to create a TypeDesc
 function makeType(world: TypeDesc["world"], domain: string): TypeDesc {

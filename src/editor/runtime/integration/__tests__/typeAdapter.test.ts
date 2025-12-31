@@ -29,12 +29,19 @@ import type { TypeDesc } from as RuntimeTypeDesc } from "../../field/types";;
 import { asTypeDesc } from
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
 import {
   compilerToRuntimeType,
   runtimeToCompilerType,
@@ -65,8 +72,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("field", "float");
 =======
       const compiler: CompilerTypeDesc = { world: "field", domain: "float", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "number" });
     });
@@ -86,8 +100,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("field", "vec2");
 =======
       const compiler: CompilerTypeDesc = { world: "field", domain: "vec2", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "vec2" });
     });
@@ -107,8 +128,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("field", "vec3");
 =======
       const compiler: CompilerTypeDesc = { world: "field", domain: "vec3", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "vec3" });
     });
@@ -128,8 +156,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("field", "vec4");
 =======
       const compiler: CompilerTypeDesc = { world: "field", domain: "vec4", category: "internal", busEligible: false };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "vec4" });
     });
@@ -149,8 +184,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("field", "color");
 =======
       const compiler: CompilerTypeDesc = { world: "field", domain: "color", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "color" });
     });
@@ -170,8 +212,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("field", "boolean");
 =======
       const compiler: CompilerTypeDesc = { world: "field", domain: "boolean", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "boolean" });
     });
@@ -193,8 +242,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("signal", "float");
 =======
       const compiler: CompilerTypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "number" });
     });
@@ -214,8 +270,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("signal", "vec2");
 =======
       const compiler: CompilerTypeDesc = { world: "signal", domain: "vec2", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "vec2" });
     });
@@ -235,8 +298,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("signal", "color");
 =======
       const compiler: CompilerTypeDesc = { world: "signal", domain: "color", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       const runtime = compilerToRuntimeType(compiler);
       expect(runtime).toEqual({ kind: "color" });
     });
@@ -278,8 +348,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("scalar", "float");
 =======
       const compiler: CompilerTypeDesc = { world: "scalar", domain: "float", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       expect(() => compilerToRuntimeType(compiler)).toThrow(
         UnsupportedTypeError
       );
@@ -303,8 +380,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("special", "domain");
 =======
       const compiler: CompilerTypeDesc = { world: "config", domain: "domain", category: "internal", busEligible: false };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       expect(() => compilerToRuntimeType(compiler)).toThrow(
         UnsupportedTypeError
       );
@@ -325,8 +409,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("event", "trigger");
 =======
       const compiler: CompilerTypeDesc = { world: "event", domain: "trigger", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       expect(() => compilerToRuntimeType(compiler)).toThrow(
         UnsupportedTypeError
       );
@@ -347,8 +438,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("field", "timeMs");
 =======
       const compiler: CompilerTypeDesc = { world: "field", domain: "timeMs", category: "internal", busEligible: false };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       expect(() => compilerToRuntimeType(compiler)).toThrow(
         UnsupportedTypeError
       );
@@ -372,8 +470,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("signal", "phaseSample");
 =======
       const compiler: CompilerTypeDesc = { world: "signal", domain: "phaseSample", category: "internal", busEligible: false };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       expect(() => compilerToRuntimeType(compiler)).toThrow(
         UnsupportedTypeError
       );
@@ -394,8 +499,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("field", "domain");
 =======
       const compiler: CompilerTypeDesc = { world: "field", domain: "domain", category: "internal", busEligible: false };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       expect(() => compilerToRuntimeType(compiler)).toThrow(
         UnsupportedTypeError
       );
@@ -416,8 +528,15 @@ describe("Type Adapter - Compiler to Runtime", () => {
       const compiler = makeCompilerType("scalar", "float");
 =======
       const compiler: CompilerTypeDesc = { world: "scalar", domain: "float", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
       try {
         compilerToRuntimeType(compiler);
         expect.fail("Should have thrown");
@@ -447,6 +566,7 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
       expect(compiler).toEqual({ world: "field", domain: "float", category: "core", busEligible: true });
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       expect(compiler).toEqual({ world: "field", domain: "float", category: "core", busEligible: true });
@@ -454,6 +574,12 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     });
 
     it("should convert vec2 to field vec2", () => {
@@ -469,6 +595,7 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
       expect(compiler).toEqual({ world: "field", domain: "vec2", category: "core", busEligible: true });
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       expect(compiler).toEqual({ world: "field", domain: "vec2", category: "core", busEligible: true });
@@ -476,6 +603,12 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     });
 
     it("should convert color to field color", () => {
@@ -491,6 +624,7 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
       expect(compiler).toEqual({ world: "field", domain: "color", category: "core", busEligible: true });
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       expect(compiler).toEqual({ world: "field", domain: "color", category: "core", busEligible: true });
@@ -498,6 +632,12 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     });
 
     it("should convert boolean to field boolean", () => {
@@ -513,6 +653,7 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
       expect(compiler).toEqual({ world: "field", domain: "boolean", category: "core", busEligible: true });
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       expect(compiler).toEqual({ world: "field", domain: "boolean", category: "core", busEligible: true });
@@ -520,6 +661,12 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     });
 
     it("should convert string to field string", () => {
@@ -535,6 +682,7 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
       expect(compiler).toEqual({ world: "field", domain: "string", category: "internal", busEligible: false });
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       expect(compiler).toEqual({ world: "field", domain: "string", category: "internal", busEligible: false });
@@ -542,6 +690,12 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     });
   });
 
@@ -559,6 +713,7 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
       expect(compiler).toEqual({ world: "signal", domain: "float", category: "core", busEligible: true });
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       expect(compiler).toEqual({ world: "signal", domain: "float", category: "core", busEligible: true });
@@ -566,6 +721,12 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     });
 
     it("should create field types when world='field' (explicit)", () => {
@@ -581,6 +742,7 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
       expect(compiler).toEqual({ world: "field", domain: "vec2", category: "core", busEligible: true });
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       expect(compiler).toEqual({ world: "field", domain: "vec2", category: "core", busEligible: true });
@@ -588,6 +750,12 @@ describe("Type Adapter - Runtime to Compiler", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     });
   });
 
@@ -629,6 +797,7 @@ describe("Type Adapter - Batch Conversion", () => {
       { world: "field", domain: "vec2", category: "core", busEligible: true },
       { world: "signal", domain: "color", category: "core", busEligible: true },
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       { world: "field", domain: "float", category: "core", busEligible: true },
@@ -638,6 +807,12 @@ describe("Type Adapter - Batch Conversion", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     ];
 
     const results = batchCompilerToRuntimeTypes(compilerTypes);
@@ -672,12 +847,19 @@ describe("Type Adapter - Batch Conversion", () => {
       { world: "field", domain: "domain", category: "internal", busEligible: false }, // Unsupported (domain)
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     ];
 
     const results = batchCompilerToRuntimeTypes(compilerTypes);
@@ -701,6 +883,7 @@ describe("Type Adapter - Batch Conversion", () => {
       { world: "scalar", domain: "float", category: "core", busEligible: true },
       { world: "config", domain: "domain", category: "internal", busEligible: false },
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       { world: "scalar", domain: "float", category: "core", busEligible: true },
@@ -709,6 +892,12 @@ describe("Type Adapter - Batch Conversion", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     ];
 
     const results = batchCompilerToRuntimeTypes(compilerTypes);
@@ -739,12 +928,19 @@ describe("Type Adapter - Batch Conversion", () => {
       { world: "field", domain: "vec2", category: "core", busEligible: true }, // index 3, kept
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     ];
 
     const results = batchCompilerToRuntimeTypes(compilerTypes);
@@ -769,8 +965,15 @@ describe("Type Adapter - Type Compatibility", () => {
     const compiler = makeCompilerType("field", "float");
 =======
     const compiler: CompilerTypeDesc = { world: "field", domain: "float", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     const runtime: RuntimeTypeDesc = { kind: "number" };
 
     expect(areTypesCompatible(compiler, runtime)).toBe(true);
@@ -791,8 +994,15 @@ describe("Type Adapter - Type Compatibility", () => {
     const compiler = makeCompilerType("field", "vec2");
 =======
     const compiler: CompilerTypeDesc = { world: "field", domain: "vec2", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     const runtime: RuntimeTypeDesc = { kind: "number" };
 
     expect(areTypesCompatible(compiler, runtime)).toBe(false);
@@ -813,8 +1023,15 @@ describe("Type Adapter - Type Compatibility", () => {
     const compiler = makeCompilerType("scalar", "float");
 =======
     const compiler: CompilerTypeDesc = { world: "scalar", domain: "float", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     const runtime: RuntimeTypeDesc = { kind: "number" };
 
     expect(areTypesCompatible(compiler, runtime)).toBe(false);
@@ -835,8 +1052,15 @@ describe("Type Adapter - Type Compatibility", () => {
     const compiler = makeCompilerType("signal", "color");
 =======
     const compiler: CompilerTypeDesc = { world: "signal", domain: "color", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     const runtime: RuntimeTypeDesc = { kind: "color" };
 
     expect(areTypesCompatible(compiler, runtime)).toBe(true);
@@ -869,6 +1093,7 @@ describe("Type Adapter - Type Guards", () => {
       expect(isFieldType({ world: "scalar", domain: "float", category: "core", busEligible: true })).toBe(false);
       expect(isFieldType({ world: "config", domain: "domain", category: "internal", busEligible: false })).toBe(false);
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
       expect(isFieldType({ world: "field", domain: "float", category: "core", busEligible: true })).toBe(true);
@@ -883,6 +1108,12 @@ describe("Type Adapter - Type Guards", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     });
   });
 
@@ -940,10 +1171,17 @@ describe("Type Adapter - Type Guards", () => {
         false
       );
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     });
   });
 
@@ -983,8 +1221,15 @@ describe("Type Adapter - Caching", () => {
     const compiler = makeCompilerType("field", "float");
 =======
     const compiler: CompilerTypeDesc = { world: "field", domain: "float", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
     const result1 = compilerToRuntimeTypeCached(compiler);
     const result2 = compilerToRuntimeTypeCached(compiler);
@@ -1008,8 +1253,15 @@ describe("Type Adapter - Caching", () => {
     const compiler = makeCompilerType("field", "vec2");
 =======
     const compiler: CompilerTypeDesc = { world: "field", domain: "vec2", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
     const result = compilerToRuntimeTypeCached(compiler);
 
@@ -1028,6 +1280,7 @@ describe("Type Adapter - Caching", () => {
     const compiler1: CompilerTypeDesc = { world: "field", domain: "float", category: "core", busEligible: true };
     const compiler2: CompilerTypeDesc = { world: "field", domain: "vec2", category: "core", busEligible: true };
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 =======
     const compiler1: CompilerTypeDesc = { world: "field", domain: "float", category: "core", busEligible: true };
@@ -1036,6 +1289,12 @@ describe("Type Adapter - Caching", () => {
 =======
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
     const result1 = compilerToRuntimeTypeCached(compiler1);
     const result2 = compilerToRuntimeTypeCached(compiler2);
@@ -1060,8 +1319,15 @@ describe("Type Adapter - Caching", () => {
     const compiler = makeCompilerType("scalar", "float");
 =======
     const compiler: CompilerTypeDesc = { world: "scalar", domain: "float", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
 
     expect(() => compilerToRuntimeTypeCached(compiler)).toThrow(
       UnsupportedTypeError
@@ -1085,8 +1351,15 @@ describe("Type Adapter - Roundtrip Conversion", () => {
     const original = makeCompilerType("field", "float");
 =======
     const original: CompilerTypeDesc = { world: "field", domain: "float", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     const runtime = compilerToRuntimeType(original);
     const backToCompiler = runtimeToCompilerType(runtime, "field");
 
@@ -1109,8 +1382,15 @@ describe("Type Adapter - Roundtrip Conversion", () => {
     const original = makeCompilerType("signal", "vec2");
 =======
     const original: CompilerTypeDesc = { world: "signal", domain: "vec2", category: "core", busEligible: true };
+<<<<<<< HEAD
 >>>>>>> 8eb3ea5 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+<<<<<<< HEAD
 >>>>>>> 5161973 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+=======
+=======
+>>>>>>> f5b0eb1 (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 6d6c78f (feat(types): Migrate 90% of TypeDesc literals to new contract)
+>>>>>>> 9d8b52e (feat(types): Migrate 90% of TypeDesc literals to new contract)
     const runtime = compilerToRuntimeType(original);
     const backToCompiler = runtimeToCompilerType(runtime, "signal");
 
