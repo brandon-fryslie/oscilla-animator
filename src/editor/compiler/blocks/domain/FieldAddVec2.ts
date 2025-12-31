@@ -21,7 +21,7 @@ const lowerFieldAddVec2: BlockLowerFn = ({ ctx, inputs }) => {
     throw new Error('FieldAddVec2 requires field inputs');
   }
 
-  const outType = { world: 'field' as const, domain: 'vec2' as const };
+  const outType = { world: "field" as const, domain: "vec2" as const, category: "core" as const, busEligible: true };
   const fieldId = ctx.b.fieldZip(a.id, b.id, { kind: 'opcode', opcode: OpCode.Vec2Add }, outType,);
 
   const slot = ctx.b.allocValueSlot();
@@ -33,11 +33,11 @@ registerBlockType({
   type: 'FieldAddVec2',
   capability: 'pure',
   inputs: [
-    { portId: 'a', label: 'A', dir: 'in', type: { world: 'field', domain: 'vec2' }, defaultSource: { value: [0, 0] } },
-    { portId: 'b', label: 'B', dir: 'in', type: { world: 'field', domain: 'vec2' }, defaultSource: { value: [0, 0] } },
+    { portId: 'a', label: 'A', dir: 'in', type: { world: "field", domain: "vec2", category: "core", busEligible: true }, defaultSource: { value: [0, 0] } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: "field", domain: "vec2", category: "core", busEligible: true }, defaultSource: { value: [0, 0] } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'vec2' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: "field", domain: "vec2", category: "core", busEligible: true } },
   ],
   lower: lowerFieldAddVec2,
 });

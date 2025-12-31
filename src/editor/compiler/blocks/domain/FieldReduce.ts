@@ -51,7 +51,7 @@ const lowerFieldReduce: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Map reduce operations to ReduceFn interface
   const reduceFn: ReduceFn = {
     reducerId: op,
-    outputType: { world: 'signal', domain: 'float' },
+    outputType: { world: "signal", domain: "float", category: "core", busEligible: true },
   };
 
   // Use IRBuilder's reduceFieldToSig method
@@ -65,10 +65,10 @@ registerBlockType({
   type: 'FieldReduce',
   capability: 'pure',
   inputs: [
-    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'field', label: 'Field', dir: 'in', type: { world: "field", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'signal', label: 'Signal', dir: 'out', type: { world: 'signal', domain: 'float' } },
+    { portId: 'signal', label: 'Signal', dir: 'out', type: { world: "signal", domain: "float", category: "core", busEligible: true } },
   ],
   lower: lowerFieldReduce,
 });

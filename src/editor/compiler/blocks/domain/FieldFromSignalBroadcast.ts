@@ -33,7 +33,7 @@ const lowerFieldFromSignalBroadcast: BlockLowerFn = ({ ctx, inputs }) => {
     throw new Error('FieldFromSignalBroadcast requires signal input');
   }
 
-  const outType = { world: 'field' as const, domain: 'float' as const };
+  const outType = { world: "field" as const, domain: "float" as const, category: "core" as const, busEligible: true };
   const fieldId = ctx.b.broadcastSigToField(signal.id, domain.id, outType);
 
   const slot = ctx.b.allocValueSlot();
@@ -45,11 +45,11 @@ registerBlockType({
   type: 'FieldFromSignalBroadcast',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
-    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "config", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 100 } },
+    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'field', label: 'Field', dir: 'out', type: { world: 'field', domain: 'float' } },
+    { portId: 'field', label: 'Field', dir: 'out', type: { world: "field", domain: "float", category: "core", busEligible: true } },
   ],
   lower: lowerFieldFromSignalBroadcast,
 });

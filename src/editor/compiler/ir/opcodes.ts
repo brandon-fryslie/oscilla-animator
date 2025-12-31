@@ -200,72 +200,100 @@ export interface OpCodeMeta {
 const numberSignal: TypeDesc = {
   world: "signal",
   domain: "float",
+  category: "core",
+  busEligible: true,
 };
 
 const vec2Signal: TypeDesc = {
   world: "signal",
   domain: "vec2",
+  category: "core",
+  busEligible: true,
 };
 
 const colorSignal: TypeDesc = {
   world: "signal",
   domain: "color",
+  category: "core",
+  busEligible: true,
 };
 
 const triggerSignal: TypeDesc = {
   world: "signal",
   domain: "trigger",
+  category: "core",
+  busEligible: true,
 };
 
 const phaseSignal: TypeDesc = {
   world: "signal",
   domain: "float",
   semantics: "phase(0..1)",
+  category: "core",
+  busEligible: true,
 };
 
 const timeSignal: TypeDesc = {
   world: "signal",
   domain: "timeMs",
+  category: "internal",
+  busEligible: false,
 };
 
 const numberField: TypeDesc = {
   world: "field",
   domain: "float",
+  category: "core",
+  busEligible: true,
 };
 
 const mat4Field: TypeDesc = {
   world: "field",
   domain: "mat4",
+  category: "internal",
+  busEligible: false,
 };
 
 const colorField: TypeDesc = {
   world: "field",
   domain: "color",
+  category: "core",
+  busEligible: true,
 };
 
 const renderTreeSpecial: TypeDesc = {
-  world: "special",
+  world: "config",
   domain: "renderTree",
+  category: "internal",
+  busEligible: false,
 };
 
 const renderCmdsSpecial: TypeDesc = {
-  world: "special",
+  world: "config",
   domain: "renderCmds",
+  category: "internal",
+  busEligible: false,
 };
 
 const cameraSpecial: TypeDesc = {
-  world: "special",
+  world: "config",
   domain: "camera",
+  category: "internal",
+  busEligible: false,
 };
 
 const meshSpecial: TypeDesc = {
-  world: "special",
+  world: "config",
   domain: "mesh",
+  category: "internal",
+  busEligible: false,
 };
 
 const domainSpecial: TypeDesc = {
-  world: "special",
+  world: "config",
   domain: "domain",
+  category: "internal",
+  busEligible: false,
 };
 
 // =============================================================================
@@ -832,7 +860,7 @@ export const OPCODE_REGISTRY: Record<OpCode, OpCodeMeta> = {
     name: "domainFromSVG",
     category: "domain",
     inputTypes: [],
-    outputType: { world: "field", domain: "path" },
+    outputType: { world: "field", domain: "path", category: "internal", busEligible: false },
     purity: "io",
     description: "Load domain from SVG",
   },
@@ -902,7 +930,7 @@ export const OPCODE_REGISTRY: Record<OpCode, OpCodeMeta> = {
     opcode: OpCode.FieldFilter,
     name: "fieldFilter",
     category: "field",
-    inputTypes: [numberField, { world: "field", domain: "boolean" }],
+    inputTypes: [numberField, { world: "field", domain: "boolean", category: "core", busEligible: true }],
     outputType: numberField,
     purity: "pure",
     description: "Filter field by predicate",

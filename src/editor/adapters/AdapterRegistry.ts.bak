@@ -110,21 +110,6 @@ function makeTypeDesc(
   };
 }
 
-/**
- * Convert hex color string to packed RGBA u32 number.
- * Used for color constants in IR.
- */
-function hexToPackedRGBA(hex: string): number {
-  const cleaned = hex.replace(/^#/, '');
-  const num = parseInt(cleaned, 16);
-  const r = (num >> 16) & 0xff;
-  const g = (num >> 8) & 0xff;
-  const b = num & 0xff;
-  const a = 255; // Full alpha
-  // Pack as little-endian RGBA (matches runtime unpacking)
-  return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
-}
-
 export function initAdapterRegistry(): void {
   if (adapterRegistry.list().length > 0) return;
 
@@ -174,33 +159,31 @@ export function initAdapterRegistry(): void {
           world: 'signal',
           domain: domainStr as IRTypeDesc['domain'],
         });
+        const outputType: IRTypeDesc = asTypeDesc({
+          world: 'signal',
+          domain: domainStr as IRTypeDesc['domain'],
+        });
+        const outputType: IRTypeDesc = asTypeDesc({
+          world: 'signal',
+          domain: domainStr as IRTypeDesc['domain'],
+        });
+        const outputType: IRTypeDesc = asTypeDesc({
+          world: 'signal',
+          domain: domainStr as IRTypeDesc['domain'],
+        });
+        };
 
-        // Convert value to number based on domain
-        let numericValue: number;
+        // Create a constant signal with the value
         if (typeof constValue === 'number') {
-          // float domain - use value as-is
-          numericValue = constValue;
-        } else if (typeof constValue === 'boolean') {
-          // boolean domain - convert to 0/1 (matches apply() behavior)
-          numericValue = constValue ? 1 : 0;
-        } else if (typeof constValue === 'string' && domainStr === 'color') {
-          // color domain - convert hex string to packed RGBA
-          numericValue = hexToPackedRGBA(constValue);
-        } else if (typeof constValue === 'object' && constValue !== null && domainStr === 'vec2') {
-          // vec2 domain - return scalarConst (vec2 objects cannot be represented as numbers)
-          // Vec2 objects {x, y} cannot be represented as single numbers in sigConst
-          // The runtime handles vec2 constants via scalarConst references
-          return input;
-        } else {
-          // Unknown domain or value type - fallback to scalarConst
-          return input;
+          const sigId = ctx.builder.sigConst(constValue, outputType);
+          const slot = ctx.builder.allocValueSlot(outputType);
+          ctx.builder.registerSigSlot(sigId, slot);
+          return { k: 'sig', id: sigId, slot };
         }
 
-        // Create a constant signal with the numeric value
-        const sigId = ctx.builder.sigConst(numericValue, outputType);
-        const slot = ctx.builder.allocValueSlot(outputType);
-        ctx.builder.registerSigSlot(sigId, slot);
-        return { k: 'sig', id: sigId, slot };
+        // For non-number values (vec2, color, etc.), keep as scalar const
+        // The runtime will handle the constant value directly
+        return input;
       },
     });
 
@@ -350,14 +333,7 @@ export function initAdapterRegistry(): void {
       return { kind: 'Error', message: `PhaseToNumber unsupported for ${artifact.kind}` };
     },
     // IR compilation support deferred - identity transformation
-    // IR compilation: Phase is already a number, identity transform
-    compileToIR: (input, _ctx) => {
-      // Phase to number is identity - return input unchanged
-      if (input.k !== 'sig') {
-        return null;
-      }
-      return input;
-    },
+    compileToIR: undefined,
   });
 
   adapterRegistry.register({
@@ -392,14 +368,7 @@ export function initAdapterRegistry(): void {
       return { kind: 'Error', message: `PhaseToNumber unsupported for ${artifact.kind}` };
     },
     // IR compilation support deferred - identity transformation
-    // IR compilation: Scalar phase to scalar number is identity
-    compileToIR: (input, _ctx) => {
-      // Scalar phase to scalar number is identity - return input unchanged
-      if (input.k !== 'scalarConst') {
-        return null;
-      }
-      return input;
-    },
+    compileToIR: undefined,
   });
 
   adapterRegistry.register({

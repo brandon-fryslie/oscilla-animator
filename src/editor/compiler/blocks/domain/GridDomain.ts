@@ -51,7 +51,7 @@ const lowerGridDomain: BlockLowerFn = ({ ctx, config }) => {
   }
 
   // Create position field as const
-  const posField = ctx.b.fieldConst(positions, { world: 'field', domain: 'vec2' });
+  const posField = ctx.b.fieldConst(positions, { world: "field", domain: "vec2", category: "core", busEligible: true });
 
   const slot = ctx.b.allocValueSlot();
   return {
@@ -74,41 +74,41 @@ registerBlockType({
       portId: 'rows',
       label: 'Rows',
       dir: 'in',
-      type: { world: 'scalar', domain: 'int' },
+      type: { world: "scalar", domain: "int", category: "core", busEligible: true },
       defaultSource: { value: 10 },
     },
     {
       portId: 'cols',
       label: 'Cols',
       dir: 'in',
-      type: { world: 'scalar', domain: 'int' },
+      type: { world: "scalar", domain: "int", category: "core", busEligible: true },
       defaultSource: { value: 10 },
     },
     {
       portId: 'spacing',
       label: 'Spacing',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 20 },
     },
     {
       portId: 'originX',
       label: 'Origin X',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 100 },
     },
     {
       portId: 'originY',
       label: 'Origin Y',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 100 },
     },
   ],
   outputs: [
-    { portId: 'domain', label: 'Domain', dir: 'out', type: { world: 'special', domain: 'domain' } },
-    { portId: 'pos0', label: 'Pos0', dir: 'out', type: { world: 'field', domain: 'vec2' } },
+    { portId: 'domain', label: 'Domain', dir: 'out', type: { world: "config", domain: "domain", category: "internal", busEligible: false } },
+    { portId: 'pos0', label: 'Pos0', dir: 'out', type: { world: "field", domain: "vec2", category: "core", busEligible: true } },
   ],
   lower: lowerGridDomain,
 });

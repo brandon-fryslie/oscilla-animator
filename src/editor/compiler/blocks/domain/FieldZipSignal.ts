@@ -81,7 +81,7 @@ const lowerFieldZipSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // Strategy: broadcast signal to field, then zip the two fields
   // This matches the semantic of "apply signal value to each field element"
-  const outType = { world: 'field' as const, domain: 'float' as const };
+  const outType = { world: "field" as const, domain: "float" as const, category: "core" as const, busEligible: true };
 
   // Note: We need domain slot from the field input
   // For now, we'll create a placeholder - this will need proper domain tracking
@@ -100,11 +100,11 @@ registerBlockType({
   type: 'FieldZipSignal',
   capability: 'pure',
   inputs: [
-    { portId: 'field', label: 'Field', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
-    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'field', label: 'Field', dir: 'in', type: { world: "field", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
+    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'float' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: "field", domain: "float", category: "core", busEligible: true } },
   ],
   lower: lowerFieldZipSignal,
 });

@@ -77,10 +77,10 @@ registerBlockType({
   type: 'FieldOpacity',
   capability: 'pure',
   inputs: [
-    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'values', label: 'Values', dir: 'in', type: { world: "field", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'opacity', label: 'Opacity', dir: 'out', type: { world: 'field', domain: 'float' } },
+    { portId: 'opacity', label: 'Opacity', dir: 'out', type: { world: "field", domain: "float", category: "core", busEligible: true } },
   ],
   lower: lowerFieldOpacity,
 });

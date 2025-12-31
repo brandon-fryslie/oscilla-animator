@@ -37,10 +37,10 @@ registerBlockType({
   type: 'DSConstFieldVec2',
   capability: 'pure',
   inputs: [
-    { portId: 'value', label: 'Value', dir: 'in', type: { world: 'field', domain: 'vec2' }, defaultSource: { value: { x: 0, y: 0 } } },
+    { portId: 'value', label: 'Value', dir: 'in', type: { world: "field", domain: "vec2", category: "core", busEligible: true }, defaultSource: { value: { x: 0, y: 0 } } },
   ],
   outputs: [
-    { portId: 'out', label: 'Output', dir: 'out', type: { world: 'field', domain: 'vec2' } },
+    { portId: 'out', label: 'Output', dir: 'out', type: { world: "field", domain: "vec2", category: "core", busEligible: true } },
   ],
   lower: lowerDSConstFieldVec2,
 });

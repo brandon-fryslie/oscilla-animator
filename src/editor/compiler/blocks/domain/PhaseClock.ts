@@ -47,8 +47,8 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   const periodMs = periodSec * 1000;
 
-  const numberType = { world: 'signal' as const, domain: 'float' as const };
-  const phaseType = { world: 'signal' as const, domain: 'float' as const, semantics: 'phase(0..1)' as const };
+  const numberType = { world: "signal" as const, domain: "float" as const, category: "core" as const, busEligible: true };
+  const phaseType = { world: "signal" as const, domain: "float" as const, semantics: 'phase(0..1)' as const, category: "core" as const, busEligible: true };
 
   // Calculate raw phase: t / period
   const periodConst = ctx.b.sigConst(periodMs, numberType);
@@ -111,7 +111,7 @@ registerBlockType({
       portId: 'tIn',
       label: 'Time In',
       dir: 'in',
-      type: { world: 'signal', domain: 'timeMs' },
+      type: { world: "signal", domain: "timeMs", category: "internal", busEligible: false },
       defaultSource: { value: 0 },
     },
   ],
@@ -120,13 +120,13 @@ registerBlockType({
       portId: 'phase',
       label: 'Phase',
       dir: 'out',
-      type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
+      type: { world: "signal", domain: "float", semantics: 'phase(0..1)', category: "core", busEligible: true },
     },
     {
       portId: 'u',
       label: 'U',
       dir: 'out',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
     },
   ],
   lower: lowerPhaseClock,

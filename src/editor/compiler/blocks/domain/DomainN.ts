@@ -57,19 +57,19 @@ registerBlockType({
       portId: 'n',
       label: 'N',
       dir: 'in',
-      type: { world: 'scalar', domain: 'int' },
+      type: { world: "scalar", domain: "int", category: "core", busEligible: true },
       defaultSource: { value: 100 },
     },
     {
       portId: 'seed',
       label: 'Seed',
       dir: 'in',
-      type: { world: 'scalar', domain: 'int' },
+      type: { world: "scalar", domain: "int", category: "core", busEligible: true },
       defaultSource: { value: 0 },
     },
   ],
   outputs: [
-    { portId: 'domain', label: 'Domain', dir: 'out', type: { world: 'special', domain: 'domain' } },
+    { portId: 'domain', label: 'Domain', dir: 'out', type: { world: "config", domain: "domain", category: "internal", busEligible: false } },
   ],
   lower: lowerDomainN,
 });

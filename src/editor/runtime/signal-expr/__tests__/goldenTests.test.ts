@@ -140,7 +140,7 @@ describe("Golden Tests - Block Migration Validation", () => {
         nodes: [
           {
             kind: "const",
-            type: { world: "signal", domain: "float" },
+            type: { world: "signal", domain: "float", category: "core", busEligible: true },
             constId: 0,
           },
         ],
@@ -161,7 +161,7 @@ describe("Golden Tests - Block Migration Validation", () => {
         nodes: [
           {
             kind: "timeAbsMs",
-            type: { world: "signal", domain: "timeMs" },
+            type: { world: "signal", domain: "timeMs", category: "internal", busEligible: false },
           },
         ],
         constPool: { numbers: [] },

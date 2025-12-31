@@ -136,8 +136,8 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Note: sat and light are baked into the base color for Sprint 2
   // They would be used if we had a 3-input ColorHSLToRGB opcode
 
-  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
-  const colorType: TypeDesc = { world: 'signal', domain: 'color' };
+  const numberType: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+  const colorType: TypeDesc = { world: "signal", domain: "color", category: "core", busEligible: true };
 
   // Calculate hue shift: phase * hueSpan
   const hueSpanSig = ctx.b.sigConst(hueSpan, numberType);
@@ -160,7 +160,7 @@ registerBlockType({
       portId: 'phase',
       label: 'Phase',
       dir: 'in',
-      type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
+      type: { world: "signal", domain: "float", semantics: 'phase(0..1)', category: "core", busEligible: true },
       defaultSource: { value: 0 },
     },
   ],
@@ -169,7 +169,7 @@ registerBlockType({
       portId: 'color',
       label: 'Color',
       dir: 'out',
-      type: { world: 'signal', domain: 'color' },
+      type: { world: "signal", domain: "color", category: "core", busEligible: true },
     },
   ],
   lower: lowerColorLFO,

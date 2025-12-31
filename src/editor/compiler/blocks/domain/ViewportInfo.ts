@@ -48,8 +48,8 @@ registerBlockType({
   capability: 'pure',
   inputs: [],
   outputs: [
-    { portId: 'size', label: 'Size', dir: 'out', type: { world: 'scalar', domain: 'vec2' } },
-    { portId: 'center', label: 'Center', dir: 'out', type: { world: 'scalar', domain: 'vec2' } },
+    { portId: 'size', label: 'Size', dir: 'out', type: { world: "scalar", domain: "vec2", category: "core", busEligible: true } },
+    { portId: 'center', label: 'Center', dir: 'out', type: { world: "scalar", domain: "vec2", category: "core", busEligible: true } },
   ],
   lower: lowerViewportInfo,
 });

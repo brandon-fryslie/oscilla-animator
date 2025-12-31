@@ -23,14 +23,14 @@ describe("Pass 6: Port Contract Enforcement", () => {
         type: testType,
         capability: "pure",
         inputs: [
-          { portId: "a", label: "A", dir: "in", type: { world: "signal", domain: "float" }, defaultSource: { value: 0 } },
-          { portId: "b", label: "B", dir: "in", type: { world: "signal", domain: "float" }, defaultSource: { value: 0 } },
+          { portId: "a", label: "A", dir: "in", type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
+          { portId: "b", label: "B", dir: "in", type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
         ],
         outputs: [
-          { portId: "out", label: "Out", dir: "out", type: { world: "signal", domain: "float" } },
+          { portId: "out", label: "Out", dir: "out", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
         ],
         lower: ({ ctx }) => {
-          const typeNum: TypeDesc = { world: "signal", domain: "float" };
+          const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
           const sigId = ctx.b.sigConst(42, typeNum);
           const slot = ctx.b.allocValueSlot(typeNum);
           return {
@@ -82,14 +82,14 @@ describe("Pass 6: Port Contract Enforcement", () => {
         type: testType,
         capability: "pure",
         inputs: [
-          { portId: "a", label: "A", dir: "in", type: { world: "signal", domain: "float" }, defaultSource: { value: 0 } },
-          { portId: "b", label: "B", dir: "in", type: { world: "signal", domain: "float" }, defaultSource: { value: 0 } },
+          { portId: "a", label: "A", dir: "in", type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
+          { portId: "b", label: "B", dir: "in", type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
         ],
         outputs: [
-          { portId: "out", label: "Out", dir: "out", type: { world: "signal", domain: "float" } },
+          { portId: "out", label: "Out", dir: "out", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
         ],
         lower: ({ ctx }) => {
-          const typeNum: TypeDesc = { world: "signal", domain: "float" };
+          const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
           const sigId = ctx.b.sigConst(42, typeNum);
           const slot = ctx.b.allocValueSlot(typeNum);
           return {
@@ -146,11 +146,11 @@ describe("Pass 6: Port Contract Enforcement", () => {
         capability: "pure",
         inputs: [],
         outputs: [
-          { portId: "x", label: "X", dir: "out", type: { world: "signal", domain: "float" } },
-          { portId: "y", label: "Y", dir: "out", type: { world: "signal", domain: "float" } },
+          { portId: "x", label: "X", dir: "out", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
+          { portId: "y", label: "Y", dir: "out", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
         ],
         lower: ({ ctx }) => {
-          const typeNum: TypeDesc = { world: "signal", domain: "float" };
+          const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
           const sigX = ctx.b.sigConst(1, typeNum);
           const sigY = ctx.b.sigConst(2, typeNum);
           const slotX = ctx.b.allocValueSlot(typeNum);
@@ -206,11 +206,11 @@ describe("Pass 6: Port Contract Enforcement", () => {
         capability: "pure",
         inputs: [],
         outputs: [
-          { portId: "x", label: "X", dir: "out", type: { world: "signal", domain: "float" } },
-          { portId: "y", label: "Y", dir: "out", type: { world: "signal", domain: "float" } },
+          { portId: "x", label: "X", dir: "out", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
+          { portId: "y", label: "Y", dir: "out", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
         ],
         lower: ({ ctx }) => {
-          const typeNum: TypeDesc = { world: "signal", domain: "float" };
+          const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
           const sigX = ctx.b.sigConst(1, typeNum);
           const sigY = ctx.b.sigConst(2, typeNum);
           const slotX = ctx.b.allocValueSlot(typeNum);
@@ -269,14 +269,14 @@ describe("Pass 6: Port Contract Enforcement", () => {
         type: testType,
         capability: "pure",
         inputs: [
-          { portId: "a", label: "A", dir: "in", type: { world: "signal", domain: "float" }, defaultSource: { value: 0 } },
-          { portId: "b", label: "B", dir: "in", type: { world: "signal", domain: "float" }, defaultSource: { value: 0 } },
+          { portId: "a", label: "A", dir: "in", type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
+          { portId: "b", label: "B", dir: "in", type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
         ],
         outputs: [
-          { portId: "out", label: "Out", dir: "out", type: { world: "signal", domain: "float" } },
+          { portId: "out", label: "Out", dir: "out", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
         ],
         lower: ({ ctx }) => {
-          const typeNum: TypeDesc = { world: "signal", domain: "float" };
+          const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
           const sigId = ctx.b.sigConst(42, typeNum);
           const slot = ctx.b.allocValueSlot(typeNum);
           return {
@@ -322,14 +322,14 @@ describe("Pass 6: Port Contract Enforcement", () => {
         type: testType,
         capability: "pure",
         inputs: [
-          { portId: "a", label: "A", dir: "in", type: { world: "signal", domain: "float" }, defaultSource: { value: 0 } },
-          { portId: "b", label: "B", dir: "in", type: { world: "signal", domain: "float" }, defaultSource: { value: 0 } },
+          { portId: "a", label: "A", dir: "in", type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
+          { portId: "b", label: "B", dir: "in", type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
         ],
         outputs: [
-          { portId: "out", label: "Out", dir: "out", type: { world: "signal", domain: "float" } },
+          { portId: "out", label: "Out", dir: "out", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
         ],
         lower: ({ ctx }) => {
-          const typeNum: TypeDesc = { world: "signal", domain: "float" };
+          const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
           const sigId = ctx.b.sigConst(42, typeNum);
           const slot = ctx.b.allocValueSlot(typeNum);
           return {
@@ -385,14 +385,14 @@ describe("Pass 6: Port Contract Enforcement", () => {
         type: testType,
         capability: "pure",
         inputs: [
-          { portId: "a", label: "A", dir: "in", type: { world: "signal", domain: "float" }, defaultSource: { value: 0 } },
-          { portId: "b", label: "B", dir: "in", type: { world: "signal", domain: "float" }, defaultSource: { value: 0 } },
+          { portId: "a", label: "A", dir: "in", type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
+          { portId: "b", label: "B", dir: "in", type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
         ],
         outputs: [
-          { portId: "out", label: "Out", dir: "out", type: { world: "signal", domain: "float" } },
+          { portId: "out", label: "Out", dir: "out", type: { world: "signal", domain: "float", category: "core", busEligible: true } },
         ],
         lower: ({ ctx }) => {
-          const typeNum: TypeDesc = { world: "signal", domain: "float" };
+          const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
           const sigId = ctx.b.sigConst(42, typeNum);
           const slot = ctx.b.allocValueSlot(typeNum);
           return {

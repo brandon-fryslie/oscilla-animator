@@ -19,7 +19,7 @@ import type {
   TransformChainId,
   BusIndex,
 } from "./types";
-import { getTypeArity } from "./types";
+import { getTypeArity, asTypeDesc } from "./types";
 import type { SignalExprIR, StatefulSignalOp, EventExprIR, EventCombineMode } from "./signalExpr";
 import type { FieldExprIR } from "./fieldExpr";
 import type { TransformStepIR, PureFnRef } from "./transforms";
@@ -304,7 +304,7 @@ export class IRBuilderImpl implements IRBuilder {
     const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "timeAbsMs",
-      type: { world: "signal", domain: "timeMs" },
+      type: { world: "signal", domain: "timeMs", category: "internal", busEligible: false },
     });
     this.trackSigExprSource(id);
     return id;
@@ -314,7 +314,7 @@ export class IRBuilderImpl implements IRBuilder {
     const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "timeModelMs",
-      type: { world: "signal", domain: "float" },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
     });
     this.trackSigExprSource(id);
     return id;
@@ -324,7 +324,7 @@ export class IRBuilderImpl implements IRBuilder {
     const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "phase01",
-      type: { world: "signal", domain: "float", semantics: "phase(0..1)" },
+      type: { world: "signal", domain: "float", semantics: "phase(0..1)", category: "core", busEligible: true },
     });
     this.trackSigExprSource(id);
     return id;
@@ -334,7 +334,7 @@ export class IRBuilderImpl implements IRBuilder {
     const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "wrapEvent",
-      type: { world: "event", domain: "trigger" },
+      type: { world: "event", domain: "trigger", category: "core", busEligible: true },
     });
     this.trackSigExprSource(id);
     return id;
@@ -581,10 +581,10 @@ export class IRBuilderImpl implements IRBuilder {
     const id = this.allocEventExprId();
     this.eventExprs.push({
       kind: "eventWrap",
-      type: {
+      type: asTypeDesc({
         world: "event",
         domain: "trigger",
-      },
+      }),
     });
 
     // Track source block for debug index
@@ -694,7 +694,7 @@ export class IRBuilderImpl implements IRBuilder {
   // =============================================================================
 
   domainFromN(n: number): ValueSlot {
-    const slot = this.allocValueSlot({ world: "scalar", domain: "domain" }, `domain_n${n}`);
+    const slot = this.allocValueSlot({ world: "scalar", domain: "domain", category: "internal", busEligible: false }, `domain_n${n}`);
     this.domains.push({
       slot,
       count: n,
@@ -704,7 +704,7 @@ export class IRBuilderImpl implements IRBuilder {
 
   domainFromSVG(svgRef: string, sampleCount: number): ValueSlot {
     const slot = this.allocValueSlot(
-      { world: "scalar", domain: "domain" },
+      { world: "scalar", domain: "domain", category: "internal", busEligible: false },
       `domain_svg_${svgRef}`
     );
     this.domains.push({

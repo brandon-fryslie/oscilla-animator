@@ -46,7 +46,7 @@ const lowerFieldHash01ById: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // For now, we emit a kernel-based field map node
   // The kernel 'hash01ById' will be implemented in the runtime
-  const outType = { world: 'field' as const, domain: 'float' as const };
+  const outType = { world: "field" as const, domain: "float" as const, category: "core" as const, busEligible: true };
 
   // Use Hash01ById opcode if available, otherwise use a kernel reference
   const fieldId = ctx.b.fieldMap(
@@ -66,10 +66,10 @@ registerBlockType({
   type: 'FieldHash01ById',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "config", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 100 } },
   ],
   outputs: [
-    { portId: 'u', label: 'U', dir: 'out', type: { world: 'field', domain: 'float' } },
+    { portId: 'u', label: 'U', dir: 'out', type: { world: "field", domain: "float", category: "core", busEligible: true } },
   ],
   lower: lowerFieldHash01ById,
 });

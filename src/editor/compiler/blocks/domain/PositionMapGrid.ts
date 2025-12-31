@@ -65,7 +65,7 @@ const lowerPositionMapGrid: BlockLowerFn = ({ ctx, inputs, config }) => {
   }
 
   // Create position field as const
-  const posField = ctx.b.fieldConst(positions, { world: 'field', domain: 'vec2' });
+  const posField = ctx.b.fieldConst(positions, { world: "field", domain: "vec2", category: "core", busEligible: true });
 
   const slot = ctx.b.allocValueSlot();
   return {
@@ -78,52 +78,52 @@ registerBlockType({
   type: 'PositionMapGrid',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "config", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 100 } },
     {
       portId: 'rows',
       label: 'Rows',
       dir: 'in',
-      type: { world: 'scalar', domain: 'int' },
+      type: { world: "scalar", domain: "int", category: "core", busEligible: true },
       defaultSource: { value: 10 },
     },
     {
       portId: 'cols',
       label: 'Cols',
       dir: 'in',
-      type: { world: 'scalar', domain: 'int' },
+      type: { world: "scalar", domain: "int", category: "core", busEligible: true },
       defaultSource: { value: 10 },
     },
     {
       portId: 'spacing',
       label: 'Spacing',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 20 },
     },
     {
       portId: 'originX',
       label: 'Origin X',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 0 },
     },
     {
       portId: 'originY',
       label: 'Origin Y',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 0 },
     },
     {
       portId: 'order',
       label: 'Order',
       dir: 'in',
-      type: { world: 'scalar', domain: 'string' },
+      type: { world: "scalar", domain: "string", category: "internal", busEligible: false },
       defaultSource: { value: 'rowMajor' },
     },
   ],
   outputs: [
-    { portId: 'pos', label: 'Pos', dir: 'out', type: { world: 'field', domain: 'vec2' } },
+    { portId: 'pos', label: 'Pos', dir: 'out', type: { world: "field", domain: "vec2", category: "core", busEligible: true } },
   ],
   lower: lowerPositionMapGrid,
 });

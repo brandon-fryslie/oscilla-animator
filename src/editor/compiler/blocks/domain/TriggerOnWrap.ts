@@ -44,8 +44,8 @@ const lowerTriggerOnWrap: BlockLowerFn = ({ ctx, inputs }) => {
     throw new Error(`TriggerOnWrap: expected sig input for phase, got ${phase.k}`);
   }
 
-  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
-  const triggerType: TypeDesc = { world: 'signal', domain: 'trigger' };
+  const numberType: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+  const triggerType: TypeDesc = { world: "signal", domain: "trigger", category: "core", busEligible: true };
 
   // Allocate state for previous phase value
   const stateId = ctx.b.allocStateId(
@@ -85,7 +85,7 @@ registerBlockType({
       portId: 'phase',
       label: 'Phase',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 0 },
     },
   ],
@@ -94,7 +94,7 @@ registerBlockType({
       portId: 'trigger',
       label: 'Trigger',
       dir: 'out',
-      type: { world: 'signal', domain: 'trigger' },
+      type: { world: "signal", domain: "trigger", category: "core", busEligible: true },
     },
   ],
   lower: lowerTriggerOnWrap,

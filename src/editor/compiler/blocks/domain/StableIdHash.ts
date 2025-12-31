@@ -56,7 +56,7 @@ const lowerStableIdHash: BlockLowerFn = ({ ctx, inputs, config }) => {
   }
 
   // Create field as const
-  const hashField = ctx.b.fieldConst(hashValues, { world: 'field', domain: 'float' });
+  const hashField = ctx.b.fieldConst(hashValues, { world: "field", domain: "float", category: "core", busEligible: true });
 
   const slot = ctx.b.allocValueSlot();
   return {
@@ -69,10 +69,10 @@ registerBlockType({
   type: 'StableIdHash',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "config", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 100 } },
   ],
   outputs: [
-    { portId: 'u01', label: 'U01', dir: 'out', type: { world: 'field', domain: 'float' } },
+    { portId: 'u01', label: 'U01', dir: 'out', type: { world: "field", domain: "float", category: "core", busEligible: true } },
   ],
   lower: lowerStableIdHash,
 });

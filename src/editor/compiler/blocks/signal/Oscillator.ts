@@ -60,7 +60,7 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
 
   // Map phase to waveform using appropriate opcode
   let waveformId: number;
-  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
+  const numberType: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
 
   switch (shape) {
     case 'sine':

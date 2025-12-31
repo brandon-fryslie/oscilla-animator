@@ -37,10 +37,10 @@ registerBlockType({
   type: 'DSConstSignalColor',
   capability: 'pure',
   inputs: [
-    { portId: 'value', label: 'Value', dir: 'in', type: { world: 'signal', domain: 'color' }, defaultSource: { value: '#ffffff' } },
+    { portId: 'value', label: 'Value', dir: 'in', type: { world: "signal", domain: "color", category: "core", busEligible: true }, defaultSource: { value: '#ffffff' } },
   ],
   outputs: [
-    { portId: 'out', label: 'Output', dir: 'out', type: { world: 'signal', domain: 'color' } },
+    { portId: 'out', label: 'Output', dir: 'out', type: { world: "signal", domain: "color", category: "core", busEligible: true } },
   ],
   lower: lowerDSConstSignalColor,
 });

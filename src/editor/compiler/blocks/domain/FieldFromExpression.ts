@@ -106,18 +106,18 @@ const _lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
 //   type: 'FieldFromExpression',
 //   capability: 'pure',
 //   inputs: [
-//     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
-//     { portId: 'signal', label: 'Signal', dir: 'in', type: { world: 'signal', domain: 'float' }, optional: true, defaultSource: { value: 0 } },
+//     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "special", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 100 } },
+//     { portId: 'signal', label: 'Signal', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, optional: true, defaultSource: { value: 0 } },
 //     {
 //       portId: 'expression',
 //       label: 'Expression',
 //       dir: 'in',
-//       type: { world: 'scalar', domain: 'string' },
+//       type: { world: "scalar", domain: "string", category: "internal", busEligible: false },
 //       defaultSource: { value: 'hsl(i / n * 360 + signal * 360, 80, 60)' },
 //     },
 //   ],
 //   outputs: [
-//     { portId: 'field', label: 'Field', dir: 'out', type: { world: 'field', domain: 'string' } },
+//     { portId: 'field', label: 'Field', dir: 'out', type: { world: "field", domain: "string", category: "internal", busEligible: false } },
 //   ],
 //   lower: _lowerFieldFromExpression,
 // });

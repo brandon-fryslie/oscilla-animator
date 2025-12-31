@@ -37,10 +37,10 @@ registerBlockType({
   type: 'DSConstSignalFloat',
   capability: 'pure',
   inputs: [
-    { portId: 'value', label: 'Value', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'value', label: 'Value', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Output', dir: 'out', type: { world: 'signal', domain: 'float' } },
+    { portId: 'out', label: 'Output', dir: 'out', type: { world: "signal", domain: "float", category: "core", busEligible: true } },
   ],
   lower: lowerDSConstSignalFloat,
 });

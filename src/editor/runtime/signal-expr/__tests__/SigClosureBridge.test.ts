@@ -36,7 +36,7 @@ import type { TypeDesc } from "../../../compiler/ir/types";
 
 // Test helpers
 
-const numberType: TypeDesc = { world: "signal", domain: "float" };
+const numberType: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
 
 interface CreateTestEnvOptions {
   tAbsMs?: number;

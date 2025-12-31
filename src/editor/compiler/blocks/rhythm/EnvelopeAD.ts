@@ -58,8 +58,8 @@ const lowerEnvelopeAD: BlockLowerFn = ({ ctx, inputs, config }) => {
     ? Number(config.peak)
     : 1.0;
 
-  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
-  const timeType: TypeDesc = { world: 'signal', domain: 'timeMs' };
+  const numberType: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+  const timeType: TypeDesc = { world: "signal", domain: "timeMs", category: "internal", busEligible: false };
 
   // Allocate state for trigger time
   const triggerTimeStateId = ctx.b.allocStateId(
@@ -111,7 +111,7 @@ registerBlockType({
       portId: 'trigger',
       label: 'Trigger',
       dir: 'in',
-      type: { world: 'signal', domain: 'trigger' },
+      type: { world: "signal", domain: "trigger", category: "core", busEligible: true },
       defaultSource: { value: false },
     },
   ],
@@ -120,7 +120,7 @@ registerBlockType({
       portId: 'env',
       label: 'Envelope',
       dir: 'out',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
     },
   ],
   lower: lowerEnvelopeAD,

@@ -11,7 +11,8 @@
 import { describe, it, expect } from "vitest";
 import { IRBuilderImpl } from "../../../ir/IRBuilderImpl";
 import { buildCompiledProgram } from "../../../ir/buildSchedule";
-import type { TypeDesc } from "../../../ir/types";
+import type { TypeDesc } from } from "../../../ir/types";;
+import { asTypeDesc } from
 
 // Helper to create a TypeDesc
 function makeType(world: TypeDesc["world"], domain: string): TypeDesc {

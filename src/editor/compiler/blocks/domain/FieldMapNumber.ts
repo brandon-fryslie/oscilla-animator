@@ -90,7 +90,7 @@ const lowerFieldMapNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
   const bRaw = Number(configObj?.b);
   const b = !isNaN(bRaw) ? bRaw : 1;
 
-  const outType = { world: 'field' as const, domain: 'float' as const };
+  const outType = { world: "field" as const, domain: "float" as const, category: "core" as const, busEligible: true };
   const opcode = getOpCode(fn);
 
   // Build the function reference using PureFnRef union types
@@ -109,10 +109,10 @@ registerBlockType({
   type: 'FieldMapNumber',
   capability: 'pure',
   inputs: [
-    { portId: 'x', label: 'X', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'x', label: 'X', dir: 'in', type: { world: "field", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'y', label: 'Y', dir: 'out', type: { world: 'field', domain: 'float' } },
+    { portId: 'y', label: 'Y', dir: 'out', type: { world: "field", domain: "float", category: "core", busEligible: true } },
   ],
   lower: lowerFieldMapNumber,
 });

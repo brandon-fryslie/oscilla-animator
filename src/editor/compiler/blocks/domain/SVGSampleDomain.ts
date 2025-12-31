@@ -312,7 +312,7 @@ const lowerSVGSampleDomain: BlockLowerFn = ({ ctx, config }) => {
   const sampledPoints = sampleSVGPath(asset, sampleCount, distribution);
 
   // Create position field as const
-  const posField = ctx.b.fieldConst(sampledPoints, { world: 'field', domain: 'vec2' });
+  const posField = ctx.b.fieldConst(sampledPoints, { world: "field", domain: "vec2", category: "core", busEligible: true });
 
   const slot = ctx.b.allocValueSlot();
   return {
@@ -332,8 +332,8 @@ registerBlockType({
   capability: 'identity',
   inputs: [],
   outputs: [
-    { portId: 'domain', label: 'Domain', dir: 'out', type: { world: 'special', domain: 'domain' } },
-    { portId: 'pos0', label: 'Pos0', dir: 'out', type: { world: 'field', domain: 'vec2' } },
+    { portId: 'domain', label: 'Domain', dir: 'out', type: { world: "config", domain: "domain", category: "internal", busEligible: false } },
+    { portId: 'pos0', label: 'Pos0', dir: 'out', type: { world: "field", domain: "vec2", category: "core", busEligible: true } },
   ],
   lower: lowerSVGSampleDomain,
 });

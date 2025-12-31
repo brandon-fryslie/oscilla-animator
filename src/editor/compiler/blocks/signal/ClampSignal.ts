@@ -27,7 +27,7 @@ const lowerClampSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
   const minValue = cfg?.min ?? 0;
   const maxValue = cfg?.max ?? 1;
 
-  const outType = { world: 'signal' as const, domain: 'float' as const };
+  const outType = { world: "signal" as const, domain: "float" as const, category: "core" as const, busEligible: true };
 
   // Create min constant, then max(value, minConst), then min(result, maxConst)
   const minConstId = ctx.b.sigConst(minValue, outType);
@@ -47,10 +47,10 @@ registerBlockType({
   type: 'ClampSignal',
   capability: 'pure',
   inputs: [
-    { portId: 'in', label: 'In', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'in', label: 'In', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'signal', domain: 'float' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: "signal", domain: "float", category: "core", busEligible: true } },
   ],
   lower: lowerClampSignal,
 });

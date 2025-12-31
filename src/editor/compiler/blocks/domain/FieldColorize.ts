@@ -99,10 +99,10 @@ registerBlockType({
   type: 'FieldColorize',
   capability: 'pure',
   inputs: [
-    { portId: 'values', label: 'Values', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'values', label: 'Values', dir: 'in', type: { world: "field", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'colors', label: 'Colors', dir: 'out', type: { world: 'field', domain: 'color' } },
+    { portId: 'colors', label: 'Colors', dir: 'out', type: { world: "field", domain: "color", category: "core", busEligible: true } },
   ],
   lower: lowerFieldColorize,
 });

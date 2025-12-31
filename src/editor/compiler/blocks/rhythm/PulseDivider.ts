@@ -42,8 +42,8 @@ const lowerPulseDivider: BlockLowerFn = ({ ctx, inputs, config }) => {
     ? Number(config.divisions)
     : 4;
 
-  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
-  const triggerType: TypeDesc = { world: 'signal', domain: 'trigger' };
+  const numberType: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+  const triggerType: TypeDesc = { world: "signal", domain: "trigger", category: "core", busEligible: true };
 
   // Allocate state for previous subPhase
   const stateId = ctx.b.allocStateId(
@@ -92,7 +92,7 @@ registerBlockType({
       portId: 'phase',
       label: 'Phase',
       dir: 'in',
-      type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
+      type: { world: "signal", domain: "float", semantics: 'phase(0..1)', category: "core", busEligible: true },
       defaultSource: { value: 0 },
     },
   ],
@@ -101,7 +101,7 @@ registerBlockType({
       portId: 'tick',
       label: 'Tick',
       dir: 'out',
-      type: { world: 'signal', domain: 'trigger' },
+      type: { world: "signal", domain: "trigger", category: "core", busEligible: true },
     },
   ],
   lower: lowerPulseDivider,

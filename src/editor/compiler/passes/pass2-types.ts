@@ -107,19 +107,19 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
   // Special types without generic syntax
   // Use 'special' world for compatibility with existing IR runtime
   const specialTypes: Record<string, TypeDesc> = {
-    Scene: { world: "special", domain: "scene" },
-    SceneTargets: { world: "special", domain: "sceneTargets" },
-    SceneStrokes: { world: "special", domain: "sceneStrokes" },
-    Domain: { world: "special", domain: "domain" },
-    Program: { world: "special", domain: "program" },
-    Render: { world: "special", domain: "renderTree" },
-    RenderTree: { world: "special", domain: "renderTree" },
-    CanvasRender: { world: "special", domain: "canvasRender" },
-    RenderNode: { world: "special", domain: "renderNode" },
-    "RenderNode[]": { world: "special", domain: "renderNode" },
-    FilterDef: { world: "special", domain: "filterDef" },
-    StrokeStyle: { world: "special", domain: "strokeStyle" },
-    ElementCount: { world: "scalar", domain: "int" },
+    Scene: { world: "config", domain: "scene", category: "internal", busEligible: false },
+    SceneTargets: { world: "config", domain: "sceneTargets", category: "internal", busEligible: false },
+    SceneStrokes: { world: "config", domain: "sceneStrokes", category: "internal", busEligible: false },
+    Domain: { world: "config", domain: "domain", category: "internal", busEligible: false },
+    Program: { world: "config", domain: "program", category: "internal", busEligible: false },
+    Render: { world: "config", domain: "renderTree", category: "internal", busEligible: false },
+    RenderTree: { world: "config", domain: "renderTree", category: "internal", busEligible: false },
+    CanvasRender: { world: "config", domain: "canvasRender", category: "internal", busEligible: false },
+    RenderNode: { world: "config", domain: "renderNode", category: "internal", busEligible: false },
+    "RenderNode[]": { world: "config", domain: "renderNode", category: "internal", busEligible: false },
+    FilterDef: { world: "config", domain: "filterDef", category: "internal", busEligible: false },
+    StrokeStyle: { world: "config", domain: "strokeStyle", category: "internal", busEligible: false },
+    ElementCount: { world: "scalar", domain: "int", category: "core", busEligible: true },
   };
 
   if (slotType in specialTypes) {

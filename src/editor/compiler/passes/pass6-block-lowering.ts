@@ -64,60 +64,60 @@ export interface UnlinkedIRFragments {
 function artifactKindToTypeDesc(kind: string): TypeDesc {
   // Signal types
   if (kind === "Signal:float") {
-    return { world: "signal", domain: "float" };
+    return { world: "signal", domain: "float", category: "core", busEligible: true };
   }
   if (kind === "Signal:int") {
-    return { world: "signal", domain: "int" };
+    return { world: "signal", domain: "int", category: "core", busEligible: true };
   }
   if (kind === "Signal:phase") {
-    return { world: "signal", domain: "float", semantics: "phase(0..1)" };
+    return { world: "signal", domain: "float", semantics: "phase(0..1)", category: "core", busEligible: true };
   }
   if (kind === "Signal:vec2") {
-    return { world: "signal", domain: "vec2" };
+    return { world: "signal", domain: "vec2", category: "core", busEligible: true };
   }
   if (kind === "Signal:color") {
-    return { world: "signal", domain: "color" };
+    return { world: "signal", domain: "color", category: "core", busEligible: true };
   }
   if (kind === "Signal:Time") {
-    return { world: "signal", domain: "float" };
+    return { world: "signal", domain: "float", category: "core", busEligible: true };
   }
 
   // Field types
   if (kind === "Field:float") {
-    return { world: "field", domain: "float" };
+    return { world: "field", domain: "float", category: "core", busEligible: true };
   }
   if (kind === "Field:int") {
-    return { world: "field", domain: "int" };
+    return { world: "field", domain: "int", category: "core", busEligible: true };
   }
   if (kind === "Field:vec2" || kind === "Field:Point" || kind === "Field<Point>") {
-    return { world: "field", domain: "vec2" };
+    return { world: "field", domain: "vec2", category: "core", busEligible: true };
   }
   if (kind === "Field:color") {
-    return { world: "field", domain: "color" };
+    return { world: "field", domain: "color", category: "core", busEligible: true };
   }
   if (kind === "Field:string") {
-    return { world: "field", domain: "string" };
+    return { world: "field", domain: "string", category: "internal", busEligible: false };
   }
   if (kind === "Field:boolean") {
-    return { world: "field", domain: "boolean" };
+    return { world: "field", domain: "boolean", category: "core", busEligible: true };
   }
 
   // Scalars map to signals with constant values
   if (kind === "Scalar:float") {
-    return { world: "signal", domain: "float" };
+    return { world: "signal", domain: "float", category: "core", busEligible: true };
   }
   if (kind === "Scalar:int") {
-    return { world: "signal", domain: "int" };
+    return { world: "signal", domain: "int", category: "core", busEligible: true };
   }
   if (kind === "Scalar:vec2") {
-    return { world: "signal", domain: "vec2" };
+    return { world: "signal", domain: "vec2", category: "core", busEligible: true };
   }
   if (kind === "Scalar:color") {
-    return { world: "signal", domain: "color" };
+    return { world: "signal", domain: "color", category: "core", busEligible: true };
   }
 
   // Default: unknown scalar
-  return { world: "signal", domain: "float" };
+  return { world: "signal", domain: "float", category: "core", busEligible: true };
 }
 
 // =============================================================================
@@ -158,7 +158,7 @@ function artifactToValueRef(
   }
 
   if (kind === "Scalar:vec2") {
-    const type: TypeDesc = { world: "signal", domain: "vec2" };
+    const type: TypeDesc = { world: "signal", domain: "vec2", category: "core", busEligible: true };
     // For vec2, we need to create a constant. For now, use 0 as placeholder
     const sigId = builder.sigConst(0, type);
     const slot = builder.allocValueSlot(type);
@@ -167,7 +167,7 @@ function artifactToValueRef(
   }
 
   if (kind === "Scalar:color") {
-    const type: TypeDesc = { world: "signal", domain: "color" };
+    const type: TypeDesc = { world: "signal", domain: "color", category: "core", busEligible: true };
     const sigId = builder.sigConst(0, type);
     const slot = builder.allocValueSlot(type);
     builder.registerSigSlot(sigId, slot);
@@ -186,7 +186,7 @@ function artifactToValueRef(
   ) {
     // Create a time signal as placeholder - actual signal evaluation happens via closure
     const timeId = builder.sigTimeAbsMs();
-    const slot = builder.allocValueSlot({ world: "signal", domain: "timeMs" });
+    const slot = builder.allocValueSlot({ world: "signal", domain: "timeMs", category: "internal", busEligible: false });
     builder.registerSigSlot(timeId, slot);
     // For now, use time signal directly as placeholder
     // In Phase 4, we'll emit proper signal expressions
