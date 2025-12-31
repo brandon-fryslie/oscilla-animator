@@ -1,0 +1,79 @@
+Agent: iterative-implementer | 2025-12-31-110500
+Mode: manual (no existing tests for TypeDesc unification)
+Completed: 2 of 4 deliverables | Files: 3 | Commits: 2
+Cache invalidated: type-contracts-divergence.md
+Status: in_progress
+
+## Completed Work
+
+### P0: Fix Test Blocker ✓ COMPLETE
+- Added `debugProbes: []` field to all 6 test mocks in state-offset-resolution.test.ts
+- Typecheck now passes without errors
+- Commit: bbb89cb "fix(test): Add missing debugProbes field to test mocks"
+
+### P0: Unified TypeDesc - PARTIAL (Step 1 of 3 complete)
+- Created unified TypeDesc system in src/core/types.ts (lines 447-686)
+- Includes: TypeWorld, Domain (Core + Internal), TypeCategory, TypeDesc interface
+- Bundle shape via `lanes: number[]` field (e.g., [3] = vec3, [4] = rgba)
+- Helper functions: getTypeArity(), inferBundleLanes(), createTypeDesc()
+- Commit: 1ef5e3e "feat(types): Add unified TypeDesc system to src/core/types.ts"
+- Cache invalidation: Removed type-contracts-divergence.md (stale after unification)
+
+## Remaining Work
+
+### P0: Unified TypeDesc - Steps 2-3
+- Step 2: Update src/editor/types.ts to re-export from core (remove local TypeDesc/Domain/TypeWorld)
+- Step 3: Update src/editor/compiler/ir/types.ts to import from core (migrate bundleKind → lanes)
+- Fix all typecheck errors from migration
+- Run `just check` to verify no regressions
+
+### P1: DefaultSource Shared Helper (NOT STARTED)
+- Create src/editor/compiler/ir/defaultSourceUtils.ts with materializeDefaultSource()
+- Update Pass6 and Pass8 to use shared helper
+- Unit tests for all world types
+- Signal non-numeric uses const pool (not coercion)
+
+### P1: Harden Pass 8 Link Resolution (NOT STARTED)
+- Output slot validation (emit MissingOutputRegistration)
+- Bus publisher validation (emit BusWithoutPublisher)
+- Document null ValueRef handling
+- Unit tests for new validations
+
+## Design Decisions
+
+Unified TypeDesc in src/core/types.ts:
+- world: 'signal' | 'event' | 'field' | 'scalar' | 'config' (NOT 'special')
+- domain: CoreDomain | InternalDomain (full list from both editor + IR)
+- category: 'core' | 'internal'
+- busEligible: boolean
+- lanes?: number[] (semantic shape, e.g., [3] = vec3)
+- Packing strategy (AoS/SoA) stays IR/runtime-only
+
+## Next Steps
+
+1. Migrate src/editor/types.ts:
+   - Remove TypeWorld, Domain, TypeCategory, TypeDesc (lines 20-166)
+   - Add: export { TypeWorld, Domain, TypeCategory, TypeDesc, ... } from '../core/types'
+   - Fix any editor code that breaks (likely minimal - same fields)
+
+2. Migrate src/editor/compiler/ir/types.ts:
+   - Remove local TypeDesc (has bundleKind/bundleArity instead of lanes)
+   - Import from src/core/types.ts
+   - Create migration helper: bundleKindToLanes(kind: BundleKind): number[]
+   - Update all IR code to use `lanes` instead of bundleKind/bundleArity
+   - Replace 'special' world with 'config' or remove from TypeDesc
+
+3. Run `just typecheck` iteratively, fix breaks
+
+4. Once typecheck passes, implement P1 deliverables
+
+## Blockers
+
+None. Migration is straightforward but requires careful incremental changes.
+
+## Notes
+
+- Test suite passes (debugProbes fix resolved blocker)
+- TypeDesc unification is foundational for P1 deliverables
+- Bundle type system uses `lanes` not bundleKind (cleaner, more flexible)
+- 'config' world replaces 'special' for non-runtime values
