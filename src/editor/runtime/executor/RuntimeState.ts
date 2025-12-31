@@ -45,10 +45,24 @@ import { createTimeState, type TimeState } from "./timeResolution";
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+import { asTypeDesc } from "../../compiler/ir/types";
+=======
+import { EventStore } from "./EventStore";
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
+=======
+import { EventStore } from "./EventStore";
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
+=======
+=======
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
 import { EventStore } from "./EventStore";
 =======
 import { asTypeDesc } from "../../compiler/ir/types";
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
@@ -101,6 +115,10 @@ import { asTypeDesc } from "../../compiler/ir/types";
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
 =======
 =======
+<<<<<<< HEAD
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
+=======
 =======
 import { asTypeDesc } from "../../compiler/ir/types";
 =======
@@ -108,6 +126,7 @@ import { EventStore } from "./EventStore";
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+<<<<<<< HEAD
 >>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 import { asTypeDesc } from "../../compiler/ir/types";
@@ -126,6 +145,8 @@ import { EventStore } from "./EventStore";
 =======
 >>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
 >>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
 
 // ============================================================================
 // RuntimeState Interface

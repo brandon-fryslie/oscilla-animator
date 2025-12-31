@@ -121,6 +121,7 @@ export function createTimeState(): TimeState {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
@@ -138,6 +139,12 @@ export function createTimeState(): TimeState {
 =======
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
  *
  * @param tAbsMs - Absolute time in milliseconds
  * @param timeModel - Time model specification
@@ -173,6 +180,7 @@ export function resolveTime(
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
   if (timeState !== undefined) {
@@ -196,6 +204,12 @@ export function resolveTime(
 =======
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
     }
     timeState.prevTAbsMs = tAbsMs;
   }
@@ -217,6 +231,7 @@ export function resolveTime(
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
 =======
 >>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
@@ -234,6 +249,12 @@ export function resolveTime(
 =======
 >>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
 >>>>>>> a30d736 (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> a2a2b5c (feat(events): Implement EventStore for discrete event semantics)
+=======
+>>>>>>> 3b1c0a6 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> 7509ff8 (feat(events): Implement EventStore for discrete event semantics)
+>>>>>>> f1444f6 (feat(events): Implement EventStore for discrete event semantics)
   switch (timeModel.kind) {
     case "finite": {
       // Clamp to duration
