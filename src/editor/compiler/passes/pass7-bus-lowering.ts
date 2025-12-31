@@ -63,11 +63,15 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
   return asTypeDesc({
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
     world: busType.world,
     domain: busType.domain,
 =======
     world: busType.world as TypeDesc["world"],
     domain: busType.domain as TypeDesc["domain"],
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
 =======
@@ -77,6 +81,9 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
     world: busType.world as TypeDesc["world"],
     domain: busType.domain as TypeDesc["domain"],
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
   });
 }
 
