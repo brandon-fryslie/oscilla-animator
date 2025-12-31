@@ -309,11 +309,11 @@ describe("pass2TypeGraph", () => {
       expect(() => pass2TypeGraph(patch)).toThrow(/BusIneligibleType/);
     });
 
-    it("rejects special buses (not bus-eligible)", () => {
+    it("rejects config buses (not bus-eligible)", () => {
       const patch = createNormalizedPatch({
         buses: [
-          createBus("bus1", "specialBus", asTypeDesc({
-    world: "special",
+          createBus("bus1", "configBus", asTypeDesc({
+    world: "config",
     domain: "renderTree",
   })),
         ],
@@ -535,9 +535,9 @@ describe("pass2TypeGraph", () => {
       ).toBe(false);
     });
 
-    it("returns false for special types", () => {
+    it("returns false for config types", () => {
       expect(
-        isBusEligible(asTypeDesc({ world: "special", domain: "renderTree" }))
+        isBusEligible(asTypeDesc({ world: "config", domain: "renderTree" }))
       ).toBe(false);
     });
   });

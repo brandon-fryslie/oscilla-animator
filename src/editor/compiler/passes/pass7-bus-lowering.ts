@@ -61,8 +61,8 @@ export interface IRWithBusRoots {
  */
 function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
   return asTypeDesc({
-    world: busType.world as TypeDesc["world"],
-    domain: busType.domain as TypeDesc["domain"],
+    world: busType.world,
+    domain: busType.domain,
   });
 }
 

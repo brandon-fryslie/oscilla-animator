@@ -1,0 +1,34 @@
+Agent: iterative-implementer | 2025-12-31
+Mode: manual
+Completed: Fixed 1450+ typecheck errors | Files: 3 | Commits: 1
+Cache invalidated: N/A (no eval cache for this work)
+Status: complete
+
+## Problem
+The TypeDesc migration inadvertently duplicated ~20 type exports in src/editor/types.ts,
+causing 1450+ typecheck errors across the codebase.
+
+## Root Cause
+The file had both:
+1. Duplicate TypeWorld/Domain/TypeDesc definitions (lines 28-166)
+2. Duplicate export statements for utility functions (lines 51 & 54)
+
+Instead of re-exporting from src/core/types.ts (the single source of truth),
+the types were redefined in editor/types.ts, creating conflicts.
+
+## Solution
+1. Replaced duplicated type definitions with proper imports and re-exports from src/core/types.ts
+2. Removed duplicate export statement for getTypeArity/inferBundleLanes/createTypeDesc
+3. Fixed LensRegistry.ts to use asTypeDesc() helper for TypeDesc creation
+4. Removed duplicate debugProbes fields in test mocks
+
+## Result
+- Typecheck errors: 1450+ → 0 ✓
+- All types now properly re-exported from single source (src/core/types.ts)
+- Unified type contract system restored
+- Test mocks cleaned up
+
+## Files Modified
+- src/editor/types.ts (removed duplicates, added proper imports)
+- src/editor/lenses/LensRegistry.ts (wrapped outputType in asTypeDesc)
+- src/editor/compiler/ir/__tests__/state-offset-resolution.test.ts (removed duplicate debugProbes)

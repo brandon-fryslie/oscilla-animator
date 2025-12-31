@@ -344,7 +344,7 @@ export function pass2TypeGraph(
   const busTypes = new Map<string, TypeDesc>();
 
   for (const bus of normalized.buses) {
-    const busType = bus.type as TypeDesc;
+    const busType = bus.type;
 
     // Validate bus eligibility
     if (!isBusEligible(busType)) {

@@ -188,10 +188,10 @@ export function migrateBundleToLanes(
   bundleKind?: BundleKind,
   bundleArity?: number
 ): number[] | undefined {
-  if (bundleKind) {
+  if (bundleKind !== undefined) {
     return bundleKindToLanes(bundleKind);
   }
-  if (bundleArity && bundleArity !== 1) {
+  if (bundleArity !== undefined && bundleArity !== 1) {
     return [bundleArity];
   }
   // Scalar - no explicit lanes
