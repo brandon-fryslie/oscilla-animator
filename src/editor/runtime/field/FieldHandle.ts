@@ -196,6 +196,28 @@ export function evalFieldHandle(
       };
       break;
 
+    case 'mapIndexed':
+      // Indexed map - generate values from element index
+      handle = {
+        kind: 'MapIndexed',
+        domainSlot: node.domainSlot,
+        fn: node.fn.opcode,
+        signals: node.signals,
+        type: node.type,
+      };
+      break;
+
+    case 'zipSig':
+      // Zip field with signals
+      handle = {
+        kind: 'ZipSig',
+        field: node.field,
+        fn: node.fn.opcode,
+        signals: node.signals,
+        type: node.type,
+      };
+      break;
+
     default:
       throw new Error(`Unknown field kind: ${String((node as { kind: unknown }).kind)}`);
   }
