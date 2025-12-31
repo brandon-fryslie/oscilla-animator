@@ -11,7 +11,7 @@
  * - Empty domain handling
  */
 
-import { asTypeDesc } from "../../../compiler/ir/types";
+import { asTypeDesc } from "../../../../compiler/ir/types";
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   executeInstances3DProject,
@@ -102,7 +102,7 @@ function createMinimalProgram(): CompiledProgramIR {
     slot: i,
     storage: "object" as const,
     offset: i,
-    type: { world: "special" as const, domain: "unknown" as const },
+    type: asTypeDesc({ world: "config", domain: "unknown" }),
   }));
 
   return {

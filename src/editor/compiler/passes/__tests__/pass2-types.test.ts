@@ -241,10 +241,9 @@ describe("pass2TypeGraph", () => {
 
       const typed = pass2TypeGraph(patch);
       expect(typed.busTypes.size).toBe(1);
-      expect(typed.busTypes.get("bus1")).toEqual({
-        world: "signal",
-        domain: "float",
-      });
+      const busType = typed.busTypes.get("bus1");
+      expect(busType?.world).toBe("signal");
+      expect(busType?.domain).toBe("float");
     });
 
     it("accepts event buses (always eligible)", () => {

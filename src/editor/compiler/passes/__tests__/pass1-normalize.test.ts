@@ -181,15 +181,12 @@ describe("pass1Normalize", () => {
       const normalized = pass1Normalize(patch);
 
       expect(normalized.defaultSources).toHaveLength(1);
-      expect(normalized.defaultSources[0]).toEqual({
-        blockId: "b1",
-        slotId: "in1",
-        constId: 0,
-        type: {
-          world: "signal",
-          domain: "float",
-        },
-      });
+      const ds = normalized.defaultSources[0];
+      expect(ds.blockId).toBe("b1");
+      expect(ds.slotId).toBe("in1");
+      expect(ds.constId).toBe(0);
+      expect(ds.type.world).toBe("signal");
+      expect(ds.type.domain).toBe("float");
     });
 
     it("does not attach default sources for wired inputs", () => {

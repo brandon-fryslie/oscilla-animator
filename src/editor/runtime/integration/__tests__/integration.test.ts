@@ -9,7 +9,8 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import type { TypeDesc as CompilerTypeDesc , asTypeDesc} from "../../../compiler/ir/types";
+import type { TypeDesc as CompilerTypeDesc } from "../../../compiler/ir/types";
+import { asTypeDesc } from "../../../compiler/ir/types";
 import {
   compilerToRuntimeType,
   canBroadcastToField,
@@ -27,6 +28,11 @@ import type {
 } from "../../field/types";
 import { numberType } from "../../field/types";
 
+// Helper to create valid CompilerTypeDesc from partial spec
+function makeType(world: CompilerTypeDesc["world"], domain: CompilerTypeDesc["domain"], extras?: Partial<CompilerTypeDesc>): CompilerTypeDesc {
+  return asTypeDesc({ world, domain, ...extras });
+}
+
 describe("Integration: Type Adapter + SignalBridge", () => {
   let bridge: SignalBridge;
   let pool: FieldBufferPool;
@@ -38,7 +44,7 @@ describe("Integration: Type Adapter + SignalBridge", () => {
 
   describe("Type conversion for field materialization", () => {
     it("should convert compiler field type to runtime type", () => {
-      const compilerType: CompilerTypeDesc = { world: "field", domain: "float" };
+      const compilerType = makeType("field", "float");
 
       const runtimeType = compilerToRuntimeType(compilerType);
 
@@ -46,7 +52,7 @@ describe("Integration: Type Adapter + SignalBridge", () => {
     });
 
     it("should convert compiler signal type for broadcast", () => {
-      const compilerType: CompilerTypeDesc = { world: "signal", domain: "float" };
+      const compilerType = makeType("signal", "float");
 
       expect(canBroadcastToField(compilerType)).toBe(true);
 
@@ -55,11 +61,7 @@ describe("Integration: Type Adapter + SignalBridge", () => {
     });
 
     it("should convert vec2 types for position fields", () => {
-      const compilerType: CompilerTypeDesc = {
-        world: "field",
-        domain: "vec2",
-        semantics: "point",
-      };
+      const compilerType = makeType("field", "vec2", { semantics: "point" });
 
       const runtimeType = compilerToRuntimeType(compilerType);
 
@@ -67,10 +69,7 @@ describe("Integration: Type Adapter + SignalBridge", () => {
     });
 
     it("should convert color types for fill fields", () => {
-      const compilerType: CompilerTypeDesc = {
-        world: "signal",
-        domain: "color",
-      };
+      const compilerType = makeType("signal", "color");
 
       expect(canBroadcastToField(compilerType)).toBe(true);
 
@@ -311,7 +310,7 @@ describe("Integration: Type Adapter + SignalBridge", () => {
   describe("End-to-end: Compiler type → Runtime materialization", () => {
     it("should materialize a field with compiler-converted type", () => {
       // Start with compiler type
-      const compilerType: CompilerTypeDesc = { world: "signal", domain: "float" };
+      const compilerType = makeType("signal", "float");
 
       // Convert to runtime type
       const runtimeType = compilerToRuntimeType(compilerType);
@@ -386,10 +385,7 @@ describe("Integration: Type Adapter + SignalBridge", () => {
     });
 
     it("should handle type conversion errors gracefully", () => {
-      const unsupportedType: CompilerTypeDesc = {
-        world: "scalar",
-        domain: "float",
-      };
+      const unsupportedType = makeType("scalar", "float");
 
       expect(() => compilerToRuntimeType(unsupportedType)).toThrow();
     });
@@ -497,7 +493,7 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
     it("should evaluate constant signal via SigEvaluator", () => {
       // Create SignalExprIR nodes
       const sigNodes: SignalExprIR[] = [
-        { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 },
+        { kind: "const", type: makeType("signal", "float"), constId: 0 },
       ];
 
       // Create proper SigEnv for IR evaluation
@@ -577,18 +573,18 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
     it("should evaluate sin(t) signal via SigEvaluator", () => {
       // Create SignalExprIR nodes: sin(t / 1000)
       const sigNodes: SignalExprIR[] = [
-        { kind: "timeAbsMs", type: { world: "signal", domain: "float" } },
-        { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 },
+        { kind: "timeAbsMs", type: makeType("signal", "float") },
+        { kind: "const", type: makeType("signal", "float"), constId: 0 },
         {
           kind: "zip",
-          type: { world: "signal", domain: "float" },
+          type: makeType("signal", "float"),
           a: 0,
           b: 1,
           fn: { kind: "opcode", opcode: OpCode.Div },
         },
         {
           kind: "map",
-          type: { world: "signal", domain: "float" },
+          type: makeType("signal", "float"),
           src: 2,
           fn: { kind: "opcode", opcode: OpCode.Sin },
         },
@@ -670,7 +666,7 @@ describe("Integration: Phase 4 SigEvaluator via Materializer", () => {
     it("should prefer IR evaluation over SignalBridge when both available", () => {
       // Create a simple constant node
       const sigNodes: SignalExprIR[] = [
-        { kind: "const", type: { world: "signal", domain: "float" }, constId: 0 },
+        { kind: "const", type: makeType("signal", "float"), constId: 0 },
       ];
 
       // IR says value is 100
