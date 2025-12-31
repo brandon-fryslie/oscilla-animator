@@ -25,6 +25,7 @@ import {
   RESERVED_BUS_CONTRACTS,
   validateReservedBus,
   validateCombineModeCompatibility,
+  validateBusIRSupport,
 } from './busContracts';
 
 /**
@@ -85,6 +86,10 @@ export class Validator {
     // Rule 8: Combine mode compatibility validation (NEW P1)
     const combineModeErrors = this.validateCombineModeCompatibility(patch);
     errors.push(...combineModeErrors);
+
+    // Rule 9: Bus IR type support validation (Sprint 19 P1)
+    const busIRSupportErrors = this.validateBusIRSupport(patch);
+    errors.push(...busIRSupportErrors);
 
     // Warning: Empty buses
     const emptyBusWarnings = this.warnEmptyBuses(patch);
@@ -598,6 +603,48 @@ export class Validator {
                 domain: bus.type.domain,
                 combineMode: bus.combineMode,
                 allowedModes: compatibilityError.expected,
+              },
+            },
+          })
+        );
+      }
+    }
+
+    return errors;
+  }
+
+  /**
+   * Rule: Bus types must be supported in IR mode.
+   * Sprint 19 P1: Non-numeric buses (vec2/vec3/color) not yet supported in IR mode.
+   */
+  private validateBusIRSupport(patch: PatchDocument): Diagnostic[] {
+    const errors: Diagnostic[] = [];
+
+    if (patch.buses == null) {
+      return errors;
+    }
+
+    for (const bus of patch.buses) {
+      const irSupportError = validateBusIRSupport(bus.id, bus.type);
+
+      if (irSupportError) {
+        errors.push(
+          createDiagnostic({
+            code: irSupportError.code,
+            severity: 'error',
+            domain: 'compile',
+            primaryTarget: {
+              kind: 'bus',
+              busId: bus.id,
+            },
+            title: 'Unsupported bus type in IR mode',
+            message: irSupportError.message,
+            patchRevision: this.patchRevision,
+            payload: {
+              kind: 'generic',
+              data: {
+                busId: irSupportError.busId,
+                domain: irSupportError.domain,
               },
             },
           })

@@ -155,6 +155,15 @@ export const COMBINE_MODE_COMPATIBILITY: Record<string, BusCombineMode[]> = {
 };
 
 /**
+ * Numeric domains that can be combined with mathematical operations.
+ * These are the domains supported by executeBusEval.ts combineValues() function.
+ *
+ * Sprint 19 P1: Non-numeric buses (vec2/vec3/color/etc.) are not yet supported
+ * in IR mode. The runtime only handles numeric scalar combine operations.
+ */
+const NUMERIC_DOMAINS = new Set(['float', 'int', 'boolean', 'time', 'rate', 'duration']);
+
+/**
  * Check if a bus name is reserved.
  */
 export function isReservedBusName(busName: string): boolean {
@@ -274,6 +283,46 @@ export function validateCombineModeCompatibility(
       message: `Bus with type domain "${domain}" cannot use combineMode="${combineMode}"`,
       expected: allowedModes,
       actual: combineMode,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Validate that a bus type is supported in IR mode.
+ *
+ * Sprint 19 P1: Non-numeric buses (vec2/vec3/color) not yet supported in IR mode.
+ * The runtime executeBusEval.ts only handles numeric scalar combine operations.
+ *
+ * @param busId - Bus identifier for error message
+ * @param busType - TypeDesc of the bus to validate
+ * @returns Validation error or null if supported
+ */
+export function validateBusIRSupport(
+  busId: string,
+  busType: TypeDesc
+): {
+  code: 'E_BUS_UNSUPPORTED_IR_TYPE';
+  message: string;
+  busId: string;
+  domain: string;
+} | null {
+  // Only signal and field buses are supported in IR mode
+  if (busType.world !== 'signal' && busType.world !== 'field') {
+    // Event buses are handled separately, so we skip them here
+    if (busType.world === 'event') {
+      return null;
+    }
+  }
+
+  // Check if domain is numeric
+  if (!NUMERIC_DOMAINS.has(busType.domain)) {
+    return {
+      code: 'E_BUS_UNSUPPORTED_IR_TYPE',
+      message: `Non-numeric buses (vec2/vec3/color) not yet supported in IR mode. Bus '${busId}' has type '${busType.domain}'`,
+      busId,
+      domain: busType.domain,
     };
   }
 
