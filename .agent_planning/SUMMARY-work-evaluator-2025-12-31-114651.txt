@@ -1,0 +1,7 @@
+Agent: work-evaluator | 2025-12-31-114651
+Scope: work/render-pipeline
+Verdict: INCOMPLETE
+Criteria: 6/6 functional | Breaks found: 0 | Ambiguities: 0
+Previous issues: n/a (first evaluation)
+Missing checks: 0 specified
+Cache updated: No cache updates (ESLint pattern is project-level, not scope-specific)
