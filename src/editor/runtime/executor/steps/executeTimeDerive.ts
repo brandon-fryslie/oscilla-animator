@@ -2,6 +2,7 @@
  * Execute Time Derive Step
  *
  * Writes derived time values to well-known slots.
+ * wrapEvent is written to EventStore (discrete trigger) instead of ValueStore (numeric value).
  *
  * This is the ONLY step kind with a full implementation in Sprint 1.
  * It reads tAbsMs from input slot and writes derived time signals to output slots.
@@ -9,6 +10,7 @@
  * References:
  * - HANDOFF.md Topic 3 (ScheduleExecutor - Time Derive)
  * - design-docs/12-Compiler-Final/10-Schedule-Semantics.md §12.2 Step 1
+ * - .agent_planning/time-event-semantics/PLAN-2025-12-31-013758.md (P1 EventStore)
  */
 
 import type { StepTimeDerive } from "../../../compiler/ir";
@@ -19,18 +21,19 @@ import type { EffectiveTime } from "../timeResolution";
  * Execute TimeDerive step.
  *
  * Writes derived time values to their designated slots.
+ * wrapEvent is written to EventStore with payload (discrete trigger semantics).
  *
  * Inputs:
  * - tAbsMs: from effectiveTime (already resolved)
  *
  * Outputs (written to slots per step.out):
- * - tModelMs: model time (always written)
- * - phase01: phase 0..1 (cyclic models only)
- * - wrapEvent: wrap event (cyclic models only)
- * - progress01: progress 0..1 (finite models only)
+ * - tModelMs: model time (always written to ValueStore)
+ * - phase01: phase 0..1 (cyclic models only, ValueStore)
+ * - wrapEvent: wrap event (cyclic models only, EventStore with payload)
+ * - progress01: progress 0..1 (finite models only, ValueStore)
  *
  * @param step - TimeDerive step specification
- * @param runtime - Runtime state (provides ValueStore)
+ * @param runtime - Runtime state (provides ValueStore and EventStore)
  * @param time - Effective time (pre-computed by resolveTime)
  */
 export function executeTimeDerive(
@@ -62,9 +65,16 @@ export function executeTimeDerive(
     }
   }
 
-  if (step.out.wrapEvent !== undefined && time.wrapEvent !== undefined) {
+  // Write wrapEvent to EventStore (discrete trigger) instead of ValueStore (numeric value)
+  // Event semantics: trigger once per wrap, not continuous 0.0/1.0 value
+  if (step.out.wrapEvent !== undefined && time.wrapEvent !== undefined && time.wrapEvent > 0) {
     if (!written.has(step.out.wrapEvent)) {
-      runtime.values.write(step.out.wrapEvent, time.wrapEvent);
+      // Trigger event with payload (phase, count, deltaMs)
+      runtime.events.trigger(step.out.wrapEvent, {
+        phase: time.phase01 ?? 0, // Phase at wrap time (0.0-1.0)
+        count: runtime.timeState.wrapCount, // Total wrap count
+        deltaMs: runtime.timeState.lastDeltaMs, // Frame delta when wrap occurred
+      });
       written.add(step.out.wrapEvent);
     }
   }

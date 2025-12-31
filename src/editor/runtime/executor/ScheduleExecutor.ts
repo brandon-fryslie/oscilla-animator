@@ -85,12 +85,13 @@ export class ScheduleExecutor {
    * Frame lifecycle:
    * 1. Start new frame (increment frameId, invalidate per-frame caches)
    * 2. Clear ValueStore (reset slot writes)
-   * 3. Resolve effective time (with wrap detection using timeState)
-   * 4. Execute each step in schedule order
-   * 5. Extract render output
+   * 3. Clear EventStore (reset event triggers)
+   * 4. Resolve effective time (with wrap detection using timeState)
+   * 5. Execute each step in schedule order
+   * 6. Extract render output
    *
    * @param program - Compiled program IR
-   * @param runtime - Runtime state (values, state, caches, timeState)
+   * @param runtime - Runtime state (values, state, events, caches, timeState)
    * @param tMs - Absolute time in milliseconds
    * @returns RenderFrameIR for this frame
    */
@@ -102,6 +103,7 @@ export class ScheduleExecutor {
     // 1. New frame lifecycle
     runtime.frameCache.newFrame();
     runtime.values.clear();
+    runtime.events.reset(); // Clear event triggers from previous frame
     runtime.frameId++;
 
     // 2. Compute effective time (pass timeState for wrap detection)
@@ -148,10 +150,10 @@ export class ScheduleExecutor {
    * // User edits patch - recompile
    * const newProgram = compile(editedPatch);
    *
-   * // Hot-swap (no visual jank)
+   * // Hot-swap (preserves state)
    * runtime = executor.swapProgram(newProgram, runtime);
    *
-   * // Continue with new program
+   * // Continue execution with new program (no jank)
    * executor.executeFrame(newProgram, runtime, tMs);
    * ```
    */
@@ -159,20 +161,20 @@ export class ScheduleExecutor {
     newProgram: CompiledProgramIR,
     oldRuntime: RuntimeState,
   ): RuntimeState {
-    // Hot-swap via RuntimeState.hotSwap()
+    // Delegate to RuntimeState.hotSwap()
     return oldRuntime.hotSwap(newProgram);
   }
 
   /**
-   * Execute a single step.
+   * Execute a single schedule step.
    *
-   * Dispatches to the appropriate step executor based on step.kind.
-   * Uses exhaustive switch to ensure all step kinds are handled.
+   * Dispatches to the appropriate step executor based on step kind.
+   * Throws error for unknown step kinds (fail-fast on compiler bugs).
    *
    * @param step - Step to execute
-   * @param program - Compiled program
-   * @param runtime - Runtime state
-   * @param effectiveTime - Resolved time values
+   * @param program - Compiled program (provides signal/field/bus tables)
+   * @param runtime - Runtime state (values, state, caches)
+   * @param effectiveTime - Effective time for this frame
    */
   private executeStep(
     step: StepIR,
@@ -251,9 +253,11 @@ export class ScheduleExecutor {
         break;
 
       default: {
-        // Exhaustiveness check - TypeScript will error if a case is missing
-        const _exhaustive: never = step;
-        throw new Error(`Unknown step kind: ${(_exhaustive as StepIR).kind}`);
+        // Exhaustiveness check: if we reach here, compiler emitted unknown step kind
+        const unknownStep = step as StepIR;
+        throw new Error(
+          `Unknown step kind: ${(unknownStep as { kind: string }).kind}`
+        );
       }
     }
   }
