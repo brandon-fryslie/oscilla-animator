@@ -1,0 +1,18 @@
+Agent: iterative-implementer | 20251231111718
+Mode: manual
+Completed: EventStore ergonomic improvements | Files: 2 | Commits: 1
+Tests: 35 passing (EventStore.test.ts)
+Cache invalidated: None (additive changes only)
+Status: complete
+
+Details:
+- Added consume() method (combines check + getPayload)
+- Added hasEvents() method (quick check for any events)
+- Added getTriggered() method (enumerate all triggered slots)
+- 15 new tests covering all convenience methods
+- All 35 EventStore tests passing
+- Backward compatible with existing API
+- Typecheck passing
+- Commit: 20f6657 feat(events): Add ergonomic convenience methods to EventStore
+
+Next: Ready for evaluation or next task

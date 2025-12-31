@@ -278,7 +278,7 @@ describe("resolveTime", () => {
       const time1 = resolveTime(900, cyclicModel, timeState, 'playback');
 
       // Simulate executeTimeDerive writing to EventStore
-      if (time1.wrapEvent && time1.wrapEvent > 0 && !time1.isScrub) {
+      if (time1.wrapEvent !== undefined && time1.wrapEvent > 0 && !time1.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time1.phase01 ?? 0,
           count: timeState.wrapCount,
@@ -292,7 +292,7 @@ describe("resolveTime", () => {
       eventStore.reset();
       const time2 = resolveTime(1100, cyclicModel, timeState, 'playback');
 
-      if (time2.wrapEvent && time2.wrapEvent > 0 && !time2.isScrub) {
+      if (time2.wrapEvent !== undefined && time2.wrapEvent > 0 && !time2.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time2.phase01 ?? 0,
           count: timeState.wrapCount,
@@ -312,7 +312,7 @@ describe("resolveTime", () => {
       eventStore.reset();
       const time3 = resolveTime(1200, cyclicModel, timeState, 'playback');
 
-      if (time3.wrapEvent && time3.wrapEvent > 0 && !time3.isScrub) {
+      if (time3.wrapEvent !== undefined && time3.wrapEvent > 0 && !time3.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time3.phase01 ?? 0,
           count: timeState.wrapCount,
@@ -338,7 +338,7 @@ describe("resolveTime", () => {
 
       eventStore.reset();
       const time1 = resolveTime(1050, cyclicModel, timeState, 'playback');
-      if (time1.wrapEvent && time1.wrapEvent > 0 && !time1.isScrub) {
+      if (time1.wrapEvent !== undefined && time1.wrapEvent > 0 && !time1.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time1.phase01 ?? 0,
           count: timeState.wrapCount,
@@ -355,7 +355,7 @@ describe("resolveTime", () => {
 
       eventStore.reset();
       const time2 = resolveTime(2050, cyclicModel, timeState, 'playback');
-      if (time2.wrapEvent && time2.wrapEvent > 0 && !time2.isScrub) {
+      if (time2.wrapEvent !== undefined && time2.wrapEvent > 0 && !time2.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time2.phase01 ?? 0,
           count: timeState.wrapCount,
@@ -372,7 +372,7 @@ describe("resolveTime", () => {
 
       eventStore.reset();
       const time3 = resolveTime(3050, cyclicModel, timeState, 'playback');
-      if (time3.wrapEvent && time3.wrapEvent > 0 && !time3.isScrub) {
+      if (time3.wrapEvent !== undefined && time3.wrapEvent > 0 && !time3.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time3.phase01 ?? 0,
           count: timeState.wrapCount,
@@ -399,7 +399,7 @@ describe("resolveTime", () => {
       // Frame 2: 1050ms (crosses wrap boundary)
       eventStore.reset();
       const time2 = resolveTime(1050, cyclicModel, timeState, 'playback');
-      if (time2.wrapEvent && time2.wrapEvent > 0 && !time2.isScrub) {
+      if (time2.wrapEvent !== undefined && time2.wrapEvent > 0 && !time2.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time2.phase01 ?? 0,
           count: timeState.wrapCount,
@@ -411,7 +411,7 @@ describe("resolveTime", () => {
       // Frame 3: 1100ms (still in cycle after wrap)
       eventStore.reset();
       const time3 = resolveTime(1100, cyclicModel, timeState, 'playback');
-      if (time3.wrapEvent && time3.wrapEvent > 0 && !time3.isScrub) {
+      if (time3.wrapEvent !== undefined && time3.wrapEvent > 0 && !time3.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time3.phase01 ?? 0,
           count: timeState.wrapCount,
@@ -423,7 +423,7 @@ describe("resolveTime", () => {
       // Frame 4: 1500ms (middle of cycle)
       eventStore.reset();
       const time4 = resolveTime(1500, cyclicModel, timeState, 'playback');
-      if (time4.wrapEvent && time4.wrapEvent > 0 && !time4.isScrub) {
+      if (time4.wrapEvent !== undefined && time4.wrapEvent > 0 && !time4.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time4.phase01 ?? 0,
           count: timeState.wrapCount,
@@ -449,7 +449,7 @@ describe("resolveTime", () => {
       const time2 = resolveTime(500, cyclicModel, timeState, 'scrub');
 
       // Should NOT trigger event due to scrub
-      if (time2.wrapEvent && time2.wrapEvent > 0 && !time2.isScrub) {
+      if (time2.wrapEvent !== undefined && time2.wrapEvent > 0 && !time2.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time2.phase01 ?? 0,
           count: timeState.wrapCount,
@@ -475,7 +475,7 @@ describe("resolveTime", () => {
       // Frame 2: 1050ms (crosses wrap)
       eventStore.reset();
       const time2 = resolveTime(1050, cyclicModel, timeState, 'playback');
-      if (time2.wrapEvent && time2.wrapEvent > 0 && !time2.isScrub) {
+      if (time2.wrapEvent !== undefined && time2.wrapEvent > 0 && !time2.isScrub) {
         eventStore.trigger(wrapSlot, {
           phase: time2.phase01 ?? 0,
           count: timeState.wrapCount,
