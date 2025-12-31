@@ -16,7 +16,11 @@ import type { DefaultSourceAttachment } from './defaultSources/types';
 <<<<<<< HEAD
 
 =======
+<<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
 // =============================================================================
 // Bus Type System (Core/Internal Split)
 // =============================================================================
@@ -57,7 +61,11 @@ export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
 // =============================================================================
 // Kernel Capabilities (Primitive Enforcement)
 // =============================================================================
+<<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
 
 
 
@@ -220,7 +228,11 @@ export interface TypeDesc {
 export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer';
 
 /**
+<<<<<<< HEAD
 >>>>>>> 64db43c (fix(types): Complete TypeDesc contract migration for production code)
+=======
+>>>>>>> aabe157 (fix(types): Complete TypeDesc contract migration for production code)
+>>>>>>> b2e904e (fix(types): Complete TypeDesc contract migration for production code)
  * Format a TypeDesc for display.
  */
 // MOVED TO SEMANTIC KERNEL
