@@ -38,7 +38,7 @@ if (typeof globalThis.window !== 'undefined') {
 if (typeof HTMLCanvasElement !== 'undefined') {
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
 
-  HTMLCanvasElement.prototype.getContext = function(contextId: string, ...args: any[]): any {
+  HTMLCanvasElement.prototype.getContext = function(contextId: string, ..._args: any[]): any {
     if (contextId === '2d') {
       // Create a minimal canvas 2D context mock
       const canvas = this;
@@ -59,35 +59,35 @@ if (typeof HTMLCanvasElement !== 'undefined') {
         // Transform methods
         save() {},
         restore() {},
-        scale(x: number, y: number) {},
-        rotate(angle: number) {},
-        translate(x: number, y: number) {},
-        transform(a: number, b: number, c: number, d: number, e: number, f: number) {},
-        setTransform(a: number, b: number, c: number, d: number, e: number, f: number) {},
+        scale(_x: number, _y: number) {},
+        rotate(_angle: number) {},
+        translate(_x: number, _y: number) {},
+        transform(_a: number, _b: number, _c: number, _d: number, _e: number, _f: number) {},
+        setTransform(_a: number, _b: number, _c: number, _d: number, _e: number, _f: number) {},
         resetTransform() {},
 
         // Path methods
         beginPath() {},
         closePath() {},
-        moveTo(x: number, y: number) {},
-        lineTo(x: number, y: number) {},
-        bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number) {},
-        quadraticCurveTo(cpx: number, cpy: number, x: number, y: number) {},
-        arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean) {},
-        arcTo(x1: number, y1: number, x2: number, y2: number, radius: number) {},
-        ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, counterclockwise?: boolean) {},
-        rect(x: number, y: number, w: number, h: number) {},
+        moveTo(_x: number, _y: number) {},
+        lineTo(_x: number, _y: number) {},
+        bezierCurveTo(_cp1x: number, _cp1y: number, _cp2x: number, _cp2y: number, _x: number, _y: number) {},
+        quadraticCurveTo(_cpx: number, _cpy: number, _x: number, _y: number) {},
+        arc(_x: number, _y: number, _radius: number, _startAngle: number, _endAngle: number, _counterclockwise?: boolean) {},
+        arcTo(_x1: number, _y1: number, _x2: number, _y2: number, _radius: number) {},
+        ellipse(_x: number, _y: number, _radiusX: number, _radiusY: number, _rotation: number, _startAngle: number, _endAngle: number, _counterclockwise?: boolean) {},
+        rect(_x: number, _y: number, _w: number, _h: number) {},
 
         // Drawing methods
         fill() {},
         stroke() {},
         clip() {},
-        fillRect(x: number, y: number, w: number, h: number) {},
-        strokeRect(x: number, y: number, w: number, h: number) {},
-        clearRect(x: number, y: number, w: number, h: number) {},
+        fillRect(_x: number, _y: number, _w: number, _h: number) {},
+        strokeRect(_x: number, _y: number, _w: number, _h: number) {},
+        clearRect(_x: number, _y: number, _w: number, _h: number) {},
 
         // Image methods
-        drawImage(...args: any[]) {},
+        drawImage(..._args: any[]) {},
 
         // ImageData methods
         createImageData(sw: number, sh: number): ImageData {
@@ -105,36 +105,36 @@ if (typeof HTMLCanvasElement !== 'undefined') {
           }
           return imageData.get(key)!;
         },
-        putImageData(imagedata: ImageData, dx: number, dy: number, ...args: any[]) {
+        putImageData(imagedata: ImageData, dx: number, dy: number, ..._args: any[]) {
           const key = `${dx},${dy},${imagedata.width},${imagedata.height}`;
           imageData.set(key, imagedata);
         },
 
         // Gradient methods
-        createLinearGradient(x0: number, y0: number, x1: number, y1: number): CanvasGradient {
+        createLinearGradient(_x0: number, _y0: number, _x1: number, _y1: number): CanvasGradient {
           return {
-            addColorStop(offset: number, color: string) {},
+            addColorStop(_offset: number, _color: string) {},
           } as CanvasGradient;
         },
-        createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): CanvasGradient {
+        createRadialGradient(_x0: number, _y0: number, _r0: number, _x1: number, _y1: number, _r1: number): CanvasGradient {
           return {
-            addColorStop(offset: number, color: string) {},
+            addColorStop(_offset: number, _color: string) {},
           } as CanvasGradient;
         },
-        createConicGradient(startAngle: number, x: number, y: number): CanvasGradient {
+        createConicGradient(_startAngle: number, _x: number, _y: number): CanvasGradient {
           return {
-            addColorStop(offset: number, color: string) {},
+            addColorStop(_offset: number, _color: string) {},
           } as CanvasGradient;
         },
 
         // Pattern methods
-        createPattern(image: any, repetition: string | null): CanvasPattern | null {
+        createPattern(_image: any, _repetition: string | null): CanvasPattern | null {
           return {} as CanvasPattern;
         },
 
         // Text methods (minimal)
-        fillText(text: string, x: number, y: number, maxWidth?: number) {},
-        strokeText(text: string, x: number, y: number, maxWidth?: number) {},
+        fillText(_text: string, _x: number, _y: number, _maxWidth?: number) {},
+        strokeText(_text: string, _x: number, _y: number, _maxWidth?: number) {},
         measureText(text: string): TextMetrics {
           return { width: text.length * 8 } as TextMetrics;
         },
@@ -152,6 +152,6 @@ if (typeof HTMLCanvasElement !== 'undefined') {
     }
 
     // Fallback to original implementation for other context types
-    return originalGetContext.call(this, contextId, ...args);
+    return originalGetContext.call(this, contextId, ..._args);
   };
 }
