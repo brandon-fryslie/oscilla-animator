@@ -20,9 +20,9 @@ import type { IRWithBusRoots, ValueRefPacked } from "./pass7-bus-lowering";
 import type { CompilerConnection, CompileError } from "../types";
 import { getBlockType } from "../ir/lowerTypes";
 import type { LowerCtx } from "../ir/lowerTypes";
-import type { TypeDesc } from "../ir/types";
 import { adapterRegistry } from "../../adapters/AdapterRegistry";
 import type { AdapterIRCtx } from "../../adapters/AdapterRegistry";
+import { materializeDefaultSource } from "../ir/defaultSourceUtils";
 import { getLens } from "../../lenses/LensRegistry";
 
 // =============================================================================
@@ -144,56 +144,6 @@ function registerFieldSlots(
  * Note: Scalar types are handled at the call site (they're compile-time
  * config values, not runtime IR).
  */
-/**
- * Create a ValueRefPacked from a default source value.
- *
- * Supports:
- * - signal/number → sigConst
- * - field/* → fieldConst
- * - scalar/* → scalarConst (stored in constant pool)
- */
-function createDefaultRef(
-  builder: IRBuilder,
-  type: TypeDesc,
-  defaultValue: unknown
-): ValueRefPacked | null {
-  if (type.world === "signal") {
-    // Signal constants can be numbers (for numeric signals) or other values (like strings for colors)
-    // The IRBuilder.sigConst accepts numbers, but for other types (like color strings),
-    // we may need special handling in the future. For now, only handle numeric signals.
-    if (typeof defaultValue !== "number") {
-      // Non-number signal values (vec3, color) → use constant pool
-      const constId = builder.allocConstId(defaultValue);
-      return { k: "scalarConst", constId };
-    }
-    const sigId = builder.sigConst(defaultValue, type);
-    const slot = builder.allocValueSlot(type);
-    builder.registerSigSlot(sigId, slot);
-    return { k: "sig", id: sigId, slot };
-  }
-
-  if (type.world === "field") {
-    const fieldId = builder.fieldConst(defaultValue, type);
-    const slot = builder.allocValueSlot(type);
-    builder.registerFieldSlot(fieldId, slot);
-    return { k: "field", id: fieldId, slot };
-  }
-
-  if (type.world === "scalar") {
-    const constId = builder.allocConstId(defaultValue);
-    return { k: "scalarConst", constId };
-  }
-
-  if (type.world === "config" && type.domain === "domain") {
-    const count = typeof defaultValue === "number" ? defaultValue : Number(defaultValue);
-    const safeCount = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
-    const domainSlot = builder.domainFromN(safeCount);
-    return { k: "special", tag: "domain", id: domainSlot };
-  }
-
-  return null;
-}
-
 
 function applyRenderLowering(
   builder: IRBuilder,
@@ -233,7 +183,7 @@ function applyRenderLowering(
         const input = block.inputs[portIdx];
         const defaultSource = input.defaultSource;
         if (defaultSource !== undefined) {
-          const defaultRef = createDefaultRef(builder, inputDecl.type, defaultSource.value);
+          const defaultRef = materializeDefaultSource(builder, inputDecl.type, defaultSource.value);
           if (defaultRef !== null) {
             inputs.push(defaultRef);
             continue;
@@ -315,7 +265,7 @@ function applyRenderLowering(
         const input = block.inputs[portIdx];
         const defaultSource = input.defaultSource ?? inputDecl.defaultSource;
         if (defaultSource !== undefined) {
-          const defaultRef = createDefaultRef(builder, inputDecl.type, defaultSource.value);
+          const defaultRef = materializeDefaultSource(builder, inputDecl.type, defaultSource.value);
           if (defaultRef !== null) {
             inputs.push(defaultRef);
             continue;
@@ -692,7 +642,7 @@ function buildBlockInputRoots(
           continue; // Successfully resolved via config
         }
 
-        const defaultRef = createDefaultRef(builder, inputDef.type, defaultSource.value);
+        const defaultRef = materializeDefaultSource(builder, inputDef.type, defaultSource.value);
         if (defaultRef !== null) {
           refs[flatIdx] = defaultRef;
           continue; // Successfully resolved via default
@@ -711,7 +661,7 @@ function buildBlockInputRoots(
         // Find the port declaration to get the type
         const portDecl = blockDecl.inputs.find((p) => p.portId === input.id);
         if (portDecl !== undefined) {
-          const defaultRef = createDefaultRef(builder, portDecl.type, input.defaultSource.value);
+          const defaultRef = materializeDefaultSource(builder, portDecl.type, input.defaultSource.value);
           if (defaultRef !== null) {
             refs[flatIdx] = defaultRef;
             continue; // Successfully resolved via default source

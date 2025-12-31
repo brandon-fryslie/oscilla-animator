@@ -27,6 +27,7 @@ import { getBlockType } from "../ir/lowerTypes";
 import type { Domain } from "../unified/Domain";
 import { BLOCK_DEFS_BY_TYPE } from "../../blocks/registry";
 import { validatePureBlockOutput } from "../pure-block-validator";
+import { materializeDefaultSource } from "../ir/defaultSourceUtils";
 
 // Re-export ValueRefPacked for backwards compatibility
 export type { ValueRefPacked } from "../ir/lowerTypes";
@@ -309,35 +310,9 @@ function lowerBlockInstance(
         // Check if the port has a registered default source
         const portDecl = blockType.inputs[portIndex];
         if (portDecl?.defaultSource !== undefined) {
-          // Port has a default source - create a constant from it
-          const type = portDecl.type;
-          const value = portDecl.defaultSource.value;
-          if (type.world === 'signal') {
-            // Signal constants must be numbers
-            const numValue = typeof value === 'number' ? value : (Number(value) !== 0 && !Number.isNaN(Number(value)) ? Number(value) : 0);
-            const sigId = builder.sigConst(numValue, type);
-            const slot = builder.allocValueSlot(type);
-            builder.registerSigSlot(sigId, slot);
-            const ref = { k: "sig", id: sigId, slot } as ValueRefPacked;
-            inputsById[inputPort.id] = ref;
-            return ref;
-          } else if (type.world === 'field') {
-            const fieldId = builder.fieldConst(value as number, type);
-            const slot = builder.allocValueSlot(type);
-            builder.registerFieldSlot(fieldId, slot);
-            const ref = { k: "field", id: fieldId, slot } as ValueRefPacked;
-            inputsById[inputPort.id] = ref;
-            return ref;
-          } else if (type.world === 'scalar') {
-            const constId = builder.allocConstId(value);
-            const ref = { k: "scalarConst", constId } as ValueRefPacked;
-            inputsById[inputPort.id] = ref;
-            return ref;
-          } else if (type.world === 'config' && type.domain === 'domain') {
-            const count = typeof value === 'number' ? value : Number(value);
-            const safeCount = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
-            const domainSlot = builder.domainFromN(safeCount);
-            const ref = { k: "special", tag: "domain", id: domainSlot } as ValueRefPacked;
+          // Port has a default source - materialize it using shared helper
+          const ref = materializeDefaultSource(builder, portDecl.type, portDecl.defaultSource.value);
+          if (ref !== null) {
             inputsById[inputPort.id] = ref;
             return ref;
           }
