@@ -316,8 +316,11 @@ export interface IRBuilder {
 
   /**
    * Create a domain from a fixed size N.
+   * @param n - Number of elements in the domain
+   * @param elementIds - Optional stable element IDs for hash-based operations.
+   *                     If not provided, hash01ById will use index as fallback (less stable).
    */
-  domainFromN(n: number): ValueSlot;
+  domainFromN(n: number, elementIds?: readonly string[]): ValueSlot;
 
   /**
    * Create a domain from SVG sampling.

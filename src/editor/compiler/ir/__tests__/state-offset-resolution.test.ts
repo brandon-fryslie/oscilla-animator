@@ -77,6 +77,7 @@ describe("State Offset Resolution", () => {
         fieldValueSlots: [],
         eventValueSlots: [],
         nextValueSlot: outputSlot + 1,
+        debugProbes: [],
       };
 
       // Compile program (this should resolve state offsets)
@@ -138,6 +139,7 @@ describe("State Offset Resolution", () => {
         fieldValueSlots: [],
         eventValueSlots: [],
         nextValueSlot: 0,
+        debugProbes: [],
       };
 
       const compiled = buildCompiledProgram(builderIR, "test-patch", 1, 42);
@@ -199,6 +201,7 @@ describe("State Offset Resolution", () => {
         fieldValueSlots: [],
         eventValueSlots: [],
         nextValueSlot: 0,
+        debugProbes: [],
       };
 
       // Should throw StateRefMissingDecl error
@@ -244,6 +247,7 @@ describe("State Offset Resolution", () => {
         fieldValueSlots: [],
         eventValueSlots: [],
         nextValueSlot: 0,
+        debugProbes: [],
       };
 
       const compiled = buildCompiledProgram(builderIR, "test-patch", 1, 42);
@@ -302,6 +306,7 @@ describe("State Offset Resolution", () => {
           fieldValueSlots: [],
           eventValueSlots: [],
           nextValueSlot: 0,
+          debugProbes: [],
         };
 
         const compiled = buildCompiledProgram(builderIR, "test-patch", 1, 42);
@@ -366,6 +371,7 @@ describe("State Offset Resolution", () => {
         fieldValueSlots: [],
         eventValueSlots: [],
         nextValueSlot: 0,
+        debugProbes: [],
       };
 
       const compiled = buildCompiledProgram(builderIR, "test-patch", 1, 42);

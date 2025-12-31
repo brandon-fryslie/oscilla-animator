@@ -693,11 +693,12 @@ export class IRBuilderImpl implements IRBuilder {
   // Domains
   // =============================================================================
 
-  domainFromN(n: number): ValueSlot {
+  domainFromN(n: number, elementIds?: readonly string[]): ValueSlot {
     const slot = this.allocValueSlot({ world: "scalar", domain: "domain" }, `domain_n${n}`);
     this.domains.push({
       slot,
       count: n,
+      elementIds,
     });
     return slot;
   }

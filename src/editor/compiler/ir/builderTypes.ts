@@ -126,6 +126,14 @@ export interface DomainDefIR {
 
   /** Optional SVG path data for SVG-sampled domains */
   svgPath?: string;
+
+  /**
+   * Stable element IDs for hash-based operations.
+   * If provided, these IDs are used for hash01ById and other identity-based ops.
+   * Without these, operations like hash01ById cannot produce stable results
+   * when domain order changes.
+   */
+  elementIds?: readonly string[];
 }
 
 // =============================================================================
