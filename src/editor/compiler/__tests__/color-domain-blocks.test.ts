@@ -24,8 +24,8 @@ describe("Color Domain Blocks", () => {
       const irDecl = getBlockType("ColorLFO");
       expect(irDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
-      const typeColor: TypeDesc = { world: "signal", domain: "color" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true, semantics: "phase(0..1)" };
+      const typeColor: TypeDesc = { world: "signal", domain: "color", category: "core", busEligible: true };
 
       const phaseSignal = builder.sigConst(0.5, typePhase);
       const slotPhase = builder.allocValueSlot(typePhase);
@@ -65,8 +65,8 @@ describe("Color Domain Blocks", () => {
       const irDecl = getBlockType("ColorLFO");
       expect(irDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
-      const typeColor: TypeDesc = { world: "signal", domain: "color" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true, semantics: "phase(0..1)" };
+      const typeColor: TypeDesc = { world: "signal", domain: "color", category: "core", busEligible: true };
 
       const phaseSignal = builder.sigConst(0, typePhase);
       const slotPhase = builder.allocValueSlot(typePhase);
@@ -102,8 +102,8 @@ describe("Color Domain Blocks", () => {
       const irDecl = getBlockType("ColorLFO");
       expect(irDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
-      const typeColor: TypeDesc = { world: "signal", domain: "color" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true, semantics: "phase(0..1)" };
+      const typeColor: TypeDesc = { world: "signal", domain: "color", category: "core", busEligible: true };
 
       const phaseSignal = builder.sigConst(0.25, typePhase);
       const slotPhase = builder.allocValueSlot(typePhase);
@@ -147,12 +147,12 @@ describe("Color Domain Blocks", () => {
         { k: "scalarConst", constId: nConst },
       ];
 
-      const typeDomain: TypeDesc = { world: "special", domain: "domain" };
+      const typeDomain: TypeDesc = { world: "config", domain: "domain", category: "internal", busEligible: false };
       const ctx = {
         blockIdx: 0 as BlockIndex,
         blockType: "DomainN",
         instanceId: "test-domain-10",
-        inTypes: [{ world: "scalar" as const, domain: "float" as const }],
+        inTypes: [{ world: "scalar" as const, domain: "float" as const, category: "core" as const, busEligible: true }],
         outTypes: [typeDomain],
         b: builder,
         seedConstId: 0,
@@ -182,12 +182,12 @@ describe("Color Domain Blocks", () => {
         { k: "scalarConst", constId: nConst },
       ];
 
-      const typeDomain: TypeDesc = { world: "special", domain: "domain" };
+      const typeDomain: TypeDesc = { world: "config", domain: "domain", category: "internal", busEligible: false };
       const ctx = {
         blockIdx: 0 as BlockIndex,
         blockType: "DomainN",
         instanceId: "test-domain-1",
-        inTypes: [{ world: "scalar" as const, domain: "float" as const }],
+        inTypes: [{ world: "scalar" as const, domain: "float" as const, category: "core" as const, busEligible: true }],
         outTypes: [typeDomain],
         b: builder,
         seedConstId: 0,
@@ -210,12 +210,12 @@ describe("Color Domain Blocks", () => {
         { k: "scalarConst", constId: nConst },
       ];
 
-      const typeDomain: TypeDesc = { world: "special", domain: "domain" };
+      const typeDomain: TypeDesc = { world: "config", domain: "domain", category: "internal", busEligible: false };
       const ctx = {
         blockIdx: 0 as BlockIndex,
         blockType: "DomainN",
         instanceId: "test-domain-large",
-        inTypes: [{ world: "scalar" as const, domain: "float" as const }],
+        inTypes: [{ world: "scalar" as const, domain: "float" as const, category: "core" as const, busEligible: true }],
         outTypes: [typeDomain],
         b: builder,
         seedConstId: 0,
@@ -235,8 +235,8 @@ describe("Color Domain Blocks", () => {
       const irDecl = getBlockType("GridDomain");
       expect(irDecl).toBeDefined();
 
-      const typeDomain: TypeDesc = { world: "special", domain: "domain" };
-      const typeVec2: TypeDesc = { world: "field", domain: "vec2" };
+      const typeDomain: TypeDesc = { world: "config", domain: "domain", category: "internal", busEligible: false };
+      const typeVec2: TypeDesc = { world: "field", domain: "vec2", category: "core", busEligible: true };
 
       const ctx = {
         blockIdx: 0 as BlockIndex,
@@ -279,8 +279,8 @@ describe("Color Domain Blocks", () => {
       const irDecl = getBlockType("GridDomain");
       expect(irDecl).toBeDefined();
 
-      const typeDomain: TypeDesc = { world: "special", domain: "domain" };
-      const typeVec2: TypeDesc = { world: "field", domain: "vec2" };
+      const typeDomain: TypeDesc = { world: "config", domain: "domain", category: "internal", busEligible: false };
+      const typeVec2: TypeDesc = { world: "field", domain: "vec2", category: "core", busEligible: true };
 
       const ctx = {
         blockIdx: 0 as BlockIndex,
@@ -312,8 +312,8 @@ describe("Color Domain Blocks", () => {
       const irDecl = getBlockType("GridDomain");
       expect(irDecl).toBeDefined();
 
-      const typeDomain: TypeDesc = { world: "special", domain: "domain" };
-      const typeVec2: TypeDesc = { world: "field", domain: "vec2" };
+      const typeDomain: TypeDesc = { world: "config", domain: "domain", category: "internal", busEligible: false };
+      const typeVec2: TypeDesc = { world: "field", domain: "vec2", category: "core", busEligible: true };
 
       const ctx = {
         blockIdx: 0 as BlockIndex,
@@ -345,8 +345,8 @@ describe("Color Domain Blocks", () => {
       const irDecl = getBlockType("GridDomain");
       expect(irDecl).toBeDefined();
 
-      const typeDomain: TypeDesc = { world: "special", domain: "domain" };
-      const typeVec2: TypeDesc = { world: "field", domain: "vec2" };
+      const typeDomain: TypeDesc = { world: "config", domain: "domain", category: "internal", busEligible: false };
+      const typeVec2: TypeDesc = { world: "field", domain: "vec2", category: "core", busEligible: true };
 
       const ctx = {
         blockIdx: 0 as BlockIndex,
@@ -401,8 +401,8 @@ describe("Color Domain Blocks", () => {
         blockIdx: 0 as BlockIndex,
         blockType: "DomainN",
         instanceId: "domain-for-color",
-        inTypes: [{ world: "scalar" as const, domain: "float" as const }],
-        outTypes: [{ world: "special" as const, domain: "domain" as const }],
+        inTypes: [{ world: "scalar" as const, domain: "float" as const, category: "core" as const, busEligible: true }],
+        outTypes: [{ world: "config" as const, domain: "domain" as const, category: "internal" as const, busEligible: false }],
         b: builder,
         seedConstId: 0,
       };
@@ -414,7 +414,7 @@ describe("Color Domain Blocks", () => {
       const colorDecl = getBlockType("ColorLFO");
       expect(colorDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true, semantics: "phase(0..1)" };
       const phaseSignal = builder.sigConst(0.5, typePhase);
       const slotPhase = builder.allocValueSlot(typePhase);
       builder.registerSigSlot(phaseSignal, slotPhase);
@@ -428,7 +428,7 @@ describe("Color Domain Blocks", () => {
         blockType: "ColorLFO",
         instanceId: "color-lfo",
         inTypes: [typePhase],
-        outTypes: [{ world: "signal" as const, domain: "color" as const }],
+        outTypes: [{ world: "signal" as const, domain: "color" as const, category: "core" as const, busEligible: true }],
         b: builder,
         seedConstId: 0,
       };

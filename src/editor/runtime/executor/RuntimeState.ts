@@ -538,7 +538,7 @@ function inferSlotMetaFromSchedule(program: CompiledProgramIR): SlotMeta[] {
       offset: slot, // Dense allocation: offset = slot index
       type: {
         // Field buffers and render trees are "special" world objects
-        world: "special",
+        world: "config",
         domain: "renderTree", // Generic object domain for buffers/trees
       },
     });

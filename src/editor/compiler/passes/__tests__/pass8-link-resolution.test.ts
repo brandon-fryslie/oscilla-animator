@@ -54,7 +54,7 @@ describe("Pass 8: Link Resolution", () => {
       const ir = createIRWithBusRoots();
 
       // Add some block outputs
-      const sigId = ir.builder.sigConst(42, { world: "signal", domain: "float" });
+      const sigId = ir.builder.sigConst(42, asTypeDesc({ world: "signal", domain: "float" }));
       const slot = ir.builder.allocValueSlot();
       ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sigId, slot }]]));
 
@@ -70,8 +70,8 @@ describe("Pass 8: Link Resolution", () => {
     it("should handle multiple blocks with outputs", () => {
       const ir = createIRWithBusRoots();
 
-      const sig1 = ir.builder.sigConst(1, { world: "signal", domain: "float" });
-      const sig2 = ir.builder.sigConst(2, { world: "signal", domain: "float" });
+      const sig1 = ir.builder.sigConst(1, asTypeDesc({ world: "signal", domain: "float" }));
+      const sig2 = ir.builder.sigConst(2, asTypeDesc({ world: "signal", domain: "float" }));
       const slot1 = ir.builder.allocValueSlot();
       const slot2 = ir.builder.allocValueSlot();
 
@@ -91,8 +91,8 @@ describe("Pass 8: Link Resolution", () => {
     it("should handle blocks with multiple outputs", () => {
       const ir = createIRWithBusRoots();
 
-      const sig1 = ir.builder.sigConst(1, { world: "signal", domain: "float" });
-      const sig2 = ir.builder.sigConst(2, { world: "signal", domain: "float" });
+      const sig1 = ir.builder.sigConst(1, asTypeDesc({ world: "signal", domain: "float" }));
+      const sig2 = ir.builder.sigConst(2, asTypeDesc({ world: "signal", domain: "float" }));
       const slot1 = ir.builder.allocValueSlot();
       const slot2 = ir.builder.allocValueSlot();
 
@@ -113,7 +113,7 @@ describe("Pass 8: Link Resolution", () => {
     it("should resolve input connected via wire", () => {
       const ir = createIRWithBusRoots();
 
-      const sigId = ir.builder.sigConst(42, { world: "signal", domain: "float" });
+      const sigId = ir.builder.sigConst(42, asTypeDesc({ world: "signal", domain: "float" }));
       const slot = ir.builder.allocValueSlot();
       ir.blockOutputs.set(0 as BlockIndex, createOutputMap([["out0", { k: "sig", id: sigId, slot }]]));
 

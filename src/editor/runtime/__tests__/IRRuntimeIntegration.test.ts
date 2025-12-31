@@ -45,7 +45,7 @@ function createMinimalProgram(seed: number = 42): CompiledProgramIR {
       nodes: [
         {
           kind: "const",
-          type: { world: "field", domain: "float" },
+          type: { world: "field", domain: "float", category: "core", busEligible: true },
           constId: 0,
         },
       ],

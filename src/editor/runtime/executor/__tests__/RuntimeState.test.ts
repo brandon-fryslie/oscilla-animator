@@ -349,7 +349,7 @@ describe("RuntimeState", () => {
           ],
           combine: { mode: "last" },
           silent: { kind: "zero" },
-          busType: { world: "signal", domain: "float" },
+          busType: { world: "signal", domain: "float", category: "core", busEligible: true },
         },
       ];
 

@@ -97,15 +97,15 @@ registerBlockType({
   type: 'FieldHueGradient',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
-    { portId: 'hueOffset', label: 'Hue Offset', dir: 'in', type: { world: 'signal', domain: 'float' }, optional: true, defaultSource: { value: 0 } },
-    { portId: 'hueSpread', label: 'Hue Spread', dir: 'in', type: { world: 'signal', domain: 'float' }, optional: true, defaultSource: { value: 1 } },
-    { portId: 'saturation', label: 'Saturation', dir: 'in', type: { world: 'signal', domain: 'float' }, optional: true, defaultSource: { value: 80 } },
-    { portId: 'lightness', label: 'Lightness', dir: 'in', type: { world: 'signal', domain: 'float' }, optional: true, defaultSource: { value: 60 } },
-    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' }, optional: true, defaultSource: { value: 0 } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "config", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 100 } },
+    { portId: 'hueOffset', label: 'Hue Offset', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, optional: true, defaultSource: { value: 0 } },
+    { portId: 'hueSpread', label: 'Hue Spread', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, optional: true, defaultSource: { value: 1 } },
+    { portId: 'saturation', label: 'Saturation', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, optional: true, defaultSource: { value: 80 } },
+    { portId: 'lightness', label: 'Lightness', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, optional: true, defaultSource: { value: 60 } },
+    { portId: 'phase', label: 'Phase', dir: 'in', type: { world: "signal", domain: "float", semantics: 'phase(0..1)', category: "core", busEligible: true }, optional: true, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'colors', label: 'Colors', dir: 'out', type: { world: 'field', domain: 'color' } },
+    { portId: 'colors', label: 'Colors', dir: 'out', type: { world: "field", domain: "color", category: "core", busEligible: true } },
   ],
   lower: lowerFieldHueGradient,
 });

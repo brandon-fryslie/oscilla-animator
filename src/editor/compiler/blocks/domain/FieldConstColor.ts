@@ -25,7 +25,7 @@ const lowerFieldConstColor: BlockLowerFn = ({ ctx, inputs, config }) => {
   const colorValue = configObj?.color;
   const color = typeof colorValue === 'string' ? colorValue : '#000000';
 
-  const outType = { world: 'field' as const, domain: 'color' as const };
+  const outType = { world: "field" as const, domain: "color" as const, category: "core" as const, busEligible: true };
   const fieldId = ctx.b.fieldConst(color, outType);
 
   const slot = ctx.b.allocValueSlot();
@@ -37,10 +37,10 @@ registerBlockType({
   type: 'FieldConstColor',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "config", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 100 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'color' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: "field", domain: "color", category: "core", busEligible: true } },
   ],
   lower: lowerFieldConstColor,
 });

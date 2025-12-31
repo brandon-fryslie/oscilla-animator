@@ -29,7 +29,7 @@ import {
 } from "../StateBuffer";
 import { createRuntimeCtx, createDefaultRuntimeCtx } from "../RuntimeCtx";
 
-const numberType: TypeDesc = { world: "signal", domain: "float" };
+const numberType: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
 
 // =============================================================================
 // StateBuffer Tests

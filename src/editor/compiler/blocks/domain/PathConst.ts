@@ -33,7 +33,7 @@ const lowerPathConst: BlockLowerFn = ({ ctx, inputs, config }) => {
     ],
   };
 
-  const outType = { world: 'field' as const, domain: 'path' as const };
+  const outType = { world: "field" as const, domain: "path" as const, category: "internal" as const, busEligible: false };
   const fieldId = ctx.b.fieldConst(pathExpr, outType);
 
   const slot = ctx.b.allocValueSlot();
@@ -45,10 +45,10 @@ registerBlockType({
   type: 'PathConst',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 1 } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "config", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 1 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'path' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: "field", domain: "path", category: "internal", busEligible: false } },
   ],
   lower: lowerPathConst,
 });

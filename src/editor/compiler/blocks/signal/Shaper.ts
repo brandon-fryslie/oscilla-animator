@@ -69,7 +69,7 @@ const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
   const kind = (cfg?.kind !== undefined && cfg.kind !== null) ? String(cfg.kind) : 'smoothstep';
   const amount = Number(cfg?.amount ?? 1);
 
-  const numberType: TypeDesc = { world: 'signal', domain: 'float' };
+  const numberType: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
 
   let outputId: number;
 
@@ -176,7 +176,7 @@ registerBlockType({
       portId: 'in',
       label: 'Input',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 0 },
     },
   ],
@@ -185,7 +185,7 @@ registerBlockType({
       portId: 'out',
       label: 'Output',
       dir: 'out',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
     },
   ],
   lower: lowerShaper,

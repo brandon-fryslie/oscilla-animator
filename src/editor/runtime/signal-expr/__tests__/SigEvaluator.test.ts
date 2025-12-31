@@ -37,8 +37,8 @@ import type { TypeDesc } from "../../../compiler/ir/types";
 
 // Test helpers
 
-const numberType: TypeDesc = { world: "signal", domain: "float" };
-const timeType: TypeDesc = { world: "signal", domain: "timeMs" };
+const numberType: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+const timeType: TypeDesc = { world: "signal", domain: "timeMs", category: "internal", busEligible: false };
 
 interface CreateTestEnvOptions {
   tModelMs?: number;

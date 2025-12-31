@@ -37,10 +37,10 @@ registerBlockType({
   type: 'DSConstSignalPoint',
   capability: 'pure',
   inputs: [
-    { portId: 'value', label: 'Value', dir: 'in', type: { world: 'signal', domain: 'vec2' }, defaultSource: { value: { x: 0, y: 0 } } },
+    { portId: 'value', label: 'Value', dir: 'in', type: { world: "signal", domain: "vec2", category: "core", busEligible: true }, defaultSource: { value: { x: 0, y: 0 } } },
   ],
   outputs: [
-    { portId: 'out', label: 'Output', dir: 'out', type: { world: 'signal', domain: 'vec2' } },
+    { portId: 'out', label: 'Output', dir: 'out', type: { world: "signal", domain: "vec2", category: "core", busEligible: true } },
   ],
   lower: lowerDSConstSignalPoint,
 });

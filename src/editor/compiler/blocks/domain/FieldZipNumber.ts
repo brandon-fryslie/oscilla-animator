@@ -66,7 +66,7 @@ const lowerFieldZipNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
   const op = configObj?.op ?? 'add';
   const opcode = getOpCode(op);
 
-  const outType = { world: 'field' as const, domain: 'float' as const };
+  const outType = { world: "field" as const, domain: "float" as const, category: "core" as const, busEligible: true };
   const fieldId = ctx.b.fieldZip(a.id, b.id, {
     kind: 'opcode',
     opcode,
@@ -81,11 +81,11 @@ registerBlockType({
   type: 'FieldZipNumber',
   capability: 'pure',
   inputs: [
-    { portId: 'a', label: 'A', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
-    { portId: 'b', label: 'B', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 0 } },
+    { portId: 'a', label: 'A', dir: 'in', type: { world: "field", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
+    { portId: 'b', label: 'B', dir: 'in', type: { world: "field", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Out', dir: 'out', type: { world: 'field', domain: 'float' } },
+    { portId: 'out', label: 'Out', dir: 'out', type: { world: "field", domain: "float", category: "core", busEligible: true } },
   ],
   lower: lowerFieldZipNumber,
 });

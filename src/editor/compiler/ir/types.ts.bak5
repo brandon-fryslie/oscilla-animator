@@ -28,7 +28,7 @@ import type {
   TypeDesc,
 } from '../../../core/types';
 
-import { getTypeArity, inferBundleLanes, createTypeDesc } from '../../../core/types';
+import { getTypeArity, inferBundleLanes } from '../../../core/types';
 
 /**
  * TypeDomain is now an alias for Domain from core.
@@ -40,7 +40,7 @@ export type TypeDomain = Domain;
 
 // Re-export for convenience
 export type { TypeWorld, Domain, TypeCategory, TypeDesc };
-export { getTypeArity, inferBundleLanes, createTypeDesc };
+export { getTypeArity, inferBundleLanes };
 
 // ============================================================================
 // Bundle Type System (DEPRECATED - use lanes in TypeDesc instead)

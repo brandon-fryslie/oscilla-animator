@@ -7,7 +7,8 @@
 import { describe, it, expect } from "vitest";
 import { IRBuilderImpl } from "../IRBuilderImpl";
 import { buildCompiledProgram } from "../buildSchedule";
-import type { TypeDesc } from "../types";
+import type { TypeDesc } from } from "../types";;
+import { asTypeDesc } from
 import type { BuilderProgramIR } from "../builderTypes";
 
 // Helper to create a simple TypeDesc

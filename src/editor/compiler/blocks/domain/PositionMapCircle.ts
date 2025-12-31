@@ -66,7 +66,7 @@ const lowerPositionMapCircle: BlockLowerFn = ({ ctx, inputs, config }) => {
   }
 
   // Create position field as const
-  const posField = ctx.b.fieldConst(positions, { world: 'field', domain: 'vec2' });
+  const posField = ctx.b.fieldConst(positions, { world: "field", domain: "vec2", category: "core", busEligible: true });
 
   const slot = ctx.b.allocValueSlot();
   return {
@@ -79,52 +79,52 @@ registerBlockType({
   type: 'PositionMapCircle',
   capability: 'pure',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 100 } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "config", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 100 } },
     {
       portId: 'centerX',
       label: 'Center X',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 250 },
     },
     {
       portId: 'centerY',
       label: 'Center Y',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 250 },
     },
     {
       portId: 'radius',
       label: 'Radius',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 150 },
     },
     {
       portId: 'startAngle',
       label: 'Start Angle',
       dir: 'in',
-      type: { world: 'scalar', domain: 'float' },
+      type: { world: "scalar", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 0 },
     },
     {
       portId: 'winding',
       label: 'Winding',
       dir: 'in',
-      type: { world: 'scalar', domain: 'float' },
+      type: { world: "scalar", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 1 },
     },
     {
       portId: 'distribution',
       label: 'Distribution',
       dir: 'in',
-      type: { world: 'scalar', domain: 'string' },
+      type: { world: "scalar", domain: "string", category: "internal", busEligible: false },
       defaultSource: { value: 'even' },
     },
   ],
   outputs: [
-    { portId: 'pos', label: 'Pos', dir: 'out', type: { world: 'field', domain: 'vec2' } },
+    { portId: 'pos', label: 'Pos', dir: 'out', type: { world: "field", domain: "vec2", category: "core", busEligible: true } },
   ],
   lower: lowerPositionMapCircle,
 });

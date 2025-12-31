@@ -7,7 +7,8 @@
 
 import { describe, it, expect } from "vitest";
 import { IRBuilderImpl } from "../IRBuilderImpl";
-import type { TypeDesc } from "../types";
+import type { TypeDesc } from } from "../types";;
+import { asTypeDesc } from
 
 // Helper to create a simple TypeDesc
 function makeType(world: "signal" | "field", domain: string): TypeDesc {

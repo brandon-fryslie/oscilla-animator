@@ -37,10 +37,10 @@ registerBlockType({
   type: 'DSConstScalarInt',
   capability: 'pure',
   inputs: [
-    { portId: 'value', label: 'Value', dir: 'in', type: { world: 'scalar', domain: 'int' }, defaultSource: { value: 0 } },
+    { portId: 'value', label: 'Value', dir: 'in', type: { world: "scalar", domain: "int", category: "core", busEligible: true }, defaultSource: { value: 0 } },
   ],
   outputs: [
-    { portId: 'out', label: 'Output', dir: 'out', type: { world: 'scalar', domain: 'int' } },
+    { portId: 'out', label: 'Output', dir: 'out', type: { world: "scalar", domain: "int", category: "core", busEligible: true } },
   ],
   lower: lowerDSConstScalarInt,
 });

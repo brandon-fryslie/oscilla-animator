@@ -18,8 +18,8 @@ import type { SignalExprIR } from "../signalExpr";
 import type { TypeDesc } from "../types";
 import type { TimeModelIR } from "../schedule";
 
-const numberType: TypeDesc = { world: "signal", domain: "float" };
-const triggerType: TypeDesc = { world: "signal", domain: "trigger" };
+const numberType: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+const triggerType: TypeDesc = { world: "signal", domain: "trigger", category: "core", busEligible: true };
 
 // Helper to create a minimal time model
 const createTimeModel = (): TimeModelIR => ({

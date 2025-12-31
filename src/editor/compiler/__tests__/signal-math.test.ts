@@ -27,7 +27,7 @@ describe("Signal Math Operations", () => {
       expect(irDecl).toBeDefined();
 
       // Create two constant signal inputs
-      const typeNum: TypeDesc = { world: "signal", domain: "float" };
+      const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
       const sigA = builder.sigConst(5, typeNum);
       const sigB = builder.sigConst(3, typeNum);
 
@@ -68,7 +68,7 @@ describe("Signal Math Operations", () => {
       const irDecl = getBlockType("SubSignal");
       expect(irDecl).toBeDefined();
 
-      const typeNum: TypeDesc = { world: "signal", domain: "float" };
+      const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
       const sigA = builder.sigConst(10, typeNum);
       const sigB = builder.sigConst(3, typeNum);
 
@@ -103,7 +103,7 @@ describe("Signal Math Operations", () => {
       const irDecl = getBlockType("MulSignal");
       expect(irDecl).toBeDefined();
 
-      const typeNum: TypeDesc = { world: "signal", domain: "float" };
+      const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
       const sigA = builder.sigConst(4, typeNum);
       const sigB = builder.sigConst(2.5, typeNum);
 
@@ -138,7 +138,7 @@ describe("Signal Math Operations", () => {
       const irDecl = getBlockType("DivSignal");
       expect(irDecl).toBeDefined();
 
-      const typeNum: TypeDesc = { world: "signal", domain: "float" };
+      const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
       const sigA = builder.sigConst(10, typeNum);
       const sigB = builder.sigConst(2, typeNum);
 
@@ -172,7 +172,7 @@ describe("Signal Math Operations", () => {
       const irDecl = getBlockType("MinSignal");
       expect(irDecl).toBeDefined();
 
-      const typeNum: TypeDesc = { world: "signal", domain: "float" };
+      const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
       const sigA = builder.sigConst(5, typeNum);
       const sigB = builder.sigConst(3, typeNum);
 
@@ -206,7 +206,7 @@ describe("Signal Math Operations", () => {
       const irDecl = getBlockType("MaxSignal");
       expect(irDecl).toBeDefined();
 
-      const typeNum: TypeDesc = { world: "signal", domain: "float" };
+      const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
       const sigA = builder.sigConst(5, typeNum);
       const sigB = builder.sigConst(8, typeNum);
 
@@ -240,7 +240,7 @@ describe("Signal Math Operations", () => {
       const irDecl = getBlockType("ClampSignal");
       expect(irDecl).toBeDefined();
 
-      const typeNum: TypeDesc = { world: "signal", domain: "float" };
+      const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
       const sigIn = builder.sigConst(15, typeNum);
       const sigMin = builder.sigConst(0, typeNum);
       const sigMax = builder.sigConst(10, typeNum);
@@ -280,9 +280,9 @@ describe("Signal Math Operations", () => {
       const irDecl = getBlockType("Oscillator");
       expect(irDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
-      const typeNum: TypeDesc = { world: "signal", domain: "float" };
-      const typeWaveform: TypeDesc = { world: "scalar", domain: "waveform" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)", category: "core", busEligible: true };
+      const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+      const typeWaveform: TypeDesc = { world: "scalar", domain: "waveform", category: "internal", busEligible: false };
 
       const phaseSignal = builder.sigConst(0.5, typePhase);
       const amplitudeSignal = builder.sigConst(1, typeNum);
@@ -329,9 +329,9 @@ describe("Signal Math Operations", () => {
       const irDecl = getBlockType("Oscillator");
       expect(irDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
-      const typeNum: TypeDesc = { world: "signal", domain: "float" };
-      const typeWaveform: TypeDesc = { world: "scalar", domain: "waveform" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)", category: "core", busEligible: true };
+      const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+      const typeWaveform: TypeDesc = { world: "scalar", domain: "waveform", category: "internal", busEligible: false };
 
       const phaseSignal = builder.sigConst(0.25, typePhase);
       const amplitudeSignal = builder.sigConst(2, typeNum);
@@ -374,9 +374,9 @@ describe("Signal Math Operations", () => {
       const irDecl = getBlockType("Oscillator");
       expect(irDecl).toBeDefined();
 
-      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)" };
-      const typeNum: TypeDesc = { world: "signal", domain: "float" };
-      const typeWaveform: TypeDesc = { world: "scalar", domain: "waveform" };
+      const typePhase: TypeDesc = { world: "signal", domain: "float", semantics: "phase(0..1)", category: "core", busEligible: true };
+      const typeNum: TypeDesc = { world: "signal", domain: "float", category: "core", busEligible: true };
+      const typeWaveform: TypeDesc = { world: "scalar", domain: "waveform", category: "internal", busEligible: false };
 
       const phaseSignal = builder.sigConst(0.75, typePhase);
       const amplitudeSignal = builder.sigConst(1, typeNum);

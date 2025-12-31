@@ -70,12 +70,12 @@ registerBlockType({
   type: 'RenderPaths2D',
   capability: 'render',
   inputs: [
-    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: 'special', domain: 'domain' }, defaultSource: { value: 1 } },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "config", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 1 } },
     {
       portId: 'paths',
       label: 'Paths',
       dir: 'in',
-      type: { world: 'field', domain: 'path' },
+      type: { world: "field", domain: "path", category: "internal", busEligible: false },
       defaultSource: {
         value: {
           commands: [
@@ -88,10 +88,10 @@ registerBlockType({
         },
       },
     },
-    { portId: 'fillColor', label: 'Fill Color', dir: 'in', type: { world: 'field', domain: 'color' }, defaultSource: { value: '#ffffff' } },
-    { portId: 'strokeColor', label: 'Stroke Color', dir: 'in', type: { world: 'field', domain: 'color' }, defaultSource: { value: '#000000' } },
-    { portId: 'strokeWidth', label: 'Stroke Width', dir: 'in', type: { world: 'field', domain: 'float' }, defaultSource: { value: 1 } },
-    { portId: 'opacity', label: 'Opacity', dir: 'in', type: { world: 'signal', domain: 'float' }, defaultSource: { value: 1.0 } },
+    { portId: 'fillColor', label: 'Fill Color', dir: 'in', type: { world: "field", domain: "color", category: "core", busEligible: true }, defaultSource: { value: '#ffffff' } },
+    { portId: 'strokeColor', label: 'Stroke Color', dir: 'in', type: { world: "field", domain: "color", category: "core", busEligible: true }, defaultSource: { value: '#000000' } },
+    { portId: 'strokeWidth', label: 'Stroke Width', dir: 'in', type: { world: "field", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 1 } },
+    { portId: 'opacity', label: 'Opacity', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 1.0 } },
   ],
   outputs: [],
   lower: lowerRenderPaths2D,

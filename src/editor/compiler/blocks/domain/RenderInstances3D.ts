@@ -103,42 +103,42 @@ registerBlockType({
       portId: 'domain',
       label: 'Domain',
       dir: 'in',
-      type: { world: 'special', domain: 'domain' },
+      type: { world: "config", domain: "domain", category: "internal", busEligible: false },
       defaultSource: { value: 100 },
     },
     {
       portId: 'positions3d',
       label: 'Positions (3D)',
       dir: 'in',
-      type: { world: 'field', domain: 'vec3' },
+      type: { world: "field", domain: "vec3", category: "core", busEligible: true },
       defaultSource: { value: [0, 0, 0] },
     },
     {
       portId: 'color',
       label: 'Color',
       dir: 'in',
-      type: { world: 'field', domain: 'color' },
+      type: { world: "field", domain: "color", category: "core", busEligible: true },
       defaultSource: { value: '#ffffff' },
     },
     {
       portId: 'radius',
       label: 'Radius',
       dir: 'in',
-      type: { world: 'field', domain: 'float' }, // Can also accept signal
+      type: { world: "field", domain: "float", category: "core", busEligible: true }, // Can also accept signal
       defaultSource: { value: 5 },
     },
     {
       portId: 'opacity',
       label: 'Opacity',
       dir: 'in',
-      type: { world: 'signal', domain: 'float' },
+      type: { world: "signal", domain: "float", category: "core", busEligible: true },
       defaultSource: { value: 1.0 },
     },
     {
       portId: 'camera',
       label: 'Camera',
       dir: 'in',
-      type: { world: 'special', domain: 'camera' },
+      type: { world: "config", domain: "camera", category: "internal", busEligible: false },
       optional: true,  // Pass8 injects default if missing
       defaultSource: { value: null },
     },
