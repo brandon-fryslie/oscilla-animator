@@ -11,15 +11,15 @@
 import { describe, it, expect } from "vitest";
 import { IRBuilderImpl } from "../../../ir/IRBuilderImpl";
 import { buildCompiledProgram } from "../../../ir/buildSchedule";
-import type { TypeDesc } from } from "../../../ir/types";;
-import { asTypeDesc } from
+import type { TypeDesc } from "../../../ir/types";
+import { asTypeDesc } from "../../../ir/types";
 
 // Helper to create a TypeDesc
 function makeType(world: TypeDesc["world"], domain: string): TypeDesc {
-  return {
+  return asTypeDesc({
     world,
     domain: domain as TypeDesc["domain"],
-  };
+  });
 }
 
 /**
