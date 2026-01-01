@@ -1,7 +1,7 @@
 /**
  * Pass 0: Materialize Default Sources
  *
- * Converts unconnected inputs with default sources into hidden provider blocks with edges.
+ * Converts unconnected inputs with default sources into hidden provider blocks with connections.
  * This eliminates the need for separate default source metadata and special-case input resolution.
  *
  * Sprint: Phase 0 - Sprint 2: Unify Default Sources with Blocks
@@ -11,7 +11,8 @@
  * - compiler-final/ARCHITECTURE-RECOMMENDATIONS.md Part 2
  */
 
-import type { Patch, Edge, Block, SlotWorld } from '../../types';
+import type { CompilerPatch, CompilerConnection, BlockInstance } from '../types';
+import type { SlotWorld } from '../../types';
 import type { TypeDesc } from '../ir/types';
 import { getBlockDefinition } from '../../blocks';
 
@@ -56,14 +57,15 @@ function selectProviderType(world: SlotWorld, domain: string): string {
 }
 
 /**
- * Check if an input is connected via an edge.
+ * Check if an input is connected via a CompilerConnection.
  */
-function hasEdgeToInput(edges: readonly Edge[], blockId: string, slotId: string): boolean {
-  return edges.some(e =>
-    e.to.kind === 'port' &&
-    e.to.blockId === blockId &&
-    e.to.slotId === slotId &&
-    (e.enabled === true)
+function hasConnectionToInput(
+  connections: readonly CompilerConnection[],
+  blockId: string,
+  slotId: string
+): boolean {
+  return connections.some(
+    c => c.to.block === blockId && c.to.port === slotId
   );
 }
 
@@ -80,24 +82,23 @@ function generateProviderId(blockId: string, slotId: string): string {
  * This is Pass 0 of the compilation pipeline - it runs BEFORE pass 1.
  * It scans all blocks for inputs that:
  * 1. Have a defaultSource defined
- * 2. Are not connected via any edge
+ * 2. Are not connected via any CompilerConnection
  *
  * For each such input, it:
  * 1. Creates a hidden DSConst* provider block with the default value
- * 2. Creates an Edge from the provider to the input
+ * 2. Creates a CompilerConnection from the provider to the input
  *
- * The result is a patch where ALL inputs are backed by edges, eliminating
+ * The result is a patch where ALL inputs are backed by connections, eliminating
  * the need for special-case input resolution in later passes.
  *
- * @param patch - The raw patch from the editor
- * @returns A new patch with materialized default sources as hidden blocks
+ * @param patch - The CompilerPatch from editorToPatch
+ * @returns A new CompilerPatch with materialized default sources as hidden blocks
  */
-export function materializeDefaultSources(patch: Patch): Patch {
-  // Use edges if available, otherwise empty array
-  const existingEdges = patch.edges ?? [];
+export function materializeDefaultSources(patch: CompilerPatch): CompilerPatch {
+  const existingConnections = patch.connections ?? [];
 
-  const newBlocks: Block[] = [];
-  const newEdges: Edge[] = [];
+  const newBlocks: BlockInstance[] = [];
+  const newConnections: CompilerConnection[] = [];
 
   // Scan all blocks for unconnected inputs with defaults
   for (const block of patch.blocks) {
@@ -116,7 +117,7 @@ export function materializeDefaultSources(patch: Patch): Patch {
       }
 
       // Is this input already connected?
-      if (hasEdgeToInput(existingEdges, block.id, inputDef.id)) {
+      if (hasConnectionToInput(existingConnections, block.id, inputDef.id)) {
         continue;
       }
 
@@ -145,44 +146,37 @@ export function materializeDefaultSources(patch: Patch): Patch {
 
       const providerType = selectProviderType(defaultSource.world, domain);
 
-      // Get the provider block definition to fill in required fields
+      // Get the provider block definition
       const providerDef = getBlockDefinition(providerType);
       if (providerDef == null) {
         console.warn(`Provider block type not found: ${providerType}`);
         continue;
       }
 
-      // Create the hidden provider block with all required fields
-      const provider: Block = {
+      // Create the hidden provider BlockInstance (minimal format for CompilerPatch)
+      const provider: BlockInstance = {
         id: providerId,
         type: providerType,
-        label: providerDef.label,
-        inputs: providerDef.inputs,
-        outputs: providerDef.outputs,
         params: { value: defaultSource.value },
-        category: providerDef.subcategory ?? 'Other',
-        position: (block.position != null) ? { x: block.position.x - 100, y: block.position.y } : { x: 0, y: 0 },
-        hidden: true,
-        role: 'defaultSourceProvider',
+        position: 0, // Hidden blocks have no position in CompilerPatch
       };
 
-      // Create edge from provider output to block input
-      const edge: Edge = {
-        id: `${providerId}_edge`,
-        from: { kind: 'port', blockId: providerId, slotId: 'out' },
-        to: { kind: 'port', blockId: block.id, slotId: inputDef.id },
-        enabled: true,
+      // Create CompilerConnection from provider output to block input
+      const connection: CompilerConnection = {
+        id: `${providerId}_conn`,
+        from: { block: providerId, port: 'out' },
+        to: { block: block.id, port: inputDef.id },
       };
 
       newBlocks.push(provider);
-      newEdges.push(edge);
+      newConnections.push(connection);
     }
   }
 
-  // Return new patch with augmented blocks and edges
+  // Return new patch with augmented blocks and connections
   return {
     ...patch,
     blocks: [...patch.blocks, ...newBlocks],
-    edges: [...existingEdges, ...newEdges],
+    connections: [...existingConnections, ...newConnections],
   };
 }
