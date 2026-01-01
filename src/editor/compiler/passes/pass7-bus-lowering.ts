@@ -95,7 +95,7 @@ function getPublishersFromEdges(
       (e) =>
         e.enabled &&
         e.to.kind === "bus" &&
-        (e.to as Extract<Endpoint, { kind: "bus" }>).busId === busId
+        e.to.busId === busId
     )
     .map((e) => {
       const from = e.from as Extract<Endpoint, { kind: "port" }>;

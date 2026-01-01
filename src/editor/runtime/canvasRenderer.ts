@@ -281,7 +281,7 @@ export class Canvas2DRenderer {
 
             default: {
               const _exhaustive: never = pass.clip;
-              throw new Error(`Canvas2DRenderer: unknown clip kind ${(_exhaustive as any).kind}`);
+              throw new Error(`Canvas2DRenderer: unknown clip kind ${String((_exhaustive as { kind: unknown }).kind)}`);
             }
           }
 

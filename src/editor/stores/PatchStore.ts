@@ -1031,7 +1031,7 @@ export class PatchStore {
   ): void {
     runTx(this.root, { label: 'Update Connection' }, (tx) => {
       const connection = this.connections.find((c) => c.id === connectionId);
-      if (!connection) return;
+      if (connection === null || connection === undefined) return;
 
       const next = { ...connection, ...updates };
       tx.replace('connections', connectionId, next);
@@ -1232,7 +1232,7 @@ export class PatchStore {
   ): void {
     runTx(this.root, { label: 'Update Edge' }, (tx) => {
       const edge = this.edges.find((e) => e.id === edgeId);
-      if (!edge) return;
+      if (edge === null || edge === undefined) return;
 
       const next = { ...edge, ...updates };
       // Validate updated edge

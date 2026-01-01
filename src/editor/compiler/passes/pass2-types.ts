@@ -343,10 +343,10 @@ function getEndpointType(
   if (endpoint.kind === 'port') {
     // Find the block and slot
     const block = blocks.find(b => b.id === endpoint.blockId);
-    if (!block) return null;
+    if (block === null || block === undefined) return null;
 
     const slot = [...block.inputs, ...block.outputs].find(s => s.id === endpoint.slotId);
-    if (!slot) return null;
+    if (slot === null || slot === undefined) return null;
 
     try {
       return slotTypeToTypeDesc(slot.type);
@@ -421,7 +421,7 @@ export function pass2TypeGraph(
   // Use unified edges if available, otherwise fall back to legacy wires
   const conversionPaths = new Map<Connection | string, readonly string[]>();
 
-  if (normalized.edges && normalized.edges.length > 0) {
+  if (normalized.edges !== undefined && normalized.edges !== null && normalized.edges.length > 0) {
     // New unified edge format
     const edges: readonly Edge[] = normalized.edges;
     for (const edge of edges) {

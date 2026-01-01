@@ -52,7 +52,7 @@ function getPixel(
   y: number
 ): [number, number, number, number] {
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Failed to get canvas context");
+  if (ctx === null) throw new Error("Failed to get canvas context");
   const imageData = ctx.getImageData(x, y, 1, 1);
   return [
     imageData.data[0],
@@ -74,7 +74,7 @@ describe("Gap 1: Z-Order Rendering", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     // Create three overlapping passes at different z-levels
     const pass1: Instances2DPassIR = {
       kind: "instances2d",
@@ -131,9 +131,9 @@ describe("Gap 1: Z-Order Rendering", () => {
     };
 
     frame.passes = [pass3, pass1, pass2]; // Intentionally out of order
-    
+
     const valueStore = createValueStore([]);
-    
+
     // Smoke test - verify rendering doesn't crash
     expect(() => {
       renderer.renderFrame(frame, valueStore);
@@ -157,7 +157,7 @@ describe("Gap 2: Curve Flattening", () => {
     // For now, we verify the renderer doesn't crash with paths
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     // Paths2DPass would contain flattened curves from executeMaterializePath
     // This is a smoke test - full integration requires PathGeometryBufferIR
     expect(() => {
@@ -179,7 +179,7 @@ describe("Gap 3: Clipping/Masking", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     // Child pass that would be clipped
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const childPass: Instances2DPassIR = {
@@ -219,9 +219,9 @@ describe("Gap 3: Clipping/Masking", () => {
     };
 
     frame.passes = [clipGroupPass];
-    
+
     const valueStore = createValueStore([]);
-    
+
     // Smoke test - verify ClipGroup rendering doesn't crash
     expect(() => {
       renderer.renderFrame(frame, valueStore);
@@ -235,7 +235,7 @@ describe("Gap 3: Clipping/Masking", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const childPass: Instances2DPassIR = {
       kind: "instances2d",
@@ -272,7 +272,7 @@ describe("Gap 3: Clipping/Masking", () => {
     };
 
     frame.passes = [clipGroupPass];
-    
+
     const valueStore = createValueStore([]);
     expect(() => {
       renderer.renderFrame(frame, valueStore);
@@ -286,7 +286,7 @@ describe("Gap 3: Clipping/Masking", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const clipGroupPass: ClipGroupPassIR = {
       kind: "clipGroup",
@@ -305,7 +305,7 @@ describe("Gap 3: Clipping/Masking", () => {
     };
 
     frame.passes = [clipGroupPass];
-    
+
     const valueStore = createValueStore([]);
     expect(() => {
       renderer.renderFrame(frame, valueStore);
@@ -325,7 +325,7 @@ describe("Gap 4: Per-Instance Transforms", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     // Note: rotation is applied via geometry transforms in the IR
     // This is a smoke test that rendering doesn't crash with transforms
     const pass: Instances2DPassIR = {
@@ -348,9 +348,9 @@ describe("Gap 4: Per-Instance Transforms", () => {
     };
 
     frame.passes = [pass];
-    
+
     const valueStore = createValueStore([]);
-    
+
     expect(() => {
       renderer.renderFrame(frame, valueStore);
     }).not.toThrow();
@@ -363,7 +363,7 @@ describe("Gap 4: Per-Instance Transforms", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     const pass: Instances2DPassIR = {
       kind: "instances2d",
       header: {
@@ -384,9 +384,9 @@ describe("Gap 4: Per-Instance Transforms", () => {
     };
 
     frame.passes = [pass];
-    
+
     const valueStore = createValueStore([]);
-    
+
     expect(() => {
       renderer.renderFrame(frame, valueStore);
     }).not.toThrow();
@@ -405,7 +405,7 @@ describe("Gap 5: PostFX Effects", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const postfxPass: PostFXPassIR = {
       kind: "postfx",
@@ -421,7 +421,7 @@ describe("Gap 5: PostFX Effects", () => {
     };
 
     frame.passes = [postfxPass];
-    
+
     const valueStore = createValueStore([]);
     expect(() => {
       renderer.renderFrame(frame, valueStore);
@@ -435,7 +435,7 @@ describe("Gap 5: PostFX Effects", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const postfxPass: PostFXPassIR = {
       kind: "postfx",
@@ -452,7 +452,7 @@ describe("Gap 5: PostFX Effects", () => {
     };
 
     frame.passes = [postfxPass];
-    
+
     const valueStore = createValueStore([]);
     expect(() => {
       renderer.renderFrame(frame, valueStore);
@@ -466,7 +466,7 @@ describe("Gap 5: PostFX Effects", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const postfxPass: PostFXPassIR = {
       kind: "postfx",
@@ -482,7 +482,7 @@ describe("Gap 5: PostFX Effects", () => {
     };
 
     frame.passes = [postfxPass];
-    
+
     const valueStore = createValueStore([]);
     expect(() => {
       renderer.renderFrame(frame, valueStore);
@@ -492,12 +492,12 @@ describe("Gap 5: PostFX Effects", () => {
   it("applies colorGrade effect with 3x3 matrix", () => {
     const canvas = createTestCanvas(50, 50);
     const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Failed to get canvas context");
-    
+    if (ctx === null) throw new Error("Failed to get canvas context");
+
     // Draw a red square first
     ctx.fillStyle = "rgb(255, 0, 0)";
     ctx.fillRect(0, 0, 50, 50);
-    
+
     const renderer = new Canvas2DRenderer(canvas);
     renderer.setViewport(50, 50);
 
@@ -506,14 +506,14 @@ describe("Gap 5: PostFX Effects", () => {
       passes: [],
       overlays: [],
     };
-    
+
     // Grayscale matrix (averages RGB channels)
     const grayscaleMatrix = [
       0.299, 0.587, 0.114, // R' = 0.299*R + 0.587*G + 0.114*B
       0.299, 0.587, 0.114, // G' = same
       0.299, 0.587, 0.114, // B' = same
     ];
-    
+
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const postfxPass: PostFXPassIR = {
       kind: "postfx",
@@ -528,9 +528,9 @@ describe("Gap 5: PostFX Effects", () => {
     };
 
     frame.passes = [postfxPass];
-    
+
     const valueStore = createValueStore([]);
-    
+
     // Smoke test - verify colorGrade doesn't crash
     expect(() => {
       renderer.renderFrame(frame, valueStore);
@@ -556,7 +556,7 @@ describe("Gap 6: Gradient Materials", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     // Note: Gradient rendering is implemented in renderPassExecutors
     // This is a smoke test that rendering doesn't crash
     const pass: Instances2DPassIR = {
@@ -584,7 +584,7 @@ describe("Gap 6: Gradient Materials", () => {
     };
 
     frame.passes = [pass];
-    
+
     const valueStore = createValueStore([]);
     expect(() => {
       renderer.renderFrame(frame, valueStore);
@@ -598,7 +598,7 @@ describe("Gap 6: Gradient Materials", () => {
 
     // @ts-ignore - Test fixture types may not match runtime IR exactly
     const frame = createMinimalFrame();
-    
+
     const pass: Instances2DPassIR = {
       kind: "instances2d",
       header: {
@@ -624,7 +624,7 @@ describe("Gap 6: Gradient Materials", () => {
     };
 
     frame.passes = [pass];
-    
+
     const valueStore = createValueStore([]);
     expect(() => {
       renderer.renderFrame(frame, valueStore);

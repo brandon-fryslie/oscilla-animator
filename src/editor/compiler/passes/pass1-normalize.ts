@@ -102,7 +102,7 @@ export function pass1Normalize(
   let listeners: Listener[];
   let edges: Edge[] | undefined;
 
-  if (patch.edges && patch.edges.length > 0) {
+  if (patch.edges !== undefined && patch.edges !== null && patch.edges.length > 0) {
     // New format: patch has unified edges array
     // Canonicalize edges (filter enabled, sort publishers)
     const canonical = canonicalizeEdges(patch.edges);
@@ -115,9 +115,9 @@ export function pass1Normalize(
     listeners = converted.listeners;
   } else {
     // Legacy format: patch has separate arrays
-    connections = patch.connections || [];
-    publishers = patch.publishers || [];
-    listeners = patch.listeners || [];
+    connections = patch.connections ?? [];
+    publishers = patch.publishers ?? [];
+    listeners = patch.listeners ?? [];
     edges = undefined;
   }
 
@@ -139,7 +139,7 @@ export function pass1Normalize(
       // Check if input is connected
       let isConnected: boolean;
 
-      if (edges) {
+      if (edges !== undefined && edges !== null) {
         // Use unified edges to check connectivity
         isConnected = hasEdgeToInput(edges, block.id, input.id);
       } else {
