@@ -10,6 +10,8 @@ import type {
   BlockType,
   LensInstance,
   Edge,
+  TypeDesc,
+  CombinePolicy,
 } from '../types';
 import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import { getBlockDefinition } from '../blocks';
@@ -23,6 +25,7 @@ import { storeToPatchDocument } from '../semantic/patchAdapter';
 import { randomUUID } from "../crypto";
 import { runTx } from '../transactions/TxBuilder';
 import { validateEdge } from '../edgeMigration';
+import { convertBusToBlock } from '../bus-block/conversion';
 
 // =============================================================================
 // Migration Helpers
@@ -96,6 +99,9 @@ export class PatchStore {
       publisherEdges: computed,
       listenerEdges: computed,
 
+      // Computed getters for bus management (Sprint 3: Bus-Block Unification)
+      busBlocks: computed,
+
       // Actions
       addBlock: action,
       expandMacro: action,
@@ -119,6 +125,11 @@ export class PatchStore {
       addEdge: action,
       removeEdge: action,
       updateEdge: action,
+
+      // Bus management actions (Sprint 3: Bus-Block Unification)
+      addBus: action,
+      removeBus: action,
+      updateBus: action,
     });
   }
 
@@ -150,6 +161,37 @@ export class PatchStore {
   get listenerEdges(): Edge[] {
     return this.edges.filter(e =>
       e.from.kind === 'bus' && e.to.kind === 'port'
+    );
+  }
+
+  // =============================================================================
+  // Computed Getters - Bus Management (Sprint 3: Bus-Block Unification)
+  // =============================================================================
+
+  /**
+   * Get all BusBlock instances in the patch.
+   *
+   * Sprint: Bus-Block Unification - Sprint 3 (Cleanup & Store Unification)
+   * Replaces BusStore.buses access in UI components.
+   *
+   * @returns Array of BusBlock instances
+   */
+  get busBlocks(): Block[] {
+    return this.blocks.filter(b => b.type === 'BusBlock');
+  }
+
+  /**
+   * Get a BusBlock by its bus ID.
+   *
+   * Sprint: Bus-Block Unification - Sprint 3 (Cleanup & Store Unification)
+   * Replaces BusStore.getBusById() in UI components.
+   *
+   * @param busId - The bus ID to find (stored in params.busId)
+   * @returns The BusBlock instance, or undefined if not found
+   */
+  getBusById(busId: string): Block | undefined {
+    return this.blocks.find(b =>
+      b.type === 'BusBlock' && b.params.busId === busId
     );
   }
 
@@ -834,6 +876,138 @@ export class PatchStore {
       const next = { ...block, params: { ...block.params, ...params } };
       tx.replace('blocks', blockId, next);
     });
+  }
+
+  // =============================================================================
+  // Actions - Bus Management (Sprint 3: Bus-Block Unification)
+  // =============================================================================
+
+  /**
+   * Create a new bus by adding a BusBlock.
+   *
+   * Sprint: Bus-Block Unification - Sprint 3 (Cleanup & Store Unification)
+   * Replaces BusStore.createBus() in UI components.
+   *
+   * @param params - Bus parameters
+   * @returns The created BusBlock instance
+   */
+  addBus(params: {
+    name: string;
+    type: TypeDesc;
+    combine: CombinePolicy;
+    defaultValue?: unknown;
+    origin?: 'built-in' | 'user';
+  }): Block {
+    // Check for duplicate name (case-insensitive)
+    const normalizedName = params.name.toLowerCase();
+    const existingBus = this.busBlocks.find(
+      b => (b.params.busName as string).toLowerCase() === normalizedName
+    );
+    if (existingBus !== undefined) {
+      throw new Error(`Bus name "${params.name}" already exists`);
+    }
+
+    // Generate a unique bus ID
+    const busId = this.root.generateId('bus');
+
+    // Create a pseudo-Bus entity to use the conversion utility
+    const tempBus = {
+      id: busId,
+      name: params.name,
+      type: params.type,
+      combine: params.combine,
+      defaultValue: params.defaultValue ?? 0,
+      sortKey: this.busBlocks.length,
+      origin: params.origin ?? 'user',
+    };
+
+    // Convert to BusBlock
+    const busBlock = convertBusToBlock(tempBus);
+
+    // Use transaction system for undo/redo
+    runTx(this.root, { label: `Create Bus "${params.name}"` }, tx => {
+      tx.add('blocks', busBlock);
+    });
+
+    // Emit BusCreated event
+    this.root.events.emit({
+      type: 'BusCreated',
+      busId: busBlock.id,
+      name: params.name,
+      busType: params.type,
+    });
+
+    return busBlock;
+  }
+
+  /**
+   * Remove a bus by removing its BusBlock.
+   *
+   * Sprint: Bus-Block Unification - Sprint 3 (Cleanup & Store Unification)
+   * Replaces BusStore.deleteBus() in UI components.
+   *
+   * @param busId - The bus ID to remove
+   */
+  removeBus(busId: string): void {
+    const busBlock = this.getBusById(busId);
+    if (busBlock === undefined) {
+      throw new Error(`Bus ${busId} not found`);
+    }
+
+    const busName = busBlock.params.busName as string;
+
+    // Remove the BusBlock (cascade removes all connections)
+    this.removeBlock(busBlock.id);
+
+    // Emit BusDeleted event
+    this.root.events.emit({
+      type: 'BusDeleted',
+      busId,
+      name: busName,
+    });
+  }
+
+  /**
+   * Update bus properties by updating the BusBlock's params.
+   *
+   * Sprint: Bus-Block Unification - Sprint 3 (Cleanup & Store Unification)
+   * Replaces BusStore.updateBus() in UI components.
+   *
+   * @param busId - The bus ID to update
+   * @param updates - The properties to update (name, combine, defaultValue)
+   */
+  updateBus(
+    busId: string,
+    updates: Partial<{
+      name: string;
+      combine: CombinePolicy;
+      defaultValue: unknown;
+    }>
+  ): void {
+    const busBlock = this.getBusById(busId);
+    if (busBlock === undefined) {
+      throw new Error(`Bus ${busId} not found`);
+    }
+
+    // Map updates to BusBlock param names
+    const paramUpdates: Record<string, unknown> = {};
+    if (updates.name !== undefined) {
+      paramUpdates.busName = updates.name;
+    }
+    if (updates.combine !== undefined) {
+      paramUpdates.combine = updates.combine;
+    }
+    if (updates.defaultValue !== undefined) {
+      paramUpdates.defaultValue = updates.defaultValue;
+    }
+
+    // Update the BusBlock's params
+    this.updateBlockParams(busBlock.id, paramUpdates);
+
+    // Also update the label if name changed
+    if (updates.name !== undefined) {
+      this.updateBlock(busBlock.id, { label: updates.name });
+    }
   }
 
   // =============================================================================

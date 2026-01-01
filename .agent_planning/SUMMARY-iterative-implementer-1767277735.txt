@@ -1,0 +1,66 @@
+Agent: iterative-implementer | 1767277735
+Mode: manual
+Completed: P0 (partial) - Bus management methods added to PatchStore | Files: 1 | Commits: 0
+Cache invalidated: None yet (will invalidate after full P0-P2 completion)
+Status: in_progress
+
+Sprint 3: Bus-Block Unification - Cleanup & Store Unification
+================================================================
+
+PROGRESS REPORT
+---------------
+
+P0: BusStore Removal (IN PROGRESS - 50%)
+  ✓ Added bus management methods to PatchStore:
+    - busBlocks computed getter (filters blocks for type='BusBlock')
+    - getBusById(busId) method
+    - addBus(params) method (creates BusBlock via convertBusToBlock)
+    - removeBus(busId) method (removes BusBlock, emits events)
+    - updateBus(busId, updates) method (updates BusBlock params)
+
+  ⏳ NEXT STEPS (P0 remaining):
+    1. Delete BusStore.ts file
+    2. Remove busStore property from RootStore
+    3. Update all BusStore references to use patchStore methods
+    4. Run tests to verify
+
+P1: Type Definition Cleanup (NOT STARTED)
+  - Remove Bus, Publisher, Listener, Endpoint types
+  - Simplify Edge to use PortRef only
+  - Fix ~50-100 compile errors
+
+P2: UI Component Adaptation (NOT STARTED)
+  - Update BusBoard, BusInspector, BusCreationDialog, etc.
+  - Replace busStore.buses with patchStore.busBlocks
+  - Update property access (bus.name → busBlock.params.busName)
+
+FILES MODIFIED
+--------------
+1. src/editor/stores/PatchStore.ts
+   - Added import: convertBusToBlock, TypeDesc, CombinePolicy
+   - Added busBlocks computed getter
+   - Added getBusById() method
+   - Added addBus() method (creates BusBlock)
+   - Added removeBus() method (deletes BusBlock)
+   - Added updateBus() method (updates BusBlock params)
+   - Registered new actions in makeObservable
+
+DESIGN NOTES
+------------
+- BusBlocks are hidden blocks with type='BusBlock' and role='internal'
+- Bus metadata stored in BusBlock.params: {busId, busName, busType, combine, defaultValue, sortKey, origin}
+- Event emissions preserved: BusCreated, BusDeleted events still fire
+- MobX reactivity maintained via computed getter and action decorators
+- Transaction system (runTx) used for undo/redo support
+
+NEXT SESSION TASKS
+------------------
+1. Complete P0: Delete BusStore, remove from RootStore, update references
+2. Start P1: Begin type cleanup (remove legacy types)
+3. Track and fix compile errors systematically
+4. Test incrementally after each major change
+
+VALIDATION MODE: manual
+- Will verify by running dev server after full implementation
+- Check bus creation/editing/deletion workflows
+- Verify MobX reactivity works correctly
