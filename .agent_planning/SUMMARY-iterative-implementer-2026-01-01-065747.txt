@@ -1,0 +1,139 @@
+Agent: iterative-implementer | 2026-01-01-065747
+Mode: manual
+Completed: P0 BusBlock Definition, P1 Bus→BusBlock Conversion, P2 Edge Migration | Files: 6 | Commits: 2
+Tests: 33 passing (18 conversion + 15 migration)
+Cache invalidated: None (new implementation, no pre-existing cache)
+Status: complete
+
+Sprint 1: Bus-Block Unification - Foundation
+
+COMPLETED WORK:
+================
+
+P0: BusBlock Definition ✓
+--------------------------
+- Created hidden pass-through block type 'BusBlock' in src/editor/blocks/bus-block.ts
+- Block has input port with combine policy (multi-input) and single output port
+- Tagged with hidden=true, bus=true, role='bus' to filter from UI
+- Registered in block registry (src/editor/blocks/registry.ts)
+- Already filtered from BlockLibrary via existing isBlockHidden() function
+- TypeScript compiles without errors
+- Acceptance: BusBlock exists in BLOCK_DEFS_BY_TYPE, not shown in UI palette
+
+P1: Bus→BusBlock Conversion Utility ✓
+--------------------------------------
+- Created src/editor/bus-block/conversion.ts with bidirectional conversion
+- convertBusToBlock(bus): converts Bus to Block, preserves ID for stable refs
+- convertBlockToBus(block): supports roundtrip and backward compatibility
+- 18 comprehensive unit tests (all passing)
+  * ID preservation
+  * Type mapping
+  * Param storage
+  * Hidden/role flags
+  * Input/output slot creation
+  * Combine policy transfer
+  * Roundtrip conversion
+  * Validation and error handling
+- Acceptance: Bus→Block→Bus roundtrip preserves all data
+
+P2: Edge Migration - Remove Endpoint Union ✓
+--------------------------------------------
+- Created src/editor/bus-block/migration.ts with migration functions
+- migrateEdgesToPortOnly(patch): full migration pipeline
+  * Converts all buses to BusBlocks
+  * Adds BusBlocks to blocks array
+  * Migrates publisher edges (port→bus) to port→BusBlock.in
+  * Migrates listener edges (bus→port) to BusBlock.out→port
+  * Leaves wire edges (port→port) unchanged
+  * Empties buses array
+- isMigrated(patch): detects already-migrated patches
+- safeMigrate(patch): prevents double-migration
+- 15 comprehensive unit tests (all passing)
+  * Bus to BusBlock conversion
+  * Publisher/listener/wire edge handling
+  * Multiple publishers/listeners
+  * Edge metadata preservation
+  * Complex multi-bus patches
+  * Error handling for missing buses
+  * Migration detection and prevention
+- Acceptance: All edges become port→port after migration
+
+FILES MODIFIED:
+===============
+- NEW: src/editor/blocks/bus-block.ts (BusBlock definition)
+- MODIFIED: src/editor/blocks/index.ts (export BusBlock)
+- MODIFIED: src/editor/blocks/registry.ts (register BusBlock)
+- NEW: src/editor/bus-block/conversion.ts (conversion utilities)
+- NEW: src/editor/bus-block/__tests__/conversion.test.ts (18 tests)
+- NEW: src/editor/bus-block/migration.ts (migration utilities)
+- NEW: src/editor/bus-block/__tests__/migration.test.ts (15 tests)
+
+COMMITS:
+========
+- 0fbb4d4: feat(bus-unification): Add BusBlock definition and conversion utilities (P0-P1)
+- 94ba667: feat(bus-unification): Add edge migration utilities (P2)
+
+VALIDATION:
+===========
+Mode: Manual (no pre-existing tests for this feature)
+- TypeScript compilation: PASS (pnpm exec tsc --noEmit)
+- Unit tests: 33/33 PASS (18 conversion + 15 migration)
+- Registry validation: PASS (BusBlock in BLOCK_DEFS_BY_TYPE)
+- Hidden block filtering: PASS (isBlockHidden(BusBlock) === true)
+
+ACCEPTANCE CRITERIA STATUS:
+============================
+DOD Reference: .agent_planning/bus-block-unification/DOD-2026-01-01-sprint1.md
+
+P0: BusBlock Definition
+- [x] BusBlock type exists
+- [x] Multi-input port with combine from params
+- [x] Single output port
+- [x] Hidden tag (hidden: true, bus: true)
+- [x] Bus metadata in params (busId, busName, busType, combine, defaultValue)
+- [x] Registered in BLOCK_DEFS_BY_TYPE
+- [x] Filtered from BlockLibrary
+- [x] TypeScript compiles
+
+P1: Bus→BusBlock Conversion Utility
+- [x] convertBusToBlock(bus) function exists
+- [x] convertBlockToBus(block) function exists
+- [x] ID preserved (block.id === bus.id)
+- [x] Name preserved
+- [x] Type preserved
+- [x] Combine preserved
+- [x] Roundtrip works
+- [x] 18+ unit tests pass
+
+P2: Edge Migration
+- [x] migrateEdgesToPortOnly(patch) function exists
+- [x] Publisher migration (port→bus becomes port→BusBlock.in)
+- [x] Listener migration (bus→port becomes BusBlock.out→port)
+- [x] Wire unchanged (port→port remains port→port)
+- [x] No bus endpoints after migration
+- [x] Buses converted to BusBlocks
+- [x] Compilation works (TypeScript compiles)
+- [x] 15+ unit tests pass
+
+Sprint 1 Overall:
+- [x] All new tests pass (33/33)
+- [x] TypeScript compiles without errors
+- [x] Existing tests still pass (no regressions)
+
+STATUS: ALL ACCEPTANCE CRITERIA MET - SPRINT 1 COMPLETE
+
+NEXT STEPS (Sprint 2):
+=====================
+Sprint 2 focuses on compiler integration - NOT in scope for this sprint:
+- Update compiler passes to recognize BusBlock
+- Handle BusBlock in Pass 6 (block lowering)
+- Consider deleting Pass 7 (bus lowering) - may become redundant
+- Update resolveWriters to handle BusBlock as regular block
+
+Sprint 3 will focus on cleanup:
+- Remove deprecated Publisher/Listener types
+- Remove Endpoint discriminated union
+- Update UI components
+- Remove BusStore (or transform to thin wrapper)
+
+READY FOR EVALUATION: Yes
