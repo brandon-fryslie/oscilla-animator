@@ -32,8 +32,8 @@ describe('TxBuilder', () => {
         tx.add('blocks', block);
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(1);
-      expect(rootStore.patchStore.blocks[0]).toEqual(block);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(1);
+      expect(rootStore.patchStore.userBlocks[0]).toEqual(block);
       expect(result.ops).toHaveLength(1);
       expect(result.ops[0]).toMatchObject({
         type: 'Add',
@@ -93,7 +93,7 @@ describe('TxBuilder', () => {
         tx.remove('blocks', 'block-1');
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(0);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(0);
       expect(result.ops[0]).toMatchObject({
         type: 'Remove',
         table: 'blocks',
@@ -135,8 +135,8 @@ describe('TxBuilder', () => {
         tx.replace('blocks', 'block-1', updated);
       });
 
-      expect(rootStore.patchStore.blocks[0].label).toBe('Updated');
-      expect(rootStore.patchStore.blocks[0].params).toEqual({ value: 2 });
+      expect(rootStore.patchStore.userBlocks[0].label).toBe('Updated');
+      expect(rootStore.patchStore.userBlocks[0].params).toEqual({ value: 2 });
       expect(result.ops[0]).toMatchObject({
         type: 'Update',
         table: 'blocks',
@@ -157,7 +157,7 @@ describe('TxBuilder', () => {
 
       runTx(rootStore, { label: 'Add' }, tx => tx.add('blocks', block));
 
-      const originalReference = rootStore.patchStore.blocks[0];
+      const originalReference = rootStore.patchStore.userBlocks[0];
 
       const updated: Block = { ...block, label: 'Updated' };
 
@@ -166,8 +166,8 @@ describe('TxBuilder', () => {
       });
 
       // Same object reference (mutated in place)
-      expect(rootStore.patchStore.blocks[0]).toBe(originalReference);
-      expect(rootStore.patchStore.blocks[0].label).toBe('Updated');
+      expect(rootStore.patchStore.userBlocks[0]).toBe(originalReference);
+      expect(rootStore.patchStore.userBlocks[0].label).toBe('Updated');
     });
 
     it('throws if entity does not exist', () => {
@@ -238,7 +238,7 @@ describe('TxBuilder', () => {
         });
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(2);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(2);
       expect(result.ops).toHaveLength(1);
       expect(result.ops[0].type).toBe('Many');
       const manyOp = result.ops[0];
@@ -290,7 +290,7 @@ describe('TxBuilder', () => {
             entity: { type: 'test' }, // Missing id
           });
         });
-      }).toThrow('Add op missing entity id');
+      }).toThrow('Add op entity missing id');
     });
 
     it('applies ops atomically (all-or-nothing)', () => {
@@ -319,7 +319,7 @@ describe('TxBuilder', () => {
         tx.add('blocks', block2);
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(2);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(2);
     });
   });
 
@@ -412,7 +412,7 @@ describe('TxBuilder', () => {
       }).toThrow('Intentional error');
 
       // Store should be unchanged
-      expect(rootStore.patchStore.blocks).toHaveLength(0);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(0);
     });
   });
 
@@ -530,7 +530,7 @@ describe('TxBuilder', () => {
         });
 
         // Verify setup
-        expect(rootStore.patchStore.blocks).toHaveLength(2);
+        expect(rootStore.patchStore.userBlocks).toHaveLength(2);
         expect(rootStore.patchStore.connections).toHaveLength(1);
         expect(rootStore.busStore.publishers).toHaveLength(1);
         expect(rootStore.busStore.listeners).toHaveLength(1);
@@ -541,8 +541,8 @@ describe('TxBuilder', () => {
         });
 
         // Verify block removed
-        expect(rootStore.patchStore.blocks).toHaveLength(1);
-        expect(rootStore.patchStore.blocks[0].id).toBe('block-2');
+        expect(rootStore.patchStore.userBlocks).toHaveLength(1);
+        expect(rootStore.patchStore.userBlocks[0].id).toBe('block-2');
 
         // Verify connections removed
         expect(rootStore.patchStore.connections).toHaveLength(0);
