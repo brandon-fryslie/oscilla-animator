@@ -973,8 +973,26 @@ export class PatchStore {
 
     const busName = busBlock.params.busName as string;
 
-    // Remove the BusBlock (cascade removes all connections)
-    this.removeBlock(busBlock.id);
+    // Remove all publishers and listeners that reference this bus
+    // (Must do this before removing the block, as we need to access busStore)
+    const publishersToRemove = this.root.busStore.publishers.filter(p => p.busId === busId);
+    const listenersToRemove = this.root.busStore.listeners.filter(l => l.busId === busId);
+
+    // Use transaction to remove bus and all its bindings atomically
+    runTx(this.root, { label: `Delete Bus "${busName}"` }, tx => {
+      // 1. Remove all publishers
+      for (const pub of publishersToRemove) {
+        tx.remove('publishers', pub.id);
+      }
+
+      // 2. Remove all listeners
+      for (const listener of listenersToRemove) {
+        tx.remove('listeners', listener.id);
+      }
+
+      // 3. Remove the BusBlock itself (cascade removes connections)
+      tx.removeBlockCascade(busBlock.id);
+    });
 
     // Emit BusDeleted event
     this.root.events.emit({

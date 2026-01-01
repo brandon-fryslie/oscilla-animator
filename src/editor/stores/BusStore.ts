@@ -127,6 +127,7 @@ export class BusStore {
    * - palette: signal:color (color bias/palette signal)
    *
    * Sprint 3: Delegates to PatchStore.addBus
+   * Note: Events are emitted by PatchStore.addBus, not here (no duplicate emissions).
    */
   createDefaultBuses(): void {
     // Only create if no buses exist
@@ -161,20 +162,13 @@ export class BusStore {
       };
 
       // Delegate to PatchStore
-      const busBlock = this.root.patchStore.addBus({
+      // PatchStore.addBus emits BusCreated event - no duplicate emission here
+      this.root.patchStore.addBus({
         name: def.name,
         type: typeDesc,
         combine: { when: 'multi', mode: def.combineMode },
         defaultValue: def.defaultValue,
         origin: 'built-in',
-      });
-
-      // Emit BusCreated event AFTER bus added
-      this.root.events.emit({
-        type: 'BusCreated',
-        busId: busBlock.params.busId as string,
-        name: def.name,
-        busType: typeDesc,
       });
     });
   }
@@ -183,6 +177,7 @@ export class BusStore {
    * Create a new bus.
    *
    * Sprint 3: Delegates to PatchStore.addBus
+   * Note: Events are emitted by PatchStore.addBus, not here (no duplicate emissions).
    */
   createBus(
     typeDesc: TypeDesc,
@@ -191,6 +186,7 @@ export class BusStore {
     defaultValue?: unknown
   ): string {
     // Delegate to PatchStore
+    // PatchStore.addBus emits BusCreated event - no duplicate emission here
     const busBlock = this.root.patchStore.addBus({
       name,
       type: typeDesc,
@@ -200,15 +196,6 @@ export class BusStore {
     });
 
     const busId = busBlock.params.busId as string;
-
-    // Emit BusCreated event (fine-grained event, coexists with GraphCommitted)
-    this.root.events.emit({
-      type: 'BusCreated',
-      busId,
-      name,
-      busType: typeDesc,
-    });
-
     return busId;
   }
 
@@ -216,23 +203,12 @@ export class BusStore {
    * Delete a bus and all its routing.
    *
    * Sprint 3: Delegates to PatchStore.removeBus
+   * Note: Events are emitted by PatchStore.removeBus, not here (no duplicate emissions).
    */
   deleteBus(busId: string): void {
-    // Get bus data before removal (for event)
-    const bus = this.getBusById(busId);
-    if (bus === null) {
-      throw new Error(`Bus ${busId} not found`);
-    }
-
     // Delegate to PatchStore
+    // PatchStore.removeBus emits BusDeleted event - no duplicate emission here
     this.root.patchStore.removeBus(busId);
-
-    // Emit BusDeleted event AFTER state changes committed
-    this.root.events.emit({
-      type: 'BusDeleted',
-      busId: bus.id,
-      name: bus.name,
-    });
   }
 
   /**
