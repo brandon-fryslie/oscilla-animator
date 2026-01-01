@@ -1,4 +1,4 @@
-export * from './LensRegistry';
+// Re-exports removed - use TRANSFORM_REGISTRY directly from '../transforms/TransformRegistry'
 export * from './lensResolution';
 
 import type { Artifact, RuntimeCtx } from '../compiler/types';

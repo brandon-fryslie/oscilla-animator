@@ -1,6 +1,6 @@
 import { isDirectlyCompatible } from '../types';
 import type { TypeDesc, AdapterStep, AdapterPolicy } from '../types';
-import { adapterRegistry } from './AdapterRegistry';
+import { TRANSFORM_REGISTRY } from '../transforms/TransformRegistry';
 
 export interface AutoAdapterResult {
   ok: boolean;
@@ -23,7 +23,14 @@ export function findAdapterPath(
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
-  const allAdapters = adapterRegistry.list();
+  const allAdapters = TRANSFORM_REGISTRY.getAllAdapters().map(transform => ({
+    id: transform.id,
+    policy: transform.policy ?? 'EXPLICIT',
+    cost: transform.cost ?? 0,
+    from: transform.inputType === 'same' ? from : transform.inputType,
+    to: transform.outputType === 'same' ? to : transform.outputType,
+  }));
+
   const candidates = findCandidatePaths(from, to, allAdapters);
 
   const autoPaths = candidates.filter((path) => path.every((step) => isAutoAllowed(step.policy, step.cost, context)));

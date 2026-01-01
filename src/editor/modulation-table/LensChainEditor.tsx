@@ -16,9 +16,24 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import Tippy from '@tippyjs/react';
 import type { LensDefinition, TypeDesc } from '../types';
 import { LENS_PRESETS, createLensFromPreset, type LensPreset } from '../lens-presets';
-import { getAllLenses, getLens } from '../lenses/LensRegistry';
+import { TRANSFORM_REGISTRY, isLensTransform } from '../transforms/TransformRegistry';
 import { listLensesFor } from '../transforms/catalog';
 import type { TransformScope } from '../transforms/types';
+
+/**
+ * Helper: Get lens from TRANSFORM_REGISTRY
+ */
+function getLens(lensId: string) {
+  const transform = TRANSFORM_REGISTRY.getTransform(lensId);
+  return transform && isLensTransform(transform) ? transform : undefined;
+}
+
+/**
+ * Helper: Get all lenses from TRANSFORM_REGISTRY
+ */
+function getAllLenses() {
+  return TRANSFORM_REGISTRY.getAllLenses();
+}
 
 /**
  * Recently used lens storage
