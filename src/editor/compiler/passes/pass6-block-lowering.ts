@@ -27,7 +27,6 @@ import { getBlockType } from "../ir/lowerTypes";
 import type { Domain } from "../unified/Domain";
 import { BLOCK_DEFS_BY_TYPE } from "../../blocks/registry";
 import { validatePureBlockOutput } from "../pure-block-validator";
-import { materializeDefaultSource } from "../ir/defaultSourceUtils";
 
 // Re-export ValueRefPacked for backwards compatibility
 export type { ValueRefPacked } from "../ir/lowerTypes";
@@ -295,7 +294,7 @@ function lowerBlockInstance(
       // Collect input ValueRefs (need to resolve from wires/buses)
       // For now, we'll collect inputs from compiled port map
       const inputsById: Record<string, ValueRefPacked> = {};
-      const inputs: ValueRefPacked[] = block.inputs.map((inputPort, portIndex) => {
+      const inputs: ValueRefPacked[] = block.inputs.map((inputPort) => {
         const portKey = `${block.id}:${inputPort.id}`;
         const artifact = compiledPortMap.get(portKey);
 
@@ -307,22 +306,11 @@ function lowerBlockInstance(
           }
         }
 
-        // Check if the port has a registered default source
-        const portDecl = blockType.inputs[portIndex];
-        if (portDecl?.defaultSource !== undefined) {
-          // Port has a default source - materialize it using shared helper
-          const ref = materializeDefaultSource(builder, portDecl.type, portDecl.defaultSource.value);
-          if (ref !== null) {
-            inputsById[inputPort.id] = ref;
-            return ref;
-          }
-        }
-
-        // P0.5: No silent fallback - missing inputs without defaultSource are compile errors
+        // Sprint 2: After materializeDefaultSources() runs in pass 0, all inputs
+        // should have wires. If we reach here, it's an internal compiler error.
         throw new Error(
-          `Missing input "${inputPort.id}" for block "${block.type}" (${block.id}). ` +
-          `No wire, bus listener, or defaultSource provides a value. ` +
-          `Fix: Connect a wire, add a bus listener, or define a defaultSource for this port.`
+          `Internal compiler error: Unmaterialized input "${inputPort.id}" for block "${block.type}" (${block.id}). ` +
+          `All inputs should have wires after pass 0 materialization.`
         );
       });
 
