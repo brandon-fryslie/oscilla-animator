@@ -1,0 +1,24 @@
+Agent: iterative-implementer | 2025-12-31-201100
+Mode: manual
+Completed: Pass 8 unified edge support | Files: 1 | Commits: 1
+Cache invalidated: edge-unification-status.md
+Status: complete
+
+## Summary
+Implemented unified edge support in Pass 8 buildBlockInputRoots() function. The function now uses the edges parameter when available instead of always falling back to legacy wires/listeners arrays.
+
+## Changes
+- Removed `void edges;` suppression in buildBlockInputRoots()
+- Added unified edge lookup when edges array is provided and non-empty
+- Discriminates edge types via from.kind (port vs bus) to handle wires and listeners uniformly
+- Falls back to legacy wires/listeners lookup when edges not available
+- Maintains full backward compatibility
+
+## Validation
+- All pass8-link-resolution tests pass (14/14)
+- TypeScript compilation passes
+- ESLint passes (only pre-existing warnings)
+- Manual validation mode (no tests needed for this specific fix)
+
+## Next Steps
+When Pass 1 populates the edges array, unified edge path will be automatically exercised.

@@ -5,7 +5,6 @@
 | Default Sources Current State | default-sources-current-state.md | 2025-12-30 02:24 | project-evaluator (default-sources-hidden-blocks) | HIGH |
 | Type Contracts Divergence | type-contracts-divergence.md | 2025-12-31 01:45 | project-evaluator (type-contracts-ir-plumbing) | HIGH |
 | Adapter Application Status | adapter-application-status.md | 2025-12-31 01:45 | project-evaluator (type-contracts-ir-plumbing) | HIGH |
-| Edge Unification Status | edge-unification-status.md | 2025-12-31 19:32 | project-evaluator (multi-input blocks) | HIGH |
 
 ## Cache Freshness Guidelines
 - **FRESH**: < 1 hour - trust fully
@@ -19,7 +18,6 @@
 - **default-sources-current-state.md**: Current constant-only default source implementation (store/UI/compiler/types)
 - **type-contracts-divergence.md**: Editor vs IR TypeDesc incompatibility (world: config vs special, different fields, domain mismatches)
 - **adapter-application-status.md**: Adapter/lens application happens in Pass 8 (not Pass 6), block lowering sees unadapted types
-- **edge-unification-status.md**: Edge unification Sprint 1 progress (2/6 items done), single-input invariant locations, bus combine modes, compiler integration points
 
 ## Not Yet Cached
 - project-structure.md (directory layout, entry points)
@@ -31,11 +29,12 @@
 - compiler-integration.md (INVALIDATED 2025-12-26 - CompiledProgram type extended with SignalExpr IR)
 
 ## Removed in This Session
-- architecture.md (INVALIDATED 2025-12-26 04:14 - Compiler pipeline modified: SignalExprTable extraction added to compileBusAware)
-- compiler-architecture.md (INVALIDATED 2025-12-26 - Signal blocks migrated to IR lowering, P1-8 through P1-13 completed)
+- architecture.md (INVALIDATED 2025-12-26 04:14 - Compiler pipeline modified)
+- compiler-architecture.md (INVALIDATED 2025-12-26 - Signal blocks migrated to IR lowering)
 - bus-compiler-architecture.md (INVALIDATED 2025-12-26 - removed as stale)
-- block-compiler-migration.md (INVALIDATED 2025-12-26 05:55 - Signal blocks 8-13 migrated to IR lowering)
-- rendering-architecture.md (INVALIDATED 2025-12-26 11:25 - Player.setIRProgram added, IRRuntimeAdapter created, ScheduleExecutor rendering integration)
-- port-catalog-migration.md (INVALIDATED 2025-12-29 04:03 - Port catalog helper implemented, 4 blocks migrated to outputsById, strict-by-default enabled)
-- debug-export-workstream.md (INVALIDATED 2025-12-30 04:00 - TraceController API extended, ProbeCard updated, DebugReplPanel modified, executeDebugProbe updated)
-- debug-ui-field-visualization.md (INVALIDATED 2025-12-30 05:05 - FieldStats, FieldHeatmap, FieldHistogram, FieldVisualizationMode components added)
+- block-compiler-migration.md (INVALIDATED 2025-12-26 05:55 - Signal blocks migrated)
+- rendering-architecture.md (INVALIDATED 2025-12-26 11:25 - Player.setIRProgram added)
+- port-catalog-migration.md (INVALIDATED 2025-12-29 04:03 - Port catalog implemented)
+- debug-export-workstream.md (INVALIDATED 2025-12-30 04:00 - TraceController API extended)
+- debug-ui-field-visualization.md (INVALIDATED 2025-12-30 05:05 - Field visualization components added)
+- edge-unification-status.md (INVALIDATED 2025-12-31 20:11 - Pass 8 now uses unified edges)

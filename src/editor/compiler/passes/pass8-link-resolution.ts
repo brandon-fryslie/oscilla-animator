@@ -530,10 +530,8 @@ function buildBlockInputRoots(
   // Get block type declarations for type information
   const blockDecls = blocks.map((block) => getBlockType(block.type));
 
-  // Sprint 1: Unified edges support (parameter accepted for future use)
-  // TODO: Implement unified edge iteration when Pass 1 populates edges array
-  // For now, fall back to legacy wires/listeners arrays
-  void edges; // Suppress unused parameter warning
+  // Determine whether to use unified edges or legacy lookup
+  const useUnifiedEdges = edges !== undefined && edges.length > 0;
 
   // Process each block's inputs
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
@@ -544,170 +542,284 @@ function buildBlockInputRoots(
       const input = block.inputs[portIdx];
       const flatIdx = blockIdx * maxInputs + portIdx;
 
-      // Priority 1: Check for wire connection
-      const wire = wires.find(
-        (w) => w.to.block === block.id && w.to.port === input.id
-      );
+      let resolved = false;
 
-      if (wire !== undefined) {
-        // Resolve upstream block output
-        const upstreamBlockIdx = blockIdToIndex.get(wire.from.block);
+      if (useUnifiedEdges) {
+        // Use unified edge lookup
+        const edge = edges.find(
+          (e) => e.to.kind === 'port' && e.to.blockId === block.id && e.to.slotId === input.id
+        );
 
-        if (upstreamBlockIdx === undefined) {
-          // Upstream block wasn't processed - this is a real error
-          errors.push({
-            code: "DanglingConnection",
-            message: `Wire to ${block.id}:${input.id} from unknown block ${wire.from.block}`,
-          });
+        if (edge !== undefined) {
+          if (edge.from.kind === 'port') {
+            // Handle like wire: port→port connection
+            const upstreamBlockIdx = blockIdToIndex.get(edge.from.blockId);
+
+            if (upstreamBlockIdx === undefined) {
+              errors.push({
+                code: "DanglingConnection",
+                message: `Edge to ${block.id}:${input.id} from unknown block ${edge.from.blockId}`,
+              });
+              continue;
+            }
+
+            const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
+            let ref = upstreamOutputs?.get(edge.from.slotId);
+
+            if (ref !== undefined) {
+              // Apply adapter chain if present
+              if (edge.adapterChain !== undefined && edge.adapterChain.length > 0) {
+                ref = applyAdapterChain(
+                  ref,
+                  edge.adapterChain,
+                  builder,
+                  errors,
+                  `edge to ${block.type}.${input.id}`
+                );
+              }
+
+              // Apply lens stack if present
+              if (edge.lensStack !== undefined && edge.lensStack.length > 0) {
+                ref = applyLensStack(
+                  ref,
+                  edge.lensStack,
+                  builder,
+                  errors,
+                  `edge to ${block.type}.${input.id}`
+                );
+              }
+
+              refs[flatIdx] = ref;
+              resolved = true;
+              continue;
+            }
+
+            // Wire exists but upstream port has no IR representation
+            // This is expected for non-IR types (events, domains, etc.)
+            resolved = true;
+            continue;
+          } else {
+            // Handle like listener: bus→port connection
+            const busIdx = busIdToIndex.get(edge.from.busId);
+
+            if (busIdx === undefined) {
+              errors.push({
+                code: "DanglingBindingEndpoint",
+                message: `Edge to ${block.id}:${input.id} from unknown bus ${edge.from.busId}`,
+              });
+              continue;
+            }
+
+            let busRef = busRoots.get(busIdx);
+
+            if (busRef !== undefined) {
+              // Apply adapter chain if present
+              if (edge.adapterChain !== undefined && edge.adapterChain.length > 0) {
+                busRef = applyAdapterChain(
+                  busRef,
+                  edge.adapterChain,
+                  builder,
+                  errors,
+                  `bus edge for ${block.type}.${input.id}`
+                );
+              }
+
+              // Apply lens stack if present
+              if (edge.lensStack !== undefined && edge.lensStack.length > 0) {
+                busRef = applyLensStack(
+                  busRef,
+                  edge.lensStack,
+                  builder,
+                  errors,
+                  `bus edge for ${block.type}.${input.id}`
+                );
+              }
+
+              refs[flatIdx] = busRef;
+              resolved = true;
+              continue;
+            }
+
+            // Bus exists but has no IR representation (e.g., event bus)
+            // This is expected for non-IR bus types - NOT an error
+            resolved = true;
+            continue;
+          }
+        }
+      } else {
+        // Fall back to legacy wires/listeners lookup
+        // Priority 1: Check for wire connection
+        const wire = wires.find(
+          (w) => w.to.block === block.id && w.to.port === input.id
+        );
+
+        if (wire !== undefined) {
+          // Resolve upstream block output
+          const upstreamBlockIdx = blockIdToIndex.get(wire.from.block);
+
+          if (upstreamBlockIdx === undefined) {
+            // Upstream block wasn't processed - this is a real error
+            errors.push({
+              code: "DanglingConnection",
+              message: `Wire to ${block.id}:${input.id} from unknown block ${wire.from.block}`,
+            });
+            continue;
+          }
+
+          const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
+          let ref = upstreamOutputs?.get(wire.from.port);
+
+          if (ref !== undefined) {
+            // Apply adapter chain if present
+            if (wire.adapterChain !== undefined && wire.adapterChain.length > 0) {
+              ref = applyAdapterChain(
+                ref,
+                wire.adapterChain,
+                builder,
+                errors,
+                `wire to ${block.type}.${input.id}`
+              );
+            }
+
+            // Apply lens stack if present
+            if (wire.lensStack !== undefined && wire.lensStack.length > 0) {
+              ref = applyLensStack(
+                ref,
+                wire.lensStack,
+                builder,
+                errors,
+                `wire to ${block.type}.${input.id}`
+              );
+            }
+
+            refs[flatIdx] = ref;
+            resolved = true;
+            continue;
+          }
+
+          // P1 Validation 3: Null ValueRef Documentation
+          // Wire exists but upstream port has no IR representation.
+          //
+          // When null is EXPECTED (not an error):
+          // - Event ports: Events are discrete streams with no default values
+          // - Domain ports: Domain handles are config-time, not runtime IR
+          // - Config ports: Non-runtime-evaluated types
+          //
+          // When null is ERROR (missing data):
+          // - Signal/Field/Scalar ports: IR types require concrete values
+          //
+          // For now, we continue silently for non-IR types (backward compatibility).
+          // In future sprints, we could emit a diagnostic for IR types with null refs
+          // by checking the port's TypeDesc.world against IR type worlds.
+          resolved = true;
           continue;
         }
 
-        const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
-        let ref = upstreamOutputs?.get(wire.from.port);
+        // Priority 2: Check for bus listener
+        const listener = listeners.find(
+          (l) => l.to.blockId === block.id && l.to.slotId === input.id
+        );
 
-        if (ref !== undefined) {
-          // Apply adapter chain if present
-          if (wire.adapterChain !== undefined && wire.adapterChain.length > 0) {
-            ref = applyAdapterChain(
-              ref,
-              wire.adapterChain,
-              builder,
-              errors,
-              `wire to ${block.type}.${input.id}`
-            );
+        if (listener !== undefined) {
+          const busIdx = busIdToIndex.get(listener.busId);
+
+          if (busIdx === undefined) {
+            // Bus not found - this is a real error
+            errors.push({
+              code: "DanglingBindingEndpoint",
+              message: `Listener to ${block.id}:${input.id} from unknown bus ${listener.busId}`,
+            });
+            continue;
           }
 
-          // Apply lens stack if present
-          if (wire.lensStack !== undefined && wire.lensStack.length > 0) {
-            ref = applyLensStack(
-              ref,
-              wire.lensStack,
-              builder,
-              errors,
-              `wire to ${block.type}.${input.id}`
-            );
+          let busRef = busRoots.get(busIdx);
+
+          if (busRef !== undefined) {
+            // Apply adapter chain if present
+            if (listener.adapterChain !== undefined && listener.adapterChain.length > 0) {
+              busRef = applyAdapterChain(
+                busRef,
+                listener.adapterChain,
+                builder,
+                errors,
+                `bus listener for ${block.type}.${input.id}`
+              );
+            }
+
+            // Apply lens stack if present
+            if (listener.lensStack !== undefined && listener.lensStack.length > 0) {
+              busRef = applyLensStack(
+                busRef,
+                listener.lensStack,
+                builder,
+                errors,
+                `bus listener for ${block.type}.${input.id}`
+              );
+            }
+
+            refs[flatIdx] = busRef;
+            resolved = true;
+            continue;
           }
 
-          refs[flatIdx] = ref;
-          continue; // Successfully resolved via wire
-        }
-
-        // P1 Validation 3: Null ValueRef Documentation
-        // Wire exists but upstream port has no IR representation.
-        //
-        // When null is EXPECTED (not an error):
-        // - Event ports: Events are discrete streams with no default values
-        // - Domain ports: Domain handles are config-time, not runtime IR
-        // - Config ports: Non-runtime-evaluated types
-        //
-        // When null is ERROR (missing data):
-        // - Signal/Field/Scalar ports: IR types require concrete values
-        //
-        // For now, we continue silently for non-IR types (backward compatibility).
-        // In future sprints, we could emit a diagnostic for IR types with null refs
-        // by checking the port's TypeDesc.world against IR type worlds.
-        continue;
-      }
-
-      // Priority 2: Check for bus listener
-      const listener = listeners.find(
-        (l) => l.to.blockId === block.id && l.to.slotId === input.id
-      );
-
-      if (listener !== undefined) {
-        const busIdx = busIdToIndex.get(listener.busId);
-
-        if (busIdx === undefined) {
-          // Bus not found - this is a real error
-          errors.push({
-            code: "DanglingBindingEndpoint",
-            message: `Listener to ${block.id}:${input.id} from unknown bus ${listener.busId}`,
-          });
+          // Bus exists but has no IR representation (e.g., event bus)
+          // This is expected for non-IR bus types - NOT an error
+          resolved = true;
           continue;
         }
+      }
 
-        let busRef = busRoots.get(busIdx);
+      // If not resolved via edge/wire/listener, try default source
+      if (!resolved) {
+        // Priority 3: Default source
+        // Check instance first, then block definition for defaultSource
+        const blockDef = getBlockType(block.type);
+        const inputDef = blockDef?.inputs.find(i => i.portId === input.id);
+        const defaultSource = input.defaultSource ?? inputDef?.defaultSource;
 
-        if (busRef !== undefined) {
-          // Apply adapter chain if present
-          if (listener.adapterChain !== undefined && listener.adapterChain.length > 0) {
-            busRef = applyAdapterChain(
-              busRef,
-              listener.adapterChain,
-              builder,
-              errors,
-              `bus listener for ${block.type}.${input.id}`
-            );
+        if (defaultSource !== undefined && inputDef !== undefined) {
+          // Scalar types are compile-time config values, not runtime IR
+          // They're passed to block lowering via config, not resolved here
+          if (inputDef.type.world === "scalar") {
+            continue; // Successfully resolved via config
           }
 
-          // Apply lens stack if present
-          if (listener.lensStack !== undefined && listener.lensStack.length > 0) {
-            busRef = applyLensStack(
-              busRef,
-              listener.lensStack,
-              builder,
-              errors,
-              `bus listener for ${block.type}.${input.id}`
-            );
-          }
-
-          refs[flatIdx] = busRef;
-          continue; // Successfully resolved via bus
-        }
-
-        // Bus exists but has no IR representation (e.g., event bus)
-        // This is expected for non-IR bus types - NOT an error
-        continue;
-      }
-
-      // Priority 3: Default source
-      // Check instance first, then block definition for defaultSource
-      const blockDef = getBlockType(block.type);
-      const inputDef = blockDef?.inputs.find(i => i.portId === input.id);
-      const defaultSource = input.defaultSource ?? inputDef?.defaultSource;
-
-      if (defaultSource !== undefined && inputDef !== undefined) {
-        // Scalar types are compile-time config values, not runtime IR
-        // They're passed to block lowering via config, not resolved here
-        if (inputDef.type.world === "scalar") {
-          continue; // Successfully resolved via config
-        }
-
-        const defaultRef = materializeDefaultSource(builder, inputDef.type, defaultSource.value);
-        if (defaultRef !== null) {
-          refs[flatIdx] = defaultRef;
-          continue; // Successfully resolved via default
-        }
-      }
-
-      // Check if this is a scalar input that doesn't need IR resolution
-      // (even without explicit defaultSource, scalars come from params/config)
-      if (inputDef?.type.world === "scalar") {
-        continue;
-      }
-
-      // No wire, no bus, no default - this is a missing required input
-      // Use the defaultSource from the input slot if available
-      if (input.defaultSource !== undefined && blockDecl !== undefined) {
-        // Find the port declaration to get the type
-        const portDecl = blockDecl.inputs.find((p) => p.portId === input.id);
-        if (portDecl !== undefined) {
-          const defaultRef = materializeDefaultSource(builder, portDecl.type, input.defaultSource.value);
+          const defaultRef = materializeDefaultSource(builder, inputDef.type, defaultSource.value);
           if (defaultRef !== null) {
             refs[flatIdx] = defaultRef;
-            continue; // Successfully resolved via default source
+            continue; // Successfully resolved via default
           }
         }
-      }
 
-      // No source found - check if this is an error
-      // Only report error if there's no defaultSource
-      if (input.defaultSource === undefined) {
-        errors.push({
-          code: "MissingInput",
-          message: `Missing required input for ${block.type}.${input.id} (no wire, bus, or valid defaultSource).`,
-          where: { blockId: block.id, port: input.id },
-        });
+        // Check if this is a scalar input that doesn't need IR resolution
+        // (even without explicit defaultSource, scalars come from params/config)
+        if (inputDef?.type.world === "scalar") {
+          continue;
+        }
+
+        // No wire, no bus, no default - this is a missing required input
+        // Use the defaultSource from the input slot if available
+        if (input.defaultSource !== undefined && blockDecl !== undefined) {
+          // Find the port declaration to get the type
+          const portDecl = blockDecl.inputs.find((p) => p.portId === input.id);
+          if (portDecl !== undefined) {
+            const defaultRef = materializeDefaultSource(builder, portDecl.type, input.defaultSource.value);
+            if (defaultRef !== null) {
+              refs[flatIdx] = defaultRef;
+              continue; // Successfully resolved via default source
+            }
+          }
+        }
+
+        // No source found - check if this is an error
+        // Only report error if there's no defaultSource
+        if (input.defaultSource === undefined) {
+          errors.push({
+            code: "MissingInput",
+            message: `Missing required input for ${block.type}.${input.id} (no wire, bus, or valid defaultSource).`,
+            where: { blockId: block.id, port: input.id },
+          });
+        }
       }
     }
   }
