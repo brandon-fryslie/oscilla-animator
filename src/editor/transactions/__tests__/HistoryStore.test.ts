@@ -117,14 +117,14 @@ describe('HistoryStore', () => {
         tx.add('blocks', block);
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(1);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(1);
       expect(rootStore.historyStore.currentRevisionId).toBe(1);
 
       // Undo
       const result = rootStore.historyStore.undo();
 
       expect(result).toBe(true);
-      expect(rootStore.patchStore.blocks).toHaveLength(0);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(0);
       expect(rootStore.historyStore.currentRevisionId).toBe(0);
     });
 
@@ -191,16 +191,16 @@ describe('HistoryStore', () => {
         });
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(3);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(3);
       expect(rootStore.historyStore.currentRevisionId).toBe(3);
 
       // Undo twice
       rootStore.historyStore.undo();
-      expect(rootStore.patchStore.blocks).toHaveLength(2);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(2);
       expect(rootStore.historyStore.currentRevisionId).toBe(2);
 
       rootStore.historyStore.undo();
-      expect(rootStore.patchStore.blocks).toHaveLength(1);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(1);
       expect(rootStore.historyStore.currentRevisionId).toBe(1);
     });
 
@@ -225,13 +225,13 @@ describe('HistoryStore', () => {
         });
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(1);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(1);
       expect(rootStore.patchStore.connections).toHaveLength(1);
 
       // Undo should remove both
       rootStore.historyStore.undo();
 
-      expect(rootStore.patchStore.blocks).toHaveLength(0);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(0);
       expect(rootStore.patchStore.connections).toHaveLength(0);
     });
   });
@@ -255,15 +255,15 @@ describe('HistoryStore', () => {
 
       // Undo
       rootStore.historyStore.undo();
-      expect(rootStore.patchStore.blocks).toHaveLength(0);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(0);
       expect(rootStore.historyStore.canRedo).toBe(true);
 
       // Redo
       const result = rootStore.historyStore.redo();
 
       expect(result).toBe(true);
-      expect(rootStore.patchStore.blocks).toHaveLength(1);
-      expect(rootStore.patchStore.blocks[0]).toMatchObject({
+      expect(rootStore.patchStore.userBlocks).toHaveLength(1);
+      expect(rootStore.patchStore.userBlocks[0]).toMatchObject({
         id: 'block-1',
         label: 'Test Block',
       });
@@ -341,20 +341,20 @@ describe('HistoryStore', () => {
       rootStore.historyStore.undo();
       rootStore.historyStore.undo();
       rootStore.historyStore.undo();
-      expect(rootStore.patchStore.blocks).toHaveLength(0);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(0);
       expect(rootStore.historyStore.currentRevisionId).toBe(0);
 
       // Redo all
       rootStore.historyStore.redo();
-      expect(rootStore.patchStore.blocks).toHaveLength(1);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(1);
       expect(rootStore.historyStore.currentRevisionId).toBe(1);
 
       rootStore.historyStore.redo();
-      expect(rootStore.patchStore.blocks).toHaveLength(2);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(2);
       expect(rootStore.historyStore.currentRevisionId).toBe(2);
 
       rootStore.historyStore.redo();
-      expect(rootStore.patchStore.blocks).toHaveLength(3);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(3);
       expect(rootStore.historyStore.currentRevisionId).toBe(3);
     });
   });
@@ -455,7 +455,7 @@ describe('HistoryStore', () => {
 
       // Current should be at new branch
       expect(rootStore.historyStore.currentRevisionId).toBe(2);
-      expect(rootStore.patchStore.blocks[0].id).toBe('block-2');
+      expect(rootStore.patchStore.userBlocks[0].id).toBe('block-2');
     });
 
     it('redo uses first child if no preferred child', () => {
@@ -495,7 +495,7 @@ describe('HistoryStore', () => {
       // Redo should use first child (revision 1)
       rootStore.historyStore.redo();
       expect(rootStore.historyStore.currentRevisionId).toBe(1);
-      expect(rootStore.patchStore.blocks[0].id).toBe('block-1');
+      expect(rootStore.patchStore.userBlocks[0].id).toBe('block-1');
     });
   });
 
@@ -634,7 +634,7 @@ describe('HistoryStore', () => {
 
       // Should end up at revision 1
       expect(rootStore.historyStore.currentRevisionId).toBe(1);
-      expect(rootStore.patchStore.blocks).toHaveLength(1);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(1);
     });
   });
 });
