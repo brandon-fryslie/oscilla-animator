@@ -22,7 +22,6 @@ import { getBlockType } from "../ir/lowerTypes";
 import type { LowerCtx } from "../ir/lowerTypes";
 import { adapterRegistry } from "../../adapters/AdapterRegistry";
 import type { AdapterIRCtx } from "../../adapters/AdapterRegistry";
-import { materializeDefaultSource } from "../ir/defaultSourceUtils";
 import { getLens } from "../../lenses/LensRegistry";
 
 // =============================================================================
@@ -87,7 +86,12 @@ export interface LinkedGraphIR {
  *
  * For each block:
  * - Output ports: already in blockOutputs from Pass 6
- * - Input ports: resolve via wire → bus listener → default source
+ * - Input ports: resolve via wire → bus listener
+ *
+ * Note: Default sources are handled by Pass 0 (materializeDefaultSources),
+ * which creates hidden provider blocks and wires for all unconnected inputs
+ * with defaultSource metadata. By the time Pass 8 runs, those inputs have
+ * wires and don't need special handling.
  */
 export function pass8LinkResolution(
   irWithBusRoots: IRWithBusRoots,
@@ -149,16 +153,6 @@ function registerFieldSlots(
   }
 }
 
-/**
- * Create a ValueRef for a default source value.
- *
- * For signal types: creates a sigConst
- * For field types: creates a fieldConst
- *
- * Note: Scalar types are handled at the call site (they're compile-time
- * config values, not runtime IR).
- */
-
 function applyRenderLowering(
   builder: IRBuilder,
   blocks: readonly Block[],
@@ -194,21 +188,18 @@ function applyRenderLowering(
       }
       const ref = blockInputRoots.refs[blockInputRoots.indexOf(blockIdx as BlockIndex, portIdx)];
       if (ref === undefined) {
-        const input = block.inputs[portIdx];
-        const defaultSource = input.defaultSource;
-        if (defaultSource !== undefined) {
-          const defaultRef = materializeDefaultSource(builder, inputDecl.type, defaultSource.value);
-          if (defaultRef !== null) {
-            inputs.push(defaultRef);
-            continue;
-          }
-        }
+        // Note: Pass 0 materializes all default sources as hidden provider blocks.
+        // If ref is undefined here, the input is either:
+        // 1. Optional (skip it)
+        // 2. Required but missing (error)
+        // No need for defaultSource fallback - that's handled by Pass 0.
         if (inputDecl.optional === true) {
           continue;
         }
         errors.push({
           code: "MissingInput",
-          message: `Missing required input for ${block.type}.${inputDecl.portId} (no defaultSource).`,
+          message: `Missing required input for ${block.type}.${inputDecl.portId}. ` +
+                   `No wire connection found and no default source was materialized by Pass 0.`,
           where: { blockId: block.id, port: inputDecl.portId },
         });
         missingInput = true;
@@ -276,18 +267,13 @@ function applyRenderLowering(
       }
       const ref = blockInputRoots.refs[blockInputRoots.indexOf(blockIdx as BlockIndex, portIdx)];
       if (ref === undefined) {
-        const input = block.inputs[portIdx];
-        const defaultSource = input.defaultSource ?? inputDecl.defaultSource;
-        if (defaultSource !== undefined) {
-          const defaultRef = materializeDefaultSource(builder, inputDecl.type, defaultSource.value);
-          if (defaultRef !== null) {
-            inputs.push(defaultRef);
-            continue;
-          }
-        }
+        // Note: Pass 0 materializes all default sources as hidden provider blocks.
+        // If ref is undefined here, the input is missing and required.
+        // No need for defaultSource fallback - that's handled by Pass 0.
         errors.push({
           code: "MissingInput",
-          message: `Missing required input for ${block.type}.${inputDecl.portId} (no defaultSource).`,
+          message: `Missing required input for ${block.type}.${inputDecl.portId}. ` +
+                   `No wire connection found and no default source was materialized by Pass 0.`,
           where: { blockId: block.id, port: inputDecl.portId },
         });
         missingInput = true;
@@ -490,10 +476,13 @@ function applyLensStack(
  * Resolution priority:
  * 1. Wire connection (direct block-to-block)
  * 2. Bus listener (bus → input)
- * 3. Default source (materialized into IR)
- * 3. Default source (fallback constant from slot definition)
  *
- * If no source is found and input has no defaultSource, it's an error.
+ * Note: Default sources are handled by Pass 0 (materializeDefaultSources),
+ * which creates hidden provider blocks and wires for all unconnected inputs
+ * with defaultSource metadata. By the time this function runs, those inputs
+ * already have wires and don't need special handling.
+ *
+ * If no source is found (no wire, no listener), it's a missing required input error.
  */
 function buildBlockInputRoots(
   blocks: readonly Block[],
@@ -527,8 +516,6 @@ function buildBlockInputRoots(
     }
   });
 
-  // Get block type declarations for type information
-  const blockDecls = blocks.map((block) => getBlockType(block.type));
 
   // Determine whether to use unified edges or legacy lookup
   const useUnifiedEdges = edges !== undefined && edges.length > 0;
@@ -536,7 +523,6 @@ function buildBlockInputRoots(
   // Process each block's inputs
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx];
-    const blockDecl = blockDecls[blockIdx];
 
     for (let portIdx = 0; portIdx < block.inputs.length; portIdx++) {
       const input = block.inputs[portIdx];
@@ -769,54 +755,32 @@ function buildBlockInputRoots(
         }
       }
 
-      // If not resolved via edge/wire/listener, try default source
+      // If not resolved via edge/wire/listener, check if it's a scalar or optional
       if (!resolved) {
-        // Priority 3: Default source
-        // Check instance first, then block definition for defaultSource
+        // Note: Pass 0 (materializeDefaultSources) creates hidden provider blocks
+        // for all unconnected inputs with defaultSource metadata. By the time we
+        // reach this point, those inputs already have wires. If we're here, either:
+        // 1. The input is scalar (compile-time config, not runtime IR)
+        // 2. The input is optional (can be missing)
+        // 3. The input is required and missing (error)
+
         const blockDef = getBlockType(block.type);
         const inputDef = blockDef?.inputs.find(i => i.portId === input.id);
-        const defaultSource = input.defaultSource ?? inputDef?.defaultSource;
-
-        if (defaultSource !== undefined && inputDef !== undefined) {
-          // Scalar types are compile-time config values, not runtime IR
-          // They're passed to block lowering via config, not resolved here
-          if (inputDef.type.world === "scalar") {
-            continue; // Successfully resolved via config
-          }
-
-          const defaultRef = materializeDefaultSource(builder, inputDef.type, defaultSource.value);
-          if (defaultRef !== null) {
-            refs[flatIdx] = defaultRef;
-            continue; // Successfully resolved via default
-          }
-        }
 
         // Check if this is a scalar input that doesn't need IR resolution
-        // (even without explicit defaultSource, scalars come from params/config)
+        // Scalars are compile-time config values passed via block.params
         if (inputDef?.type.world === "scalar") {
-          continue;
+          continue; // Successfully resolved via config
         }
 
-        // No wire, no bus, no default - this is a missing required input
-        // Use the defaultSource from the input slot if available
-        if (input.defaultSource !== undefined && blockDecl !== undefined) {
-          // Find the port declaration to get the type
-          const portDecl = blockDecl.inputs.find((p) => p.portId === input.id);
-          if (portDecl !== undefined) {
-            const defaultRef = materializeDefaultSource(builder, portDecl.type, input.defaultSource.value);
-            if (defaultRef !== null) {
-              refs[flatIdx] = defaultRef;
-              continue; // Successfully resolved via default source
-            }
-          }
-        }
-
-        // No source found - check if this is an error
-        // Only report error if there's no defaultSource
-        if (input.defaultSource === undefined) {
+        // No wire, no bus, and not a scalar - this is a missing required input
+        // Report error unless the input is marked as optional
+        if (inputDef?.optional !== true) {
           errors.push({
             code: "MissingInput",
-            message: `Missing required input for ${block.type}.${input.id} (no wire, bus, or valid defaultSource).`,
+            message: `Missing required input for ${block.type}.${input.id}. ` +
+                     `No wire connection, no bus listener, and no default source was materialized by Pass 0. ` +
+                     `Ensure the input is either connected, has a defaultSource in the block definition, or is marked optional.`,
             where: { blockId: block.id, port: input.id },
           });
         }

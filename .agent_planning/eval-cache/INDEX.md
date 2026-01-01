@@ -3,7 +3,6 @@
 | Lint Infrastructure | lint-infrastructure.md | 2025-12-25 17:48 | project-evaluator (lint-cleanup) | HIGH |
 | IR Primitives Status | ir-primitives-status.md | 2025-12-30 02:31 | project-evaluator (spec analysis) | HIGH |
 | Type Contracts Divergence | type-contracts-divergence.md | 2025-12-31 01:45 | project-evaluator (type-contracts-ir-plumbing) | HIGH |
-| Adapter Application Status | adapter-application-status.md | 2025-12-31 01:45 | project-evaluator (type-contracts-ir-plumbing) | HIGH |
 
 ## Cache Freshness Guidelines
 - **FRESH**: < 1 hour - trust fully
@@ -15,7 +14,6 @@
 - **lint-infrastructure.md**: ESLint config, two-tier rules (critical vs non-critical), auto-fixable rules
 - **ir-primitives-status.md**: 74 IR gaps across 11 specs, 20-sprint roadmap, dependency analysis, risk assessment
 - **type-contracts-divergence.md**: Editor vs IR TypeDesc incompatibility (world: config vs special, different fields, domain mismatches)
-- **adapter-application-status.md**: Adapter/lens application happens in Pass 8 (not Pass 6), block lowering sees unadapted types
 
 ## Not Yet Cached
 - project-structure.md (directory layout, entry points)
@@ -37,3 +35,5 @@
 - debug-ui-field-visualization.md (INVALIDATED 2025-12-30 05:05 - Field visualization components added)
 - edge-unification-status.md (INVALIDATED 2025-12-31 20:11 - Pass 8 now uses unified edges)
 - default-sources-current-state.md (INVALIDATED 2025-12-31 20:45 - materializeDefaultSources() integrated, dual system active)
+- adapter-application-status.md (INVALIDATED 2025-12-31 21:50 - Pass 6 defaultSource fallback removed)
+- pass8-link-resolution.md (INVALIDATED 2025-12-31 21:58 - defaultSource fallbacks removed, Pass 0 handles all defaults)
