@@ -22,6 +22,9 @@ import * as MacroBlocks from './macros';
 // Import default source provider blocks (Sprint 4+)
 import * as DefaultSourceProviders from './default-source-providers';
 
+// Import BusBlock (hidden bus representation)
+import * as BusBlockModule from './bus-block';
+
 // Import composite bridge for optional composite support
 import { getCompositeBlockDefinitions } from '../composite-bridge';
 
@@ -36,6 +39,7 @@ const ALL_INDIVIDUAL_BLOCKS: BlockDefinition[] = [
   ...Object.values(FieldPrimitiveBlocks),
   ...Object.values(MacroBlocks),
   ...Object.values(DefaultSourceProviders),
+  ...Object.values(BusBlockModule),
 ].filter((block): block is BlockDefinition => (block as BlockDefinition).type !== undefined);
 
 

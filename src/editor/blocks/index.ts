@@ -24,6 +24,9 @@ export * from './macros';
 // Re-export default source provider blocks (hidden compile-time blocks)
 export * from './default-source-providers';
 
+// Re-export BusBlock (hidden bus representation)
+export * from './bus-block';
+
 // Re-export all registry functions
 export * from './registry';
 
