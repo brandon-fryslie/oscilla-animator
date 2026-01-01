@@ -13,6 +13,8 @@
  * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
  * Updated to use unified edges when available, with fallback to legacy publishers.
  *
+ * Refactored: 2026-01-01 - Use shared createCombineNode() from combine-utils.ts
+ *
  * References:
  * - design-docs/12-Compiler-Final/15-Canonical-Lowering-Pipeline.md § Pass 7
  * - PLAN-2025-12-25-200731.md P0-2: Pass 7 - Bus Lowering to IR
@@ -20,13 +22,13 @@
  */
 
 import type { Bus, Publisher, Block, Edge, Endpoint } from "../../types";
-import type { BusIndex, TypeDesc, EventExprId } from "../ir/types";
+import type { BusIndex, TypeDesc } from "../ir/types";
 import { asTypeDesc } from "../ir/types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
 import type { CompileError } from "../types";
-import type { EventCombineMode } from "../ir/signalExpr";
 import { getSortedPublishers } from "../../semantic/busSemantics";
+import { createCombineNode } from "./combine-utils";
 
 // Re-export ValueRefPacked for downstream consumers
 export type { ValueRefPacked } from "./pass6-block-lowering";
@@ -221,8 +223,10 @@ export function pass7BusLowering(
  *
  * Strategy:
  * - No publishers → use default value as constant
- * - One publisher → use publisher output directly (no combine needed)
- * - Multiple publishers → create combine node with sorted publishers
+ * - One or more publishers → collect ValueRefs and call createCombineNode()
+ *
+ * This function now uses the shared createCombineNode() from combine-utils.ts,
+ * which handles all world types (Signal, Field, Event) and combine modes.
  *
  * Note: Adapters and lenses are validated in the main pass7BusLowering function.
  * If present, they will have already emitted errors.
@@ -238,10 +242,8 @@ function lowerBusToCombineNode(
 ): ValueRefPacked | null {
   const irType = toIRTypeDesc(bus.type);
 
-  // Collect terms (publisher outputs) by world type
-  const sigTerms: number[] = [];
-  const fieldTerms: number[] = [];
-  const eventTerms: EventExprId[] = [];
+  // Collect publisher outputs as ValueRefPacked array
+  const inputs: ValueRefPacked[] = [];
 
   for (const pub of publishers) {
     const blockIdx = blockIdToIndex.get(pub.from.blockId);
@@ -260,81 +262,31 @@ function lowerBusToCombineNode(
     // in pass7BusLowering before this function is called.
     // Here we assume 1:1 mapping (no transforms).
 
-    if (ref.k === "sig") {
-      sigTerms.push(ref.id);
-    } else if (ref.k === "field") {
-      fieldTerms.push(ref.id);
-    } else if (ref.k === "event") {
-      eventTerms.push(ref.id);
-    }
+    inputs.push(ref);
   }
 
-  // Handle Signal Bus
-  if (irType.world === "signal") {
-    // If no valid terms found, create default
-    if (sigTerms.length === 0) {
-      return createDefaultBusValue(bus, builder);
-    }
-
-    // Create combine node
-    // Note: If only 1 term, we could optimize, but maintaining 'combine' semantics (like 'last') is safer explicitly unless strict identity is guaranteed.
-    // However, builder.sigCombine usually handles single-term optimization or runtime handles it.
-    // Wait, sigCombine interface requires mode.
-    // Supported modes for signals: 'sum', 'last' (and potentially 'average', 'max', 'min' if supported)
-    const mode = bus.combineMode as "sum" | "average" | "max" | "min" | "last";
-
-    // Safety check for mode
-    const validModes = ["sum", "average", "max", "min", "last"];
-    const safeMode = validModes.includes(mode) ? mode : "last";
-
-    const sigId = builder.sigCombine(busIndex, sigTerms, safeMode, irType);
-    const slot = builder.allocValueSlot();
-    builder.registerSigSlot(sigId, slot);
-    return { k: "sig", id: sigId, slot };
+  // Handle empty bus - create default value
+  if (inputs.length === 0) {
+    return createDefaultBusValue(bus, builder);
   }
 
-  // Handle Field Bus
-  if (irType.world === "field") {
-    if (fieldTerms.length === 0) {
-      return createDefaultBusValue(bus, builder);
-    }
+  // Use shared createCombineNode() for all worlds
+  const combineMode = bus.combineMode;
+  const combinedRef = createCombineNode(
+    combineMode,
+    inputs,
+    irType,
+    builder,
+    busIndex
+  );
 
-    const mode = bus.combineMode as "sum" | "average" | "max" | "min" | "last" | "product";
-    const validModes = ["sum", "average", "max", "min", "last", "product"];
-    const safeMode = validModes.includes(mode) ? mode : "product";
-
-    const fieldId = builder.fieldCombine(busIndex, fieldTerms, safeMode, irType);
-    const slot = builder.allocValueSlot();
-    builder.registerFieldSlot(fieldId, slot);
-    return { k: "field", id: fieldId, slot };
+  // createCombineNode returns null if no valid terms for the target world
+  // In that case, fall back to default value
+  if (combinedRef === null) {
+    return createDefaultBusValue(bus, builder);
   }
 
-  // Handle Event Bus
-  if (irType.world === "event") {
-    if (eventTerms.length === 0) {
-      return createDefaultBusValue(bus, builder);
-    }
-
-    // Map bus combineMode to event combine semantics
-    // For events: 'merge' combines all event streams, 'last' takes only last publisher's events
-    const mode = bus.combineMode as string;
-    let eventMode: EventCombineMode;
-    if (mode === "sum" || mode === "merge") {
-      eventMode = "merge";
-    } else if (mode === "first") {
-      eventMode = "first";
-    } else {
-      // Default to 'last' for any other mode
-      eventMode = "last";
-    }
-
-    const eventId = builder.eventCombine(busIndex, eventTerms, eventMode, irType);
-    const slot = builder.allocValueSlot();
-    builder.registerEventSlot(eventId, slot);
-    return { k: "event", id: eventId, slot };
-  }
-
-  return null;
+  return combinedRef;
 }
 
 /**
