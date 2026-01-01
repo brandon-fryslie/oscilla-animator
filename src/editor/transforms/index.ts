@@ -1,19 +1,19 @@
 /**
- * Unified Transform Abstraction
+ * Unified Transform System
  *
- * This module provides a single abstraction over adapters and lenses,
- * eliminating fragmentation across the compiler and UI.
- *
- * Modules:
- * - types: Core type definitions
- * - normalize: Convert between storage and normalized representations
- * - catalog: Discovery of available transforms
- * - validate: Scope, type, and structural validation
- * - apply: Transform execution engine
+ * Sprint 4: Phase 0 - Unify Lenses and Adapters
  */
 
-export * from './types';
-export * from './normalize';
-export * from './catalog';
-export * from './validate';
-export * from './apply';
+export {
+  TransformRegistry,
+  TRANSFORM_REGISTRY,
+  isLensTransform,
+  isAdapterTransform,
+  type TransformDef,
+  type LensParamSpec,
+  type TransformIRCtx,
+} from './TransformRegistry';
+
+// Auto-migrate existing lenses and adapters to TransformRegistry
+import './migrateLenses';
+import './migrateAdapters';
