@@ -77,6 +77,7 @@ describe("State Offset Resolution", () => {
         sigValueSlots: [undefined, undefined, outputSlot],
         fieldValueSlots: [],
         eventValueSlots: [],
+        debugProbes: [],
         nextValueSlot: outputSlot + 1,
         busRoots: [],
       };
@@ -140,6 +141,7 @@ describe("State Offset Resolution", () => {
         sigValueSlots: [],
         fieldValueSlots: [],
         eventValueSlots: [],
+        debugProbes: [],
         nextValueSlot: 0,
         busRoots: [],
       };
@@ -203,6 +205,7 @@ describe("State Offset Resolution", () => {
         sigValueSlots: [],
         fieldValueSlots: [],
         eventValueSlots: [],
+        debugProbes: [],
         nextValueSlot: 0,
         busRoots: [],
       };
@@ -250,6 +253,7 @@ describe("State Offset Resolution", () => {
         sigValueSlots: [],
         fieldValueSlots: [],
         eventValueSlots: [],
+        debugProbes: [],
         nextValueSlot: 0,
         busRoots: [],
       };
@@ -310,6 +314,7 @@ describe("State Offset Resolution", () => {
           sigValueSlots: [],
           fieldValueSlots: [],
           eventValueSlots: [],
+          debugProbes: [],
           nextValueSlot: 0,
           busRoots: [],
         };
@@ -376,6 +381,7 @@ describe("State Offset Resolution", () => {
         sigValueSlots: [],
         fieldValueSlots: [],
         eventValueSlots: [],
+        debugProbes: [],
         nextValueSlot: 0,
         busRoots: [],
       };
