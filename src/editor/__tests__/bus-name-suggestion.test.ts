@@ -13,7 +13,8 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
   beforeEach(() => {
     store = new RootStore();
     // Clear default buses for clean test slate
-    store.busStore.buses = [];
+    // Sprint 3: Buses are now BusBlocks in patchStore.blocks
+    store.patchStore.blocks = store.patchStore.blocks.filter(b => b.type !== 'BusBlock');
   });
 
   describe('Default names by domain', () => {

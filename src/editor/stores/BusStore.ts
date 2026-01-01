@@ -1,8 +1,18 @@
 /**
  * @file Bus Store
  * @description Manages signal buses and routing (publishers/listeners).
+ *
+ * Sprint 3: Bus-Block Unification - Facade Pattern
+ *
+ * This store now delegates bus management to PatchStore.busBlocks.
+ * Publishers/listeners remain here until full migration.
+ *
+ * Architecture:
+ * - buses: Computed getter that converts PatchStore.busBlocks to Bus[]
+ * - publishers/listeners: Still managed here (legacy)
+ * - Bus CRUD: Delegates to PatchStore methods
  */
-import { makeObservable, observable, action } from 'mobx';
+import { makeObservable, observable, action, computed } from 'mobx';
 import type {
   Bus,
   Publisher,
@@ -17,10 +27,19 @@ import type {
 import type { RootStore } from './RootStore';
 import { createLensInstanceFromDefinition } from '../lenses/lensInstances';
 import { runTx } from '../transactions/TxBuilder';
+import { convertBlockToBus } from '../bus-block/conversion';
 
 export class BusStore {
-  buses: Bus[] = [];
+  /**
+   * Legacy publishers array (still managed here).
+   * TODO Sprint 4: Migrate to unified edge system.
+   */
   publishers: Publisher[] = [];
+
+  /**
+   * Legacy listeners array (still managed here).
+   * TODO Sprint 4: Migrate to unified edge system.
+   */
   listeners: Listener[] = [];
 
   root: RootStore;
@@ -28,9 +47,14 @@ export class BusStore {
   constructor(root: RootStore) {
     this.root = root;
     makeObservable(this, {
-      buses: observable,
+      // Computed getter that delegates to PatchStore
+      buses: computed,
+
+      // Legacy routing still observable
       publishers: observable,
       listeners: observable,
+
+      // Actions
       createBus: action,
       deleteBus: action,
       updateBus: action,
@@ -49,10 +73,26 @@ export class BusStore {
   }
 
   /**
+   * Get buses from PatchStore.busBlocks.
+   *
+   * Sprint 3: Bus-Block Unification
+   * This computed getter delegates to PatchStore, converting BusBlock → Bus.
+   * Maintains backward compatibility with all existing UI code.
+   */
+  get buses(): Bus[] {
+    return this.root.patchStore.busBlocks.map(convertBlockToBus);
+  }
+
+  /**
    * Get bus by ID.
+   * Delegates to PatchStore.getBusById and converts to Bus.
    */
   getBusById(id: string): Bus | null {
-    return this.buses.find((b) => b.id === id) ?? null;
+    const busBlock = this.root.patchStore.getBusById(id);
+    if (busBlock === undefined) {
+      return null;
+    }
+    return convertBlockToBus(busBlock);
   }
 
   /**
@@ -72,7 +112,7 @@ export class BusStore {
   }
 
   // =============================================================================
-  // Actions - Bus Management
+  // Actions - Bus Management (Delegated to PatchStore)
   // =============================================================================
 
   /**
@@ -85,6 +125,8 @@ export class BusStore {
    * - energy: signal:float (accumulated energy)
    * - pulse: signal:trigger (discrete trigger events)
    * - palette: signal:color (color bias/palette signal)
+   *
+   * Sprint 3: Delegates to PatchStore.addBus
    */
   createDefaultBuses(): void {
     // Only create if no buses exist
@@ -118,23 +160,20 @@ export class BusStore {
         semantics: def.semantics,
       };
 
-      const bus: Bus = {
-        id: this.root.generateId('bus'),
+      // Delegate to PatchStore
+      const busBlock = this.root.patchStore.addBus({
         name: def.name,
         type: typeDesc,
         combine: { when: 'multi', mode: def.combineMode },
         defaultValue: def.defaultValue,
-        sortKey: this.buses.length,
         origin: 'built-in',
-      };
+      });
 
-      this.buses.push(bus);
-
-      // Emit BusCreated event AFTER bus added to store
+      // Emit BusCreated event AFTER bus added
       this.root.events.emit({
         type: 'BusCreated',
-        busId: bus.id,
-        name: bus.name,
+        busId: busBlock.params.busId as string,
+        name: def.name,
         busType: typeDesc,
       });
     });
@@ -142,6 +181,8 @@ export class BusStore {
 
   /**
    * Create a new bus.
+   *
+   * Sprint 3: Delegates to PatchStore.addBus
    */
   createBus(
     typeDesc: TypeDesc,
@@ -149,56 +190,42 @@ export class BusStore {
     combineMode: BusCombineMode,
     defaultValue?: unknown
   ): string {
-    // Check for duplicate name (case-insensitive)
-    const normalizedName = name.toLowerCase();
-    if (this.buses.some(b => b.name.toLowerCase() === normalizedName)) {
-      throw new Error(`Bus name "${name}" already exists`);
-    }
-
-    const bus: Bus = {
-      id: this.root.generateId('bus'),
+    // Delegate to PatchStore
+    const busBlock = this.root.patchStore.addBus({
       name,
       type: typeDesc,
       combine: { when: 'multi', mode: combineMode },
       defaultValue,
-      sortKey: this.buses.length,
-      origin: 'user', // User-created buses
-    };
-
-    // Use transaction system for undo/redo
-    runTx(this.root, { label: `Create Bus "${name}"` }, tx => {
-      tx.add('buses', bus);
+      origin: 'user',
     });
+
+    const busId = busBlock.params.busId as string;
 
     // Emit BusCreated event (fine-grained event, coexists with GraphCommitted)
     this.root.events.emit({
       type: 'BusCreated',
-      busId: bus.id,
-      name: bus.name,
+      busId,
+      name,
       busType: typeDesc,
     });
 
-    return bus.id;
+    return busId;
   }
 
   /**
    * Delete a bus and all its routing.
-   */
-  /**
-   * Delete a bus and all its routing.
    *
-   * P1-1 MIGRATED: Now uses tx.removeBusCascade() for undo/redo support.
+   * Sprint 3: Delegates to PatchStore.removeBus
    */
   deleteBus(busId: string): void {
     // Get bus data before removal (for event)
-    const bus = this.buses.find(b => b.id === busId);
-    if (bus === undefined) {
+    const bus = this.getBusById(busId);
+    if (bus === null) {
       throw new Error(`Bus ${busId} not found`);
     }
 
-    runTx(this.root, { label: 'Delete Bus' }, tx => {
-      tx.removeBusCascade(busId);
-    });
+    // Delegate to PatchStore
+    this.root.patchStore.removeBus(busId);
 
     // Emit BusDeleted event AFTER state changes committed
     this.root.events.emit({
@@ -211,22 +238,15 @@ export class BusStore {
   /**
    * Update bus properties.
    *
-   * P1-2 MIGRATED: Now uses runTx() for undo/redo support.
+   * Sprint 3: Delegates to PatchStore.updateBus
    */
   updateBus(busId: string, updates: Partial<Pick<Bus, 'name' | 'combine' | 'defaultValue'>>): void {
-    runTx(this.root, { label: 'Update Bus' }, tx => {
-      const bus = this.root.busStore.buses.find(b => b.id === busId);
-      if (bus === null || bus === undefined) {
-        throw new Error(`Bus ${busId} not found`);
-      }
-
-      const next = { ...bus, ...updates };
-      tx.replace('buses', busId, next);
-    });
+    // Delegate to PatchStore
+    this.root.patchStore.updateBus(busId, updates);
   }
 
   // =============================================================================
-  // Actions - Routing Management
+  // Actions - Routing Management (Still managed locally)
   // =============================================================================
 
   /**
@@ -241,8 +261,8 @@ export class BusStore {
     lensStack?: LensInstance[],
     options?: { suppressGraphCommitted?: boolean }
   ): string {
-    const bus = this.buses.find(b => b.id === busId);
-    if (bus === null || bus === undefined) {
+    const bus = this.getBusById(busId);
+    if (bus === null) {
       throw new Error(`Bus ${busId} not found`);
     }
 
@@ -338,8 +358,8 @@ export class BusStore {
     lensOrStack?: LensDefinition | LensDefinition[] | LensInstance[],
     options?: { suppressGraphCommitted?: boolean }
   ): string {
-    const bus = this.buses.find(b => b.id === busId);
-    if (bus === null || bus === undefined) {
+    const bus = this.getBusById(busId);
+    if (bus === null) {
       throw new Error(`Bus ${busId} not found`);
     }
 

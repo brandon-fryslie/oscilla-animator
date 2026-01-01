@@ -13,6 +13,9 @@
  * - No validation (ops are assumed to be valid)
  * - Caller is responsible for MobX action context
  *
+ * Sprint 3: Bus-Block Unification
+ * - 'buses' table ops now convert Bus ↔ BusBlock and operate on patchStore.blocks
+ *
  * @see design-docs/6-Transactions/2-Ops.md
  */
 
@@ -20,6 +23,7 @@ import { runInAction } from 'mobx';
 import type { Op, TableName, Entity } from './ops';
 import type { RootStore } from '../stores/RootStore';
 import type { Block, Connection, Bus, Publisher, Listener, Composite, DefaultSourceState, Edge } from '../types';
+import { convertBusToBlock, convertBlockToBus } from '../bus-block/conversion';
 
 /**
  * Apply a sequence of ops to the store.
@@ -85,6 +89,9 @@ function applyOp(op: Op, store: RootStore): void {
 
 /**
  * Add an entity to a table.
+ *
+ * Sprint 3: Bus-Block Unification
+ * - 'buses' table: Convert Bus → BusBlock and add to patchStore.blocks
  */
 function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
   switch (table) {
@@ -94,9 +101,13 @@ function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
     case 'connections':
       store.patchStore.connections.push(entity as Connection);
       break;
-    case 'buses':
-      store.busStore.buses.push(entity as Bus);
+    case 'buses': {
+      // Convert Bus → BusBlock and add to patchStore.blocks
+      const bus = entity as Bus;
+      const busBlock = convertBusToBlock(bus);
+      store.patchStore.blocks.push(busBlock);
       break;
+    }
     case 'publishers':
       store.busStore.publishers.push(entity as Publisher);
       break;
@@ -121,6 +132,9 @@ function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
 
 /**
  * Remove an entity from a table.
+ *
+ * Sprint 3: Bus-Block Unification
+ * - 'buses' table: Remove BusBlock from patchStore.blocks (match by busId in params)
  */
 function applyRemove(table: TableName, id: string, store: RootStore): void {
   switch (table) {
@@ -130,9 +144,13 @@ function applyRemove(table: TableName, id: string, store: RootStore): void {
     case 'connections':
       store.patchStore.connections = store.patchStore.connections.filter(c => c.id !== id);
       break;
-    case 'buses':
-      store.busStore.buses = store.busStore.buses.filter(b => b.id !== id);
+    case 'buses': {
+      // Remove BusBlock from patchStore.blocks (match by busId in params)
+      store.patchStore.blocks = store.patchStore.blocks.filter(b =>
+        !(b.type === 'BusBlock' && b.params.busId === id)
+      );
       break;
+    }
     case 'publishers':
       store.busStore.publishers = store.busStore.publishers.filter(p => p.id !== id);
       break;
@@ -158,6 +176,9 @@ function applyRemove(table: TableName, id: string, store: RootStore): void {
 /**
  * Update an entity in a table.
  * Mutates the entity in place to preserve MobX reactivity.
+ *
+ * Sprint 3: Bus-Block Unification
+ * - 'buses' table: Find BusBlock, convert to Bus, apply updates, convert back, update BusBlock
  */
 function applyUpdate(table: TableName, id: string, next: Entity, store: RootStore): void {
   switch (table) {
@@ -176,9 +197,19 @@ function applyUpdate(table: TableName, id: string, next: Entity, store: RootStor
       break;
     }
     case 'buses': {
-      const bus = store.busStore.buses.find(b => b.id === id);
-      if (bus) {
-        Object.assign(bus, next);
+      // Find BusBlock by busId in params
+      const busBlock = store.patchStore.blocks.find(b =>
+        b.type === 'BusBlock' && b.params.busId === id
+      );
+      if (busBlock) {
+        // Convert current BusBlock → Bus
+        const currentBus = convertBlockToBus(busBlock);
+        // Apply updates to Bus
+        const updatedBus = { ...currentBus, ...(next as Partial<Bus>) };
+        // Convert back to BusBlock
+        const updatedBusBlock = convertBusToBlock(updatedBus);
+        // Update the BusBlock in place
+        Object.assign(busBlock, updatedBusBlock);
       }
       break;
     }

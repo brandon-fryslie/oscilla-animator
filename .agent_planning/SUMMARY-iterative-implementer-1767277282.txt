@@ -1,0 +1,78 @@
+Agent: iterative-implementer | 2026-01-01-072122
+Mode: manual
+Completed: Pass 8 Edge Unification (Sprint 2 P2) | Files: 2 | Commits: 1
+Tests: 14 passing (pass8-link-resolution.test.ts)
+Cache invalidated: None needed (only modified compiler passes)
+Status: complete
+
+DELIVERABLE: Sprint 2 P2 - Pass 8 Edge Unification
+
+Changes:
+- Removed edge-kind discrimination from Pass 8 buildBlockInputRoots()
+- Unified edge processing: all edges are port→port after migration
+- Added UnmigratedBusEdge error code for validation
+- Reduced Pass 8 from 910 lines to 889 lines (21 lines removed)
+
+Technical Summary:
+The key change is in the useUnifiedEdges branch (lines 562-635). Previously,
+Pass 8 checked `if (edge.from.kind === 'port')` and had separate paths for
+port edges vs bus edges. After BusBlock unification:
+
+- BusBlock.out→port edges are just port→port edges
+- No need for `edge.from.kind === 'bus'` branch
+- Migration should convert all bus edges to BusBlock port edges
+- If unmigrated edges reach compiler, emit UnmigratedBusEdge error
+
+Before (lines 560-654, 95 lines):
+```typescript
+if (edge.from.kind === 'port') {
+  // Handle port→port (47 lines)
+} else {
+  // Handle bus→port (47 lines) - LEGACY
+}
+```
+
+After (lines 562-635, 74 lines):
+```typescript
+// All edges are port→port after migration
+if (edge.from.kind !== 'port') {
+  errors.push({ code: 'UnmigratedBusEdge', ... });
+  continue;
+}
+// Unified port→port handling (including BusBlock edges)
+```
+
+Acceptance Criteria Met:
+- [x] Uniform processing: All edges processed without edge-kind checks
+- [x] No Endpoint.kind checks: Only validation check remains
+- [x] Transforms work: applyAdapterChain/applyLensStack work on all edges
+- [x] Fragment linking: BusBlock ports handled uniformly
+- [x] All tests pass: Pass 8 test suite passes (14 tests)
+- [x] No Endpoint refs: Only in type imports and validation
+
+Test Results:
+- Pass 8 tests: 14/14 passing
+- Total compiler tests: 677/679 passing (2 failures unrelated to Pass 8)
+- Unrelated failures: diagnostic-emission.test.ts (programMeta issue)
+
+Code Metrics:
+- Pass 8: 910 → 889 lines (-21, target was ~50 reduction)
+- Actual reduction less than planned due to:
+  - Added comprehensive documentation
+  - Added UnmigratedBusEdge validation
+  - Retained legacy wires/listeners path for backward compatibility
+
+Files Modified:
+- src/editor/compiler/passes/pass8-link-resolution.ts (main changes)
+- src/editor/compiler/types.ts (added UnmigratedBusEdge error code)
+
+Commit: 55bef85
+Message: "feat(compiler): Unify Pass 8 edge processing (Sprint 2 P2)"
+
+Next Steps:
+- Sprint 2 P0 and P1 already complete
+- Sprint 2 P2 now complete
+- Sprint 2 overall: COMPLETE (all deliverables done)
+- Sprint 3: BusStore removal, type cleanup, UI updates
+
+Ready for evaluation: YES

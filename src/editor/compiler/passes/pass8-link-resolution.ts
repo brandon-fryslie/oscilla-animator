@@ -16,7 +16,7 @@
  * - .agent_planning/bus-block-unification/PLAN-2026-01-01-sprint2.md P2
  */
 
-import type { Block, Listener, AdapterStep, LensInstance } from "../../types";
+import type { Block, Listener, AdapterStep, LensInstance, TransformStep } from "../../types";
 import type { BlockIndex } from "../ir/patches";
 import type { BusIndex } from "../ir/types";
 import type { IRBuilder } from "../ir/IRBuilder";
@@ -26,6 +26,7 @@ import { getBlockType } from "../ir/lowerTypes";
 import type { LowerCtx } from "../ir/lowerTypes";
 import { TRANSFORM_REGISTRY, isAdapterTransform, isLensTransform } from "../../transforms";
 import type { TransformIRCtx } from "../../transforms";
+import { getEdgeTransforms } from "../../transforms/migrate";
 
 // =============================================================================
 // Types
@@ -342,153 +343,188 @@ function buildBlockOutputRoots(
   };
 }
 
+// =============================================================================
+// Transform Application (Track A.4 - Unified Transform Application)
+// =============================================================================
+
 /**
- * Apply adapter chain to a value reference.
+ * Apply a single adapter transform step to a value reference.
  *
- * Iterates through the adapter chain and applies each adapter's compileToIR.
- * If any adapter doesn't support IR compilation, adds an error and returns the input unchanged.
+ * Applies the adapter's compileToIR function. If the adapter doesn't support
+ * IR compilation or fails to compile, adds an error and returns the input unchanged.
+ *
+ * Track A.4: Helper function extracted from legacy applyAdapterChain.
  */
-function applyAdapterChain(
+function applyAdapterStep(
   valueRef: ValueRefPacked,
-  adapterChain: readonly AdapterStep[],
+  step: AdapterStep,
   builder: IRBuilder,
   errors: CompileError[],
   context: string
 ): ValueRefPacked {
-  let result = valueRef;
+  const transformDef = TRANSFORM_REGISTRY.getTransform(step.adapterId);
 
-  for (const step of adapterChain) {
-    const transformDef = TRANSFORM_REGISTRY.getTransform(step.adapterId);
-
-    if (transformDef === undefined) {
-      errors.push({
-        code: "UnsupportedAdapterInIRMode",
-        message: `Unknown adapter '${step.adapterId}' in ${context}. This adapter is not registered.`,
-      });
-      continue; // Skip unknown adapter, continue with original value
-    }
-
-    if (!isAdapterTransform(transformDef)) {
-      errors.push({
-        code: "UnsupportedAdapterInIRMode",
-        message: `Transform '${transformDef.label}' used in ${context} is not an adapter (it's a ${transformDef.kind}).`,
-      });
-      continue;
-    }
-
-    if (transformDef.compileToIR === undefined) {
-      errors.push({
-        code: "UnsupportedAdapterInIRMode",
-        message: `Adapter '${transformDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
-                 `This adapter requires special runtime handling that hasn't been implemented in the IR compiler. ` +
-                 `To use this adapter, either:\n` +
-                 `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
-                 `  - Remove this adapter from your connection\n` +
-                 `  - Use an alternative adapter if available`,
-      });
-      continue; // Skip unsupported adapter, continue with original value
-    }
-
-    // Apply the adapter's IR compilation
-    const irCtx: TransformIRCtx = {
-      builder,
-      transformId: step.adapterId,
-      params: step.params,
-    };
-
-    const transformed = transformDef.compileToIR(result, {}, irCtx);
-    if (transformed === null) {
-      errors.push({
-        code: "UnsupportedAdapterInIRMode",
-        message: `Adapter '${transformDef.label}' in ${context} failed to compile to IR. ` +
-                 `The input type may be incompatible with this adapter.`,
-      });
-      continue; // Skip failed adapter, continue with original value
-    }
-
-    result = transformed;
+  if (transformDef === undefined) {
+    errors.push({
+      code: "UnsupportedAdapterInIRMode",
+      message: `Unknown adapter '${step.adapterId}' in ${context}. This adapter is not registered.`,
+    });
+    return valueRef; // Continue with original value
   }
 
-  return result;
+  if (!isAdapterTransform(transformDef)) {
+    errors.push({
+      code: "UnsupportedAdapterInIRMode",
+      message: `Transform '${transformDef.label}' used in ${context} is not an adapter (it's a ${transformDef.kind}).`,
+    });
+    return valueRef;
+  }
+
+  if (transformDef.compileToIR === undefined) {
+    errors.push({
+      code: "UnsupportedAdapterInIRMode",
+      message: `Adapter '${transformDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
+               `This adapter requires special runtime handling that hasn't been implemented in the IR compiler. ` +
+               `To use this adapter, either:\n` +
+               `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
+               `  - Remove this adapter from your connection\n` +
+               `  - Use an alternative adapter if available`,
+    });
+    return valueRef; // Continue with original value
+  }
+
+  // Apply the adapter's IR compilation
+  const irCtx: TransformIRCtx = {
+    builder,
+    transformId: step.adapterId,
+    params: step.params,
+  };
+
+  const transformed = transformDef.compileToIR(valueRef, {}, irCtx);
+  if (transformed === null) {
+    errors.push({
+      code: "UnsupportedAdapterInIRMode",
+      message: `Adapter '${transformDef.label}' in ${context} failed to compile to IR. ` +
+               `The input type may be incompatible with this adapter.`,
+    });
+    return valueRef; // Continue with original value
+  }
+
+  return transformed;
 }
 
 /**
- * Apply lens stack to a value reference.
+ * Apply a single lens transform step to a value reference.
  *
- * Iterates through the lens stack and applies each lens's compileToIR.
- * If any lens doesn't support IR compilation, adds an error and returns the input unchanged.
+ * Applies the lens's compileToIR function. If the lens doesn't support
+ * IR compilation or fails to compile, adds an error and returns the input unchanged.
+ *
+ * Track A.4: Helper function extracted from legacy applyLensStack.
  */
-function applyLensStack(
+function applyLensStep(
   valueRef: ValueRefPacked,
-  lensStack: readonly LensInstance[],
+  lensInstance: LensInstance,
+  builder: IRBuilder,
+  errors: CompileError[],
+  context: string
+): ValueRefPacked {
+  const transformDef = TRANSFORM_REGISTRY.getTransform(lensInstance.lensId);
+
+  if (transformDef === undefined) {
+    errors.push({
+      code: "UnsupportedLensInIRMode",
+      message: `Unknown lens '${lensInstance.lensId}' in ${context}. This lens is not registered.`,
+    });
+    return valueRef; // Continue with original value
+  }
+
+  if (!isLensTransform(transformDef)) {
+    errors.push({
+      code: "UnsupportedLensInIRMode",
+      message: `Transform '${transformDef.label}' used in ${context} is not a lens (it's a ${transformDef.kind}).`,
+    });
+    return valueRef;
+  }
+
+  if (transformDef.compileToIR === undefined) {
+    errors.push({
+      code: "UnsupportedLensInIRMode",
+      message: `Lens '${transformDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
+               `This lens requires stateful operation or special runtime handling that hasn't been implemented in the IR compiler. ` +
+               `To use this lens, either:\n` +
+               `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
+               `  - Remove this lens from your connection\n` +
+               `  - Use an alternative lens with similar functionality`,
+    });
+    return valueRef; // Continue with original value
+  }
+
+  // Convert lens params to ValueRefPacked
+  const paramsMap: Record<string, ValueRefPacked> = {};
+  for (const [paramId, binding] of Object.entries(lensInstance.params)) {
+    if (binding.kind === 'literal') {
+      // Convert literal values to scalar constants
+      const constId = builder.allocConstId(binding.value);
+      paramsMap[paramId] = { k: 'scalarConst', constId };
+    }
+    // TODO: Handle other binding kinds (bus, wire, default) in future sprints
+    // For now, only literal bindings are supported in IR mode
+  }
+
+  // Apply the lens's IR compilation
+  const irCtx: TransformIRCtx = {
+    builder,
+    transformId: lensInstance.lensId,
+    params: lensInstance.params,
+  };
+
+  const transformed = transformDef.compileToIR(valueRef, paramsMap, irCtx);
+  if (transformed === null) {
+    errors.push({
+      code: "UnsupportedLensInIRMode",
+      message: `Lens '${transformDef.label}' in ${context} failed to compile to IR. ` +
+               `The input type may be incompatible with this lens, or the lens parameters are not yet supported.`,
+    });
+    return valueRef; // Continue with original value
+  }
+
+  return transformed;
+}
+
+/**
+ * Apply a sequence of transform steps (adapters and lenses) to a value reference.
+ *
+ * Iterates through the transform array and applies each transform based on its kind.
+ * Uses explicit kind branching to handle adapter vs lens application semantics.
+ *
+ * Track A.4: Unified transform application function.
+ * Replaces separate applyAdapterChain and applyLensStack calls.
+ *
+ * @param valueRef - Input value reference to transform
+ * @param transforms - Array of transform steps to apply in order
+ * @param builder - IR builder for creating new IR nodes
+ * @param errors - Array to collect compilation errors
+ * @param context - Human-readable context for error messages
+ * @returns Transformed value reference (or original if transforms fail)
+ */
+function applyTransforms(
+  valueRef: ValueRefPacked,
+  transforms: readonly TransformStep[],
   builder: IRBuilder,
   errors: CompileError[],
   context: string
 ): ValueRefPacked {
   let result = valueRef;
 
-  for (const lensInstance of lensStack) {
-    const transformDef = TRANSFORM_REGISTRY.getTransform(lensInstance.lensId);
-
-    if (transformDef === undefined) {
-      errors.push({
-        code: "UnsupportedLensInIRMode",
-        message: `Unknown lens '${lensInstance.lensId}' in ${context}. This lens is not registered.`,
-      });
-      continue; // Skip unknown lens, continue with original value
+  for (const step of transforms) {
+    // Branch based on transform kind (unavoidable due to signature incompatibility)
+    // LensApplyFn uses (RuntimeCtx, Artifact params)
+    // AdapterApplyFn uses (CompileCtx, unknown params)
+    if (step.kind === 'adapter') {
+      result = applyAdapterStep(result, step, builder, errors, context);
+    } else if (step.kind === 'lens') {
+      result = applyLensStep(result, step.lens, builder, errors, context);
     }
-
-    if (!isLensTransform(transformDef)) {
-      errors.push({
-        code: "UnsupportedLensInIRMode",
-        message: `Transform '${transformDef.label}' used in ${context} is not a lens (it's a ${transformDef.kind}).`,
-      });
-      continue;
-    }
-
-    if (transformDef.compileToIR === undefined) {
-      errors.push({
-        code: "UnsupportedLensInIRMode",
-        message: `Lens '${transformDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
-                 `This lens requires stateful operation or special runtime handling that hasn't been implemented in the IR compiler. ` +
-                 `To use this lens, either:\n` +
-                 `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
-                 `  - Remove this lens from your connection\n` +
-                 `  - Use an alternative lens with similar functionality`,
-      });
-      continue; // Skip unsupported lens, continue with original value
-    }
-
-    // Convert lens params to ValueRefPacked
-    const paramsMap: Record<string, ValueRefPacked> = {};
-    for (const [paramId, binding] of Object.entries(lensInstance.params)) {
-      if (binding.kind === 'literal') {
-        // Convert literal values to scalar constants
-        const constId = builder.allocConstId(binding.value);
-        paramsMap[paramId] = { k: 'scalarConst', constId };
-      }
-      // TODO: Handle other binding kinds (bus, wire, default) in future sprints
-      // For now, only literal bindings are supported in IR mode
-    }
-
-    // Apply the lens's IR compilation
-    const irCtx: TransformIRCtx = {
-      builder,
-      transformId: lensInstance.lensId,
-      params: lensInstance.params,
-    };
-
-    const transformed = transformDef.compileToIR(result, paramsMap, irCtx);
-    if (transformed === null) {
-      errors.push({
-        code: "UnsupportedLensInIRMode",
-        message: `Lens '${transformDef.label}' in ${context} failed to compile to IR. ` +
-                 `The input type may be incompatible with this lens, or the lens parameters are not yet supported.`,
-      });
-      continue; // Skip failed lens, continue with original value
-    }
-
-    result = transformed;
   }
 
   return result;
@@ -600,23 +636,12 @@ function buildBlockInputRoots(
           let ref = upstreamOutputs?.get(edge.from.slotId);
 
           if (ref !== undefined) {
-            // Apply adapter chain if present
-            // TODO Phase 0.5: Use getEdgeTransforms(edge) instead of separate lensStack/adapterChain
-            if (edge.adapterChain !== undefined && edge.adapterChain.length > 0) {
-              ref = applyAdapterChain(
+            // Track A.4: Use unified transform application
+            const transforms = getEdgeTransforms(edge);
+            if (transforms.length > 0) {
+              ref = applyTransforms(
                 ref,
-                edge.adapterChain,
-                builder,
-                errors,
-                `edge to ${block.type}.${input.id}`
-              );
-            }
-
-            // Apply lens stack if present
-            if (edge.lensStack !== undefined && edge.lensStack.length > 0) {
-              ref = applyLensStack(
-                ref,
-                edge.lensStack,
+                transforms,
                 builder,
                 errors,
                 `edge to ${block.type}.${input.id}`
@@ -657,22 +682,12 @@ function buildBlockInputRoots(
           let ref = upstreamOutputs?.get(wire.from.port);
 
           if (ref !== undefined) {
-            // Apply adapter chain if present
-            if (wire.adapterChain !== undefined && wire.adapterChain.length > 0) {
-              ref = applyAdapterChain(
+            // Track A.4: Use unified transform application
+            const transforms = getEdgeTransforms(wire);
+            if (transforms.length > 0) {
+              ref = applyTransforms(
                 ref,
-                wire.adapterChain,
-                builder,
-                errors,
-                `wire to ${block.type}.${input.id}`
-              );
-            }
-
-            // Apply lens stack if present
-            if (wire.lensStack !== undefined && wire.lensStack.length > 0) {
-              ref = applyLensStack(
-                ref,
-                wire.lensStack,
+                transforms,
                 builder,
                 errors,
                 `wire to ${block.type}.${input.id}`
@@ -722,22 +737,12 @@ function buildBlockInputRoots(
           let busRef = busRoots.get(busIdx);
 
           if (busRef !== undefined) {
-            // Apply adapter chain if present
-            if (listener.adapterChain !== undefined && listener.adapterChain.length > 0) {
-              busRef = applyAdapterChain(
+            // Track A.4: Use unified transform application
+            const transforms = getEdgeTransforms(listener);
+            if (transforms.length > 0) {
+              busRef = applyTransforms(
                 busRef,
-                listener.adapterChain,
-                builder,
-                errors,
-                `bus listener for ${block.type}.${input.id}`
-              );
-            }
-
-            // Apply lens stack if present
-            if (listener.lensStack !== undefined && listener.lensStack.length > 0) {
-              busRef = applyLensStack(
-                busRef,
-                listener.lensStack,
+                transforms,
                 builder,
                 errors,
                 `bus listener for ${block.type}.${input.id}`

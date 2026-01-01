@@ -1,5 +1,0 @@
-Agent: iterative-implementer | 2026-01-01-060000
-Mode: manual
-Completed: Track B Registry Cleanup | Files: 4 | Commits: 3
-Cache invalidated: phase0-compat-cleanup.md
-Status: complete

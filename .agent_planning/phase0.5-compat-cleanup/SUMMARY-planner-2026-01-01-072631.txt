@@ -1,0 +1,4 @@
+Agent: status-planner | 2026-01-01-072631
+Topic: Complete Track A - Lens/Adapter Transform Unification
+Files: PLAN-2026-01-01-072631.md, DOD-2026-01-01-072631.md
+Items: 2 (P0: A.4 unified applyTransforms, P1: A.5 remove legacy fields)

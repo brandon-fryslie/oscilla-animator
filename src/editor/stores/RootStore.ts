@@ -24,6 +24,7 @@ import { DebugUIStore } from './DebugUIStore';
 import { Kernel } from '../kernel/PatchKernel';
 import type { PatchKernel } from '../kernel/types';
 import type { Block, Bus, Composite, Patch, Slot } from '../types';
+import { convertBusToBlock } from '../bus-block/conversion';
 
 export class RootStore {
   // Event dispatcher (created first so stores can set up listeners)
@@ -204,22 +205,28 @@ export class RootStore {
    *
    * Note: Kernel.doc is typed as PatchDocument (minimal type) but internally
    * stores a full Patch with all fields. Safe to cast here.
+   *
+   * Sprint 3: Bus-Block Unification
+   * Buses from kernel are converted to BusBlocks in PatchStore.
    */
   syncFromKernel(): void {
     runInAction(() => {
       // Kernel.doc is actually a full Patch, safe to cast
       const patch = this.kernel.doc as unknown as Patch;
 
-      // Sync blocks
-      this.patchStore.blocks = patch.blocks.map(b => ({ ...b }));
+      // Sync blocks (excluding BusBlocks - they come from buses array)
+      const nonBusBlocks = patch.blocks.filter(b => b.type !== 'BusBlock');
+      this.patchStore.blocks = nonBusBlocks.map(b => ({ ...b }));
+
+      // Sync buses → BusBlocks
+      if (patch.buses !== null && patch.buses !== undefined && patch.buses.length > 0) {
+        const busBlocks = patch.buses.map(convertBusToBlock);
+        // Add busBlocks to patchStore.blocks
+        this.patchStore.blocks = [...this.patchStore.blocks, ...busBlocks];
+      }
 
       // Sync connections
       this.patchStore.connections = patch.connections.map(c => ({ ...c }));
-
-      // Sync buses
-      if (patch.buses !== null && patch.buses !== undefined && patch.buses.length > 0) {
-        this.busStore.buses = patch.buses.map(b => ({ ...b }));
-      }
 
       // Sync publishers
       if (patch.publishers !== null && patch.publishers !== undefined && patch.publishers.length > 0) {
@@ -290,10 +297,20 @@ export class RootStore {
     // Load into kernel first
     this.kernel = new Kernel(patch);
 
-    // Then sync to MobX observables
-    this.patchStore.blocks = patch.blocks.map((block) => ({ ...block }));
+    // Sync blocks (excluding BusBlocks - they come from buses array below)
+    const nonBusBlocks = patch.blocks.filter(b => b.type !== 'BusBlock');
+    this.patchStore.blocks = nonBusBlocks.map((block) => ({ ...block }));
+
+    // Convert legacy buses to BusBlocks and add to patchStore
+    if (patch.buses !== null && patch.buses !== undefined && patch.buses.length > 0) {
+      const busBlocks = patch.buses.map(convertBusToBlock);
+      this.patchStore.blocks = [...this.patchStore.blocks, ...busBlocks];
+    }
+
+    // Sync connections
     this.patchStore.connections = patch.connections.map((connection) => ({ ...connection }));
 
+    // Load settings
     this.uiStore.settings = {
       seed: patch.settings.seed,
       speed: patch.settings.speed,
@@ -304,7 +321,7 @@ export class RootStore {
       filterByConnection: patch.settings.filterByConnection ?? false,
     };
 
-    this.busStore.buses = patch.buses.map((bus) => ({ ...bus }));
+    // Load publishers/listeners (still in BusStore)
     this.busStore.publishers = patch.publishers.map((publisher) => ({ ...publisher }));
     this.busStore.listeners = patch.listeners.map((listener) => ({ ...listener }));
 
@@ -376,7 +393,7 @@ export class RootStore {
     // Clear MobX observables
     this.patchStore.blocks = [];
     this.patchStore.connections = [];
-    this.busStore.buses = [];
+    // buses are now computed from patchStore.blocks, so clearing blocks clears buses
     this.busStore.publishers = [];
     this.busStore.listeners = [];
     this.uiStore.uiState.selectedBlockId = null;
