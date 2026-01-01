@@ -520,10 +520,14 @@ function applyTransforms(
     // Branch based on transform kind (unavoidable due to signature incompatibility)
     // LensApplyFn uses (RuntimeCtx, Artifact params)
     // AdapterApplyFn uses (CompileCtx, unknown params)
-    if (step.kind === 'adapter') {
-      result = applyAdapterStep(result, step, builder, errors, context);
-    } else if (step.kind === 'lens') {
+    // TransformStep = AdapterStep | { kind: 'lens'; lens: LensInstance }
+    // Use 'kind' in step to discriminate between adapter and lens
+    if ('kind' in step && step.kind === 'lens') {
+      // Lens transform step
       result = applyLensStep(result, step.lens, builder, errors, context);
+    } else {
+      // Adapter transform step (no 'kind' field, has 'adapterId')
+      result = applyAdapterStep(result, step as AdapterStep, builder, errors, context);
     }
   }
 
