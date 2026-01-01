@@ -274,10 +274,28 @@ export interface Edge {
   /** Destination endpoint (port or bus) */
   readonly to: Endpoint;
 
-  /** Optional lens stack for value transformation (applied after adapters) */
+  /**
+   * Unified transform chain (adapters + lenses in execution order).
+   * This replaces the separate lensStack and adapterChain fields.
+   *
+   * Transform execution order:
+   * 1. Adapters (type conversions)
+   * 2. Lenses (value transformations)
+   *
+   * @since Phase 0.5 Track A
+   */
+  readonly transforms?: TransformStep[];
+
+  /**
+   * Optional lens stack for value transformation (applied after adapters).
+   * @deprecated Use `transforms` field instead (Phase 0.5 Track A)
+   */
   readonly lensStack?: LensInstance[];
 
-  /** Optional adapter chain for type conversion (applied before lenses) */
+  /**
+   * Optional adapter chain for type conversion (applied before lenses).
+   * @deprecated Use `transforms` field instead (Phase 0.5 Track A)
+   */
   readonly adapterChain?: AdapterStep[];
 
   /** Whether this edge is enabled */
@@ -292,7 +310,11 @@ export interface Edge {
 
 /**
  * Transform step - union of adapter and lens for unified transform chains.
- * Phase 4 will consolidate these into a single transform representation.
+ * Phase 0.5 Track A unifies lensStack + adapterChain into this representation.
+ *
+ * References:
+ * - .agent_planning/phase0.5-compat-cleanup/PLAN-2026-01-01-000000.md (Track A)
+ * - .agent_planning/phase0.5-compat-cleanup/DOD-2026-01-01-000000.md (Track A)
  */
 export type TransformStep = AdapterStep | { readonly kind: 'lens'; readonly lens: LensInstance };
 
