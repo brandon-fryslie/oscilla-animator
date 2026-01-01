@@ -1,6 +1,6 @@
 import type { DefaultSourceStore } from '../stores/DefaultSourceStore';
 import type { LensDefinition, LensInstance, LensParamBinding } from '../types';
-import { getLens } from './LensRegistry';
+import { TRANSFORM_REGISTRY, isLensTransform } from '../transforms/TransformRegistry';
 
 /**
  * Create a LensInstance from a LensDefinition using literal bindings.
@@ -12,7 +12,9 @@ export function createLensInstanceFromDefinition(
   lensIndex: number,
   _defaultSourceStore: DefaultSourceStore
 ): LensInstance {
-  const def = getLens(lens.type);
+  const transform = TRANSFORM_REGISTRY.getTransform(lens.type);
+  const def = transform && isLensTransform(transform) ? transform : null;
+
   if (def == null) {
     // Unknown lens type - just pass through params as literals
     const paramBindings: Record<string, LensParamBinding> = {};
@@ -29,7 +31,7 @@ export function createLensInstanceFromDefinition(
 
   // Build param bindings using literal values
   const paramBindings: Record<string, LensParamBinding> = {};
-  for (const [paramKey, spec] of Object.entries(def.params)) {
+  for (const [paramKey, spec] of Object.entries(def.params ?? {})) {
     const value = paramKey in lens.params ? lens.params[paramKey] : spec.default;
     paramBindings[paramKey] = { kind: 'literal', value };
   }

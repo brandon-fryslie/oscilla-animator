@@ -180,7 +180,8 @@ export const GridDomainBlock: BlockCompiler = {
     // Support both new (inputs) and old (params) parameter systems
     const paramsObj = params as { rows: int; cols?: int; spacing: float; originX: float; originY: float };
     const rows: int = Math.max(1, Math.floor(extractNumber(inputs.rows, paramsObj.rows)));
-    const cols: int = Math.max(1, Math.floor(extractNumber(inputs.cols, paramsObj.cols)));
+    // cols is optional in params, default to rows to make grid square if not specified
+    const cols: int = Math.max(1, Math.floor(extractNumber(inputs.cols, paramsObj.cols ?? rows)));
     const spacing: float = extractNumber(inputs.spacing, paramsObj.spacing);
     const originX: float = extractNumber(inputs.originX, paramsObj.originX);
     const originY: float = extractNumber(inputs.originY, paramsObj.originY);

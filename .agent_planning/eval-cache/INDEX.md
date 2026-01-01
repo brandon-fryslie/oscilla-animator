@@ -39,6 +39,11 @@ Cache runtime knowledge and patterns discovered during evaluations:
   - Scope: Multi-input blocks architecture
   - Key findings: CombinePolicy types, writer resolution, shared utilities, integration points
 
+- **bus-slot-combine-status.md** - Bus.combineMode vs Slot.combine unification status
+  - Confidence: FRESH (2026-01-01)
+  - Scope: Bus and Slot combine field design
+  - Key findings: Already correctly unified at type level, intentionally different wrappers
+
 ### Architecture & Design
 
 - **ir-primitives-status.md** - IR primitive lowering status
