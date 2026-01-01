@@ -66,10 +66,8 @@ export function connectionToEdge(conn: Connection): Edge {
     id: conn.id,
     from,
     to,
-    lensStack: conn.lensStack,
-    adapterChain: conn.adapterChain,
     enabled: conn.enabled ?? true,
-    transforms: convertLegacyTransforms(conn.lensStack, conn.adapterChain),
+    transforms: convertLegacyTransforms(undefined, undefined),
   };
 
   validateEdge(edge);
@@ -98,12 +96,10 @@ export function publisherToEdge(pub: Publisher): Edge {
     id: pub.id,
     from,
     to,
-    lensStack: pub.lensStack,
-    adapterChain: pub.adapterChain,
     enabled: pub.enabled,
     weight: pub.weight,
     sortKey: pub.sortKey,
-    transforms: convertLegacyTransforms(pub.lensStack, pub.adapterChain),
+    transforms: convertLegacyTransforms(undefined, undefined),
   };
 
   validateEdge(edge);
@@ -132,10 +128,8 @@ export function listenerToEdge(listener: Listener): Edge {
     id: listener.id,
     from,
     to,
-    lensStack: listener.lensStack,
-    adapterChain: listener.adapterChain,
     enabled: listener.enabled,
-    transforms: convertLegacyTransforms(listener.lensStack, listener.adapterChain),
+    transforms: convertLegacyTransforms(undefined, undefined),
   };
 
   validateEdge(edge);
@@ -174,8 +168,6 @@ export function edgeToConnection(edge: Edge): Connection | null {
     id: edge.id,
     from,
     to,
-    lensStack: edge.lensStack,
-    adapterChain: edge.adapterChain,
     enabled: edge.enabled,
   };
 }
@@ -202,8 +194,6 @@ export function edgeToPublisher(edge: Edge): Publisher | null {
     id: edge.id,
     busId: edge.to.busId,
     from,
-    lensStack: edge.lensStack,
-    adapterChain: edge.adapterChain,
     enabled: edge.enabled,
     weight: edge.weight,
     sortKey: edge.sortKey ?? 0,
@@ -232,8 +222,6 @@ export function edgeToListener(edge: Edge): Listener | null {
     id: edge.id,
     busId: edge.from.busId,
     to,
-    lensStack: edge.lensStack,
-    adapterChain: edge.adapterChain,
     enabled: edge.enabled,
   };
 }

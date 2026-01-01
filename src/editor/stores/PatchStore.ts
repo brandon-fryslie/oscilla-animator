@@ -14,7 +14,7 @@ import type {
   CombinePolicy,
 } from '../types';
 import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
-import { getBlockDefinition } from '../blocks';
+import { getBlockDefinition, isBlockHidden } from '../blocks';
 import { getMacroKey, getMacroExpansion, type MacroExpansion } from '../macros';
 import { listCompositeDefinitions } from '../composites';
 import type { RootStore } from './RootStore';
@@ -101,6 +101,7 @@ export class PatchStore {
 
       // Computed getters for bus management (Sprint 3: Bus-Block Unification)
       busBlocks: computed,
+      userBlocks: computed,
 
       // Actions
       addBlock: action,
@@ -178,6 +179,22 @@ export class PatchStore {
    */
   get busBlocks(): Block[] {
     return this.blocks.filter(b => b.type === 'BusBlock');
+  }
+
+  /**
+   * Get all user-visible blocks (excludes hidden system blocks like BusBlocks).
+   *
+   * Sprint: Bus-Block Unification - Sprint 3 (Fix Tests)
+   * Helper for tests that check block counts - filters out BusBlocks and other
+   * hidden blocks from the count.
+   *
+   * @returns Array of user-visible blocks
+   */
+  get userBlocks(): Block[] {
+    return this.blocks.filter(b => {
+      const definition = getBlockDefinition(b.type);
+      return definition === undefined || !isBlockHidden(definition);
+    });
   }
 
   /**

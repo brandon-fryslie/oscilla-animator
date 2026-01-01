@@ -1,0 +1,43 @@
+Agent: iterative-implementer | 2026-01-01
+Mode: manual (no pre-existing tests for this sprint)
+Completed: BusStore facade delegation to PatchStore | Files: 4 | Commits: 1
+Cache invalidated: None needed (new functionality)
+Status: in_progress
+
+## Work Completed
+
+### P0: BusStore Delegation (50% complete)
+- BusStore.buses is now computed getter delegating to PatchStore.busBlocks
+- Bus CRUD methods delegate to PatchStore (createBus, deleteBus, updateBus)
+- Transaction system converts Bus ↔ BusBlock automatically
+- RootStore loads/syncs buses as BusBlocks
+- TypeScript compiles successfully
+- Tests need systematic updates (see Remaining Work)
+
+## Files Modified
+- src/editor/stores/BusStore.ts (facade pattern)
+- src/editor/stores/RootStore.ts (Bus → BusBlock conversion)
+- src/editor/transactions/applyOps.ts (Bus ↔ BusBlock conversion)
+- src/editor/__tests__/bus-name-suggestion.test.ts (updated setup)
+
+## Remaining Work
+
+### P0 Remaining: Test Updates (blocking)
+Many tests fail because they check patchStore.blocks.length without filtering BusBlocks.
+Default buses (6 BusBlocks) are created outside undo/redo history.
+
+Action required: Systematically update tests to filter out BusBlocks or adjust expectations.
+
+Affected tests: ~50 failures across integration.test.ts, HistoryStore.test.ts
+
+### P1: Type Definition Cleanup (deferred)
+Keep deprecated types for backward compat - not doing this sprint
+
+### P2: UI Component Adaptation (next)
+Update UI components once P0 tests are fixed
+
+## Decision Log
+- Used facade pattern to maintain API compatibility
+- Transaction system transparently converts Bus ↔ BusBlock
+- Default buses remain outside undo/redo (by design)
+- Test updates required due to architectural change (BusBlocks in blocks array)

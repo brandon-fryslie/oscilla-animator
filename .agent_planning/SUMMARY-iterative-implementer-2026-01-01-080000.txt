@@ -1,0 +1,162 @@
+Agent: iterative-implementer | 2026-01-01-080000
+Mode: manual
+Completed: Type definitions updated, edgeMigration.ts cleaned | Files: 2 | Commits: 2
+Tests: TypeScript errors in 8 files (40+ errors to fix)
+Cache invalidated: Not yet (blocked on completion)
+Status: in_progress
+
+================================================================================
+Track A - A.5: Remove Legacy Transform Fields - PROGRESS REPORT
+================================================================================
+
+## Completed Work
+
+1. ✅ src/editor/types.ts - COMPLETE
+   - Removed lensStack and adapterChain from Edge interface
+   - Removed lensStack and adapterChain from Publisher interface
+   - Removed lensStack and adapterChain from Listener interface
+   - Removed lensStack and adapterChain from Connection interface
+   - Commit: 42c45de
+
+2. ✅ src/editor/edgeMigration.ts - COMPLETE
+   - Removed dual-write logic from connectionToEdge()
+   - Removed dual-write logic from publisherToEdge()
+   - Removed dual-write logic from listenerToEdge()
+   - Removed dual-write logic from edgeToConnection()
+   - Removed dual-write logic from edgeToPublisher()
+   - Removed dual-write logic from edgeToListener()
+   - Factory functions now only set transforms field
+   - Previous commit (already done)
+
+## Remaining Work (TypeScript Errors)
+
+TypeScript compilation now fails with 40+ errors across 8 files:
+
+### 1. src/editor/stores/BusStore.ts (11 errors)
+   - Lines 278, 311, 390, 422, 448, 462, 479, 489, 507
+   - Issues:
+     * Creating Publisher/Listener objects with adapterChain/lensStack fields that no longer exist
+     * updatePublisher/updateListener type signatures reference non-existent fields
+     * Reading lensStack from Listener objects
+   - Fix: Remove all references to legacy fields, functions should not accept these parameters
+
+### 2. src/editor/stores/PatchStore.ts (13 errors)
+   - Lines 816, 833-834, 1218, 1239, 1263, 1266, 1269, 1290, 1293, 1419
+   - Issues:
+     * Reading adapterChain/lensStack from Publisher/Listener/Connection
+     * updateConnection/updateEdge type signatures reference non-existent fields
+     * Manipulating lensStack arrays that don't exist
+   - Fix: Remove all legacy field handling, use Edge.transforms instead
+
+### 3. src/editor/ConnectionInspector.tsx (5 errors)
+   - Lines 569, 570, 573
+   - Issues:
+     * Reading lensStack from Publisher/Listener bindings
+     * Mapping over lensStack arrays
+   - Fix: Read from binding.transforms via getEdgeTransforms() instead
+
+### 4. src/editor/modulation-table/ModulationTableStore.ts (3 errors)
+   - Lines 451, 452
+   - Issues:
+     * Reading lensStack from Listener
+     * Mapping over lensStack array
+   - Fix: Use getEdgeTransforms() to read transforms
+
+### 5. src/editor/kernel/TransactionBuilder.ts (2 errors)
+   - Lines 284, 326
+   - Issues:
+     * Creating Publisher/Listener with adapterChain field
+   - Fix: Remove adapterChain from object literals
+
+### 6. src/editor/kernel/ops.ts (2 errors)
+   - Lines 114, 130
+   - Issues:
+     * UpdatePublisher/UpdateListener operation types reference non-existent fields
+   - Fix: Remove adapterChain/lensStack from Pick<> type parameters
+
+### 7. src/editor/Inspector.tsx (1 error)
+   - Line 205
+   - Issues:
+     * Reading lensStack from Listener
+   - Fix: Use getEdgeTransforms() or remove feature
+
+### 8. src/editor/kernel/__tests__/migration.test.ts (2 errors)
+   - Lines 238, 447
+   - Issues:
+     * Test data creates Connection objects with lensStack field
+   - Fix: Remove lensStack from test data (fields no longer exist)
+
+## Implementation Strategy
+
+The errors fall into three categories:
+
+### Category 1: Object Creation (BusStore, TransactionBuilder)
+**Issue:** Code creates Publisher/Listener objects with fields that no longer exist
+**Fix:** Remove the field assignments
+**Impact:** Functions can still accept the parameters for backward compat, but won't store them
+
+### Category 2: Field Access (ConnectionInspector, ModulationTableStore, Inspector, PatchStore)
+**Issue:** Code reads from lensStack/adapterChain fields that no longer exist
+**Fix:** Use getEdgeTransforms() helper to read from transforms field instead
+**Alternative:** For deprecated Connection/Publisher/Listener types, may need different approach
+
+### Category 3: Type Signatures (ops.ts, PatchStore, BusStore)
+**Issue:** Update operation types still reference non-existent fields
+**Fix:** Remove fields from Pick<> type parameters
+
+## Next Steps
+
+1. Fix BusStore.ts:
+   - Remove adapterChain/lensStack from object literals in addPublisher/addListener
+   - Update updatePublisher/updateListener type signatures
+   - Remove lensStack access in listener update methods
+
+2. Fix PatchStore.ts:
+   - Update updateConnection/updateEdge type signatures
+   - Remove legacy field access throughout
+   - Use Edge.transforms instead
+
+3. Fix UI components:
+   - ConnectionInspector.tsx: Use getEdgeTransforms()
+   - Inspector.tsx: Use getEdgeTransforms() or remove feature
+   - ModulationTableStore.ts: Use getEdgeTransforms()
+
+4. Fix kernel files:
+   - ops.ts: Update type definitions
+   - TransactionBuilder.ts: Remove legacy field assignments
+   - migration.test.ts: Update test data
+
+5. Run tests and verify no regressions
+
+6. Update PROGRESS-Track-A.md to mark Track A 100% complete
+
+7. Invalidate eval cache for modified files
+
+## Key Challenge
+
+The main challenge is that many UI components and stores directly access the legacy fields.
+We need to migrate all this code to use the transforms field via getEdgeTransforms().
+
+However, there's a complication: getEdgeTransforms() is designed for Edge objects, but much
+of the existing code works with deprecated Connection/Publisher/Listener objects directly.
+
+We may need to:
+- Convert Connection/Publisher/Listener to Edge first, then read transforms
+- Or add similar helper functions for the deprecated types
+- Or refactor code to work with edges instead of the deprecated types
+
+## Estimated Remaining Effort
+
+- 8 files with 40+ errors
+- Estimate: 2-3 hours of focused work
+- Some errors are simple (remove field), others require careful refactoring
+
+## Recommendation
+
+Given the scope of remaining work, options:
+1. Complete all fixes now (2-3 hours)
+2. Create a tracking issue and complete incrementally
+3. Revert types.ts changes and approach differently (smaller increments)
+
+The compiler already uses unified transforms (A.4 complete), so the system partially works.
+The remaining errors are in UI/store code that needs updating to match the new types.

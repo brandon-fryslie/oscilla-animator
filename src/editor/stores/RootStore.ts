@@ -138,6 +138,10 @@ export class RootStore {
     // Initialize default buses for a new patch
     this.busStore.createDefaultBuses();
 
+
+    // Reset history after creating default buses (Sprint 3: Bus-Block Unification - Fix Tests)
+    // This ensures tests start from a clean history state at revision 0
+    this.historyStore.reset();
     // Wire up event listeners
     this.setupEventListeners();
   }
@@ -344,6 +348,7 @@ export class RootStore {
     // Create default buses if none exist in loaded patch
     this.busStore.createDefaultBuses();
 
+    this.historyStore.reset();
     // Load legacy composites if present
     type PatchWithComposites = Patch & { composites?: Composite[] };
     const patchWithComposites = patch as PatchWithComposites;
@@ -403,6 +408,7 @@ export class RootStore {
     this.busStore.createDefaultBuses();
 
     // Emit PatchCleared event AFTER state changes committed
+    this.historyStore.reset();
     this.events.emit({ type: 'PatchCleared' });
   }
 

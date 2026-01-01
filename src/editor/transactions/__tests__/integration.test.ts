@@ -48,7 +48,7 @@ describe('Undo/Redo Integration', () => {
   describe('Block Operations (Transaction System)', () => {
     it('undoes block addition', async () => {
       const block = createTestBlock('block-1');
-      const initialCount = rootStore.patchStore.blocks.length;
+      const initialCount = rootStore.patchStore.userBlocks.length;
 
       // Add block via transaction
       const { runTx } = await import('../TxBuilder');
@@ -56,19 +56,19 @@ describe('Undo/Redo Integration', () => {
         tx.add('blocks', block);
       });
 
-      expect(rootStore.patchStore.blocks.length).toBe(initialCount + 1);
+      expect(rootStore.patchStore.userBlocks.length).toBe(initialCount + 1);
       expect(rootStore.patchStore.blocks.find(b => b.id === 'block-1')).toBeDefined();
 
       // Undo
       const undoResult = rootStore.historyStore.undo();
       expect(undoResult).toBe(true);
-      expect(rootStore.patchStore.blocks.length).toBe(initialCount);
+      expect(rootStore.patchStore.userBlocks.length).toBe(initialCount);
       expect(rootStore.patchStore.blocks.find(b => b.id === 'block-1')).toBeUndefined();
 
       // Redo
       const redoResult = rootStore.historyStore.redo();
       expect(redoResult).toBe(true);
-      expect(rootStore.patchStore.blocks.length).toBe(initialCount + 1);
+      expect(rootStore.patchStore.userBlocks.length).toBe(initialCount + 1);
       expect(rootStore.patchStore.blocks.find(b => b.id === 'block-1')).toBeDefined();
     });
 
@@ -78,20 +78,20 @@ describe('Undo/Redo Integration', () => {
 
       // Add block
       runTx(rootStore, { label: 'Add' }, tx => tx.add('blocks', block));
-      const initialCount = rootStore.patchStore.blocks.length;
+      const initialCount = rootStore.patchStore.userBlocks.length;
 
       // Remove block
       runTx(rootStore, { label: 'Remove' }, tx => tx.remove('blocks', 'block-1'));
-      expect(rootStore.patchStore.blocks.length).toBe(initialCount - 1);
+      expect(rootStore.patchStore.userBlocks.length).toBe(initialCount - 1);
 
       // Undo
       rootStore.historyStore.undo();
-      expect(rootStore.patchStore.blocks.length).toBe(initialCount);
+      expect(rootStore.patchStore.userBlocks.length).toBe(initialCount);
       expect(rootStore.patchStore.blocks.find(b => b.id === 'block-1')).toBeDefined();
 
       // Redo
       rootStore.historyStore.redo();
-      expect(rootStore.patchStore.blocks.length).toBe(initialCount - 1);
+      expect(rootStore.patchStore.userBlocks.length).toBe(initialCount - 1);
     });
 
     it('undoes block update', async () => {
@@ -134,17 +134,17 @@ describe('Undo/Redo Integration', () => {
       };
       runTx(rootStore, { label: 'Connect' }, tx => tx.add('connections', connection));
 
-      const initialBlocks = rootStore.patchStore.blocks.length;
+      const initialBlocks = rootStore.patchStore.userBlocks.length;
       const initialConnections = rootStore.patchStore.connections.length;
 
       // Remove block with cascade
       runTx(rootStore, { label: 'Remove' }, tx => tx.removeBlockCascade('block-2'));
-      expect(rootStore.patchStore.blocks.length).toBe(initialBlocks - 1);
+      expect(rootStore.patchStore.userBlocks.length).toBe(initialBlocks - 1);
       expect(rootStore.patchStore.connections.length).toBe(initialConnections - 1);
 
       // Undo
       rootStore.historyStore.undo();
-      expect(rootStore.patchStore.blocks.length).toBe(initialBlocks);
+      expect(rootStore.patchStore.userBlocks.length).toBe(initialBlocks);
       expect(rootStore.patchStore.connections.length).toBe(initialConnections);
     });
 
@@ -474,11 +474,11 @@ describe('Undo/Redo Integration', () => {
 
       // Step 1: Add block 1
       runTx(rootStore, { label: 'Add block 1' }, tx => tx.add('blocks', block1));
-      expect(rootStore.patchStore.blocks.length).toBe(1);
+      expect(rootStore.patchStore.userBlocks.length).toBe(1);
 
       // Step 2: Add block 2
       runTx(rootStore, { label: 'Add block 2' }, tx => tx.add('blocks', block2));
-      expect(rootStore.patchStore.blocks.length).toBe(2);
+      expect(rootStore.patchStore.userBlocks.length).toBe(2);
 
       // Step 3: Connect blocks
       const connection: Connection = {
@@ -495,18 +495,18 @@ describe('Undo/Redo Integration', () => {
 
       // Undo add block 2
       rootStore.historyStore.undo();
-      expect(rootStore.patchStore.blocks.length).toBe(1);
+      expect(rootStore.patchStore.userBlocks.length).toBe(1);
 
       // Undo add block 1
       rootStore.historyStore.undo();
-      expect(rootStore.patchStore.blocks.length).toBe(0);
+      expect(rootStore.patchStore.userBlocks.length).toBe(0);
 
       // Redo all
       rootStore.historyStore.redo();
-      expect(rootStore.patchStore.blocks.length).toBe(1);
+      expect(rootStore.patchStore.userBlocks.length).toBe(1);
 
       rootStore.historyStore.redo();
-      expect(rootStore.patchStore.blocks.length).toBe(2);
+      expect(rootStore.patchStore.userBlocks.length).toBe(2);
 
       rootStore.historyStore.redo();
       expect(rootStore.patchStore.connections.length).toBe(1);
@@ -563,7 +563,7 @@ describe('Undo/Redo Integration', () => {
 
       // Setup observer
       const dispose = autorun(() => {
-        const count = rootStore.patchStore.blocks.length;
+        const count = rootStore.patchStore.userBlocks.length;
         reactions.push(`blocks:${count}`);
       });
 
@@ -633,7 +633,7 @@ describe('Undo/Redo Integration', () => {
     it('handles undo at root gracefully', () => {
       const result = rootStore.historyStore.undo();
       expect(result).toBe(false);
-      expect(rootStore.patchStore.blocks.length).toBe(0);
+      expect(rootStore.patchStore.userBlocks.length).toBe(0);
     });
 
     it('handles redo at leaf gracefully', () => {
@@ -651,11 +651,11 @@ describe('Undo/Redo Integration', () => {
 
       // Undo
       rootStore.historyStore.undo();
-      expect(rootStore.patchStore.blocks.length).toBe(0);
+      expect(rootStore.patchStore.userBlocks.length).toBe(0);
 
       // New operation (creates branch)
       runTx(rootStore, { label: 'Add block 2' }, tx => tx.add('blocks', block2));
-      expect(rootStore.patchStore.blocks.length).toBe(1);
+      expect(rootStore.patchStore.userBlocks.length).toBe(1);
       expect(rootStore.patchStore.blocks.find(b => b.id === 'block-2')).toBeDefined();
     });
   });
