@@ -20,9 +20,8 @@ import type { IRWithBusRoots, ValueRefPacked } from "./pass7-bus-lowering";
 import type { CompilerConnection, CompileError } from "../types";
 import { getBlockType } from "../ir/lowerTypes";
 import type { LowerCtx } from "../ir/lowerTypes";
-import { adapterRegistry } from "../../adapters/AdapterRegistry";
-import type { AdapterIRCtx } from "../../adapters/AdapterRegistry";
-import { getLens } from "../../lenses/LensRegistry";
+import { TRANSFORM_REGISTRY, isAdapterTransform, isLensTransform } from "../../transforms";
+import type { TransformIRCtx } from "../../transforms";
 
 // =============================================================================
 // Types
@@ -355,9 +354,9 @@ function applyAdapterChain(
   let result = valueRef;
 
   for (const step of adapterChain) {
-    const adapterDef = adapterRegistry.get(step.adapterId);
+    const transformDef = TRANSFORM_REGISTRY.getTransform(step.adapterId);
 
-    if (adapterDef === undefined) {
+    if (transformDef === undefined) {
       errors.push({
         code: "UnsupportedAdapterInIRMode",
         message: `Unknown adapter '${step.adapterId}' in ${context}. This adapter is not registered.`,
@@ -365,10 +364,18 @@ function applyAdapterChain(
       continue; // Skip unknown adapter, continue with original value
     }
 
-    if (adapterDef.compileToIR === undefined) {
+    if (!isAdapterTransform(transformDef)) {
       errors.push({
         code: "UnsupportedAdapterInIRMode",
-        message: `Adapter '${adapterDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
+        message: `Transform '${transformDef.label}' used in ${context} is not an adapter (it's a ${transformDef.kind}).`,
+      });
+      continue;
+    }
+
+    if (transformDef.compileToIR === undefined) {
+      errors.push({
+        code: "UnsupportedAdapterInIRMode",
+        message: `Adapter '${transformDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
                  `This adapter requires special runtime handling that hasn't been implemented in the IR compiler. ` +
                  `To use this adapter, either:\n` +
                  `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
@@ -379,17 +386,17 @@ function applyAdapterChain(
     }
 
     // Apply the adapter's IR compilation
-    const irCtx: AdapterIRCtx = {
+    const irCtx: TransformIRCtx = {
       builder,
-      adapterId: step.adapterId,
+      transformId: step.adapterId,
       params: step.params,
     };
 
-    const transformed = adapterDef.compileToIR(result, irCtx);
+    const transformed = transformDef.compileToIR(result, {}, irCtx);
     if (transformed === null) {
       errors.push({
         code: "UnsupportedAdapterInIRMode",
-        message: `Adapter '${adapterDef.label}' in ${context} failed to compile to IR. ` +
+        message: `Adapter '${transformDef.label}' in ${context} failed to compile to IR. ` +
                  `The input type may be incompatible with this adapter.`,
       });
       continue; // Skip failed adapter, continue with original value
@@ -417,9 +424,9 @@ function applyLensStack(
   let result = valueRef;
 
   for (const lensInstance of lensStack) {
-    const lensDef = getLens(lensInstance.lensId);
+    const transformDef = TRANSFORM_REGISTRY.getTransform(lensInstance.lensId);
 
-    if (lensDef === undefined) {
+    if (transformDef === undefined) {
       errors.push({
         code: "UnsupportedLensInIRMode",
         message: `Unknown lens '${lensInstance.lensId}' in ${context}. This lens is not registered.`,
@@ -427,10 +434,18 @@ function applyLensStack(
       continue; // Skip unknown lens, continue with original value
     }
 
-    if (lensDef.compileToIR === undefined) {
+    if (!isLensTransform(transformDef)) {
       errors.push({
         code: "UnsupportedLensInIRMode",
-        message: `Lens '${lensDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
+        message: `Transform '${transformDef.label}' used in ${context} is not a lens (it's a ${transformDef.kind}).`,
+      });
+      continue;
+    }
+
+    if (transformDef.compileToIR === undefined) {
+      errors.push({
+        code: "UnsupportedLensInIRMode",
+        message: `Lens '${transformDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
                  `This lens requires stateful operation or special runtime handling that hasn't been implemented in the IR compiler. ` +
                  `To use this lens, either:\n` +
                  `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
@@ -453,12 +468,17 @@ function applyLensStack(
     }
 
     // Apply the lens's IR compilation
-    const irCtx = { builder };
-    const transformed = lensDef.compileToIR(result, paramsMap, irCtx);
+    const irCtx: TransformIRCtx = {
+      builder,
+      transformId: lensInstance.lensId,
+      params: lensInstance.params,
+    };
+
+    const transformed = transformDef.compileToIR(result, paramsMap, irCtx);
     if (transformed === null) {
       errors.push({
         code: "UnsupportedLensInIRMode",
-        message: `Lens '${lensDef.label}' in ${context} failed to compile to IR. ` +
+        message: `Lens '${transformDef.label}' in ${context} failed to compile to IR. ` +
                  `The input type may be incompatible with this lens, or the lens parameters are not yet supported.`,
       });
       continue; // Skip failed lens, continue with original value
