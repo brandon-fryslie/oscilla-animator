@@ -8,13 +8,14 @@
  * - Create combine nodes for Signal/Field/Event worlds
  * - Validate combineMode against world/domain constraints
  * - Handle edge ordering for deterministic combine (sortKey)
- * - Support all combine modes (sum, average, max, min, last, layer)
+ * - Support all combine modes (sum, average, max, min, last, layer, first, error)
  *
  * Sprint: Phase 0 - Sprint 3: Multi-Input Blocks
  * Extracted from: pass7-bus-lowering.ts (lines 230-330)
+ * Updated: Multi-Input Blocks Integration (2026-01-01)
  */
 
-import type { BusCombineMode, Edge, SlotWorld } from "../../types";
+import type { BusCombineMode, CombineMode, CombinePolicy, Edge, SlotWorld } from "../../types";
 import type { TypeDesc, CoreDomain } from "../../../core/types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import type { ValueRefPacked } from "./pass6-block-lowering";
@@ -44,12 +45,13 @@ export interface CombineModeValidation {
  *
  * Validation rules:
  * - 'last' is always valid (all worlds/domains)
+ * - 'first' is always valid (all worlds/domains, opposite of 'last')
  * - Signal/Field worlds: All modes valid
- * - Config world: Only 'last' valid (stepwise changes)
+ * - Config world: Only 'last'/'first' valid (stepwise changes)
  * - Scalar world: Multi-input not allowed (should emit error if N > 1)
  * - Numeric domains (float, int, vec2, vec3): All modes valid
- * - Color domain: Only 'last' and 'layer' valid
- * - String/boolean domains: Only 'last' valid
+ * - Color domain: Only 'last', 'first', and 'layer' valid
+ * - String/boolean domains: Only 'last'/'first' valid
  *
  * @param mode - The combine mode to validate
  * @param world - The slot's world (signal, field, config, scalar)
@@ -57,12 +59,23 @@ export interface CombineModeValidation {
  * @returns Validation result with reason if invalid
  */
 export function validateCombineMode(
-  mode: BusCombineMode,
+  mode: CombineMode,
   world: SlotWorld,
   domain: CoreDomain
 ): CombineModeValidation {
-  // 'last' is always valid for all worlds and domains
-  if (mode === 'last') {
+  // 'error' mode is special - it rejects multiple writers
+  if (mode === 'error') {
+    return { valid: true }; // Validated separately in caller
+  }
+
+  // Custom modes need registry validation (not implemented yet)
+  if (typeof mode === 'object' && mode.kind === 'custom') {
+    // TODO: Check custom combine registry
+    return { valid: true }; // Assume valid for now
+  }
+
+  // 'last' and 'first' are always valid for all worlds and domains
+  if (mode === 'last' || mode === 'first') {
     return { valid: true };
   }
 
@@ -74,11 +87,11 @@ export function validateCombineMode(
     };
   }
 
-  // Config world only supports 'last' (stepwise changes)
+  // Config world only supports 'last' and 'first' (stepwise changes)
   if (world === 'config') {
     return {
       valid: false,
-      reason: 'Config inputs only support combineMode "last" (stepwise changes)',
+      reason: 'Config inputs only support combineMode "last" or "first" (stepwise changes)',
     };
   }
 
@@ -90,26 +103,97 @@ export function validateCombineMode(
   }
 
   if (domain === 'color') {
-    // Color domain only supports 'last' and 'layer'
+    // Color domain only supports 'last', 'first', and 'layer'
     if (mode === 'layer') {
       return { valid: true };
     }
     return {
       valid: false,
-      reason: 'Color domain only supports combineMode "last" and "layer"',
+      reason: 'Color domain only supports combineMode "last", "first", and "layer"',
     };
   }
 
-  // String, boolean, and other domains only support 'last'
+  // String, boolean, and other domains only support 'last' and 'first'
   return {
     valid: false,
-    reason: `Domain "${domain}" only supports combineMode "last"`,
+    reason: `Domain "${domain}" only supports combineMode "last" or "first"`,
   };
+}
+
+/**
+ * Validate combine policy against writer count.
+ *
+ * Enforces policy semantics:
+ * - when: 'multi', mode: 'error' → Reject if N > 1
+ * - when: 'always' → Always combine (even N=1)
+ * - when: 'multi' → Only combine if N >= 2
+ *
+ * @param policy - Combine policy
+ * @param writerCount - Number of writers
+ * @returns Validation result with reason if invalid
+ */
+export function validateCombinePolicy(
+  policy: CombinePolicy,
+  writerCount: number
+): CombineModeValidation {
+  // Error mode rejects multiple writers
+  if (policy.mode === 'error' && writerCount > 1) {
+    return {
+      valid: false,
+      reason: `Input port forbids multiple writers (combine policy: error), but has ${writerCount} writers`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Should combine be applied for this policy + writer count?
+ *
+ * @param policy - Combine policy
+ * @param writerCount - Number of writers
+ * @returns True if combine should be applied
+ */
+export function shouldCombine(policy: CombinePolicy, writerCount: number): boolean {
+  if (policy.when === 'always') {
+    return writerCount >= 1;
+  }
+  // when: 'multi'
+  return writerCount >= 2;
 }
 
 // =============================================================================
 // Combine Node Creation
 // =============================================================================
+
+/**
+ * Normalize CombineMode to BusCombineMode for IR emission.
+ *
+ * Maps:
+ * - 'first' → 'last' (inverse of sorted writer order)
+ * - 'layer' → 'last' (semantic alias)
+ * - 'error' → Should never reach here (validated earlier)
+ * - Custom → TODO: Look up in custom registry
+ *
+ * @param mode - CombineMode to normalize
+ * @returns BusCombineMode for IR emission
+ */
+function normalizeCombineMode(mode: CombineMode): BusCombineMode {
+  if (mode === 'first') {
+    return 'last'; // 'first' is 'last' with reversed order
+  }
+  if (mode === 'error') {
+    throw new Error('Internal error: combine mode "error" should be validated before combine node creation');
+  }
+  if (typeof mode === 'object' && mode.kind === 'custom') {
+    // TODO: Look up custom combine implementation
+    // For now, fallback to 'last'
+    console.warn(`Custom combine mode "${mode.id}" not implemented, using 'last'`);
+    return 'last';
+  }
+  // Must be BusCombineMode
+  return mode as BusCombineMode;
+}
 
 /**
  * Create a combine node for N inputs with the specified combine mode.
@@ -120,13 +204,14 @@ export function validateCombineMode(
  * Edge ordering:
  * - Inputs are assumed to be pre-sorted by the caller
  * - For 'last' and 'layer' modes, order matters (last input wins)
+ * - For 'first' mode, reverse the input order before combining (first input wins)
  * - For commutative modes (sum, average, max, min), order doesn't affect result
  *
  * Special cases:
  * - N=0: Returns null (caller should use defaultSource)
  * - N=1: Caller should optimize by using direct passthrough
  *
- * @param mode - Combine mode (sum, average, max, min, last, layer)
+ * @param mode - Combine mode (sum, average, max, min, last, first, layer)
  * @param inputs - Pre-sorted input ValueRefs (ascending sortKey, ties by edge ID)
  * @param type - Type descriptor (world, domain, category)
  * @param builder - IRBuilder for emitting nodes
@@ -134,7 +219,7 @@ export function validateCombineMode(
  * @returns Combined ValueRefPacked or null if no inputs
  */
 export function createCombineNode(
-  mode: BusCombineMode,
+  mode: CombineMode,
   inputs: readonly ValueRefPacked[],
   type: TypeDesc,
   builder: IRBuilder,
@@ -145,6 +230,12 @@ export function createCombineNode(
     return null;
   }
 
+  // Normalize mode to BusCombineMode
+  const normalizedMode = normalizeCombineMode(mode);
+
+  // Handle 'first' mode by reversing input order
+  const orderedInputs = mode === 'first' ? [...inputs].reverse() : inputs;
+
   // Note: Caller should handle N=1 case with direct passthrough for optimization.
   // We still create a combine node here for semantic clarity (e.g., 'last' of 1 item).
 
@@ -153,7 +244,7 @@ export function createCombineNode(
   const fieldTerms: number[] = [];
   const eventTerms: EventExprId[] = [];
 
-  for (const ref of inputs) {
+  for (const ref of orderedInputs) {
     if (ref.k === "sig") {
       sigTerms.push(ref.id);
     } else if (ref.k === "field") {
@@ -171,7 +262,7 @@ export function createCombineNode(
 
     // Map BusCombineMode to Signal combine mode
     const validModes = ["sum", "average", "max", "min", "last"];
-    const safeMode = validModes.includes(mode) ? mode : "last";
+    const safeMode = validModes.includes(normalizedMode) ? normalizedMode : "last";
     const combineMode = safeMode as "sum" | "average" | "max" | "min" | "last";
 
     const sigId = builder.sigCombine(busIndex ?? -1, sigTerms, combineMode, type);
@@ -188,7 +279,7 @@ export function createCombineNode(
 
     // Map BusCombineMode to Field combine mode
     const validModes = ["sum", "average", "max", "min", "last", "product"];
-    const safeMode = validModes.includes(mode) ? mode : "product";
+    const safeMode = validModes.includes(normalizedMode) ? normalizedMode : "product";
     const combineMode = safeMode as "sum" | "average" | "max" | "min" | "last" | "product";
 
     const fieldId = builder.fieldCombine(busIndex ?? -1, fieldTerms, combineMode, type);
@@ -205,7 +296,7 @@ export function createCombineNode(
 
     // Map bus combineMode to event combine semantics
     // For events: 'merge' combines all streams, 'last' takes only last publisher
-    const eventMode: EventCombineMode = mode === 'last' ? 'last' : 'merge';
+    const eventMode: EventCombineMode = normalizedMode === 'last' ? 'last' : 'merge';
     const eventId = builder.eventCombine(busIndex ?? -1, eventTerms, eventMode, type);
     const slot = builder.allocValueSlot();
     builder.registerEventSlot(eventId, slot);
@@ -220,7 +311,7 @@ export function createCombineNode(
  * Sort edges by sortKey (ascending), breaking ties by edge ID.
  *
  * This ensures deterministic ordering for combine modes where order matters
- * ('last', 'layer'). The last edge in the sorted array "wins" for 'last' mode.
+ * ('last', 'first', 'layer'). The last edge in the sorted array "wins" for 'last' mode.
  *
  * @param edges - Edges to sort
  * @returns Sorted edges (ascending sortKey, ties broken by ID)

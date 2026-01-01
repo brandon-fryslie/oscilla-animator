@@ -1,0 +1,116 @@
+Agent: iterative-implementer | 2026-01-01-02:30:00
+Mode: manual (no tests exist yet for multi-input blocks)
+Completed: Core type system updates | Files: 2 | Commits: 2
+Cache invalidated: 0 entries (changes are additive, existing cache remains valid)
+Status: in_progress
+
+===============================================================================
+WORK COMPLETED
+===============================================================================
+
+1. ✅ Updated Slot interface with CombinePolicy (commit: 6952d55)
+   Location: src/editor/types.ts
+   Changes:
+   - Added CombineMode type (BusCombineMode + 'first' + 'error' + custom)
+   - Added CombinePolicy type (when: multi|always, mode: CombineMode|error)
+   - Changed Slot.combineMode?: BusCombineMode → Slot.combine?: CombinePolicy
+   - Updated JSDoc with policy semantics and validation rules
+   - Implements spec §1.1-1.2
+
+2. ✅ Created resolveWriters.ts module (commit: 7e967ab)
+   Location: src/editor/compiler/passes/resolveWriters.ts
+   Exports:
+   - Writer type (wire|bus|default discriminated union)
+   - InputEndpoint type
+   - ResolvedInputSpec type
+   - writerSortKey() - deterministic ordering
+   - sortWriters() - stable sort implementation
+   - enumerateWriters() - collect all writers to an endpoint
+   - resolveCombinePolicy() - policy resolution with defaults
+   - resolveInput() - full resolution for single input
+   - resolveBlockInputs() - full resolution for all inputs
+   - Implements spec §2-3, §9.1
+
+3. ✅ TypeScript compilation validates
+   - All files compile without errors
+   - No breaking changes to existing code
+   - Backward compatible (Slot.combine is optional)
+
+===============================================================================
+REMAINING WORK (Per Spec design-docs/now/01-MultiBlock-Input.md)
+===============================================================================
+
+HIGH PRIORITY:
+1. Update combine-utils.ts to support CombinePolicy
+   Current: Uses BusCombineMode only
+   Needed: Support 'first', 'error', and policy.when semantics
+   
+2. Integrate resolveWriters into pass6-block-lowering.ts
+   - Import resolveInput() or resolveBlockInputs()
+   - Use writer information instead of artifact lookup
+   - Emit IRNodeCombine when writers.length > 1
+   - Handle policy.when semantics (multi vs always)
+   - Handle mode: "error" (reject if writers.length > 1)
+
+MEDIUM PRIORITY:
+3. Create combineRegistry.ts (optional - may already exist in combine-utils)
+   - Validate combine mode against type/world/domain
+   - Already have validateCombineMode() in combine-utils
+   - Already have createCombineNode() in combine-utils
+   - May be redundant
+
+4. Update compileBusAware.ts to use resolveWriters
+   - Replace ad-hoc writer resolution
+   - Use shared resolveWriters logic
+   - Spec §9.1 says to use it here too
+
+LOW PRIORITY:
+5. Write tests for resolveWriters module
+   - Test writer enumeration (wires, bus listeners, defaults)
+   - Test deterministic sorting
+   - Test combine policy resolution
+   - Test edge cases (no writers, single writer, multi-writer)
+
+6. Write integration tests
+   - Test patch with multi-input blocks compiles
+   - Test combine nodes are emitted correctly
+   - Test policy.when semantics
+   - Test mode: "error" rejects multiple writers
+
+===============================================================================
+FILES MODIFIED
+===============================================================================
+Modified:
+- src/editor/types.ts (added CombineMode, CombinePolicy, updated Slot.combine)
+
+Created:
+- src/editor/compiler/passes/resolveWriters.ts (294 lines, full implementation)
+
+===============================================================================
+COMMITS
+===============================================================================
+6952d55 - feat(types): Update Slot to use CombinePolicy instead of combineMode
+7e967ab - feat(compiler): Add resolveWriters module for multi-input writer resolution
+
+===============================================================================
+EVAL CACHE STATUS
+===============================================================================
+Invalidated: 0 entries
+
+Reasoning:
+- Changes are additive (new types, optional field)
+- Slot.combine is optional and backward compatible
+- No existing code broken by changes
+- Existing cache entries remain valid:
+  - type-contracts-divergence.md: Still valid (TypeDesc contracts unchanged)
+  - runtime-sprint2-defaults.md: Still valid (default sources unchanged)
+  - Others: Not affected by type changes
+
+===============================================================================
+NEXT ACTIONS
+===============================================================================
+1. Update combine-utils.ts for CombinePolicy support
+2. Integrate resolveWriters into pass6-block-lowering.ts
+3. Run test suite and verify no regressions
+4. Write tests for new functionality
+5. Continue with pass6 integration
