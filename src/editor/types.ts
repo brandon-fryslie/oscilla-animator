@@ -201,8 +201,73 @@ export interface PortRef {
   readonly direction: 'input' | 'output';
 }
 
+// =============================================================================
+// Unified Edge System (Sprint 1: Phase 0 Architecture Refactoring)
+// =============================================================================
+
+/**
+ * Endpoint discriminated union - represents either a block port or a bus.
+ *
+ * This is the foundation of the unified connection system that replaces
+ * the separate Connection, Publisher, and Listener types.
+ *
+ * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
+ * References:
+ * - .agent_planning/phase0-architecture-refactoring/PLAN-2025-12-31-170000-sprint1-connections.md
+ * - .agent_planning/phase0-architecture-refactoring/DOD-2025-12-31-170000-sprint1-connections.md
+ */
+export type Endpoint =
+  | { readonly kind: 'port'; readonly blockId: string; readonly slotId: string }
+  | { readonly kind: 'bus'; readonly busId: string };
+
+/**
+ * Edge - unified connection type that replaces Connection, Publisher, and Listener.
+ *
+ * An Edge connects two endpoints with optional transformations:
+ * - port→port: Direct wire connection (replaces Connection)
+ * - port→bus: Publishing to a bus (replaces Publisher)
+ * - bus→port: Subscribing from a bus (replaces Listener)
+ * - bus→bus: INVALID - rejected at validation time
+ *
+ * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
+ */
+export interface Edge {
+  /** Unique identifier */
+  readonly id: string;
+
+  /** Source endpoint (port or bus) */
+  readonly from: Endpoint;
+
+  /** Destination endpoint (port or bus) */
+  readonly to: Endpoint;
+
+  /** Optional lens stack for value transformation (applied after adapters) */
+  readonly lensStack?: LensInstance[];
+
+  /** Optional adapter chain for type conversion (applied before lenses) */
+  readonly adapterChain?: AdapterStep[];
+
+  /** Whether this edge is enabled */
+  readonly enabled: boolean;
+
+  /** Optional weight for weighted combine modes (publishers only) */
+  readonly weight?: number;
+
+  /** Sort key for deterministic ordering */
+  readonly sortKey?: number;
+}
+
+/**
+ * Transform step - union of adapter and lens for unified transform chains.
+ * Phase 4 will consolidate these into a single transform representation.
+ */
+export type TransformStep = AdapterStep | { readonly kind: 'lens'; readonly lens: LensInstance };
+
 /**
  * Publisher - connects an output to a bus.
+ *
+ * @deprecated Use Edge with from.kind='port' and to.kind='bus' instead.
+ * This type is maintained for backward compatibility during migration.
  */
 export interface Publisher {
   /** Unique identifier */
@@ -232,6 +297,9 @@ export interface Publisher {
 
 /**
  * Listener - connects a bus to an input.
+ *
+ * @deprecated Use Edge with from.kind='bus' and to.kind='port' instead.
+ * This type is maintained for backward compatibility during migration.
  */
 export interface Listener {
   /** Unique identifier */
@@ -572,6 +640,9 @@ export interface Block {
 /**
  * A Connection links an output slot to an input slot.
  * Supports optional lens transformations and adapter chains for type conversion.
+ *
+ * @deprecated Use Edge with from.kind='port' and to.kind='port' instead.
+ * This type is maintained for backward compatibility during migration.
  */
 export interface Connection {
   /** Unique ID for this connection */

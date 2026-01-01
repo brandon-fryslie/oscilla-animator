@@ -1,8 +1,274 @@
 # Project Roadmap: IR Compiler Migration
 
-Last updated: 2025-12-27-200000
+Last updated: 2025-12-31-190000
 
 > **Migration Strategy:** "Strangle Pattern" - New IR wraps existing closures, gradually replacing them while keeping the app running at every step.
+
+---
+
+## 🚨 Priority Override: Architecture Refactoring
+
+**Source:** `compiler-final/ARCHITECTURE-RECOMMENDATIONS.md`
+
+All other work is **ON HOLD** until these refactors are complete and the IR compiler is functional.
+
+**Rationale:** The codebase has accumulated complexity from parallel V1 (closure-based) and V2 (IR-based) systems. Three unifications will dramatically simplify the new compiler by ensuring every input has exactly one resolution path: follow the edge.
+
+---
+
+## Phase 0: Architecture Refactoring [ACTIVE - TOP PRIORITY]
+
+**Goal:** Unify redundant abstractions to simplify the IR compiler. Every input should have exactly one resolution path.
+
+**Migration Safety:** Each refactor can be done incrementally with backward compatibility shims.
+
+**Started:** 2025-12-31
+
+### Topics (in recommended order)
+
+#### unify-connections-edge [PROPOSED]
+**Description:** Merge Connection, Publisher, Listener into single Edge type with discriminated union endpoints. Eliminates three-way handling in every compiler pass.
+
+**Current state (problem):**
+- Connection: port→port (direct wire)
+- Publisher: port→bus
+- Listener: bus→port
+- Every compiler pass (2, 6, 7, 8) handles all three separately
+
+**Target state:**
+```typescript
+type Endpoint =
+  | { kind: 'port'; blockId: string; slotId: string }
+  | { kind: 'bus'; busId: string };
+
+interface Edge {
+  readonly id: string;
+  readonly from: Endpoint;
+  readonly to: Endpoint;
+  readonly transforms?: TransformStep[];
+  readonly enabled: boolean;
+  readonly weight?: number;      // for bus publishers
+  readonly sortKey?: number;     // for deterministic ordering
+}
+```
+
+**Files to modify:**
+- `src/editor/types.ts` - Add Edge, Endpoint types
+- `src/editor/stores/PatchStore.ts` - Replace connections/publishers/listeners with edges
+- `src/editor/compiler/passes/pass2-types.ts` - Unified edge type-checking
+- `src/editor/compiler/passes/pass6-block-lowering.ts` - Unified input resolution
+- `src/editor/compiler/passes/pass7-bus-lowering.ts` - Simplify to edge filtering
+- `src/editor/compiler/passes/pass8-link-resolution.ts` - Unified wiring
+
+**Spec:** `compiler-final/ARCHITECTURE-RECOMMENDATIONS.md` Part 1
+**Dependencies:** None
+**Labels:** architecture, refactor, connections, foundation
+**Test Strategy:** Migration helpers (connectionToEdge, publisherToEdge, listenerToEdge) roundtrip correctly
+
+---
+
+#### unify-default-sources-blocks [PROPOSED]
+**Description:** Make every unconnected input backed by a hidden provider block. Eliminates special-case input resolution - ALL inputs are connected via edges.
+
+**Current state (problem):**
+- DefaultSource metadata attached to input slots
+- Three-way priority logic: wire > listener > default (implicit)
+- Special handling in multiple compiler passes
+
+**Target state:**
+- When input has no explicit edge: create hidden DSConst* block, create edge from it
+- ALL inputs connected via edges
+- No special-case resolution needed
+
+**Implementation:**
+```typescript
+function materializeDefaultSources(patch: Patch): Patch {
+  // For each unconnected input:
+  // 1. Create hidden DSConst* block with default value
+  // 2. Create edge from provider to input
+  // Result: all inputs connected via edges
+}
+```
+
+**Files to modify:**
+- `src/editor/types.ts` - Remove DefaultSourceState, DefaultSourceAttachment (or deprecate)
+- `src/editor/compiler/passes/pass1-normalize.ts` - Add materializeDefaultSources()
+- `src/editor/compiler/passes/pass6-block-lowering.ts` - Remove default source handling
+- `src/editor/stores/PatchStore.ts` - Update to manage hidden blocks
+
+**Spec:** `compiler-final/ARCHITECTURE-RECOMMENDATIONS.md` Part 2
+**Dependencies:** unify-connections-edge
+**Labels:** architecture, refactor, default-sources, foundation
+**Test Strategy:** materializeDefaultSources creates hidden blocks for all unconnected inputs
+
+---
+
+#### v2-adapter-implementation [PROPOSED]
+**Description:** Implement the V2 adapter stub to allow legacy bridge blocks to work with the new IR compiler. Key bridge between V1 closures and V2 IR.
+
+**Current state:**
+```typescript
+// src/editor/compiler/v2adapter.ts - STUB
+export function adaptV2Compiler(v2Compiler: BlockCompilerV2): BlockCompiler {
+  return {
+    compile(_compileArgs) {
+      return { /* Error artifacts */ };
+    }
+  };
+}
+```
+
+**Target state:**
+- Create SignalExprBuilder for block
+- Convert input Artifacts to SigExprId references
+- Call v2Compiler.compileV2() to get output SigExprIds
+- Wrap outputs as closures that call evalSig() at runtime
+
+**Key challenge:** Mix V1 closures with V2 IR via `closureNode` approach:
+```typescript
+case 'closure':  // V1 bridge leaf node
+  return node.closureFn(ctx);
+```
+
+**Files to modify:**
+- `src/editor/compiler/v2adapter.ts` - Full implementation
+- `src/editor/compiler/ir/types.ts` - Add SignalExprClosure node type
+- `src/editor/runtime/executor/evalSig.ts` - Handle closure nodes
+
+**Spec:** `compiler-final/ARCHITECTURE-RECOMMENDATIONS.md` Part 4
+**Dependencies:** unify-connections-edge, unify-default-sources-blocks
+**Labels:** compiler, adapter, v2, bridge
+**Test Strategy:** V2 block with V1 closure inputs produces correct output
+
+---
+
+#### unify-lenses-adapters [PROPOSED]
+**Description:** Create unified TransformStep abstraction for lenses and adapters. Lower priority - can defer until after IR compiler is working.
+
+**Current state (two registries):**
+- LensRegistry: T→T transforms, user-editable params
+- AdapterRegistry: T₁→T₂ conversions, auto-insert
+
+**Target state:**
+```typescript
+interface TransformStep {
+  readonly id: string;
+  readonly kind: 'lens' | 'adapter';
+  readonly params?: Record<string, unknown>;
+}
+
+interface TransformDef {
+  id: string;
+  kind: 'lens' | 'adapter';
+  inputType: TypeDesc | 'same';
+  outputType: TypeDesc | 'same';
+  params?: Record<string, ParamSpec>;
+  policy?: 'auto' | 'suggest' | 'explicit';
+  cost?: number;
+}
+```
+
+**Spec:** `compiler-final/ARCHITECTURE-RECOMMENDATIONS.md` Part 3
+**Dependencies:** unify-connections-edge (uses transforms in Edge type)
+**Labels:** architecture, refactor, transforms, polish
+**Test Strategy:** Unified registry serves both lens and adapter queries
+
+---
+
+### Phase 0 Completion Gate
+
+Before moving to Phase 6 completion or other work:
+- [ ] All edges use unified Edge type
+- [ ] All inputs connected via edges (no special default source handling)
+- [ ] V2 adapter compiles legacy bridge blocks
+- [ ] Golden patch compiles and runs with new structure
+
+---
+
+## Phase 0.5: Compatibility Cleanup [QUEUED]
+
+**Goal:** Remove backward compatibility shims, deprecated types, and facades introduced during Phase 0 refactoring.
+
+**Migration Safety:** Only proceed after Phase 0 is complete and all tests pass with new abstractions.
+
+**Blocked By:** Phase 0 completion gate
+
+### Topics
+
+#### remove-connection-facades [PROPOSED]
+**Description:** Remove deprecated Connection, Publisher, Listener types and migration helpers. All code should use Edge type directly.
+
+**Work items:**
+- Delete `connectionToEdge()`, `publisherToEdge()`, `listenerToEdge()` helpers
+- Delete `edgeToConnection()`, `edgeToPublisher()`, `edgeToListener()` reverse helpers
+- Remove deprecated type aliases (Connection, Publisher, Listener)
+- Update any remaining code using old types
+- Remove backward compatibility comments
+
+**Files to modify:**
+- `src/editor/types.ts` - Remove deprecated types
+- `src/editor/stores/PatchStore.ts` - Remove computed getters for old types
+- Test files - Update to use Edge directly
+
+**Dependencies:** unify-connections-edge (Sprint 1)
+**Labels:** cleanup, types, migration
+**Test Strategy:** All tests pass with deprecated types removed
+
+---
+
+#### remove-default-source-facades [PROPOSED]
+**Description:** Remove DefaultSourceState, DefaultSourceAttachment types and any shims for old default source handling.
+
+**Work items:**
+- Delete DefaultSourceState, DefaultSourceAttachment types
+- Remove any `defaultSources` or `defaultSourceAttachments` fields from Patch
+- Delete any compatibility code that reads old format
+- Update serialization to only support new format
+
+**Dependencies:** unify-default-sources-blocks (Sprint 2)
+**Labels:** cleanup, types, migration
+**Test Strategy:** All tests pass, old format not supported
+
+---
+
+#### remove-registry-facades [PROPOSED]
+**Description:** If Sprint 4 was completed, remove old LensRegistry and AdapterRegistry facades. Keep unified TransformRegistry only.
+
+**Work items:**
+- Delete LensRegistry.ts (or convert to pure re-export)
+- Delete AdapterRegistry.ts (or convert to pure re-export)
+- Remove deprecation warnings
+- Update all imports to use TransformRegistry
+
+**Dependencies:** unify-lenses-adapters (Sprint 4, optional)
+**Labels:** cleanup, transforms, registry
+**Test Strategy:** All lens/adapter functionality works through unified registry
+
+---
+
+#### serialization-version-bump [PROPOSED]
+**Description:** Bump patch serialization format version and remove support for pre-Phase-0 format.
+
+**Work items:**
+- Increment PATCH_FORMAT_VERSION
+- Remove migration code for old formats
+- Document breaking change in CHANGELOG
+- Update any saved patches in tests/fixtures
+
+**Dependencies:** All Phase 0 sprints
+**Labels:** cleanup, serialization, breaking-change
+**Test Strategy:** Old format patches rejected with clear error message
+
+---
+
+### Phase 0.5 Completion Gate
+
+Before moving to Phase 6:
+- [ ] No deprecated types remain in codebase
+- [ ] No migration helpers or facades remain
+- [ ] Serialization format is clean (no backward compat)
+- [ ] All tests pass with cleaned codebase
+- [ ] CHANGELOG documents all breaking changes
 
 ---
 
@@ -411,11 +677,13 @@ Reference: `design-docs/12-Compiler-Final/`
 
 ---
 
-## Phase 6: Full Scheduled Runtime [IN PROGRESS]
+## Phase 6: Full Scheduled Runtime [ON HOLD - Pending Phase 0]
 
 **Goal:** Complete IR-driven runtime with explicit schedule, ValueStore, state management, and hot-swap.
 
 **Migration Safety:** Parallel execution - run both old and new runtime, compare results.
+
+**Status:** ON HOLD until Phase 0 (Architecture Refactoring) is complete.
 
 **Started:** 2025-12-26
 **Sprint 1 Complete:** 2025-12-26
@@ -502,11 +770,13 @@ Reference: `design-docs/12-Compiler-Final/`
 
 ---
 
-## Phase 7: Debug Infrastructure [IN PROGRESS]
+## Phase 7: Debug Infrastructure [ON HOLD - Pending Phase 0]
 
 **Goal:** Build power-user debugger with ring buffers, causal links, and trace storage.
 
 **Migration Safety:** Debug infrastructure is additive - doesn't affect core execution.
+
+**Status:** ON HOLD until Phase 0 (Architecture Refactoring) and Phase 6 are complete.
 
 **Started:** 2025-12-27
 **Sprint 1 Focus:** DebugIndex population + executeDebugProbe implementation
@@ -837,6 +1107,11 @@ Reference: `design-docs/12-Compiler-Final/`
 
 Each topic includes a **Test Strategy** that must pass before the topic is complete.
 
+**Phase 0 (Architecture Refactoring):**
+- Each unification can be done incrementally
+- Backward compatibility shims during transition
+- Tests validate both old and new code paths
+
 **Phase 1-2 (Types):** Pure TypeScript types - compile-time validation only.
 
 **Phase 3 (Bridge Compiler):**
@@ -887,3 +1162,4 @@ At any point, the system can roll back by:
 - `QUEUED` - Planned but not started
 - `COMPLETED` - All topics completed
 - `ARCHIVED` - No longer relevant
+- `ON HOLD` - Blocked by higher-priority work
