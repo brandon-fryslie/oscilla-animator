@@ -902,9 +902,6 @@ export class PatchStore {
     );
     if (exists) return;
 
-    // INVARIANT: An input can only have one source.
-    // Disconnect any existing wire or bus listener before connecting.
-    this.disconnectInputPort(toBlockId, toSlotId);
 
     // Preflight validation using Semantic Validator (warn-only, does not block)
     try {

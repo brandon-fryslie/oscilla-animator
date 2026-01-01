@@ -343,9 +343,6 @@ export class BusStore {
       throw new Error(`Bus ${busId} not found`);
     }
 
-    // INVARIANT: An input can only have one source.
-    // Disconnect any existing wire or bus listener before adding this listener.
-    this.root.patchStore.disconnectInputPort(blockId, slotId);
 
     const listenerId = this.root.generateId('list');
     let lensStack: LensInstance[] | undefined;
