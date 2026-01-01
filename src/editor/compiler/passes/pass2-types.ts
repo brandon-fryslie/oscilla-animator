@@ -9,9 +9,13 @@
  *
  * This pass establishes the type system foundation for all subsequent passes.
  *
+ * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
+ * Updated to use unified edges when available, with fallback to legacy arrays.
+ *
  * References:
  * - HANDOFF.md Topic 3: Pass 2 - Type Graph
  * - design-docs/12-Compiler-Final/15-Canonical-Lowering-Pipeline.md § Pass 2
+ * - .agent_planning/phase0-architecture-refactoring/PLAN-2025-12-31-170000-sprint1-connections.md
  */
 
 import type {
@@ -20,6 +24,8 @@ import type {
   Publisher,
   Listener,
   Bus,
+  Edge,
+  Endpoint,
 } from "../../types";
 import type { TypeDesc, TypeDomain } from "../ir/types";
 import type { NormalizedPatch, TypedPatch } from "../ir";
@@ -327,6 +333,33 @@ function computeConversionPath(
 }
 
 /**
+ * Get the type of an endpoint (port or bus).
+ */
+function getEndpointType(
+  endpoint: Endpoint,
+  blocks: readonly Block[],
+  busTypes: Map<string, TypeDesc>
+): TypeDesc | null {
+  if (endpoint.kind === 'port') {
+    // Find the block and slot
+    const block = blocks.find(b => b.id === endpoint.blockId);
+    if (!block) return null;
+
+    const slot = [...block.inputs, ...block.outputs].find(s => s.id === endpoint.slotId);
+    if (!slot) return null;
+
+    try {
+      return slotTypeToTypeDesc(slot.type);
+    } catch {
+      return null;
+    }
+  } else {
+    // Bus endpoint
+    return busTypes.get(endpoint.busId) ?? null;
+  }
+}
+
+/**
  * Pass 2: Type Graph Construction
  *
  * Establishes types for every slot and bus, validates bus eligibility,
@@ -384,51 +417,90 @@ export function pass2TypeGraph(
     }
   }
 
-  // Step 3: Precompute conversion paths for wired connections
-  const conversionPaths = new Map<Connection, readonly string[]>();
+  // Step 3: Precompute conversion paths
+  // Use unified edges if available, otherwise fall back to legacy wires
+  const conversionPaths = new Map<Connection | string, readonly string[]>();
 
-  for (const wire of normalized.wires) {
-    // Find source and target blocks
-    const fromBlock = normalized.blocks.find(
-      (b: Block) => b.id === wire.from.blockId
-    );
-    const toBlock = normalized.blocks.find((b: Block) => b.id === wire.to.blockId);
+  if (normalized.edges && normalized.edges.length > 0) {
+    // New unified edge format
+    const edges: readonly Edge[] = normalized.edges;
+    for (const edge of edges) {
+      // Only check edges with port endpoints (wires and listeners)
+      // Publishers (port→bus) don't need type checking here
+      if (edge.to.kind !== 'port') {
+        continue;
+      }
 
-    if (fromBlock === undefined || toBlock === undefined) {
-      // Dangling connection - will be caught by Pass 4
-      continue;
-    }
+      // Get source and target types
+      const fromType = getEndpointType(edge.from, normalized.blocks, busTypes);
+      const toType = getEndpointType(edge.to, normalized.blocks, busTypes);
 
-    // Find source and target slots
-    const fromSlot = fromBlock.outputs.find((s) => s.id === wire.from.slotId);
-    const toSlot = toBlock.inputs.find((s) => s.id === wire.to.slotId);
+      if (fromType === null || toType === null) {
+        // Dangling reference - will be caught by Pass 4
+        continue;
+      }
 
-    if (fromSlot === undefined || toSlot === undefined) {
-      // Dangling slot reference - will be caught by Pass 4
-      continue;
-    }
-
-    try {
-      const fromType = slotTypeToTypeDesc(fromSlot.type);
-      const toType = slotTypeToTypeDesc(toSlot.type);
-
+      // Compute conversion path
       const path = computeConversionPath(fromType, toType);
 
       if (path === null) {
         errors.push({
           kind: "NoConversionPath",
-          connectionId: wire.id,
+          connectionId: edge.id,
           fromType,
           toType,
-          message: `No conversion path from ${fromType.world}<${fromType.domain}> to ${toType.world}<${toType.domain}> for wire ${wire.id}`,
+          message: `No conversion path from ${fromType.world}<${fromType.domain}> to ${toType.world}<${toType.domain}> for edge ${edge.id}`,
         });
       } else if (path.length > 0) {
-        // Store non-empty conversion paths
-        conversionPaths.set(wire, path);
+        // Store non-empty conversion paths (keyed by edge id)
+        conversionPaths.set(edge.id, path);
       }
-    } catch {
-      // Type parsing error already recorded in step 2
-      continue;
+    }
+  } else {
+    // Legacy wire format (backward compatibility)
+    for (const wire of normalized.wires) {
+      // Find source and target blocks
+      const fromBlock = normalized.blocks.find(
+        (b: Block) => b.id === wire.from.blockId
+      );
+      const toBlock = normalized.blocks.find((b: Block) => b.id === wire.to.blockId);
+
+      if (fromBlock === undefined || toBlock === undefined) {
+        // Dangling connection - will be caught by Pass 4
+        continue;
+      }
+
+      // Find source and target slots
+      const fromSlot = fromBlock.outputs.find((s) => s.id === wire.from.slotId);
+      const toSlot = toBlock.inputs.find((s) => s.id === wire.to.slotId);
+
+      if (fromSlot === undefined || toSlot === undefined) {
+        // Dangling slot reference - will be caught by Pass 4
+        continue;
+      }
+
+      try {
+        const fromType = slotTypeToTypeDesc(fromSlot.type);
+        const toType = slotTypeToTypeDesc(toSlot.type);
+
+        const path = computeConversionPath(fromType, toType);
+
+        if (path === null) {
+          errors.push({
+            kind: "NoConversionPath",
+            connectionId: wire.id,
+            fromType,
+            toType,
+            message: `No conversion path from ${fromType.world}<${fromType.domain}> to ${toType.world}<${toType.domain}> for wire ${wire.id}`,
+          });
+        } else if (path.length > 0) {
+          // Store non-empty conversion paths (keyed by Connection object)
+          conversionPaths.set(wire, path);
+        }
+      } catch {
+        // Type parsing error already recorded in step 2
+        continue;
+      }
     }
   }
 
