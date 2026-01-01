@@ -21,7 +21,6 @@ import type { CompilerConnection, CompileError } from "../types";
 import { getBlockType } from "../ir/lowerTypes";
 import type { LowerCtx } from "../ir/lowerTypes";
 import { TRANSFORM_REGISTRY, isAdapterTransform, isLensTransform } from "../../transforms";
-import { getEdgeTransforms } from "../../transforms/migrate";
 import type { TransformIRCtx } from "../../transforms";
 
 // =============================================================================

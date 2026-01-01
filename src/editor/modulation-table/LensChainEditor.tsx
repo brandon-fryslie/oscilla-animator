@@ -107,7 +107,7 @@ function getDefaultParamsForLens(lensId: string): Record<string, unknown> {
   if (!def) return {};
 
   const defaults: Record<string, unknown> = {};
-  for (const [key, spec] of Object.entries(def.params)) {
+  for (const [key, spec] of Object.entries(def.params ?? {})) {
     defaults[key] = spec.default;
   }
   return defaults;
@@ -548,7 +548,7 @@ function LensParamsEditor({
   // Get lens definition from registry
   const def = getLens(lens.type);
 
-  if (!def || Object.keys(def.params).length === 0) {
+  if (!def || Object.keys(def.params ?? {}).length === 0) {
     return (
       <div className="lens-param-row lens-param-hint">
         No parameters available
@@ -559,7 +559,7 @@ function LensParamsEditor({
   // Render each param based on its UIControlHint
   return (
     <>
-      {Object.entries(def.params).map(([key, spec]) => {
+      {Object.entries(def.params ?? {}).map(([key, spec]) => {
         const value = lens.params[key] ?? spec.default;
         const hint = spec.uiHint;
 
