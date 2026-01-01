@@ -57,16 +57,26 @@ function selectProviderType(world: SlotWorld, domain: string): string {
 }
 
 /**
- * Check if an input is connected via a CompilerConnection.
+ * Check if an input is driven (has a wire OR an enabled bus listener).
+ * Returns true if the input is already driven, false if it needs a default provider.
  */
-function hasConnectionToInput(
-  connections: readonly CompilerConnection[],
+function isInputDriven(
+  patch: CompilerPatch,
   blockId: string,
   slotId: string
 ): boolean {
-  return connections.some(
+  // Check for wire: any connection to this input
+  const hasWire = patch.connections.some(
     c => c.to.block === blockId && c.to.port === slotId
   );
+
+  // Check for listener: any enabled bus listener to this input
+  const hasListener = patch.listeners.some(
+    l => l.to?.blockId === blockId && l.to?.slotId === slotId && l.enabled
+  );
+
+  // Returns true if EITHER check is true (has wire OR has listener)
+  return hasWire || hasListener;
 }
 
 /**
@@ -79,24 +89,27 @@ function generateProviderId(blockId: string, slotId: string): string {
 /**
  * Materialize default sources as hidden provider blocks.
  *
- * This is Pass 0 of the compilation pipeline - it runs BEFORE pass 1.
- * It scans all blocks for inputs that:
- * 1. Have a defaultSource defined
+ * This is System 2 of the dual default source system:
+ * - System 1 (injectDefaultSourceProviders): Advanced providers from allowlist (e.g., Oscillator)
+ * - System 2 (materializeDefaultSources): Simple DSConst* defaults from block metadata
+ *
+ * This function runs FIRST in the pipeline. It scans all blocks for inputs that:
+ * 1. Have a defaultSource defined in block metadata
  * 2. Are not connected via any CompilerConnection
+ * 3. Are not connected via any enabled bus Listener
  *
  * For each such input, it:
  * 1. Creates a hidden DSConst* provider block with the default value
  * 2. Creates a CompilerConnection from the provider to the input
  *
- * The result is a patch where ALL inputs are backed by connections, eliminating
- * the need for special-case input resolution in later passes.
+ * The result is a patch where simple defaults are materialized as blocks.
+ * Advanced defaults (from System 1) will be injected later and will skip inputs
+ * that already have connections from System 2.
  *
  * @param patch - The CompilerPatch from editorToPatch
  * @returns A new CompilerPatch with materialized default sources as hidden blocks
  */
 export function materializeDefaultSources(patch: CompilerPatch): CompilerPatch {
-  const existingConnections = patch.connections ?? [];
-
   const newBlocks: BlockInstance[] = [];
   const newConnections: CompilerConnection[] = [];
 
@@ -116,8 +129,8 @@ export function materializeDefaultSources(patch: CompilerPatch): CompilerPatch {
         continue;
       }
 
-      // Is this input already connected?
-      if (hasConnectionToInput(existingConnections, block.id, inputDef.id)) {
+      // Is this input already driven (by wire or bus listener)?
+      if (isInputDriven(patch, block.id, inputDef.id)) {
         continue;
       }
 
@@ -177,6 +190,6 @@ export function materializeDefaultSources(patch: CompilerPatch): CompilerPatch {
   return {
     ...patch,
     blocks: [...patch.blocks, ...newBlocks],
-    connections: [...existingConnections, ...newConnections],
+    connections: [...patch.connections, ...newConnections],
   };
 }

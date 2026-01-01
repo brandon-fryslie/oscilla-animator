@@ -18,6 +18,7 @@ import { getBlockDefinition } from '../blocks';
 import { registerAllComposites, getCompositeCompilers } from '../composite-bridge';
 import { createDiagnostic, type Diagnostic, type DiagnosticCode, type TargetRef } from '../diagnostics/types';
 import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from '../defaultSources/allowlist';
+import { materializeDefaultSources } from './passes/pass0-materialize';
 
 // =============================================================================
 // Diagnostic Conversion
@@ -1043,7 +1044,13 @@ export function createCompilerService(store: RootStore): CompilerService {
 
         patch = rewrittenPatch;
 
-        // Step 3: Inject default source providers (Sprint 10 + Sprint 11)
+        // Step 3: Materialize default sources from block metadata (System 2)
+        // This creates simple DSConst* providers for inputs with defaultSource metadata
+        patch = materializeDefaultSources(patch);
+
+        // Step 4: Inject advanced default source providers from allowlist (System 1)
+        // This creates advanced providers (e.g., Oscillator) based on user configuration
+        // System 1 skips inputs that already have connections (from System 2 or user wires)
         patch = injectDefaultSourceProviders(store, patch, registry);
 
         store.logStore.debug(
