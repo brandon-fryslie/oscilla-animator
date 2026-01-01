@@ -5,17 +5,21 @@
  * ordering and transform chains.
  *
  * Key responsibilities:
- * - Collect sorted publishers using busSemantics.getSortedPublishers
+ * - Collect sorted publishers using busSemantics.getSortedPublishers or unified edges
  * - Create sigCombine/fieldCombine nodes based on bus type
  * - Detect unsupported adapters/lenses and emit compile-time errors
  * - Handle empty buses with default values
  *
+ * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
+ * Updated to use unified edges when available, with fallback to legacy publishers.
+ *
  * References:
  * - design-docs/12-Compiler-Final/15-Canonical-Lowering-Pipeline.md § Pass 7
  * - PLAN-2025-12-25-200731.md P0-2: Pass 7 - Bus Lowering to IR
+ * - .agent_planning/phase0-architecture-refactoring/PLAN-2025-12-31-170000-sprint1-connections.md
  */
 
-import type { Bus, Publisher, Block } from "../../types";
+import type { Bus, Publisher, Block, Edge, Endpoint } from "../../types";
 import type { BusIndex, TypeDesc, EventExprId } from "../ir/types";
 import { asTypeDesc } from "../ir/types";
 import type { IRBuilder } from "../ir/IRBuilder";
@@ -51,6 +55,18 @@ export interface IRWithBusRoots {
   errors: CompileError[];
 }
 
+/**
+ * Publisher-like data extracted from unified edges.
+ * Used internally to maintain sorting logic during migration.
+ */
+interface PublisherData {
+  readonly from: { blockId: string; slotId: string };
+  readonly weight?: number;
+  readonly sortKey?: number;
+  readonly adapterChain?: readonly unknown[];
+  readonly lensStack?: readonly unknown[];
+}
+
 // =============================================================================
 // Helper Functions
 // =============================================================================
@@ -66,6 +82,40 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
   });
 }
 
+/**
+ * Extract publisher data from edges targeting a specific bus.
+ * Filters edges where edge.to.kind === 'bus' and edge.to.busId matches.
+ */
+function getPublishersFromEdges(
+  busId: string,
+  edges: readonly Edge[]
+): PublisherData[] {
+  return edges
+    .filter(
+      (e) =>
+        e.enabled &&
+        e.to.kind === "bus" &&
+        (e.to as Extract<Endpoint, { kind: "bus" }>).busId === busId
+    )
+    .map((e) => {
+      const from = e.from as Extract<Endpoint, { kind: "port" }>;
+      return {
+        from: { blockId: from.blockId, slotId: from.slotId },
+        weight: e.weight,
+        sortKey: e.sortKey,
+        adapterChain: e.adapterChain,
+        lensStack: e.lensStack,
+      };
+    })
+    .sort((a, b) => {
+      // Sort by weight (descending), then sortKey (ascending)
+      if (a.weight !== b.weight) {
+        return (b.weight ?? 0) - (a.weight ?? 0);
+      }
+      return (a.sortKey ?? 0) - (b.sortKey ?? 0);
+    });
+}
+
 // =============================================================================
 // Pass 7 Implementation
 // =============================================================================
@@ -75,21 +125,25 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
  *
  * Translates each bus into an explicit combine node.
  *
- * Input: UnlinkedIRFragments (from Pass 6) + buses + publishers + blocks
+ * Input: UnlinkedIRFragments (from Pass 6) + buses + publishers/edges + blocks
  * Output: IRWithBusRoots with bus combine nodes
  *
  * For each bus:
- * 1. Collect sorted publishers using getSortedPublishers()
+ * 1. Collect sorted publishers using unified edges or legacy getSortedPublishers()
  * 2. Validate that no adapters/lenses are used (unsupported in IR mode)
  * 3. Resolve publisher source ValueRefs from blockOutputs
  * 4. Create combine node (sigCombine/fieldCombine)
  * 5. Handle empty buses with default values
+ *
+ * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
+ * Checks for normalized.edges and uses unified iteration when available.
  */
 export function pass7BusLowering(
   unlinked: UnlinkedIRFragments,
   buses: readonly Bus[],
   publishers: readonly Publisher[],
-  blocks: readonly Block[]
+  blocks: readonly Block[],
+  edges?: readonly Edge[]
 ): IRWithBusRoots {
   const { builder, blockOutputs, errors: inheritedErrors } = unlinked;
   const busRoots = new Map<BusIndex, ValueRefPacked>();
@@ -105,8 +159,20 @@ export function pass7BusLowering(
   for (let busIdx = 0; busIdx < buses.length; busIdx++) {
     const bus = buses[busIdx];
 
-    // Get sorted publishers for this bus (enabled only)
-    const busPublishers = getSortedPublishers(bus.id, publishers as Publisher[], false);
+    // Get publishers using unified edges if available, otherwise legacy format
+    let busPublishers: readonly PublisherData[];
+
+    if (edges !== undefined && edges.length > 0) {
+      // New unified edge format
+      busPublishers = getPublishersFromEdges(bus.id, edges);
+    } else {
+      // Legacy publisher format (backward compatibility)
+      busPublishers = getSortedPublishers(
+        bus.id,
+        publishers as Publisher[],
+        false
+      );
+    }
 
     // Validate no adapters/lenses are used (not yet supported in IR mode)
     for (const pub of busPublishers) {
@@ -163,7 +229,7 @@ export function pass7BusLowering(
  */
 function lowerBusToCombineNode(
   bus: Bus,
-  publishers: readonly Publisher[],
+  publishers: readonly PublisherData[],
   busIndex: BusIndex,
   builder: IRBuilder,
   blockOutputs: Map<number, Map<string, ValueRefPacked>>,

@@ -5,6 +5,7 @@
 | Default Sources Current State | default-sources-current-state.md | 2025-12-30 02:24 | project-evaluator (default-sources-hidden-blocks) | HIGH |
 | Type Contracts Divergence | type-contracts-divergence.md | 2025-12-31 01:45 | project-evaluator (type-contracts-ir-plumbing) | HIGH |
 | Adapter Application Status | adapter-application-status.md | 2025-12-31 01:45 | project-evaluator (type-contracts-ir-plumbing) | HIGH |
+| Edge Unification Status | edge-unification-status.md | 2025-12-31 19:32 | project-evaluator (multi-input blocks) | HIGH |
 
 ## Cache Freshness Guidelines
 - **FRESH**: < 1 hour - trust fully
@@ -18,6 +19,7 @@
 - **default-sources-current-state.md**: Current constant-only default source implementation (store/UI/compiler/types)
 - **type-contracts-divergence.md**: Editor vs IR TypeDesc incompatibility (world: config vs special, different fields, domain mismatches)
 - **adapter-application-status.md**: Adapter/lens application happens in Pass 8 (not Pass 6), block lowering sees unadapted types
+- **edge-unification-status.md**: Edge unification Sprint 1 progress (2/6 items done), single-input invariant locations, bus combine modes, compiler integration points
 
 ## Not Yet Cached
 - project-structure.md (directory layout, entry points)

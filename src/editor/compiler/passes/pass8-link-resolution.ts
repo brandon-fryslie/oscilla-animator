@@ -93,7 +93,8 @@ export function pass8LinkResolution(
   irWithBusRoots: IRWithBusRoots,
   blocks: readonly Block[],
   wires: readonly CompilerConnection[],
-  listeners: readonly Listener[]
+  listeners: readonly Listener[],
+  edges?: readonly import("../../types").Edge[]
 ): LinkedGraphIR {
   const { builder, busRoots, blockOutputs, errors: inheritedErrors } = irWithBusRoots;
   const errors: CompileError[] = [...inheritedErrors];
@@ -118,7 +119,8 @@ export function pass8LinkResolution(
     busRoots,
     blockOutputs,
     builder,
-    errors
+    errors,
+    edges
   );
 
   applyRenderLowering(builder, blocks, blockInputRoots, blockOutputRoots, errors);
@@ -500,7 +502,8 @@ function buildBlockInputRoots(
   busRoots: Map<BusIndex, ValueRefPacked>,
   blockOutputs: Map<number, Map<string, ValueRefPacked>>,
   builder: IRBuilder,
-  errors: CompileError[]
+  errors: CompileError[],
+  edges?: readonly import("../../types").Edge[]
 ): BlockInputRootIR {
   const refs: ValueRefPacked[] = [];
 
@@ -526,6 +529,11 @@ function buildBlockInputRoots(
 
   // Get block type declarations for type information
   const blockDecls = blocks.map((block) => getBlockType(block.type));
+
+  // Sprint 1: Unified edges support (parameter accepted for future use)
+  // TODO: Implement unified edge iteration when Pass 1 populates edges array
+  // For now, fall back to legacy wires/listeners arrays
+  void edges; // Suppress unused parameter warning
 
   // Process each block's inputs
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {

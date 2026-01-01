@@ -334,13 +334,21 @@ function compileIR(
     const validated = pass5CycleValidation(depGraphWithTime, patchForIR.blocks);
 
     // Run Passes 6-8: Block Lowering → Bus Lowering → Link Resolution
+    // Sprint 1: Pass normalized.edges to passes 7 and 8
     const unlinked = pass6BlockLowering(validated, patchForIR.blocks, compiledPortMap);
-    const withBuses = pass7BusLowering(unlinked, patchForIR.buses, patchForIR.publishers, patchForIR.blocks);
+    const withBuses = pass7BusLowering(
+      unlinked,
+      patchForIR.buses,
+      patchForIR.publishers,
+      patchForIR.blocks,
+      normalized.edges // Pass unified edges if available
+    );
     const linked = pass8LinkResolution(
       withBuses,
       patchForIR.blocks,
       connectionsArray,
-      patchForIR.listeners
+      patchForIR.listeners,
+      normalized.edges // Pass unified edges if available
     );
 
     // P0-6: Run IR validator (always in dev builds, can be disabled via flag)
