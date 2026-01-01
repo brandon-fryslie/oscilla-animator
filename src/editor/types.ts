@@ -302,17 +302,7 @@ export interface Edge {
    */
   readonly transforms?: TransformStep[];
 
-  /**
-   * Optional lens stack for value transformation (applied after adapters).
-   * @deprecated Use `transforms` field instead (Phase 0.5 Track A)
-   */
-  readonly lensStack?: LensInstance[];
-
-  /**
-   * Optional adapter chain for type conversion (applied before lenses).
-   * @deprecated Use `transforms` field instead (Phase 0.5 Track A)
-   */
-  readonly adapterChain?: AdapterStep[];
+  
 
   /** Whether this edge is enabled */
   readonly enabled: boolean;
@@ -350,11 +340,7 @@ export interface Publisher {
   /** Source output endpoint */
   readonly from: PortRef;
 
-  /** Optional adapter chain */
-  readonly adapterChain?: AdapterStep[];
-
-  /** Optional lens stack applied before bus combine */
-  readonly lensStack?: LensInstance[];
+  
 
   /** Whether this publisher is active */
   enabled: boolean;
@@ -382,14 +368,8 @@ export interface Listener {
   /** Target input endpoint */
   readonly to: PortRef;
 
-  /** Optional adapter chain */
-  readonly adapterChain?: AdapterStep[];
-
   /** Whether this listener is active */
   enabled: boolean;
-
-  /** Optional lens stack - multiple lenses applied in sequence (replaces single lens) */
-  readonly lensStack?: LensInstance[];
 }
 
 /**
@@ -792,11 +772,7 @@ export interface Connection {
   /** Destination block + slot */
   readonly to: PortRef;
 
-  /** Optional lens stack for value transformation (applied after adapters) */
-  readonly lensStack?: LensInstance[];
-
-  /** Optional adapter chain for type conversion (applied before lenses) */
-  readonly adapterChain?: AdapterStep[];
+  
 
   /** Whether this connection is enabled (default: true) */
   readonly enabled?: boolean;
