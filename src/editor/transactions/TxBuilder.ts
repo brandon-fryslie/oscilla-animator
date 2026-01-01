@@ -254,6 +254,8 @@ export class TxBuilder {
       case 'composites':
         return this.root.compositeStore.composites.find(c => c.id === id);
       case 'defaultSources':
+      case 'edges':
+        return this.root.patchStore.edges.find(e => e.id === id);
         return this.root.defaultSourceStore.sources.get(id);
       default: {
         const _exhaustive: never = table;

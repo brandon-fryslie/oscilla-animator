@@ -2,13 +2,14 @@
  * @file Patch Store
  * @description Manages the core patch data: blocks and connections.
  */
-import { makeObservable, observable, action } from 'mobx';
+import { makeObservable, observable, action, computed } from 'mobx';
 import type {
   Block,
   Connection,
   BlockId,
   BlockType,
   LensInstance,
+  Edge,
 } from '../types';
 import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import { getBlockDefinition } from '../blocks';
@@ -21,6 +22,7 @@ import { Validator, isAssignable, getTypeDesc } from '../semantic';
 import { storeToPatchDocument } from '../semantic/patchAdapter';
 import { randomUUID } from "../crypto";
 import { runTx } from '../transactions/TxBuilder';
+import { validateEdge } from '../edgeMigration';
 
 // =============================================================================
 // Migration Helpers
@@ -45,7 +47,24 @@ function migrateBlockParams(type: string, params: Record<string, unknown>): Reco
 
 export class PatchStore {
   blocks: Block[] = [];
+
+  /**
+   * Legacy connection array (deprecated).
+   * Use edges array instead. Maintained for backward compatibility during migration.
+   * @deprecated Use edges instead
+   */
   connections: Connection[] = [];
+
+  /**
+   * Unified edge array (Sprint 1: Phase 0 Architecture Refactoring).
+   * Replaces separate connections/publishers/listeners arrays.
+   *
+   * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
+   * References:
+   * - .agent_planning/phase0-architecture-refactoring/PLAN-2025-12-31-170000-sprint1-connections.md
+   * - .agent_planning/phase0-architecture-refactoring/DOD-2025-12-31-170000-sprint1-connections.md
+   */
+  edges: Edge[] = [];
 
   /**
    * Unique identifier for this patch.
@@ -68,8 +87,14 @@ export class PatchStore {
     makeObservable(this, {
       blocks: observable,
       connections: observable,
+      edges: observable,
       patchId: observable,
       patchRevision: observable,
+
+      // Computed getters for edge filtering
+      wireEdges: computed,
+      publisherEdges: computed,
+      listenerEdges: computed,
 
       // Actions
       addBlock: action,
@@ -89,7 +114,43 @@ export class PatchStore {
       updateBlockParams: action,
       resetPatchId: action,
       incrementRevision: action,
+
+      // New edge actions
+      addEdge: action,
+      removeEdge: action,
+      updateEdge: action,
     });
+  }
+
+  // =============================================================================
+  // Computed Getters - Edge Filtering
+  // =============================================================================
+
+  /**
+   * Get all wire edges (port→port connections).
+   */
+  get wireEdges(): Edge[] {
+    return this.edges.filter(e =>
+      e.from.kind === 'port' && e.to.kind === 'port'
+    );
+  }
+
+  /**
+   * Get all publisher edges (port→bus connections).
+   */
+  get publisherEdges(): Edge[] {
+    return this.edges.filter(e =>
+      e.from.kind === 'port' && e.to.kind === 'bus'
+    );
+  }
+
+  /**
+   * Get all listener edges (bus→port connections).
+   */
+  get listenerEdges(): Edge[] {
+    return this.edges.filter(e =>
+      e.from.kind === 'bus' && e.to.kind === 'port'
+    );
   }
 
   // =============================================================================
@@ -160,6 +221,10 @@ export class PatchStore {
 
   generateConnectionId(): string {
     return this.root.generateId('conn');
+  }
+
+  generateEdgeId(): string {
+    return this.root.generateId('edge');
   }
 
   // =============================================================================
@@ -772,7 +837,7 @@ export class PatchStore {
   }
 
   // =============================================================================
-  // Actions - Connection Management
+  // Actions - Connection Management (Legacy)
   // =============================================================================
 
   addConnection(connection: Connection): void {
@@ -1049,5 +1114,130 @@ export class PatchStore {
    */
   setConnectionEnabled(connectionId: string, enabled: boolean): void {
     this.updateConnection(connectionId, { enabled });
+  }
+
+  // =============================================================================
+  // Actions - Edge Management (New Unified System)
+  // =============================================================================
+
+  /**
+   * Add an edge to the patch.
+   * Validates the edge before adding (rejects bus→bus connections).
+   *
+   * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
+   *
+   * @param edge - The edge to add
+   * @throws Error if edge is invalid (bus→bus connection)
+   */
+  addEdge(edge: Edge): void {
+    // Validate edge before adding
+    validateEdge(edge);
+
+    // Use transaction system for undo/redo
+    runTx(this.root, { label: 'Add Edge' }, (tx) => {
+      tx.add('edges', edge);
+    });
+
+    // Emit appropriate event based on edge type
+    if (edge.from.kind === 'port' && edge.to.kind === 'port') {
+      // Wire edge
+      this.root.events.emit({
+        type: 'WireAdded',
+        wireId: edge.id,
+        from: { blockId: edge.from.blockId, slotId: edge.from.slotId, direction: 'output' },
+        to: { blockId: edge.to.blockId, slotId: edge.to.slotId, direction: 'input' },
+      });
+    } else if (edge.from.kind === 'port' && edge.to.kind === 'bus') {
+      // Publisher edge
+      this.root.events.emit({
+        type: 'BindingAdded',
+        bindingId: edge.id,
+        busId: edge.to.busId,
+        blockId: edge.from.blockId,
+        port: edge.from.slotId,
+        direction: 'publish',
+      });
+    } else if (edge.from.kind === 'bus' && edge.to.kind === 'port') {
+      // Listener edge
+      this.root.events.emit({
+        type: 'BindingAdded',
+        bindingId: edge.id,
+        busId: edge.from.busId,
+        blockId: edge.to.blockId,
+        port: edge.to.slotId,
+        direction: 'subscribe',
+      });
+    }
+  }
+
+  /**
+   * Remove an edge by ID.
+   *
+   * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
+   *
+   * @param edgeId - The ID of the edge to remove
+   */
+  removeEdge(edgeId: string): void {
+    const edge = this.edges.find((e) => e.id === edgeId);
+    if (edge === null || edge === undefined) return;
+
+    // Use transaction system for undo/redo
+    runTx(this.root, { label: 'Remove Edge' }, (tx) => {
+      tx.remove('edges', edgeId);
+    });
+
+    // Emit appropriate event based on edge type
+    if (edge.from.kind === 'port' && edge.to.kind === 'port') {
+      // Wire edge
+      this.root.events.emit({
+        type: 'WireRemoved',
+        wireId: edge.id,
+        from: { blockId: edge.from.blockId, slotId: edge.from.slotId, direction: 'output' },
+        to: { blockId: edge.to.blockId, slotId: edge.to.slotId, direction: 'input' },
+      });
+    } else if (edge.from.kind === 'port' && edge.to.kind === 'bus') {
+      // Publisher edge
+      this.root.events.emit({
+        type: 'BindingRemoved',
+        bindingId: edge.id,
+        busId: edge.to.busId,
+        blockId: edge.from.blockId,
+        port: edge.from.slotId,
+        direction: 'publish',
+      });
+    } else if (edge.from.kind === 'bus' && edge.to.kind === 'port') {
+      // Listener edge
+      this.root.events.emit({
+        type: 'BindingRemoved',
+        bindingId: edge.id,
+        busId: edge.from.busId,
+        blockId: edge.to.blockId,
+        port: edge.to.slotId,
+        direction: 'subscribe',
+      });
+    }
+  }
+
+  /**
+   * Update an edge's properties (lensStack, adapterChain, enabled, weight, sortKey).
+   *
+   * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
+   *
+   * @param edgeId - The edge to modify
+   * @param updates - The properties to update
+   */
+  updateEdge(
+    edgeId: string,
+    updates: Partial<Pick<Edge, 'lensStack' | 'adapterChain' | 'enabled' | 'weight' | 'sortKey'>>
+  ): void {
+    runTx(this.root, { label: 'Update Edge' }, (tx) => {
+      const edge = this.edges.find((e) => e.id === edgeId);
+      if (!edge) return;
+
+      const next = { ...edge, ...updates };
+      // Validate updated edge
+      validateEdge(next);
+      tx.replace('edges', edgeId, next);
+    });
   }
 }

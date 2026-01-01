@@ -22,7 +22,8 @@ import type {
   Publisher,
   Listener,
   Composite,
-  DefaultSourceState
+  DefaultSourceState,
+  Edge,
 } from '../types';
 
 /**
@@ -35,7 +36,8 @@ export type TableName =
   | 'publishers'
   | 'listeners'
   | 'composites'
-  | 'defaultSources';
+  | 'defaultSources'
+  | 'edges';
 
 /**
  * Entity union type - all entities that can be stored in tables.
@@ -47,7 +49,8 @@ export type Entity =
   | Publisher
   | Listener
   | Composite
-  | DefaultSourceState;
+  | DefaultSourceState
+  | Edge;
 
 /**
  * Position for block layout.
@@ -78,36 +81,23 @@ export type Op =
  *
  * Applying op then its inverse restores the original state:
  * ```
- * applyOp(op)
- * applyOp(computeInverse(op))
- * // State is now back to original
+ * state1 -> op -> state2
+ * state2 -> inverse(op) -> state1
  * ```
  *
- * Inverse rules:
- * - Add → Remove (with entity payload)
- * - Remove → Add (restore removed entity)
- * - Update → Update (swap prev/next)
- * - SetBlockPosition → SetBlockPosition (swap prev/next)
- * - SetTimeRoot → SetTimeRoot (swap prev/next)
- * - SetTimelineHint → SetTimelineHint (swap prev/next)
- * - Many → Many (reverse array, invert each op)
- *
- * @param op The operation to invert
- * @returns The inverse operation
+ * Used by HistoryStore.undo() to construct undo operations.
  */
 export function computeInverse(op: Op): Op {
   switch (op.type) {
     case 'Add':
-      // Add → Remove (capture entity for restoration)
       return {
         type: 'Remove',
         table: op.table,
-        id: op.entity.id,
+        id: (op.entity as { id: string }).id,
         removed: op.entity,
       };
 
     case 'Remove':
-      // Remove → Add (restore removed entity)
       return {
         type: 'Add',
         table: op.table,
@@ -115,7 +105,6 @@ export function computeInverse(op: Op): Op {
       };
 
     case 'Update':
-      // Update → Update (swap prev/next)
       return {
         type: 'Update',
         table: op.table,
@@ -125,7 +114,6 @@ export function computeInverse(op: Op): Op {
       };
 
     case 'SetBlockPosition':
-      // SetBlockPosition → SetBlockPosition (swap prev/next)
       return {
         type: 'SetBlockPosition',
         blockId: op.blockId,
@@ -134,7 +122,6 @@ export function computeInverse(op: Op): Op {
       };
 
     case 'SetTimeRoot':
-      // SetTimeRoot → SetTimeRoot (swap prev/next)
       return {
         type: 'SetTimeRoot',
         prev: op.next,
@@ -142,7 +129,6 @@ export function computeInverse(op: Op): Op {
       };
 
     case 'SetTimelineHint':
-      // SetTimelineHint → SetTimelineHint (swap prev/next)
       return {
         type: 'SetTimelineHint',
         prev: op.next,
@@ -150,15 +136,12 @@ export function computeInverse(op: Op): Op {
       };
 
     case 'Many':
-      // Many → Many (reverse array, invert each op)
-      // Order matters: inverse of [op1, op2, op3] is [inv(op3), inv(op2), inv(op1)]
       return {
         type: 'Many',
         ops: op.ops.map(computeInverse).reverse(),
       };
 
     default: {
-      // TypeScript exhaustiveness check
       const _exhaustive: never = op;
       throw new Error(`Unknown op type: ${JSON.stringify(_exhaustive)}`);
     }
@@ -166,62 +149,49 @@ export function computeInverse(op: Op): Op {
 }
 
 /**
- * Validate that an op is well-formed.
- * Checks:
- * - Entity IDs are present
- * - Remove ops have removed entity
- * - Update ops have both prev and next
- * - Positions are valid numbers
- *
- * @param op The operation to validate
- * @throws Error if op is malformed
+ * Validate an operation.
+ * @throws if op is malformed
  */
 export function validateOp(op: Op): void {
   switch (op.type) {
     case 'Add':
-      if (!op.entity.id) {
-        throw new Error(`Add op missing entity id: ${JSON.stringify(op)}`);
-      }
+      if (!op.table) throw new Error('Add op missing table');
+      if (!op.entity) throw new Error('Add op missing entity');
+      if (!(op.entity as { id?: string }).id) throw new Error('Add op entity missing id');
       break;
 
     case 'Remove':
-      if (!op.id) {
-        throw new Error(`Remove op missing id: ${JSON.stringify(op)}`);
-      }
-      if (typeof op.removed !== 'object' || op.removed === null) {
-        throw new Error(`Remove op missing removed entity: ${JSON.stringify(op)}`);
-      }
+      if (!op.table) throw new Error('Remove op missing table');
+      if (!op.id) throw new Error('Remove op missing id');
+      if (!op.removed) throw new Error('Remove op missing removed entity');
       break;
 
     case 'Update':
-      if (!op.id) {
-        throw new Error(`Update op missing id: ${JSON.stringify(op)}`);
-      }
-      if (typeof op.prev !== 'object' || op.prev === null || typeof op.next !== 'object' || op.next === null) {
-        throw new Error(`Update op missing prev/next: ${JSON.stringify(op)}`);
-      }
+      if (!op.table) throw new Error('Update op missing table');
+      if (!op.id) throw new Error('Update op missing id');
+      if (!op.prev) throw new Error('Update op missing prev state');
+      if (!op.next) throw new Error('Update op missing next state');
       break;
 
     case 'SetBlockPosition':
-      if (!op.blockId) {
-        throw new Error(`SetBlockPosition op missing blockId: ${JSON.stringify(op)}`);
-      }
-      if (typeof op.prev.x !== 'number' || typeof op.prev.y !== 'number') {
-        throw new Error(`SetBlockPosition op has invalid prev position: ${JSON.stringify(op)}`);
-      }
-      if (typeof op.next.x !== 'number' || typeof op.next.y !== 'number') {
-        throw new Error(`SetBlockPosition op has invalid next position: ${JSON.stringify(op)}`);
-      }
+      if (!op.blockId) throw new Error('SetBlockPosition op missing blockId');
+      if (!op.prev) throw new Error('SetBlockPosition op missing prev position');
+      if (!op.next) throw new Error('SetBlockPosition op missing next position');
+      break;
+
+    case 'SetTimeRoot':
+      // prev and next can be undefined
+      break;
+
+    case 'SetTimelineHint':
+      // prev and next can be unknown
       break;
 
     case 'Many':
-      // Recursively validate nested ops
-      op.ops.forEach(validateOp);
-      break;
-
-    // SetTimeRoot and SetTimelineHint are always valid
-    case 'SetTimeRoot':
-    case 'SetTimelineHint':
+      if (!Array.isArray(op.ops)) throw new Error('Many op missing ops array');
+      for (const nestedOp of op.ops) {
+        validateOp(nestedOp);
+      }
       break;
 
     default: {

@@ -19,7 +19,7 @@
 import { runInAction } from 'mobx';
 import type { Op, TableName, Entity } from './ops';
 import type { RootStore } from '../stores/RootStore';
-import type { Block, Connection, Bus, Publisher, Listener, Composite, DefaultSourceState } from '../types';
+import type { Block, Connection, Bus, Publisher, Listener, Composite, DefaultSourceState, Edge } from '../types';
 
 /**
  * Apply a sequence of ops to the store.
@@ -109,6 +109,9 @@ function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
     case 'defaultSources':
       store.defaultSourceStore.sources.set(entity.id, entity as DefaultSourceState);
       break;
+    case 'edges':
+      store.patchStore.edges.push(entity as Edge);
+      break;
     default: {
       const _exhaustive: never = table;
       throw new Error(`Unknown table: ${String(_exhaustive)}`);
@@ -141,6 +144,9 @@ function applyRemove(table: TableName, id: string, store: RootStore): void {
       break;
     case 'defaultSources':
       store.defaultSourceStore.sources.delete(id);
+      break;
+    case 'edges':
+      store.patchStore.edges = store.patchStore.edges.filter(e => e.id !== id);
       break;
     default: {
       const _exhaustive: never = table;
@@ -201,6 +207,13 @@ function applyUpdate(table: TableName, id: string, next: Entity, store: RootStor
       const source = store.defaultSourceStore.sources.get(id);
       if (source) {
         Object.assign(source, next);
+      }
+      break;
+    }
+    case 'edges': {
+      const edge = store.patchStore.edges.find(e => e.id === id);
+      if (edge) {
+        Object.assign(edge, next);
       }
       break;
     }
