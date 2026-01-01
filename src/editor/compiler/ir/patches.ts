@@ -14,6 +14,7 @@
 
 import type { TypeDesc, BusIndex, SigExprId } from "./types";
 import type { TimeModelIR } from "./schedule";
+import type { Edge } from "../../types";
 
 // =============================================================================
 // Block Index (Dense ID for Runtime)
@@ -64,6 +65,10 @@ export interface DefaultSourceAttachment {
  * - Default sources attached to unwired inputs
  * - Canonicalized publishers/listeners (sorted, enabled only)
  *
+ * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
+ * During migration, this supports both the new unified `edges` field and the
+ * legacy separate arrays (wires, publishers, listeners) for backward compatibility.
+ *
  * This is a generic interface that works with the existing Patch types.
  */
 export interface NormalizedPatch<
@@ -79,13 +84,29 @@ export interface NormalizedPatch<
   /** All blocks (order preserved from original patch) */
   readonly blocks: readonly TBlock[];
 
-  /** All wires/connections */
+  /**
+   * Unified edges (Sprint 1: Phase 0 Architecture Refactoring)
+   * When present, this is the authoritative source for all connections.
+   * Compiler passes should prefer this over the legacy arrays below.
+   */
+  readonly edges?: readonly Edge[];
+
+  /**
+   * All wires/connections
+   * @deprecated Use edges instead. Maintained for backward compatibility.
+   */
   readonly wires: readonly TConnection[];
 
-  /** Canonicalized publishers (enabled, sorted by sortKey) */
+  /**
+   * Canonicalized publishers (enabled, sorted by sortKey)
+   * @deprecated Use edges instead. Maintained for backward compatibility.
+   */
   readonly publishers: readonly TPublisher[];
 
-  /** Canonicalized listeners (enabled) */
+  /**
+   * Canonicalized listeners (enabled)
+   * @deprecated Use edges instead. Maintained for backward compatibility.
+   */
   readonly listeners: readonly TListener[];
 
   /** Bus definitions */
@@ -115,8 +136,11 @@ export interface TypedPatch<
   /** Type descriptor for each bus */
   readonly busTypes: Map<string, TypeDesc>;
 
-  /** Conversion paths for wires that need type adaptation */
-  readonly conversionPaths: Map<TConnection, readonly string[]>;
+  /**
+   * Conversion paths for edges that need type adaptation.
+   * Keyed by edge ID when using unified edges, or by TConnection when using legacy format.
+   */
+  readonly conversionPaths: Map<TConnection | string, readonly string[]>;
 }
 
 // =============================================================================

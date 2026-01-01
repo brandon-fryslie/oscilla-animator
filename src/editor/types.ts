@@ -746,6 +746,13 @@ export interface Patch {
   /** All blocks in the patch */
   blocks: Block[];
 
+  /**
+   * Unified edges (Sprint 1: Phase 0 Architecture Refactoring)
+   * When present and non-empty, this is the authoritative source for connections.
+   * The legacy arrays (connections, publishers, listeners) are maintained for compatibility.
+   */
+  edges?: Edge[];
+
   /** All connections between blocks */
   connections: Connection[];
 
