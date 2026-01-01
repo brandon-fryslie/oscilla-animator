@@ -603,6 +603,29 @@ export interface Slot {
    * Defaults to 'primary' if not specified.
    */
   readonly tier?: SlotTier;
+  /**
+   * Combine mode for multi-input slots.
+   *
+   * When multiple edges connect to the same input slot (N > 1), this determines
+   * how the values are combined. If not specified, defaults to 'last'.
+   *
+   * **Only meaningful for input slots.** Ignored on output slots.
+   *
+   * **Validation**: Combine mode must be compatible with the slot's world and domain:
+   * - Signal/Field worlds: All modes valid
+   * - Config world: Only 'last' valid (stepwise changes)
+   * - Scalar world: Multi-input not allowed (compile error if N > 1)
+   * - Numeric domains (float, int, vec2, vec3): All modes valid
+   * - Color domain: Only 'last' and 'layer' valid
+   * - String/boolean domains: Only 'last' valid
+   *
+   * **Edge ordering**: When order matters ('last', 'layer'), edges are sorted by
+   * ascending sortKey, with ties broken by edge ID for determinism.
+   *
+   * @see BusCombineMode for mode definitions
+   * @default 'last'
+   */
+  readonly combineMode?: BusCombineMode;
 }
 
 /**
