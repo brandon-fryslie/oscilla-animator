@@ -56,7 +56,7 @@ export { getTypeArity, inferBundleLanes, createTypeDesc } from '../core/types';
  * Kernel capabilities - the five authorities that define primitives.
  * These represent the different kinds of "special powers" a block can have.
  *
- * Only blocks listed in KERNEL_PRIMITIVES may claim non-pure capabilities.
+ * Only blocks listed in KERNEL_PRIMITIVES may claim non-kernel capabilities.
  */
 export type KernelCapability = 'time' | 'identity' | 'state' | 'render' | 'io';
 
@@ -485,6 +485,14 @@ export type BlockId = string;
  */
 export type BlockType = string; // e.g., 'RadialOrigin', 'PhaseMachine', 'ParticleRenderer'
 
+/**
+ * 2D position type for block canvas placement.
+ */
+export interface Vec2 {
+  readonly x: number;
+  readonly y: number;
+}
+
 // =============================================================================
 // Block Form System (Primitives, Compounds, Macros)
 // =============================================================================
@@ -604,6 +612,13 @@ export interface Slot {
 export type BlockParams = Record<string, unknown>;
 
 /**
+ * Block role - identifies special blocks created by the system.
+ *
+ * Sprint: Phase 0 - Sprint 2: Unify Default Sources with Blocks
+ */
+export type BlockRole = 'defaultSourceProvider' | 'internal';
+
+/**
  * A Block is a functional unit in the patch bay.
  * This is the data representation (serializable to JSON).
  */
@@ -631,6 +646,29 @@ export interface Block {
 
   /** Optional description for inspector */
   readonly description?: string;
+
+  /**
+   * Block position on canvas (Sprint 2: Phase 0 Architecture Refactoring)
+   * Position is stored for visual layout but doesn't affect compilation.
+   */
+  position?: Vec2;
+
+  /**
+   * Hidden blocks are not rendered on the canvas.
+   * Used for system-generated blocks like default source providers.
+   *
+   * Sprint: Phase 0 - Sprint 2: Unify Default Sources with Blocks
+   */
+  hidden?: boolean;
+
+  /**
+   * Block role identifies special system-generated blocks.
+   * - 'defaultSourceProvider': Hidden block providing default value for an input
+   * - 'internal': Internal system block (not user-created)
+   *
+   * Sprint: Phase 0 - Sprint 2: Unify Default Sources with Blocks
+   */
+  role?: BlockRole;
 }
 
 // =============================================================================
