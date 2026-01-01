@@ -21,6 +21,7 @@ import type { CompilerConnection, CompileError } from "../types";
 import { getBlockType } from "../ir/lowerTypes";
 import type { LowerCtx } from "../ir/lowerTypes";
 import { TRANSFORM_REGISTRY, isAdapterTransform, isLensTransform } from "../../transforms";
+import { getEdgeTransforms } from "../../transforms/migrate";
 import type { TransformIRCtx } from "../../transforms";
 
 // =============================================================================
@@ -574,6 +575,7 @@ function buildBlockInputRoots(
 
             if (ref !== undefined) {
               // Apply adapter chain if present
+              // TODO Phase 0.5: Use getEdgeTransforms(edge) instead of separate lensStack/adapterChain
               if (edge.adapterChain !== undefined && edge.adapterChain.length > 0) {
                 ref = applyAdapterChain(
                   ref,

@@ -28,6 +28,7 @@ import type { IRBuilder } from "../ir/IRBuilder";
 import type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
 import type { CompileError } from "../types";
 import { getSortedPublishers } from "../../semantic/busSemantics";
+import { getEdgeTransforms } from "../../transforms/migrate";
 import { createCombineNode } from "./combine-utils";
 
 // Re-export ValueRefPacked for downstream consumers
@@ -67,6 +68,7 @@ interface PublisherData {
   readonly sortKey?: number;
   readonly adapterChain?: readonly unknown[];
   readonly lensStack?: readonly unknown[];
+  readonly transforms?: readonly unknown[];
 }
 
 // =============================================================================
@@ -107,6 +109,7 @@ function getPublishersFromEdges(
         sortKey: e.sortKey,
         adapterChain: e.adapterChain,
         lensStack: e.lensStack,
+        transforms: getEdgeTransforms(e),
       };
     })
     .sort((a, b) => {
