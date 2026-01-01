@@ -335,7 +335,7 @@ function compileIR(
 
     // Run Passes 6-8: Block Lowering → Bus Lowering → Link Resolution
     // Sprint 1: Pass normalized.edges to passes 7 and 8
-    const unlinked = pass6BlockLowering(validated, patchForIR.blocks, compiledPortMap);
+    const unlinked = pass6BlockLowering(validated, patchForIR.blocks, compiledPortMap, normalized.edges);
     const withBuses = pass7BusLowering(
       unlinked,
       patchForIR.buses,
