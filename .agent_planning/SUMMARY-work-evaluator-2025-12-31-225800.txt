@@ -1,0 +1,36 @@
+Agent: work-evaluator | 2025-12-31-225800
+Scope: work/sprint2-default-sources
+Verdict: INCOMPLETE (85%)
+Criteria: 2/3 deliverables complete | Breaks found: 0 | Ambiguities: 3
+Previous issues: 4 fixed, 2 remaining
+Missing checks: 3 specified
+Cache updated: No new cache files (existing eval-cache sufficient)
+
+Progress since last eval (60% → 85%):
+- FIXED: Pass 6 defaultSource fallback removed
+- FIXED: Pass 8 defaultSource fallback removed  
+- FIXED: DSConstScalarFloat block added
+- FIXED: DSConstScalarInt block added
+
+Remaining blockers:
+- OLD METADATA: Patch.defaultSources/defaultSourceAttachments still present (DoD requires removal)
+- NO TESTS: materializeDefaultSources() has no unit tests (DoD requires tests)
+- AMBIGUOUS: compileBusAware.ts uses old system (unclear if active)
+
+Core implementation COMPLETE:
+- materializeDefaultSources() fully implemented and integrated
+- All 11 DSConst* provider blocks exist
+- Compiler passes 6, 8 special cases removed
+- Block.hidden and Block.role fields added
+
+Major blocker: DoD requires removing old Patch metadata, but it's still used in 22+ locations (compileBusAware.ts, pass1-normalize.ts, integration.ts). Removing would break existing code paths.
+
+RECOMMEND: PAUSE for user decision on:
+1. Should old metadata be removed now? (breaks 22+ references)
+2. Is compileBusAware.ts still active? (legacy compiler)
+3. Should tests be written now or deferred?
+
+Options:
+A. Relax DoD, mark metadata removal as "deferred" → 95% complete
+B. Remove metadata, update 22+ references → breaking change
+C. Wait for compileBusAware.ts removal → defer completion

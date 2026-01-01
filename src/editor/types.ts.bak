@@ -113,39 +113,6 @@ export type PureCompileKind = 'operator' | 'composite' | 'spec';
 export type BusCombineMode = 'sum' | 'average' | 'max' | 'min' | 'last' | 'layer';
 
 /**
- * Combine mode including custom modes and first/error.
- *
- * Extends BusCombineMode with additional modes for multi-input port resolution:
- * - 'first': Take first writer (stable ordering)
- * - 'error': Reject multiple writers (compile error)
- * - Custom: Explicitly implemented kernel (e.g. "blendOver", "paletteMix")
- *
- * @see design-docs/now/01-MultiBlock-Input.md §1.1
- */
-export type CombineMode =
-  | BusCombineMode
-  | 'first'
-  | 'error'
-  | { kind: 'custom'; id: string };
-
-/**
- * Combine policy for input ports.
- *
- * Determines when and how to combine multiple writers:
- * - when: "multi" - Only combine when N >= 2 writers (default)
- * - when: "always" - Always reduce, even with single writer (rare)
- * - mode: "error" - Forbid multiple writers (recovers single-input constraint)
- *
- * Default: { when: "multi", mode: "last" }
- *
- * @see design-docs/now/01-MultiBlock-Input.md §1.2
- */
-export type CombinePolicy =
-  | { when: 'multi'; mode: CombineMode }
-  | { when: 'always'; mode: CombineMode }
-  | { when: 'multi'; mode: 'error' };
-
-/**
  * Format a TypeDesc for display.
  */
 // MOVED TO SEMANTIC KERNEL
@@ -636,35 +603,6 @@ export interface Slot {
    * Defaults to 'primary' if not specified.
    */
   readonly tier?: SlotTier;
-  /**
-   * Combine policy for multi-input slots.
-   *
-   * When multiple edges connect to the same input slot (N > 1), this determines
-   * when and how the values are combined.
-   *
-   * **Only meaningful for input slots.** Ignored on output slots.
-   *
-   * **Policy semantics**:
-   * - when: "multi" - Only combine when N >= 2 writers (default behavior)
-   * - when: "always" - Always reduce, even with single writer (rare)
-   * - mode: "error" - Forbid multiple writers (recovers single-input constraint)
-   *
-   * **Validation**: Combine mode must be compatible with the slot's world and domain:
-   * - Signal/Field worlds: All modes valid (except custom)
-   * - Config world: Only 'last' valid (stepwise changes)
-   * - Scalar world: Multi-input not allowed (compile error if N > 1)
-   * - Numeric domains (float, int, vec2, vec3): All modes valid
-   * - Color domain: Only 'last' and 'layer' valid
-   * - String/boolean domains: Only 'last' valid
-   *
-   * **Edge ordering**: When order matters ('last', 'first', 'layer'), edges are sorted by
-   * ascending sortKey, with ties broken by edge ID for determinism.
-   *
-   * @see CombinePolicy for policy structure
-   * @see CombineMode for available modes
-   * @default { when: 'multi', mode: 'last' }
-   */
-  readonly combine?: CombinePolicy;
 }
 
 /**
