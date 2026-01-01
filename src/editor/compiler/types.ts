@@ -497,7 +497,9 @@ export type CompileErrorCode =
   | 'UnsupportedLensInIRMode'
   // P1: Pass 8 hardening (type-contracts-ir-plumbing)
   | 'MissingOutputRegistration'
-  | 'BusWithoutPublisher';
+  | 'BusWithoutPublisher'
+  // Sprint 2 P2: Bus-Block Unification
+  | 'UnmigratedBusEdge';
 
 export interface CompileError {
   code: CompileErrorCode;

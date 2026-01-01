@@ -7,9 +7,13 @@
  * This pass finalizes the IR by ensuring every port has a concrete value
  * and there are no dangling references.
  *
+ * Sprint: Bus-Block Unification - Sprint 2 (Compiler Unification)
+ * P2: Unified edge processing - all edges are port→port after migration
+ *
  * References:
  * - design-docs/12-Compiler-Final/15-Canonical-Lowering-Pipeline.md § Pass 8
  * - PLAN-2025-12-25-200731.md P0-3: Pass 8 - Link Resolution
+ * - .agent_planning/bus-block-unification/PLAN-2026-01-01-sprint2.md P2
  */
 
 import type { Block, Listener, AdapterStep, LensInstance } from "../../types";
@@ -494,8 +498,13 @@ function applyLensStack(
  * Build BlockInputRootIR by resolving input sources.
  *
  * Resolution priority:
- * 1. Wire connection (direct block-to-block)
- * 2. Bus listener (bus → input)
+ * 1. Unified edges (if provided) - assumes all edges are port→port after migration
+ * 2. Legacy wires (direct block-to-block)
+ * 3. Legacy listeners (bus → input)
+ *
+ * Sprint 2 P2 Note: When using unified edges, this function assumes all edges
+ * have been migrated by migrateEdgesToPortOnly(). Bus edges (edge.from.kind === 'bus')
+ * should have been converted to BusBlock port edges (edge.from.kind === 'port').
  *
  * Note: Default sources are handled by Pass 0 (materializeDefaultSources),
  * which creates hidden provider blocks and wires for all unconnected inputs
@@ -551,107 +560,78 @@ function buildBlockInputRoots(
       let resolved = false;
 
       if (useUnifiedEdges) {
-        // Use unified edge lookup
+        // Sprint 2 P2: Unified edge processing
+        // After migration, ALL edges are port→port (including BusBlock edges)
+        // No edge-kind discrimination needed - all edges handled uniformly
         const edge = edges.find(
           (e) => e.to.kind === 'port' && e.to.blockId === block.id && e.to.slotId === input.id
         );
 
         if (edge !== undefined) {
-          if (edge.from.kind === 'port') {
-            // Handle like wire: port→port connection
-            const upstreamBlockIdx = blockIdToIndex.get(edge.from.blockId);
+          // All edges are port→port after migration
+          // This includes:
+          // - Regular wire connections (block.out → block.in)
+          // - BusBlock subscriber connections (BusBlock.out → block.in)
+          // - BusBlock publisher connections (block.out → BusBlock.in) - handled in Pass 7
 
-            if (upstreamBlockIdx === undefined) {
-              errors.push({
-                code: "DanglingConnection",
-                message: `Edge to ${block.id}:${input.id} from unknown block ${edge.from.blockId}`,
-              });
-              continue;
-            }
-
-            const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
-            let ref = upstreamOutputs?.get(edge.from.slotId);
-
-            if (ref !== undefined) {
-              // Apply adapter chain if present
-              // TODO Phase 0.5: Use getEdgeTransforms(edge) instead of separate lensStack/adapterChain
-              if (edge.adapterChain !== undefined && edge.adapterChain.length > 0) {
-                ref = applyAdapterChain(
-                  ref,
-                  edge.adapterChain,
-                  builder,
-                  errors,
-                  `edge to ${block.type}.${input.id}`
-                );
-              }
-
-              // Apply lens stack if present
-              if (edge.lensStack !== undefined && edge.lensStack.length > 0) {
-                ref = applyLensStack(
-                  ref,
-                  edge.lensStack,
-                  builder,
-                  errors,
-                  `edge to ${block.type}.${input.id}`
-                );
-              }
-
-              refs[flatIdx] = ref;
-              resolved = true;
-              continue;
-            }
-
-            // Wire exists but upstream port has no IR representation
-            // This is expected for non-IR types (events, domains, etc.)
-            resolved = true;
+          // Verify edge has port source (migration should guarantee this)
+          if (edge.from.kind !== 'port') {
+            errors.push({
+              code: "UnmigratedBusEdge",
+              message: `Edge to ${block.id}:${input.id} has unmigrated bus endpoint. ` +
+                       `All edges should be port→port after migration. ` +
+                       `Run migrateEdgesToPortOnly() before compilation.`,
+            });
             continue;
-          } else {
-            // Handle like listener: bus→port connection
-            const busIdx = busIdToIndex.get(edge.from.busId);
+          }
 
-            if (busIdx === undefined) {
-              errors.push({
-                code: "DanglingBindingEndpoint",
-                message: `Edge to ${block.id}:${input.id} from unknown bus ${edge.from.busId}`,
-              });
-              continue;
+          // Resolve upstream block output
+          const upstreamBlockIdx = blockIdToIndex.get(edge.from.blockId);
+
+          if (upstreamBlockIdx === undefined) {
+            errors.push({
+              code: "DanglingConnection",
+              message: `Edge to ${block.id}:${input.id} from unknown block ${edge.from.blockId}`,
+            });
+            continue;
+          }
+
+          const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
+          let ref = upstreamOutputs?.get(edge.from.slotId);
+
+          if (ref !== undefined) {
+            // Apply adapter chain if present
+            // TODO Phase 0.5: Use getEdgeTransforms(edge) instead of separate lensStack/adapterChain
+            if (edge.adapterChain !== undefined && edge.adapterChain.length > 0) {
+              ref = applyAdapterChain(
+                ref,
+                edge.adapterChain,
+                builder,
+                errors,
+                `edge to ${block.type}.${input.id}`
+              );
             }
 
-            let busRef = busRoots.get(busIdx);
-
-            if (busRef !== undefined) {
-              // Apply adapter chain if present
-              if (edge.adapterChain !== undefined && edge.adapterChain.length > 0) {
-                busRef = applyAdapterChain(
-                  busRef,
-                  edge.adapterChain,
-                  builder,
-                  errors,
-                  `bus edge for ${block.type}.${input.id}`
-                );
-              }
-
-              // Apply lens stack if present
-              if (edge.lensStack !== undefined && edge.lensStack.length > 0) {
-                busRef = applyLensStack(
-                  busRef,
-                  edge.lensStack,
-                  builder,
-                  errors,
-                  `bus edge for ${block.type}.${input.id}`
-                );
-              }
-
-              refs[flatIdx] = busRef;
-              resolved = true;
-              continue;
+            // Apply lens stack if present
+            if (edge.lensStack !== undefined && edge.lensStack.length > 0) {
+              ref = applyLensStack(
+                ref,
+                edge.lensStack,
+                builder,
+                errors,
+                `edge to ${block.type}.${input.id}`
+              );
             }
 
-            // Bus exists but has no IR representation (e.g., event bus)
-            // This is expected for non-IR bus types - NOT an error
+            refs[flatIdx] = ref;
             resolved = true;
             continue;
           }
+
+          // Edge exists but upstream port has no IR representation
+          // This is expected for non-IR types (events, domains, etc.)
+          resolved = true;
+          continue;
         }
       } else {
         // Fall back to legacy wires/listeners lookup
