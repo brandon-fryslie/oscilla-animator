@@ -261,7 +261,7 @@ export const BusInspector = observer(({ busId }: BusInspectorProps) => {
   const availableCombineModes = getCombineModesForDomain(domain);
 
   const handleCombineModeChange = (newMode: BusCombineMode) => {
-    store.busStore.updateBus(busId, { combineMode: newMode });
+    store.busStore.updateBus(busId, { combine: { when: bus.combine.when, mode: newMode } });
   };
 
   const handleDefaultValueChange = (newValue: unknown) => {
@@ -291,7 +291,7 @@ export const BusInspector = observer(({ busId }: BusInspectorProps) => {
             <label>Combine Mode</label>
             <select
               className="bus-combine-select"
-              value={bus.combineMode}
+              value={typeof bus.combine.mode === "string" ? bus.combine.mode : "last"}
               onChange={(e) => handleCombineModeChange(e.target.value as BusCombineMode)}
             >
               {availableCombineModes.map(mode => (

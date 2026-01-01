@@ -122,7 +122,7 @@ export class BusStore {
         id: this.root.generateId('bus'),
         name: def.name,
         type: typeDesc,
-        combineMode: def.combineMode,
+        combine: { when: 'multi', mode: def.combineMode },
         defaultValue: def.defaultValue,
         sortKey: this.buses.length,
         origin: 'built-in',
@@ -159,7 +159,7 @@ export class BusStore {
       id: this.root.generateId('bus'),
       name,
       type: typeDesc,
-      combineMode,
+      combine: { when: 'multi', mode: combineMode },
       defaultValue,
       sortKey: this.buses.length,
       origin: 'user', // User-created buses
@@ -213,7 +213,7 @@ export class BusStore {
    *
    * P1-2 MIGRATED: Now uses runTx() for undo/redo support.
    */
-  updateBus(busId: string, updates: Partial<Pick<Bus, 'name' | 'combineMode' | 'defaultValue'>>): void {
+  updateBus(busId: string, updates: Partial<Pick<Bus, 'name' | 'combine' | 'defaultValue'>>): void {
     runTx(this.root, { label: 'Update Bus' }, tx => {
       const bus = this.root.busStore.buses.find(b => b.id === busId);
       if (bus === null || bus === undefined) {

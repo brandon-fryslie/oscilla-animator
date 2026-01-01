@@ -41,7 +41,7 @@ describe('Bus Diagnostics', () => {
         id: 'custom-bus',
         name: 'customBus',
         type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-        combineMode: 'last',
+        combine: { when: 'multi', mode: 'last' },
         defaultValue: 0,
         sortKey: 0,
       });
@@ -85,7 +85,7 @@ describe('Bus Diagnostics', () => {
         id: 'custom-bus',
         name: 'customBus',
         type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-        combineMode: 'last',
+        combine: { when: 'multi', mode: 'last' },
         defaultValue: 0,
         sortKey: 0,
       });

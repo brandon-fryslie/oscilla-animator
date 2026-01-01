@@ -14,6 +14,5 @@ export {
   type TransformIRCtx,
 } from './TransformRegistry';
 
-// Auto-migrate existing lenses and adapters to TransformRegistry
-import './migrateLenses';
-import './migrateAdapters';
+// Migration files removed in Phase 0.5 Track B cleanup
+// Lenses and adapters now use TRANSFORM_REGISTRY directly

@@ -83,7 +83,7 @@ describe('Integration: Block → Wire → Bus → Publisher → Undo Chain', () 
       id: 'bus1',
       name: 'Test Bus',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'sum',
+      combine: { when: 'multi', mode: 'sum' },
       defaultValue: 0,
       sortKey: 0,
     };

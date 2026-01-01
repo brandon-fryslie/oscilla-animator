@@ -27,7 +27,7 @@ describe('convertLegacyTransforms', () => {
     const lensStack: LensInstance[] = [
       {
         lensId: 'mul',
-        params: { factor: { type: 'literal', value: 2 } },
+        params: { factor: { kind: 'literal', value: 2 } },
         enabled: true,
         sortKey: 0,
       },
@@ -57,12 +57,12 @@ describe('convertLegacyTransforms', () => {
     const lensStack: LensInstance[] = [
       {
         lensId: 'mul',
-        params: { factor: { type: 'literal', value: 2 } },
+        params: { factor: { kind: 'literal', value: 2 } },
         enabled: true,
       },
       {
         lensId: 'add',
-        params: { offset: { type: 'literal', value: 1 } },
+        params: { offset: { kind: 'literal', value: 1 } },
         enabled: true,
       },
     ];
@@ -95,8 +95,8 @@ describe('convertLegacyTransforms', () => {
       {
         lensId: 'clamp',
         params: {
-          min: { type: 'literal', value: 0 },
-          max: { type: 'literal', value: 1 },
+          min: { kind: 'literal', value: 0 },
+          max: { kind: 'literal', value: 1 },
         },
         enabled: false,
         sortKey: 42,
@@ -141,7 +141,7 @@ describe('convertToLegacyTransforms', () => {
         kind: 'lens',
         lens: {
           lensId: 'mul',
-          params: { factor: { type: 'literal', value: 2 } },
+          params: { factor: { kind: 'literal', value: 2 } },
           enabled: true,
         },
       },
@@ -150,7 +150,7 @@ describe('convertToLegacyTransforms', () => {
     const result = convertToLegacyTransforms(transforms);
 
     expect(result.lensStack).toHaveLength(1);
-    expect(result.lensStack[0]).toEqual(transforms[0].lens);
+    expect(result.lensStack[0]).toEqual((transforms[0] as { kind: 'lens'; lens: LensInstance }).lens);
     expect(result.adapterChain).toEqual([]);
   });
 
@@ -173,7 +173,7 @@ describe('convertToLegacyTransforms', () => {
         kind: 'lens',
         lens: {
           lensId: 'mul',
-          params: { factor: { type: 'literal', value: 2 } },
+          params: { factor: { kind: 'literal', value: 2 } },
           enabled: true,
         },
       },
@@ -182,7 +182,7 @@ describe('convertToLegacyTransforms', () => {
         kind: 'lens',
         lens: {
           lensId: 'add',
-          params: { offset: { type: 'literal', value: 1 } },
+          params: { offset: { kind: 'literal', value: 1 } },
           enabled: true,
         },
       },
@@ -203,8 +203,8 @@ describe('convertToLegacyTransforms', () => {
     const lens: LensInstance = {
       lensId: 'clamp',
       params: {
-        min: { type: 'literal', value: 0 },
-        max: { type: 'literal', value: 1 },
+        min: { kind: 'literal', value: 0 },
+        max: { kind: 'literal', value: 1 },
       },
       enabled: false,
       sortKey: 99,
@@ -226,7 +226,7 @@ describe('roundtrip conversion', () => {
     const originalLensStack: LensInstance[] = [
       {
         lensId: 'mul',
-        params: { factor: { type: 'literal', value: 2 } },
+        params: { factor: { kind: 'literal', value: 2 } },
         enabled: true,
         sortKey: 1,
       },
@@ -254,15 +254,15 @@ describe('roundtrip conversion', () => {
     const originalLensStack: LensInstance[] = [
       {
         lensId: 'mul',
-        params: { factor: { type: 'literal', value: 2 } },
+        params: { factor: { kind: 'literal', value: 2 } },
         enabled: true,
         sortKey: 1,
       },
       {
         lensId: 'clamp',
         params: {
-          min: { type: 'literal', value: 0 },
-          max: { type: 'literal', value: 1 },
+          min: { kind: 'literal', value: 0 },
+          max: { kind: 'literal', value: 1 },
         },
         enabled: false,
         sortKey: 2,
@@ -320,7 +320,7 @@ describe('getEdgeTransforms', () => {
     const lensStack: LensInstance[] = [
       {
         lensId: 'mul',
-        params: { factor: { type: 'literal', value: 2 } },
+        params: { factor: { kind: 'literal', value: 2 } },
         enabled: true,
       },
     ];
@@ -358,7 +358,7 @@ describe('getEdgeTransforms', () => {
     const lensStack: LensInstance[] = [
       {
         lensId: 'mul',
-        params: { factor: { type: 'literal', value: 2 } },
+        params: { factor: { kind: 'literal', value: 2 } },
         enabled: true,
       },
     ];

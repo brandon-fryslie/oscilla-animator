@@ -5,7 +5,7 @@
 import { describe, it, expect } from "vitest";
 import { pass7BusLowering } from "../pass7-bus-lowering";
 import { IRBuilderImpl } from "../../ir/IRBuilderImpl";
-import type { Bus, Publisher, Domain } from "../../../types";
+import type { Bus, Publisher, Domain, BusCombineMode } from "../../../types";
 import type { UnlinkedIRFragments } from "../pass6-block-lowering";
 
 describe("Pass 7: Bus Lowering", () => {
@@ -35,7 +35,7 @@ describe("Pass 7: Bus Lowering", () => {
         category: "core",
         busEligible: true,
       },
-      combineMode: combineMode as Bus["combineMode"],
+      combine: { when: 'multi', mode: combineMode as BusCombineMode },
       defaultValue,
       sortKey: 0,
     };

@@ -157,6 +157,10 @@ export type CombinePolicy =
 
 /**
  * Bus interface - central typed signal distributors.
+ *
+ * Sprint: Multi-Input Cleanup - Bus/Slot CombinePolicy Unification (2026-01-01)
+ * Changed: combineMode: BusCombineMode → combine: CombinePolicy
+ * This unifies buses and slots to use the same combine policy type.
  */
 export interface Bus {
   /** Unique identifier for this bus */
@@ -168,8 +172,20 @@ export interface Bus {
   /** Type descriptor for this bus */
   readonly type: TypeDesc;
 
-  /** How to combine multiple publishers */
-  combineMode: BusCombineMode;
+  /**
+   * Combine policy for multiple publishers.
+   *
+   * Determines when and how to combine values from multiple publishers:
+   * - when: "multi" - Only combine when N >= 2 publishers (default)
+   * - when: "always" - Always reduce, even with single publisher (rare)
+   * - mode: Cannot be 'error' for buses (validated by semantic checker)
+   *
+   * Default: { when: 'multi', mode: 'last' }
+   *
+   * @see CombinePolicy for policy structure
+   * @see CombineMode for available modes
+   */
+  combine: CombinePolicy;
 
   /** Default value when no publishers (typed by domain) */
   defaultValue: unknown;

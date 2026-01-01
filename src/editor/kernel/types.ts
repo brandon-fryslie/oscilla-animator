@@ -113,7 +113,7 @@ export interface TxBuilder {
   removeWire(connectionId: string): void;
 
   // Bus Ops
-  addBus(spec: { name: string; type: import('../types').TypeDesc; combineMode: import('../types').BusCombineMode; defaultValue: unknown; sortKey?: number; id?: string }): string;
+  addBus(spec: { name: string; type: import('../types').TypeDesc; combine: import('../types').CombinePolicy; defaultValue: unknown; sortKey?: number; id?: string }): string;
   removeBus(busId: string): void;
   updateBus(busId: string, patch: Partial<import('../types').Bus>): void;
 

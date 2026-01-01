@@ -123,7 +123,7 @@ function createBus(id: string): Bus {
       category: "core",
       busEligible: true,
     },
-    combineMode: "last",
+    combine: { when: 'multi', mode: "last" },
     defaultValue: 0,
     sortKey: 0,
   };

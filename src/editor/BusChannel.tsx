@@ -82,7 +82,11 @@ export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelPro
   };
 
   const handleCombineModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    store.busStore.updateBus(bus.id, { combineMode: e.target.value as BusCombineMode });
+    const newMode = e.target.value as BusCombineMode;
+    // Update the combine policy, preserving the 'when' field
+    store.busStore.updateBus(bus.id, {
+      combine: { when: bus.combine.when, mode: newMode }
+    });
   };
 
   const handleDragStart = (e: React.DragEvent, publisherId: string) => {
@@ -136,6 +140,9 @@ export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelPro
     setDropTargetIndex(null);
   };
 
+  // Extract mode as string (for buses, it should always be a BusCombineMode string)
+  const currentMode = typeof bus.combine.mode === 'string' ? bus.combine.mode : 'last';
+
   return (
     <div
       className={`bus-channel ${isSelected ? 'selected' : ''}`}
@@ -180,7 +187,7 @@ export const BusChannel = observer(({ bus, isSelected, onSelect }: BusChannelPro
         <label className="bus-channel-combine-label">Combine:</label>
         <select
           className="bus-channel-combine-select"
-          value={bus.combineMode}
+          value={currentMode}
           onChange={handleCombineModeChange}
           onClick={(e) => e.stopPropagation()}
         >

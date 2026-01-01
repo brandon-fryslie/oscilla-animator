@@ -20,7 +20,7 @@ import type { PatchDocument, PortKey, ValidationResult } from './types';
 import { SemanticGraph } from './graph';
 import { createDiagnostic, type Diagnostic } from '../diagnostics/types';
 import { areSlotTypesCompatible } from './index';
-import type { SlotType } from '../types';
+import type { SlotType, BusCombineMode } from '../types';
 import {
   RESERVED_BUS_CONTRACTS,
   validateReservedBus,
@@ -442,7 +442,7 @@ export class Validator {
       const validationErrors = validateReservedBus(
         bus.name,
         bus.type,
-        bus.combineMode
+        bus.combine.mode as BusCombineMode
       );
 
       for (const validationError of validationErrors) {
@@ -580,7 +580,7 @@ export class Validator {
       // Validate combine mode compatibility with domain
       const compatibilityError = validateCombineModeCompatibility(
         bus.type.domain,
-        bus.combineMode
+        bus.combine.mode as BusCombineMode
       );
 
       if (compatibilityError) {
@@ -601,7 +601,7 @@ export class Validator {
               data: {
                 busName: bus.name,
                 domain: bus.type.domain,
-                combineMode: bus.combineMode,
+                combineMode: bus.combine.mode,
                 allowedModes: compatibilityError.expected,
               },
             },
@@ -701,7 +701,7 @@ export class Validator {
     }
 
     // Control-plane buses use 'last' combine mode
-    const controlBuses = patch.buses.filter((b) => b.combineMode === 'last');
+    const controlBuses = patch.buses.filter((b) => b.combine.mode === 'last');
 
     for (const bus of controlBuses) {
       const enabledPublishers = patch.publishers.filter(

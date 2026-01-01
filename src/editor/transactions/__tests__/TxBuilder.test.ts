@@ -494,7 +494,7 @@ describe('TxBuilder', () => {
             category: 'core',
             busEligible: true,
           },
-          combineMode: 'sum',
+          combine: { when: 'multi', mode: 'sum' },
           defaultValue: 0,
           sortKey: 0,
         };
@@ -607,7 +607,7 @@ describe('TxBuilder', () => {
             category: 'core',
             busEligible: true,
           },
-          combineMode: 'sum',
+          combine: { when: 'multi', mode: 'sum' },
           defaultValue: 0,
           sortKey: 0,
         };

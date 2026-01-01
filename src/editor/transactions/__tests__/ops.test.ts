@@ -73,7 +73,7 @@ describe('computeInverse', () => {
           category: 'core',
           busEligible: true,
         },
-        combineMode: 'sum',
+        combine: { when: 'multi', mode: 'sum' },
         defaultValue: 0,
         sortKey: 0,
       };
@@ -81,7 +81,7 @@ describe('computeInverse', () => {
       const nextBus: Bus = {
         ...prevBus,
         name: 'Updated Bus',
-        combineMode: 'average',
+        combine: { when: 'multi', mode: 'average' },
       };
 
       const op: Op = {
@@ -284,7 +284,7 @@ describe('computeInverse', () => {
         id: 'bus-1',
         name: 'Old',
         type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-        combineMode: 'sum',
+        combine: { when: 'multi', mode: 'sum' },
         defaultValue: 0,
         sortKey: 0,
       } as Bus;
@@ -373,7 +373,7 @@ describe('validateOp', () => {
       id: 'bus-1',
       name: 'Test',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'sum',
+      combine: { when: 'multi', mode: 'sum' },
       defaultValue: 0,
       sortKey: 0,
     };

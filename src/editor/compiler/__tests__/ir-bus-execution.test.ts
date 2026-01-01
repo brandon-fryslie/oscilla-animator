@@ -23,7 +23,7 @@
 import { describe, it, expect } from "vitest";
 import { pass7BusLowering } from "../passes/pass7-bus-lowering";
 import { IRBuilderImpl } from "../ir/IRBuilderImpl";
-import type { Bus, Publisher } from "../../types";
+import type { Bus, Publisher, BusCombineMode } from "../../types";
 import type { UnlinkedIRFragments } from "../passes/pass6-block-lowering";
 
 // ============================================================================
@@ -60,7 +60,7 @@ function createBus(
       category: "core",
       busEligible: true,
     },
-    combineMode: combineMode as Bus["combineMode"],
+    combine: { when: 'multi', mode: combineMode as BusCombineMode },
     defaultValue,
     sortKey: 0,
   };

@@ -24,7 +24,7 @@ function createCanonicalBuses(): Bus[] {
       id: 'phaseA',
       name: 'phaseA',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(primary)' },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     },
@@ -32,7 +32,7 @@ function createCanonicalBuses(): Bus[] {
       id: 'phaseB',
       name: 'phaseB',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(secondary)' },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     },
@@ -40,7 +40,7 @@ function createCanonicalBuses(): Bus[] {
       id: 'pulse',
       name: 'pulse',
       type: { world: 'event', domain: 'trigger', category: 'core', busEligible: true, semantics: 'pulse' },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: false,
       sortKey: 0,
     },
@@ -48,7 +48,7 @@ function createCanonicalBuses(): Bus[] {
       id: 'energy',
       name: 'energy',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'energy' },
-      combineMode: 'sum',
+      combine: { when: 'multi', mode: 'sum' },
       defaultValue: 0,
       sortKey: 0,
     },
@@ -220,7 +220,7 @@ describe('Field Bus Compilation', () => {
       id: 'fieldBus1',
       name: 'Test Field Bus',
       type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -282,7 +282,7 @@ describe('Field Bus Compilation', () => {
       id: 'fieldBus1',
       name: 'Sum Field Bus',
       type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'sum',
+      combine: { when: 'multi', mode: 'sum' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -331,7 +331,7 @@ describe('Field Bus Compilation', () => {
       id: 'fieldBus1',
       name: 'Last Field Bus',
       type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -379,7 +379,7 @@ describe('Field Bus Compilation', () => {
       id: 'fieldBus1',
       name: 'Empty Field Bus',
       type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 42, // Should produce constant field of 42
       sortKey: 0,
     };
@@ -421,7 +421,7 @@ describe('Field Bus Compilation', () => {
       id: 'fieldBus1',
       name: 'Average Field Bus',
       type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'average',
+      combine: { when: 'multi', mode: 'average' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -470,7 +470,7 @@ describe('Field Bus Compilation', () => {
       id: 'fieldBus1',
       name: 'Max Field Bus',
       type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'max',
+      combine: { when: 'multi', mode: 'max' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -519,7 +519,7 @@ describe('Field Bus Compilation', () => {
       id: 'fieldBus1',
       name: 'Min Field Bus',
       type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'min',
+      combine: { when: 'multi', mode: 'min' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -590,7 +590,7 @@ describe('Mixed Signal and Field Buses', () => {
       id: 'phaseA',
       name: 'Phase A',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -599,7 +599,7 @@ describe('Mixed Signal and Field Buses', () => {
       id: 'positions',
       name: 'Positions',
       type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     };

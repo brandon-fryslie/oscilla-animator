@@ -91,7 +91,7 @@ export type BusRemove = {
 export type BusUpdate = {
   op: 'BusUpdate';
   busId: string;
-  patch: Partial<Pick<Bus, 'name' | 'combineMode' | 'defaultValue' | 'sortKey'>>;
+  patch: Partial<Pick<Bus, 'name' | 'combine' | 'defaultValue' | 'sortKey'>>;
 };
 
 // =============================================================================

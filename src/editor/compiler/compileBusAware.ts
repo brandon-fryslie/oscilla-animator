@@ -30,7 +30,7 @@ import type {
   TimeModel,
   Vec2,
 } from './types';
-import type { Bus, Publisher, Listener, DefaultSourceState, PortRef } from '../types';
+import type { Bus, Publisher, Listener, DefaultSourceState, PortRef, BusCombineMode } from '../types';
 import { validateTimeRootConstraint } from './compile';
 import { extractTimeRootAutoPublications } from './blocks/domain/TimeRoot';
 // CRITICAL: Use busSemantics for ordering - single source of truth for UI and compiler
@@ -239,7 +239,7 @@ function validateReservedBuses(
     const validationErrors = validateReservedBus(
       bus.name,
       bus.type,
-      bus.combineMode
+      bus.combine.mode as BusCombineMode
     );
 
     for (const validationError of validationErrors) {
@@ -486,19 +486,19 @@ export function compileBusAwarePatch(
   for (const bus of buses) {
     if (isFieldBus(bus)) {
       // Field buses support more combine modes
-      if (!(FIELD_COMBINE_MODES as readonly string[]).includes(bus.combineMode)) {
+      if (!(FIELD_COMBINE_MODES as readonly string[]).includes(bus.combine.mode as BusCombineMode)) {
         errors.push({
           code: 'UnsupportedCombineMode',
-          message: `Combine mode "${bus.combineMode}" not supported for Field bus. Supported: ${FIELD_COMBINE_MODES.join(', ')}.`,
+          message: `Combine mode "${bus.combine.mode as BusCombineMode}" not supported for Field bus. Supported: ${FIELD_COMBINE_MODES.join(', ')}.`,
           where: { busId: bus.id },
         });
       }
     } else {
       // Signal buses only support last and sum
-      if (!(SIGNAL_COMBINE_MODES as readonly string[]).includes(bus.combineMode)) {
+      if (!(SIGNAL_COMBINE_MODES as readonly string[]).includes(bus.combine.mode as BusCombineMode)) {
         errors.push({
           code: 'UnsupportedCombineMode',
-          message: `Combine mode "${bus.combineMode}" not supported for Signal bus. Supported: ${SIGNAL_COMBINE_MODES.join(', ')}.`,
+          message: `Combine mode "${bus.combine.mode as BusCombineMode}" not supported for Signal bus. Supported: ${SIGNAL_COMBINE_MODES.join(', ')}.`,
           where: { busId: bus.id },
         });
       }
@@ -1085,9 +1085,9 @@ function getBusValue(
 
   // Combine artifacts using bus's combine mode - dispatch based on bus world
   if (isFieldBus(bus)) {
-    return combineFieldArtifacts(artifacts, bus.combineMode, bus.defaultValue);
+    return combineFieldArtifacts(artifacts, bus.combine.mode as BusCombineMode, bus.defaultValue);
   } else {
-    return combineSignalArtifacts(artifacts, bus.combineMode, bus.defaultValue);
+    return combineSignalArtifacts(artifacts, bus.combine.mode as BusCombineMode, bus.defaultValue);
   }
 }
 

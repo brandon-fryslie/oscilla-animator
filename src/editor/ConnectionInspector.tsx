@@ -10,7 +10,7 @@ import { useCallback, useMemo } from 'react';
 import { useStore } from './stores';
 import { InspectorContainer } from './components/InspectorContainer';
 import { describeSlotType } from './portUtils';
-import type { Connection, Publisher, Listener, Block, Slot, SlotType, TypeDesc, AdapterStep, LensDefinition, LensInstance } from './types';
+import type { Connection, Publisher, Listener, Block, Slot, SlotType, TypeDesc, AdapterStep, LensDefinition, LensInstance, BusCombineMode } from './types';
 import { parseRowKey, type TableCell, type TableRow, type TableColumn } from './modulation-table/types';
 import { findAdapterPath } from './adapters/autoAdapter';
 import { isDirectlyCompatible, SLOT_TYPE_TO_TYPE_DESC } from './types';
@@ -787,7 +787,7 @@ export const ConnectionInspector = observer(() => {
         busId: bus.id,
         name: bus.name,
         type: bus.type,
-        combineMode: bus.combineMode,
+        combineMode: bus.combine.mode as BusCombineMode,
         enabled: true,
         publisherCount: store.busStore.publishers.filter(p => p.busId === bus.id).length,
         listenerCount: store.busStore.listeners.filter(l => l.busId === bus.id).length,

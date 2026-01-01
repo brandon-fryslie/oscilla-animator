@@ -65,7 +65,6 @@ Cache runtime knowledge and patterns discovered during evaluations:
 
 ### Phase 0 Cleanup
 
-- **phase0-compat-cleanup.md** - Legacy code inventory after Phase 0
   - Confidence: FRESH (2026-01-01)
   - Scope: Phase 0.5 compatibility cleanup
   - Key findings: 7 categories of legacy code, removal sequence, 3-5 week effort

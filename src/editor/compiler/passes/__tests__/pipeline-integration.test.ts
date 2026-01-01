@@ -97,7 +97,7 @@ function createBus(id: string, name: string): Bus {
     id,
     name,
     type: { world: "signal", domain: "float" } as unknown as Bus["type"],
-    combineMode: "last",
+    combine: { when: 'multi', mode: "last" },
   } as Bus;
 }
 

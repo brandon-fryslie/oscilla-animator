@@ -15,7 +15,7 @@ import type {
   PatchKernel
 } from './types';
 import type { PatchDocument } from '../semantic/types';
-import type { Patch, Block, Connection, Bus, Publisher, Listener, PortRef, AdapterStep, LensInstance, TypeDesc, BusCombineMode } from '../types';
+import type { Patch, Block, Connection, Bus, Publisher, Listener, PortRef, AdapterStep, LensInstance, TypeDesc, CombinePolicy } from '../types';
 import { Validator } from '../semantic/validator';
 import { applyOp } from './applyOp';
 import type { Op } from './ops';
@@ -51,7 +51,7 @@ class TransactionBuilder implements TxBuilder {
       doc: this.stagedDoc as PatchDocument,
       // TODO: SemanticGraph incremental update not yet implemented.
       // For now, we return the base graph. Validation will rebuild graph from stagedDoc at commit time.
-      graph: this.kernel.graph, 
+      graph: this.kernel.graph,
     };
   }
 
@@ -67,7 +67,7 @@ class TransactionBuilder implements TxBuilder {
       // For now we allow it but warn or assume non-invertible.
       // In production, all ops MUST have inverses.
     }
-    
+
     // Apply to staged doc immediately to keep view consistent
     applyOp(this.stagedDoc, op);
   }
@@ -90,7 +90,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'BlockAdd', block };
     const inv: Op = { op: 'BlockRemove', blockId: id };
-    
+
     this.op(op, inv);
     return id;
   }
@@ -133,11 +133,11 @@ class TransactionBuilder implements TxBuilder {
   retypeBlock(blockId: string, nextType: string, remap?: { kind: 'byKey' | 'schema'; schemaId?: string }): void {
     const block = this.stagedDoc.blocks.find(b => b.id === blockId);
     if (block == null) return;
-    
+
     const prevType = block.type;
     const op: Op = { op: 'BlockRetype', blockId, nextType, remap };
     const inv: Op = { op: 'BlockRetype', blockId, nextType: prevType }; // TODO: inverse remap?
-    
+
     this.op(op, inv);
   }
 
@@ -148,7 +148,7 @@ class TransactionBuilder implements TxBuilder {
     const prevLabel = block.label;
     const op: Op = { op: 'BlockSetLabel', blockId, label };
     const inv: Op = { op: 'BlockSetLabel', blockId, label: prevLabel };
-    
+
     this.op(op, inv);
   }
 
@@ -164,7 +164,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'BlockPatchParams', blockId, patch };
     const inv: Op = { op: 'BlockPatchParams', blockId, patch: undoPatch };
-    
+
     this.op(op, inv);
   }
 
@@ -182,7 +182,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'WireAdd', connection };
     const inv: Op = { op: 'WireRemove', connectionId };
-    
+
     this.op(op, inv);
     return connectionId;
   }
@@ -193,7 +193,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'WireRemove', connectionId };
     const inv: Op = { op: 'WireAdd', connection: { ...conn } };
-    
+
     this.op(op, inv);
   }
 
@@ -207,7 +207,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'WireRetarget', connectionId, next };
     const inv: Op = { op: 'WireRetarget', connectionId, next: prev };
-    
+
     this.op(op, inv);
   }
 
@@ -215,13 +215,13 @@ class TransactionBuilder implements TxBuilder {
   // Bus Ops
   // ---------------------------------------------------------------------------
 
-  addBus(spec: { name: string; type: TypeDesc; combineMode: BusCombineMode; defaultValue: unknown; sortKey?: number; id?: string }): string {
+  addBus(spec: { name: string; type: TypeDesc; combine: CombinePolicy; defaultValue: unknown; sortKey?: number; id?: string }): string {
     const id = spec.id ?? randomUUID();
     const bus: Bus = {
       id,
       name: spec.name,
       type: spec.type,
-      combineMode: spec.combineMode,
+      combine: spec.combine,
       defaultValue: spec.defaultValue,
       sortKey: spec.sortKey ?? 0,
       origin: 'user'
@@ -229,7 +229,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'BusAdd', bus };
     const inv: Op = { op: 'BusRemove', busId: id };
-    
+
     this.op(op, inv);
     return id;
   }
@@ -250,7 +250,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'BusRemove', busId };
     const inv: Op = { op: 'BusAdd', bus: { ...bus } };
-    
+
     this.op(op, inv);
   }
 
@@ -265,7 +265,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'BusUpdate', busId, patch };
     const inv: Op = { op: 'BusUpdate', busId, patch: undoPatch };
-    
+
     this.op(op, inv);
   }
 
@@ -286,7 +286,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'PublisherAdd', publisher };
     const inv: Op = { op: 'PublisherRemove', publisherId: id };
-    
+
     this.op(op, inv);
     return id;
   }
@@ -297,7 +297,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'PublisherRemove', publisherId };
     const inv: Op = { op: 'PublisherAdd', publisher: { ...pub } };
-    
+
     this.op(op, inv);
   }
 
@@ -312,7 +312,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'PublisherUpdate', publisherId, patch };
     const inv: Op = { op: 'PublisherUpdate', publisherId, patch: undoPatch };
-    
+
     this.op(op, inv);
   }
 
@@ -329,7 +329,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'ListenerAdd', listener };
     const inv: Op = { op: 'ListenerRemove', listenerId: id };
-    
+
     this.op(op, inv);
     return id;
   }
@@ -340,7 +340,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'ListenerRemove', listenerId };
     const inv: Op = { op: 'ListenerAdd', listener: { ...list } };
-    
+
     this.op(op, inv);
   }
 
@@ -355,7 +355,7 @@ class TransactionBuilder implements TxBuilder {
 
     const op: Op = { op: 'ListenerUpdate', listenerId, patch };
     const inv: Op = { op: 'ListenerUpdate', listenerId, patch: undoPatch };
-    
+
     this.op(op, inv);
   }
 
@@ -385,10 +385,10 @@ class TransactionBuilder implements TxBuilder {
     for (const key of Object.keys(patch)) {
       undoPatch[key] = settings?.[key];
     }
-    
+
     const op: Op = { op: 'PatchSettingsUpdate', patch };
     const inv: Op = { op: 'PatchSettingsUpdate', patch: undoPatch };
-    
+
     this.op(op, inv);
   }
 

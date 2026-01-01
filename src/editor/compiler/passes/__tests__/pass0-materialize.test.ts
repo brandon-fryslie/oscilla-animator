@@ -78,7 +78,7 @@ function createBus(id: string, world: string = 'signal', domain: Domain = 'float
       category: 'core',
       busEligible: true,
     },
-    combineMode: 'last',
+    combine: { when: 'multi', mode: 'last' },
     defaultValue: 0,
     sortKey: 0,
   };

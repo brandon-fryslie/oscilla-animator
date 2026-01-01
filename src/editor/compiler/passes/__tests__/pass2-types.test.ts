@@ -93,7 +93,7 @@ function createBus(
     id,
     name,
     type: type as unknown as import("../../../types").Bus["type"], // Cast to match editor TypeDesc
-    combineMode: "last",
+    combine: { when: 'multi', mode: "last" },
     defaultValue: 0,
     sortKey: 0,
     ...overrides,

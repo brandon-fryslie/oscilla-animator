@@ -12,7 +12,7 @@
 import { makeObservable, observable, computed, action } from 'mobx';
 import type { RootStore } from '../stores/RootStore';
 import { SLOT_TYPE_TO_TYPE_DESC, isDirectlyCompatible } from '../types';
-import type { TypeDesc, Slot, Listener, Publisher, LensDefinition, LensInstance, AdapterStep } from '../types';
+import type { TypeDesc, Slot, Listener, Publisher, LensDefinition, LensInstance, AdapterStep, BusCombineMode } from '../types';
 import { findAdapterPath } from '../adapters/autoAdapter';
 import { getBlockDefinition } from '../blocks/registry';
 import {
@@ -346,7 +346,7 @@ export class ModulationTableStore {
         busId: bus.id,
         name: bus.name,
         type: bus.type,
-        combineMode: bus.combineMode,
+        combineMode: bus.combine.mode as BusCombineMode,
         enabled: true, // TODO: Add bus enabled state
         publisherCount: publisherIds.length,
         listenerCount: listenerIds.length,

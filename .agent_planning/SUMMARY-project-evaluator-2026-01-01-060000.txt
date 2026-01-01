@@ -1,0 +1,37 @@
+Agent: project-evaluator | 2026-01-01-060000
+Scope: phase0.5-compat-cleanup/remaining-work
+Completion: 35% | Gaps: 5 sprints + 2 tracks | Status: BROKEN
+Reused: 4 findings from STATUS-2026-01-01.md
+Fresh: TypeScript compilation errors (52), Track B breakage analysis
+Cache updated: None (evaluation only)
+Ambiguities: 4 found (Track B deletion intent, type definition changes)
+Workflow: PAUSE - Fix 52 TypeScript errors before proceeding
+
+CRITICAL FINDINGS:
+- TypeScript build BROKEN: 52 compilation errors
+- Track B claimed "100% complete" but missing migration files
+- transforms/index.ts imports deleted migrateLenses/migrateAdapters
+- Bus.combineMode property errors (19 test files)
+- LensParamBinding.type property errors (13 test cases)
+
+BLOCKER: Cannot run tests until TS errors fixed
+
+IMMEDIATE ACTION REQUIRED:
+1. Remove transforms/index.ts:18-19 (import missing files)
+2. Fix Bus type usage (combineMode vs combine?)
+3. Fix LensParamBinding type in tests
+4. Verify Track B actual completion status
+
+REMAINING WORK:
+- Sprint 1 (Edges Authoritative): 70% remaining (4-5 days)
+- Track A (Transform Storage): 20% remaining (2-3 days)
+- Sprint 2 (Compiler Edges-Only): 100% remaining (5-7 days)
+- Sprint 3 (Remove Migration Helpers): 100% remaining (1 day)
+- Sprint 4 (Clean Type Definitions): 100% remaining (3-5 days)
+- Sprint 5 (PatchStore Cleanup): 100% remaining (3-5 days)
+
+TOTAL EFFORT: 3-4 weeks after fixes
+
+-> NEXT: Fix TypeScript compilation (2-4 hours)
+-> THEN: Complete Sprint 1 + Track A
+-> SEQUENCE: Sprint 2 → 3 → 4 → 5

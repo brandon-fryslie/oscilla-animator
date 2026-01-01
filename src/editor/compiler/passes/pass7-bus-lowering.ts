@@ -274,7 +274,7 @@ function lowerBusToCombineNode(
   }
 
   // Use shared createCombineNode() for all worlds
-  const combineMode = bus.combineMode;
+  const combineMode = bus.combine.mode;
   const combinedRef = createCombineNode(
     combineMode,
     inputs,

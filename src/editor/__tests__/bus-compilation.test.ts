@@ -24,7 +24,7 @@ function createCanonicalBuses(): Bus[] {
       id: 'phaseA',
       name: 'phaseA',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(primary)' },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     },
@@ -32,7 +32,7 @@ function createCanonicalBuses(): Bus[] {
       id: 'phaseB',
       name: 'phaseB',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(secondary)' },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     },
@@ -40,7 +40,7 @@ function createCanonicalBuses(): Bus[] {
       id: 'pulse',
       name: 'pulse',
       type: { world: 'event', domain: 'trigger', category: 'core', busEligible: true, semantics: 'pulse' },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: false,
       sortKey: 0,
     },
@@ -48,7 +48,7 @@ function createCanonicalBuses(): Bus[] {
       id: 'energy',
       name: 'energy',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'energy' },
-      combineMode: 'sum',
+      combine: { when: 'multi', mode: 'sum' },
       defaultValue: 0,
       sortKey: 0,
     },
@@ -156,7 +156,7 @@ describe('Bus Compilation - Happy Path', () => {
       id: 'bus1',
       name: 'Test Bus',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -210,7 +210,7 @@ describe('Bus Compilation - Happy Path', () => {
       id: 'bus1',
       name: 'Empty Bus',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 99, // Should return this
       sortKey: 0,
     };
@@ -257,7 +257,7 @@ describe('Bus Compilation - Happy Path', () => {
       id: 'bus1',
       name: 'Multi Publisher Bus',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -305,7 +305,7 @@ describe('Bus Compilation - Happy Path', () => {
       id: 'bus1',
       name: 'Sum Bus',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'sum',
+      combine: { when: 'multi', mode: 'sum' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -358,7 +358,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
       id: 'bus1',
       name: 'Tie Bus',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -405,7 +405,7 @@ describe('Bus Compilation - sortKey Determinism', () => {
       id: 'bus1',
       name: 'Test Bus',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'last',
+      combine: { when: 'multi', mode: 'last' },
       defaultValue: 0,
       sortKey: 0,
     };
@@ -486,7 +486,7 @@ describe('Bus Compilation - Error Handling', () => {
       id: 'bus1',
       name: 'Average Bus',
       type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-      combineMode: 'average', // Not supported for Signal buses (only Field buses)
+      combine: { when: 'multi', mode: 'average' }, // Not supported for Signal buses (only Field buses)
       defaultValue: 0,
       sortKey: 0,
     };
