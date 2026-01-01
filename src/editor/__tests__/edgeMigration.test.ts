@@ -79,8 +79,7 @@ describe('Connection → Edge Conversion', () => {
     expect(edge.from).toEqual({ kind: 'port', blockId: 'a', slotId: 'out' });
     expect(edge.to).toEqual({ kind: 'port', blockId: 'b', slotId: 'in' });
     expect(edge.enabled).toBe(true); // Default when undefined
-    expect(edge.lensStack).toBeUndefined();
-    expect(edge.adapterChain).toBeUndefined();
+    expect(edge.transforms).toEqual([]);
   });
 
   it('converts connection with all optional fields', () => {
@@ -96,10 +95,15 @@ describe('Connection → Edge Conversion', () => {
     const edge = connectionToEdge(conn);
 
     expect(edge.enabled).toBe(false);
-    expect(edge.lensStack).toHaveLength(1);
-    expect(edge.lensStack?.[0].lensId).toBe('lens1');
-    expect(edge.adapterChain).toHaveLength(1);
-    expect(edge.adapterChain?.[0].adapterId).toBe('adapter1');
+    // Transforms field contains: adapters first, then lenses
+    expect(edge.transforms).toHaveLength(2);
+    // First is the adapter
+    expect(edge.transforms?.[0]).toEqual({ adapterId: 'adapter1', params: {} });
+    // Second is the lens (wrapped with kind: 'lens')
+    expect(edge.transforms?.[1]).toEqual({
+      kind: 'lens',
+      lens: { lensId: 'lens1', params: {}, enabled: true },
+    });
   });
 });
 
@@ -150,8 +154,11 @@ describe('Publisher → Edge Conversion', () => {
 
     const edge = publisherToEdge(pub);
 
-    expect(edge.lensStack).toHaveLength(1);
-    expect(edge.lensStack?.[0].lensId).toBe('scale');
+    expect(edge.transforms).toHaveLength(1);
+    expect(edge.transforms?.[0]).toEqual({
+      kind: 'lens',
+      lens: { lensId: 'scale', params: {}, enabled: true },
+    });
   });
 });
 
@@ -187,9 +194,15 @@ describe('Listener → Edge Conversion', () => {
     const edge = listenerToEdge(listener);
 
     expect(edge.enabled).toBe(false);
-    expect(edge.lensStack).toHaveLength(2);
-    expect(edge.lensStack?.[0].lensId).toBe('scale');
-    expect(edge.lensStack?.[1].lensId).toBe('offset');
+    expect(edge.transforms).toHaveLength(2);
+    expect(edge.transforms?.[0]).toEqual({
+      kind: 'lens',
+      lens: { lensId: 'scale', params: {}, enabled: true },
+    });
+    expect(edge.transforms?.[1]).toEqual({
+      kind: 'lens',
+      lens: { lensId: 'offset', params: {}, enabled: true },
+    });
   });
 });
 
@@ -239,21 +252,24 @@ describe('Edge → Connection Conversion', () => {
     expect(conn).toBeNull();
   });
 
-  it('preserves lens stack and adapter chain', () => {
+  it('does not copy transforms to legacy Connection type', () => {
     const edge: Edge = {
       id: 'e4',
       from: { kind: 'port', blockId: 'a', slotId: 'out' },
       to: { kind: 'port', blockId: 'b', slotId: 'in' },
       enabled: false,
-      lensStack: [{ lensId: 'lens1', params: {}, enabled: true }],
-      adapterChain: [{ adapterId: 'adapter1', params: {} }],
+      transforms: [
+        { adapterId: 'adapter1', params: {} },
+        { kind: 'lens', lens: { lensId: 'lens1', params: {}, enabled: true } },
+      ],
     };
 
     const conn = edgeToConnection(edge);
 
-    expect(conn?.lensStack).toHaveLength(1);
-    expect(conn?.adapterChain).toHaveLength(1);
+    // Legacy Connection type doesn't receive transforms - it's deprecated
     expect(conn?.enabled).toBe(false);
+    expect(conn?.lensStack).toBeUndefined();
+    expect(conn?.adapterChain).toBeUndefined();
   });
 });
 

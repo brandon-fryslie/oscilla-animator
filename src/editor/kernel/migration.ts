@@ -49,16 +49,16 @@ import { convertToEdges } from '../edgeMigration';
  */
 export function migratePatchToEdges(patch: Patch): Patch {
   // Already migrated? Check if edges array exists and is populated
-  if (patch.edges && patch.edges.length > 0) {
+  if (patch.edges != null && patch.edges.length > 0) {
     // Patch already has edges, no migration needed
     return patch;
   }
 
   // Check if there are any legacy connections to migrate
   const hasLegacyConnections =
-    (patch.connections && patch.connections.length > 0) ||
-    (patch.publishers && patch.publishers.length > 0) ||
-    (patch.listeners && patch.listeners.length > 0);
+    patch.connections.length > 0 ||
+    patch.publishers.length > 0 ||
+    patch.listeners.length > 0;
 
   if (!hasLegacyConnections) {
     // No legacy connections and no edges - this is a fresh/empty patch
@@ -92,13 +92,13 @@ export function migratePatchToEdges(patch: Patch): Patch {
  * @returns True if the patch needs migration (has legacy connections but no edges)
  */
 export function patchNeedsMigration(patch: Patch): boolean {
-  const hasEdges = patch.edges && patch.edges.length > 0;
+  const hasEdges = patch.edges != null && patch.edges.length > 0;
   const hasLegacyConnections =
-    (patch.connections && patch.connections.length > 0) ||
-    (patch.publishers && patch.publishers.length > 0) ||
-    (patch.listeners && patch.listeners.length > 0);
+    patch.connections.length > 0 ||
+    patch.publishers.length > 0 ||
+    patch.listeners.length > 0;
 
-  return !hasEdges && hasLegacyConnections;
+  return !hasEdges && Boolean(hasLegacyConnections);
 }
 
 /**

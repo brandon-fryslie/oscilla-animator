@@ -111,8 +111,8 @@ export function convertBlockToBus(block: Block): Bus {
   }
 
   return {
-    id: busId as string,
-    name: busName as string,
+    id: busId,
+    name: busName,
     type: busType as TypeDesc,
     combine: combine as Bus['combine'],
     defaultValue,

@@ -153,7 +153,8 @@ export class ModulationTableStore {
   get rows(): readonly TableRow[] {
     const rows: TableRow[] = [];
 
-    for (const block of this.root.patchStore.blocks) {
+    // Use userBlocks to exclude hidden blocks (like BusBlocks)
+    for (const block of this.root.patchStore.userBlocks) {
       const blockDef = getBlockDefinition(block.type);
       if (!blockDef) continue;
 

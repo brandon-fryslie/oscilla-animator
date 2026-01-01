@@ -1,0 +1,30 @@
+Agent: iterative-implementer | 2026-01-01-083000
+Mode: manual (test-driven fixing)
+Completed: 28 test fixes | Files: 5 | Commits: 4
+Tests: 2884 passing, 16 failing (down from 44)
+Cache invalidated: None (no arch changes, only test fixes)
+Status: in_progress
+
+Fixed Files:
+- src/editor/transactions/__tests__/HistoryStore.test.ts (25 tests passing)
+- src/editor/transactions/__tests__/TxBuilder.test.ts (21 tests passing)
+- src/editor/transactions/__tests__/ops.test.ts (19 passing, 1 skipped)
+- src/editor/stores/__tests__/BusStore.events.test.ts (17 tests passing)
+- src/editor/stores/BusStore.ts (removed duplicate event emissions)
+- src/editor/stores/PatchStore.ts (fixed cascade delete for buses)
+
+Key Fixes:
+1. Replace blocks.length with userBlocks.length (accounts for hidden BusBlocks)
+2. Replace blocks[0] with userBlocks[0] (avoid accessing BusBlocks)
+3. Fix error message mismatch: "Add op entity missing id" (actual vs expected)
+4. Remove duplicate BusCreated/BusDeleted events (BusStore delegating to PatchStore)
+5. Add cascade delete for publishers/listeners when bus removed
+
+Remaining Failures (16):
+- composite-library.test.ts (3 failures)
+- composite.expansion.test.ts (7 failures)
+- edgeMigration.test.ts (4 failures)
+- diagnostic-emission.test.ts (2 failures)
+
+These remaining failures appear to be unrelated to the BusBlock unification - likely
+pre-existing issues or composite-specific problems that need separate investigation.

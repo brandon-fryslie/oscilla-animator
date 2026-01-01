@@ -67,7 +67,7 @@ export function connectionToEdge(conn: Connection): Edge {
     from,
     to,
     enabled: conn.enabled ?? true,
-    transforms: convertLegacyTransforms(undefined, undefined),
+    transforms: convertLegacyTransforms(conn.lensStack, conn.adapterChain),
   };
 
   validateEdge(edge);
@@ -99,7 +99,7 @@ export function publisherToEdge(pub: Publisher): Edge {
     enabled: pub.enabled,
     weight: pub.weight,
     sortKey: pub.sortKey,
-    transforms: convertLegacyTransforms(undefined, undefined),
+    transforms: convertLegacyTransforms(pub.lensStack, pub.adapterChain),
   };
 
   validateEdge(edge);
@@ -129,7 +129,7 @@ export function listenerToEdge(listener: Listener): Edge {
     from,
     to,
     enabled: listener.enabled,
-    transforms: convertLegacyTransforms(undefined, undefined),
+    transforms: convertLegacyTransforms(listener.lensStack, listener.adapterChain),
   };
 
   validateEdge(edge);

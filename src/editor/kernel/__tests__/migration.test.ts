@@ -229,7 +229,7 @@ describe('Patch Migration', () => {
       });
     });
 
-    it('should preserve edge metadata (lensStack, adapterChain)', () => {
+    it('should preserve edge metadata (transforms)', () => {
       const connection: Connection = {
         id: 'c1',
         from: { blockId: 'a', slotId: 'out', direction: 'output' },
@@ -253,10 +253,13 @@ describe('Patch Migration', () => {
 
       const migrated = migratePatchToEdges(patch);
 
+      // Edge uses unified transforms field (adapters first, then lenses)
       expect(migrated.edges![0]).toMatchObject({
         id: 'c1',
-        lensStack: [{ lensId: "mul", params: { factor: { kind: "literal", value: 2 } }, enabled: true }],
-        adapterChain: [{ adapterId: 'float-to-vec2', params: {} }],
+        transforms: [
+          { adapterId: 'float-to-vec2', params: {} },
+          { kind: 'lens', lens: { lensId: "mul", params: { factor: { kind: "literal", value: 2 } }, enabled: true } },
+        ],
       });
     });
 
@@ -438,7 +441,7 @@ describe('Patch Migration', () => {
   });
 
   describe('Roundtrip Conversion', () => {
-    it('should preserve all data through legacy→edges→legacy conversion', () => {
+    it('should preserve all data through legacy→edges conversion', () => {
       const originalConnection: Connection = {
         id: 'c1',
         from: { blockId: 'osc', slotId: 'wave', direction: 'output' },
@@ -463,12 +466,14 @@ describe('Patch Migration', () => {
       // Migrate to edges
       const migrated = migratePatchToEdges(patch);
 
-      // Verify edge preserves all metadata
+      // Verify edge preserves all metadata (now using transforms field)
       expect(migrated.edges![0]).toMatchObject({
         id: 'c1',
         enabled: true,
-        lensStack: [{ lensId: "mul", params: { factor: { kind: "literal", value: 0.5 } }, enabled: true }],
-        adapterChain: [{ adapterId: 'float-to-vec2' }],
+        transforms: [
+          { adapterId: 'float-to-vec2', params: {} },
+          { kind: 'lens', lens: { lensId: "mul", params: { factor: { kind: "literal", value: 0.5 } }, enabled: true } },
+        ],
       });
 
       // Original connection should still be present for backward compat

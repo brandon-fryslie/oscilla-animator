@@ -195,8 +195,8 @@ describe('convertToLegacyTransforms', () => {
     expect(result.adapterChain[1]).toEqual(transforms[2]);
 
     expect(result.lensStack).toHaveLength(2);
-    expect(result.lensStack[0]).toEqual((transforms[1] as any).lens);
-    expect(result.lensStack[1]).toEqual((transforms[3] as any).lens);
+    expect(result.lensStack[0]).toEqual((transforms[1] as { kind: 'lens'; lens: LensInstance }).lens);
+    expect(result.lensStack[1]).toEqual((transforms[3] as { kind: 'lens'; lens: LensInstance }).lens);
   });
 
   it('preserves all lens metadata during conversion', () => {
