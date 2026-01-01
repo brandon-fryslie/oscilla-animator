@@ -268,6 +268,74 @@ export const DSConstFieldColor = createBlock({
 });
 
 /**
+ * DSConstScalarFloat - Constant provider for Scalar:float inputs
+ */
+export const DSConstScalarFloat = createBlock({
+  type: 'DSConstScalarFloat',
+  label: 'Constant (Scalar:float)',
+  description: 'Hidden provider block for Scalar:float default sources',
+  capability: 'pure',
+  compileKind: 'operator',
+
+  inputs: [
+    input('value', 'Value', 'Scalar:float', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'scalar',
+        uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 },
+      },
+    }),
+  ],
+
+  outputs: [
+    output('out', 'Output', 'Scalar:float'),
+  ],
+
+  tags: {
+    role: 'defaultSourceProvider',
+    hidden: true,
+  },
+
+  color: '#6B7280',
+  priority: 1000,
+});
+
+/**
+ * DSConstScalarInt - Constant provider for Scalar:int inputs
+ */
+export const DSConstScalarInt = createBlock({
+  type: 'DSConstScalarInt',
+  label: 'Constant (Scalar:int)',
+  description: 'Hidden provider block for Scalar:int default sources',
+  capability: 'pure',
+  compileKind: 'operator',
+
+  inputs: [
+    input('value', 'Value', 'Scalar:int', {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'scalar',
+        uiHint: { kind: 'slider', min: -100, max: 100, step: 1 },
+      },
+    }),
+  ],
+
+  outputs: [
+    output('out', 'Output', 'Scalar:int'),
+  ],
+
+  tags: {
+    role: 'defaultSourceProvider',
+    hidden: true,
+  },
+
+  color: '#6B7280',
+  priority: 1000,
+});
+
+/**
  * DSConstScalarString - Constant provider for Scalar:string inputs
  */
 export const DSConstScalarString = createBlock({

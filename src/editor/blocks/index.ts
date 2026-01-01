@@ -21,6 +21,9 @@ export * from './field-primitives';
 // Re-export macro blocks (Slice demos)
 export * from './macros';
 
+// Re-export default source provider blocks (hidden compile-time blocks)
+export * from './default-source-providers';
+
 // Re-export all registry functions
 export * from './registry';
 
