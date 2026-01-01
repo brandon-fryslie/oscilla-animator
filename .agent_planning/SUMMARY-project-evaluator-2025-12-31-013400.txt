@@ -1,7 +1,7 @@
 Agent: project-evaluator | 2025-12-31-013400
-Scope: project/debug-export-workstream7
-Completion: 85% | Gaps: 1 (test fixtures) | Test Quality: 4/5
-Reused: Previous evaluation (corrected major errors) | Fresh: File inspection + runtime check
-Cache updated: None (no new stable knowledge)
-Ambiguities: 0 found | Workflow: CONTINUE
-Next: Fix test fixtures (add debugProbes: [] to 6 mock objects in state-offset-resolution.test.ts)
+Scope: project/time-event-semantics
+Completion: 60% | Gaps: 3 | Test Quality: 3/5
+Reused: 0 findings | Fresh: All findings new
+Cache updated: None (first evaluation)
+Ambiguities: 4 found | Workflow: CONTINUE
+-> Fix test compilation errors, implement EventStore, add scrub mode, clarify InfiniteTimeRoot semantics
