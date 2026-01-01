@@ -8,10 +8,56 @@
  */
 
 import type { TransformScope } from './types';
-import type { TypeDesc } from '../types';
-import { TRANSFORM_REGISTRY, isAdapterTransform, isLensTransform, type TransformDef } from './TransformRegistry';
-import type { AdapterDef } from '../adapters/AdapterRegistry';
-import type { LensDef } from '../lenses/LensRegistry';
+import type { TypeDesc, CoreDomain, AdapterPolicy, AdapterCost } from '../types';
+import type { Artifact } from '../compiler/types';
+import type { CompileCtx } from '../compiler/types';
+import type { ValueRefPacked } from '../compiler/passes/pass6-block-lowering';
+import type { IRBuilder } from '../compiler/ir/IRBuilder';
+import { TRANSFORM_REGISTRY, isAdapterTransform, isLensTransform, type TransformDef, type LensParamSpec } from './TransformRegistry';
+
+// =============================================================================
+// Backward Compatibility Types
+// =============================================================================
+
+/**
+ * Adapter definition (backward compatibility type).
+ * @deprecated Use TransformDef with kind='adapter' instead
+ */
+export interface AdapterDef {
+  id: string;
+  label: string;
+  policy: AdapterPolicy;
+  cost: AdapterCost;
+  from: TypeDesc;
+  to: TypeDesc;
+  apply?: (artifact: Artifact, params: Record<string, unknown>, ctx: CompileCtx) => Artifact;
+  compileToIR?: (input: ValueRefPacked, ctx: { builder: IRBuilder }) => ValueRefPacked | null;
+}
+
+/**
+ * Lens scope type (backward compatibility).
+ */
+export type LensScope = 'wire' | 'publisher' | 'listener' | 'lensParam';
+
+/**
+ * Lens definition (backward compatibility type).
+ * @deprecated Use TransformDef with kind='lens' instead
+ */
+export interface LensDef {
+  id: string;
+  label: string;
+  domain: CoreDomain;
+  allowedScopes: LensScope[];
+  params: Record<string, LensParamSpec>;
+  costHint?: 'cheap' | 'medium' | 'heavy';
+  stabilityHint?: 'scrubSafe' | 'transportOnly' | 'either';
+  apply?: (value: Artifact, params: Record<string, Artifact>) => Artifact;
+  compileToIR?: (input: ValueRefPacked, params: Record<string, ValueRefPacked>, ctx: { builder: IRBuilder }) => ValueRefPacked | null;
+}
+
+// =============================================================================
+// Catalog Functions
+// =============================================================================
 
 /**
  * List all registered adapters.

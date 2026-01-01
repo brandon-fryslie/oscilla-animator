@@ -18,6 +18,7 @@ import type {
   Listener,
   PortRef,
 } from './types';
+import { convertLegacyTransforms } from './transforms/migrate';
 
 // =============================================================================
 // Validation
@@ -68,6 +69,7 @@ export function connectionToEdge(conn: Connection): Edge {
     lensStack: conn.lensStack,
     adapterChain: conn.adapterChain,
     enabled: conn.enabled ?? true,
+    transforms: convertLegacyTransforms(conn.lensStack, conn.adapterChain),
   };
 
   validateEdge(edge);
@@ -101,6 +103,7 @@ export function publisherToEdge(pub: Publisher): Edge {
     enabled: pub.enabled,
     weight: pub.weight,
     sortKey: pub.sortKey,
+    transforms: convertLegacyTransforms(pub.lensStack, pub.adapterChain),
   };
 
   validateEdge(edge);
@@ -132,6 +135,7 @@ export function listenerToEdge(listener: Listener): Edge {
     lensStack: listener.lensStack,
     adapterChain: listener.adapterChain,
     enabled: listener.enabled,
+    transforms: convertLegacyTransforms(listener.lensStack, listener.adapterChain),
   };
 
   validateEdge(edge);
