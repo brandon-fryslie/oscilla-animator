@@ -18,7 +18,7 @@
  * - HANDOFF.md Topic 1: SignalExpr Runtime
  */
 
-import type { SignalExprIR } from "../../compiler/ir/signalExpr";
+import type { SignalExprIR, LegacyClosureContext } from "../../compiler/ir/signalExpr";
 import { asTypeDesc } from "../../compiler/ir/types";
 import type { SigExprId, TypeDesc } from "../../compiler/ir/types";
 import type { PureFnRef } from "../../compiler/ir/transforms";
@@ -111,6 +111,27 @@ export interface SignalExprBuilder {
   sigZip(a: SigExprId, b: SigExprId, fn: PureFnRef): SigExprId;
 
   /**
+   * Create closure node - embed V1 closure for V2 adapter.
+   *
+   * TEMPORARY: Used by V2 adapter to wrap V1 artifact closures as IR nodes.
+   * This enables V1→V2→V1 block chains during migration.
+   *
+   * @param closureFn - V1 closure function (tAbsMs, ctx) => number
+   * @param type - Type descriptor for the signal
+   * @returns Signal expression ID
+   *
+   * @example
+   * ```typescript
+   * const v1Closure = (tAbsMs: number, ctx: LegacyClosureContext) => Math.sin(tAbsMs / 1000);
+   * const closureId = builder.closureNode(v1Closure, { world: "signal", domain: "float" });
+   * ```
+   *
+   * References:
+   * - .agent_planning/phase0-architecture-refactoring/PLAN-2025-12-31-170000-sprint3-v2-adapter.md §1
+   */
+  closureNode(closureFn: (tAbsMs: number, ctx: LegacyClosureContext) => number, type: TypeDesc): SigExprId;
+
+  /**
    * Build final result with root node.
    *
    * @param rootId - Root node ID (typically the output node)
@@ -198,6 +219,16 @@ class SignalExprBuilderImpl implements SignalExprBuilder {
       a,
       b,
       fn,
+    });
+    return id;
+  }
+
+  closureNode(closureFn: (tAbsMs: number, ctx: LegacyClosureContext) => number, type: TypeDesc): SigExprId {
+    const id = this.nodes.length;
+    this.nodes.push({
+      kind: "closure",
+      type,
+      closureFn,
     });
     return id;
   }
