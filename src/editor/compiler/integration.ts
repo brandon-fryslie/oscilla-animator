@@ -19,6 +19,7 @@ import { registerAllComposites, getCompositeCompilers } from '../composite-bridg
 import { createDiagnostic, type Diagnostic, type DiagnosticCode, type TargetRef } from '../diagnostics/types';
 import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from '../defaultSources/allowlist';
 import { materializeDefaultSources } from './passes/pass0-materialize';
+import { getFeatureFlags } from './featureFlags';
 
 // =============================================================================
 // Diagnostic Conversion
@@ -1075,8 +1076,8 @@ export function createCompilerService(store: RootStore): CompilerService {
         }
 
         const seed: Seed = store.uiStore.settings.seed;
-        // Always emit IR - the new compiler is the only compiler for debugging
-        const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+        // Use feature flag to control IR emission (legacy mode when emitIR=false)
+        const result = compilePatch(patch, registry, seed, ctx, { emitIR: getFeatureFlags().emitIR });
 
         const durationMs = performance.now() - startTime;
 

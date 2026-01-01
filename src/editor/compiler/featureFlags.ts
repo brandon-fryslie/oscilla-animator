@@ -25,6 +25,15 @@ export interface CompilerFeatureFlags {
    * When false, compiler infers TimeModel from legacy time blocks or uses infinite default.
    */
   requireTimeRoot: boolean;
+
+  /**
+   * Enable IR compilation alongside closure compilation.
+   * When true, compiler emits IR in addition to closures.
+   * When false, compiler only produces closures (legacy mode).
+   *
+   * Toggle this to false to temporarily disable IR compilation for debugging.
+   */
+  emitIR: boolean;
 }
 
 /**
@@ -35,6 +44,7 @@ const DEFAULT_FLAGS: CompilerFeatureFlags = {
   strictStateValidation: true,
   timeCtxPropagation: true,
   requireTimeRoot: true,
+  emitIR: false, // Temporarily disabled - set to true to enable IR compilation
 };
 
 /**
@@ -74,6 +84,7 @@ export function enableUnifiedArchitecture(): void {
     strictStateValidation: true,
     timeCtxPropagation: true,
     requireTimeRoot: true,
+    emitIR: true,
   };
 }
 

@@ -1,0 +1,7 @@
+Agent: work-evaluator | 2026-01-01-032834
+Scope: work/sprint3-v2-adapter
+Verdict: COMPLETE
+Criteria: 3/3 working | Breaks found: 0 | Ambiguities: 0
+Previous issues: N/A (first evaluation)
+Missing checks: 0 specified
+Cache updated: runtime-v2-adapter.md, INDEX.md

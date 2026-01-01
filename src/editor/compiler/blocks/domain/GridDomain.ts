@@ -43,11 +43,11 @@ const lowerGridDomain: BlockLowerFn = ({ ctx, config }) => {
     originY?: float;
   } | undefined;
 
-  const rows: int = Math.max(1, Math.floor(Number(configData?.rows ?? 10)));
-  const cols: int = Math.max(1, Math.floor(Number(configData?.cols ?? 10)));
-  const spacing: float = Number(configData?.spacing ?? 20);
-  const originX: float = Number(configData?.originX ?? 100);
-  const originY: float = Number(configData?.originY ?? 100);
+  const rows: int = Math.max(1, Math.floor(Number(configData?.rows)));
+  const cols: int = Math.max(1, Math.floor(Number(configData?.cols)));
+  const spacing: float = Number(configData?.spacing);
+  const originX: float = Number(configData?.originX);
+  const originY: float = Number(configData?.originY);
 
   const elementCount: int = rows * cols;
 
@@ -140,11 +140,11 @@ export const GridDomainBlock: BlockCompiler = {
   type: 'GridDomain',
 
   inputs: [
-    { name: 'rows', type: { kind: 'Scalar:int' }, required: false },
-    { name: 'cols', type: { kind: 'Scalar:int' }, required: false },
-    { name: 'spacing', type: { kind: 'Signal:float' }, required: false },
-    { name: 'originX', type: { kind: 'Signal:float' }, required: false },
-    { name: 'originY', type: { kind: 'Signal:float' }, required: false },
+    { name: 'rows', type: { kind: 'Scalar:int' }, required: true },
+    { name: 'cols', type: { kind: 'Scalar:int' }, required: true },
+    { name: 'spacing', type: { kind: 'Signal:float' }, required: true },
+    { name: 'originX', type: { kind: 'Signal:float' }, required: true },
+    { name: 'originY', type: { kind: 'Signal:float' }, required: true },
   ],
 
   outputs: [
@@ -155,6 +155,8 @@ export const GridDomainBlock: BlockCompiler = {
   compile({ id, inputs, params }) {
     // Helper to extract numeric value from Scalar or Signal artifacts, with default fallback
     const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
+      console.log("#$####### etract ahndler")
+      console.log(artifact)
       if (artifact === undefined) return defaultValue;
       if (artifact.kind === 'Scalar:int' || artifact.kind === 'Scalar:float') {
         return Number(artifact.value);
@@ -176,12 +178,12 @@ export const GridDomainBlock: BlockCompiler = {
 
     // Read from inputs with defaults matching IR lowering
     // Support both new (inputs) and old (params) parameter systems
-    const paramsObj = params as { rows?: int; cols?: int; spacing?: float; originX?: float; originY?: float } | undefined;
-    const rows: int = Math.max(1, Math.floor(extractNumber(inputs.rows, paramsObj?.rows ?? 10)));
-    const cols: int = Math.max(1, Math.floor(extractNumber(inputs.cols, paramsObj?.cols ?? 10)));
-    const spacing: float = extractNumber(inputs.spacing, paramsObj?.spacing ?? 20);
-    const originX: float = extractNumber(inputs.originX, paramsObj?.originX ?? 100);
-    const originY: float = extractNumber(inputs.originY, paramsObj?.originY ?? 100);
+    const paramsObj = params as { rows: int; cols?: int; spacing: float; originX: float; originY: float };
+    const rows: int = Math.max(1, Math.floor(extractNumber(inputs.rows, paramsObj.rows)));
+    const cols: int = Math.max(1, Math.floor(extractNumber(inputs.cols, paramsObj.cols)));
+    const spacing: float = extractNumber(inputs.spacing, paramsObj.spacing);
+    const originX: float = extractNumber(inputs.originX, paramsObj.originX);
+    const originY: float = extractNumber(inputs.originY, paramsObj.originY);
 
     const elementCount: int = rows * cols;
 

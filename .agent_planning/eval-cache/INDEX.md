@@ -1,45 +1,81 @@
-| Topic | File | Cached | Source | Confidence |
-|-------|------|--------|--------|------------|
-| Lint Infrastructure | lint-infrastructure.md | 2025-12-25 17:48 | project-evaluator (lint-cleanup) | STALE |
-| IR Primitives Status | ir-primitives-status.md | 2025-12-30 02:31 | project-evaluator (spec analysis) | RECENT |
-| Sprint 2 Default Sources Runtime | runtime-sprint2-defaults.md | 2026-01-01 01:29 | work-evaluator (sprint2-final) | FRESH |
+# Eval Cache Index
 
-## Cache Freshness Guidelines
-- **FRESH**: < 1 hour - trust fully
-- **RECENT**: < 24 hours - trust with light verification
-- **STALE**: > 24 hours - use as hints only, re-validate critical findings
-- **ANCIENT**: > 7 days - ignore
+This directory contains reusable evaluation findings that persist across evaluations.
 
-## What's Cached
-- **lint-infrastructure.md**: ESLint config, two-tier rules (critical vs non-critical), auto-fixable rules
-- **ir-primitives-status.md**: 74 IR gaps across 11 specs, 20-sprint roadmap, dependency analysis, risk assessment
-- **runtime-sprint2-defaults.md**: materializeDefaultSources() behavior, dual system architecture, test coverage, integration points
+## Purpose
 
-## Invalidated in This Session (2026-01-01)
-- **type-contracts-divergence.md** - INVALIDATED: Pass 6 now uses multi-input resolution with combine-utils
-- **compiler-architecture.md** - INVALIDATED: Pass 6 integration with resolveWriters changes architecture
+Cache runtime knowledge and patterns discovered during evaluations:
+- Runtime behavior per scope
+- Break-it test patterns
+- Data flow verification results
+- Common failure modes
 
-## Not Yet Cached
-- project-structure.md (directory layout, entry points)
-- runtime-*.md (other runtime behavior findings)
-- test-infrastructure.md (INVALIDATED 2025-12-26 - signal-expr tests modified)
-- fieldexpr-systems.md (INVALIDATED 2025-12-26 - Materializer modified, CompilerRuntime added)
-- signal-expr-runtime.md (NEEDS EVAL - SignalExprBuilder + golden tests added 2025-12-26)
-- runtime-integration.md (INVALIDATED 2025-12-26 - CompilerRuntime added, select/transform nodes added)
-- compiler-integration.md (INVALIDATED 2025-12-26 - CompiledProgram type extended with SignalExpr IR)
-- multi-input-compiler-integration.md (NEEDS EVAL - resolveWriters + combine-utils integrated into Pass 6)
+**Do NOT cache**:
+- Specific verdicts (COMPLETE/INCOMPLETE) - point-in-time
+- Test pass/fail counts - re-run to verify
+- Bug details (keep in WORK-EVALUATION files)
 
-## Removed in Previous Sessions
-- architecture.md (INVALIDATED 2025-12-26 04:14 - Compiler pipeline modified)
-- compiler-architecture.md (INVALIDATED 2026-01-01 - Pass 6 multi-input integration)
-- bus-compiler-architecture.md (INVALIDATED 2025-12-26 - removed as stale)
-- block-compiler-migration.md (INVALIDATED 2025-12-26 05:55 - Signal blocks migrated)
-- rendering-architecture.md (INVALIDATED 2025-12-26 11:25 - Player.setIRProgram added)
-- port-catalog-migration.md (INVALIDATED 2025-12-29 04:03 - Port catalog implemented)
-- debug-export-workstream.md (INVALIDATED 2025-12-30 04:00 - TraceController API extended)
-- debug-ui-field-visualization.md (INVALIDATED 2025-12-30 05:05 - Field visualization components added)
-- edge-unification-status.md (INVALIDATED 2025-12-31 20:11 - Pass 8 now uses unified edges)
-- default-sources-current-state.md (INVALIDATED 2025-12-31 20:45 - materializeDefaultSources() integrated, dual system active)
-- adapter-application-status.md (INVALIDATED 2025-12-31 21:50 - Pass 6 defaultSource fallback removed)
-- pass8-link-resolution.md (INVALIDATED 2025-12-31 21:58 - defaultSource fallbacks removed, Pass 0 handles all defaults)
-- type-contracts-divergence.md (INVALIDATED 2026-01-01 - Multi-input blocks with combine-utils integrated)
+## Files
+
+### Runtime Behavior
+
+- **runtime-sprint2-defaults.md** - Default source materialization behavior
+  - Confidence: RECENT (2026-01-01)
+  - Scope: Sprint 2 default sources
+  - Key findings: materializeDefaultSources(), hidden provider blocks
+
+- **runtime-v2-adapter.md** - V2 adapter runtime behavior
+  - Confidence: FRESH (2026-01-01)
+  - Scope: V2 adapter (SignalExprClosure nodes)
+  - Key findings: artifactToSigExprId(), evalSig() closure case
+
+- **runtime-multi-input-blocks.md** - Multi-input blocks runtime behavior
+  - Confidence: FRESH (2026-01-01, updated after Pass 7 refactor)
+  - Scope: Multi-input blocks implementation
+  - Key findings: resolveWriters, combine-utils, Pass 6 integration, Pass 7 refactor
+
+- **multi-input-architecture.md** - Multi-input architecture reference
+  - Confidence: HIGH (2026-01-01)
+  - Scope: Multi-input blocks architecture
+  - Key findings: CombinePolicy types, writer resolution, shared utilities, integration points
+
+### Architecture & Design
+
+- **ir-primitives-status.md** - IR primitive lowering status
+  - Confidence: RECENT (2025-12-30)
+  - Scope: IR primitives (Phase 3)
+  - Key findings: Primitive blocks with IR lowering functions
+
+- **render-pipeline-status.md** - Render pipeline status
+  - Confidence: RECENT (2025-12-31)
+  - Scope: Render pipeline (RenderInstances3D, etc.)
+  - Key findings: Field materialization, render sinks
+
+### Workstream Alignment
+
+- **workstream-alignment.md** - Sprint coordination findings
+  - Confidence: RECENT (2025-12-31)
+  - Scope: Multi-sprint coordination
+  - Key findings: Edge unification + multi-input + V2 adapter alignment
+
+### Phase 0 Cleanup
+
+- **phase0-compat-cleanup.md** - Legacy code inventory after Phase 0
+  - Confidence: FRESH (2026-01-01)
+  - Scope: Phase 0.5 compatibility cleanup
+  - Key findings: 7 categories of legacy code, removal sequence, 3-5 week effort
+
+## Confidence Levels
+
+- **FRESH**: Just evaluated (< 1 day old)
+- **RECENT**: Evaluated recently, no known changes (< 3 days old)
+- **RISKY**: Related code changed since evaluation (> 3 days old)
+- **STALE**: Files in scope changed significantly (re-evaluate)
+
+## Usage
+
+Evaluators should:
+1. Check this index before evaluation
+2. Read relevant cache files for context
+3. Update cache files with new findings
+4. Update confidence levels when code changes
