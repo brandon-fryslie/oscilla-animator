@@ -5,6 +5,11 @@
  * "skeleton" IR nodes that represent the structure of block outputs without
  * full semantic equivalence (that's deferred to Phase 4).
  *
+ * Multi-Input Blocks Integration (2026-01-01):
+ * - Use resolveWriters to enumerate all writers to each input
+ * - Insert combine nodes when N > 1 writers
+ * - Validate combine policies and type compatibility
+ *
  * Key insight: Block compilers still emit Artifacts (closures). This pass
  * infers IR structure from those Artifacts rather than modifying block compilers.
  *
@@ -12,11 +17,12 @@
  * - HANDOFF.md Topic 4: Pass 6 - Block Lowering
  * - design-docs/12-Compiler-Final/15-Canonical-Lowering-Pipeline.md § Pass 6
  * - design-docs/12-Compiler-Final/16-Block-Lowering.md
+ * - design-docs/now/01-MultiBlock-Input.md §5 (Multi-input resolution in Pass 6)
  */
 
 import type { Artifact } from "../types";
 import type { AcyclicOrLegalGraph, BlockIndex } from "../ir/patches";
-import type { Block } from "../../types";
+import type { Block, Edge, SlotWorld } from "../../types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import { IRBuilderImpl } from "../ir/IRBuilderImpl";
 import type { TypeDesc } from "../ir/types";
@@ -27,6 +33,17 @@ import { getBlockType } from "../ir/lowerTypes";
 import type { Domain } from "../unified/Domain";
 import { BLOCK_DEFS_BY_TYPE } from "../../blocks/registry";
 import { validatePureBlockOutput } from "../pure-block-validator";
+// Multi-Input Blocks Integration
+import {
+  resolveBlockInputs,
+  type Writer,
+} from "./resolveWriters";
+import {
+  createCombineNode,
+  validateCombineMode,
+  validateCombinePolicy,
+  shouldCombine,
+} from "./combine-utils";
 
 // Re-export ValueRefPacked for backwards compatibility
 export type { ValueRefPacked } from "../ir/lowerTypes";
@@ -243,11 +260,200 @@ function artifactToValueRef(
 }
 
 // =============================================================================
+// Multi-Input Resolution (New in Multi-Input Blocks Integration)
+// =============================================================================
+
+/**
+ * Resolve input ValueRefs for a block using multi-input resolution.
+ *
+ * For each input:
+ * 1. Enumerate writers (wires, bus listeners, defaults) via resolveWriters
+ * 2. If N=0: Error (should not happen after pass 0 materialization)
+ * 3. If N=1: Direct bind
+ * 4. If N>1: Validate combine policy, create combine node
+ *
+ * @param block - Block instance
+ * @param edges - Unified edges (from Pass 1)
+ * @param compiledPortMap - Compiled artifacts (for writer sources)
+ * @param builder - IRBuilder for emitting combine nodes
+ * @param errors - Error accumulator
+ * @returns Map of slotId → ValueRefPacked
+ */
+function resolveInputsWithMultiInput(
+  block: Block,
+  edges: readonly Edge[],
+  compiledPortMap: Map<string, Artifact>,
+  builder: IRBuilder,
+  errors: CompileError[]
+): Map<string, ValueRefPacked> {
+  const resolved = resolveBlockInputs(block, edges);
+  const inputRefs = new Map<string, ValueRefPacked>();
+
+  for (const [slotId, spec] of resolved.entries()) {
+    const { writers, combine, portType, endpoint } = spec;
+
+    // Validate combine policy against writer count
+    const policyValidation = validateCombinePolicy(combine, writers.length);
+    if (!policyValidation.valid) {
+      errors.push({
+        code: 'PortTypeMismatch',
+        message: policyValidation.reason ?? 'Invalid combine policy',
+        where: { blockId: endpoint.blockId, port: endpoint.slotId },
+      });
+      continue;
+    }
+
+    // Validate combine mode against port type
+    // Only validate for slot worlds (signal, field, scalar, config)
+    // Event world is not in SlotWorld type, so skip validation
+    if (combine.mode !== 'error' && portType.world !== 'event') {
+      const modeValidation = validateCombineMode(
+        combine.mode,
+        portType.world as SlotWorld,
+        portType.domain as import("../../../core/types").CoreDomain
+      );
+      if (!modeValidation.valid) {
+        errors.push({
+          code: 'PortTypeMismatch',
+          message: `${modeValidation.reason} for port ${endpoint.blockId}.${endpoint.slotId}`,
+          where: { blockId: endpoint.blockId, port: endpoint.slotId },
+        });
+        continue;
+      }
+    }
+
+    // Convert writers to ValueRefs
+    const writerRefs: ValueRefPacked[] = [];
+    for (const writer of writers) {
+      const writerRef = getWriterValueRef(writer, compiledPortMap, builder, errors);
+      if (writerRef !== null) {
+        writerRefs.push(writerRef);
+      }
+    }
+
+    // Handle different writer counts
+    if (writerRefs.length === 0) {
+      // Should not happen - defaults are injected by resolveWriters
+      errors.push({
+        code: 'UpstreamError',
+        message: `No writers for required input ${endpoint.blockId}.${endpoint.slotId}`,
+        where: { blockId: endpoint.blockId, port: endpoint.slotId },
+      });
+      continue;
+    }
+
+    if (writerRefs.length === 1 && !shouldCombine(combine, 1)) {
+      // Direct bind (optimization: no combine node for single writer)
+      inputRefs.set(slotId, writerRefs[0]);
+      continue;
+    }
+
+    // Multiple writers (or always combine) - create combine node
+    if (combine.mode === 'error') {
+      // Should have been caught by validateCombinePolicy
+      errors.push({
+        code: 'PortTypeMismatch',
+        message: `Internal error: combine mode 'error' reached combine node creation`,
+        where: { blockId: endpoint.blockId, port: endpoint.slotId },
+      });
+      continue;
+    }
+
+    const combinedRef = createCombineNode(
+      combine.mode,
+      writerRefs,
+      portType,
+      builder
+    );
+
+    if (combinedRef === null) {
+      errors.push({
+        code: 'NotImplemented',
+        message: `Failed to create combine node for ${endpoint.blockId}.${endpoint.slotId}`,
+        where: { blockId: endpoint.blockId, port: endpoint.slotId },
+      });
+      continue;
+    }
+
+    inputRefs.set(slotId, combinedRef);
+  }
+
+  return inputRefs;
+}
+
+/**
+ * Get ValueRef for a writer.
+ *
+ * Converts Writer (from resolveWriters) to ValueRefPacked by looking up
+ * the artifact and translating to IR.
+ *
+ * @param writer - Writer specification
+ * @param compiledPortMap - Compiled artifacts
+ * @param builder - IRBuilder
+ * @param errors - Error accumulator
+ * @returns ValueRefPacked or null if artifact missing/invalid
+ */
+function getWriterValueRef(
+  writer: Writer,
+  compiledPortMap: Map<string, Artifact>,
+  builder: IRBuilder,
+  errors: CompileError[]
+): ValueRefPacked | null {
+  if (writer.kind === 'wire') {
+    // Wire: blockId:slotId in compiledPortMap
+    const portKey = `${writer.from.blockId}:${writer.from.slotId}`;
+    const artifact = compiledPortMap.get(portKey);
+    if (artifact === undefined) {
+      errors.push({
+        code: 'UpstreamError',
+        message: `Missing artifact for wire writer ${portKey}`,
+        where: { blockId: writer.from.blockId, port: writer.from.slotId },
+      });
+      return null;
+    }
+    return artifactToValueRef(artifact, builder, writer.from.blockId, writer.from.slotId);
+  }
+
+  if (writer.kind === 'bus') {
+    // Bus: Will be resolved in Pass 7 (bus lowering)
+    // For now, return null - Pass 8 will link bus values to inputs
+    // TODO: In future, we could inject a placeholder bus read node
+    return null;
+  }
+
+  if (writer.kind === 'default') {
+    // Default: Create constant node from default type
+    // For now, create a zero constant of the appropriate type
+    const type = writer.type;
+    if (type.world === 'signal') {
+      const sigId = builder.sigConst(0, type);
+      const slot = builder.allocValueSlot(type);
+      builder.registerSigSlot(sigId, slot);
+      return { k: 'sig', id: sigId, slot };
+    }
+    if (type.world === 'field') {
+      const fieldId = builder.fieldConst(0, type);
+      const slot = builder.allocValueSlot(type);
+      builder.registerFieldSlot(fieldId, slot);
+      return { k: 'field', id: fieldId, slot };
+    }
+    // Unsupported world for default
+    return null;
+  }
+
+  return null;
+}
+
+// =============================================================================
 // Block Lowering with Registered Functions
 // =============================================================================
 
 /**
  * Lower a block instance using its registered lowering function.
+ *
+ * Multi-Input Blocks Integration:
+ * - If edges are provided, use resolveInputsWithMultiInput for input resolution
+ * - Otherwise, fall back to legacy compiled port map lookup
  *
  * If the block has a registered lowering function, use it.
  * Otherwise, fall back to artifactToValueRef for each output.
@@ -257,7 +463,8 @@ function lowerBlockInstance(
   blockIndex: BlockIndex,
   compiledPortMap: Map<string, Artifact>,
   builder: IRBuilder,
-  errors: CompileError[]
+  errors: CompileError[],
+  edges?: readonly Edge[]
 ): Map<string, ValueRefPacked> {
   const outputRefs = new Map<string, ValueRefPacked>();
 
@@ -291,10 +498,19 @@ function lowerBlockInstance(
         }
       }
 
-      // Collect input ValueRefs (need to resolve from wires/buses)
-      // For now, we'll collect inputs from compiled port map
-      const inputsById: Record<string, ValueRefPacked> = {};
+      // Collect input ValueRefs
+      // Multi-Input Integration: Use resolveInputsWithMultiInput if edges available
+      const inputsById: Record<string, ValueRefPacked> = edges !== undefined
+        ? Object.fromEntries(resolveInputsWithMultiInput(block, edges, compiledPortMap, builder, errors).entries())
+        : {};
+
       const inputs: ValueRefPacked[] = block.inputs.map((inputPort) => {
+        // If multi-input resolution succeeded, use it
+        if (inputsById[inputPort.id] !== undefined) {
+          return inputsById[inputPort.id];
+        }
+
+        // Legacy path: Look up in compiled port map
         const portKey = `${block.id}:${inputPort.id}`;
         const artifact = compiledPortMap.get(portKey);
 
@@ -433,6 +649,11 @@ function lowerBlockInstance(
  *
  * Translates compiled Artifacts into IR nodes.
  *
+ * Multi-Input Blocks Integration:
+ * - Accepts optional edges parameter for multi-input resolution
+ * - When edges provided, uses resolveWriters + combine logic
+ * - Otherwise falls back to legacy single-input path
+ *
  * Input: Validated dependency graph + compiled port map (closures) + blocks array
  * Output: UnlinkedIRFragments with skeleton IR nodes
  *
@@ -442,7 +663,8 @@ function lowerBlockInstance(
 export function pass6BlockLowering(
   validated: AcyclicOrLegalGraph,
   blocks: readonly Block[],
-  compiledPortMap: Map<string, Artifact>
+  compiledPortMap: Map<string, Artifact>,
+  edges?: readonly Edge[]
 ): UnlinkedIRFragments {
   const builder = new IRBuilderImpl();
   const blockOutputs = new Map<BlockIndex, Map<string, ValueRefPacked>>();
@@ -479,7 +701,8 @@ export function pass6BlockLowering(
         blockIndex,
         compiledPortMap,
         builder,
-        errors
+        errors,
+        edges
       );
 
       // Collect block artifacts for pure block validation
