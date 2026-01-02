@@ -110,7 +110,7 @@ export class RootStore {
 
     // Create diagnostic infrastructure (after patchStore)
     this.diagnosticHub = new DiagnosticHub(this.events, this.patchStore);
-    this.diagnosticStore = new DiagnosticStore(this.diagnosticHub);
+    this.diagnosticStore = new DiagnosticStore(this.diagnosticHub, this);
 
         // Create action executor (after stores and diagnostic hub)
 
