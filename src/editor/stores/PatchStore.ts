@@ -148,20 +148,32 @@ export class PatchStore {
   }
 
   /**
-   * Get all publisher edges (port→bus connections).
+   * Get all publisher edges (port→BusBlock.in connections).
+   * After Sprint 2 migration, publisher edges target BusBlock.in port.
    */
   get publisherEdges(): Edge[] {
+    const busBlockIds = new Set(
+      this.blocks.filter(b => b.type === 'BusBlock').map(b => b.id)
+    );
     return this.edges.filter(e =>
-      e.from.kind === 'port' && e.to.kind === 'bus'
+      e.to.kind === 'port' &&
+      busBlockIds.has(e.to.blockId) &&
+      e.to.slotId === 'in'
     );
   }
 
   /**
-   * Get all listener edges (bus→port connections).
+   * Get all listener edges (BusBlock.out→port connections).
+   * After Sprint 2 migration, listener edges source from BusBlock.out port.
    */
   get listenerEdges(): Edge[] {
+    const busBlockIds = new Set(
+      this.blocks.filter(b => b.type === 'BusBlock').map(b => b.id)
+    );
     return this.edges.filter(e =>
-      e.from.kind === 'bus' && e.to.kind === 'port'
+      e.from.kind === 'port' &&
+      busBlockIds.has(e.from.blockId) &&
+      e.from.slotId === 'out'
     );
   }
 
