@@ -1,39 +1,32 @@
 /**
  * Transform application engine.
  *
- * This module provides the canonical implementation for applying adapter chains
- * and lens stacks to artifacts. This is the single source of truth for all
- * transform application across wires, publishers, listeners, and lens params.
+ * Phase 1: Unified Runtime Dispatcher
+ *
+ * This module provides the canonical implementation for applying transforms
+ * (both adapters and lenses) to artifacts. Single code path for all transform
+ * application across wires, publishers, listeners, and lens params.
+ *
+ * References:
+ * - .agent_planning/lens-adapter-unification/PLAN-2026-01-02-transform-unification.md
+ * - .agent_planning/lens-adapter-unification/DOD-2026-01-02-transform-unification.md
  */
 
-import type { TransformStack, TransformScope } from './types';
-import type { Artifact, CompileCtx, CompileError } from '../compiler/types';
-import type { AdapterStep, LensInstance } from '../types';
-import { getAdapter, getLens } from './catalog';
+import type { TransformStack, TransformScope, TransformStep } from './types';
+import type { Artifact, CompileCtx, CompileError, RuntimeCtx } from '../compiler/types';
+import type { LensInstance } from '../types';
+import { TRANSFORM_REGISTRY } from './TransformRegistry';
 import { validateLensScope } from './validate';
 import type { ParamResolutionContext } from '../lenses/lensResolution';
 import { resolveLensParam } from '../lenses/lensResolution';
 
 /**
- * Apply a single adapter step to an artifact.
- * Uses registry-based execution (Sprint 1 Deliverable 2).
+ * Context for transform application.
+ * Combines CompileCtx and RuntimeCtx for unified handling.
  */
-function applyAdapterStep(
-  artifact: Artifact,
-  step: AdapterStep,
-  ctx: CompileCtx
-): Artifact {
-  const def = getAdapter(step.adapterId);
-
-  if (def === null || def === undefined) {
-    return { kind: 'Error', message: `Unknown adapter: ${step.adapterId}` };
-  }
-
-  if (def.apply === null || def.apply === undefined) {
-    return { kind: 'Error', message: `Adapter ${step.adapterId} has no implementation` };
-  }
-
-  return def.apply(artifact, step.params, ctx);
+export interface TransformContext {
+  compileCtx: CompileCtx;
+  runtimeCtx?: RuntimeCtx;
 }
 
 /**
@@ -67,103 +60,168 @@ function getArtifactType(artifact: Artifact): { world: 'signal' | 'field' | 'sca
 }
 
 /**
- * Apply an adapter chain to an artifact.
- *
- * Sprint 3: Canonical implementation moved from compileBusAware.ts
+ * Resolve parameters for a transform step.
+ * Handles both adapter params (simple Record<string, unknown>)
+ * and lens params (LensParamBinding[] resolved to Artifacts).
  */
-export function applyAdapterChain(
-  artifact: Artifact,
-  chain: AdapterStep[] | undefined,
-  _scope: TransformScope,
-  ctx: CompileCtx,
-  errors: CompileError[]
-): Artifact {
-  if (chain === null || chain === undefined || chain.length === 0) {
-    return artifact;
-  }
-
-  let current = artifact;
-
-  for (const step of chain) {
-    const next = applyAdapterStep(current, step, ctx);
-    if (next.kind === 'Error') {
-      errors.push({
-        code: 'AdapterError',
-        message: next.message,
-      });
-      return next;
+function resolveTransformParams(
+  step: TransformStep,
+  paramContext: ParamResolutionContext
+): Record<string, Artifact> {
+  if (step.kind === 'adapter') {
+    // Adapters have simple params that need to be wrapped as artifacts
+    const params: Record<string, Artifact> = {};
+    if (step.step.params) {
+      for (const [key, value] of Object.entries(step.step.params)) {
+        // Wrap primitive values as scalar artifacts
+        if (typeof value === 'number') {
+          params[key] = { kind: 'Scalar:float', value };
+        } else if (typeof value === 'boolean') {
+          params[key] = { kind: 'Scalar:boolean', value };
+        } else if (typeof value === 'string') {
+          params[key] = { kind: 'Scalar:string', value };
+        } else {
+          // For complex values, store as-is (may need enhancement)
+          params[key] = value as Artifact;
+        }
+      }
     }
-    current = next;
+    return params;
+  } else {
+    // Lenses have LensParamBinding that must be resolved recursively
+    const params: Record<string, Artifact> = {};
+    for (const [paramKey, binding] of Object.entries(step.lens.params)) {
+      params[paramKey] = resolveLensParam(binding, paramContext);
+    }
+    return params;
   }
-
-  return current;
 }
 
 /**
- * Apply a lens stack to an artifact.
+ * Apply a single transform step to a value.
+ * Works identically for adapters and lenses.
  *
- * Sprint 3: Canonical implementation moved from compileBusAware.ts
- *
- * This function handles:
- * - Scope validation (Sprint 2)
- * - Domain compatibility checks
- * - Lens parameter resolution (recursive with depth limit)
- * - Lens application via registry
+ * Phase 1 Deliverable: Unified apply function for both transform types.
  */
-export function applyLensStack(
-  artifact: Artifact,
-  lensStack: LensInstance[] | undefined,
+export function applyTransformStep(
+  value: Artifact,
+  step: TransformStep,
   scope: TransformScope,
-  _ctx: CompileCtx,
+  ctx: CompileCtx,
   paramContext: ParamResolutionContext,
   errors: CompileError[]
 ): Artifact {
-  if (lensStack === null || lensStack === undefined || lensStack.length === 0) {
-    return artifact;
+  // Skip if disabled
+  if (!step.enabled) {
+    return value;
   }
 
-  let current = artifact;
+  // Get transform ID
+  const id = step.kind === 'adapter' ? step.step.adapterId : step.lens.lensId;
 
-  for (const lens of lensStack) {
-    if (lens.enabled === false) continue;
+  // Get transform definition from registry
+  const def = TRANSFORM_REGISTRY.getTransform(id);
 
-    // Sprint 2: Validate lens scope compatibility
-    validateLensScope(lens.lensId, scope, errors);
+  if (!def) {
+    const error: CompileError = {
+      code: 'AdapterError',
+      message: `Unknown transform: ${id}`
+    };
+    errors.push(error);
+    return { kind: 'Error', message: error.message };
+  }
+
+  // Lens-specific validation
+  if (step.kind === 'lens') {
+    // Validate lens scope compatibility
+    validateLensScope(step.lens.lensId, scope, errors);
     if (errors.length > 0) {
-      // Early exit on scope validation errors
-      return { kind: 'Error', message: `Lens scope validation failed: ${lens.lensId}` };
+      return { kind: 'Error', message: `Lens scope validation failed: ${id}` };
     }
 
-    const def = getLens(lens.lensId);
-    if (def === null || def === undefined) {
-      continue;
-    }
-
-    const type = getArtifactType(current);
     // Domain compatibility check: exact domain match
+    const type = getArtifactType(value);
     const domainCompatible =
       type !== null &&
       type !== undefined &&
+      def.domain !== undefined &&
       type.domain === def.domain;
 
     if (!domainCompatible) {
-      errors.push({
+      const error: CompileError = {
         code: 'AdapterError',
-        message: `Lens ${lens.lensId} is not type-preserving for ${current.kind}`,
-      });
-      return { kind: 'Error', message: `Lens type mismatch: ${lens.lensId}` };
+        message: `Lens ${id} is not type-preserving for ${value.kind}`
+      };
+      errors.push(error);
+      return { kind: 'Error', message: error.message };
+    }
+  }
+
+  // Check if transform has implementation
+  if (!def.apply) {
+    const error: CompileError = {
+      code: 'AdapterError',
+      message: `Transform ${id} has no implementation`
+    };
+    errors.push(error);
+    return { kind: 'Error', message: error.message };
+  }
+
+  // Resolve parameters (unified for both types)
+  const params = resolveTransformParams(step, paramContext);
+
+  // Apply the transform
+  // Note: We need to handle the different signatures gracefully
+  // Adapters: (artifact, params, ctx: CompileCtx) => Artifact
+  // Lenses: (value, params, ctx: RuntimeCtx) => Artifact
+  if (step.kind === 'adapter') {
+    // Adapter apply expects CompileCtx
+    const adapterApply = def.apply as (artifact: Artifact, params: Record<string, unknown>, ctx: CompileCtx) => Artifact;
+    // Convert artifact params back to unknown for adapters (temporary during transition)
+    const unwrappedParams: Record<string, unknown> = {};
+    for (const [key, artifact] of Object.entries(params)) {
+      if (artifact.kind === 'Scalar:float' || artifact.kind === 'Scalar:int') {
+        unwrappedParams[key] = artifact.value;
+      } else if (artifact.kind === 'Scalar:boolean') {
+        unwrappedParams[key] = artifact.value;
+      } else if (artifact.kind === 'Scalar:string') {
+        unwrappedParams[key] = artifact.value;
+      } else {
+        unwrappedParams[key] = artifact;
+      }
+    }
+    return adapterApply(value, unwrappedParams, ctx);
+  } else {
+    // Lens apply expects RuntimeCtx (but we may not have one at compile time)
+    const lensApply = def.apply as (value: Artifact, params: Record<string, Artifact>, ctx?: RuntimeCtx) => Artifact;
+    return lensApply(value, params);
+  }
+}
+
+/**
+ * Apply a chain of transforms to a value.
+ * Single entry point for all transform application.
+ *
+ * Phase 1 Deliverable: Unified dispatcher that iterates transform chain.
+ */
+export function applyTransforms(
+  value: Artifact,
+  transforms: TransformStep[],
+  scope: TransformScope,
+  ctx: CompileCtx,
+  paramContext: ParamResolutionContext,
+  errors: CompileError[]
+): Artifact {
+  let current = value;
+
+  for (const step of transforms) {
+    const result = applyTransformStep(current, step, scope, ctx, paramContext, errors);
+
+    if (result.kind === 'Error') {
+      return result; // Early exit on error
     }
 
-    // Resolve lens parameters
-    const params: Record<string, Artifact> = {} as Record<string, Artifact>;
-    for (const [paramKey, binding] of Object.entries(lens.params)) {
-      params[paramKey] = resolveLensParam(binding, paramContext);
-    }
-
-    // Apply the lens
-    if (def.apply !== null && def.apply !== undefined) {
-      current = def.apply(current, params);
-    }
+    current = result;
   }
 
   return current;
@@ -173,9 +231,7 @@ export function applyLensStack(
  * Apply a unified transform stack to an artifact.
  *
  * This is the main entrypoint for transform application.
- * Adapters are applied first, then lenses.
- *
- * Sprint 3: Enhanced to use canonical adapter/lens implementations
+ * Handles TransformStack which may contain interleaved adapters and lenses.
  */
 export function applyTransformStack(
   artifact: Artifact,
@@ -185,23 +241,77 @@ export function applyTransformStack(
   paramContext: ParamResolutionContext,
   errors: CompileError[]
 ): Artifact {
-  let current = artifact;
+  // Convert TransformStack to array and apply
+  return applyTransforms(artifact, Array.from(stack), scope, ctx, paramContext, errors);
+}
 
-  for (const step of stack) {
-    if (!step.enabled) {
-      continue; // Skip disabled transforms
-    }
-
-    if (step.kind === 'adapter') {
-      current = applyAdapterChain(current, [step.step], scope, ctx, errors);
-    } else {
-      current = applyLensStack(current, [step.lens], scope, ctx, paramContext, errors);
-    }
-
-    if (current.kind === 'Error') {
-      return current;
-    }
+/**
+ * DEPRECATED: Apply an adapter chain to an artifact.
+ *
+ * This function is maintained for backward compatibility during the transition.
+ * New code should use applyTransforms() instead.
+ *
+ * @deprecated Use applyTransforms() with TransformStep[] instead
+ */
+export function applyAdapterChain(
+  artifact: Artifact,
+  chain: import('../types').AdapterStep[] | undefined,
+  scope: TransformScope,
+  ctx: CompileCtx,
+  errors: CompileError[]
+): Artifact {
+  if (!chain || chain.length === 0) {
+    return artifact;
   }
 
-  return current;
+  // Convert adapter chain to TransformStep[]
+  const transforms: TransformStep[] = chain.map(step => ({
+    kind: 'adapter' as const,
+    enabled: true,
+    step
+  }));
+
+  // Build a minimal param context (adapters don't use it)
+  const paramContext: ParamResolutionContext = {
+    resolveBus: () => ({ kind: 'Error', message: 'Not available in adapter context' }),
+    resolveWire: () => ({ kind: 'Error', message: 'Not available in adapter context' }),
+    defaultSources: new Map(),
+    compileCtx: ctx,
+    applyAdapterChain: () => ({ kind: 'Error', message: 'Recursive adapter chains not supported' }),
+    applyLensStack: () => ({ kind: 'Error', message: 'Lens stack not available in adapter context' }),
+    visited: new Set(),
+    depth: 0
+  };
+
+  return applyTransforms(artifact, transforms, scope, ctx, paramContext, errors);
+}
+
+/**
+ * DEPRECATED: Apply a lens stack to an artifact.
+ *
+ * This function is maintained for backward compatibility during the transition.
+ * New code should use applyTransforms() instead.
+ *
+ * @deprecated Use applyTransforms() with TransformStep[] instead
+ */
+export function applyLensStack(
+  artifact: Artifact,
+  lensStack: LensInstance[] | undefined,
+  scope: TransformScope,
+  ctx: CompileCtx,
+  paramContext: ParamResolutionContext,
+  errors: CompileError[]
+): Artifact {
+  if (!lensStack || lensStack.length === 0) {
+    return artifact;
+  }
+
+  // Convert lens stack to TransformStep[]
+  const transforms: TransformStep[] = lensStack.map(lens => ({
+    kind: 'lens' as const,
+    enabled: lens.enabled !== false, // Default to true if not specified
+    lens
+  }));
+
+  return applyTransforms(artifact, transforms, scope, ctx, paramContext, errors);
 }
