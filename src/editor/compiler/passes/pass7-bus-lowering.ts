@@ -18,11 +18,7 @@
  * to maintain compatibility during migration. When buses/publishers are provided,
  * they are automatically converted to BusBlocks internally.
  *
- * Before (Sprint 1):
- *   - Used getPublishersFromEdges() to find edges with edge.to.kind === 'bus'
- *   - Looked up publishers by busId
- *
- * After (Sprint 2):
+ * After Sprint 2 migration:
  *   - Uses getBusBlocks() to find BusBlock instances
  *   - Looks up edges to BusBlock.in port (standard port-to-port edges)
  *   - Reads combine mode from BusBlock.params.combine
@@ -149,43 +145,6 @@ function getEdgesToBusBlock(
     });
 }
 
-/**
- * Extract publisher data from edges targeting a specific bus (legacy format).
- * Filters edges where edge.to.kind === 'bus' and edge.to.busId matches.
- *
- * DEPRECATED: This is for backward compatibility with old Edge format.
- * New code should use getEdgesToBusBlock() with migrated BusBlocks.
- */
-function getPublishersFromLegacyEdges(
-  busId: string,
-  edges: readonly Edge[]
-): PublisherData[] {
-  return edges
-    .filter(
-      (e) =>
-        e.enabled &&
-        e.to.kind === "bus" &&
-        e.to.busId === busId
-    )
-    .map((e) => {
-      const from = e.from as Extract<typeof e.from, { kind: "port" }>;
-      return {
-        from: { blockId: from.blockId, slotId: from.slotId },
-        weight: e.weight,
-        sortKey: e.sortKey,
-        adapterChain: e.adapterChain,
-        lensStack: e.lensStack,
-      };
-    })
-    .sort((a, b) => {
-      // Sort by weight (descending), then sortKey (ascending)
-      if (a.weight !== b.weight) {
-        return (b.weight ?? 0) - (a.weight ?? 0);
-      }
-      return (a.sortKey ?? 0) - (b.sortKey ?? 0);
-    });
-}
-
 // =============================================================================
 // Pass 7 Implementation
 // =============================================================================
@@ -258,36 +217,27 @@ export function pass7BusLowering(
   for (let busIdx = 0; busIdx < busBlocks.length; busIdx++) {
     const busBlock = busBlocks[busIdx];
 
-    // Get publishers using edges
+    // Get publishers from edges to BusBlock.in port
+    // After Sprint 2 migration, all edges are port→port format
     let publishers: PublisherData[];
 
-    // Check if we have new-format edges (port→port to BusBlock)
-    const hasNewFormatEdges = edges.some(
-      e => e.to.kind === 'port' && e.to.blockId === busBlock.id && e.to.slotId === 'in'
-    );
+    // Check if using old signature with Publisher[] array
+    const usingOldSignature = blocksLegacy !== undefined;
 
-    if (hasNewFormatEdges) {
+    if (usingOldSignature) {
+      // Old signature: edges may not exist, use Publisher[] array
+      const publishersArray = (publishersOrEdges ?? []) as readonly Publisher[];
+      const sorted = getSortedPublishers(busBlock.id, publishersArray as Publisher[], false);
+      publishers = sorted.map(p => ({
+        from: p.from,
+        weight: p.weight,
+        sortKey: p.sortKey,
+        adapterChain: p.adapterChain,
+        lensStack: p.lensStack,
+      }));
+    } else {
       // New format: edges to BusBlock.in port
       publishers = getEdgesToBusBlock(busBlock, edges);
-    } else {
-      // Legacy format: edges to bus endpoint or Publisher[] array
-      const hasLegacyEdges = edges.some(e => e.to.kind === 'bus' && e.to.busId === busBlock.id);
-
-      if (hasLegacyEdges) {
-        // Legacy edges format
-        publishers = getPublishersFromLegacyEdges(busBlock.id, edges);
-      } else {
-        // Use Publisher[] array (oldest format)
-        const publishersArray = (publishersOrEdges ?? []) as readonly Publisher[];
-        const sorted = getSortedPublishers(busBlock.id, publishersArray as Publisher[], false);
-        publishers = sorted.map(p => ({
-          from: p.from,
-          weight: p.weight,
-          sortKey: p.sortKey,
-          adapterChain: p.adapterChain,
-          lensStack: p.lensStack,
-        }));
-      }
     }
 
     // Validate no adapters/lenses are used (not yet supported in IR mode)
