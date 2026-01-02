@@ -510,6 +510,11 @@ export function compileBusAwarePatch(
   // 4. Validate block types exist in registry
   // =============================================================================
   for (const b of patch.blocks) {
+    // Skip BusBlocks - they are handled specially by Pass 7 (bus lowering)
+    // BusBlocks are hidden pass-through blocks that represent buses
+    if (b.type === 'BusBlock') {
+      continue;
+    }
     if (registry[b.type] === undefined) {
       errors.push({
         code: 'CompilerMissing',
@@ -597,6 +602,11 @@ export function compileBusAwarePatch(
         message: `Block not found: ${blockId}`,
         where: { blockId },
       });
+      continue;
+    }
+
+    // Skip BusBlocks - they are handled specially by Pass 7 (bus lowering)
+    if (block.type === 'BusBlock') {
       continue;
     }
 
@@ -1255,6 +1265,8 @@ function createDefaultArtifact(value: unknown, kind: string): Artifact {
   switch (kind) {
     case 'Signal:float':
       return { kind: 'Signal:float', value: () => Number(value) };
+    case 'Signal:int':
+      return { kind: 'Signal:int', value: () => Math.round(Number(value)) };
     case 'Signal:Unit':
       return { kind: 'Signal:Unit', value: () => Number(value) };
     case 'Signal:phase':
@@ -1263,6 +1275,8 @@ function createDefaultArtifact(value: unknown, kind: string): Artifact {
       return { kind: 'Signal:Time', value: () => Number(value) };
     case 'Scalar:float':
       return { kind: 'Scalar:float', value: Number(value) };
+    case 'Scalar:int':
+      return { kind: 'Scalar:int', value: Math.round(Number(value)) };
     case 'Scalar:boolean':
       return { kind: 'Scalar:boolean', value: Boolean(value) };
     case 'Scalar:string':
