@@ -43,13 +43,14 @@ export interface InputEndpoint {
  *
  * Represents a single source that writes to an input endpoint.
  * Can be:
- * - Wire: Direct connection from another block's output
- * - Bus: Listener reading from a bus
+ * - Wire: Direct connection from another block's output (includes BusBlock.out edges)
  * - Default: Compiler-injected default source
+ *
+ * After Sprint 2 migration, all edges are port→port. BusBlock.out edges are
+ * wire writers like any other port edge. The 'bus' kind is no longer needed.
  */
 export type Writer =
   | { kind: 'wire'; from: { blockId: string; slotId: string }; connId: string }
-  | { kind: 'bus'; listenerId: string; busId: string }
   | { kind: 'default'; defaultId: string; type: TypeDesc };
 
 /**
@@ -93,11 +94,10 @@ export interface ResolvedInputSpec {
 export function writerSortKey(w: Writer): string {
   switch (w.kind) {
     case 'wire':
+      // Wire includes BusBlock.out edges after Sprint 2 migration
       return `0:${w.from.blockId}:${w.from.slotId}:${w.connId}`;
-    case 'bus':
-      return `1:${w.busId}:${w.listenerId}`;
     case 'default':
-      return `2:${w.defaultId}`;
+      return `1:${w.defaultId}`;
   }
 }
 
@@ -151,22 +151,15 @@ export function enumerateWriters(
     if (edge.to.blockId !== endpoint.blockId) continue;
     if (edge.to.slotId !== endpoint.slotId) continue;
 
-    // Classify by source endpoint type
+    // After Sprint 2 migration, all edges are port→port (including BusBlock.out edges)
     if (edge.from.kind === 'port') {
-      // Wire: port → port
       writers.push({
         kind: 'wire',
         from: { blockId: edge.from.blockId, slotId: edge.from.slotId },
         connId: edge.id,
       });
-    } else if (edge.from.kind === 'bus') {
-      // Bus listener: bus → port
-      writers.push({
-        kind: 'bus',
-        listenerId: edge.id,
-        busId: edge.from.busId,
-      });
     }
+    // Note: edge.from.kind === 'bus' no longer exists after migration
   }
 
   // If no writers, inject default source
