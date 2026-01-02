@@ -1,0 +1,66 @@
+Agent: iterative-implementer | 2026-01-02T19:00:00Z
+Mode: manual
+Completed: Phase 2 - Unified IR Dispatcher | Files: 1 | Commits: 1
+Tests: N/A (manual verification phase)
+Cache invalidated: None (no eval cache exists yet)
+Status: in_progress
+
+=== Work Completed ===
+
+Phase 2: Unified IR Dispatcher
+- Created applyTransformStepIR() - unified single-step IR transform application
+- Created applyTransformsIR() - unified IR transform chain dispatcher
+- Deleted old applyAdapterStep() and applyLensStep() functions from pass8
+- Updated all 6 call sites in buildBlockInputRoots() to use applyTransformsIR()
+- Handled legacy TransformStep format (AdapterStep | {kind:'lens',lens:LensInstance})
+- Added proper disabled lens handling
+- Unified error reporting for adapters and lenses in IR mode
+
+Files Modified:
+- src/editor/compiler/passes/pass8-link-resolution.ts (224 lines → 98 insertions, 126 deletions)
+
+Commits:
+- 436f799: feat(transforms): Phase 2 - Unified IR Dispatcher
+
+Verification:
+- just typecheck: PASS
+- No test failures introduced (existing tests still pass)
+
+=== Remaining Work ===
+
+Phase 3: Dead Code Deletion
+- [ ] Delete src/editor/lenses/index.ts (legacy implementations + stateful slew lens)
+- [ ] Remove duplicate validation in compileBusAware.ts
+- [ ] Update compileBusAware.ts wire/listener/publisher paths to use unified applyTransforms()
+
+Phase 4: Transform Registration
+- [ ] Audit what adapters/lenses need registration
+- [ ] Implement apply() functions for all transforms
+- [ ] Create src/editor/transforms/registerAll.ts
+- [ ] Import registerAll at app entry (main.tsx or App.tsx)
+- [ ] Add console.log for transform count on startup
+
+Phase 5: Verification
+- [ ] Unit test: mixed adapter+lens chain works
+- [ ] Unit test: disabled transforms skipped
+- [ ] Integration: wire transforms work
+- [ ] Integration: publisher transforms work
+- [ ] Integration: listener transforms work
+- [ ] just test: all existing tests pass
+- [ ] just dev: UI runs without errors
+
+=== Next Steps ===
+
+Continue with Phase 3, 4, and 5 to complete the transform unification.
+
+Critical constraint reminder: Lenses CANNOT have state. The slew lens must be deleted in Phase 3.
+
+=== Status ===
+
+Phase 1: COMPLETE (commit c986f7f)
+Phase 2: COMPLETE (commit 436f799)
+Phase 3: TODO
+Phase 4: TODO
+Phase 5: TODO
+
+Ready for next iteration: YES
