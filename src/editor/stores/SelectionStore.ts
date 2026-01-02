@@ -67,8 +67,29 @@ export class SelectionStore {
     return this.selection.kind === 'block' ? this.selection.ids : [];
   }
 
+  /**
+   * Get the selected bus ID.
+   *
+   * After Sprint 2, buses are represented by BusBlocks. When a BusBlock is
+   * selected, return its busId from params. Legacy 'bus' selection kind is
+   * still supported for backward compatibility.
+   */
   get selectedBusId(): string | null {
-    return this.selection.kind === 'bus' ? this.selection.id : null;
+    // Legacy bus selection
+    if (this.selection.kind === 'bus') {
+      return this.selection.id;
+    }
+
+    // New: BusBlock selection - single block only
+    if (this.selection.kind === 'block' && this.selection.ids.length === 1) {
+      const blockId = this.selection.ids[0];
+      const block = this.root.patchStore.blocks.find(b => b.id === blockId);
+      if (block?.type === 'BusBlock') {
+        return block.params.busId as string;
+      }
+    }
+
+    return null;
   }
 
   get selectedPortRef(): PortRef | null {
