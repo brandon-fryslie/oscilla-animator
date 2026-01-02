@@ -538,13 +538,12 @@ function applyTransforms(
  * Build BlockInputRootIR by resolving input sources.
  *
  * Resolution priority:
- * 1. Unified edges (if provided) - assumes all edges are port→port after migration
- * 2. Legacy wires (direct block-to-block)
- * 3. Legacy listeners (bus → input)
+ * 1. Unified edges - all edges are port→port after Sprint 2 migration
+ * 2. Legacy wires (direct block-to-block) - deprecated
+ * 3. Legacy listeners (bus → input) - deprecated
  *
- * Sprint 2 P2 Note: When using unified edges, this function assumes all edges
- * have been migrated by migrateEdgesToPortOnly(). Bus edges (edge.from.kind === 'bus')
- * should have been converted to BusBlock port edges (edge.from.kind === 'port').
+ * After Sprint 2 migration, all edges are port→port. BusBlock.out edges are
+ * regular port edges, not bus edges. Legacy bus edges no longer exist.
  *
  * Note: Default sources are handled by Pass 0 (materializeDefaultSources),
  * which creates hidden provider blocks and wires for all unconnected inputs
@@ -614,13 +613,12 @@ function buildBlockInputRoots(
           // - BusBlock subscriber connections (BusBlock.out → block.in)
           // - BusBlock publisher connections (block.out → BusBlock.in) - handled in Pass 7
 
-          // Verify edge has port source (migration should guarantee this)
+          // Verify edge has port source (all edges should be port→port after Sprint 2)
           if (edge.from.kind !== 'port') {
             errors.push({
               code: "UnmigratedBusEdge",
-              message: `Edge to ${block.id}:${input.id} has unmigrated bus endpoint. ` +
-                       `All edges should be port→port after migration. ` +
-                       `Run migrateEdgesToPortOnly() before compilation.`,
+              message: `Edge to ${block.id}:${input.id} has non-port source (kind: ${edge.from.kind}). ` +
+                       `All edges must be port→port format.`,
             });
             continue;
           }
