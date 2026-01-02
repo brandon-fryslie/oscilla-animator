@@ -51,27 +51,21 @@ function slotWorldToTypeWorld(slotWorld: SlotWorld): TypeWorld {
 }
 
 /**
- * Canonicalize edges: filter enabled, sort publishers by sortKey.
- * This ensures deterministic ordering for bus combines.
+ * Canonicalize edges: filter enabled, sort uniformly by sortKey.
+ *
+ * All edges are sorted deterministically for consistent bus combine order.
+ * After Sprint 2 migration, all edges are port→port. Publisher edges
+ * (to BusBlock.in) are sorted like any other edge.
  */
 function canonicalizeEdges(edges: readonly Edge[]): readonly Edge[] {
-  // Filter enabled edges only
-  const enabled = edges.filter(e => e.enabled);
-
-  // Sort publisher edges (port→bus) by sortKey for deterministic bus combines
-  const publishers = enabled
-    .filter(e => e.from.kind === 'port' && e.to.kind === 'bus')
+  return edges
+    .filter(e => e.enabled)
     .sort((a, b) => {
       if ((a.sortKey ?? 0) !== (b.sortKey ?? 0)) {
         return (a.sortKey ?? 0) - (b.sortKey ?? 0);
       }
       return a.id.localeCompare(b.id);
     });
-
-  // Non-publisher edges don't need sorting
-  const nonPublishers = enabled.filter(e => !(e.from.kind === 'port' && e.to.kind === 'bus'));
-
-  return [...publishers, ...nonPublishers];
 }
 
 /**
