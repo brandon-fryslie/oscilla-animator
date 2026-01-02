@@ -414,12 +414,8 @@ function getWriterValueRef(
     return artifactToValueRef(artifact, builder, writer.from.blockId, writer.from.slotId);
   }
 
-  if (writer.kind === 'bus') {
-    // Bus: Will be resolved in Pass 7 (bus lowering)
-    // For now, return null - Pass 8 will link bus values to inputs
-    // TODO: In future, we could inject a placeholder bus read node
-    return null;
-  }
+  // Note: After Sprint 2 migration, all edges are port→port. BusBlock.out edges
+  // are 'wire' writers, not 'bus' writers. Bus value resolution happens in Pass 7.
 
   if (writer.kind === 'default') {
     // Default: Create constant node from default type
