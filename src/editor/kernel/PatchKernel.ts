@@ -16,12 +16,12 @@ import type {
 } from './types';
 import type { PatchDocument, ValidationResult } from '../semantic/types';
 import type { SemanticGraph } from '../semantic';
-import type { Patch } from '../types';
+import type { Patch, SlotDef } from '../types';
 import { SemanticGraph as GraphImpl } from '../semantic/graph';
 import { Validator } from '../semantic/validator';
 import TransactionBuilder from './TransactionBuilder';
 import { applyOp } from './applyOp';
-import { BLOCK_REGISTRY } from '../blocks/registry';
+import { getBlockDefinition } from '../blocks/registry';
 
 /**
  * Convert a Patch to PatchDocument format expected by semantic layer.
@@ -30,12 +30,12 @@ import { BLOCK_REGISTRY } from '../blocks/registry';
 function toPatchDocument(patch: Patch): PatchDocument {
   return {
     blocks: patch.blocks.map(block => {
-      const def = BLOCK_REGISTRY.get(block.type);
+      const def = getBlockDefinition(block.type);
       return {
         id: block.id,
         type: block.type,
-        inputs: def?.inputs.map(slot => ({ id: slot.id, type: slot.type })) ?? [],
-        outputs: def?.outputs.map(slot => ({ id: slot.id, type: slot.type })) ?? [],
+        inputs: def?.inputs.map((slot: SlotDef) => ({ id: slot.id, type: slot.type })) ?? [],
+        outputs: def?.outputs.map((slot: SlotDef) => ({ id: slot.id, type: slot.type })) ?? [],
       };
     }),
     edges: patch.edges,
