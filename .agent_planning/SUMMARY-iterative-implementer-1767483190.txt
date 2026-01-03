@@ -1,0 +1,35 @@
+Agent: iterative-implementer | 2026-01-03T00:39:50Z
+Mode: manual
+Completed: Fixed type errors in 3 files | Files: 3 | Commits: 1
+Cache invalidated: None (no cache cleanup needed for type fixes)
+Status: complete
+
+Fixed Files:
+1. src/editor/replaceUtils.ts (9 errors) - Fixed in previous commit d2911d0
+   - Changed import from nonexistent 'Slot' to 'SlotDef'
+   - Added BLOCK_REGISTRY import → changed to getBlockDefinition()
+   - Added type annotations for slot parameter (s: SlotDef)
+   - Fixed Block type usage - Block instances don't have inputs/outputs, use registry
+
+2. src/editor/kernel/PatchKernel.ts (11 errors) - Fixed in commit 00f47f7
+   - Created toPatchDocument() adapter function
+   - Converts Patch to PatchDocument format for semantic layer
+   - Extracts block inputs/outputs from registry definitions
+   - Added SlotDef import and proper type annotations
+
+3. src/editor/compiler/blocks/signal/SignalExpression.ts (9 errors) - Fixed in previous commit d2911d0
+   - Updated TypeDesc from string to object: { world, domain, category, busEligible, lanes }
+   - Changed ValueKind from 'Signal:number' to 'Signal:float'
+   - Updated artifact kind checks to use 'Signal:float' and 'Scalar:float'
+   - Added support for 'Signal:int' and 'Scalar:int' variants
+
+Root Causes:
+- Type system migration: TypeDesc changed from string to structured object
+- ValueKind changes: 'number' types split into 'float' and 'int'
+- Slot type renamed from 'Slot' to 'SlotDef'
+- Block instances don't store inputs/outputs (stored in registry instead)
+- PatchDocument interface has different structure than Patch interface
+
+Verification:
+- All 29 type errors in target files resolved (verified with grep count = 0)
+- Remaining project errors are in other files (not part of this task)

@@ -328,7 +328,7 @@ export class ModulationTableStore {
         busId: bus.id,
         name: bus.name,
         type: bus.type,
-        combineMode: bus.combine.mode as CombineMode,
+        combineMode: bus.combineMode,
         enabled: true, // TODO: Add bus enabled state
         publisherCount: publisherIds.length,
         listenerCount: listenerIds.length,

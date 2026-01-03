@@ -4,7 +4,6 @@ import type {
   Slot,
   BlockParams,
   KernelCapability,
-  KernelId,
   PureCompileKind,
   SlotType,
   SlotDef,
@@ -15,6 +14,18 @@ import type {
   Capability,
 } from '../types';
 import type { CompositeDefinition } from '../composites';
+import type { KERNEL_PRIMITIVES } from './kernel-primitives';
+
+// =============================================================================
+// Block-Specific Type Overrides
+// =============================================================================
+
+/**
+ * KernelId - derived from KERNEL_PRIMITIVES keys.
+ * This overrides the generic string type from ../types to provide
+ * compile-time safety for kernel primitive names.
+ */
+export type KernelId = keyof typeof KERNEL_PRIMITIVES;
 
 // Re-export types that are used by other modules
 export type {
@@ -31,7 +42,6 @@ export type {
   // New types for Capability Enforcement
   Capability,
   KernelCapability,
-  KernelId,
   PureCompileKind,
 };
 

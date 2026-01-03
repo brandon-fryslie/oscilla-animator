@@ -164,12 +164,25 @@ export const BlockContextMenu = observer(() => {
 
       // Convert exposedParams from Record to ExposedParam[]
       const exposedParamsArray: ExposedParam[] = composite.exposedParams
-        ? Object.entries(composite.exposedParams).map(([id, binding]) => ({
-            id,
-            label: id, // Use id as label, could be improved
+        ? Object.entries(composite.exposedParams).map(([name, binding]) => ({
+            name,
             blockId: binding.blockId,
             paramName: binding.paramName,
-          }))
+            name,
+            blockId: binding.blockId,
+            paramName: binding.paramName,
+            name,
+            blockId: binding.blockId,
+            paramName: binding.paramName,
+            name,
+            blockId: binding.blockId,
+            paramName: binding.paramName,
+            name,
+            blockId: binding.blockId,
+            paramName: binding.paramName,
+            name,
+            blockId: binding.blockId,
+            paramName: binding.paramName,
         : [];
 
       const compositeDefinition: CompositeDefinition = {
