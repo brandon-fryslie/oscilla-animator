@@ -258,9 +258,6 @@ export type NodeIndex = number;
 /** Dense index for ports within a node's inputs or outputs */
 export type PortIndex = number;
 
-/** Dense index for buses (0..B-1) */
-export type BusIndex = number;
-
 /**
  * Dense index into ValueStore arrays.
  *
@@ -299,6 +296,35 @@ export type EventExprId = number;
  * Transform chain ID - dense array index.
  */
 export type TransformChainId = number;
+
+// ============================================================================
+// Constant Pool (ADR-001)
+// ============================================================================
+
+/**
+ * Constant pool for the compiled program.
+ *
+ * Allows efficient storage and deduplication of constants.
+ *
+ * References:
+ * - ADR-001: Unified IR Schema
+ */
+export interface ConstPool {
+  /**
+   * JSON-serializable constants.
+   * Includes numbers, strings, booleans, and objects.
+   * Referenced by index in this array.
+   */
+  readonly json: readonly unknown[];
+
+  /**
+   * Optional: Typed arrays for faster access in Rust/WASM.
+   * Not strictly required for JS runtime but part of the spec.
+   */
+  readonly f64?: Float64Array;
+  readonly f32?: Float32Array;
+  readonly i32?: Int32Array;
+}
 
 // ============================================================================
 // Type Table (02-IR-Schema.md §5)

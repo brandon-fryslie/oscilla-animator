@@ -57,19 +57,15 @@ The UI presents both as "Lens steps," but internally they're distinct so the com
 
 ## Where Lenses Exist
 
-### Listener-Side Lenses (Required)
 
 Every bus subscription may have a lens stack.
 
 This is the default and most important use:
 > "Everything listens to phaseA, but each parameter hears it differently."
 
-### Publisher-Side Lenses (Optional, Advanced)
 
-A publisher may also have a lens stack that shapes what it contributes to the bus:
 - useful for gain staging, clamping, normalization, smoothing before summing
 
-Keep publisher lenses as a planned extension for v1. The data model can support it.
 
 ---
 
@@ -269,9 +265,7 @@ Examples:
 
 ## Data Model
 
-### Listener Binding
 
-A listener binding stores:
 - `busId`
 - `lens`: LensStack
 

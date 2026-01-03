@@ -108,6 +108,7 @@ export class HistoryStore {
       addRevision: action,
       undo: action,
       redo: action,
+      reset: action,
     });
   }
 
@@ -151,6 +152,20 @@ export class HistoryStore {
     this.revisions.set(id, node);
     this.currentRevisionId = id;
     return id;
+  }
+
+  /**
+   * Reset the history to initial state (no revisions).
+   * Clears all revisions and resets to revision 0 (root).
+   *
+   * Sprint: Bus-Block Unification - Sprint 3 (Fix Tests)
+   * Used after creating default buses to start with a clean history.
+   */
+  reset(): void {
+    this.revisions.clear();
+    this.currentRevisionId = 0;
+    this.rootPreferredChildId = undefined;
+    this.nextRevisionId = 1;
   }
 
   /**

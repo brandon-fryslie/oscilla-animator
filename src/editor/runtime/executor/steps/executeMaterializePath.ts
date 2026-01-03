@@ -126,7 +126,7 @@ function resolvePathExprFromField(
   exprId: string,
 ): PathExpr | PathExpr[] {
   const fieldId = parseFieldExprId(exprId);
-  const fieldNode = program.fields.nodes[fieldId];
+  const fieldNode = program.fieldExprs.nodes[fieldId];
   if (fieldNode === undefined) {
     throw new Error(`executeMaterializePath: missing field expr ${exprId}`);
   }

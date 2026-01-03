@@ -18,7 +18,7 @@ import type { PortRef } from '../types';
 // =============================================================================
 
 export interface EntityRef {
-  kind: 'block' | 'wire' | 'bus' | 'publisher' | 'listener' | 'compositeDef' | 'asset';
+  kind: 'block' | 'wire' | 'compositeDef' | 'asset';
   id: string;
 }
 
@@ -112,19 +112,16 @@ export interface TxBuilder {
   addWire(from: PortRef, to: PortRef, id?: string): string;
   removeWire(connectionId: string): void;
 
-  // Bus Ops
-  addBus(spec: { name: string; type: import('../types').TypeDesc; combine: import('../types').CombinePolicy; defaultValue: unknown; sortKey?: number; id?: string }): string;
-  removeBus(busId: string): void;
-  updateBus(busId: string, patch: Partial<import('../types').Bus>): void;
-
-  // Binding Ops
-  addPublisher(spec: { busId: string; from: PortRef; enabled?: boolean; sortKey?: number; adapterChain?: import('../types').AdapterStep[]; id?: string }): string;
-  removePublisher(publisherId: string): void;
-  updatePublisher(publisherId: string, patch: Partial<import('../types').Publisher>): void;
-
-  addListener(spec: { busId: string; to: PortRef; enabled?: boolean; adapterChain?: import('../types').AdapterStep[]; lensStack?: import('../types').LensInstance[]; id?: string }): string;
-  removeListener(listenerId: string): void;
-  updateListener(listenerId: string, patch: Partial<import('../types').Listener>): void;
+  // Edge Ops (unified connection type)
+  addEdge(spec: {
+    from: { blockId: string; slotId: string };
+    to: { blockId: string; slotId: string };
+    enabled?: boolean;
+    sortKey?: number;
+    transforms?: import('../types').TransformStep[];
+    id?: string;
+  }): string;
+  removeEdge(edgeId: string): void;
 
   // Time Ops
   setTimeRoot(blockId: string): void;

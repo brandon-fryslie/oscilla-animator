@@ -71,7 +71,6 @@
 
 ### Phase 8: Bus Compilation Integration
 - [ ] `bus-compilation.test.ts` - All 7 bus compilation tests pass
-- [ ] Single publisher/listener scenario works
 - [ ] Default value scenario works
 - [ ] "last" combine mode works
 - [ ] "sum" combine mode works
@@ -80,8 +79,6 @@
 - [ ] Investigation completed: Root cause of failures identified and fixed
 
 ### Phase 9: Semantic Validator Warnings
-- [ ] `validator.test.ts` - Multiple publishers warning test passes
-- [ ] Warning emitted for control buses with multiple publishers
 - [ ] Investigation completed: Warning emission logic verified
 
 ### Phase 10: PatchStore Event Emission

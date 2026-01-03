@@ -24,7 +24,6 @@
 ### 2. MobX-Kernel Sync Helper (✓ DONE)
 
 **Created `syncFromKernel()` method:**
-- Syncs blocks, connections, buses, publishers, listeners from kernel.doc to MobX observables
 - Uses `runInAction()` to trigger MobX reactions
 - Handles type casting from PatchDocument to full Patch (kernel stores full Patch internally)
 - Documented that lanes and defaultSources remain outside kernel for now
@@ -146,7 +145,6 @@ Need to verify:
 ### 1. Kernel vs PatchStore Responsibility Split
 
 **Kernel Manages**:
-- Blocks, connections, buses, publishers, listeners
 - Transaction history and undo/redo
 - Validation (via SemanticGraph)
 

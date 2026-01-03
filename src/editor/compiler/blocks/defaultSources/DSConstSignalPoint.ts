@@ -23,7 +23,7 @@ const lowerDSConstSignalPoint: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
     throw new Error(`DSConstSignalPoint: expected sig input for value, got ${value.k}`);
   }
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'DSConstSignalPoint_out');
 
   // Pass-through: output is same as input
   return {

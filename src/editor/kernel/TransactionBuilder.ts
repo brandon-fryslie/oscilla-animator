@@ -15,7 +15,7 @@ import type {
   PatchKernel
 } from './types';
 import type { PatchDocument } from '../semantic/types';
-import type { Patch, Block, Connection, Bus, Publisher, Listener, PortRef, AdapterStep, LensInstance, TypeDesc, CombinePolicy } from '../types';
+import type { Patch, Block, Edge, PortRef } from '../types';
 import { Validator } from '../semantic/validator';
 import { applyOp } from './applyOp';
 import type { Op } from './ops';
@@ -100,31 +100,16 @@ class TransactionBuilder implements TxBuilder {
     const block = this.stagedDoc.blocks.find(b => b.id === blockId);
     if (block == null) return; // Already gone
 
-    // 2. Cascade: remove connections
-    // Iterate ALL connections in stagedDoc
-    // (In a real implementation, SemanticGraph would make this fast)
-    const wiresToRemove = this.stagedDoc.connections.filter(
-      c => c.from.blockId === blockId || c.to.blockId === blockId
+    // 2. Cascade: remove edges connected to this block
+    // All connections are now edges (unified model)
+    const edgesToRemove = this.stagedDoc.edges.filter(
+      e => e.from.blockId === blockId || e.to.blockId === blockId
     );
-    for (const wire of wiresToRemove) {
-      this.removeWire(wire.id);
+    for (const edge of edgesToRemove) {
+      this.removeEdge(edge.id);
     }
 
-    // 3. Cascade: bindings
-    if (this.stagedDoc.publishers != null) {
-      const pubsToRemove = this.stagedDoc.publishers.filter(p => p.from.blockId === blockId);
-      for (const pub of pubsToRemove) {
-        this.removePublisher(pub.id);
-      }
-    }
-    if (this.stagedDoc.listeners != null) {
-      const listenersToRemove = this.stagedDoc.listeners.filter(l => l.to.blockId === blockId);
-      for (const list of listenersToRemove) {
-        this.removeListener(list.id);
-      }
-    }
-
-    // 4. Remove Block
+    // 3. Remove Block
     const op: Op = { op: 'BlockRemove', blockId };
     const inv: Op = { op: 'BlockAdd', block: { ...block } }; // Clone block state
     this.op(op, inv);
@@ -173,190 +158,87 @@ class TransactionBuilder implements TxBuilder {
   // ---------------------------------------------------------------------------
 
   addWire(from: PortRef, to: PortRef, id?: string): string {
-    const connectionId = id ?? randomUUID();
-    const connection: Connection = {
-      id: connectionId,
-      from,
-      to
+    const edgeId = id ?? randomUUID();
+    const edge: Edge = {
+      id: edgeId,
+      from: { kind: 'port', blockId: from.blockId, slotId: from.slotId },
+      to: { kind: 'port', blockId: to.blockId, slotId: to.slotId },
+      enabled: true,
+    role: { kind: 'user' },
     };
 
-    const op: Op = { op: 'WireAdd', connection };
-    const inv: Op = { op: 'WireRemove', connectionId };
+    const op: Op = { op: 'WireAdd', edge };
+    const inv: Op = { op: 'WireRemove', edgeId };
 
     this.op(op, inv);
-    return connectionId;
+    return edgeId;
   }
 
-  removeWire(connectionId: string): void {
-    const conn = this.stagedDoc.connections.find(c => c.id === connectionId);
-    if (conn == null) return;
+  removeWire(edgeId: string): void {
+    // Look up in edges array (unified model)
+    const edge = this.stagedDoc.edges.find(e => e.id === edgeId);
+    if (edge == null) return;
 
-    const op: Op = { op: 'WireRemove', connectionId };
-    const inv: Op = { op: 'WireAdd', connection: { ...conn } };
+    const op: Op = { op: 'WireRemove', edgeId };
+    const inv: Op = { op: 'WireAdd', edge: { ...edge } };
 
     this.op(op, inv);
   }
 
-  retargetWire(connectionId: string, next: { from?: PortRef; to?: PortRef }): void {
-    const conn = this.stagedDoc.connections.find(c => c.id === connectionId);
-    if (conn == null) return;
+  retargetWire(edgeId: string, next: { from?: PortRef; to?: PortRef }): void {
+    const edge = this.stagedDoc.edges.find(e => e.id === edgeId);
+    if (edge == null) return;
 
     const prev: { from?: PortRef; to?: PortRef } = {};
-    if (next.from != null) prev.from = conn.from;
-    if (next.to != null) prev.to = conn.to;
+    if (next.from != null) prev.from = { blockId: edge.from.blockId, slotId: edge.from.slotId, direction: 'output' };
+    if (next.to != null) prev.to = { blockId: edge.to.blockId, slotId: edge.to.slotId, direction: 'input' };
 
-    const op: Op = { op: 'WireRetarget', connectionId, next };
-    const inv: Op = { op: 'WireRetarget', connectionId, next: prev };
+    const op: Op = { op: 'WireRetarget', edgeId, next };
+    const inv: Op = { op: 'WireRetarget', edgeId, next: prev };
 
     this.op(op, inv);
   }
 
   // ---------------------------------------------------------------------------
-  // Bus Ops
+  // Edge Ops
   // ---------------------------------------------------------------------------
+  // Note: Buses are implemented as BusBlocks (regular blocks with ports).
+  // Use addBlock with type='BusBlock' and addEdge for connections.
 
-  addBus(spec: { name: string; type: TypeDesc; combine: CombinePolicy; defaultValue: unknown; sortKey?: number; id?: string }): string {
+  /**
+   * Add an edge connecting two block ports.
+   * This is the unified connection type that replaces Connection, Publisher, and Listener.
+   */
+  addEdge(spec: {
+    from: { blockId: string; slotId: string };
+    to: { blockId: string; slotId: string };
+    enabled?: boolean;
+    sortKey?: number;
+    transforms?: import('../types').TransformStep[];
+    id?: string;
+  }): string {
     const id = spec.id ?? randomUUID();
-    const bus: Bus = {
+
+    const edge: Edge = {
       id,
-      name: spec.name,
-      type: spec.type,
-      combine: spec.combine,
-      defaultValue: spec.defaultValue,
-      sortKey: spec.sortKey ?? 0,
-      origin: 'user'
-    };
-
-    const op: Op = { op: 'BusAdd', bus };
-    const inv: Op = { op: 'BusRemove', busId: id };
-
-    this.op(op, inv);
-    return id;
-  }
-
-  removeBus(busId: string): void {
-    const bus = this.stagedDoc.buses?.find(b => b.id === busId);
-    if (bus == null) return;
-
-    // Cascade: remove bindings
-    if (this.stagedDoc.publishers != null) {
-      const pubs = this.stagedDoc.publishers.filter(p => p.busId === busId);
-      for (const p of pubs) this.removePublisher(p.id);
-    }
-    if (this.stagedDoc.listeners != null) {
-      const listeners = this.stagedDoc.listeners.filter(l => l.busId === busId);
-      for (const l of listeners) this.removeListener(l.id);
-    }
-
-    const op: Op = { op: 'BusRemove', busId };
-    const inv: Op = { op: 'BusAdd', bus: { ...bus } };
-
-    this.op(op, inv);
-  }
-
-  updateBus(busId: string, patch: Partial<Bus>): void {
-    const bus = this.stagedDoc.buses?.find(b => b.id === busId);
-    if (bus == null) return;
-
-    // Build undo patch by copying current values for keys being patched
-    const undoPatch = Object.fromEntries(
-      Object.keys(patch).map(key => [key, bus[key as keyof Bus]])
-    ) as Partial<Bus>;
-
-    const op: Op = { op: 'BusUpdate', busId, patch };
-    const inv: Op = { op: 'BusUpdate', busId, patch: undoPatch };
-
-    this.op(op, inv);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Binding Ops
-  // ---------------------------------------------------------------------------
-
-  addPublisher(spec: { busId: string; from: PortRef; enabled?: boolean; sortKey?: number; adapterChain?: AdapterStep[]; id?: string }): string {
-    const id = spec.id ?? randomUUID();
-    const publisher: Publisher = {
-      id,
-      busId: spec.busId,
-      from: spec.from,
+      from: { kind: 'port', blockId: spec.from.blockId, slotId: spec.from.slotId },
+      to: { kind: 'port', blockId: spec.to.blockId, slotId: spec.to.slotId },
       enabled: spec.enabled ?? true,
-      sortKey: spec.sortKey ?? 0,
-      adapterChain: spec.adapterChain
+      transforms: spec.transforms,
+      sortKey: spec.sortKey,
+      role: { kind: 'user' },
     };
 
-    const op: Op = { op: 'PublisherAdd', publisher };
-    const inv: Op = { op: 'PublisherRemove', publisherId: id };
+    const op: Op = { op: 'WireAdd', edge };
+    const inv: Op = { op: 'WireRemove', edgeId: id };
 
     this.op(op, inv);
     return id;
   }
 
-  removePublisher(publisherId: string): void {
-    const pub = this.stagedDoc.publishers?.find(p => p.id === publisherId);
-    if (pub == null) return;
-
-    const op: Op = { op: 'PublisherRemove', publisherId };
-    const inv: Op = { op: 'PublisherAdd', publisher: { ...pub } };
-
-    this.op(op, inv);
-  }
-
-  updatePublisher(publisherId: string, patch: Partial<Publisher>): void {
-    const pub = this.stagedDoc.publishers?.find(p => p.id === publisherId);
-    if (pub == null) return;
-
-    // Build undo patch by copying current values for keys being patched
-    const undoPatch = Object.fromEntries(
-      Object.keys(patch).map(key => [key, pub[key as keyof Publisher]])
-    ) as Partial<Publisher>;
-
-    const op: Op = { op: 'PublisherUpdate', publisherId, patch };
-    const inv: Op = { op: 'PublisherUpdate', publisherId, patch: undoPatch };
-
-    this.op(op, inv);
-  }
-
-  addListener(spec: { busId: string; to: PortRef; enabled?: boolean; adapterChain?: AdapterStep[]; lensStack?: LensInstance[]; id?: string }): string {
-    const id = spec.id ?? randomUUID();
-    const listener: Listener = {
-      id,
-      busId: spec.busId,
-      to: spec.to,
-      enabled: spec.enabled ?? true,
-      adapterChain: spec.adapterChain,
-      lensStack: spec.lensStack
-    };
-
-    const op: Op = { op: 'ListenerAdd', listener };
-    const inv: Op = { op: 'ListenerRemove', listenerId: id };
-
-    this.op(op, inv);
-    return id;
-  }
-
-  removeListener(listenerId: string): void {
-    const list = this.stagedDoc.listeners?.find(l => l.id === listenerId);
-    if (list == null) return;
-
-    const op: Op = { op: 'ListenerRemove', listenerId };
-    const inv: Op = { op: 'ListenerAdd', listener: { ...list } };
-
-    this.op(op, inv);
-  }
-
-  updateListener(listenerId: string, patch: Partial<Listener>): void {
-    const list = this.stagedDoc.listeners?.find(l => l.id === listenerId);
-    if (list == null) return;
-
-    // Build undo patch by copying current values for keys being patched
-    const undoPatch = Object.fromEntries(
-      Object.keys(patch).map(key => [key, list[key as keyof Listener]])
-    ) as Partial<Listener>;
-
-    const op: Op = { op: 'ListenerUpdate', listenerId, patch };
-    const inv: Op = { op: 'ListenerUpdate', listenerId, patch: undoPatch };
-
-    this.op(op, inv);
+  removeEdge(edgeId: string): void {
+    // Use removeWire which now operates on edges
+    this.removeWire(edgeId);
   }
 
   // ---------------------------------------------------------------------------
@@ -468,4 +350,4 @@ class TransactionBuilder implements TxBuilder {
   }
 }
 
-export default TransactionBuilder
+export default TransactionBuilder;

@@ -11,7 +11,6 @@ The codebase consistently uses **"Lens"** terminology:
 - `src/editor/lenses.ts` - Main implementation file (506 lines)
 - `LensDefinition` interface type
 - `applyLens()` function
-- `lensStack` field in listeners
 
 The specification uses **"Adapter"** terminology:
 - `design-docs/3-Synthesized/04-Adapters.md` - File name and content
@@ -27,7 +26,6 @@ interface LensDefinition {
 }
 
 // Legacy support exists:
-interface Listener {
   // ... other fields
   lensStack?: LensDefinition[];
   adapterChain?: AdapterStep[]; // Backward compatibility

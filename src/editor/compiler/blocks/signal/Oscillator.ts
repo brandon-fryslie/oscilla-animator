@@ -137,7 +137,7 @@ const lowerOscillator: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
   // Apply bias: (waveform * amplitude) + bias
   const output = ctx.b.sigZip(scaled, bias.id, { kind: 'opcode', opcode: OpCode.Add }, ctx.outTypes[0],);
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'Oscillator_out');
   return {
     outputs: [], // Legacy - empty for fully migrated blocks
     outputsById: { out: { k: 'sig', id: output, slot } },

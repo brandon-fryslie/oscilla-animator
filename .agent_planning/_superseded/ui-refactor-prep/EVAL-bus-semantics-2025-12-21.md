@@ -14,8 +14,6 @@ Scope: Bus ordering and combine semantics (Issue #5)
 **Blocker**: Yes - Required for multi-UI and server-authoritative architecture
 
 **The Problem**: Bus ordering and combine logic exists in TWO places:
-1. BusStore (UI layer) - sorts publishers for display
-2. compileBusAware (compiler) - sorts publishers for evaluation
 
 This creates the same "two truths" problem identified in Overview.md Issue #5.
 
@@ -32,7 +30,6 @@ From **design-docs/10-Refactor-for-UI-prep/1-Overview.md**:
 > - Combine mode is a bus property.
 > - Compiler combines at compile/eval time.
 >
-> **Risk**: if UI/store sorts one way and compiler sorts another (or filters disabled publishers differently), you get non-determinism that is invisible to users.
 >
 > **Fix shape**: ordering and enabled/disabled rules must live in one "bus semantics" module that both UI queries and compiler use.
 
@@ -41,19 +38,14 @@ From **design-docs/10-Refactor-for-UI-prep/7-PatchSemantics.md**:
 > **5.3 Deterministic ordering**
 >
 > sortKey is a contract. The kernel is where it becomes authoritative:
-> - publishers sorted by sortKey then by stable tie-breakers (id)
 > - combine order is derived from this sorted list
 > - UI and compiler MUST use same sort
 >
-> The kernel provides: `getSortedPublishers(busId)` → Publisher[]
-> This is the ONLY way anyone gets publisher ordering.
 
 From **design-docs/3-Synthesized/03-Buses.md**:
 
-> **Publisher Ordering**
 >
 > Deterministic ordering via sortKey:
-> - Every publisher has a stable sortKey
 > - Combine operations use this ordering
 > - Results are deterministic across frames
 
@@ -66,8 +58,6 @@ From **design-docs/3-Synthesized/03-Buses.md**:
 **Location 1: BusStore.ts (UI Layer)**
 ```typescript
 // src/editor/stores/BusStore.ts:499-503
-getPublishersByBus(busId: string): Publisher[] {
-  return this.publishers
     .filter(p => p.busId === busId)
     .sort((a, b) => a.sortKey - b.sortKey);  // ← Sorts by sortKey only
 }
@@ -76,8 +66,6 @@ getPublishersByBus(busId: string): Publisher[] {
 **Location 2: compileBusAware.ts (Compiler)**
 ```typescript
 // src/editor/compiler/compileBusAware.ts:83-91
-function sortPublishers(publishers: Publisher[]): Publisher[] {
-  return [...publishers].sort((a, b) => {
     if (a.sortKey !== b.sortKey) {
       return a.sortKey - b.sortKey;
     }
@@ -90,7 +78,6 @@ function sortPublishers(publishers: Publisher[]): Publisher[] {
 **CRITICAL DIVERGENCE FOUND**:
 - BusStore sorts by `sortKey` ONLY
 - Compiler sorts by `sortKey` THEN `id` (tie-breaker)
-- When multiple publishers have same sortKey, UI and compiler will show **different orderings**
 - This breaks determinism guarantees
 
 ### Combine Logic - DUPLICATED
@@ -122,28 +109,20 @@ function combineValues(values: unknown[], combineMode: string): unknown {
 
 ### Enabled/Disabled Filtering - INCONSISTENT
 
-**BusStore.ts**: No filtering by `enabled` in `getPublishersByBus()`
-- Returns ALL publishers regardless of enabled status
-- UI shows disabled publishers
 
 **compileBusAware.ts**: Filters by `enabled` at evaluation time
 ```typescript
 // Line 831
-const busPublishers = publishers.filter(p => p.busId === busId && p.enabled);
 ```
 
-**DIVERGENCE**: UI displays disabled publishers, compiler ignores them.
 
-### Semantic Graph - DOES sort publishers
 
 **Location: semantic/graph.ts**
 ```typescript
 // Lines 53-54 (inferred from structure)
-private busPublishers: Map<string, PublisherEdge[]> = new Map();
 // "sorted by sortKey for deterministic ordering"
 ```
 
-**Question**: Does SemanticGraph.getBusPublishers() use the same sort as compiler?
 - Need to verify if semantic layer is being used consistently
 - If so, this could be the foundation for the unified module
 
@@ -155,7 +134,6 @@ private busPublishers: Map<string, PublisherEdge[]> = new Map();
 
 From `src/editor/compiler/unified/__tests__/UnifiedCompiler.test.ts`:
 ```typescript
-// Lines 108-109: Publishers with explicit sortKey
 { blockId: 'source1', busId: 'bus1', port: 'out', sortKey: 0 },
 { blockId: 'source2', busId: 'bus1', port: 'out', sortKey: 1 },
 ```
@@ -164,7 +142,6 @@ Tests verify sortKey ordering works in compiler - but do NOT verify consistency 
 
 ### Runtime Risk
 
-**Scenario**: User adds 3 publishers to `energy` bus with same sortKey:
 1. UI displays them in array insertion order (BusStore has no tie-breaker)
 2. Compiler evaluates them in `id.localeCompare()` order
 3. For `last` combine mode → **different values in UI vs runtime**
@@ -189,15 +166,10 @@ Tests verify sortKey ordering works in compiler - but do NOT verify consistency 
 
 export class BusSemantics {
   /**
-   * Get sorted publishers for a bus.
    * Deterministic ordering: sortKey ascending, then id.localeCompare()
    *
-   * CRITICAL: This is the ONLY way to get publisher ordering.
    * UI and compiler MUST use this.
    */
-  getSortedPublishers(busId: string, allPublishers: Publisher[]): Publisher[] {
-    const busPublishers = allPublishers.filter(p => p.busId === busId && p.enabled);
-    return [...busPublishers].sort((a, b) => {
       if (a.sortKey !== b.sortKey) {
         return a.sortKey - b.sortKey;
       }
@@ -235,25 +207,19 @@ export class BusSemantics {
 ### Migration Steps
 
 **Phase 1: Create module**
-1. Extract `sortPublishers()` from compileBusAware.ts
 2. Extract `combineSignalArtifacts()` from compileBusAware.ts
 3. Extract `combineFieldArtifacts()` from compileBusAware.ts
 4. Add enabled filtering as explicit parameter/policy
 
 **Phase 2: Update consumers**
-1. BusStore.getPublishersByBus() → calls `BusSemantics.getSortedPublishers()`
-2. compileBusAware.sortPublishers() → calls `BusSemantics.getSortedPublishers()`
 3. compileBusAware.combineSignalArtifacts() → calls `BusSemantics.combineSignalArtifacts()`
 4. FieldExpr.combineValues() → calls `BusSemantics` (or stays separate if truly different context)
 
 **Phase 3: Validation**
 1. Add tests verifying UI and compiler use identical ordering
-2. Add test for tie-breaker behavior (multiple publishers, same sortKey)
 3. Add test for enabled/disabled filtering consistency
 
 **Phase 4: Semantic Graph Integration**
-1. Verify SemanticGraph.busPublishers uses `BusSemantics`
-2. Make SemanticGraph the authoritative cache of sorted publishers
 3. BusStore and compiler query SemanticGraph instead of re-sorting
 
 ---
@@ -272,8 +238,6 @@ export class BusSemantics {
 ### Integration Points
 
 **Already exists - good foundation**:
-- `src/editor/semantic/graph.ts` has `busPublishers` map (sorted)
-- `src/editor/semantic/validator.ts` has `getBusPublishers()` query
 - Semantic layer is positioned to be the canonical source
 
 **Missing - needs creation**:
@@ -319,11 +283,9 @@ This is foundational for multi-UI and must be fixed before any UI refactor work.
 ### Concrete Next Steps
 
 1. **Immediate**: Create `src/editor/semantic/busSemantics.ts`
-   - Extract sortPublishers with tie-breaker
    - Extract combine logic
    - Add enabled filtering policy
 
-2. **Quick Win**: Fix BusStore.getPublishersByBus()
    - Add id tie-breaker to match compiler
    - Add enabled filtering option
    - Verify UI displays match runtime
@@ -340,7 +302,6 @@ This is foundational for multi-UI and must be fixed before any UI refactor work.
 
 ### Success Criteria
 
-- [ ] Single source of truth for publisher ordering
 - [ ] BusStore and compiler return identical sorted lists
 - [ ] Combine logic unified in one place
 - [ ] Tests verify UI/compiler consistency

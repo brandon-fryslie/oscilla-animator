@@ -65,3 +65,28 @@ function easeOutBounce(t: number): number {
   if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
   return n1 * (t -= 2.625 / d1) * t + 0.984375;
 }
+
+/**
+ * Get list of all easing function names.
+ * Used by UI components for easing selection dropdowns.
+ */
+export function getEasingNames(): string[] {
+  return [
+    'linear',
+    'easeInQuad',
+    'easeOutQuad',
+    'easeInOutQuad',
+    'easeInSine',
+    'easeOutSine',
+    'easeInOutSine',
+    'easeInExpo',
+    'easeOutExpo',
+    'easeInOutExpo',
+    'easeInElastic',
+    'easeOutElastic',
+    'easeInOutElastic',
+    'easeInBounce',
+    'easeOutBounce',
+    'easeInOutBounce',
+  ];
+}

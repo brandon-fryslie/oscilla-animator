@@ -65,7 +65,6 @@ Make buses real in the compiler and runtime.
 - Deterministic ordering:
   - sortKey + stable ID
 - Bus compilation pipeline:
-  - publisher collection
   - adapter application
   - combine
 - Signal buses end-to-end
@@ -160,7 +159,6 @@ Replace lanes with a musical, legible control surface.
 ### Work
 - Bus Board layout
 - Bus rows with live visualization
-- Publisher inspection & ordering
 - Combine mode UI
 - Silent value editing
 - Binding UI (bus picker + lens)

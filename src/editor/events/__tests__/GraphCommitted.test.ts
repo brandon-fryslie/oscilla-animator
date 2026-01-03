@@ -153,8 +153,8 @@ describe('GraphCommitted Event', () => {
       rootStore.patchStore.connect(blockA, 'out', blockB, 'phase');
       events.length = 0;
 
-      const conn = rootStore.patchStore.connections[0];
-      rootStore.patchStore.disconnect(conn.id);
+      const edge = rootStore.patchStore.edges[0];
+      rootStore.patchStore.disconnect(edge.id);
 
       expect(events.length).toBeGreaterThanOrEqual(1);
       expect(events[0].diffSummary.bindingsChanged).toBe(1);
@@ -218,8 +218,8 @@ describe('GraphCommitted Event', () => {
       rootStore.patchStore.connect(blockA, 'out', blockB, 'phase');
       const revisionBeforeDisconnect = rootStore.patchStore.patchRevision;
 
-      const conn = rootStore.patchStore.connections[0];
-      rootStore.patchStore.disconnect(conn.id);
+      const edge = rootStore.patchStore.edges[0];
+      rootStore.patchStore.disconnect(edge.id);
 
       // Disconnect should increment patchRevision by at least 1
       expect(rootStore.patchStore.patchRevision).toBeGreaterThan(revisionBeforeDisconnect);

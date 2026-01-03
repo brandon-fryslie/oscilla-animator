@@ -211,9 +211,6 @@ this.root.events.emit({
 
 **Target Architecture**:
 - Remove lines 400-402 from `PatchStore.removeBlock()`
-- Add `BlockRemoved` event listener in `RootStore.setupEventListeners()`
-- Listener checks if removed block was selected and clears selection
-- Pattern mirrors `BusDeleted` event listener (RootStore.ts line 70-75)
 
 **Implementation Steps**:
 
@@ -221,7 +218,6 @@ this.root.events.emit({
    - Delete the if-statement that clears `uiStore.selectedBlockId`
    - Keep the `BlockRemoved` event emission (already correct)
 
-2. **Add Event Listener** (`RootStore.ts` after line 75)
    ```typescript
    // BlockRemoved → Clear selection if removed block was selected
    this.events.on('BlockRemoved', (event) => {
@@ -241,17 +237,11 @@ this.root.events.emit({
 
 - [ ] Direct mutation of `uiStore.selectedBlockId` removed from `PatchStore.removeBlock()`
 - [ ] Existing `BlockRemoved` event emission unchanged (no modifications needed)
-- [ ] `RootStore.setupEventListeners()` adds `BlockRemoved` event listener
-- [ ] Listener checks if `event.blockId === selectedBlockId` before clearing
 - [ ] Zero imports/references to UIStateStore in PatchStore.ts (verified by grep)
-- [ ] Pattern matches `BusDeleted` listener implementation (consistent style)
 
 ##### Testing Requirements
 
 **Unit Tests** (`src/editor/stores/__tests__/RootStore.test.ts`):
-- [ ] Test: `BlockRemoved` event listener registered in constructor
-- [ ] Test: Listener clears selection when removed block was selected
-- [ ] Test: Listener does NOT clear selection when different block removed
 
 **Integration Tests**:
 - [ ] Test: Removing selected block clears `uiStore.selectedBlockId`
@@ -312,7 +302,6 @@ P1-2 (Remove UIStore Mutation) → Depends on BlockRemoved event (Phase A ✓)
 4. Refactor block removal to emit events for cascade-deleted connections
 5. Consolidate `removeConnection()` to use `disconnect()`
 6. Remove direct UIStore mutation from `PatchStore.removeBlock()`
-7. Add `BlockRemoved` event listener to `RootStore.setupEventListeners()`
 8. Write unit tests for connection events (5 tests)
 9. Write integration tests for selection clearing (3 tests)
 10. Verify zero cross-store coupling with grep
@@ -408,7 +397,6 @@ These remain in the backlog for future sprints.
 - [ ] Refactor block removal cascade (line 378-388 to use disconnect())
 - [ ] Consolidate removeConnection() to call disconnect()
 - [ ] Remove UIStore mutation from PatchStore.removeBlock() (line 400-402)
-- [ ] Add BlockRemoved listener to RootStore.setupEventListeners()
 - [ ] Write unit tests for connection events (5 tests minimum)
 - [ ] Write integration tests for selection clearing (3 tests minimum)
 

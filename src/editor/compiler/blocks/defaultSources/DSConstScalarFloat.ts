@@ -14,33 +14,45 @@ import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 /**
  * Lower DSConstScalarFloat to IR.
- * Pure pass-through: out = value.
  *
- * Scalars are compile-time constants, so we pass through the scalarConst reference.
+ * DSConst blocks work in two modes:
+ * 1. Provider mode: No input connection, value comes from params.value
+ * 2. Pass-through mode: Has input connection, passes it through
+ *
+ * Scalars are compile-time constants stored in the const pool.
  */
-const lowerDSConstScalarFloat: BlockLowerFn = ({ inputs, inputsById }) => {
-  const value = inputsById?.value ?? inputs[0]; // Scalar:float
+const lowerDSConstScalarFloat: BlockLowerFn = ({ ctx, inputs, inputsById, config }) => {
+  const inputValue = inputsById?.value ?? inputs[0];
 
-  if (value.k !== 'scalarConst') {
-    throw new Error(`DSConstScalarFloat: expected scalarConst input for value, got ${value.k}`);
+  // If we have a valid input, pass it through
+  if (inputValue !== undefined && inputValue.k === 'scalarConst') {
+    return {
+      outputs: [],
+      outputsById: { out: { k: 'scalarConst', constId: inputValue.constId } },
+    };
   }
 
-  // Pass-through: output is same as input (scalar const reference)
+  // Provider mode: use config.value (set by pass0-materialize or user params)
+  const params = config as { value?: number } | undefined;
+  const rawValue = params?.value ?? 0;
+  const constId = ctx.b.allocConstId(rawValue);
+
   return {
-    outputs: [], // Legacy - empty for fully migrated blocks
-    outputsById: { out: { k: 'scalarConst', constId: value.constId } },
+    outputs: [],
+    outputsById: { out: { k: 'scalarConst', constId } },
   };
 };
 
 // Register block type for IR lowering
+// Note: No defaultSource on value input - DSConst blocks read from params directly
 registerBlockType({
   type: 'DSConstScalarFloat',
   capability: 'pure',
   inputs: [
-    { portId: 'value', label: 'Value', dir: 'in', type: { world: "scalar", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
+    { portId: 'value', label: 'Value', dir: 'in', type: { world: "scalar", domain: "float", category: "core", busEligible: false }, optional: true },
   ],
   outputs: [
-    { portId: 'out', label: 'Output', dir: 'out', type: { world: "scalar", domain: "float", category: "core", busEligible: true } },
+    { portId: 'out', label: 'Output', dir: 'out', type: { world: "scalar", domain: "float", category: "core", busEligible: false } },
   ],
   lower: lowerDSConstScalarFloat,
 });

@@ -32,7 +32,7 @@ export const GraphWorkspace = observer<GraphWorkspaceProps>(function GraphWorksp
 }) {
   const {
     patchStore,
-    busStore,
+    // busStore removed - use patchStore.busBlocks
     viewportStore,
     emphasisStore,
     selectionStore,
@@ -82,27 +82,34 @@ export const GraphWorkspace = observer<GraphWorkspaceProps>(function GraphWorksp
           })),
         };
       }),
-      directBindings: patchStore.connections.map((conn) => ({
-        id: `${conn.from.blockId}:${conn.from.slotId}->${conn.to.blockId}:${conn.to.slotId}`,
-        from: { blockId: conn.from.blockId, portId: conn.from.slotId },
-        to: { blockId: conn.to.blockId, portId: conn.to.slotId },
+      directBindings: patchStore.edges.map((edge) => ({
+        id: `${edge.from.blockId}:${edge.from.slotId}->${edge.to.blockId}:${edge.to.slotId}`,
+        from: { blockId: edge.from.blockId, portId: edge.from.slotId },
+        to: { blockId: edge.to.blockId, portId: edge.to.slotId },
       })),
-      busBindings: [
-        ...busStore.publishers.map((pub) => ({
-          blockId: pub.from.blockId,
-          portId: pub.from.slotId,
-          busId: pub.busId,
-          direction: 'publish' as const,
-        })),
-        ...busStore.listeners.map((listener) => ({
-          blockId: listener.to.blockId,
-          portId: listener.to.slotId,
-          busId: listener.busId,
-          direction: 'subscribe' as const,
-        })),
-      ],
+      // Bus-Block Unification: Publishers are edges TO BusBlocks, listeners are FROM
+      busBindings: (() => {
+        const busBlockIds = new Set(patchStore.blocks.filter(b => b.type === 'BusBlock').map(b => b.id));
+        const publishers = patchStore.edges
+          .filter(e => busBlockIds.has(e.to.blockId))
+          .map(e => ({
+            blockId: e.from.blockId,
+            portId: e.from.slotId,
+            busId: e.to.blockId, // BusBlock ID = bus ID
+            direction: 'publish' as const,
+          }));
+        const listeners = patchStore.edges
+          .filter(e => busBlockIds.has(e.from.blockId))
+          .map(e => ({
+            blockId: e.to.blockId,
+            portId: e.to.slotId,
+            busId: e.from.blockId, // BusBlock ID = bus ID
+            direction: 'subscribe' as const,
+          }));
+        return [...publishers, ...listeners];
+      })(),
     };
-  }, [patchStore.blocks, patchStore.connections, busStore.publishers, busStore.listeners]);
+  }, [patchStore.blocks, patchStore.edges]);
 
   // Compute layout
   const layout = useMemo(() => {

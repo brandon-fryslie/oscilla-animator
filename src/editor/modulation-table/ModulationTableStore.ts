@@ -12,9 +12,10 @@
 import { makeObservable, observable, computed, action } from 'mobx';
 import type { RootStore } from '../stores/RootStore';
 import { SLOT_TYPE_TO_TYPE_DESC, isDirectlyCompatible } from '../types';
-import type { TypeDesc, Slot, Listener, Publisher, LensDefinition, LensInstance, AdapterStep, BusCombineMode } from '../types';
+import type { TypeDesc, Slot, LensDefinition, AdapterStep, BusCombineMode } from '../types';
 import { findAdapterPath } from '../adapters/autoAdapter';
 import { getBlockDefinition } from '../blocks/registry';
+import { convertBlockToBus } from '../bus-block/conversion';
 import {
   type TableRow,
   type TableColumn,
@@ -33,7 +34,6 @@ import {
   parseRowKey,
   getColumnAbbreviation,
 } from './types';
-import { createLensInstanceFromDefinition, lensInstanceToDefinition } from '../lenses/lensInstances';
 
 /**
  * Store for modulation table state.
@@ -88,33 +88,7 @@ export class ModulationTableStore {
     const listenersByBus = new Map<string, string[]>();
     const portsByBlock = new Map<string, { inputs: string[]; outputs: string[] }>();
 
-    // Index listeners by input port
-    for (const listener of this.root.busStore.listeners) {
-      const key = createPortRefKey(listener.to.blockId, listener.to.slotId);
-      listenersByInputPort.set(key, listener.id);
 
-      // Also index by bus
-      const busListeners = listenersByBus.get(listener.busId) ?? [];
-      busListeners.push(listener.id);
-      listenersByBus.set(listener.busId, busListeners);
-    }
-
-    // Index publishers by bus and by output port
-    for (const publisher of this.root.busStore.publishers) {
-      // Index by bus
-      const busPublishers = publishersByBus.get(publisher.busId) ?? [];
-      busPublishers.push(publisher.id);
-      publishersByBus.set(publisher.busId, busPublishers);
-
-      // Index by output port (portKey -> busId -> publisherId)
-      const portKey = createPortRefKey(publisher.from.blockId, publisher.from.slotId);
-      let portPublishers = publishersByOutputPort.get(portKey);
-      if (!portPublishers) {
-        portPublishers = new Map();
-        publishersByOutputPort.set(portKey, portPublishers);
-      }
-      portPublishers.set(publisher.busId, publisher.id);
-    }
 
     // Index ports by block
     for (const block of this.root.patchStore.blocks) {
@@ -153,7 +127,8 @@ export class ModulationTableStore {
   get rows(): readonly TableRow[] {
     const rows: TableRow[] = [];
 
-    for (const block of this.root.patchStore.blocks) {
+    // Use userBlocks to exclude hidden blocks (like BusBlocks)
+    for (const block of this.root.patchStore.userBlocks) {
       const blockDef = getBlockDefinition(block.type);
       if (!blockDef) continue;
 
@@ -332,12 +307,12 @@ export class ModulationTableStore {
   get columns(): readonly TableColumn[] {
     const index = this.patchIndex;
 
-    return this.root.busStore.buses.map((bus) => {
+    return this.root.patchStore.busBlocks.map(convertBlockToBus).map((bus) => {
       const publisherIds = index.publishersByBus.get(bus.id) ?? [];
       const listenerIds = index.listenersByBus.get(bus.id) ?? [];
 
       // Calculate activity based on listener count (normalized)
-      const maxListeners = Math.max(1, ...this.root.busStore.buses.map(
+      const maxListeners = Math.max(1, ...this.root.patchStore.busBlocks.map(convertBlockToBus).map(
         (b) => (index.listenersByBus.get(b.id) ?? []).length
       ));
       const activity = listenerIds.length / maxListeners;
@@ -427,53 +402,58 @@ export class ModulationTableStore {
    */
   get cells(): readonly TableCell[] {
     const cells: TableCell[] = [];
-    const index = this.patchIndex;
+    const patchStore = this.root.patchStore;
+    const busBlocks = patchStore.busBlocks;
+    const edges = patchStore.edges;
+
+    // Build a map of bus ID -> BusBlock ID for quick lookup
+    const busIdToBlockId = new Map<string, string>();
+    for (const b of busBlocks) {
+      const busId = (b.params.busId as string) || b.id;
+      busIdToBlockId.set(busId, b.id);
+    }
 
     for (const row of this.rows) {
-      const portKey = createPortRefKey(row.blockId, row.portId);
+      const parsed = parseRowKey(row.key);
+      if (!parsed) continue;
+      const { blockId, portId, direction } = parsed;
 
       for (const column of this.columns) {
-        if (row.direction === 'input') {
-          // Input row: check for listener
-          const listenerId = index.listenersByInputPort.get(portKey);
-          const listener = listenerId != null
-            ? this.root.busStore.listeners.find((l) => l.id === listenerId && l.busId === column.busId)
-            : undefined;
-
-          const status = this.getCellStatusForListener(row, column, listener);
-
+        const busBlockId = busIdToBlockId.get(column.busId);
+        if (!busBlockId) {
           cells.push({
             rowKey: row.key,
             busId: column.busId,
-            direction: 'input',
-            listenerId: listener?.id,
-            enabled: listener?.enabled,
-            lensChain: listener?.lensStack != null
-              ? listener.lensStack.map((lens) => lensInstanceToDefinition(lens, this.root.defaultSourceStore))
-              : undefined,
-            status,
-            suggestedChain: status === 'convertible' ? this.getSuggestedChain(row, column) : undefined,
-            costClass: status === 'convertible' ? this.getCostClass(row, column) : undefined,
+            direction: row.direction,
+            status: 'available' as CellStatus,
           });
-        } else {
-          // Output row: check for publisher
-          const portPublishers = index.publishersByOutputPort.get(portKey);
-          const publisherId = portPublishers?.get(column.busId);
-          const publisher = publisherId != null
-            ? this.root.busStore.publishers.find((p) => p.id === publisherId)
-            : undefined;
-
-          const status = this.getCellStatusForPublisher(row, column, publisher);
-
-          cells.push({
-            rowKey: row.key,
-            busId: column.busId,
-            direction: 'output',
-            publisherId: publisher?.id,
-            enabled: publisher?.enabled ?? true,
-            status,
-          });
+          continue;
         }
+
+        // Check for edge connecting this port to/from this BusBlock
+        let isBound = false;
+        if (direction === 'input') {
+          // Listener: edge FROM BusBlock TO this port
+          isBound = edges.some(e =>
+            e.from.blockId === busBlockId &&
+            e.to.blockId === blockId &&
+            e.to.slotId === portId
+          );
+        } else {
+          // Publisher: edge FROM this port TO BusBlock
+          isBound = edges.some(e =>
+            e.from.blockId === blockId &&
+            e.from.slotId === portId &&
+            e.to.blockId === busBlockId
+          );
+        }
+
+        cells.push({
+          rowKey: row.key,
+          busId: column.busId,
+          direction: row.direction,
+          status: isBound ? 'bound' as CellStatus : 'available' as CellStatus,
+        });
       }
     }
 
@@ -671,25 +651,60 @@ export class ModulationTableStore {
       }
       adapterChain = result.chain;
     }
-    const portKey = createPortRefKey(blockId, portId);
+    // Edge-based binding:
+    // - For inputs: add an edge from BusBlock:out → input port
+    // - For outputs: add an edge from output port → BusBlock:in
+    const patchStore = this.root.patchStore;
+
+    // Find the BusBlock for this busId
+    const busBlock = patchStore.busBlocks.find(b => b.params.busId === busId || b.id === busId);
+    if (!busBlock) {
+      console.warn(`[ModulationTableStore] BusBlock not found for busId: ${busId}`);
+      return;
+    }
+
+    // Build transforms from adapter chain and lens chain
+    const transforms: import('../types').TransformStep[] = [];
+    if (adapterChain) {
+      for (const adapter of adapterChain) {
+        transforms.push(adapter);
+      }
+    }
+    if (lensChain) {
+      for (const lens of lensChain) {
+        // Convert LensDefinition to LensInstance format
+        transforms.push({
+          kind: 'lens',
+          lens: {
+            lensId: lens.type,
+            enabled: true,
+            params: {},  // LensParamBinding needs proper initialization
+          },
+        });
+      }
+    }
+
+    // Generate unique edge ID
+    const edgeId = `edge-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     if (direction === 'input') {
-      // For inputs: one listener per port constraint
-      const existingListenerId = this.patchIndex.listenersByInputPort.get(portKey);
-      if (existingListenerId != null) {
-        this.root.busStore.removeListener(existingListenerId);
-      }
-      this.root.busStore.addListener(busId, blockId, portId, adapterChain, lensChain);
+      // Listening: BusBlock output → block input
+      patchStore.addEdge({
+        id: edgeId,
+        from: { kind: 'port', blockId: busBlock.id, slotId: 'out' },
+        to: { kind: 'port', blockId, slotId: portId },
+        transforms: transforms.length > 0 ? transforms : undefined,
+        enabled: true,
+      });
     } else {
-      // For outputs: can have multiple publishers (one per bus)
-      // Check if already publishing to this bus
-      const portPublishers = this.patchIndex.publishersByOutputPort.get(portKey);
-      const existingPublisherId = portPublishers?.get(busId);
-      if (existingPublisherId != null) {
-        // Already bound to this bus, nothing to do
-        return;
-      }
-      this.root.busStore.addPublisher(busId, blockId, portId);
+      // Publishing: block output → BusBlock input
+      patchStore.addEdge({
+        id: edgeId,
+        from: { kind: 'port', blockId, slotId: portId },
+        to: { kind: 'port', blockId: busBlock.id, slotId: 'in' },
+        transforms: transforms.length > 0 ? transforms : undefined,
+        enabled: true,
+      });
     }
   }
 
@@ -700,24 +715,47 @@ export class ModulationTableStore {
    */
   unbindCell(rowKey: RowKey, busId?: string): void {
     const parsed = parseRowKey(rowKey);
-    if (parsed == null) return;
+    if (!parsed) {
+      throw new Error(`Invalid row key: ${rowKey}`);
+    }
 
     const { direction, blockId, portId } = parsed;
-    const portKey = createPortRefKey(blockId, portId);
+    const patchStore = this.root.patchStore;
+
+    // Find the edge(s) connecting this port to/from a BusBlock
+    const busBlockIds = new Set(patchStore.busBlocks.map(b => b.id));
+    const edges = patchStore.edges;
+
+    let edgesToRemove: string[] = [];
 
     if (direction === 'input') {
-      const listenerId = this.patchIndex.listenersByInputPort.get(portKey);
-      if (listenerId != null) {
-        this.root.busStore.removeListener(listenerId);
-      }
+      // Find edges FROM any BusBlock TO this port
+      edgesToRemove = edges
+        .filter(e =>
+          e.to.blockId === blockId &&
+          e.to.slotId === portId &&
+          busBlockIds.has(e.from.blockId) &&
+          (!busId || patchStore.busBlocks.find(b => b.id === e.from.blockId)?.params.busId === busId || e.from.blockId === busId)
+        )
+        .map(e => e.id);
     } else {
-      // For outputs, need the busId to know which publisher to remove
-      if (busId == null) return;
-      const portPublishers = this.patchIndex.publishersByOutputPort.get(portKey);
-      const publisherId = portPublishers?.get(busId);
-      if (publisherId != null) {
-        this.root.busStore.removePublisher(publisherId);
-      }
+      // Find edges FROM this port TO any BusBlock
+      edgesToRemove = edges
+        .filter(e =>
+          e.from.blockId === blockId &&
+          e.from.slotId === portId &&
+          busBlockIds.has(e.to.blockId) &&
+          (!busId || patchStore.busBlocks.find(b => b.id === e.to.blockId)?.params.busId === busId || e.to.blockId === busId)
+        )
+        .map(e => e.id);
+    }
+
+    if (edgesToRemove.length === 0) {
+      return; // Nothing to unbind
+    }
+
+    for (const edgeId of edgesToRemove) {
+      patchStore.removeEdge(edgeId);
     }
   }
 
@@ -726,19 +764,56 @@ export class ModulationTableStore {
    */
   updateCellLenses(rowKey: RowKey, lensChain: LensDefinition[] | undefined): void {
     const parsed = parseRowKey(rowKey);
-    if (!parsed || parsed.direction !== 'input') return;
+    if (!parsed) {
+      throw new Error(`Invalid row key: ${rowKey}`);
+    }
 
-    const portKey = createPortRefKey(parsed.blockId, parsed.portId);
-    const listenerId = this.patchIndex.listenersByInputPort.get(portKey);
+    const { direction, blockId, portId } = parsed;
+    const patchStore = this.root.patchStore;
 
-    if (listenerId == null) return;
+    // Only input/listener cells can have lenses
+    if (direction !== 'input') {
+      console.warn('[ModulationTableStore] updateCellLenses only supported for input rows');
+      return;
+    }
 
-    const lensStack: LensInstance[] | undefined = lensChain
-      ? lensChain.map((lens, index) =>
-          createLensInstanceFromDefinition(lens, listenerId, index, this.root.defaultSourceStore)
-        )
-      : undefined;
-    this.root.busStore.updateListener(listenerId, { lensStack });
+    // Find the BusBlock edge for this input port
+    const busBlockIds = new Set(patchStore.busBlocks.map(b => b.id));
+    const edge = patchStore.edges.find(e =>
+      e.to.blockId === blockId &&
+      e.to.slotId === portId &&
+      busBlockIds.has(e.from.blockId)
+    );
+
+    if (!edge) {
+      console.warn('[ModulationTableStore] No bus connection found for row:', rowKey);
+      return;
+    }
+
+    // Build new transforms array - preserve adapters, update lenses
+    const existingTransforms = edge.transforms ?? [];
+    const adapters = existingTransforms.filter(t => !('kind' in t) || t.kind !== 'lens');
+    const newLenses: import('../types').TransformStep[] = lensChain?.map(lens => ({
+      kind: 'lens' as const,
+      lens: {
+        lensId: lens.type,
+        enabled: true,
+        params: {},  // LensParamBinding needs proper initialization
+      },
+    })) ?? [];
+
+    const newTransforms = [...adapters, ...newLenses];
+
+    // Update the edge - remove and re-add since we don't have WireUpdate
+    // Note: We could use patchStore.updateEdge if available
+    patchStore.removeEdge(edge.id);
+    patchStore.addEdge({
+      id: edge.id, // Preserve edge ID
+      from: edge.from,
+      to: edge.to,
+      transforms: newTransforms.length > 0 ? newTransforms : undefined,
+      enabled: edge.enabled,
+    });
   }
 
   // =============================================================================
@@ -755,42 +830,42 @@ export class ModulationTableStore {
   /**
    * Get cell status for a listener (input) row.
    */
-  private getCellStatusForListener(row: TableRow, column: TableColumn, listener?: Listener): CellStatus {
-    if (listener) {
-      return 'bound';
-    }
-
-    // For listeners, bus type is source, row type is target
-    if (this.isTypeCompatible(column.type, row.type)) {
-      return 'empty';
-    }
-
-    if (this.isTypeConvertible(column.type, row.type)) {
-      return 'convertible';
-    }
-
-    return 'incompatible';
-  }
+//   private getCellStatusForListener(row: TableRow, column: TableColumn, listener?: Listener): CellStatus {
+//     if (listener) {
+//       return 'bound';
+//     }
+// 
+//     // For listeners, bus type is source, row type is target
+//     if (this.isTypeCompatible(column.type, row.type)) {
+//       return 'empty';
+//     }
+// 
+//     if (this.isTypeConvertible(column.type, row.type)) {
+//       return 'convertible';
+//     }
+// 
+//     return 'incompatible';
+//   }
 
   /**
    * Get cell status for a publisher (output) row.
    */
-  private getCellStatusForPublisher(row: TableRow, column: TableColumn, publisher?: Publisher): CellStatus {
-    if (publisher) {
-      return 'bound';
-    }
-
-    // For publishers, row type is source, bus type is target
-    if (this.isTypeCompatible(row.type, column.type)) {
-      return 'empty';
-    }
-
-    if (this.isTypeConvertible(row.type, column.type)) {
-      return 'convertible';
-    }
-
-    return 'incompatible';
-  }
+//   private getCellStatusForPublisher(row: TableRow, column: TableColumn, publisher?: Publisher): CellStatus {
+//     if (publisher) {
+//       return 'bound';
+//     }
+// 
+//     // For publishers, row type is source, bus type is target
+//     if (this.isTypeCompatible(row.type, column.type)) {
+//       return 'empty';
+//     }
+// 
+//     if (this.isTypeConvertible(row.type, column.type)) {
+//       return 'convertible';
+//     }
+// 
+//     return 'incompatible';
+//   }
 
   /**
    * Check if source type is directly compatible with target type.
@@ -802,33 +877,33 @@ export class ModulationTableStore {
   /**
    * Check if source type can be converted to target type.
    */
-  private isTypeConvertible(source: TypeDesc, target: TypeDesc): boolean {
-    const result = findAdapterPath(source, target, 'listener');
-    return !!result.ok || !!(result.suggestions && result.suggestions.length > 0);
-  }
-
+//   private isTypeConvertible(source: TypeDesc, target: TypeDesc): boolean {
+//     const result = findAdapterPath(source, target, 'listener');
+//     return !!result.ok || !!(result.suggestions && result.suggestions.length > 0);
+//   }
+// 
   /**
    * Get suggested lens chain for type conversion.
    */
-  private getSuggestedChain(_row: TableRow, _column: TableColumn): LensDefinition[] | undefined {
-    // Type conversions should be represented via adapters, not lenses.
-    return undefined;
-  }
+//   private getSuggestedChain(_row: TableRow, _column: TableColumn): LensDefinition[] | undefined {
+//     // Type conversions should be represented via adapters, not lenses.
+//     return undefined;
+//   }
 
   /**
    * Get cost class for type conversion.
    */
-  private getCostClass(row: TableRow, column: TableColumn): 'cheap' | 'moderate' | 'heavy' {
-    // Signal to field: cheap (broadcast)
-    if (column.type.world === 'signal' && row.type.world === 'field') {
-      return 'cheap';
-    }
-
-    // Same world conversions are cheap
-    if (column.type.world === row.type.world) {
-      return 'cheap';
-    }
-
-    return 'moderate';
-  }
+//   private getCostClass(row: TableRow, column: TableColumn): 'cheap' | 'moderate' | 'heavy' {
+//     // Signal to field: cheap (broadcast)
+//     if (column.type.world === 'signal' && row.type.world === 'field') {
+//       return 'cheap';
+//     }
+// 
+//     // Same world conversions are cheap
+//     if (column.type.world === row.type.world) {
+//       return 'cheap';
+//     }
+// 
+//     return 'moderate';
+//   }
 }

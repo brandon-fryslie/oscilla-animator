@@ -8,14 +8,14 @@ import { ActionExecutor } from '../ActionExecutor';
 import type { PatchStore } from '../../stores/PatchStore';
 import type { UIStateStore } from '../../stores/UIStateStore';
 import type { DiagnosticHub } from '../DiagnosticHub';
-import type { BlockId, Block, Connection } from '../../types';
+import type { BlockId, Block, Edge } from '../../types';
 
 // Mock stores
 const createMockPatchStore = (): Partial<PatchStore> => {
   const blocks: Block[] = [];
   return {
     blocks,
-    connections: [],
+    edges: [],
     addBlock: vi.fn((_type: string, _params?: Record<string, unknown>) => {
       const newBlockId = `block-${Date.now()}`;
       blocks.push({ id: newBlockId, type: _type, label: _type, inputs: [], outputs: [], params: {}, category: 'Other' });
@@ -285,14 +285,16 @@ describe('ActionExecutor', () => {
         description: 'Adapter block',
       };
 
-      const connection: Connection = {
-        id: 'conn-1',
-        from: { blockId: 'source-block' as BlockId, slotId: 'out', direction: 'output' },
-        to: { blockId: 'target-block' as BlockId, slotId: 'in', direction: 'input' },
+      const edge: Edge = {
+        id: 'edge-1',
+        from: { kind: 'port', blockId: 'source-block', slotId: 'out' },
+        to: { kind: 'port', blockId: 'target-block', slotId: 'in' },
+        enabled: true,
+      role: { kind: 'user' },
       };
 
       mockPatchStore.blocks = [sourceBlock, targetBlock];
-      mockPatchStore.connections = [connection];
+      mockPatchStore.edges = [edge];
       // Mock addBlock to return adapter and add it to blocks
       (mockPatchStore.addBlock as ReturnType<typeof vi.fn>) = vi.fn((_adapterType: string) => {
         const adapterId = 'adapter-block' as BlockId;
@@ -313,8 +315,8 @@ describe('ActionExecutor', () => {
       // Verify adapter block was added
       expect(mockPatchStore.addBlock).toHaveBeenCalledWith('ClampSignal');
 
-      // Verify old connection was removed
-      expect(mockPatchStore.disconnect).toHaveBeenCalledWith('conn-1');
+      // Verify old edge was removed
+      expect(mockPatchStore.disconnect).toHaveBeenCalledWith('edge-1');
 
       // Verify new connections were added (source -> adapter -> target)
       expect(mockPatchStore.connect).toHaveBeenCalledTimes(2);
@@ -325,9 +327,9 @@ describe('ActionExecutor', () => {
       expect(mockUIStateStore.selectBlock).toHaveBeenCalledWith('adapter-block');
     });
 
-    it('should return false if no connection from port', () => {
-      // Remove the connection
-      mockPatchStore.connections = [];
+    it('should return false if no edge from port', () => {
+      // Remove the edge
+      mockPatchStore.edges = [];
 
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -339,7 +341,7 @@ describe('ActionExecutor', () => {
 
       expect(result).toBe(false);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        '[ActionExecutor] No connection found from port:',
+        '[ActionExecutor] No edge found from port:',
         expect.objectContaining({ blockId: 'source-block', slotId: 'out', direction: 'output' })
       );
 
@@ -400,10 +402,10 @@ describe('ActionExecutor', () => {
     it('should return false and warn for unknown action kind', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      // Actually test with a simpler approach - just invoke with valid action and check logs
+      // This tests the "no edge found" warning since there's no edge for block 'b'
       actionExecutor.execute({ kind: 'addAdapter', fromPort: { kind: 'port', portRef: { blockId: 'b', slotId: 'p', direction: 'output' } }, adapterType: 'test' });
 
-      expect(consoleWarnSpy).toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalledWith('[ActionExecutor] No edge found from port:', expect.anything());
 
       consoleWarnSpy.mockRestore();
     });

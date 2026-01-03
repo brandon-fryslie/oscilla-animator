@@ -21,9 +21,7 @@ Files in Scope: 3
 ```
 .modulation-table-container: 1125px (flex column)
   └─ .mod-table-sections: 1125px (flex row)
-       ├─ .listeners-section: 559.5px (50% split)
        │    └─ .modulation-table: 340px ❌ ONLY 60% OF CONTAINER
-       └─ .publishers-section: 559.5px (50% split)
             └─ .modulation-table: 340px ❌ ONLY 60% OF CONTAINER
 ```
 
@@ -88,8 +86,6 @@ Files in Scope: 3
 
 ModulationTable.tsx (lines 680-681):
 ```typescript
-const listenersWidth = listenersCollapsed ? 'auto' : `${splitRatio * 100}%`;
-const publishersWidth = publishersCollapsed ? 'auto' : `${(1 - splitRatio) * 100}%`;
 ```
 
 **Container sections ARE responsive** (percentage-based), but:
@@ -319,8 +315,6 @@ ModulationTable.css shows sticky positioning:
 2. **PASS:** Horizontal scroll appears, can scroll to see all columns
 
 ### Test 5: Collapse Section
-1. Collapse listeners section
-2. **PASS:** Publishers section expands to fill space, table fills section
 
 ### Test 6: Expand Column
 1. Click column header to expand

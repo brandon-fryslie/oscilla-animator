@@ -103,7 +103,6 @@ No `cyclic` variant.
 **Answer:** Rails are implemented as **reserved buses**.
 - **Rails**: fixed, built-in channels (non-deletable, locked type, fixed combine semantics).
 - **User buses**: user-created routing channels (fully configurable, deletable).
-- In code, both use the same Bus/Publisher/Listener machinery; Rails are distinguished by `origin: 'built-in'` + locked constraints.
 
 ---
 

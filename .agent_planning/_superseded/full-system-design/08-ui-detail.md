@@ -78,7 +78,6 @@ Each bus row contains:
    - Color: animated swatch
    - Trigger: pulse flashes
 
-4. **Publisher Stack Indicator**
    - Count
    - Expandable
    - Ordered by sortKey
@@ -88,7 +87,6 @@ Each bus row contains:
    - Disabled when irrelevant
 
 6. **Silent Value Indicator**
-   - Shown when no publishers active
    - Editable for core domains
 
 ---
@@ -97,7 +95,6 @@ Each bus row contains:
 
 Expanding a bus reveals:
 
-**Full publisher list:**
 - source block
 - adapter chain preview
 - gain/weight (if applicable)

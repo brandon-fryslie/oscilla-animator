@@ -1,0 +1,53 @@
+Agent: project-evaluator | 2026-01-02 10:00:00
+Scope: module:bus-cleanup:20260102-100000
+Topic: bus-store-removal
+
+Completion: Cannot delete immediately - requires 10-16 hour refactoring
+Gaps: 47 BusStore call sites, 23 publishers[] refs, 21 listeners[] refs, 84 kind checks
+Test Quality: N/A (current tests failing from unrelated transform work)
+Reused: 0 findings | Fresh: 100% new evaluation
+Cache updated: None (ephemeral bug findings, not stable knowledge)
+Ambiguities: 0 found | Workflow: CONTINUE (with 4-phase plan)
+
+Critical Findings:
+1. BusStore.publishers[] and listeners[] are NOT delegated (facade incomplete)
+2. 47 active call sites across 7 files (ModulationTableStore: 13 sites)
+3. RootStore serialization directly uses BusStore arrays
+4. Patch type requires publishers/listeners fields (100+ file dependency)
+5. 84 'kind: bus' checks in compiler/stores (functional, not dead code)
+6. Current test failures (43) are from RECENT transform work (unrelated to buses)
+
+What CAN'T be deleted now:
+- BusStore.ts (47 call sites)
+- publishers[] array (9 files, 23 refs)
+- listeners[] array (9 files, 21 refs)
+- Patch.publishers/listeners fields (type contract)
+- Endpoint.kind === 'bus' (84 functional checks)
+
+Minimal path to deletion (4 phases):
+Phase 0: Fix current test failures (transform type errors) - 1-2 hours
+Phase 1: Migrate data to edge-based storage - 4-6 hours
+  - Add PatchStore.publishers/listeners getters (from edges)
+  - Redirect BusStore arrays to PatchStore
+  - Update RootStore serialization to use edges
+Phase 2: Delete BusStore - 2-3 hours
+  - Move methods to PatchStore
+  - Update 47 call sites
+  - Delete BusStore.ts and RootStore.busStore
+Phase 3: Type cleanup - 2-3 hours
+  - Simplify Endpoint to PortRef
+  - Remove Publisher/Listener interfaces
+  - Fix 50-100 compile errors
+Phase 4: Remove kind checks - 1-2 hours
+  - Update compiler passes (4 files)
+  - Update stores (3 files)
+
+Critical path: Phase 0 (fix tests) → Phase 1 (edge storage) → Phase 2 (delete BusStore)
+Total effort: 10-16 hours
+Files to modify: ~40 files
+Files to delete: 1 file (BusStore.ts)
+
+Highest risk: ModulationTableStore (13 call sites, user-facing UI)
+
+→ CONTINUE with 4-phase systematic refactoring
+→ Start: Fix current test failures FIRST (blocks compilation)

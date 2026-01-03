@@ -26,7 +26,6 @@ import type { Block, Edge, SlotWorld } from "../../types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import { IRBuilderImpl } from "../ir/IRBuilderImpl";
 import type { TypeDesc } from "../ir/types";
-import { asTypeDesc } from "../ir/types";
 import type { CompileError } from "../types";
 import type { ValueRefPacked, LowerCtx } from "../ir/lowerTypes";
 import { getBlockType } from "../ir/lowerTypes";
@@ -120,18 +119,19 @@ function artifactKindToTypeDesc(kind: string): TypeDesc {
     return { world: "field", domain: "boolean", category: "core", busEligible: true };
   }
 
-  // Scalars map to signals with constant values
+  // Scalars - should NOT be converted to signals
+  // Scalar artifacts should use scalarConst, not signal nodes
   if (kind === "Scalar:float") {
-    return { world: "signal", domain: "float", category: "core", busEligible: true };
+    return { world: "scalar", domain: "float", category: "core", busEligible: false };
   }
   if (kind === "Scalar:int") {
-    return { world: "signal", domain: "int", category: "core", busEligible: true };
+    return { world: "scalar", domain: "int", category: "core", busEligible: false };
   }
   if (kind === "Scalar:vec2") {
-    return { world: "signal", domain: "vec2", category: "core", busEligible: true };
+    return { world: "scalar", domain: "vec2", category: "core", busEligible: false };
   }
   if (kind === "Scalar:color") {
-    return { world: "signal", domain: "color", category: "core", busEligible: true };
+    return { world: "scalar", domain: "color", category: "core", busEligible: false };
   }
 
   // Default: unknown scalar
@@ -150,7 +150,7 @@ function artifactKindToTypeDesc(kind: string): TypeDesc {
  * just for validation.
  *
  * Strategy:
- * - Scalar artifacts → constant signal nodes
+ * - Scalar artifacts → scalarConst (const pool, NOT signal nodes)
  * - Signal artifacts → placeholder signal nodes (identity-like)
  * - Field artifacts → placeholder field nodes (identity-like)
  * - Special artifacts (RenderTree, etc.) → Not represented in IR (skip)
@@ -163,33 +163,31 @@ function artifactToValueRef(
 ): ValueRefPacked | null {
   const { kind } = artifact;
 
-  // Scalar: create constant signal
+  // Scalar: store in const pool (DO NOT create signal nodes)
+  // Workstream 03: Scalar inputs must remain scalarConst in IR
   if (kind === "Scalar:float" || kind === "Scalar:int") {
-    const type: TypeDesc = asTypeDesc({
-      world: "signal",
-      domain: kind === "Scalar:int" ? "int" : "float",
-    });
-    const sigId = builder.sigConst(artifact.value, type);
-    const slot = builder.allocValueSlot(type);
-    builder.registerSigSlot(sigId, slot);
-    return { k: "sig", id: sigId, slot };
+    const constId = builder.allocConstId(artifact.value);
+    return { k: "scalarConst", constId };
   }
 
   if (kind === "Scalar:vec2") {
-    const type: TypeDesc = { world: "signal", domain: "vec2", category: "core", busEligible: true };
-    // For vec2, we need to create a constant. For now, use 0 as placeholder
-    const sigId = builder.sigConst(0, type);
-    const slot = builder.allocValueSlot(type);
-    builder.registerSigSlot(sigId, slot);
-    return { k: "sig", id: sigId, slot };
+    const constId = builder.allocConstId(artifact.value);
+    return { k: "scalarConst", constId };
   }
 
   if (kind === "Scalar:color") {
-    const type: TypeDesc = { world: "signal", domain: "color", category: "core", busEligible: true };
-    const sigId = builder.sigConst(0, type);
-    const slot = builder.allocValueSlot(type);
-    builder.registerSigSlot(sigId, slot);
-    return { k: "sig", id: sigId, slot };
+    const constId = builder.allocConstId(artifact.value);
+    return { k: "scalarConst", constId };
+  }
+
+  if (kind === "Scalar:boolean") {
+    const constId = builder.allocConstId(artifact.value);
+    return { k: "scalarConst", constId };
+  }
+
+  if (kind === "Scalar:string") {
+    const constId = builder.allocConstId(artifact.value);
+    return { k: "scalarConst", constId };
   }
 
   // Signal: create time-based signal (placeholder)
@@ -387,6 +385,9 @@ function resolveInputsWithMultiInput(
  * Converts Writer (from resolveWriters) to ValueRefPacked by looking up
  * the artifact and translating to IR.
  *
+ * Workstream 03: Writer defaults for scalar/config types use scalarConst,
+ * not signal nodes.
+ *
  * @param writer - Writer specification
  * @param compiledPortMap - Compiled artifacts
  * @param builder - IRBuilder
@@ -414,29 +415,34 @@ function getWriterValueRef(
     return artifactToValueRef(artifact, builder, writer.from.blockId, writer.from.slotId);
   }
 
-  if (writer.kind === 'bus') {
-    // Bus: Will be resolved in Pass 7 (bus lowering)
-    // For now, return null - Pass 8 will link bus values to inputs
-    // TODO: In future, we could inject a placeholder bus read node
-    return null;
-  }
+  // Note: After Sprint 2 migration, all edges are port→port. BusBlock.out edges
+  // are 'wire' writers, not 'bus' writers. Bus value resolution happens in Pass 7.
 
   if (writer.kind === 'default') {
     // Default: Create constant node from default type
-    // For now, create a zero constant of the appropriate type
+    // Workstream 03: Scalar/config types use scalarConst
     const type = writer.type;
+
+    if (type.world === 'scalar' || type.world === 'config') {
+      // Scalar/config defaults: use const pool
+      const constId = builder.allocConstId(0); // Placeholder value - actual value from defaultSource
+      return { k: 'scalarConst', constId };
+    }
+
     if (type.world === 'signal') {
       const sigId = builder.sigConst(0, type);
       const slot = builder.allocValueSlot(type);
       builder.registerSigSlot(sigId, slot);
       return { k: 'sig', id: sigId, slot };
     }
+
     if (type.world === 'field') {
       const fieldId = builder.fieldConst(0, type);
       const slot = builder.allocValueSlot(type);
       builder.registerFieldSlot(fieldId, slot);
       return { k: 'field', id: fieldId, slot };
     }
+
     // Unsupported world for default
     return null;
   }
@@ -542,8 +548,11 @@ function lowerBlockInstance(
         seedConstId: 0, // TODO: Proper seed management
       };
 
+      // Pass block params as config (needed for DSConst blocks to access their value)
+      const config = block.params;
+
       // Call lowering function
-      const result = blockType.lower({ ctx, inputs, inputsById });
+      const result = blockType.lower({ ctx, inputs, inputsById, config });
 
       // Map outputs to port IDs - prefer outputsById over positional outputs
       if (result.outputsById !== undefined && Object.keys(result.outputsById).length > 0) {

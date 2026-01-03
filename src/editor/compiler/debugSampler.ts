@@ -9,7 +9,6 @@
  */
 
 import type { Artifact, BlockId, Program, RenderTree } from './types';
-import { getBlockDefinition } from '../blocks/registry';
 
 interface DebuggedBlockInfo {
   blockId: BlockId;
@@ -21,22 +20,10 @@ interface DebuggedBlockInfo {
 }
 
 let debugStore: {
-  isBlockDebugging: (blockId: string) => boolean;
-  getDebuggingBlockIds: () => string[];
+  isBlockProbed: (blockId: string) => boolean;
+  probedBlockIds: string[];
   getAutoPosition: (index: number) => { x: number; y: number };
-  setEntry: (entry: {
-    id: string;
-    label: string;
-    posX: number;
-    posY: number;
-    values: {
-      signal?: number;
-      phase?: number;
-      domainCount?: number;
-      fieldSample?: float[];
-    };
-    timestamp: number;
-  }) => void;
+  updateProbe: (id: string, value: { t: string; v?: unknown }, tMs: number) => void;
 } | null = null;
 
 // Collect debug info during compilation
@@ -61,20 +48,9 @@ export function isDebugSamplingEnabled(): boolean {
  */
 export function isBlockDebugged(blockId: BlockId): boolean {
   if (debugStore === null) return false;
-  return debugStore.isBlockDebugging(blockId);
+  return debugStore.isBlockProbed(blockId);
 }
 
-/**
- * Get label for a block from its definition
- */
-function getBlockLabel(blockType: string): string {
-  try {
-    const def = getBlockDefinition(blockType);
-    return def?.label ?? blockType;
-  } catch {
-    return blockType;
-  }
-}
 
 /**
  * Collect output artifacts from a compiled block for runtime debugging
@@ -85,7 +61,7 @@ export function sampleBlockOutputs(
   outputs: Record<string, Artifact>
 ): void {
   if (debugStore === null) return;
-  if (!debugStore.isBlockDebugging(blockId)) {
+  if (!debugStore.isBlockProbed(blockId)) {
     // Remove from collection if no longer being debugged
     debuggedBlocks.delete(blockId);
     return;
@@ -129,12 +105,9 @@ export function wrapProgramWithDebug<T extends RenderTree>(
 
   return {
     signal: (tMs: number, runtimeCtx) => {
-      // Sample debugged blocks
-      const debuggedIds = debugStore!.getDebuggingBlockIds();
-
       for (const [blockId, info] of debuggedBlocks.entries()) {
         // Check if still being debugged
-        if (!debugStore!.isBlockDebugging(blockId)) {
+        if (!debugStore!.isBlockProbed(blockId)) {
           lastUpdateTime.delete(blockId);
           continue;
         }
@@ -156,25 +129,17 @@ export function wrapProgramWithDebug<T extends RenderTree>(
         try {
           const value = signalFn(tMs, runtimeCtx);
 
-          // Get auto position
-          const index = debuggedIds.indexOf(blockId);
-          const position = debugStore!.getAutoPosition(index);
-
-          // Get label from block type
-          const label = getBlockLabel(info.blockType);
-
           // Determine if it's a phase signal
           const isPhase = firstSignal.artifact.kind === 'Signal:phase' ||
                          firstSignal.portName.toLowerCase().includes('phase');
 
-          debugStore!.setEntry({
-            id: blockId,
-            label,
-            posX: position.x,
-            posY: position.y,
-            values: isPhase ? { phase: value } : { signal: value },
-            timestamp: Date.now(),
-          });
+          // Create probe ID and update
+          const probeId = `block:${blockId}`;
+          const valueSummary = isPhase
+            ? { t: 'phase', v: value }
+            : { t: 'num', v: value };
+
+          debugStore!.updateProbe(probeId, valueSummary, tMs);
         } catch (e) {
           // Silently fail on sampling errors
           console.debug('Debug sampling error:', e);

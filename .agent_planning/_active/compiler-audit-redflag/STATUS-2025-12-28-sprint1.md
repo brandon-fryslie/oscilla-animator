@@ -91,7 +91,6 @@ if (ir === undefined) {
 
 ### 2. `composite.expansion.test.ts` (1 failure)
 - **Issue:** Block ID expectation mismatch after expansion
-- **Test:** "listener targeting composite boundary input rewrites to internal primitive"
 - **Root Cause:** Test expectation issue (not IR-related)
 - **Impact:** Does NOT block IR compiler work
 

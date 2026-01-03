@@ -306,10 +306,10 @@ function validateRequiredBusesExist(
   // Check each required bus
   if (spec.busInputs) {
     for (const [inputId, busName] of Object.entries(spec.busInputs)) {
-      // Look up bus by name
-      const bus = rootStore.busStore.buses.find((b) => b.name === busName);
+      // Bus-Block Unification: Look up BusBlock by name in params
+      const busBlock = rootStore.patchStore.busBlocks.find((b) => b.params.name === busName);
 
-      if (!bus) {
+      if (!busBlock) {
         // Bus doesn't exist - emit error
         // Get target block info for friendly error message
         const targetBlockInstance = rootStore.patchStore.blocks.find(
@@ -394,26 +394,32 @@ function validateNoCycles(
     return diagnostics;
   }
 
-  // Get all buses that the provider reads from
+  // Bus-Block Unification: Get all buses that the provider reads from
   const providerReadsBuses = new Set<string>();
   for (const busName of Object.values(spec.busInputs)) {
-    const bus = rootStore.busStore.buses.find((b) => b.name === busName);
-    if (bus) {
-      providerReadsBuses.add(bus.id);
+    // Find BusBlock by name (stored in params.name)
+    const busBlock = rootStore.patchStore.busBlocks.find((b) => b.params.name === busName);
+    if (busBlock) {
+      providerReadsBuses.add(busBlock.id); // block ID = bus ID
     }
   }
 
-  // Get all buses that the target block publishes to
-  const targetPublisherBuses = rootStore.busStore.publishers
-    .filter((p) => p.from.blockId === target.blockId && p.enabled)
-    .map((p) => p.busId);
+  // Bus-Block Unification: Get all buses that the target block "publishes" to
+  // (i.e., edges FROM target block TO BusBlocks)
+  const edges = rootStore.patchStore.edges;
+  const busBlocks = rootStore.patchStore.busBlocks;
+  const busBlockIds = new Set(busBlocks.map(b => b.id));
+
+  const targetPublisherBuses = edges
+    .filter((e) => e.from.blockId === target.blockId && busBlockIds.has(e.to.blockId))
+    .map((e) => e.to.blockId); // to.blockId is the BusBlock ID = bus ID
 
   // Check for overlap: if provider reads from a bus that target publishes to, we have a cycle
   for (const busId of targetPublisherBuses) {
     if (providerReadsBuses.has(busId)) {
       // Cycle detected - emit WARNING (not error, may be intentional)
-      const bus = rootStore.busStore.buses.find((b) => b.id === busId);
-      const busName = bus?.name ?? busId;
+      const busBlock = rootStore.patchStore.busBlocks.find((b) => b.id === busId);
+      const busName = (busBlock?.params.name as string) ?? busId;
 
       // Get target block info for friendly warning message
       const targetBlockInstance = rootStore.patchStore.blocks.find(

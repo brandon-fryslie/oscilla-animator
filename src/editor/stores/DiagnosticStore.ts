@@ -11,6 +11,7 @@
 import { makeObservable, computed, observable, action } from 'mobx';
 import type { DiagnosticHub } from '../diagnostics/DiagnosticHub';
 import type { Diagnostic, Severity } from '../diagnostics/types';
+import type { RootStore } from './RootStore';
 
 /**
  * DiagnosticStore provides reactive access to diagnostic state.
@@ -18,7 +19,7 @@ import type { Diagnostic, Severity } from '../diagnostics/types';
  * Usage:
  * ```typescript
  * const hub = new DiagnosticHub(events, patchStore);
- * const store = new DiagnosticStore(hub);
+ * const store = new DiagnosticStore(hub, rootStore);
  *
  * // In React component:
  * const { activeDiagnostics, errorCount, warningCount } = store;
@@ -28,6 +29,9 @@ export class DiagnosticStore {
   /** Reference to the underlying DiagnosticHub */
   private readonly hub: DiagnosticHub;
 
+  /** Reference to the root store for accessing other stores */
+  private readonly root: RootStore;
+
   /**
    * Observable revision counter that gets incremented when diagnostics change.
    * This triggers MobX to recompute derived values.
@@ -35,8 +39,9 @@ export class DiagnosticStore {
    */
   public _revisionCounter = 0;
 
-  constructor(hub: DiagnosticHub) {
+  constructor(hub: DiagnosticHub, root: RootStore) {
     this.hub = hub;
+    this.root = root;
 
     makeObservable<DiagnosticStore, '_revisionCounter'>(this, {
       _revisionCounter: observable,
@@ -169,13 +174,26 @@ export class DiagnosticStore {
 
   /**
    * Get diagnostics for a specific bus.
+   *
+   * After Sprint 2, buses are represented by BusBlocks. Diagnostics may target
+   * either the legacy 'bus' kind or a block that is a BusBlock.
    */
   getDiagnosticsForBus(busId: string): Diagnostic[] {
     void this._revisionCounter;
     return this.activeDiagnostics.filter(d => {
       const target = d.primaryTarget;
+      // Legacy bus target
       if (target.kind === 'bus') return target.busId === busId;
       if (target.kind === 'binding') return target.busId === busId;
+
+      // BusBlock target - check if block is a BusBlock with matching ID (block ID = bus ID)
+      if (target.kind === 'block') {
+        const block = this.root.patchStore.blocks.find(b => b.id === target.blockId);
+        if (block?.type === 'BusBlock' && block.id === busId) {
+          return true;
+        }
+      }
+
       return false;
     });
   }

@@ -10,7 +10,7 @@
  * - design-docs/12-Compiler-Final/02-IR-Schema.md §12-15
  */
 
-import type { StepId, NodeIndex, BusIndex, ValueSlot, StateId, SigExprId } from "./types";
+import type { StepId, NodeIndex, ValueSlot, StateId, SigExprId } from "./types";
 
 // Import 3D step types
 import type { StepCameraEval } from "../../runtime/executor/steps/executeCameraEval";
@@ -121,8 +121,6 @@ export type StepIR =
   | StepTimeDerive
   | StepSignalEval
   | StepNodeEval
-  | StepBusEval
-  | StepEventBusEval
   | StepMaterialize
   | StepMaterializeColor
   | StepMaterializePath
@@ -245,130 +243,6 @@ export interface StepNodeEval extends StepBase {
   /** State cells written by this node */
   stateWrites?: StateId[];
 
-  /** Scheduling phase relative to bus evaluation */
-  phase: "preBus" | "postBus" | "render";
-}
-
-// ============================================================================
-// Step 3: Bus Evaluation (10-Schedule-Semantics.md §12.2)
-// ============================================================================
-
-/**
- * Bus Eval Step
- *
- * Combines all publisher values for a bus into a single bus value.
- *
- * Semantics:
- * - Publishers are processed in deterministic order (sortKey ascending, then publisherId)
- * - For each enabled publisher: read srcSlot, apply transform, produce term
- * - Combine terms based on bus type (signal/field) and combine spec
- * - If zero enabled publishers: write silent value
- * - Write result to outSlot
- */
-export interface StepBusEval extends StepBase {
-  kind: "busEval";
-
-  /** Index of the bus being evaluated */
-  busIndex: BusIndex;
-
-  /** Output slot for the combined bus value */
-  outSlot: ValueSlot;
-
-  /** Publishers in deterministic order */
-  publishers: PublisherIR[];
-
-  /** Combine specification */
-  combine: CombineSpec;
-
-  /** Silent value specification (used when no publishers) */
-  silent: SilentValueSpec;
-
-  /** Bus type (determines evaluation mode: signal vs field) */
-  busType: import("./types").TypeDesc;
-}
-
-/** Publisher specification */
-export interface PublisherIR {
-  /** Whether this publisher is enabled */
-  enabled: boolean;
-
-  /** Deterministic sort key (primary ordering) */
-  sortKey: number;
-
-  /** Source value slot */
-  srcSlot: ValueSlot;
-
-  /** Optional transform chain reference */
-  transform?: TransformChainRef;
-
-  /** Stable publisher identifier (for tie-breaking) */
-  publisherId: string;
-}
-
-/** Transform chain reference (placeholder for Phase 3-5) */
-export interface TransformChainRef {
-  chainId: number;
-}
-
-/** Combine specification for bus aggregation */
-export interface CombineSpec {
-  /** Combine mode */
-  mode: "last" | "sum" | "average" | "max" | "min" | "product";
-}
-
-/** Silent value specification */
-export interface SilentValueSpec {
-  /** Kind of silent value */
-  kind: "zero" | "default" | "const";
-
-  /** Optional constant ID (for kind: "const") */
-  constId?: number;
-}
-
-// ============================================================================
-// Step 3b: Event Bus Evaluation
-// ============================================================================
-
-/**
- * Event Bus Eval Step
- *
- * Combines event streams from multiple publishers into a single event stream.
- *
- * Semantics:
- * - Publishers are processed in deterministic order (sortKey ascending, then publisherId)
- * - For each enabled publisher: read srcSlot (event stream)
- * - Combine event streams based on combine mode:
- *   - merge: Union of all events, sorted by time
- *   - first: Events from first publisher only
- *   - last: Events from last publisher only
- * - If zero enabled publishers: return empty event stream
- * - Write result to outSlot
- *
- * Event streams are arrays of { time: number, value: unknown } sorted by time.
- */
-export interface StepEventBusEval extends StepBase {
-  kind: "eventBusEval";
-
-  /** Index of the bus being evaluated */
-  busIndex: BusIndex;
-
-  /** Output slot for the combined event stream */
-  outSlot: ValueSlot;
-
-  /** Publishers in deterministic order */
-  publishers: PublisherIR[];
-
-  /** Event combine specification */
-  combine: EventCombineSpec;
-
-  /** Bus type (for type safety) */
-  busType: import("./types").TypeDesc;
-}
-
-/** Combine specification for event bus aggregation */
-export interface EventCombineSpec {
-  /** Combine mode for events */
-  mode: "merge" | "first" | "last";
 }
 
 // ============================================================================
@@ -737,11 +611,7 @@ export interface DependencyIndexIR {
   /** Maps slot to steps that consume it */
   slotConsumers: Record<ValueSlot, StepId[]>;
 
-  /** Bus dependencies on source slots */
-  busDependsOnSlots: Record<BusIndex, ValueSlot[]>;
 
-  /** Bus provides slot mapping */
-  busProvidesSlot: Record<BusIndex, ValueSlot>;
 
   /** Field expression dependencies (optional, can be derived) */
   exprDependsOnExpr?: Record<string, string[]>;
@@ -763,7 +633,6 @@ export interface DependencyIndexIR {
 export interface DeterminismIR {
   /** Allowed inputs that can affect ordering */
   allowedOrderingInputs: Array<
-    | { kind: "busPublisherSortKey" }
     | { kind: "publisherIdTieBreak" }
     | { kind: "topoStableNodeIdTieBreak" }
   >;
@@ -806,7 +675,6 @@ export type CacheKeySpec =
  */
 export type CacheDep =
   | { kind: "slot"; slot: ValueSlot }
-  | { kind: "bus"; busIndex: BusIndex }
   | { kind: "timeModel" }
   | { kind: "seed" }
   | { kind: "stateCell"; stateId: StateId }

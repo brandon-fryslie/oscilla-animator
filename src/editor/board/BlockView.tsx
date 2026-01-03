@@ -160,11 +160,11 @@ const PortItem = observer<PortItemProps>(function PortItem({
   // Check if port is connected
   const isConnected =
     direction === 'input'
-      ? patchStore.connections.some(
-          (c) => c.to.blockId === blockId && c.to.slotId === portId
+      ? patchStore.edges.some(
+          (e) => e.to.blockId === blockId && e.to.slotId === portId
         )
-      : patchStore.connections.some(
-          (c) => c.from.blockId === blockId && c.from.slotId === portId
+      : patchStore.edges.some(
+          (e) => e.from.blockId === blockId && e.from.slotId === portId
         );
 
   return (

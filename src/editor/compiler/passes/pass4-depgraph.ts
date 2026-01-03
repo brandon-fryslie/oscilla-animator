@@ -3,10 +3,11 @@
  *
  * Transforms a TimeResolvedPatch into a DepGraph by:
  * 1. Creating BlockEval nodes for all blocks
- * 2. Creating BusValue nodes for all buses
- * 3. Adding Wire edges (block → block)
- * 4. Adding Publisher edges (block → bus)
- * 5. Adding Listener edges (bus → block)
+ * 2. Adding edges (block → block) from unified Edge type
+ *
+ * NOTE: After Bus-Block Unification, BusBlocks are regular blocks.
+ * There are no separate BusValue nodes - BusBlocks appear as BlockEval nodes.
+ * Edges to/from BusBlocks are treated like any other edge.
  *
  * This graph is used for topological scheduling and cycle validation.
  *
@@ -17,18 +18,15 @@
 
 import type {
   Block,
-  Connection,
-  Publisher,
-  Listener,
-  Bus,
+  Edge,
 } from "../../types";
 import type {
   TimeResolvedPatch,
   DepGraph,
   DepNode,
   DepEdge,
-  TimeModelIR,
 } from "../ir";
+import type { TimeModelIR } from "../ir/schedule";
 
 /**
  * Error types emitted by Pass 4.
@@ -41,17 +39,8 @@ export interface DanglingConnectionError {
   message: string;
 }
 
-export interface DanglingBindingEndpointError {
-  kind: "DanglingBindingEndpoint";
-  bindingId: string;
-  busId: string;
-  blockId?: string;
-  message: string;
-}
-
 export type Pass4Error =
-  | DanglingConnectionError
-  | DanglingBindingEndpointError;
+  | DanglingConnectionError;
 
 /**
  * Output of Pass 4: DepGraph with timeModel threaded through.
@@ -64,27 +53,26 @@ export interface DepGraphWithTimeModel {
 /**
  * Pass 4: Dependency Graph Construction
  *
- * Builds a unified dependency graph with BlockEval and BusValue nodes,
- * and edges for wires, publishers, and listeners.
+ * Builds a unified dependency graph with BlockEval nodes
+ * and edges from the unified Edge array.
+ *
+ * After Bus-Block Unification, BusBlocks are regular blocks.
+ * All edges are port→port, including edges to/from BusBlocks.
  *
  * @param timeResolved - The time-resolved patch from Pass 3
  * @returns A dependency graph ready for cycle validation
  */
 export function pass4DepGraph(
-  timeResolved: TimeResolvedPatch<
-    Block,
-    Connection,
-    Publisher,
-    Listener,
-    Bus
-  >
+  timeResolved: TimeResolvedPatch
 ): DepGraphWithTimeModel {
   const errors: Pass4Error[] = [];
   const nodes: DepNode[] = [];
-  const edges: DepEdge[] = [];
+  const depEdges: DepEdge[] = [];
 
-  // Step 1: Create BlockEval nodes for all blocks
-  for (const block of timeResolved.blocks) {
+  // Step 1: Create BlockEval nodes for all blocks (including BusBlocks)
+  // Use Array.from() to avoid downlevelIteration issues
+  for (const blockData of Array.from(timeResolved.blocks.values())) {
+    const block = blockData as Block;
     const blockIndex = timeResolved.blockIndexMap.get(block.id);
     if (blockIndex === undefined) {
       // This should never happen - blockIndexMap is created in Pass 1
@@ -99,108 +87,33 @@ export function pass4DepGraph(
     });
   }
 
-  // Step 2: Create BusValue nodes for all buses
-  for (let busIdx = 0; busIdx < timeResolved.buses.length; busIdx++) {
-    nodes.push({
-      kind: "BusValue",
-      busIndex: busIdx,
-    });
-  }
+  // Step 2: Add edges from unified Edge array
+  // All edges are now port→port (block→block) including BusBlock connections
+  const patchEdges: readonly Edge[] = timeResolved.edges ?? [];
 
-  // Step 3: Add Wire edges (block → block)
-  for (const wire of timeResolved.wires) {
-    const fromBlockIndex = timeResolved.blockIndexMap.get(wire.from.blockId);
-    const toBlockIndex = timeResolved.blockIndexMap.get(wire.to.blockId);
+  for (const edge of patchEdges) {
+    if (!edge.enabled) continue;
+
+    const fromBlockIndex = timeResolved.blockIndexMap.get(edge.from.blockId);
+    const toBlockIndex = timeResolved.blockIndexMap.get(edge.to.blockId);
 
     // Validate both endpoints exist
     if (fromBlockIndex === undefined || toBlockIndex === undefined) {
       errors.push({
         kind: "DanglingConnection",
-        connectionId: wire.id,
+        connectionId: edge.id,
         fromBlockId:
-          fromBlockIndex === undefined ? wire.from.blockId : undefined,
-        toBlockId: toBlockIndex === undefined ? wire.to.blockId : undefined,
-        message: `Wire ${wire.id} references non-existent block(s): ${
-          fromBlockIndex === undefined ? `from=${wire.from.blockId} ` : ""
-        }${toBlockIndex === undefined ? `to=${wire.to.blockId}` : ""}`,
+          fromBlockIndex === undefined ? edge.from.blockId : undefined,
+        toBlockId: toBlockIndex === undefined ? edge.to.blockId : undefined,
+        message: `Edge ${edge.id} references non-existent block(s): ${
+          fromBlockIndex === undefined ? `from=${edge.from.blockId} ` : ""
+        }${toBlockIndex === undefined ? `to=${edge.to.blockId}` : ""}`,
       });
       continue;
     }
 
-    edges.push({
+    depEdges.push({
       from: { kind: "BlockEval", blockIndex: fromBlockIndex },
-      to: { kind: "BlockEval", blockIndex: toBlockIndex },
-    });
-  }
-
-  // Step 4: Add Publisher edges (block → bus)
-  for (const publisher of timeResolved.publishers) {
-    const fromBlockIndex = timeResolved.blockIndexMap.get(
-      publisher.from.blockId
-    );
-    const busIdx = timeResolved.buses.findIndex(
-      (b: Bus) => b.id === publisher.busId
-    );
-
-    // Validate block exists
-    if (fromBlockIndex === undefined) {
-      errors.push({
-        kind: "DanglingBindingEndpoint",
-        bindingId: publisher.id,
-        busId: publisher.busId,
-        blockId: publisher.from.blockId,
-        message: `Publisher ${publisher.id} references non-existent block ${publisher.from.blockId}`,
-      });
-      continue;
-    }
-
-    // Validate bus exists
-    if (busIdx === -1) {
-      errors.push({
-        kind: "DanglingBindingEndpoint",
-        bindingId: publisher.id,
-        busId: publisher.busId,
-        message: `Publisher ${publisher.id} references non-existent bus ${publisher.busId}`,
-      });
-      continue;
-    }
-
-    edges.push({
-      from: { kind: "BlockEval", blockIndex: fromBlockIndex },
-      to: { kind: "BusValue", busIndex: busIdx },
-    });
-  }
-
-  // Step 5: Add Listener edges (bus → block)
-  for (const listener of timeResolved.listeners) {
-    const toBlockIndex = timeResolved.blockIndexMap.get(listener.to.blockId);
-    const busIdx = timeResolved.buses.findIndex((b: Bus) => b.id === listener.busId);
-
-    // Validate block exists
-    if (toBlockIndex === undefined) {
-      errors.push({
-        kind: "DanglingBindingEndpoint",
-        bindingId: listener.id,
-        busId: listener.busId,
-        blockId: listener.to.blockId,
-        message: `Listener ${listener.id} references non-existent block ${listener.to.blockId}`,
-      });
-      continue;
-    }
-
-    // Validate bus exists
-    if (busIdx === -1) {
-      errors.push({
-        kind: "DanglingBindingEndpoint",
-        bindingId: listener.id,
-        busId: listener.busId,
-        message: `Listener ${listener.id} references non-existent bus ${listener.busId}`,
-      });
-      continue;
-    }
-
-    edges.push({
-      from: { kind: "BusValue", busIndex: busIdx },
       to: { kind: "BlockEval", blockIndex: toBlockIndex },
     });
   }
@@ -219,7 +132,7 @@ export function pass4DepGraph(
   return {
     graph: {
       nodes,
-      edges,
+      edges: depEdges,
     },
     timeModel: timeResolved.timeModel,
   };

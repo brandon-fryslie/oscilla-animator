@@ -9,7 +9,7 @@
  * - Network transmission of compiled programs
  *
  * Key challenges:
- * - Typed arrays (Float32Array, etc.) need conversion to regular arrays for JSON
+ * - Map objects need conversion to plain objects for JSON
  * - Maintain all type information for deserialization
  * - Preserve determinism (no Map/Set iteration order issues)
  */
@@ -19,65 +19,61 @@ import type { CompiledProgramIR } from './program';
 /**
  * Serializable representation of CompiledProgramIR.
  *
- * This is the JSON-compatible version where typed arrays are converted to regular arrays.
+ * This is the JSON-compatible version where Maps are converted to plain objects.
  */
 export interface SerializedProgramIR {
-  /** IR format version */
-  irVersion: number;
+  /** IR format version (literal 1) */
+  irVersion: 1;
   /** Patch ID */
   patchId: string;
-  /** Patch revision */
-  patchRevision: number;
-  /** Compile ID */
-  compileId: string;
   /** Random seed */
   seed: number;
   /** Time model (already JSON-compatible) */
   timeModel: CompiledProgramIR['timeModel'];
   /** Type table (already JSON-compatible) */
   types: CompiledProgramIR['types'];
-  /** Node table (already JSON-compatible) */
-  nodes: CompiledProgramIR['nodes'];
-  /** Bus table (already JSON-compatible) */
-  buses: CompiledProgramIR['buses'];
-  /** Lens table (already JSON-compatible) */
-  lenses: CompiledProgramIR['lenses'];
-  /** Adapter table (already JSON-compatible) */
-  adapters: CompiledProgramIR['adapters'];
-  /** Field table (already JSON-compatible) */
-  fields: CompiledProgramIR['fields'];
-  /** Signal table (already JSON-compatible) */
-  signalTable?: CompiledProgramIR['signalTable'];
-  /** Constant pool (needs typed array conversion) */
+  /** Signal expression table (already JSON-compatible) */
+  signalExprs: CompiledProgramIR['signalExprs'];
+  /** Field expression table (already JSON-compatible) */
+  fieldExprs: CompiledProgramIR['fieldExprs'];
+  /** Event expression table (already JSON-compatible) */
+  eventExprs: CompiledProgramIR['eventExprs'];
+  /** Constant pool (JSON-only, no typed arrays) */
   constants: {
-    json: unknown[];
-    f64: number[];
-    f32: number[];
-    i32: number[];
-    constIndex: CompiledProgramIR['constants']['constIndex'];
+    readonly json: unknown[];
   };
   /** State layout (already JSON-compatible) */
   stateLayout: CompiledProgramIR['stateLayout'];
   /** Slot metadata (already JSON-compatible) */
-  slotMeta?: CompiledProgramIR['slotMeta'];
+  slotMeta: CompiledProgramIR['slotMeta'];
+  /** Render IR (already JSON-compatible) */
+  render: CompiledProgramIR['render'];
   /** Camera table (already JSON-compatible) */
-  cameras?: CompiledProgramIR['cameras'];
-  /** Default camera ID (already JSON-compatible) */
-  defaultCameraId?: CompiledProgramIR['defaultCameraId'];
+  cameras: CompiledProgramIR['cameras'];
   /** Mesh table (already JSON-compatible) */
-  meshes?: CompiledProgramIR['meshes'];
+  meshes: CompiledProgramIR['meshes'];
+  /** Primary camera ID (optional) */
+  primaryCameraId?: CompiledProgramIR['primaryCameraId'];
   /** Schedule (already JSON-compatible) */
   schedule: CompiledProgramIR['schedule'];
   /** Outputs (already JSON-compatible) */
   outputs: CompiledProgramIR['outputs'];
-  /** Metadata (already JSON-compatible) */
-  meta: CompiledProgramIR['meta'];
+  /** Debug index (Maps converted to objects) */
+  debugIndex: {
+    stepToBlock: Record<string, string>;
+    slotToBlock: Record<string, string>;
+    labels?: Record<string, string>;
+  };
+  /** Optional source map */
+  sourceMap?: CompiledProgramIR['sourceMap'];
+  /** Optional compiler warnings */
+  warnings?: CompiledProgramIR['warnings'];
 }
 
 /**
  * Serialize CompiledProgramIR to JSON-compatible object.
  *
- * Converts typed arrays to regular arrays for JSON serialization.
+ * Converts Maps to plain objects for JSON serialization.
  *
  * @param program - Compiled program to serialize
  * @returns Serializable program object
@@ -86,39 +82,44 @@ export function serializeProgram(program: CompiledProgramIR): SerializedProgramI
   return {
     irVersion: program.irVersion,
     patchId: program.patchId,
-    patchRevision: program.patchRevision,
-    compileId: program.compileId,
     seed: program.seed,
     timeModel: program.timeModel,
     types: program.types,
-    nodes: program.nodes,
-    buses: program.buses,
-    lenses: program.lenses,
-    adapters: program.adapters,
-    fields: program.fields,
-    signalTable: program.signalTable,
+    signalExprs: program.signalExprs,
+    fieldExprs: program.fieldExprs,
+    eventExprs: program.eventExprs,
     constants: {
-      json: program.constants.json,
-      f64: Array.from(program.constants.f64),
-      f32: Array.from(program.constants.f32),
-      i32: Array.from(program.constants.i32),
-      constIndex: program.constants.constIndex,
+      json: [...program.constants.json],
     },
     stateLayout: program.stateLayout,
     slotMeta: program.slotMeta,
+    render: program.render,
     cameras: program.cameras,
-    defaultCameraId: program.defaultCameraId,
     meshes: program.meshes,
+    primaryCameraId: program.primaryCameraId,
     schedule: program.schedule,
     outputs: program.outputs,
-    meta: program.meta,
+    debugIndex: {
+      stepToBlock: Object.fromEntries(program.debugIndex.stepToBlock),
+      slotToBlock: Object.fromEntries(
+        Array.from(program.debugIndex.slotToBlock.entries()).map(([slot, block]) => [
+          String(slot),
+          block,
+        ])
+      ),
+      labels: program.debugIndex.labels !== undefined
+        ? Object.fromEntries(program.debugIndex.labels)
+        : undefined,
+    },
+    sourceMap: program.sourceMap,
+    warnings: program.warnings,
   };
 }
 
 /**
  * Deserialize JSON-compatible object to CompiledProgramIR.
  *
- * Converts regular arrays back to typed arrays.
+ * Converts plain objects back to Maps.
  *
  * @param serialized - Serialized program object
  * @returns Deserialized CompiledProgramIR
@@ -127,32 +128,37 @@ export function deserializeProgram(serialized: SerializedProgramIR): CompiledPro
   return {
     irVersion: serialized.irVersion,
     patchId: serialized.patchId,
-    patchRevision: serialized.patchRevision,
-    compileId: serialized.compileId,
     seed: serialized.seed,
     timeModel: serialized.timeModel,
     types: serialized.types,
-    nodes: serialized.nodes,
-    buses: serialized.buses,
-    lenses: serialized.lenses,
-    adapters: serialized.adapters,
-    fields: serialized.fields,
-    signalTable: serialized.signalTable,
+    signalExprs: serialized.signalExprs,
+    fieldExprs: serialized.fieldExprs,
+    eventExprs: serialized.eventExprs,
     constants: {
       json: serialized.constants.json,
-      f64: new Float64Array(serialized.constants.f64),
-      f32: new Float32Array(serialized.constants.f32),
-      i32: new Int32Array(serialized.constants.i32),
-      constIndex: serialized.constants.constIndex,
     },
     stateLayout: serialized.stateLayout,
     slotMeta: serialized.slotMeta,
+    render: serialized.render,
     cameras: serialized.cameras,
-    defaultCameraId: serialized.defaultCameraId,
     meshes: serialized.meshes,
+    primaryCameraId: serialized.primaryCameraId,
     schedule: serialized.schedule,
     outputs: serialized.outputs,
-    meta: serialized.meta,
+    debugIndex: {
+      stepToBlock: new Map(Object.entries(serialized.debugIndex.stepToBlock)),
+      slotToBlock: new Map(
+        Object.entries(serialized.debugIndex.slotToBlock).map(([slotStr, block]) => [
+          Number(slotStr),
+          block,
+        ])
+      ),
+      labels: serialized.debugIndex.labels !== undefined
+        ? new Map(Object.entries(serialized.debugIndex.labels))
+        : undefined,
+    },
+    sourceMap: serialized.sourceMap,
+    warnings: serialized.warnings,
   };
 }
 

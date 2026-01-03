@@ -1,0 +1,5 @@
+Agent: status-planner | 2026-01-03-124630
+Topic: structural-block-roles
+Files: PLAN-2026-01-03-124630.md, DOD-2026-01-03-124630.md
+Items: 3 (P0: 2, P1: 1, P2: 0)
+Deferred: 3 items (Remove Hidden Field, Role Invariant Validation, Terminology Consistency)

@@ -34,7 +34,6 @@ Phase 4 scope breaks down into four distinct areas with different complexity, de
 
 ### Phase 2: COMPLETE (Store Migration)
 - PatchStore methods migrated: addBlock, removeBlock, updateBlock, updateBlockParams, connect, disconnect
-- BusStore methods migrated: createBus, deleteBus, updateBus, add/remove/update publishers and listeners
 - 87 tests passing (66 unit + 21 integration)
 
 ### Phase 3: DEFERRED
@@ -56,7 +55,6 @@ expandMacro(expansion: MacroExpansion, macroKey?: string): BlockId {
   // Clear the patch first - macros replace everything
   this.root.clearPatch();  // <-- THE PROBLEM
 
-  // Creates many blocks, connections, publishers, listeners...
 }
 ```
 
@@ -64,7 +62,6 @@ expandMacro(expansion: MacroExpansion, macroKey?: string): BlockId {
 
 `clearPatch()` in `RootStore.ts:379-412`:
 - Clears PatchStore: blocks, connections
-- Clears BusStore: buses, publishers, listeners
 - Clears ViewStateStore: lane blockIds
 - Recreates default buses
 - Emits `PatchCleared` event
@@ -87,7 +84,6 @@ runTx(store, { label: 'Expand Macro' }, tx => {
   for (const macroBlock of expansion.blocks) {
     tx.add('blocks', createBlock(macroBlock));
   }
-  // ... connections, publishers, listeners
 });
 ```
 

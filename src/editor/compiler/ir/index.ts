@@ -16,6 +16,8 @@ export type {
   TypeWorld,
   TypeDomain,
   TypeDesc,
+  TypeCategory,
+  Domain,
   ValueKind,
 
   // Stable IDs
@@ -28,14 +30,34 @@ export type {
   // Dense indices
   NodeIndex,
   PortIndex,
-  BusIndex,
   ValueSlot,
   SigExprId,
   FieldExprId,
+  EventExprId,
   TransformChainId,
 
   // Type table
   TypeTable,
+
+  // Constant pool (canonical schema)
+  ConstPool,
+} from "./types";
+
+export {
+  // Bundle kind helpers (legacy migration)
+  BundleKind,
+  getBundleArity,
+  inferBundleKind,
+  bundleKindToLanes,
+  migrateBundleToLanes,
+
+  // Type helpers
+  getTypeArity,
+  inferBundleLanes,
+  createTypeDesc,
+  createTypeDescCompat,
+  completeTypeDesc,
+  asTypeDesc,
 } from "./types";
 
 // ============================================================================
@@ -92,8 +114,6 @@ export type {
   StepTimeDerive,
   StepSignalEval,
   StepNodeEval,
-  StepBusEval,
-  StepEventBusEval,
   StepMaterialize,
   StepMaterializeColor,
   StepMaterializePath,
@@ -106,11 +126,6 @@ export type {
   PathBatch,
 
   // Step components
-  PublisherIR,
-  TransformChainRef,
-  CombineSpec,
-  EventCombineSpec,
-  SilentValueSpec,
   MaterializationIR,
   BufferFormat,
   DebugProbeIR,
@@ -146,35 +161,30 @@ export {
 } from "./stores";
 
 // ============================================================================
-// Program IR
+// Program IR (Canonical Schema)
 // ============================================================================
 
 export type {
-  // Top-level program
+  // Top-level program (canonical)
   CompiledProgramIR,
-
-  // Tables
-  NodeTable,
-  NodeIR,
-  BusTable,
-  BusIR,
-  LensTable,
-  LensIR,
-  AdapterTable,
-  AdapterIR,
-  FieldExprTable,
-  FieldExprNodeIR,
-  FieldMaterializationPlan,
-  ConstPool,
-  ConstIndexEntry,
+  CompiledProgram, // Deprecated alias
 
   // Outputs
-  OutputSpec,
+  OutputSpecIR,
 
-  // Metadata
-  ProgramMeta,
+  // Slot metadata
+  SlotMetaEntry,
+
+  // Render IR
+  RenderIR,
+  RenderSinkIR,
+
+  // Debug index (mandatory)
+  DebugIndexIR,
+
+  // Diagnostics
   SourceMapIR,
-  CompileWarningIR,
+  CompilerWarning,
 } from "./program";
 
 // ============================================================================
@@ -202,6 +212,10 @@ export type {
 
   // Stateful operations
   StatefulSignalOp,
+
+  // Combine spec
+  SigCombineMode,
+  SigCombineSpec,
 } from "./signalExpr";
 
 // ============================================================================
@@ -271,7 +285,7 @@ export type {
 
 export type {
   // Table
-  FieldExprTable as FieldExprTableIR,
+  FieldExprTable,
 
   // Expression types (discriminated union)
   FieldExprIR,
@@ -282,6 +296,12 @@ export type {
   FieldExprSelect,
   FieldExprTransform,
   FieldExprBusCombine,
+  FieldExprMapIndexed,
+  FieldExprZipSig,
+
+  // Combine spec
+  FieldCombineMode,
+  FieldCombineSpec,
 } from "./fieldExpr";
 
 // ============================================================================
@@ -326,7 +346,6 @@ export type {
   ReduceFn,
   StateLayoutEntry,
   BuilderTransformChain,
-  RenderSinkIR,
   BuilderDebugIndex,
   SignalIRTable,
   FieldIRTable,

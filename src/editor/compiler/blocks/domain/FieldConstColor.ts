@@ -28,7 +28,7 @@ const lowerFieldConstColor: BlockLowerFn = ({ ctx, inputs, config }) => {
   const outType = { world: "field" as const, domain: "color" as const, category: "core" as const, busEligible: true };
   const fieldId = ctx.b.fieldConst(color, outType);
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldConstColor_out');
   return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 

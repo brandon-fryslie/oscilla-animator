@@ -20,16 +20,13 @@ import { resolveTime, type EffectiveTime } from "./timeResolution";
 
 // Step executors
 import { executeTimeDerive } from "./steps/executeTimeDerive";
-import { executeNodeEval } from "./steps/executeNodeEval";
-import { executeBusEval } from "./steps/executeBusEval";
-import { executeEventBusEval } from "./steps/executeEventBusEval";
+import { executeSignalEval } from "./steps/executeSignalEval";
 import { executeMaterialize } from "./steps/executeMaterialize";
 import { executeMaterializeColor } from "./steps/executeMaterializeColor";
 import { executeMaterializePath } from "./steps/executeMaterializePath";
 import { executeMaterializeTestGeometry } from "./steps/executeMaterializeTestGeometry";
 import { executeRenderAssemble } from "./steps/executeRenderAssemble";
 import { executeDebugProbe } from "./steps/executeDebugProbe";
-import { executeSignalEval } from "./steps/executeSignalEval";
 
 // 3D step executors
 import { executeCameraEval } from "./steps/executeCameraEval";
@@ -191,18 +188,6 @@ export class ScheduleExecutor {
 
       case "signalEval":
         executeSignalEval(step, program, runtime, effectiveTime);
-        break;
-
-      case "nodeEval":
-        executeNodeEval(step, program, runtime);
-        break;
-
-      case "busEval":
-        executeBusEval(step, program, runtime);
-        break;
-
-      case "eventBusEval":
-        executeEventBusEval(step, program, runtime);
         break;
 
       case "materialize":

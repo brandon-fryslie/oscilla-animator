@@ -117,7 +117,6 @@ After initial analysis, the 79 test failures fall into these categories:
 - [ ] Block Ops (5): BlockAdd, BlockRemove, BlockRetype, BlockSetLabel, BlockPatchParams
 - [ ] Wire Ops (3): WireAdd, WireRemove, WireRetarget
 - [ ] Bus Ops (3): BusAdd, BusRemove, BusUpdate
-- [ ] Binding Ops (6): PublisherAdd/Remove/Update, ListenerAdd/Remove/Update
 - [ ] Composite Ops (4): CompositeDefAdd/Remove/Update/ReplaceGraph
 - [ ] Time Ops (1): TimeRootSet
 - [ ] Settings Ops (1): PatchSettingsUpdate
@@ -149,8 +148,6 @@ See: `.agent_planning/ui-prep-refactor/DELIVERABLE-3-PROGRESS.md`
 - [ ] Replace `addWire()` / `connect()` with kernel transaction
 - [ ] Replace `removeWire()` / `disconnect()` with kernel transaction
 - [ ] Replace `updateBus()` with kernel transaction
-- [ ] Replace `addPublisher()` / `addListener()` with kernel transaction
-- [ ] Replace `removePublisher()` / `removeListener()` with kernel transaction
 - [ ] Add transaction rollback on validation failure
 - [ ] Add MobX reactions to kernel state changes
 - [ ] Integration test: full UI → Kernel → UI cycle

@@ -1,0 +1,21 @@
+Agent: project-evaluator | 2026-01-01-063200
+Scope: architecture/bus-block-unification
+Completion: 60% aligned | 0% implemented | Gaps: 5 ambiguities
+Reused: 3 RECENT findings from eval-cache
+Cache updated: None (specialized evaluation, not general knowledge)
+Ambiguities: 5 found (bus metadata, compiler impl, UX, migration, diagnostics)
+Workflow: PAUSE - Design questions need answers before implementation
+
+Key Findings:
+- Combine semantics ALREADY unified (Bus.combine = Slot.combine = CombinePolicy)
+- createCombineNode() shared between Pass 6 and Pass 7
+- Hidden block pattern exists (default-sources precedent)
+- Would eliminate ~600 lines (Endpoint union, Publisher/Listener, Pass 7)
+- Would unify edge handling (all port→port, no discriminated union)
+
+Critical Blockers:
+1. 5 design ambiguities need resolution
+2. Hidden block precedent not yet implemented (default-sources)
+3. Migration strategy unclear (risk to existing patches)
+
+Next Action: Answer 5 ambiguities (#1-5 in STATUS), then implement default-sources hidden blocks first

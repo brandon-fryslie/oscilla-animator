@@ -25,8 +25,6 @@ lensRegistry.getAll().forEach(lens => {
   expect(lens.inputType.domain).toBe(lens.outputType.domain);
 });
 
-// Test 1.3: Publisher can have both adapterChain and lensStack
-const publisher: Publisher = {
   id: 'test',
   busId: 'energy',
   from: { blockId: 'a', slotId: 'out', dir: 'output' },
@@ -35,8 +33,6 @@ const publisher: Publisher = {
   enabled: true,
   sortKey: 0
 };
-expect(publisher.adapterChain).toBeDefined();
-expect(publisher.lensStack).toBeDefined();
 ```
 
 ### 2. Auto-Adapter Selection Algorithm ✅
@@ -87,15 +83,12 @@ allPaths.forEach(path => {
 const gainLens: LensInstance = {
   lensId: 'gain',
   params: {
-    gain: { kind: 'default', defaultSourceId: 'ds:listener:0:gain' },
     bias: { kind: 'bus', busId: 'energy' }
   },
   enabled: true
 };
 
 // Test 3.2: Default sources are created automatically
-const listener = busStore.addListener(...);
-expect(defaultSourceStore.get(`ds:${listener.id}:0:gain`)).toBeDefined();
 
 // Test 3.3: Default sources can be updated
 defaultSourceStore.update('ds:test:0:gain', 2.0);
@@ -112,25 +105,19 @@ expect(artifact.kind).not.toBe('Error');
 
 ### 4. Evaluation Order ✅
 
-**DOD**: Evaluation follows strict order: output → publisher adapter → publisher lens → bus combine → listener adapter → listener lens
 
 **Verification Test**:
 ```typescript
-// Create publisher with adapter and lens
-const pubWithStack = createPublisher({
   output: { value: 5, type: 'Const:number' },
   adapterChain: [{ adapterId: 'ConstToSignal', params: {} }],
   lensStack: [{ lensId: 'gain', params: { gain: 2 } }]
 });
 
-// Create listener with adapter and lens
-const listenerWithStack = createListener({
   adapterChain: [],
   lensStack: [{ lensId: 'offset', params: { amount: 10 } }]
 });
 
 // Compile and verify order
-const result = await compileFullPath(pubWithStack, listenerWithStack);
 // Expected: 5 → Signal → gain(5*2=10) → bus → offset(10+10=20)
 expect(result.value).toBe(20);
 ```
@@ -168,29 +155,18 @@ requiredAdapters.forEach(({ id, policy, cost }) => {
 
 ### 6. Domain-Specific Lens Catalogs ✅
 
-**DOD**: Lenses are organized by domain with publisher/listener restrictions.
 
 **Verification Tests**:
 ```typescript
 // Test 6.1: Number domain lenses
-const numberLenses = lensRegistry.getLensesForDomain('number', 'listener');
 expect(numberLenses.some(l => l.id === 'ease')).toBe(true);
 expect(numberLenses.some(l => l.id === 'mapRange')).toBe(true);
 
-// Test 6.2: Publisher vs listener restrictions
-const publisherLenses = lensRegistry.getLensesForDomain('number', 'publisher');
-const listenerLenses = lensRegistry.getLensesForDomain('number', 'listener');
 
-// ease should be listener-only
-expect(publisherLenses.some(l => l.id === 'ease')).toBe(false);
-expect(listenerLenses.some(l => l.id === 'ease')).toBe(true);
 
 // gain should be both
-expect(publisherLenses.some(l => l.id === 'gain')).toBe(true);
-expect(listenerLenses.some(l => l.id === 'gain')).toBe(true);
 
 // Test 6.3: Phase domain lenses
-const phaseLenses = lensRegistry.getLensesForDomain('phase', 'publisher');
 expect(phaseLenses.some(l => l.id === 'phaseOffset')).toBe(true);
 expect(phaseLenses.some(l => l.id === 'pingPong')).toBe(true);
 ```
@@ -236,13 +212,10 @@ const legacyLens: LensDefinition = {
   params: { gain: 1.5, bias: 0.5 }
 };
 
-const migrated = migrateLensDefinition(legacyLens, 'listener123', defaultSourceStore);
 expect(migrated.lensId).toBe('gain');
 expect(migrated.params.gain.kind).toBe('default');
 expect(migrated.params.bias.kind).toBe('default');
 
-// Test 8.2: Listener migration
-const legacyListener: Listener = {
   id: 'l1',
   busId: 'energy',
   to: { blockId: 'b1', slotId: 'in', dir: 'input' },
@@ -250,15 +223,8 @@ const legacyListener: Listener = {
   enabled: true
 };
 
-const migratedListener = migrateListener(legacyListener, defaultSourceStore);
-expect(migratedListener.lens).toBeUndefined();
-expect(migratedListener.lensStack).toHaveLength(1);
-expect(migratedListener.lensStack[0].lensId).toBe('scale');
 
 // Test 8.3: No data loss
-expect(migratedListener.id).toBe(legacyListener.id);
-expect(migratedListener.busId).toBe(legacyListener.busId);
-expect(migratedListener.enabled).toBe(legacyListener.enabled);
 ```
 
 ### 9. Performance Requirements ✅
@@ -289,7 +255,6 @@ expect(duration).toBeLessThan(100); // Should be < 100ms for 1000 evaluations
 const initialMemory = process.memoryUsage().heapUsed;
 // Create 1000 lenses with default sources
 for (let i = 0; i < 1000; i++) {
-  createListenerWithLenses();
 }
 const finalMemory = process.memoryUsage().heapUsed;
 const memoryIncrease = finalMemory - initialMemory;
@@ -335,21 +300,15 @@ expect(result3.kind).toBe('Error');
 
 ## Integration Tests
 
-### IT-1: End-to-End Publisher → Bus → Listener Flow
 
 ```typescript
-describe('Full publisher to listener flow', () => {
   it('should apply adapters and lenses in correct order', async () => {
-    // Setup: Publisher with Const→Signal adapter + gain lens
-    const publisher = createPublisher({
       blockOutput: { kind: 'Const:number', value: 2 },
       adapterChain: [{ adapterId: 'ConstToSignal' }],
       lensStack: [{ lensId: 'gain', params: { gain: { kind: 'default', defaultSourceId: 'ds:gain' } } }]
     });
     defaultSourceStore.create({ id: 'ds:gain', value: 3 });
 
-    // Setup: Listener with mapRange lens
-    const listener = createListener({
       adapterChain: [],
       lensStack: [{
         lensId: 'mapRange',
@@ -367,7 +326,6 @@ describe('Full publisher to listener flow', () => {
     defaultSourceStore.create({ id: 'ds:outMax', value: 200 });
 
     // Execute: Compile full path
-    const result = await compileBindingPath(publisher, listener);
 
     // Verify: 2 → Signal → gain(2*3=6) → mapRange(6 from [0,10] to [100,200] = 160)
     expect(result.kind).toBe('Signal:number');
@@ -377,19 +335,12 @@ describe('Full publisher to listener flow', () => {
 });
 ```
 
-### IT-2: Multiple Publishers with Bus Combine
 
 ```typescript
-describe('Multiple publishers with bus combine', () => {
-  it('should apply publisher lenses before combining', async () => {
-    // Publisher 1: value 10 with gain 2
-    const pub1 = createPublisher({
       blockOutput: { kind: 'Signal:number', value: () => 10 },
       lensStack: [{ lensId: 'gain', params: { gain: 2 } }]
     });
 
-    // Publisher 2: value 5 with polarity invert
-    const pub2 = createPublisher({
       blockOutput: { kind: 'Signal:number', value: () => 5 },
       lensStack: [{ lensId: 'polarity', params: { invert: true } }]
     });
@@ -398,7 +349,6 @@ describe('Multiple publishers with bus combine', () => {
     const bus = createBus({ combineMode: 'sum' });
 
     // Result: (10*2) + (-5) = 15
-    const result = await compileBusWithPublishers(bus, [pub1, pub2]);
     expect(result.value(0, mockRuntimeCtx)).toBe(15);
   });
 });
@@ -406,13 +356,10 @@ describe('Multiple publishers with bus combine', () => {
 
 ## UI Acceptance Criteria
 
-### UI-1: Publisher Lens Visibility
 
-- [ ] Publisher lenses shown on bus channel
 - [ ] Mini-strip with enable toggle
 - [ ] Primary lens control visible inline
 - [ ] Expandable drawer for full lens stack
-- [ ] Visual indication when publisher has lenses
 
 ### UI-2: Lens Parameter Binding
 

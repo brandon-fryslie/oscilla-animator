@@ -1,0 +1,7 @@
+Agent: work-evaluator | 2026-01-01-034006
+Scope: work/multi-input-blocks
+Verdict: COMPLETE
+Criteria: 5/5 work items complete | Code: 100% | Tests: 40%
+Previous issues: N/A (first evaluation)
+Missing checks: Unit tests, integration tests, golden patch tests
+Cache updated: runtime-multi-input-blocks.md, INDEX.md

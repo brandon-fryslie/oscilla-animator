@@ -13,7 +13,6 @@
 
 Phase 2 successfully migrated:
 - PatchStore: addBlock, removeBlock, updateBlock, updateBlockParams, connect, disconnect
-- BusStore: deleteBus, updateBus, updatePublisher, updateListener
 - Deep clone fix for tx.replace() undo bug
 - **87 tests passing** (66 unit + 21 integration)
 
@@ -53,12 +52,6 @@ Phase 2 successfully migrated:
 | BusStore | createBus() | COMPLETE | Line 154: `tx.add('buses', bus)` |
 | BusStore | deleteBus() | COMPLETE | Line 184: `tx.removeBusCascade(busId)` |
 | BusStore | updateBus() | COMPLETE | Line 202: `tx.replace('buses', busId, next)` |
-| BusStore | addPublisher() | COMPLETE | Line 248: `tx.add('publishers', publisher)` |
-| BusStore | updatePublisher() | COMPLETE | Line 275: `tx.replace('publishers', publisherId, next)` |
-| BusStore | removePublisher() | COMPLETE | Line 297: `tx.remove('publishers', publisherId)` |
-| BusStore | addListener() | COMPLETE | Line 371: `tx.add('listeners', listener)` |
-| BusStore | updateListener() | COMPLETE | Line 388: `tx.replace('listeners', listenerId, next)` |
-| BusStore | removeListener() | COMPLETE | Line 497: `tx.remove('listeners', listenerId)` |
 
 ### suppressGraphCommitted Pattern - Still Present
 
@@ -85,7 +78,6 @@ PatchStore.ts:1044 - disconnect() has suppress check
 - Creates default sources (not tx-aware)
 - Modifies lane blockIds directly (line 796)
 - Calls connect() with suppressGraphCommitted (line 804)
-- Calls addPublisher/addListener (which DO use runTx - creates nested transactions!)
 - Calls removeBlock() (which now uses runTx - DOUBLE TRANSACTION!)
 - Emits multiple events in sequence
 
@@ -101,7 +93,6 @@ runTx(this.root, { label: 'Replace Block' }, tx => {
   // 1. Add new block
   tx.add('blocks', newBlock);
   // 2. Copy preserved connections (use tx.add for each)
-  // 3. Copy publishers/listeners (use tx.add for each)
   // 4. Remove old block cascade
   tx.removeBlockCascade(oldBlockId);
 });
@@ -121,13 +112,11 @@ runTx(this.root, { label: 'Replace Block' }, tx => {
 - Uses _createBlock() helper (direct push, no runTx)
 - Creates many blocks in a loop
 - Creates connections with validation
-- Creates publishers/listeners (call runTx-aware methods - nested transactions!)
 - Emits MacroExpanded + GraphCommitted
 
 **Issues Found**:
 1. clearPatch() is not transaction-aware (entire state reset)
 2. _createBlock() bypasses runTx for performance (used by both expandMacro and addBlock internal)
-3. Publisher/listener creation creates separate transactions
 
 **Migration Strategy**:
 Option A: Single mega-transaction (difficult - clearPatch changes everything)
@@ -154,7 +143,6 @@ Option B: Mark expandMacro as "checkpoint" operation (cannot undo past it)
 
 ---
 
-### 4. Lens Operations - Connection/Listener Stacks
 
 **PatchStore Methods** (direct mutations via updateConnection):
 | Method | Lines | Status |
@@ -173,7 +161,6 @@ Option B: Mark expandMacro as "checkpoint" operation (cannot undo past it)
 
 **Migration Strategy**:
 - updateConnection() should use runTx with tx.replace('connections', ...)
-- Lens methods just call updateConnection/updateListener
 
 **Estimated Complexity**: LOW-MEDIUM (straightforward pattern)
 
@@ -277,12 +264,9 @@ Phase 4+:
 
 **Missing Integration Tests** (Phase 3 should add):
 1. replaceBlock -> undo -> original block restored with connections
-2. replaceBlock -> undo -> bus publishers/listeners restored
 3. addLensToConnection -> undo -> lens removed
 4. removeLensFromConnection -> undo -> lens restored
 5. updateConnectionLens -> undo -> params restored
-6. addLensToStack (listener) -> undo
-7. removeLensFromStack (listener) -> undo
 8. clearLensStack -> undo -> stack restored
 
 ---
@@ -296,7 +280,6 @@ Phase 4+:
 - [ ] replaceBlock() uses single runTx() - atomic undo
 - [ ] suppressGraphCommitted removed from connect/disconnect (was only for replaceBlock)
 - [ ] updateConnection() uses runTx()
-- [ ] All lens operations undoable via updateConnection/updateListener
 - [ ] addBlockAtIndex() uses runTx() with lane assignment
 - [ ] 20+ new integration tests
 - [ ] Manual testing confirms undo works for all migrated operations

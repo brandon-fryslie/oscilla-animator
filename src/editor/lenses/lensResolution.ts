@@ -1,13 +1,9 @@
 import type {Artifact, CompileCtx, Vec2} from '../compiler';
-import type { DefaultSourceState, LensParamBinding, LensInstance, AdapterStep } from '../types';
+import type { DefaultSourceState, LensParamBinding } from '../types';
 
 export interface ParamResolutionContext {
-  resolveBus: (busId: string) => Artifact;
-  resolveWire: (blockId: string, slotId: string) => Artifact;
   defaultSources: Map<string, DefaultSourceState>;
   compileCtx: CompileCtx;
-  applyAdapterChain: (artifact: Artifact, chain?: AdapterStep[]) => Artifact;
-  applyLensStack: (artifact: Artifact, lensStack?: LensInstance[]) => Artifact;
   // Recursion guard
   visited: Set<string>;
   depth: number;
@@ -25,21 +21,6 @@ export function resolveLensParam(binding: LensParamBinding, ctx: ParamResolution
         return { kind: 'Error', message: `Default source not found: ${binding.defaultSourceId}` };
       }
       return artifactFromDefaultSource(source);
-    }
-    case 'bus': {
-      const art = ctx.resolveBus(binding.busId);
-      const adapted = ctx.applyAdapterChain(art, binding.adapterChain);
-      return ctx.applyLensStack(adapted, binding.lensStack);
-    }
-    case 'wire': {
-      const key = `${binding.from.blockId}:${binding.from.slotId}`;
-      if (ctx.visited.has(key)) {
-        return { kind: 'Error', message: 'Lens param cycle detected' };
-      }
-      ctx.visited.add(key);
-      const art = ctx.resolveWire(binding.from.blockId, binding.from.slotId);
-      const adapted = ctx.applyAdapterChain(art, binding.adapterChain);
-      return ctx.applyLensStack(adapted, binding.lensStack);
     }
     case 'literal': {
       // Literal bindings store the value directly

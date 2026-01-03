@@ -19,32 +19,32 @@ import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from '../defaultSources/allowlist';
 import { getBlockDefinition } from '../blocks/registry';
 
 // =============================================================================
-// DefaultSource Class (Observable)
+// DefaultSourceState Class (Observable)
 // =============================================================================
 
 /**
- * Observable DefaultSource class.
+ * Observable DefaultSourceState class.
  *
  * This is the canonical way to create observable DefaultSourceState instances.
  * By using a class with makeAutoObservable in the constructor, we guarantee
  * that every instance is properly observable - mutations to .value are
  * automatically tracked by MobX reactions.
  *
- * Pattern: All DefaultSourceState creation goes through this class.
+ * Pattern: All DefaultSource creation goes through this class.
  */
-export class DefaultSource implements DefaultSourceState {
+export class ObservableDefaultSource implements DefaultSourceState {
   id: string;
   type: TypeDesc;
   value: unknown;
   uiHint?: UIControlHint;
-  rangeHint?: DefaultSourceState['rangeHint'];
+  rangeHint?: { min?: number; max?: number; step?: number; log?: boolean };
 
   constructor(init: {
     id: string;
     type: TypeDesc;
     value: unknown;
     uiHint?: UIControlHint;
-    rangeHint?: DefaultSourceState['rangeHint'];
+    rangeHint?: { min?: number; max?: number; step?: number; log?: boolean };
   }) {
     this.id = init.id;
     this.type = init.type;
@@ -63,7 +63,7 @@ export class DefaultSource implements DefaultSourceState {
 
 /**
  * Map from SlotWorld to TypeDesc world.
- * Used when creating DefaultSourceState from Slot defaultSource.
+ * Used when creating DefaultSource from Slot defaultSource.
  */
 function slotWorldToTypeWorld(world: SlotWorld): 'signal' | 'field' | 'scalar' | 'config' {
   return world;
@@ -78,9 +78,9 @@ function isDeterministicInputId(id: string): boolean {
 }
 
 export class DefaultSourceStore {
-  // Store DefaultSource instances (which are self-observable via makeAutoObservable)
+  // Store DefaultSourceState instances (which are self-observable via makeAutoObservable)
   // We use observable.shallow because the Map entries themselves are already observable
-  sources: Map<string, DefaultSource> = new Map();
+  sources: Map<string, DefaultSourceState> = new Map();
 
   /**
    * Maps blockId -> Map of slotId -> defaultSource ID.
@@ -293,7 +293,7 @@ export class DefaultSourceStore {
                 busEligible: false,
               };
 
-        const newSource = new DefaultSource({
+        const newSource = new ObservableDefaultSource({
           id: providerInputDefaultId,
           type: typeDesc,
           value: inputSlot.defaultSource.value,
@@ -360,7 +360,7 @@ export class DefaultSourceStore {
         if (existingSource != null) {
           // Create provider input default with existing value
           const providerInputDefaultId = attachment.provider.editableInputSourceIds.value;
-          const providerInputDefault = new DefaultSource({
+          const providerInputDefault = new ObservableDefaultSource({
             id: providerInputDefaultId,
             type: existingSource.type,
             value: existingSource.value,
@@ -387,12 +387,12 @@ export class DefaultSourceStore {
   ensureDefaultSource(
     id: string,
     spec: { type: TypeDesc; value: unknown; uiHint?: UIControlHint; rangeHint?: DefaultSourceState['rangeHint'] }
-  ): DefaultSource {
+  ): DefaultSourceState {
     const existing = this.sources.get(id);
     if (existing !== undefined) return existing;
 
-    // DefaultSource class handles its own observability via makeAutoObservable
-    const created = new DefaultSource({
+    // ObservableDefaultSource class handles its own observability via makeAutoObservable
+    const created = new ObservableDefaultSource({
       id,
       type: spec.type,
       value: spec.value,
@@ -405,7 +405,7 @@ export class DefaultSourceStore {
 
   /**
    * Update the value of an existing default source.
-   * Since DefaultSourceState objects are observable, this mutation triggers reactions.
+   * Since ObservableDefaultSource objects are observable, this mutation triggers reactions.
    */
   setDefaultValue(id: string, value: unknown): void {
     const existing = this.sources.get(id);
@@ -417,7 +417,7 @@ export class DefaultSourceStore {
   /**
    * Get a default source by ID.
    */
-  getDefaultSource(id: string): DefaultSource | undefined {
+  getDefaultSource(id: string): DefaultSourceState | undefined {
     return this.sources.get(id);
   }
 
@@ -425,7 +425,7 @@ export class DefaultSourceStore {
    * Get the default source for a block input.
    * Returns undefined if no default source exists for this input.
    */
-  getDefaultSourceForInput(blockId: BlockId, slotId: string): DefaultSource | undefined {
+  getDefaultSourceForInput(blockId: BlockId, slotId: string): DefaultSourceState | undefined {
     const slotMap = this.blockSlotIndex.get(blockId);
     if (slotMap === null || slotMap === undefined) return undefined;
     const dsId = slotMap.get(slotId);
@@ -481,7 +481,7 @@ export class DefaultSourceStore {
       const value = params?.[slot.id] !== undefined ? params[slot.id] : slot.defaultSource.value;
 
       // Create DefaultSource for input
-      const ds = new DefaultSource({
+      const ds = new ObservableDefaultSource({
         id: dsId,
         type: typeDesc,
         value,
@@ -496,7 +496,7 @@ export class DefaultSourceStore {
 
       // Create DefaultSource for provider's 'value' input
       const providerInputDefaultId = attachment.provider.editableInputSourceIds.value;
-      const providerInputDefault = new DefaultSource({
+      const providerInputDefault = new ObservableDefaultSource({
         id: providerInputDefaultId,
         type: typeDesc,
         value,
@@ -548,7 +548,7 @@ export class DefaultSourceStore {
    * Implements backward compatibility: regenerates non-deterministic IDs.
    */
   load(defaultSources: DefaultSourceState[]): void {
-    // Create DefaultSource instances from serialized state
+    // Create DefaultSourceState instances from serialized state
     // Check for non-deterministic IDs and regenerate if needed
     const regeneratedSources = defaultSources.map((source) => {
       if (!isDeterministicInputId(source.id)) {
@@ -557,7 +557,7 @@ export class DefaultSourceStore {
         // The regeneration will happen in RootStore.loadPatch when we have block context
         console.warn(`DefaultSource ${source.id} has non-deterministic ID - will be regenerated on next save`);
       }
-      return new DefaultSource(source);
+      return new ObservableDefaultSource(source);
     });
 
     this.sources = new Map(regeneratedSources.map((source) => [source.id, source]));
@@ -585,7 +585,7 @@ export class DefaultSourceStore {
         // Regenerate with deterministic ID, preserving value and metadata
         console.warn(`Regenerating non-deterministic ID ${dsId} -> ${newDsId}`);
 
-        const newSource = new DefaultSource({
+        const newSource = new ObservableDefaultSource({
           id: newDsId,
           type: oldSource.type,
           value: oldSource.value,

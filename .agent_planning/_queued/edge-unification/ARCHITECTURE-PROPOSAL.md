@@ -4,11 +4,8 @@
 
 ```
 Wire:       BlockA.output ──────────────> BlockB.input     (enforced 1:1)
-Publisher:  BlockA.output ──────────────> Bus              (N:1 to bus)
-Listener:   Bus ───────────────────────> BlockB.input     (1:N from bus)
 ```
 
-The bus does the combining (N publishers → combine → 1 value → N listeners).
 
 ## Proposed: Unified Edges with Combine-at-Input
 
@@ -40,7 +37,6 @@ Edge:       Source.port ────────────────> Sink.p
 
 4. **Buses become optional named waypoints**
    - A "Bus" is just a block with:
-     - N dynamic inputs (publishers)
      - 1 output (combined value)
      - `combineMode` and `defaultValue` params
    - Or eliminated entirely (UI shows multi-edge inputs directly)
@@ -84,18 +80,14 @@ This means buses are redundant if inputs can accept multiple edges with combine.
 - Update runtime combine logic
 
 **Phase 2: Add EdgeQueryService**
-- Unified query across wires, publishers, listeners
 - Powers Probe Mode, disconnect operations
 - Backward compatible with current stores
 
 **Phase 3: Migrate buses to edge model**
 - Convert Bus entities to BusCombiner blocks
-- Convert publishers to edges
-- Convert listeners to edges
 - Deprecate BusStore
 
 **Phase 4: Remove BusStore**
-- Delete Publisher/Listener types
 - Delete BusStore
 - Update BusBoard to query BusCombiner blocks
 

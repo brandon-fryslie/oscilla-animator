@@ -38,13 +38,11 @@ interface TarjanState {
 
 /**
  * Create a unique key for a DepNode.
+ *
+ * NOTE: DepNode is now only BlockEval (bus nodes removed in Edge migration).
  */
 function nodeKey(node: DepNode): string {
-  if (node.kind === "BlockEval") {
-    return `block:${node.blockIndex}`;
-  } else {
-    return `bus:${node.busIndex}`;
-  }
+  return `block:${node.blockIndex}`;
 }
 
 /**
@@ -55,12 +53,9 @@ function nodesEqual(a: DepNode, b: DepNode): boolean {
     return false;
   }
 
+  // Only BlockEval nodes exist now
   if (a.kind === "BlockEval" && b.kind === "BlockEval") {
     return a.blockIndex === b.blockIndex;
-  }
-
-  if (a.kind === "BusValue" && b.kind === "BusValue") {
-    return a.busIndex === b.busIndex;
   }
 
   return false;

@@ -215,15 +215,13 @@ function normalizeCombineMode(mode: CombineMode): BusCombineMode {
  * @param inputs - Pre-sorted input ValueRefs (ascending sortKey, ties by edge ID)
  * @param type - Type descriptor (world, domain, category)
  * @param builder - IRBuilder for emitting nodes
- * @param busIndex - Optional bus index for tracking (Pass 7 only)
  * @returns Combined ValueRefPacked or null if no inputs
  */
 export function createCombineNode(
   mode: CombineMode,
   inputs: readonly ValueRefPacked[],
   type: TypeDesc,
-  builder: IRBuilder,
-  busIndex?: number
+  builder: IRBuilder
 ): ValueRefPacked | null {
   // Handle empty inputs - caller should materialize default
   if (inputs.length === 0) {
@@ -265,8 +263,8 @@ export function createCombineNode(
     const safeMode = validModes.includes(normalizedMode) ? normalizedMode : "last";
     const combineMode = safeMode as "sum" | "average" | "max" | "min" | "last";
 
-    const sigId = builder.sigCombine(busIndex ?? -1, sigTerms, combineMode, type);
-    const slot = builder.allocValueSlot();
+    const sigId = builder.sigCombine(sigTerms, combineMode, type);
+    const slot = builder.allocValueSlot(type, `combine_sig_${combineMode}`);
     builder.registerSigSlot(sigId, slot);
     return { k: "sig", id: sigId, slot };
   }
@@ -282,8 +280,8 @@ export function createCombineNode(
     const safeMode = validModes.includes(normalizedMode) ? normalizedMode : "product";
     const combineMode = safeMode as "sum" | "average" | "max" | "min" | "last" | "product";
 
-    const fieldId = builder.fieldCombine(busIndex ?? -1, fieldTerms, combineMode, type);
-    const slot = builder.allocValueSlot();
+    const fieldId = builder.fieldCombine(fieldTerms, combineMode, type);
+    const slot = builder.allocValueSlot(type, `combine_field_${combineMode}`);
     builder.registerFieldSlot(fieldId, slot);
     return { k: "field", id: fieldId, slot };
   }
@@ -297,8 +295,8 @@ export function createCombineNode(
     // Map bus combineMode to event combine semantics
     // For events: 'merge' combines all streams, 'last' takes only last publisher
     const eventMode: EventCombineMode = normalizedMode === 'last' ? 'last' : 'merge';
-    const eventId = builder.eventCombine(busIndex ?? -1, eventTerms, eventMode, type);
-    const slot = builder.allocValueSlot();
+    const eventId = builder.eventCombine(eventTerms, eventMode, type);
+    const slot = builder.allocValueSlot(type, `combine_event_${eventMode}`);
     builder.registerEventSlot(eventId, slot);
     return { k: "event", id: eventId, slot };
   }

@@ -88,7 +88,6 @@ The compiler must:
 ### Bus Compilation Contract
 
 For each bus:
-1. Collect publishers
 2. Sort by sortKey, then stable ID
 3. Apply adapter chains
 4. Combine using domain-specific reducer

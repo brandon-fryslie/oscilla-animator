@@ -17,7 +17,6 @@ import type {
   ValueSlot,
   StateId,
   TransformChainId,
-  BusIndex,
 } from "./types";
 import { getTypeArity, asTypeDesc } from "./types";
 import type { SignalExprIR, StatefulSignalOp, EventExprIR, EventCombineMode } from "./signalExpr";
@@ -395,7 +394,6 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   sigCombine(
-    busIndex: BusIndex,
     terms: readonly SigExprId[],
     mode: "sum" | "average" | "max" | "min" | "last",
     outputType: TypeDesc
@@ -403,7 +401,6 @@ export class IRBuilderImpl implements IRBuilder {
     const id = this.sigExprs.length;
     this.sigExprs.push({
       kind: "busCombine",
-      busIndex,
       terms: [...terms],
       combine: { mode },
       type: outputType,
@@ -553,7 +550,6 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   fieldCombine(
-    busIndex: BusIndex,
     terms: readonly FieldExprId[],
     mode: "sum" | "average" | "max" | "min" | "last" | "product",
     outputType: TypeDesc
@@ -561,7 +557,6 @@ export class IRBuilderImpl implements IRBuilder {
     const id = this.fieldExprs.length;
     this.fieldExprs.push({
       kind: "busCombine",
-      busIndex,
       terms: [...terms],
       combine: { mode },
       type: outputType,
@@ -664,7 +659,6 @@ export class IRBuilderImpl implements IRBuilder {
   }
 
   eventCombine(
-    busIndex: BusIndex,
     terms: readonly EventExprId[],
     mode: EventCombineMode,
     outputType: TypeDesc
@@ -673,7 +667,6 @@ export class IRBuilderImpl implements IRBuilder {
     this.eventExprs.push({
       kind: "eventBusCombine",
       type: outputType,
-      busIndex,
       terms: [...terms],
       combine: { mode },
     });

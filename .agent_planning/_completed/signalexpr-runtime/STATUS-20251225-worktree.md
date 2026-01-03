@@ -53,8 +53,6 @@ Phase 4 has **6 topics**, all in PROPOSED state:
 ✅ **Compiler Pipeline**
 - `compileBusAware.ts` (1,013 lines) - Multi-pass compiler with bus resolution
 - Supports wired AND bus connections
-- Publisher ordering by sortKey (deterministic)
-- Default values when buses have no publishers
 - **BUT**: Emits closures, NOT IR
 
 ✅ **Type System**
@@ -156,7 +154,6 @@ Phase 4 **depends on Phase 3 (Bridge Compiler)**, which depends on Phase 2 and 1
 3. **State determinism** - Stateful ops produce bitwise-identical results
 4. **Cache correctness** - Per-frame memoization doesn't leak state
 5. **Transform chain tests** - Adapter/lens execution matches legacy
-6. **Bus combine tests** - Deterministic publisher ordering in IR evaluator
 
 **Cannot run runtime checks**: No IR implementation exists to test.
 
@@ -167,7 +164,6 @@ Phase 4 **depends on Phase 3 (Bridge Compiler)**, which depends on Phase 2 and 1
 | Flow | Input | Compile | Execute | Cache | Output |
 |------|-------|---------|---------|-------|--------|
 | TimeRoot → Signal | ✅ Patch | ✅ Closure | ✅ Player | ❌ No cache | ✅ Value |
-| Bus → Signal | ✅ Publisher | ✅ Combine closure | ✅ Per-frame | ❌ Not memoized | ✅ Value |
 | Signal math (Add/Mul) | ✅ Inputs | ✅ Closure tree | ✅ Per-frame | ❌ Re-evaluated | ✅ Value |
 | Transform chain | ✅ Adapter/Lens | ⚠️ Inline in closure | ✅ Hidden | ❌ No introspection | ✅ Value |
 
@@ -209,7 +205,6 @@ Existing signal block tests:
 
 - ✅ **Empty inputs**: Current closures don't validate inputs thoroughly
 - ⚠️ **Second run state**: Stateful signal ops use closure scope (hidden state, no reset)
-- ❌ **Cleanup**: No resource cleanup in closures (event listeners, timers, etc.)
 - ⚠️ **Error messages**: Generic errors ("requires Signal<number>"), no context
 - ⚠️ **Edge cases**: No validation for NaN, Infinity, division by zero in signal math
 
@@ -234,7 +229,6 @@ Existing signal block tests:
 
 🚩 **Re-evaluation waste**
 - Same signal computed multiple times per frame
-- No memoization (bus listeners all re-compute)
 - Performance degrades with complex patches
 
 🚩 **No determinism guarantee**
@@ -305,7 +299,6 @@ Existing signal block tests:
 
 4. **Add signal-evaluator-combine**
    - Implement busCombine node evaluation
-   - Use deterministic publisher ordering from IR
    - Test: Bus combine produces same results as closure version
 
 5. **Add signal-evaluator-transforms**
@@ -397,8 +390,6 @@ Phase 4 **CANNOT START** until:
 **Required**:
 - `busCombine` node evaluation
 - Combine modes: sum, average, min, max, last
-- Deterministic publisher ordering (from IR's sorted terms array)
-- Silent value handling (when no publishers)
 
 **Missing**:
 - All combine mode implementations

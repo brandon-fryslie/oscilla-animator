@@ -3,6 +3,9 @@
  *
  * Sprint: Bus-Block Unification - Sprint 1 (Foundation)
  * DOD: 8+ unit tests validating conversion utilities
+ *
+ * Key design decision: Block ID === Bus ID (no redundant params.busId)
+ * Block uses params.name for programmatic bus name (not params.busName)
  */
 
 import { describe, it, expect } from 'vitest';
@@ -42,7 +45,7 @@ describe('convertBusToBlock', () => {
     expect(block.type).toBe('BusBlock');
   });
 
-  it('stores bus name in params.busName', () => {
+  it('stores bus name in params.name', () => {
     const bus: Bus = {
       id: 'bus-789',
       name: 'Energy',
@@ -55,7 +58,10 @@ describe('convertBusToBlock', () => {
 
     const block = convertBusToBlock(bus);
 
-    expect(block.params.busName).toBe('Energy');
+    // params.name is the programmatic bus name
+    expect(block.params.name).toBe('Energy');
+    // block.label is also set to bus name for display
+    expect(block.label).toBe('Energy');
   });
 
   it('stores bus type in params.busType', () => {
@@ -198,48 +204,6 @@ describe('convertBlockToBus', () => {
     expect(() => convertBlockToBus(regularBlock)).toThrow('Cannot convert block of type "SignalOsc" to Bus');
   });
 
-  it('validates busId parameter', () => {
-    const invalidBlock: Block = {
-      id: 'block-invalid',
-      type: 'BusBlock',
-      label: 'Bad Bus',
-      inputs: [],
-      outputs: [],
-      params: {
-        // Missing busId
-        busName: 'Invalid',
-        busType: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-        combine: { when: 'multi', mode: 'last' },
-        defaultValue: 0,
-      },
-      category: 'Other',
-      description: 'Invalid bus block',
-    };
-
-    expect(() => convertBlockToBus(invalidBlock)).toThrow('busId must be a string');
-  });
-
-  it('validates busName parameter', () => {
-    const invalidBlock: Block = {
-      id: 'block-invalid',
-      type: 'BusBlock',
-      label: 'Bad Bus',
-      inputs: [],
-      outputs: [],
-      params: {
-        busId: 'bus-123',
-        // Missing busName
-        busType: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-        combine: { when: 'multi', mode: 'last' },
-        defaultValue: 0,
-      },
-      category: 'Other',
-      description: 'Invalid bus block',
-    };
-
-    expect(() => convertBlockToBus(invalidBlock)).toThrow('busName must be a string');
-  });
-
   it('validates busType parameter', () => {
     const invalidBlock: Block = {
       id: 'block-invalid',
@@ -248,8 +212,7 @@ describe('convertBlockToBus', () => {
       inputs: [],
       outputs: [],
       params: {
-        busId: 'bus-123',
-        busName: 'Invalid',
+        name: 'Invalid',
         // Missing busType
         combine: { when: 'multi', mode: 'last' },
         defaultValue: 0,
@@ -269,8 +232,7 @@ describe('convertBlockToBus', () => {
       inputs: [],
       outputs: [],
       params: {
-        busId: 'bus-123',
-        busName: 'Invalid',
+        name: 'Invalid',
         busType: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
         // Missing combine
         defaultValue: 0,
@@ -290,8 +252,7 @@ describe('convertBlockToBus', () => {
       inputs: [],
       outputs: [],
       params: {
-        busId: 'bus-123',
-        busName: 'TestBus',
+        name: 'TestBus',
         busType: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
         combine: { when: 'multi', mode: 'last' },
         defaultValue: 0,
@@ -314,8 +275,7 @@ describe('convertBlockToBus', () => {
       inputs: [],
       outputs: [],
       params: {
-        busId: 'bus-123',
-        busName: 'TestBus',
+        name: 'TestBus',
         busType: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
         combine: { when: 'multi', mode: 'last' },
         defaultValue: 0,
@@ -330,6 +290,30 @@ describe('convertBlockToBus', () => {
 
     // Should default to 'user' for invalid origin
     expect(bus.origin).toBe('user');
+  });
+
+  it('uses block.label as fallback for bus name', () => {
+    const block: Block = {
+      id: 'bus-label-fallback',
+      type: 'BusBlock',
+      label: 'FallbackName',
+      inputs: [],
+      outputs: [],
+      params: {
+        // name missing - should use label
+        busType: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        combine: { when: 'multi', mode: 'last' },
+        defaultValue: 0,
+        sortKey: 0,
+        origin: 'user',
+      },
+      category: 'Other',
+      description: 'Bus block',
+    };
+
+    const bus = convertBlockToBus(block);
+
+    expect(bus.name).toBe('FallbackName');
   });
 });
 

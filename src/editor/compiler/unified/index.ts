@@ -34,8 +34,6 @@ export type {
   BlockInstance,
   ConnectionDef,
   BusDef,
-  PublisherDef,
-  ListenerDef,
   PatchDefinition,
   Evaluator,
   CompiledBlock,

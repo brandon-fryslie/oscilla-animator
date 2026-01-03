@@ -1,0 +1,54 @@
+Agent: iterative-implementer | 1767479888 (2026-01-03 15:38:08)
+Mode: manual
+Completed: Compiler Integration | Files: 2 | Commits: 1
+Cache invalidated: None (no eval cache entries exist yet)
+Status: complete
+
+## Work Completed
+
+1. **Updated editorToPatch() to use getNormalizedGraph()**
+   - Changed `store.patchStore.blocks` to `store.patchStore.getNormalizedGraph()`
+   - Normalized graph already contains structural blocks materialized by GraphNormalizer
+   - Removed redundant `materializeDefaultSources()` call (line 924)
+
+2. **Fixed defaultSourceValues building**
+   - Removed buggy iteration over `block.inputs` (property doesn't exist on Block type)
+   - Now uses `store.defaultSourceStore.attachmentsByTarget` Map directly
+   - Map key is already in "blockId:slotId" format
+
+3. **Removed materializeDefaultSources import and file**
+   - Deleted import from line 19 of integration.ts
+   - Deleted src/editor/compiler/passes/pass0-materialize.ts
+   - Logic has been moved to GraphNormalizer.ts (completed by previous agent)
+
+4. **Fixed patchId reference**
+   - PatchStore doesn't have `patchId` property yet
+   - Used temporary string 'patch' with comment noting it's temporary
+   - This is a pre-existing issue in the codebase
+
+## Files Modified
+
+- src/editor/compiler/integration.ts (updated)
+- src/editor/compiler/passes/pass0-materialize.ts (deleted)
+
+## Commits
+
+- 3fa63fc: refactor(compiler): integrate GraphNormalizer into compiler pipeline
+
+## Testing
+
+Note: Pre-existing typecheck errors in other modules (adapters, tests, BlockLibrary, etc.)
+These errors are unrelated to this change and exist in the codebase already.
+
+The changes to integration.ts compile correctly - no new errors introduced.
+
+## Next Steps
+
+The Graph Normalization integration is now complete:
+1. Types defined (RawGraph, NormalizedGraph, CompilerGraph) ✓
+2. GraphNormalizer.normalize() implemented ✓
+3. PatchStore.getNormalizedGraph() with caching ✓
+4. Compiler uses normalized graph ✓
+5. pass0-materialize removed ✓
+
+All deliverables from .agent_planning/graph-normalization/PLAN-2026-01-03-121815.md are complete.

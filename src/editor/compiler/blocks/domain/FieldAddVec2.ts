@@ -24,7 +24,7 @@ const lowerFieldAddVec2: BlockLowerFn = ({ ctx, inputs }) => {
   const outType = { world: "field" as const, domain: "vec2" as const, category: "core" as const, busEligible: true };
   const fieldId = ctx.b.fieldZip(a.id, b.id, { kind: 'opcode', opcode: OpCode.Vec2Add }, outType,);
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldAddVec2_out');
   return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 

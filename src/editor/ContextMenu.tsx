@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
-import { getConnectionsForPort, findCompatiblePorts } from './portUtils';
+import { getEdgesForPort, findCompatiblePorts } from './portUtils';
 import './ContextMenu.css';
 
 /**
@@ -36,9 +36,9 @@ export const ContextMenu = observer(() => {
       portRef,
       slot,
       store.patchStore.blocks,
-      store.patchStore.connections
+      store.patchStore.edges
     ).slice(0, 8); // Limit to 8 to keep menu compact
-  }, [isOpen, portRef, slot, store.patchStore.blocks, store.patchStore.connections]);
+  }, [isOpen, portRef, slot, store.patchStore.blocks, store.patchStore.edges]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -75,11 +75,11 @@ export const ContextMenu = observer(() => {
     return null;
   }
 
-  const connections = getConnectionsForPort(
+  const edges = getEdgesForPort(
     portRef.blockId,
     portRef.slotId,
     portRef.direction,
-    store.patchStore.connections
+    store.patchStore.edges
   );
 
   const handleConnect = (targetBlockId: string, targetSlotId: string) => {
@@ -88,28 +88,28 @@ export const ContextMenu = observer(() => {
       store.patchStore.connect(portRef.blockId, portRef.slotId, targetBlockId, targetSlotId);
     } else {
       // This port is an input, target is an output
-      // Remove existing connection first (input can only have one source)
-      const existingConn = connections.find(c => c.to.blockId === portRef.blockId && c.to.slotId === portRef.slotId);
-      if (existingConn !== undefined) {
-        store.patchStore.disconnect(existingConn.id);
+      // Remove existing edge first (input can only have one source)
+      const existingEdge = edges.find(e => e.to.blockId === portRef.blockId && e.to.slotId === portRef.slotId);
+      if (existingEdge !== undefined) {
+        store.patchStore.disconnect(existingEdge.id);
       }
       store.patchStore.connect(targetBlockId, targetSlotId, portRef.blockId, portRef.slotId);
     }
     store.uiStore.closeContextMenu();
   };
 
-  const handleDisconnect = (connectionId: string) => {
-    if (store.uiStore.settings.warnBeforeDisconnect && showConfirm !== connectionId) {
-      setShowConfirm(connectionId);
+  const handleDisconnect = (edgeId: string) => {
+    if (store.uiStore.settings.warnBeforeDisconnect && showConfirm !== edgeId) {
+      setShowConfirm(edgeId);
       return;
     }
 
-    store.patchStore.disconnect(connectionId);
+    store.patchStore.disconnect(edgeId);
     setShowConfirm(null);
 
-    // Close menu if no more connections
-    const remainingConnections = connections.filter((c) => c.id !== connectionId);
-    if (remainingConnections.length === 0) {
+    // Close menu if no more edges
+    const remainingEdges = edges.filter((e) => e.id !== edgeId);
+    if (remainingEdges.length === 0) {
       store.uiStore.closeContextMenu();
     }
   };
@@ -120,7 +120,7 @@ export const ContextMenu = observer(() => {
       return;
     }
 
-    connections.forEach((conn) => store.patchStore.disconnect(conn.id));
+    edges.forEach((edge) => store.patchStore.disconnect(edge.id));
     store.uiStore.closeContextMenu();
     setShowConfirm(null);
   };
@@ -179,32 +179,32 @@ export const ContextMenu = observer(() => {
           </div>
         )}
 
-        {connections.length === 0 ? (
+        {edges.length === 0 ? (
           compatiblePorts.length === 0 && <div className="context-menu-empty">No connections available</div>
         ) : (
           <>
             <div className="context-menu-section">
               <div className="context-menu-section-title">Connections</div>
-              {connections.map((conn) => {
+              {edges.map((edge) => {
                 const otherBlockId =
-                  portRef.direction === 'output' ? conn.to.blockId : conn.from.blockId;
+                  portRef.direction === 'output' ? edge.to.blockId : edge.from.blockId;
                 const otherSlotId =
-                  portRef.direction === 'output' ? conn.to.slotId : conn.from.slotId;
+                  portRef.direction === 'output' ? edge.to.slotId : edge.from.slotId;
                 const otherBlock = store.patchStore.blocks.find((b) => b.id === otherBlockId);
                 const otherSlots =
                   portRef.direction === 'output' ? otherBlock?.inputs : otherBlock?.outputs;
                 const otherSlot = otherSlots?.find((s) => s.id === otherSlotId);
 
-                const isConfirming = showConfirm === conn.id;
+                const isConfirming = showConfirm === edge.id;
 
                 return (
-                  <div key={conn.id} className="context-menu-item">
+                  <div key={edge.id} className="context-menu-item">
                     {isConfirming ? (
                       <div className="context-menu-confirm">
                         <span>Disconnect?</span>
                         <button
                           className="context-menu-confirm-btn confirm"
-                          onClick={() => handleDisconnect(conn.id)}
+                          onClick={() => handleDisconnect(edge.id)}
                         >
                           Yes
                         </button>
@@ -218,7 +218,7 @@ export const ContextMenu = observer(() => {
                     ) : (
                       <button
                         className="context-menu-action"
-                        onClick={() => handleDisconnect(conn.id)}
+                        onClick={() => handleDisconnect(edge.id)}
                       >
                         <span className="context-menu-icon">×</span>
                         <span className="context-menu-target-block">
@@ -234,7 +234,7 @@ export const ContextMenu = observer(() => {
               })}
             </div>
 
-            {connections.length > 1 && (
+            {edges.length > 1 && (
               <div className="context-menu-section">
                 <div className="context-menu-item">
                   {showConfirm === 'all' ? (
@@ -259,7 +259,7 @@ export const ContextMenu = observer(() => {
                       onClick={handleDisconnectAll}
                     >
                       <span className="context-menu-icon">⊗</span>
-                      <span>Disconnect All ({connections.length})</span>
+                      <span>Disconnect All ({edges.length})</span>
                     </button>
                   )}
                 </div>

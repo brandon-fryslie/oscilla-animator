@@ -57,7 +57,7 @@ const lowerFieldReduce: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Use IRBuilder's reduceFieldToSig method
   const sigId = ctx.b.reduceFieldToSig(field.id, reduceFn);
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldReduce_out');
   return { outputs: [{ k: 'sig', id: sigId, slot }] };
 };
 

@@ -39,14 +39,12 @@ Compile to: FieldExpr node
 Evaluation: Lazy, at sinks
 Use for: shared per-element attributes (advanced)
 
-Note: Field buses are optional for v1. Most variation happens through listener lenses.
 
 ---
 
 ## Bus Compilation Contract
 
 For each bus:
-1. Collect publishers
 2. Sort by sortKey, then stable ID
 3. Apply adapter chains
 4. Combine using domain-specific reducer
@@ -74,15 +72,12 @@ Architecturally, buses are:
 A bus definition includes:
 - **World**: Signal or Field
 - **Domain**: phase, number, color, trigger, etc.
-- **Combine mode**: how multiple publishers merge
-- **Silent value**: default when no publishers active
 
 ---
 
 ## Combine Modes
 
 ### Signal Combine Modes
-- `last`: final publisher wins (sorted order)
 - `sum`: add all values
 - `max`: maximum value
 - `min`: minimum value
@@ -91,7 +86,6 @@ A bus definition includes:
 
 ### Field Combine Modes
 - Combination is per element
-- All publishers must share the same Domain
 - Combine functions are lifted pointwise
 
 Example:
@@ -100,9 +94,7 @@ Example:
 
 ---
 
-## Publisher Ordering
 
-Publishers are ordered by:
 1. `sortKey` (explicit ordering control)
 2. Stable block ID (deterministic tiebreaker)
 
@@ -112,7 +104,6 @@ This ensures deterministic evaluation across sessions.
 
 ## Silent Values
 
-When no publishers are active, the bus returns its silent value:
 - phase: 0
 - number: 0
 - color: transparent/black
@@ -158,9 +149,6 @@ Auto-create a small default bus set on new patch init. You want a patch to "do s
 ## Determinism and Ordering
 
 - Bus ordering is deterministic
-- Publisher ordering is controlled by sortKey
-- Listener lenses apply after bus combine
-- Publisher-side lenses (if present) apply before bus combine for that publisher only
 
 All deterministic:
 - stable compilation

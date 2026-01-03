@@ -90,7 +90,7 @@ describe("State Offset Resolution", () => {
       );
 
       // Verify that state offset was automatically assigned
-      const statefulNode = compiled.signalTable!.nodes[statefulSigId] as Extract<
+      const statefulNode = compiled.signalExprs.nodes[statefulSigId] as Extract<
         SignalExprIR,
         { kind: "stateful" }
       >;
@@ -147,15 +147,15 @@ describe("State Offset Resolution", () => {
       const compiled = buildCompiledProgram(builderIR, "test-patch", 1, 42);
 
       // Verify sequential offsets
-      const node1 = compiled.signalTable!.nodes[sig1] as Extract<
+      const node1 = compiled.signalExprs.nodes[sig1] as Extract<
         SignalExprIR,
         { kind: "stateful" }
       >;
-      const node2 = compiled.signalTable!.nodes[sig2] as Extract<
+      const node2 = compiled.signalExprs.nodes[sig2] as Extract<
         SignalExprIR,
         { kind: "stateful" }
       >;
-      const node3 = compiled.signalTable!.nodes[sig3] as Extract<
+      const node3 = compiled.signalExprs.nodes[sig3] as Extract<
         SignalExprIR,
         { kind: "stateful" }
       >;
@@ -256,7 +256,7 @@ describe("State Offset Resolution", () => {
 
       const compiled = buildCompiledProgram(builderIR, "test-patch", 1, 42);
 
-      const slewNode = compiled.signalTable!.nodes[slewSig] as Extract<
+      const slewNode = compiled.signalExprs.nodes[slewSig] as Extract<
         SignalExprIR,
         { kind: "stateful" }
       >;
@@ -316,15 +316,15 @@ describe("State Offset Resolution", () => {
 
         const compiled = buildCompiledProgram(builderIR, "test-patch", 1, 42);
 
-        const node1 = compiled.signalTable!.nodes[sig1] as Extract<
+        const node1 = compiled.signalExprs.nodes[sig1] as Extract<
           SignalExprIR,
           { kind: "stateful" }
         >;
-        const node2 = compiled.signalTable!.nodes[sig2] as Extract<
+        const node2 = compiled.signalExprs.nodes[sig2] as Extract<
           SignalExprIR,
           { kind: "stateful" }
         >;
-        const node3 = compiled.signalTable!.nodes[sig3] as Extract<
+        const node3 = compiled.signalExprs.nodes[sig3] as Extract<
           SignalExprIR,
           { kind: "stateful" }
         >;

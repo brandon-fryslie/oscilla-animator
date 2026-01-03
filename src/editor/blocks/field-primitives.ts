@@ -276,7 +276,6 @@ export const FieldFromExpression = createBlock({
       defaultSource: {
         value: 0,
         world: 'signal',
-        defaultBus: 'phaseA',
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
       },
     }),

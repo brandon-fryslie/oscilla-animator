@@ -18,20 +18,8 @@ import { executeBusEval } from "../steps/executeBusEval";
 import { createRuntimeState } from "../RuntimeState";
 import type { StepBusEval, CompiledProgramIR } from "../../../compiler/ir";
 
-interface TestContext {
-  program: CompiledProgramIR;
-  runtime: ReturnType<typeof createRuntimeState>;
-}
-
-interface Publisher {
-  enabled: boolean;
-  sortKey: number;
-  srcSlot: number;
-  publisherId: string;
-}
-
 // Helper to create test program and runtime with pre-configured slots
-function createTestContext(slotCount: number = 150): TestContext {
+function createTestContext(slotCount: number = 150) {
   const program: CompiledProgramIR = {
     irVersion: 1,
     patchId: "test",
@@ -56,14 +44,14 @@ function createTestContext(slotCount: number = 150): TestContext {
     schedule: {
       steps: [{
         kind: "busEval" as const,
-        id: "test" as unknown as never,
+        id: "test" as any,
         deps: [],
-        busIndex: 0 as unknown as never,
+        busIndex: 0 as any,
         outSlot: 100,
         publishers: [],
         combine: { mode: "sum" as const },
         silent: { kind: "zero" as const },
-        busType: { world: "signal", domain: "float" } as unknown as never,
+        busType: { world: "signal", domain: "number" } as any,
       }],
       stepIdToIndex: {},
       deps: { fwdDeps: {}, revDeps: {} },
@@ -74,9 +62,8 @@ function createTestContext(slotCount: number = 150): TestContext {
   } as unknown as CompiledProgramIR;
 
   // Add slots manually since we bypass extractSlotMeta
-  const stepPublishers = (program.schedule.steps[0] as unknown as { publishers: Publisher[] }).publishers;
   for (let i = 0; i < slotCount; i++) {
-    stepPublishers.push({
+    (program.schedule.steps[0] as any).publishers.push({
       enabled: i < 10, // First 10 enabled
       sortKey: i,
       srcSlot: i,
@@ -98,9 +85,9 @@ describe("executeBusEval - Combine Modes", () => {
 
     const step: StepBusEval = {
       kind: "busEval",
-      id: "test" as unknown as never,
+      id: "test" as any,
       deps: [],
-      busIndex: 0 as unknown as never,
+      busIndex: 0 as any,
       outSlot: 100,
       publishers: [
         { enabled: true, sortKey: 0, srcSlot: 0, publisherId: "pub1" },
@@ -109,7 +96,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "sum" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "float" } as unknown as never,
+      busType: { world: "signal", domain: "number" } as any,
     };
 
     executeBusEval(step, program, runtime);
@@ -125,9 +112,9 @@ describe("executeBusEval - Combine Modes", () => {
 
     const step: StepBusEval = {
       kind: "busEval",
-      id: "test" as unknown as never,
+      id: "test" as any,
       deps: [],
-      busIndex: 0 as unknown as never,
+      busIndex: 0 as any,
       outSlot: 100,
       publishers: [
         { enabled: true, sortKey: 0, srcSlot: 0, publisherId: "pub1" },
@@ -136,7 +123,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "average" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "float" } as unknown as never,
+      busType: { world: "signal", domain: "number" } as any,
     };
 
     executeBusEval(step, program, runtime);
@@ -152,9 +139,9 @@ describe("executeBusEval - Combine Modes", () => {
 
     const step: StepBusEval = {
       kind: "busEval",
-      id: "test" as unknown as never,
+      id: "test" as any,
       deps: [],
-      busIndex: 0 as unknown as never,
+      busIndex: 0 as any,
       outSlot: 100,
       publishers: [
         { enabled: true, sortKey: 0, srcSlot: 0, publisherId: "pub1" },
@@ -163,7 +150,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "min" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "float" } as unknown as never,
+      busType: { world: "signal", domain: "number" } as any,
     };
 
     executeBusEval(step, program, runtime);
@@ -179,9 +166,9 @@ describe("executeBusEval - Combine Modes", () => {
 
     const step: StepBusEval = {
       kind: "busEval",
-      id: "test" as unknown as never,
+      id: "test" as any,
       deps: [],
-      busIndex: 0 as unknown as never,
+      busIndex: 0 as any,
       outSlot: 100,
       publishers: [
         { enabled: true, sortKey: 0, srcSlot: 0, publisherId: "pub1" },
@@ -190,7 +177,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "max" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "float" } as unknown as never,
+      busType: { world: "signal", domain: "number" } as any,
     };
 
     executeBusEval(step, program, runtime);
@@ -206,9 +193,9 @@ describe("executeBusEval - Combine Modes", () => {
 
     const step: StepBusEval = {
       kind: "busEval",
-      id: "test" as unknown as never,
+      id: "test" as any,
       deps: [],
-      busIndex: 0 as unknown as never,
+      busIndex: 0 as any,
       outSlot: 100,
       publishers: [
         { enabled: true, sortKey: 0, srcSlot: 0, publisherId: "pub1" },
@@ -217,7 +204,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "last" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "float" } as unknown as never,
+      busType: { world: "signal", domain: "number" } as any,
     };
 
     executeBusEval(step, program, runtime);
@@ -233,9 +220,9 @@ describe("executeBusEval - Combine Modes", () => {
 
     const step: StepBusEval = {
       kind: "busEval",
-      id: "test" as unknown as never,
+      id: "test" as any,
       deps: [],
-      busIndex: 0 as unknown as never,
+      busIndex: 0 as any,
       outSlot: 100,
       publishers: [
         { enabled: true, sortKey: 0, srcSlot: 0, publisherId: "pub1" },
@@ -244,7 +231,7 @@ describe("executeBusEval - Combine Modes", () => {
       ],
       combine: { mode: "product" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "float" } as unknown as never,
+      busType: { world: "signal", domain: "number" } as any,
     };
 
     executeBusEval(step, program, runtime);
@@ -258,14 +245,14 @@ describe("executeBusEval - Silent Values", () => {
 
     const step: StepBusEval = {
       kind: "busEval",
-      id: "test" as unknown as never,
+      id: "test" as any,
       deps: [],
-      busIndex: 0 as unknown as never,
+      busIndex: 0 as any,
       outSlot: 100,
       publishers: [],
       combine: { mode: "sum" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "float" } as unknown as never,
+      busType: { world: "signal", domain: "number" } as any,
     };
 
     executeBusEval(step, program, runtime);
@@ -277,14 +264,14 @@ describe("executeBusEval - Silent Values", () => {
 
     const step: StepBusEval = {
       kind: "busEval",
-      id: "test" as unknown as never,
+      id: "test" as any,
       deps: [],
-      busIndex: 0 as unknown as never,
+      busIndex: 0 as any,
       outSlot: 100,
       publishers: [],
       combine: { mode: "sum" },
       silent: { kind: "const", constId: 1 }, // 99
-      busType: { world: "signal", domain: "float" } as unknown as never,
+      busType: { world: "signal", domain: "number" } as any,
     };
 
     executeBusEval(step, program, runtime);
@@ -296,16 +283,16 @@ describe("executeBusEval - Silent Values", () => {
 
     const step: StepBusEval = {
       kind: "busEval",
-      id: "test" as unknown as never,
+      id: "test" as any,
       deps: [],
-      busIndex: 0 as unknown as never,
+      busIndex: 0 as any,
       outSlot: 100,
       publishers: [
         { enabled: false, sortKey: 0, srcSlot: 0, publisherId: "pub1" },
       ],
       combine: { mode: "sum" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "float" } as unknown as never,
+      busType: { world: "signal", domain: "number" } as any,
     };
 
     executeBusEval(step, program, runtime);
@@ -323,9 +310,9 @@ describe("executeBusEval - Publisher Filtering", () => {
 
     const step: StepBusEval = {
       kind: "busEval",
-      id: "test" as unknown as never,
+      id: "test" as any,
       deps: [],
-      busIndex: 0 as unknown as never,
+      busIndex: 0 as any,
       outSlot: 100,
       publishers: [
         { enabled: true, sortKey: 0, srcSlot: 0, publisherId: "pub1" },
@@ -334,7 +321,7 @@ describe("executeBusEval - Publisher Filtering", () => {
       ],
       combine: { mode: "sum" },
       silent: { kind: "zero" },
-      busType: { world: "signal", domain: "float" } as unknown as never,
+      busType: { world: "signal", domain: "number" } as any,
     };
 
     executeBusEval(step, program, runtime);

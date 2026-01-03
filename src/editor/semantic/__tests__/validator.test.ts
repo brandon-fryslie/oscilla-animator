@@ -3,6 +3,10 @@
  *
  * Tests for the semantic validator - the single source of truth
  * for graph validation rules.
+ *
+ * NOTE: After bus-block unification (2026-01-02), buses are now BusBlocks.
+ * Tests for reserved bus validation, combine mode validation, and publisher
+ * warnings have been removed as these are now handled by BusBlock definitions.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -21,10 +25,7 @@ describe('Validator', () => {
             outputs: [{ id: 'domain', type: 'Domain' }],
           },
         ],
-        connections: [],
-        buses: [],
-        publishers: [],
-        listeners: [],
+        edges: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -51,10 +52,7 @@ describe('Validator', () => {
             outputs: [{ id: 'progress', type: 'Signal<Unit>' }],
           },
         ],
-        connections: [],
-        buses: [],
-        publishers: [],
-        listeners: [],
+        edges: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -81,10 +79,7 @@ describe('Validator', () => {
             outputs: [{ id: 'render', type: 'Render' }],
           },
         ],
-        connections: [],
-        buses: [],
-        publishers: [],
-        listeners: [],
+        edges: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -127,21 +122,22 @@ describe('Validator', () => {
             outputs: [{ id: 'scaled', type: 'Signal<float>' }],
           },
         ],
-        connections: [
+        edges: [
           {
             id: 'conn1',
-            from: { blockId: 'source1', slotId: 'value', direction: 'output' },
-            to: { blockId: 'target', slotId: 'value', direction: 'input' },
+            from: { kind: 'port', blockId: 'source1', slotId: 'value' },
+            enabled: true,
+            to: { kind: 'port', blockId: 'target', slotId: 'value' },
+          role: { kind: 'user' },
           },
           {
             id: 'conn2',
-            from: { blockId: 'source2', slotId: 'value', direction: 'output' },
-            to: { blockId: 'target', slotId: 'value', direction: 'input' },
+            from: { kind: 'port', blockId: 'source2', slotId: 'value' },
+            enabled: true,
+            to: { kind: 'port', blockId: 'target', slotId: 'value' },
+          role: { kind: 'user' },
           },
         ],
-        buses: [],
-        publishers: [],
-        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -173,16 +169,15 @@ describe('Validator', () => {
             outputs: [{ id: 'scaled', type: 'Signal<Point>' }],
           },
         ],
-        connections: [
+        edges: [
           {
             id: 'conn1',
-            from: { blockId: 'source', slotId: 'value', direction: 'output' },
-            to: { blockId: 'target', slotId: 'position', direction: 'input' },
+            from: { kind: 'port', blockId: 'source', slotId: 'value' },
+            enabled: true,
+            to: { kind: 'port', blockId: 'target', slotId: 'position' },
+          role: { kind: 'user' },
           },
         ],
-        buses: [],
-        publishers: [],
-        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -212,16 +207,15 @@ describe('Validator', () => {
             outputs: [{ id: 'scaled', type: 'Signal<float>' }],
           },
         ],
-        connections: [
+        edges: [
           {
             id: 'conn1',
-            from: { blockId: 'source', slotId: 'value', direction: 'output' },
-            to: { blockId: 'target', slotId: 'value', direction: 'input' },
+            from: { kind: 'port', blockId: 'source', slotId: 'value' },
+            enabled: true,
+            to: { kind: 'port', blockId: 'target', slotId: 'value' },
+          role: { kind: 'user' },
           },
         ],
-        buses: [],
-        publishers: [],
-        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -255,26 +249,29 @@ describe('Validator', () => {
             outputs: [{ id: 'scaled', type: 'Signal<float>' }],
           },
         ],
-        connections: [
+        edges: [
           {
             id: 'conn1',
-            from: { blockId: 'time', slotId: 'phase', direction: 'output' },
-            to: { blockId: 'a', slotId: 'value', direction: 'input' },
+            from: { kind: 'port', blockId: 'time', slotId: 'phase' },
+            enabled: true,
+            to: { kind: 'port', blockId: 'a', slotId: 'value' },
+          role: { kind: 'user' },
           },
           {
             id: 'conn2',
-            from: { blockId: 'a', slotId: 'scaled', direction: 'output' },
-            to: { blockId: 'b', slotId: 'value', direction: 'input' },
+            from: { kind: 'port', blockId: 'a', slotId: 'scaled' },
+            enabled: true,
+            to: { kind: 'port', blockId: 'b', slotId: 'value' },
+          role: { kind: 'user' },
           },
           {
             id: 'conn3',
-            from: { blockId: 'b', slotId: 'scaled', direction: 'output' },
-            to: { blockId: 'a', slotId: 'value', direction: 'input' },
+            from: { kind: 'port', blockId: 'b', slotId: 'scaled' },
+            enabled: true,
+            to: { kind: 'port', blockId: 'a', slotId: 'value' },
+          role: { kind: 'user' },
           },
         ],
-        buses: [],
-        publishers: [],
-        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -297,16 +294,15 @@ describe('Validator', () => {
             outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
         ],
-        connections: [
+        edges: [
           {
             id: 'conn1',
-            from: { blockId: 'source', slotId: 'value', direction: 'output' },
-            to: { blockId: 'missing', slotId: 'value', direction: 'input' },
+            from: { kind: 'port', blockId: 'source', slotId: 'value' },
+            enabled: true,
+            to: { kind: 'port', blockId: 'missing', slotId: 'value' },
+          role: { kind: 'user' },
           },
         ],
-        buses: [],
-        publishers: [],
-        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -317,188 +313,6 @@ describe('Validator', () => {
         (e) => e.code === 'E_INVALID_CONNECTION'
       );
       expect(endpointErrors.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('reserved bus validation', () => {
-    it('should accept correct reserved bus contracts', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'phaseA',
-            name: 'phaseA',
-            type: {
-              world: 'signal',
-              domain: 'float',
-              semantics: 'phase(primary)',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'last' },
-            defaultValue: 0,
-            sortKey: 0,
-          },
-          {
-            id: 'energy',
-            name: 'energy',
-            type: {
-              world: 'signal',
-              domain: 'float',
-              semantics: 'energy',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'sum' },
-            defaultValue: 0,
-            sortKey: 1,
-          },
-        ],
-        publishers: [],
-        listeners: [],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      const reservedBusErrors = result.errors.filter((e) =>
-        e.code.includes('RESERVED_BUS')
-      );
-      expect(reservedBusErrors).toHaveLength(0);
-    });
-
-    it('should reject reserved bus with wrong type', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'phaseA',
-            name: 'phaseA',
-            type: {
-              world: 'signal',
-              domain: 'float', // Wrong domain for phaseA
-              semantics: 'primary',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'last' },
-            defaultValue: 0,
-            sortKey: 0,
-          },
-        ],
-        publishers: [],
-        listeners: [],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      const typeMismatchErrors = result.errors.filter(
-        (e) => e.code === 'E_RESERVED_BUS_TYPE_MISMATCH'
-      );
-      expect(typeMismatchErrors).toHaveLength(1);
-      // Phase is now represented as signal:float with semantics
-      expect(typeMismatchErrors[0]?.message).toContain(
-        'must have type signal:float'
-      );
-    });
-
-    it('should reject reserved bus with wrong combine mode', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'energy',
-            name: 'energy',
-            type: {
-              world: 'signal',
-              domain: 'float',
-              semantics: 'energy',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'last' }, // Wrong combine mode for energy
-            defaultValue: 0,
-            sortKey: 0,
-          },
-        ],
-        publishers: [],
-        listeners: [],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      const combineModeErrors = result.errors.filter(
-        (e) => e.code === 'E_RESERVED_BUS_COMBINE_MODE_MISMATCH'
-      );
-      expect(combineModeErrors).toHaveLength(1);
-      expect(combineModeErrors[0]?.message).toContain(
-        'must use combineMode="sum"'
-      );
-    });
-
-    it('should allow non-reserved buses with any configuration', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'custom',
-            name: 'customBus',
-            type: {
-              world: 'signal',
-              domain: 'color',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'last' },
-            defaultValue: '#ffffff',
-            sortKey: 0,
-          },
-        ],
-        publishers: [],
-        listeners: [],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      const reservedBusErrors = result.errors.filter((e) =>
-        e.code.includes('RESERVED_BUS')
-      );
-      expect(reservedBusErrors).toHaveLength(0);
     });
   });
 
@@ -513,10 +327,7 @@ describe('Validator', () => {
             outputs: [{ id: 'phase', type: 'Signal<phase>' }],
           },
         ],
-        connections: [],
-        buses: [],
-        publishers: [],
-        listeners: [],
+        edges: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -544,16 +355,15 @@ describe('Validator', () => {
             outputs: [{ id: 'value', type: 'Scalar<float>' }],
           },
         ],
-        connections: [
+        edges: [
           {
             id: 'conn1',
-            from: { blockId: 'default', slotId: 'value', direction: 'output' },
-            to: { blockId: 'time', slotId: 'period', direction: 'input' },
+            from: { kind: 'port', blockId: 'default', slotId: 'value' },
+            enabled: true,
+            to: { kind: 'port', blockId: 'time', slotId: 'period' },
+          role: { kind: 'user' },
           },
         ],
-        buses: [],
-        publishers: [],
-        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -581,16 +391,15 @@ describe('Validator', () => {
             outputs: [{ id: 'value', type: 'Signal<float>' }],
           },
         ],
-        connections: [
+        edges: [
           {
             id: 'conn1',
-            from: { blockId: 'source', slotId: 'value', direction: 'output' },
-            to: { blockId: 'time', slotId: 'period', direction: 'input' },
+            from: { kind: 'port', blockId: 'source', slotId: 'value' },
+            enabled: true,
+            to: { kind: 'port', blockId: 'time', slotId: 'period' },
+          role: { kind: 'user' },
           },
         ],
-        buses: [],
-        publishers: [],
-        listeners: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -603,338 +412,6 @@ describe('Validator', () => {
       expect(timeRootDepErrors[0]?.message).toContain(
         'TimeRoot cannot depend on block "NumberSource"'
       );
-    });
-
-    it('should reject TimeRoot with bus listener', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [{ id: 'period', type: 'Scalar<float>' }],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'energy',
-            name: 'energy',
-            type: {
-              world: 'signal',
-              domain: 'float',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'sum' },
-            defaultValue: 0,
-            sortKey: 0,
-          },
-        ],
-        publishers: [],
-        listeners: [
-          {
-            id: 'listener1',
-            busId: 'energy',
-            to: { blockId: 'time', slotId: 'period', direction: 'input' },
-            enabled: true,
-          },
-        ],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      const busListenerErrors = result.errors.filter(
-        (e) => e.code === 'E_TIME_ROOT_BUS_LISTENER'
-      );
-      expect(busListenerErrors).toHaveLength(1);
-      expect(busListenerErrors[0]?.message).toContain(
-        'TimeRoot cannot have bus listeners'
-      );
-    });
-  });
-
-  describe('combine mode compatibility validation', () => {
-    it('should accept compatible combine modes', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'numbers',
-            name: 'numbers',
-            type: {
-              world: 'signal',
-              domain: 'float',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'sum' },
-            defaultValue: 0,
-            sortKey: 0,
-          },
-          {
-            id: 'phases',
-            name: 'phases',
-            type: {
-              world: 'signal',
-              domain: 'float',
-              semantics: 'phase(0..1)',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'last' },
-            defaultValue: 0,
-            sortKey: 1,
-          },
-        ],
-        publishers: [],
-        listeners: [],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      const combineModeErrors = result.errors.filter(
-        (e) => e.code === 'E_BUS_COMBINE_MODE_INCOMPATIBLE'
-      );
-      expect(combineModeErrors).toHaveLength(0);
-    });
-
-    it('should reject incompatible combine modes', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'phases',
-            name: 'phases',
-            type: {
-              world: 'signal',
-              domain: 'time',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'sum' }, // Incompatible with time domain
-            defaultValue: 0,
-            sortKey: 0,
-          },
-        ],
-        publishers: [],
-        listeners: [],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      const combineModeErrors = result.errors.filter(
-        (e) => e.code === 'E_BUS_COMBINE_MODE_INCOMPATIBLE'
-      );
-      expect(combineModeErrors).toHaveLength(1);
-      expect(combineModeErrors[0]?.message).toContain(
-        'cannot use combineMode="sum"'
-      );
-      expect(combineModeErrors[0]?.message).toContain('Allowed modes: last');
-    });
-
-    it('should skip compatibility check for reserved buses', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'phaseA',
-            name: 'phaseA',
-            type: {
-              world: 'signal',
-              domain: 'float',
-              semantics: 'phase(primary)',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'sum' }, // Wrong for reserved bus, but handled by reserved bus validation
-            defaultValue: 0,
-            sortKey: 0,
-          },
-        ],
-        publishers: [],
-        listeners: [],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      // Should get reserved bus error, not compatibility error
-      const combineModeErrors = result.errors.filter(
-        (e) => e.code === 'E_BUS_COMBINE_MODE_INCOMPATIBLE'
-      );
-      const reservedBusErrors = result.errors.filter(
-        (e) => e.code === 'E_RESERVED_BUS_COMBINE_MODE_MISMATCH'
-      );
-
-      expect(combineModeErrors).toHaveLength(0);
-      expect(reservedBusErrors).toHaveLength(1);
-    });
-  });
-
-  describe('multiple publisher validation', () => {
-    it('should warn about multiple publishers on control buses', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-          {
-            id: 'source1',
-            type: 'PhaseClock',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-          {
-            id: 'source2',
-            type: 'PhaseClock',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'phaseA',
-            name: 'phaseA',
-            type: {
-              world: 'signal',
-              domain: 'float',
-              semantics: 'phase(primary)',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'last' },
-            defaultValue: 0,
-            sortKey: 0,
-          },
-        ],
-        publishers: [
-          {
-            id: 'pub1',
-            busId: 'phaseA',
-            from: { blockId: 'source1', slotId: 'phase', direction: 'output' },
-            enabled: true,
-            sortKey: 0,
-          },
-          {
-            id: 'pub2',
-            busId: 'phaseA',
-            from: { blockId: 'source2', slotId: 'phase', direction: 'output' },
-            enabled: true,
-            sortKey: 1,
-          },
-        ],
-        listeners: [],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      const multiplePubWarnings = result.warnings.filter(
-        (e) => e.code === 'W_BUS_MULTIPLE_PUBLISHERS_CONTROL'
-      );
-      expect(multiplePubWarnings).toHaveLength(1);
-      expect(multiplePubWarnings[0]?.message).toContain(
-        'Control-plane bus "phaseA" has 2 publishers'
-      );
-    });
-
-    it('should allow multiple publishers on data buses', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-          {
-            id: 'source1',
-            type: 'NumberSource',
-            inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<float>' }],
-          },
-          {
-            id: 'source2',
-            type: 'NumberSource',
-            inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<float>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'energy',
-            name: 'energy',
-            type: {
-              world: 'signal',
-              domain: 'float',
-              semantics: 'energy',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'sum' },
-            defaultValue: 0,
-            sortKey: 0,
-          },
-        ],
-        publishers: [
-          {
-            id: 'pub1',
-            busId: 'energy',
-            from: { blockId: 'source1', slotId: 'value', direction: 'output' },
-            enabled: true,
-            sortKey: 0,
-          },
-          {
-            id: 'pub2',
-            busId: 'energy',
-            from: { blockId: 'source2', slotId: 'value', direction: 'output' },
-            enabled: true,
-            sortKey: 1,
-          },
-        ],
-        listeners: [],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      const multiplePubWarnings = result.warnings.filter(
-        (e) => e.code === 'W_BUS_MULTIPLE_PUBLISHERS_CONTROL'
-      );
-      expect(multiplePubWarnings).toHaveLength(0);
     });
   });
 
@@ -955,10 +432,7 @@ describe('Validator', () => {
             outputs: [{ id: 'scaled', type: 'Signal<float>' }],
           },
         ],
-        connections: [],
-        buses: [],
-        publishers: [],
-        listeners: [],
+        edges: [],
       };
 
       const validator = new Validator(patch, 1);
@@ -970,45 +444,6 @@ describe('Validator', () => {
 
       expect(result.ok).toBe(true);
       expect(result.errors).toHaveLength(0);
-    });
-  });
-
-  describe('bus warnings', () => {
-    it('should warn about empty buses', () => {
-      const patch: PatchDocument = {
-        blocks: [
-          {
-            id: 'time',
-            type: 'InfiniteTimeRoot',
-            inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
-          },
-        ],
-        connections: [],
-        buses: [
-          {
-            id: 'energy',
-            name: 'energy',
-            type: {
-              world: 'signal',
-              domain: 'float',
-              category: 'core',
-              busEligible: true,
-            },
-            combine: { when: 'multi', mode: 'sum' },
-            defaultValue: 0,
-            sortKey: 0,
-          },
-        ],
-        publishers: [],
-        listeners: [],
-      };
-
-      const validator = new Validator(patch, 1);
-      const result = validator.validateAll(patch);
-
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]?.code).toBe('W_BUS_NO_PUBLISHERS');
     });
   });
 });

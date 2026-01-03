@@ -17,7 +17,7 @@ import { useDroppable, useDraggable } from '@dnd-kit/core';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import { useStore } from './stores';
-import type { Block, Slot, PortRef, Bus } from './types';
+import type { Block, Slot, PortRef, TypeDesc } from './types';
 import type { LaneViewLane as Lane, LaneViewKind as LaneKind } from './lanes/types';
 import { getBlockDefinition } from './blocks';
 import { BlockContextMenu } from './BlockContextMenu';
@@ -27,8 +27,8 @@ import {
   areTypesCompatible,
   describeSlotType,
 } from './portUtils';
-import { getIncomingBindingForInputPort, getOutgoingBindingsForOutputPort } from './bindings';
 import { isDefined } from './types/helpers';
+import type { RootStore } from './stores';
 import './PatchBay.css';
 import { DiagnosticBadge } from './components/DiagnosticBadge';
 
@@ -36,9 +36,10 @@ import { DiagnosticBadge } from './components/DiagnosticBadge';
 /**
  * Get a color for a bus based on its domain type.
  */
-function getBusDomainColor(bus: Bus): string {
+function getBusDomainColorFromType(typeDesc: TypeDesc | undefined): string {
   const domainColors: Record<string, string> = {
     number: '#60a5fa',  // blue
+    float: '#60a5fa',   // blue (alias)
     vec2: '#4ade80',    // green
     color: '#f472b6',   // pink
     boolean: '#fbbf24', // yellow
@@ -47,7 +48,116 @@ function getBusDomainColor(bus: Bus): string {
     rate: '#f97316',    // orange
     trigger: '#ef4444', // red
   };
-  return domainColors[bus.type.domain] ?? '#666';
+  if (!typeDesc) return '#666';
+  return domainColors[typeDesc.domain] ?? '#666';
+}
+
+/**
+ * Get connection info for an input port using edges directly.
+ * In the Edge architecture:
+ * - Regular block connection: edge.to points to this port, edge.from is another block
+ * - Bus connection: edge.from is a BusBlock
+ */
+function getInputConnectionInfo(
+  store: RootStore,
+  blockId: string,
+  slotId: string
+): ConnectionInfo {
+  const edges = store.patchStore.edges;
+  const busBlocks = store.patchStore.busBlocks;
+  const busBlockIds = new Set(busBlocks.map(b => b.id));
+
+  // Find edges where this port is the destination
+  const incomingEdges = edges.filter(e =>
+    e.to.blockId === blockId && e.to.slotId === slotId
+  );
+
+  if (incomingEdges.length === 0) {
+    return { hasBlockConnection: false, hasBusConnection: false };
+  }
+
+  // Check for bus connection (source is a BusBlock)
+  const busEdge = incomingEdges.find(e => busBlockIds.has(e.from.blockId));
+  const blockEdge = incomingEdges.find(e => !busBlockIds.has(e.from.blockId));
+
+  let busName: string | undefined;
+  let busColor: string | undefined;
+  if (busEdge) {
+    const busBlock = busBlocks.find(b => b.id === busEdge.from.blockId);
+    if (busBlock) {
+      busName = (busBlock.params.busName as string) ?? busBlock.label;
+      const busType = busBlock.params.busType as TypeDesc | undefined;
+      busColor = getBusDomainColorFromType(busType);
+    }
+  }
+
+  let connectedBlockLabel: string | undefined;
+  if (blockEdge) {
+    const sourceBlock = store.patchStore.blocks.find(b => b.id === blockEdge.from.blockId);
+    connectedBlockLabel = sourceBlock?.label;
+  }
+
+  return {
+    hasBlockConnection: blockEdge !== undefined,
+    hasBusConnection: busEdge !== undefined,
+    busName,
+    busColor,
+    connectedBlockLabel,
+  };
+}
+
+/**
+ * Get connection info for an output port using edges directly.
+ * In the Edge architecture:
+ * - Regular block connection: edge.from points to this port, edge.to is another block
+ * - Bus connection: edge.to is a BusBlock (publishing to bus)
+ */
+function getOutputConnectionInfo(
+  store: RootStore,
+  blockId: string,
+  slotId: string
+): ConnectionInfo {
+  const edges = store.patchStore.edges;
+  const busBlocks = store.patchStore.busBlocks;
+  const busBlockIds = new Set(busBlocks.map(b => b.id));
+
+  // Find edges where this port is the source
+  const outgoingEdges = edges.filter(e =>
+    e.from.blockId === blockId && e.from.slotId === slotId
+  );
+
+  if (outgoingEdges.length === 0) {
+    return { hasBlockConnection: false, hasBusConnection: false };
+  }
+
+  // Check for bus connection (destination is a BusBlock = publishing to bus)
+  const busEdge = outgoingEdges.find(e => busBlockIds.has(e.to.blockId));
+  const blockEdge = outgoingEdges.find(e => !busBlockIds.has(e.to.blockId));
+
+  let busName: string | undefined;
+  let busColor: string | undefined;
+  if (busEdge) {
+    const busBlock = busBlocks.find(b => b.id === busEdge.to.blockId);
+    if (busBlock) {
+      busName = (busBlock.params.busName as string) ?? busBlock.label;
+      const busType = busBlock.params.busType as TypeDesc | undefined;
+      busColor = getBusDomainColorFromType(busType);
+    }
+  }
+
+  let connectedBlockLabel: string | undefined;
+  if (blockEdge) {
+    const destBlock = store.patchStore.blocks.find(b => b.id === blockEdge.to.blockId);
+    connectedBlockLabel = destBlock?.label;
+  }
+
+  return {
+    hasBlockConnection: blockEdge !== undefined,
+    hasBusConnection: busEdge !== undefined,
+    busName,
+    busColor,
+    connectedBlockLabel,
+  };
 }
 
 /**
@@ -439,9 +549,6 @@ const DraggablePatchBlock = observer(({
       })()
     : null;
 
-  // Get bus connection info for this block's ports
-  const buses = store.busStore.buses;
-
   // Helper to get port-level diagnostics
   const getPortDiagnostics = (slotId: string, direction: 'input' | 'output') => {
     return store.diagnosticStore.activeDiagnostics.filter(d => {
@@ -469,65 +576,12 @@ const DraggablePatchBlock = observer(({
     };
   };
 
-  // Helper to get connection info for a specific port using binding facade
+  // Helper to get connection info for a specific port using Edge architecture
   const getConnectionInfo = (slotId: string, direction: 'input' | 'output'): ConnectionInfo => {
     if (direction === 'input') {
-      // Use binding facade for input ports
-      const binding = getIncomingBindingForInputPort(store, block.id, slotId);
-      
-      if (!binding) {
-        return {
-          hasBlockConnection: false,
-          hasBusConnection: false,
-        };
-      }
-
-      if (binding.kind === 'wire') {
-        // Wire connection
-        const otherBlock = store.patchStore.blocks.find((b) => b.id === binding.from.blockId);
-        return {
-          hasBlockConnection: true,
-          hasBusConnection: false,
-          connectedBlockLabel: otherBlock?.label,
-        };
-      } else {
-        // Listener connection
-        const bus = buses.find((b) => b.id === binding.busId);
-        return {
-          hasBlockConnection: false,
-          hasBusConnection: true,
-          busName: bus?.name,
-          busColor: bus ? getBusDomainColor(bus) : undefined,
-        };
-      }
+      return getInputConnectionInfo(store, block.id, slotId);
     } else {
-      // Use binding facade for output ports
-      const bindings = getOutgoingBindingsForOutputPort(store, block.id, slotId);
-      
-      const wireBinding = bindings.find(b => b.kind === 'wire');
-      const busBinding = bindings.find(b => b.kind === 'publisher');
-
-      let connectedBlockLabel: string | undefined;
-      if (wireBinding && wireBinding.kind === 'wire') {
-        const otherBlock = store.patchStore.blocks.find((b) => b.id === wireBinding.to.blockId);
-        connectedBlockLabel = otherBlock?.label;
-      }
-
-      let busName: string | undefined;
-      let busColor: string | undefined;
-      if (busBinding && busBinding.kind === 'publisher') {
-        const bus = buses.find((b) => b.id === busBinding.busId);
-        busName = bus?.name;
-        busColor = bus ? getBusDomainColor(bus) : undefined;
-      }
-
-      return {
-        hasBlockConnection: wireBinding !== undefined,
-        hasBusConnection: busBinding !== undefined,
-        busName,
-        busColor,
-        connectedBlockLabel,
-      };
+      return getOutputConnectionInfo(store, block.id, slotId);
     }
   };
 
@@ -898,7 +952,7 @@ export const PatchBay = observer(() => {
   const [isSelecting, setIsSelecting] = useState(false);
 
   // Build port color map for visual connection indication
-  const portColorMap = buildPortColorMap(store.patchStore.connections);
+  const portColorMap = buildPortColorMap(store.patchStore.edges);
 
   // Click anywhere in patch-bay (except ports/blocks which stop propagation) clears port selection
   const handleBackgroundClick = () => {

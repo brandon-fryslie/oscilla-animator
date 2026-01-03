@@ -1,5 +1,5 @@
 import type { RootStore } from '../stores/RootStore';
-import type { Block, Connection, Publisher, Listener, PortRef } from '../types';
+import type { Block, Edge, PortRef } from '../types';
 import { compilePatch } from './compile';
 import { createCompileCtx } from './context';
 import { createBlockRegistry, registerDynamicBlock } from './blocks';
@@ -8,7 +8,6 @@ import type {
   BlockRegistry,
   CompileResult,
   CompiledProgram,
-  CompilerConnection,
   CompilerPatch,
   CompileError,
   Seed,
@@ -17,8 +16,6 @@ import { buildDecorations, emptyDecorations, type DecorationSet } from './error-
 import { getBlockDefinition } from '../blocks';
 import { registerAllComposites, getCompositeCompilers } from '../composite-bridge';
 import { createDiagnostic, type Diagnostic, type DiagnosticCode, type TargetRef } from '../diagnostics/types';
-import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from '../defaultSources/allowlist';
-import { materializeDefaultSources } from './passes/pass0-materialize';
 import { getFeatureFlags } from './featureFlags';
 
 // =============================================================================
@@ -75,18 +72,14 @@ function compileErrorToDiagnostic(
   } else if (
     error.where !== null &&
     error.where !== undefined &&
-    error.where.connection !== null &&
-    error.where.connection !== undefined
+    error.where.edgeId !== null &&
+    error.where.edgeId !== undefined
   ) {
-    // Connection error - target both ends
-    const conn = error.where.connection;
+    // Edge error - target the edge ID
     primaryTarget = {
-      kind: 'port',
-      portRef: { blockId: conn.from.block, slotId: conn.from.port, direction: 'output' },
+      kind: 'block',
+      blockId: error.where.edgeId,
     };
-    affectedTargets = [
-      { kind: 'port', portRef: { blockId: conn.to.block, slotId: conn.to.port, direction: 'input' } },
-    ];
   } else if (
     error.where !== null &&
     error.where !== undefined &&
@@ -172,59 +165,47 @@ function generateBusDiagnostics(
   const diagnostics: Diagnostic[] = [];
 
   // W_BUS_EMPTY: Buses with 0 listeners
-  if (patch.buses.length > 0 && patch.listeners.length > 0) {
-    const busListenerCounts = new Map<string, number>();
+  // Bus-Block Unification: Check connections to/from BusBlocks
+  const busBlocks = patch.blocks.filter(b => b.type === 'BusBlock');
+  // busBlockIds can be used for filtering connection targets if needed
+  void busBlocks; // Used in the loop below
 
-    // Count listeners per bus
-    for (const listener of patch.listeners) {
-      busListenerCounts.set(listener.busId, (busListenerCounts.get(listener.busId) ?? 0) + 1);
-    }
+  for (const busBlock of busBlocks) {
+    // Count edges FROM BusBlock (listeners)
+    const listenerCount = patch.edges.filter(e => e.from.blockId === busBlock.id).length;
 
-    // Find buses with 0 listeners
-    for (const bus of patch.buses) {
-      const listenerCount = busListenerCounts.get(bus.id) ?? 0;
+    // Count edges TO BusBlock (publishers)
+    const publisherEdges = patch.edges.filter(e => e.to.blockId === busBlock.id);
 
-      // Find publishers for this bus
-      const publishers = (patch.publishers ?? []).filter(p => p.busId === bus.id);
+    // Only warn if there are publishers but no listeners
+    if (listenerCount === 0 && publisherEdges.length > 0) {
+      const affectedTargets: TargetRef[] = publisherEdges.map(e => ({
+        kind: 'block',
+        blockId: e.from.blockId,
+      }));
 
-      // Only warn if there are publishers but no listeners
-      // (Don't warn about buses that aren't being used at all)
-      if (listenerCount === 0 && publishers.length > 0) {
-        const affectedTargets: TargetRef[] = publishers.map(p => ({
-          kind: 'block',
-          blockId: p.from.blockId,
-        }));
-
-        diagnostics.push(
-          createDiagnostic({
-            code: 'W_BUS_EMPTY',
-            severity: 'warn',
-            domain: 'compile',
-            primaryTarget: { kind: 'bus', busId: bus.id },
-            affectedTargets: affectedTargets.length > 0 ? affectedTargets : undefined,
-            title: 'Empty Bus',
-            message: `Bus "${bus.name}" has no listeners. Published values are not being used.`,
-            patchRevision,
-          })
-        );
-      }
+      const busName = (busBlock.params?.name as string) ?? busBlock.id;
+      diagnostics.push(
+        createDiagnostic({
+          code: 'W_BUS_EMPTY',
+          severity: 'warn',
+          domain: 'compile',
+          primaryTarget: { kind: 'block', blockId: busBlock.id },
+          affectedTargets: affectedTargets.length > 0 ? affectedTargets : undefined,
+          title: 'Empty Bus',
+          message: `Bus "${busName}" has no listeners. Published values are not being used.`,
+          patchRevision,
+        })
+      );
     }
   }
 
-  // W_GRAPH_UNUSED_OUTPUT: Block outputs not connected and not published to bus
+  // W_GRAPH_UNUSED_OUTPUT: Block outputs not connected
   const connectedOutputs = new Set<string>();
-  const publishedOutputs = new Set<string>();
 
-  // Track connected outputs
-  for (const conn of patch.connections) {
-    connectedOutputs.add(`${conn.from.block}.${conn.from.port}`);
-  }
-
-  // Track published outputs
-  if (patch.publishers.length > 0) {
-    for (const pub of patch.publishers) {
-      publishedOutputs.add(`${pub.from.blockId}.${pub.from.slotId}`);
-    }
+  // Track connected outputs (including edges to BusBlocks)
+  for (const edge of patch.edges) {
+    connectedOutputs.add(`${edge.from.blockId}.${edge.from.slotId}`);
   }
 
   // Check each block's outputs
@@ -251,9 +232,9 @@ function generateBusDiagnostics(
 
       const outputKey = `${blockId}.${output.id}`;
       const isConnected = connectedOutputs.has(outputKey);
-      const isPublished = publishedOutputs.has(outputKey);
 
-      if (!isConnected && !isPublished) {
+      // Bus-Block Unification: Connections to BusBlocks count as "published"
+      if (!isConnected) {
         diagnostics.push(
           createDiagnostic({
             code: 'W_GRAPH_UNUSED_OUTPUT',
@@ -264,7 +245,7 @@ function generateBusDiagnostics(
               portRef: { blockId, slotId: output.id, direction: 'output' },
             },
             title: 'Unused Output',
-            message: `Output "${output.label ?? output.id}" on block is not connected or published to a bus.`,
+            message: `Output "${output.label ?? output.id}" on block is not connected.`,
             patchRevision,
           })
         );
@@ -368,8 +349,7 @@ function createRewriteMapBuilder(): {
 export interface CompositeExpansionResult {
   expandedPatch: CompilerPatch;
   rewriteMap: PortRefRewriteMap;
-  newPublishers: Publisher[];
-  newListeners: Listener[];
+  // Bus-Block Unification: publishers/listeners removed - bus bindings are now connections
 }
 
 // =============================================================================
@@ -385,14 +365,15 @@ function _isInputUndriven(
   slotId: string,
   patch: CompilerPatch
 ): boolean {
-  // Check for wire: any connection to this input
-  const hasWire = patch.connections.some(
-    c => c.to.block === blockId && c.to.port === slotId
+  // Check for wire: any edge to this input
+  const hasWire = patch.edges.some(
+    e => e.to.blockId === blockId && e.to.slotId === slotId
   );
 
-  // Check for listener: any enabled bus listener to this input
-  const hasListener = patch.listeners.some(
-    l => l.to?.blockId === blockId && l.to?.slotId === slotId && l.enabled
+  // Bus-Block Unification: Check for edge from any BusBlock to this input
+  const busBlockIds = new Set(patch.blocks.filter(b => b.type === 'BusBlock').map(b => b.id));
+  const hasListener = patch.edges.some(
+    e => busBlockIds.has(e.from.blockId) && e.to.blockId === blockId && e.to.slotId === slotId
   );
 
   // Returns true only if BOTH checks are false (no wire AND no listener)
@@ -411,17 +392,7 @@ function _makeProviderWireId(
   return `wire:ds:${providerId}->${targetBlockId}:${targetSlotId}`;
 }
 
-/**
- * Helper: Generate stable ID for provider bus listener.
- * Format: lis:ds:${busId}->${providerId}:${inputId}
- */
-function _makeProviderListenerId(
-  busId: string,
-  providerId: string,
-  inputId: string
-): string {
-  return `lis:ds:${busId}->${providerId}:${inputId}`;
-}
+// _makeProviderListenerId removed - bus listeners replaced by connections to BusBlocks
 
 /**
  * Inject default source provider blocks into CompilerPatch.
@@ -447,10 +418,9 @@ export function injectDefaultSourceProviders(
   // Track which providers we've already added (for deduplication)
   const addedProviders = new Set<string>();
 
-  // Collect injected blocks, wires, listeners, and default source values
+  // Collect injected blocks, edges, and default source values
   const injectedBlocks: BlockInstance[] = [];
-  const injectedWires: CompilerConnection[] = [];
-  const injectedListeners: Listener[] = [];
+  const injectedEdges: Edge[] = [];
   const extendedDefaultSourceValues: Record<string, unknown> = { ...patch.defaultSourceValues };
 
   // Iterate through all attachments
@@ -497,67 +467,25 @@ export function injectDefaultSourceProviders(
         }
       }
 
-      // 4. Inject bus listeners for provider busInputs (Sprint 11)
-      // Get provider spec from allowlist
-      const providerSpec = DEFAULT_SOURCE_PROVIDER_BLOCKS.find(
-        spec => spec.blockType === provider.blockType
-      );
-
-      if (providerSpec != null && providerSpec.busInputs != null) {
-        // For each busInput: { inputSlotId: busName }
-        for (const [inputSlotId, busName] of Object.entries(providerSpec.busInputs)) {
-          // Look up bus by name
-          const bus = store.busStore.buses.find(b => b.name === busName);
-
-          if (bus == null) {
-            // MISSING BUS ERROR - fail compilation with clear, actionable message
-            // Get friendly names for error message
-            const targetBlock = store.patchStore.blocks.find(b => b.id === target.blockId);
-            const blockName = targetBlock?.type ?? target.blockId;
-            const blockDef = getBlockDefinition(blockName);
-            const inputSlot = blockDef?.inputs?.find(i => i.id === target.slotId);
-            const inputName = inputSlot?.label ?? target.slotId;
-
-            throw new Error(
-              `Default provider for ${blockName}.${inputName} requires bus '${busName}' which does not exist. ` +
-              `Provider type: ${providerSpec.label}. ` +
-              `Create bus '${busName}' or select a different default source provider.`
-            );
-          }
-
-          // Create listener
-          const listener: Listener = {
-            id: _makeProviderListenerId(bus.id, provider.providerId, inputSlotId),
-            busId: bus.id,
-            to: {
-              blockId: provider.providerId,
-              slotId: inputSlotId,
-              direction: 'input' as const,
-            },
-            enabled: true,
-          };
-
-          injectedListeners.push(listener);
-        }
-      }
     }
 
-    // 2. Inject wire from provider output to target input
-    const wire: CompilerConnection = {
+    // 2. Inject edge from provider output to target input
+    const edge: Edge = {
       id: _makeProviderWireId(provider.providerId, target.blockId, target.slotId),
-      from: { block: provider.providerId, port: provider.outputPortId },
-      to: { block: target.blockId, port: target.slotId },
+      from: { kind: 'port', blockId: provider.providerId, slotId: provider.outputPortId },
+      to: { kind: 'port', blockId: target.blockId, slotId: target.slotId },
+      enabled: true,
+    role: { kind: 'user' },
     };
 
-    injectedWires.push(wire);
+    injectedEdges.push(edge);
   }
 
   // Return new patch with injected primitives (pure function - no mutation)
   return {
     ...patch,
     blocks: [...patch.blocks, ...injectedBlocks],
-    connections: [...patch.connections, ...injectedWires],
-    listeners: [...patch.listeners, ...injectedListeners],
+    edges: [...patch.edges, ...injectedEdges],
     defaultSourceValues: extendedDefaultSourceValues,
   };
 }
@@ -579,42 +507,36 @@ function convertBlocks(blocks: Block[]): BlockInstance[] {
 }
 
 /**
- * Convert EditorStore connections to compiler format.
- * Preserves lens stacks, adapter chains, and enabled state for wire transformations.
- */
-function convertConnections(connections: Connection[]): CompilerConnection[] {
-  return connections.map((c: Connection) => ({
-    from: { block: c.from.blockId, port: c.from.slotId },
-    to: { block: c.to.blockId, port: c.to.slotId },
-  }));
-}
-
-/**
  * Convert EditorStore to CompilerPatch.
+ *
+ * Sprint: Graph Normalization Layer (2026-01-03)
+ * - Uses getNormalizedGraph() to get blocks with structural artifacts already materialized
+ * - Default source providers are injected by GraphNormalizer, not by pass0-materialize
  */
 export function editorToPatch(store: RootStore): CompilerPatch {
+  // Get normalized graph with structural blocks already materialized
+  const normalizedGraph = store.patchStore.getNormalizedGraph();
+
   // Build a lookup map for default sources: blockId:slotId -> value
   // This allows the compiler to look up runtime-edited values
   const defaultSourceValues: Record<string, unknown> = {};
-  for (const block of store.patchStore.blocks) {
-    for (const input of block.inputs) {
-      const ds = store.defaultSourceStore.getDefaultSourceForInput(block.id, input.id);
-      if (ds != null) {
-        defaultSourceValues[`${block.id}:${input.id}`] = ds.value;
-      }
+
+  // Iterate through all default source attachments to build the values map
+  for (const [targetKey, attachment] of store.defaultSourceStore.attachmentsByTarget) {
+    // targetKey is already in "blockId:slotId" format
+    const sourceId = attachment.provider.editableInputSourceIds.value;
+    const source = store.defaultSourceStore.getDefaultSource(sourceId);
+    if (source != null) {
+      defaultSourceValues[targetKey] = source.value;
     }
   }
 
   return {
-    blocks: convertBlocks(store.patchStore.blocks),
-    connections: convertConnections(store.patchStore.connections),
-    // Include bus routing from BusStore
-    buses: store.busStore.buses,
-    publishers: store.busStore.publishers,
-    listeners: store.busStore.listeners,
+    blocks: convertBlocks(normalizedGraph.blocks),
+    edges: normalizedGraph.edges,
+    buses: [], // Buses derived from BusBlocks in patchStore.blocks during compilation
     defaultSources: Object.fromEntries(store.defaultSourceStore.sources.entries()),
-    defaultSourceValues, // NEW: lookup-friendly map for runtime values
-    // output is auto-inferred
+    defaultSourceValues,
   };
 }
 
@@ -651,11 +573,9 @@ function generateBusBindingId(compositeId: string, type: 'pub' | 'sub', port: st
  */
 function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
   const queue: Array<[string, BlockInstance]> = patch.blocks.map(b => [b.id, b]);
-  let connections = [...patch.connections];
+  let edges = [...patch.edges];
   const newBlocks = new Map<string, BlockInstance>();
-  const newConnections: CompilerConnection[] = [];
-  const newPublishers: Publisher[] = [];
-  const newListeners: Listener[] = [];
+  const newEdges: Edge[] = [];
 
   // Build the rewrite map as we expand composites
   const rewriteBuilder = createRewriteMapBuilder();
@@ -721,7 +641,7 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
         }
       }
 
-      // Handle bus subscriptions (composite inputs auto-subscribed to buses)
+      // Bus-Block Unification: Convert bus subscriptions to edges FROM BusBlock TO internal block
       if (compositeDef?.graph.busSubscriptions != null) {
         for (const [inputPort, busNameValue] of Object.entries(compositeDef.graph.busSubscriptions)) {
           const busName = busNameValue;
@@ -730,23 +650,25 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
             const [node, port] = internalRef.split('.');
             const internalBlockId = idMap.get(node);
             if (internalBlockId != null) {
-              const listener: Listener = {
-                id: generateBusBindingId(blockId, 'sub', inputPort),
-                busId: busName,
-                to: {
-                  blockId: internalBlockId,
-                  slotId: port,
-                  direction: 'input',
-                },
-                enabled: true,
-              };
-              newListeners.push(listener);
+              // Find the BusBlock by name
+              const busBlock = patch.blocks.find(b =>
+                b.type === 'BusBlock' && (b.params?.name === busName || b.id === busName)
+              );
+              if (busBlock != null) {
+                newEdges.push({
+                  id: generateBusBindingId(blockId, 'sub', inputPort),
+                  from: { kind: 'port', blockId: busBlock.id, slotId: 'out' },
+                  to: { kind: 'port', blockId: internalBlockId, slotId: port },
+                  enabled: true,
+                role: { kind: 'user' },
+                });
+              }
             }
           }
         }
       }
 
-      // Handle bus publications (composite outputs auto-published to buses)
+      // Bus-Block Unification: Convert bus publications to edges FROM internal block TO BusBlock
       if (compositeDef?.graph.busPublications != null) {
         for (const [outputPort, busNameValue] of Object.entries(compositeDef.graph.busPublications)) {
           const busName = busNameValue;
@@ -755,82 +677,92 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
             const [node, port] = internalRef.split('.');
             const internalBlockId = idMap.get(node);
             if (internalBlockId != null) {
-              const publisher: Publisher = {
-                id: generateBusBindingId(blockId, 'pub', outputPort),
-                busId: busName,
-                from: {
-                  blockId: internalBlockId,
-                  slotId: port,
-                  direction: 'output',
-                },
-                enabled: true,
-                sortKey: 0, // Default sort key, can be customized if needed
-              };
-              newPublishers.push(publisher);
+              // Find the BusBlock by name
+              const busBlock = patch.blocks.find(b =>
+                b.type === 'BusBlock' && (b.params?.name === busName || b.id === busName)
+              );
+              if (busBlock != null) {
+                newEdges.push({
+                  id: generateBusBindingId(blockId, 'pub', outputPort),
+                  from: { kind: 'port', blockId: internalBlockId, slotId: port },
+                  to: { kind: 'port', blockId: busBlock.id, slotId: 'in' },
+                  enabled: true,
+                role: { kind: 'user' },
+                });
+              }
             }
           }
         }
       }
 
       // Internal edges
-      for (const edge of graph.edges) {
-        const [fromNode, fromPort] = edge.from.split('.');
-        const [toNode, toPort] = edge.to.split('.');
+      for (const graphEdge of graph.edges) {
+        const [fromNode, fromPort] = graphEdge.from.split('.');
+        const [toNode, toPort] = graphEdge.to.split('.');
         const fromId = idMap.get(fromNode);
         const toId = idMap.get(toNode);
         if (fromId != null && toId != null) {
-          newConnections.push({
-            from: { block: fromId, port: fromPort },
-            to: { block: toId, port: toPort },
+          newEdges.push({
+            id: `${blockId}::${fromNode}.${fromPort}->${toNode}.${toPort}`,
+            from: { kind: 'port', blockId: fromId, slotId: fromPort },
+            to: { kind: 'port', blockId: toId, slotId: toPort },
+            enabled: true,
+          role: { kind: 'user' },
           });
         }
       }
 
-      // Rewire incoming connections - check both original connections and already-rewired ones
-      const incoming = connections.filter((c) => c.to.block === blockId);
-      const incomingFromNew = newConnections.filter((c) => c.to.block === blockId);
-      const outgoing = connections.filter((c) => c.from.block === blockId);
-      const outgoingFromNew = newConnections.filter((c) => c.from.block === blockId);
+      // Rewire incoming edges - check both original edges and already-rewired ones
+      const incoming = edges.filter((e) => e.to.blockId === blockId);
+      const incomingFromNew = newEdges.filter((e) => e.to.blockId === blockId);
+      const outgoing = edges.filter((e) => e.from.blockId === blockId);
+      const outgoingFromNew = newEdges.filter((e) => e.from.blockId === blockId);
 
-      connections = connections.filter(
-        (c) => c.to.block !== blockId && c.from.block !== blockId
+      edges = edges.filter(
+        (e) => e.to.blockId !== blockId && e.from.blockId !== blockId
       );
 
-      // Remove connections targeting this composite from newConnections (will be rewired)
-      const connectionsToRemove = new Set<CompilerConnection>();
-      incomingFromNew.forEach((c) => connectionsToRemove.add(c));
-      outgoingFromNew.forEach((c) => connectionsToRemove.add(c));
+      // Remove edges targeting this composite from newEdges (will be rewired)
+      const edgesToRemove = new Set<Edge>();
+      incomingFromNew.forEach((e) => edgesToRemove.add(e));
+      outgoingFromNew.forEach((e) => edgesToRemove.add(e));
 
-      for (const conn of [...incoming, ...incomingFromNew]) {
-        const internalRef = graph.inputMap[conn.to.port];
+      for (const edge of [...incoming, ...incomingFromNew]) {
+        const internalRef = graph.inputMap[edge.to.slotId];
         if (internalRef == null || internalRef === '') continue;
         const [node, port] = internalRef.split('.');
         const toId = idMap.get(node);
         if (toId != null) {
-          newConnections.push({
-            from: conn.from,
-            to: { block: toId, port },
+          newEdges.push({
+            id: `${edge.id}::rewired`,
+            from: edge.from,
+            to: { kind: 'port', blockId: toId, slotId: port },
+            enabled: edge.enabled,
+            role: { kind: 'user' },
           });
         }
       }
 
-      for (const conn of [...outgoing, ...outgoingFromNew]) {
-        const internalRef = graph.outputMap[conn.from.port];
+      for (const edge of [...outgoing, ...outgoingFromNew]) {
+        const internalRef = graph.outputMap[edge.from.slotId];
         if (internalRef == null || internalRef === '') continue;
         const [node, port] = internalRef.split('.');
         const fromId = idMap.get(node);
         if (fromId != null) {
-          newConnections.push({
-            from: { block: fromId, port },
-            to: conn.to,
+          newEdges.push({
+            id: `${edge.id}::rewired`,
+            from: { kind: 'port', blockId: fromId, slotId: port },
+            to: edge.to,
+            enabled: edge.enabled,
+            role: { kind: 'user' },
           });
         }
       }
 
-      // Remove the connections that were rewired from newConnections
-      for (let i = newConnections.length - 1; i >= 0; i--) {
-        if (connectionsToRemove.has(newConnections[i])) {
-          newConnections.splice(i, 1);
+      // Remove the edges that were rewired from newEdges
+      for (let i = newEdges.length - 1; i >= 0; i--) {
+        if (edgesToRemove.has(newEdges[i])) {
+          newEdges.splice(i, 1);
         }
       }
     } else {
@@ -838,89 +770,35 @@ function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
     }
   }
 
-  // Add any untouched connections
-  for (const conn of connections) {
-    newConnections.push(conn);
+  // Add any untouched edges
+  for (const edge of edges) {
+    newEdges.push(edge);
   }
 
   return {
     expandedPatch: {
       blocks: Array.from(newBlocks.values()),
-      connections: newConnections,
+      edges: newEdges,
       buses: patch.buses,
-      publishers: [], // Will be merged with newPublishers by caller
-      listeners: [], // Will be merged with newListeners by caller
     },
     rewriteMap: rewriteBuilder.build(),
-    newPublishers,
-    newListeners,
   };
 }
 
 /**
- * Apply the rewrite map to bus publishers and listeners.
- * This rewrites port references from composite boundary ports to internal primitive ports.
+ * Apply the rewrite map to bus bindings.
+ * Bus-Block Unification: Publishers/listeners removed. Connections to BusBlocks
+ * are now created directly in expandComposites, so this is a pass-through.
  *
  * Design: CompositeTransparencyDesign.md Section 8
  */
 function rewriteBusBindings(
   patch: CompilerPatch,
-  rewriteMap: PortRefRewriteMap
+  _rewriteMap: PortRefRewriteMap
 ): { patch: CompilerPatch; errors: CompileError[] } {
-  const errors: CompileError[] = [];
-
-  // Rewrite publishers
-  const rewrittenPublishers = patch.publishers.map((pub) => {
-    const ref: PortRef = { blockId: pub.from.blockId, slotId: pub.from.slotId, direction: 'output' };
-    const rewritten = rewriteMap.rewrite(ref);
-
-    if (rewritten === null) {
-      // Port not exposed by composite boundary
-      errors.push({
-        code: 'PortMissing',
-        message: `Publisher port not exposed by composite boundary: ${pub.from.blockId}.${pub.from.slotId}`,
-        where: { blockId: pub.from.blockId, port: pub.from.slotId },
-      });
-      return pub; // Return unchanged, error will prevent compilation
-    }
-
-    // Return publisher with rewritten port reference
-    return {
-      ...pub,
-      from: { blockId: rewritten.blockId, slotId: rewritten.slotId, direction: 'output' as const },
-    };
-  });
-
-  // Rewrite listeners
-  const rewrittenListeners = patch.listeners.map((listener) => {
-    const ref: PortRef = { blockId: listener.to.blockId, slotId: listener.to.slotId, direction: 'input' };
-    const rewritten = rewriteMap.rewrite(ref);
-
-    if (rewritten === null) {
-      // Port not exposed by composite boundary
-      errors.push({
-        code: 'PortMissing',
-        message: `Listener port not exposed by composite boundary: ${listener.to.blockId}.${listener.to.slotId}`,
-        where: { blockId: listener.to.blockId, port: listener.to.slotId },
-      });
-      return listener; // Return unchanged, error will prevent compilation
-    }
-
-    // Return listener with rewritten port reference
-    return {
-      ...listener,
-      to: { blockId: rewritten.blockId, slotId: rewritten.slotId, direction: 'input' as const },
-    };
-  });
-
-  return {
-    patch: {
-      ...patch,
-      publishers: rewrittenPublishers,
-      listeners: rewrittenListeners,
-    },
-    errors,
-  };
+  // Bus-Block Unification: Publishers/listeners removed - nothing to rewrite
+  // Bus connections are now regular connections created in expandComposites
+  return { patch, errors: [] };
 }
 
 // =============================================================================
@@ -981,14 +859,14 @@ export function createCompilerService(store: RootStore): CompilerService {
 
       // Generate compileId
       const compileId = randomUUID();
-      const patchId = store.patchStore.patchId;
       const patchRevision = store.patchStore.patchRevision;
+      console.log('[CompilerService] compile() called with', store.patchStore.blocks.length, 'blocks:', store.patchStore.blocks.map(b => b.type));
 
               // Emit CompileStarted event
               store.events.emit({
                 type: 'CompileStarted',
                 compileId,
-                patchId,
+                patchId: 'patch', // Temporary - patchId not yet on PatchStore
                 patchRevision,
                 trigger: 'graphCommitted',
               });
@@ -999,15 +877,14 @@ export function createCompilerService(store: RootStore): CompilerService {
                 let patch = editorToPatch(store);
 
                 // Step 1: Expand composites and build rewrite map
-                const { expandedPatch, rewriteMap, newPublishers, newListeners } = expandComposites(patch);
+                // Bus-Block Unification: publishers/listeners removed - bus bindings are now connections
+                const { expandedPatch, rewriteMap } = expandComposites(patch);
 
-        // Step 2: Apply rewrite map to bus publishers/listeners and merge new bus bindings
+        // Step 2: Apply rewrite map (now a no-op, kept for structure)
         const { patch: rewrittenPatch, errors: rewriteErrors } = rewriteBusBindings(
           {
             ...expandedPatch,
             buses: patch.buses,
-            publishers: [...patch.publishers, ...newPublishers],
-            listeners: [...patch.listeners, ...newListeners],
           },
           rewriteMap
         );
@@ -1033,7 +910,7 @@ export function createCompilerService(store: RootStore): CompilerService {
           store.events.emit({
             type: 'CompileFinished',
             compileId,
-            patchId,
+            patchId: 'patch', // Temporary
             patchRevision,
             status: 'failed',
             durationMs,
@@ -1045,18 +922,15 @@ export function createCompilerService(store: RootStore): CompilerService {
 
         patch = rewrittenPatch;
 
-        // Step 3: Materialize default sources from block metadata (System 2)
-        // This creates simple DSConst* providers for inputs with defaultSource metadata
-        patch = materializeDefaultSources(patch);
-
-        // Step 4: Inject advanced default source providers from allowlist (System 1)
-        // This creates advanced providers (e.g., Oscillator) based on user configuration
-        // System 1 skips inputs that already have connections (from System 2 or user wires)
+        // Step 3: Inject advanced default source providers from allowlist (System 1)
+        // Graph normalization already materialized structural blocks (DSConst* providers)
+        // This step only injects advanced providers (e.g., Oscillator) based on user configuration
+        // System 1 skips inputs that already have connections (from normalization or user wires)
         patch = injectDefaultSourceProviders(store, patch, registry);
 
         store.logStore.debug(
           'compiler',
-          `Patch has ${patch.blocks.length} blocks and ${patch.connections.length} connections`
+          `Patch has ${patch.blocks.length} blocks and ${patch.edges.length} edges`
         );
         // Log rewrite map stats for debugging
         const mappingCount = rewriteMap.getAllMappings().size;
@@ -1067,13 +941,7 @@ export function createCompilerService(store: RootStore): CompilerService {
           );
         }
 
-        // Log bus binding stats
-        if (newPublishers.length > 0 || newListeners.length > 0) {
-          store.logStore.debug(
-            'compiler',
-            `Bus bindings: ${newPublishers.length} publishers, ${newListeners.length} listeners from composite expansion`
-          );
-        }
+        // Bus-Block Unification: publishers/listeners removed - bus bindings are now connections
 
         const seed: Seed = store.uiStore.settings.seed;
         // Use feature flag to control IR emission (legacy mode when emitIR=false)
@@ -1099,7 +967,7 @@ export function createCompilerService(store: RootStore): CompilerService {
           store.events.emit({
             type: 'CompileFinished',
             compileId,
-            patchId,
+            patchId: 'patch', // Temporary
             patchRevision,
             status: 'ok',
             durationMs,
@@ -1124,7 +992,7 @@ export function createCompilerService(store: RootStore): CompilerService {
             store.events.emit({
               type: 'CompileFinished',
               compileId,
-              patchId,
+              patchId: 'patch', // Temporary
               patchRevision,
               status: 'failed',
               durationMs,
@@ -1142,7 +1010,7 @@ export function createCompilerService(store: RootStore): CompilerService {
             store.events.emit({
               type: 'CompileFinished',
               compileId,
-              patchId,
+              patchId: 'patch', // Temporary
               patchRevision,
               status: 'failed',
               durationMs,
@@ -1177,7 +1045,7 @@ export function createCompilerService(store: RootStore): CompilerService {
         store.events.emit({
           type: 'CompileFinished',
           compileId,
-          patchId,
+          patchId: 'patch', // Temporary
           patchRevision,
           status: 'failed',
           durationMs,
@@ -1242,24 +1110,22 @@ function inferTimeRootKind(patch: CompilerPatch): 'FiniteTimeRoot' | 'InfiniteTi
 
 /**
  * Build bus usage summary for program metadata.
+ * Bus-Block Unification: Count connections to/from BusBlocks instead of publishers/listeners.
  */
 function buildBusUsageSummary(patch: CompilerPatch): Record<string, { publishers: number; listeners: number }> {
   const summary: Record<string, { publishers: number; listeners: number }> = {};
 
-  // Count publishers per bus
-  for (const pub of patch.publishers) {
-    if (summary[pub.busId] === undefined) {
-      summary[pub.busId] = { publishers: 0, listeners: 0 };
-    }
-    summary[pub.busId].publishers++;
-  }
+  // Find all BusBlocks
+  const busBlockIds = new Set(patch.blocks.filter(b => b.type === 'BusBlock').map(b => b.id));
 
-  // Count listeners per bus
-  for (const listener of patch.listeners) {
-    if (summary[listener.busId] === undefined) {
-      summary[listener.busId] = { publishers: 0, listeners: 0 };
-    }
-    summary[listener.busId].listeners++;
+  for (const busBlockId of busBlockIds) {
+    // Count edges TO the BusBlock (publishers)
+    const publisherCount = patch.edges.filter(e => e.to.blockId === busBlockId).length;
+
+    // Count edges FROM the BusBlock (listeners)
+    const listenerCount = patch.edges.filter(e => e.from.blockId === busBlockId).length;
+
+    summary[busBlockId] = { publishers: publisherCount, listeners: listenerCount };
   }
 
   return summary;
@@ -1297,19 +1163,12 @@ export function setupAutoCompile(
     () => ({
       blockCount: store.patchStore.blocks.length,
       blocks: store.patchStore.blocks.map((b: Block) => ({ id: b.id, type: b.type, params: JSON.stringify(b.params) })),
-      connectionCount: store.patchStore.connections.length,
-      connections: store.patchStore.connections.map((c: Connection) => `${c.from.blockId}:${c.from.slotId}->${c.to.blockId}:${c.to.slotId}`),
+      edgeCount: store.patchStore.edges.length,
+      edges: store.patchStore.edges.map((e: Edge) => `${e.from.blockId}:${e.from.slotId}->${e.to.blockId}:${e.to.slotId}`),
       seed: store.uiStore.settings.seed,
       // Default sources - track value changes to trigger recompilation
       // We use a revision counter because structural tracking of values in a Map is tricky
       defaultSourceRevision: store.defaultSourceStore.valueRevision,
-      // Bus system - track publishers and listeners
-      busCount: store.busStore.buses.length,
-      buses: store.busStore.buses.map(b => `${b.id}:${b.name}`),
-      publisherCount: store.busStore.publishers.length,
-      publishers: store.busStore.publishers.map(p => `${p.id}:${p.from.blockId}.${p.from.slotId}->${p.busId}:${p.enabled}`),
-      listenerCount: store.busStore.listeners.length,
-      listeners: store.busStore.listeners.map(l => `${l.id}:${l.busId}->${l.to.blockId}.${l.to.slotId}:${l.enabled}`),
     }),
     // React to changes
     () => {

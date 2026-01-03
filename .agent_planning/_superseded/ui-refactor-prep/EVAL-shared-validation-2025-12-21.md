@@ -34,8 +34,6 @@ From `design-docs/10-Refactor-for-UI-prep/5-DivergentTypes.md`:
 
 **SemanticGraph** (`src/editor/semantic/graph.ts`):
 - ✅ 426 lines, fully implemented
-- ✅ Derived indices: incoming/outgoing wires, publishers/listeners per bus, adjacency
-- ✅ Incremental update methods (addWireEdge, addPublisherEdge, addListenerEdge)
 - ✅ Cycle detection via Tarjan's SCC algorithm
 - ✅ Query methods for all index structures
 - **Evidence**: Lines 37-425 implement complete graph indexing
@@ -71,7 +69,6 @@ From `design-docs/10-Refactor-for-UI-prep/5-DivergentTypes.md`:
 - ✅ 221 lines, complete type system
 - ✅ `ValidationResult` with errors/warnings/fixes (lines 27-39)
 - ✅ `PortKey` canonical port identity (lines 72-76)
-- ✅ Graph node/edge types (BlockNode, PortNode, BusNode, WireEdge, PublisherEdge, ListenerEdge)
 - ✅ Utility functions for PortKey manipulation (lines 170-220)
 - **Evidence**: Lines 1-221 define complete validation type system
 

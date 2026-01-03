@@ -12,10 +12,7 @@ function createTestPatch(): Patch {
   return {
     version: 1,
     blocks: [],
-    connections: [],
-    buses: [],
-    publishers: [],
-    listeners: [],
+    edges: [],
     defaultSources: [],
     settings: {
       seed: 42,

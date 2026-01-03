@@ -1,0 +1,23 @@
+Agent: iterative-implementer | 20251227200556
+Mode: manual
+Completed: Add missing BusStore methods | Files: 1 | Commits: 1
+Tests: N/A (manual validation)
+Cache invalidated: None (no eval cache exists yet)
+Status: complete
+
+Summary:
+- Added getPublishersByBus() method to BusStore (returns sorted publishers)
+- Added getListenersByBus() method to BusStore (filters listeners by bus ID)
+- Removed unused getSortedPublishers import
+- Fixed missing method calls in BusChannel.tsx (lines 66-67)
+- Resolved implicit any types in BusChannel.tsx (lines 115, 202)
+
+Files Modified:
+- src/editor/stores/BusStore.ts
+
+Commits:
+- 791c6df: feat(stores): Add getPublishersByBus and getListenersByBus methods to BusStore
+
+Validation:
+- TypeScript compilation passes with no errors in modified files
+- No implicit any types remain in BusChannel.tsx

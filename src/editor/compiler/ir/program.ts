@@ -1,458 +1,211 @@
 /**
- * Compiled Program IR - Top-Level Container
+ * Compiled Program IR - Top-Level Container (CANONICAL)
  *
- * This module defines the complete CompiledProgramIR structure,
- * which is the single canonical output of the compiler.
- *
- * The runtime/player consumes only this structure - no closures,
- * no hidden JavaScript behavior.
+ * Single compiler output contract. Runtime consumes only this structure.
+ * No legacy schema. No closures. No hidden behavior.
  *
  * References:
  * - design-docs/12-Compiler-Final/02-IR-Schema.md §3
  * - design-docs/12-Compiler-Final/14-Compiled-IR-Program-Contract.md §1-9
- * - design-docs/13-Renderer/06-3d-IR-Deltas.md (3D extensions)
  */
 
-import type { NodeId, BusId, TypeTable } from "./types";
+import type { TypeTable, ValueSlot, TypeDesc } from "./types";
 import type { TimeModelIR, ScheduleIR } from "./schedule";
 import type { StateLayout } from "./stores";
 import type { SignalExprTable } from "./signalExpr";
-import type { FieldExprIR } from "./fieldExpr";
+import type { FieldExprTable } from "./fieldExpr";
+import type { EventExprTable } from "./signalExpr"; // EventExprTable lives in signalExpr.ts
 import type { CameraTable, MeshTable, CameraId } from "./types3d";
 
 // ============================================================================
-// Top-Level Compiled Program (02-IR-Schema.md §3)
+// Top-Level Compiled Program (CANONICAL)
 // ============================================================================
 
-/**
- * CompiledProgramIR - The Complete Compiled Program
- *
- * This is the authoritative output of the compiler.
- * It contains everything needed to execute the program:
- * - Identity and provenance
- * - Time topology
- * - All execution tables (nodes, buses, fields, etc.)
- * - Execution schedule
- * - Output specifications
- * - Debug metadata
- *
- * Hard invariants:
- * - No closures - runtime evaluation is dispatch over dense IR arrays
- * - Deterministic - every ordering is fixed by IR, not object iteration
- * - Stable identities - every observable thing has a stable ID
- * - Portable - representable 1:1 in Rust (enums + vectors + typed buffers)
- * - Debuggable - every value traceable to (block, port, bus, transform, state)
- */
 export interface CompiledProgramIR {
   // ============================================================================
-  // Identity and Provenance
+  // Identity & Versioning
   // ============================================================================
 
-  /** IR format version (bump only with intentional migrations) */
-  irVersion: number;
+  /** Stable patch ID */
+  readonly patchId: string;
 
-  /** Stable patch identifier */
-  patchId: string;
+  /** Deterministic seed */
+  readonly seed: number;
 
-  /** Patch revision number (increments with each edit) */
-  patchRevision: number;
-
-  /** Unique compile identifier (UUIDv4 or similar) */
-  compileId: string;
-
-  /** Random seed for deterministic randomness */
-  seed: number;
+  /** IR schema version (MUST be literal 1) */
+  readonly irVersion: 1;
 
   // ============================================================================
-  // Time Topology (Authoritative)
+  // Time
   // ============================================================================
 
-  /**
-   * Time model - authoritative time topology
-   *
-   * No "player looping" hacks - this is the single source of truth.
-   */
-  timeModel: TimeModelIR;
+  /** Exactly one TimeModel per program */
+  readonly timeModel: TimeModelIR;
+
+  // ============================================================================
+  // Types
+  // ============================================================================
+
+  /** All types referenced by expr tables / slots */
+  readonly types: TypeTable;
 
   // ============================================================================
   // Execution Tables
   // ============================================================================
 
-  /** Type interning table */
-  types: TypeTable;
-
-  /** Node table (blocks and internal nodes) */
-  nodes: NodeTable;
-
-  /** Bus table */
-  buses: BusTable;
-
-  /** Lens (field transform) table */
-  lenses: LensTable;
-
-  /** Adapter (signal/scalar transform) table */
-  adapters: AdapterTable;
-
-  /** Field expression table (may be empty until runtime builds exprs) */
-  fields: FieldExprTable;
-
-  /** Signal expression table (for SigEvaluator) */
-  signalTable?: SignalExprTable;
-
-  /** Constant pool (JSON + packed numeric values) */
-  constants: ConstPool;
-
-  /** State layout (for stateful nodes) */
-  stateLayout: StateLayout;
-
-  /**
-   * Slot metadata - canonical source for all allocated slots.
-   *
-   * Per design-docs/13-Renderer/12-ValueSlotPerNodeOutput.md:
-   * - Emitted during lowering, not inferred from schedule
-   * - Every node output has a slot, regardless of consumption
-   * - RuntimeState uses this instead of inferring from schedule steps
-   */
-  slotMeta?: import("./stores").SlotMeta[];
+  readonly signalExprs: SignalExprTable;
+  readonly fieldExprs: FieldExprTable;
+  readonly eventExprs: EventExprTable;
 
   // ============================================================================
-  // 3D Support (Optional but First-Class)
+  // Constants (JSON-only)
   // ============================================================================
 
-  /**
-   * Camera table (optional)
-   *
-   * Cameras defined in the program. Only present if 3D features are used.
-   * See design-docs/13-Renderer/06-3d-IR-Deltas.md §1
-   */
-  cameras?: CameraTable;
-
-  /**
-   * Default camera ID - always present when cameras are defined.
-   *
-   * Camera selection semantics:
-   * - 0 cameras → '__default__' (implicit camera injected)
-   * - 1 camera → that camera's ID
-   * - N cameras → first by creation order (deterministic)
-   */
-  defaultCameraId?: CameraId;
-
-  /**
-   * Mesh table (optional)
-   *
-   * Procedural mesh recipes. Only present if 3D features are used.
-   * See design-docs/13-Renderer/06-3d-IR-Deltas.md §2
-   */
-  meshes?: MeshTable;
-
-  // ============================================================================
-  // Execution Schedule
-  // ============================================================================
-
-  /**
-   * Schedule - ordered execution plan
-   *
-   * The schedule defines exactly what steps to execute and in what order.
-   */
-  schedule: ScheduleIR;
-
-  // ============================================================================
-  // Outputs
-  // ============================================================================
-
-  /**
-   * Output specifications (render roots, etc.)
-   *
-   * Defines what the program produces.
-   */
-  outputs: OutputSpec[];
-
-  // ============================================================================
-  // Debug and Metadata
-  // ============================================================================
-
-  /**
-   * Program metadata
-   *
-   * Source mapping, labels, and debug information.
-   * Always included (compact) for debuggability.
-   */
-  meta: ProgramMeta;
-}
-
-// ============================================================================
-// Node Table (14-Compiled-IR-Program-Contract.md §3)
-// ============================================================================
-
-/**
- * Node Table
- *
- * Contains all nodes (user blocks + compiler-generated internal nodes).
- */
-export interface NodeTable {
-  /** Array of all nodes in the program */
-  nodes: NodeIR[];
-}
-
-/**
- * Node IR
- *
- * Represents a single node (block instance or internal compiler node).
- */
-export interface NodeIR {
-  /** Stable node identifier */
-  id: NodeId;
-
-  /** Node type (interned string ID) */
-  typeId: number;
-
-  /** Input port count */
-  inputCount: number;
-
-  /** Output port count */
-  outputCount: number;
-
-  /** Optional compiler tag (for feature gating/versioning) */
-  compilerTag?: number;
-
-  /** Optional opcode reference (for primitive nodes) */
-  opcodeId?: number;
-}
-
-// ============================================================================
-// Bus Table (14-Compiled-IR-Program-Contract.md §3)
-// ============================================================================
-
-/**
- * Bus Table
- *
- * Contains all buses in the program.
- */
-export interface BusTable {
-  /** Array of all buses */
-  buses: BusIR[];
-}
-
-/**
- * Bus IR
- *
- * Represents a single bus (modulation routing).
- */
-export interface BusIR {
-  /** Stable bus identifier */
-  id: BusId;
-
-  /** Bus type descriptor */
-  type: import("./types").TypeDesc;
-
-  /** Combine specification */
-  combine: import("./schedule").CombineSpec;
-
-  /** Default value (constant ID) */
-  defaultValueConstId: number;
-
-  /** Optional reserved role (e.g., "phaseA", "energy", "palette") */
-  reservedRole?: string;
-}
-
-// ============================================================================
-// Transform Tables (14-Compiled-IR-Program-Contract.md §4-5)
-// ============================================================================
-
-/**
- * Lens Table
- *
- * Field transforms (map, filter, reduce).
- * Placeholder for Phase 5 implementation.
- */
-export interface LensTable {
-  /** Array of lens transform chains */
-  lenses: LensIR[];
-}
-
-/**
- * Lens IR (placeholder)
- */
-export interface LensIR {
-  id: number;
-  // Full definition deferred to Phase 5
-}
-
-/**
- * Adapter Table
- *
- * Signal/scalar transforms.
- * Placeholder for Phase 4 implementation.
- */
-export interface AdapterTable {
-  /** Array of adapter transform chains */
-  adapters: AdapterIR[];
-}
-
-/**
- * Adapter IR (placeholder)
- */
-export interface AdapterIR {
-  id: number;
-  // Full definition deferred to Phase 4
-}
-
-// ============================================================================
-// Field Expression Table (14-Compiled-IR-Program-Contract.md §5)
-// ============================================================================
-
-/**
- * Field Expression Table
- *
- * FieldExpr pool + materialization plan.
- * May be empty initially - runtime can build expressions lazily.
- */
-export interface FieldExprTable {
-  /** Array of field expression nodes (uses full FieldExprIR from fieldExpr.ts) */
-  nodes: FieldExprIR[];
-
-  /** Materialization plan */
-  materialization?: FieldMaterializationPlan;
-}
-
-/**
- * Field Expression Node IR (placeholder for nodes that need stable IDs)
- * This is kept for backwards compatibility but FieldExprIR is preferred.
- */
-export interface FieldExprNodeIR {
-  id: string;
-  // Full definition deferred to Phase 5
-}
-
-/**
- * Field Materialization Plan (placeholder)
- */
-export interface FieldMaterializationPlan {
-  /** Materialization requests */
-  requests: unknown[];
-
-  /** Coalesce groups (optional optimization) */
-  coalesceGroups?: unknown[];
-}
-
-// ============================================================================
-// Constant Pool (14-Compiled-IR-Program-Contract.md §7)
-// ============================================================================
-
-/**
- * Constant Pool
- *
- * Single place for JSON and packed numeric constants.
- * Used for default values, initial state, and parameter values.
- */
-export interface ConstPool {
-  /** JSON constants (stable indices) */
-  json: unknown[];
-
-  /** 64-bit float constants */
-  f64: Float64Array;
-
-  /** 32-bit float constants */
-  f32: Float32Array;
-
-  /** 32-bit integer constants */
-  i32: Int32Array;
-
-  /** Constant index (maps constId to storage location) */
-  constIndex: ConstIndexEntry[];
-}
-
-/**
- * Constant Index Entry
- *
- * Maps a constant ID to its storage location.
- */
-export type ConstIndexEntry =
-  | { k: "json"; idx: number }
-  | { k: "f64"; idx: number }
-  | { k: "f32"; idx: number }
-  | { k: "i32"; idx: number };
-
-// ============================================================================
-// Output Specification (02-IR-Schema.md §8)
-// ============================================================================
-
-/**
- * Output Specification
- *
- * Defines what the program produces (render trees, exports, etc.).
- */
-export interface OutputSpec {
-  /** Output identifier */
-  id: string;
-
-  /** Output kind */
-  kind: "renderTree" | "renderFrame" | "export" | "debug";
-
-  /** Slot containing the output value */
-  slot: import("./types").ValueSlot;
-
-  /** Optional label for UI */
-  label?: string;
-}
-
-// ============================================================================
-// Program Metadata (02-IR-Schema.md §17)
-// ============================================================================
-
-/**
- * Program Metadata
- *
- * Source mapping, labels, and compile warnings.
- * Used for debugging, UI selection, and error reporting.
- */
-export interface ProgramMeta {
-  /** Source map (IR -> editor blocks/ports) */
-  sourceMap: SourceMapIR;
-
-  /** User-friendly labels for debugger */
-  names: {
-    /** Node ID -> label */
-    nodes: Record<NodeId, string>;
-
-    /** Bus ID -> label */
-    buses: Record<BusId, string>;
-
-    /** Step ID -> label */
-    steps: Record<import("./types").StepId, string>;
+  readonly constants: {
+    readonly json: readonly unknown[];
   };
 
-  /** Optional compile warnings */
-  warnings?: CompileWarningIR[];
+  // ============================================================================
+  // State
+  // ============================================================================
+
+  readonly stateLayout: StateLayout;
+
+  // ============================================================================
+  // Slots (authoritative memory layout + debug/type metadata)
+  // ============================================================================
+
+  readonly slotMeta: readonly SlotMetaEntry[];
+
+  // ============================================================================
+  // Render & 3D Metadata (NOT used for output selection)
+  // ============================================================================
+
+  readonly render: RenderIR;
+  readonly cameras: CameraTable;
+  readonly meshes: MeshTable;
+  readonly primaryCameraId?: CameraId;
+
+  // ============================================================================
+  // Schedule (runtime executes only this)
+  // ============================================================================
+
+  readonly schedule: ScheduleIR;
+
+  // ============================================================================
+  // Outputs (runtime reads render output ONLY from here)
+  // ============================================================================
+
+  readonly outputs: readonly OutputSpecIR[];
+
+  // ============================================================================
+  // Debug Index (mandatory; enables stable debugging under graph churn)
+  // ============================================================================
+
+  readonly debugIndex: DebugIndexIR;
+
+  // ============================================================================
+  // Optional diagnostics (pure metadata; never required for execution)
+  // ============================================================================
+
+  readonly sourceMap?: SourceMapIR;
+  readonly warnings?: readonly CompilerWarning[];
 }
 
+// ============================================================================
+// Outputs
+// ============================================================================
+
 /**
- * Source Map IR
- *
- * Maps IR elements back to editor blocks/ports.
+ * The runtime MUST extract the render product from program.outputs[0].
+ * Exactly one output is expected for now.
  */
+export interface OutputSpecIR {
+  readonly kind: "renderFrame";
+  readonly slot: ValueSlot; // ValueStore slot containing RenderFrameIR object
+}
+
+// ============================================================================
+// Slot Metadata
+// ============================================================================
+
+export interface SlotMetaEntry {
+  /** Slot id */
+  readonly slot: ValueSlot;
+
+  /** Storage backing */
+  readonly storage: "f64" | "f32" | "i32" | "u32" | "object";
+
+  /**
+   * Byte/element offset into the backing store for this slot.
+   * REQUIRED. Runtime MUST NOT compute offsets.
+   */
+  readonly offset: number;
+
+  /** Type descriptor for validation/debug */
+  readonly type: TypeDesc;
+
+  /** Optional debug label */
+  readonly debugName?: string;
+}
+
+// ============================================================================
+// Render IR (metadata only; not output selection)
+// ============================================================================
+
+export interface RenderIR {
+  /** Compile-time sink metadata; runtime output selection uses program.outputs */
+  readonly sinks: readonly RenderSinkIR[];
+}
+
+export interface RenderSinkIR {
+  readonly sinkType: string;
+  readonly inputs: Record<string, ValueSlot>;
+}
+
+// ============================================================================
+// Debug Index (mandatory)
+// ============================================================================
+
+export interface DebugIndexIR {
+  /**
+   * Stable mapping from schedule step -> source block.
+   * Debug UIs group/label execution using this, not program.nodes.
+   */
+  readonly stepToBlock: ReadonlyMap<string, string>;
+
+  /**
+   * Stable mapping from produced slot -> source block.
+   * Used for “where did this value come from?”
+   */
+  readonly slotToBlock: ReadonlyMap<ValueSlot, string>;
+
+  /** Optional human labels */
+  readonly labels?: ReadonlyMap<string, string>;
+}
+
+// ============================================================================
+// Diagnostics
+// ============================================================================
+
 export interface SourceMapIR {
-  /** Node ID -> editor block */
-  nodeToEditorBlock?: Record<NodeId, { blockId: string; kind: "primitive" | "compositeInternal" }>;
+  /** Maps expr-node id → source BlockId (if you still have expr ids) */
+  readonly nodeToBlock?: Record<string, string>;
 
-  /** Port -> editor slot */
-  portToEditorSlot?: Record<string, { blockId: string; slotId: string }>;
+  /** Maps value slot → (node id, port name) */
+  readonly slotToPort?: Record<number, { nodeId: string; port: string }>;
 }
 
-/**
- * Compile Warning IR
- */
-export interface CompileWarningIR {
-  /** Warning code */
-  code: string;
-
-  /** Warning message */
-  message: string;
-
-  /** Optional location */
-  where?: {
-    nodeId?: NodeId;
-    busId?: BusId;
-    stepId?: import("./types").StepId;
+export interface CompilerWarning {
+  readonly severity: "info" | "warn";
+  readonly category: "unused" | "performance" | "type-coercion" | "other";
+  readonly message: string;
+  readonly source?: {
+    readonly blockId?: string;
+    readonly busId?: string;
+    readonly portName?: string;
   };
 }
+
+/** @deprecated */
+export type CompiledProgram = CompiledProgramIR;

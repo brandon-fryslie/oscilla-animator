@@ -21,11 +21,11 @@ export interface PortRef {
 
 /**
  * Selection discriminated union.
+ * Note: 'bus' selection is removed - select BusBlocks as regular blocks instead.
  */
 export type Selection =
   | { kind: 'none' }
   | { kind: 'block'; ids: string[] }
-  | { kind: 'bus'; id: string }
   | { kind: 'port'; ref: PortRef };
 
 export class SelectionStore {
@@ -59,7 +59,7 @@ export class SelectionStore {
   // Computed Values
   // =============================================================================
 
-  get kind(): 'none' | 'block' | 'bus' | 'port' {
+  get kind(): 'none' | 'block' | 'port' {
     return this.selection.kind;
   }
 
@@ -67,8 +67,21 @@ export class SelectionStore {
     return this.selection.kind === 'block' ? this.selection.ids : [];
   }
 
+  /**
+   * Get the selected bus ID (if a BusBlock is selected).
+   * Block ID = Bus ID in the unified architecture.
+   */
   get selectedBusId(): string | null {
-    return this.selection.kind === 'bus' ? this.selection.id : null;
+    // BusBlock selection - single block only (block ID = bus ID)
+    if (this.selection.kind === 'block' && this.selection.ids.length === 1) {
+      const blockId = this.selection.ids[0];
+      const block = this.root.patchStore.blocks.find(b => b.id === blockId);
+      if (block?.type === 'BusBlock') {
+        return block.id; // Block ID is the bus ID
+      }
+    }
+
+    return null;
   }
 
   get selectedPortRef(): PortRef | null {
@@ -134,11 +147,12 @@ export class SelectionStore {
   }
 
   /**
-   * Select a bus.
-   * @param id - Bus ID to select
+   * Select a bus (selects its BusBlock).
+   * @param id - Bus ID to select (block ID = bus ID)
    */
   selectBus(id: string): void {
-    this.selection = { kind: 'bus', id };
+    // In the unified architecture, selecting a bus means selecting its BusBlock
+    this.selection = { kind: 'block', ids: [id] };
   }
 
   /**

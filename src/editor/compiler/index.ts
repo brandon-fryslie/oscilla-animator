@@ -35,7 +35,6 @@ export type {
 
   // Patch graph
   BlockId,
-  CompilerConnection,
   BlockInstance,
   CompilerPatch,
 

@@ -26,7 +26,7 @@ const lowerMulSignal: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
   const outType = { world: "signal" as const, domain: "float" as const, category: "core" as const, busEligible: true };
   const sigId = ctx.b.sigZip(a.id, b.id, { kind: 'opcode', opcode: OpCode.Mul }, outType,);
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'MulSignal_out');
   return {
     outputs: [], // Legacy - empty for fully migrated blocks
     outputsById: { out: { k: 'sig', id: sigId, slot } },

@@ -23,16 +23,8 @@ function createCanonicalBuses(): Bus[] {
     {
       id: 'phaseA',
       name: 'phaseA',
-      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(primary)' },
-      combine: { when: 'multi', mode: 'last' },
-      defaultValue: 0,
-      sortKey: 0,
-    },
-    {
-      id: 'phaseB',
-      name: 'phaseB',
-      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(secondary)' },
-      combine: { when: 'multi', mode: 'last' },
+      type: { world: 'signal', domain: 'phase01', category: 'core', busEligible: true, semantics: 'primary' },
+      combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
     },
@@ -40,15 +32,15 @@ function createCanonicalBuses(): Bus[] {
       id: 'pulse',
       name: 'pulse',
       type: { world: 'event', domain: 'trigger', category: 'core', busEligible: true, semantics: 'pulse' },
-      combine: { when: 'multi', mode: 'last' },
+      combineMode: 'last',
       defaultValue: false,
       sortKey: 0,
     },
     {
       id: 'energy',
       name: 'energy',
-      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'energy' },
-      combine: { when: 'multi', mode: 'sum' },
+      type: { world: 'signal', domain: 'number', category: 'core', busEligible: true, semantics: 'energy' },
+      combineMode: 'sum',
       defaultValue: 0,
       sortKey: 0,
     },
@@ -70,47 +62,48 @@ function createTestContext(): CompileCtx {
  */
 function createFieldTestRegistry(): BlockRegistry {
   return {
-    // InfiniteTimeRoot - required for all patches (minimal outputs)
-    InfiniteTimeRoot: {
-      type: 'InfiniteTimeRoot',
-      inputs: [
-        { name: 'windowMs', type: { kind: 'Scalar:float' } },
-        { name: 'periodMs', type: { kind: 'Scalar:float' } },
-      ],
+    // CycleTimeRoot - required for all patches (includes all standard outputs)
+    CycleTimeRoot: {
+      type: 'CycleTimeRoot',
+      inputs: [],
       outputs: [
         { name: 'systemTime', type: { kind: 'Signal:Time' }, required: true },
-        { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
-        { name: 'pulse', type: { kind: 'Event' }, required: true },
-        { name: 'energy', type: { kind: 'Signal:float' }, required: true },
+        { name: 'cycleT', type: { kind: 'Signal:Time' }, required: true },
+        { name: 'phase', type: { kind: 'Signal:phase01' }, required: true },
+        { name: 'wrap', type: { kind: 'Event' }, required: true },
+        { name: 'cycleIndex', type: { kind: 'Signal:number' }, required: true },
+        { name: 'energy', type: { kind: 'Signal:number' }, required: true },
       ],
       compile: ({ params }: { params: Record<string, unknown> }) => {
         const periodMs = (params.periodMs as number) ?? 3000;
         return {
           systemTime: { kind: 'Signal:Time', value: (t: number) => t },
-          phase: { kind: 'Signal:phase', value: (t: number) => (t / periodMs) % 1 },
-          pulse: { kind: 'Event', value: (t: number, lastT: number) => Math.floor(t / periodMs) > Math.floor(lastT / periodMs) },
-          energy: { kind: 'Signal:float', value: () => 1.0 },
+          cycleT: { kind: 'Signal:Time', value: (t: number) => t % periodMs },
+          phase: { kind: 'Signal:phase01', value: (t: number) => (t / periodMs) % 1 },
+          wrap: { kind: 'Event', value: (t: number, lastT: number) => Math.floor(t / periodMs) > Math.floor(lastT / periodMs) },
+          cycleIndex: { kind: 'Signal:number', value: (t: number) => Math.floor(t / periodMs) },
+          energy: { kind: 'Signal:number', value: () => 1.0 },
         };
       },
     },
 
-    // Field source - produces Field<float>
+    // Field source - produces Field<number>
     FieldNumberSource: {
       type: 'FieldNumberSource',
       inputs: [],
-      outputs: [{ name: 'field', type: { kind: 'Field:float' }, required: true }],
+      outputs: [{ name: 'field', type: { kind: 'Field:number' }, required: true }],
       compile: ({ params }: { params: Record<string, unknown> }) => {
         const baseValue = (params.value as number) ?? 0;
         // Field is bulk form: (seed, n, ctx) => readonly number[]
-        const field: Field<float> = (_seed, n, _ctx) => {
-        const result: float[] = [];
+        const field: Field<number> = (_seed, n, _ctx) => {
+          const result: number[] = [];
           for (let i = 0; i < n; i++) {
             result.push(baseValue + i); // Each element gets baseValue + index
           }
           return result;
         };
         return {
-          field: { kind: 'Field:float', value: field },
+          field: { kind: 'Field:number', value: field },
         };
       },
     },
@@ -118,15 +111,15 @@ function createFieldTestRegistry(): BlockRegistry {
     // Field consumer - sums field values and outputs RenderTreeProgram
     FieldSink: {
       type: 'FieldSink',
-      inputs: [{ name: 'field', type: { kind: 'Field:float' }, required: true }],
+      inputs: [{ name: 'field', type: { kind: 'Field:number' }, required: true }],
       outputs: [{ name: 'program', type: { kind: 'RenderTreeProgram' }, required: true }],
       compile: ({ inputs }: { inputs: Record<string, Artifact> }) => {
         const fieldArtifact = inputs.field;
-        if (fieldArtifact?.kind !== 'Field:float' && fieldArtifact?.kind !== 'Field:int') {
+        if (fieldArtifact?.kind !== 'Field:number') {
           return {
             program: {
               kind: 'Error',
-              message: `FieldSink requires Field:float input, got ${fieldArtifact?.kind}`,
+              message: `FieldSink requires Field:number input, got ${fieldArtifact?.kind}`,
             },
           };
         }
@@ -160,19 +153,19 @@ function createFieldTestRegistry(): BlockRegistry {
     FieldAdd: {
       type: 'FieldAdd',
       inputs: [
-        { name: 'a', type: { kind: 'Field:float' }, required: true },
-        { name: 'b', type: { kind: 'Field:float' }, required: true },
+        { name: 'a', type: { kind: 'Field:number' }, required: true },
+        { name: 'b', type: { kind: 'Field:number' }, required: true },
       ],
-      outputs: [{ name: 'out', type: { kind: 'Field:float' }, required: true }],
+      outputs: [{ name: 'out', type: { kind: 'Field:number' }, required: true }],
       compile: ({ inputs }: { inputs: Record<string, Artifact> }) => {
         const aArtifact = inputs.a;
         const bArtifact = inputs.b;
 
-        if (aArtifact?.kind !== 'Field:float' || bArtifact?.kind !== 'Field:float') {
+        if (aArtifact?.kind !== 'Field:number' || bArtifact?.kind !== 'Field:number') {
           return {
             out: {
               kind: 'Error',
-              message: 'FieldAdd requires two Field:float inputs',
+              message: 'FieldAdd requires two Field:number inputs',
             },
           };
         }
@@ -181,10 +174,10 @@ function createFieldTestRegistry(): BlockRegistry {
         const bField = bArtifact.value;
 
         // Combine fields lazily
-        const combined: Field<float> = (seed, n, ctx) => {
+        const combined: Field<number> = (seed, n, ctx) => {
           const aValues = aField(seed, n, ctx);
           const bValues = bField(seed, n, ctx);
-          const result: float[] = [];
+          const result: number[] = [];
           for (let i = 0; i < n; i++) {
             const aVal = aValues[i];
             const bVal = bValues[i];
@@ -197,7 +190,7 @@ function createFieldTestRegistry(): BlockRegistry {
         };
 
         return {
-          out: { kind: 'Field:float', value: combined },
+          out: { kind: 'Field:number', value: combined },
         };
       },
     },
@@ -209,9 +202,9 @@ function createFieldTestRegistry(): BlockRegistry {
 // =============================================================================
 
 describe('Field Bus Compilation', () => {
-  it('compiles single Field<float> bus with one publisher and one listener', () => {
+  it('compiles single Field<number> bus with one publisher and one listener', () => {
     const blocks = [
-      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
     ];
@@ -219,8 +212,8 @@ describe('Field Bus Compilation', () => {
     const fieldBus: Bus = {
       id: 'fieldBus1',
       name: 'Test Field Bus',
-      type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combine: { when: 'multi', mode: 'last' },
+      type: { world: 'field', domain: 'number', category: 'core', busEligible: true },
+      combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
     };
@@ -272,7 +265,7 @@ describe('Field Bus Compilation', () => {
 
   it('combines multiple Field publishers with "sum" mode', () => {
     const blocks = [
-      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } },
       { id: 'source2', type: 'FieldNumberSource', params: { value: 100 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
@@ -281,8 +274,8 @@ describe('Field Bus Compilation', () => {
     const fieldBus: Bus = {
       id: 'fieldBus1',
       name: 'Sum Field Bus',
-      type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combine: { when: 'multi', mode: 'sum' },
+      type: { world: 'field', domain: 'number', category: 'core', busEligible: true },
+      combineMode: 'sum',
       defaultValue: 0,
       sortKey: 0,
     };
@@ -321,7 +314,7 @@ describe('Field Bus Compilation', () => {
 
   it('combines multiple Field publishers with "last" mode - highest sortKey wins', () => {
     const blocks = [
-      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 10 } },
       { id: 'source2', type: 'FieldNumberSource', params: { value: 100 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
@@ -330,8 +323,8 @@ describe('Field Bus Compilation', () => {
     const fieldBus: Bus = {
       id: 'fieldBus1',
       name: 'Last Field Bus',
-      type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combine: { when: 'multi', mode: 'last' },
+      type: { world: 'field', domain: 'number', category: 'core', busEligible: true },
+      combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
     };
@@ -366,20 +359,17 @@ describe('Field Bus Compilation', () => {
     }
   });
 
-  // NEEDS REVIEW - DEPRECATED: Bus default values not wired to listener inputs
-  // When a bus has no publishers, the defaultValue should be used as the input
-  // for any listeners. This feature may not be fully implemented.
-  it.skip('returns default field when bus has no publishers', () => {
+  it('returns default field when bus has no publishers', () => {
     const blocks = [
-      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
     ];
 
     const fieldBus: Bus = {
       id: 'fieldBus1',
       name: 'Empty Field Bus',
-      type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combine: { when: 'multi', mode: 'last' },
+      type: { world: 'field', domain: 'number', category: 'core', busEligible: true },
+      combineMode: 'last',
       defaultValue: 42, // Should produce constant field of 42
       sortKey: 0,
     };
@@ -411,7 +401,7 @@ describe('Field Bus Compilation', () => {
 
   it('supports "average" combine mode for Field buses', () => {
     const blocks = [
-      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 0 } },
       { id: 'source2', type: 'FieldNumberSource', params: { value: 10 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
@@ -420,8 +410,8 @@ describe('Field Bus Compilation', () => {
     const fieldBus: Bus = {
       id: 'fieldBus1',
       name: 'Average Field Bus',
-      type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combine: { when: 'multi', mode: 'average' },
+      type: { world: 'field', domain: 'number', category: 'core', busEligible: true },
+      combineMode: 'average',
       defaultValue: 0,
       sortKey: 0,
     };
@@ -460,7 +450,7 @@ describe('Field Bus Compilation', () => {
 
   it('supports "max" combine mode for Field buses', () => {
     const blocks = [
-      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 5 } },
       { id: 'source2', type: 'FieldNumberSource', params: { value: 0 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
@@ -469,8 +459,8 @@ describe('Field Bus Compilation', () => {
     const fieldBus: Bus = {
       id: 'fieldBus1',
       name: 'Max Field Bus',
-      type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combine: { when: 'multi', mode: 'max' },
+      type: { world: 'field', domain: 'number', category: 'core', busEligible: true },
+      combineMode: 'max',
       defaultValue: 0,
       sortKey: 0,
     };
@@ -509,7 +499,7 @@ describe('Field Bus Compilation', () => {
 
   it('supports "min" combine mode for Field buses', () => {
     const blocks = [
-      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
       { id: 'source1', type: 'FieldNumberSource', params: { value: 5 } },
       { id: 'source2', type: 'FieldNumberSource', params: { value: 0 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
@@ -518,8 +508,8 @@ describe('Field Bus Compilation', () => {
     const fieldBus: Bus = {
       id: 'fieldBus1',
       name: 'Min Field Bus',
-      type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combine: { when: 'multi', mode: 'min' },
+      type: { world: 'field', domain: 'number', category: 'core', busEligible: true },
+      combineMode: 'min',
       defaultValue: 0,
       sortKey: 0,
     };
@@ -572,15 +562,15 @@ describe('Mixed Signal and Field Buses', () => {
       PhaseSource: {
         type: 'PhaseSource',
         inputs: [],
-        outputs: [{ name: 'phase', type: { kind: 'Signal:float' }, required: true }],
+        outputs: [{ name: 'phase', type: { kind: 'Signal:number' }, required: true }],
         compile: () => ({
-          phase: { kind: 'Signal:float', value: (t: number) => (t / 1000) % 1 },
+          phase: { kind: 'Signal:number', value: (t: number) => (t / 1000) % 1 },
         }),
       },
     };
 
     const blocks = [
-      { id: 'timeroot', type: 'InfiniteTimeRoot', params: { periodMs: 3000 } },
+      { id: 'timeroot', type: 'CycleTimeRoot', params: { periodMs: 3000 } },
       { id: 'phaseSource', type: 'PhaseSource', params: {} },
       { id: 'fieldSource', type: 'FieldNumberSource', params: { value: 10 } },
       { id: 'sink1', type: 'FieldSink', params: {} },
@@ -589,8 +579,8 @@ describe('Mixed Signal and Field Buses', () => {
     const phaseBus: Bus = {
       id: 'phaseA',
       name: 'Phase A',
-      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
-      combine: { when: 'multi', mode: 'last' },
+      type: { world: 'signal', domain: 'phase01', category: 'core', busEligible: true },
+      combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
     };
@@ -598,8 +588,8 @@ describe('Mixed Signal and Field Buses', () => {
     const positionBus: Bus = {
       id: 'positions',
       name: 'Positions',
-      type: { world: 'field', domain: 'float', category: 'core', busEligible: true },
-      combine: { when: 'multi', mode: 'last' },
+      type: { world: 'field', domain: 'number', category: 'core', busEligible: true },
+      combineMode: 'last',
       defaultValue: 0,
       sortKey: 0,
     };

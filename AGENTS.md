@@ -292,24 +292,13 @@ export const MacroMyEffect = createMacro({
   connections: [
     // Wire blocks together (uses 'ref' from blocks array)
     { fromRef: 'clock', fromSlot: 'phase', toRef: 'osc', toSlot: 'phase' },
-  ],
-  publishers: [
-    // Optional: publish block outputs to buses
-    { fromRef: 'clock', fromSlot: 'phase', busName: 'phaseA' },
-  ],
-  listeners: [
-    // Optional: subscribe block inputs to buses (with optional lens)
-    { busName: 'phaseA', toRef: 'render', toSlot: 'radius',
-      lens: { type: 'scale', params: { scale: 10, offset: 2 } } },
-  ],
+  ]
 },
 ```
 
 **Key Interfaces:**
 - `MacroBlock`: `{ ref, type, laneKind, label?, params? }`
 - `MacroConnection`: `{ fromRef, fromSlot, toRef, toSlot }`
-- `MacroPublisher`: `{ fromRef, fromSlot, busName }`
-- `MacroListener`: `{ busName, toRef, toSlot, lens? }`
 
 **How Expansion Works:**
 When user adds a macro block, `PatchStore.addBlock()` calls `expandMacro()` which:
@@ -463,7 +452,6 @@ RootStore
 - `patchStore.blocks` - All block instances
 - `busStore.buses` - All bus definitions
 - `busStore.publishers` - Block->Bus connections
-- `busStore.listeners` - Bus->Block connections
 
 ---
 
@@ -475,3 +463,29 @@ RootStore
 - Utilities: camelCase `.ts`
 - Tests: `*.test.ts` in `__tests__/` directories
 Use Chrome DevTools MCP to verify rather than running the tests.  the tests are NOT a good indication that the code is working
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds

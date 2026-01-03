@@ -14,30 +14,46 @@ import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 /**
  * Lower DSConstSignalFloat to IR.
- * Pure pass-through: out = value.
+ *
+ * DSConst blocks work in two modes:
+ * 1. Provider mode: No input connection, value comes from params.value
+ * 2. Pass-through mode: Has input connection, passes it through
+ *
+ * Signals are time-indexed values, but for constants we just emit sigConst.
  */
-const lowerDSConstSignalFloat: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
-  const value = inputsById?.value ?? inputs[0]; // Signal<float>
+const lowerDSConstSignalFloat: BlockLowerFn = ({ ctx, inputs, inputsById, config }) => {
+  const inputValue = inputsById?.value ?? inputs[0];
 
-  if (value.k !== 'sig') {
-    throw new Error(`DSConstSignalFloat: expected sig input for value, got ${value.k}`);
+  // If we have a valid input, pass it through
+  if (inputValue !== undefined && inputValue.k === 'sig') {
+    const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'DSConstSignalFloat_out');
+    return {
+      outputs: [],
+      outputsById: { out: { k: 'sig', id: inputValue.id, slot } },
+    };
   }
 
-  const slot = ctx.b.allocValueSlot();
+  // Provider mode: use config.value (set by pass0-materialize or user params)
+  const params = config as { value?: number } | undefined;
+  const rawValue = params?.value ?? 0;
+  const type = ctx.outTypes[0];
+  const sigId = ctx.b.sigConst(rawValue, type);
+  const slot = ctx.b.allocValueSlot(type, 'DSConstSignalFloat_out');
+  ctx.b.registerSigSlot(sigId, slot);
 
-  // Pass-through: output is same as input
   return {
-    outputs: [], // Legacy - empty for fully migrated blocks
-    outputsById: { out: { k: 'sig', id: value.id, slot } },
+    outputs: [],
+    outputsById: { out: { k: 'sig', id: sigId, slot } },
   };
 };
 
 // Register block type for IR lowering
+// Note: No defaultSource on value input - DSConst blocks read from params directly
 registerBlockType({
   type: 'DSConstSignalFloat',
   capability: 'pure',
   inputs: [
-    { portId: 'value', label: 'Value', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, defaultSource: { value: 0 } },
+    { portId: 'value', label: 'Value', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, optional: true },
   ],
   outputs: [
     { portId: 'out', label: 'Output', dir: 'out', type: { world: "signal", domain: "float", category: "core", busEligible: true } },

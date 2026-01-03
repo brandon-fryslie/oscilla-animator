@@ -4,7 +4,8 @@
  * - Structure validity
  * - Block type references
  * - Connection integrity
- * - Bus publisher/listener validity
+ *
+ * NOTE: Publisher/listener validation removed after transform unification
  */
 
 import { describe, it, expect } from 'vitest';
@@ -52,40 +53,17 @@ describe('Macro Registry Validation', () => {
         it('should have valid connections', () => {
           const expansion = MACRO_REGISTRY[macroKey];
           const blockRefs = new Set(expansion.blocks.map(b => b.ref));
-          
+
           expansion.connections.forEach((conn) => {
-            expect(blockRefs.has(conn.fromRef), 
+            expect(blockRefs.has(conn.fromRef),
               `Connection fromRef "${conn.fromRef}" not found in blocks`).toBe(true);
-            expect(blockRefs.has(conn.toRef), 
+            expect(blockRefs.has(conn.toRef),
               `Connection toRef "${conn.toRef}" not found in blocks`).toBe(true);
           });
         });
 
-        it('should have valid publishers if present', () => {
-          const expansion = MACRO_REGISTRY[macroKey];
-          if (expansion.publishers) {
-            const blockRefs = new Set(expansion.blocks.map(b => b.ref));
-            expansion.publishers.forEach((pub) => {
-              expect(blockRefs.has(pub.fromRef), 
-                `Publisher fromRef "${pub.fromRef}" not found`).toBe(true);
-              expect(pub.busName).toBeDefined();
-              expect(pub.fromSlot).toBeDefined();
-            });
-          }
-        });
-
-        it('should have valid listeners if present', () => {
-          const expansion = MACRO_REGISTRY[macroKey];
-          if (expansion.listeners) {
-            const blockRefs = new Set(expansion.blocks.map(b => b.ref));
-            expansion.listeners.forEach((listener) => {
-              expect(blockRefs.has(listener.toRef), 
-                `Listener toRef "${listener.toRef}" not found`).toBe(true);
-              expect(listener.busName).toBeDefined();
-              expect(listener.toSlot).toBeDefined();
-            });
-          }
-        });
+        // DELETED: Publisher/listener validation (removed in transform unification)
+        // MacroExpansion no longer has publishers/listeners fields
 
         it('should have at least one render block', () => {
           const expansion = MACRO_REGISTRY[macroKey];
@@ -138,40 +116,16 @@ describe('Macro Registry Validation', () => {
         it('should have valid connections', () => {
           const expansion = MACRO_REGISTRY[macroKey];
           const blockRefs = new Set(expansion.blocks.map(b => b.ref));
-          
+
           expansion.connections.forEach((conn) => {
-            expect(blockRefs.has(conn.fromRef), 
+            expect(blockRefs.has(conn.fromRef),
               `Connection fromRef "${conn.fromRef}" not found in blocks`).toBe(true);
-            expect(blockRefs.has(conn.toRef), 
+            expect(blockRefs.has(conn.toRef),
               `Connection toRef "${conn.toRef}" not found in blocks`).toBe(true);
           });
         });
 
-        it('should have valid publishers if present', () => {
-          const expansion = MACRO_REGISTRY[macroKey];
-          if (expansion.publishers) {
-            const blockRefs = new Set(expansion.blocks.map(b => b.ref));
-            expansion.publishers.forEach((pub) => {
-              expect(blockRefs.has(pub.fromRef), 
-                `Publisher fromRef "${pub.fromRef}" not found`).toBe(true);
-              expect(pub.busName).toBeDefined();
-              expect(pub.fromSlot).toBeDefined();
-            });
-          }
-        });
-
-        it('should have valid listeners if present', () => {
-          const expansion = MACRO_REGISTRY[macroKey];
-          if (expansion.listeners) {
-            const blockRefs = new Set(expansion.blocks.map(b => b.ref));
-            expansion.listeners.forEach((listener) => {
-              expect(blockRefs.has(listener.toRef), 
-                `Listener toRef "${listener.toRef}" not found`).toBe(true);
-              expect(listener.busName).toBeDefined();
-              expect(listener.toSlot).toBeDefined();
-            });
-          }
-        });
+        // DELETED: Publisher/listener validation (removed in transform unification)
 
         it('should have at least one render block', () => {
           const expansion = MACRO_REGISTRY[macroKey];
@@ -186,22 +140,12 @@ describe('Macro Registry Validation', () => {
     describe('macro:goldenPatch (comprehensive)', () => {
       it('should be the most complex macro', () => {
         const golden = MACRO_REGISTRY['macro:goldenPatch'];
-        
+
         // Golden patch should be among the most complex
         expect(golden.blocks.length).toBeGreaterThan(10);
       });
 
-      it('should publish to all canonical buses', () => {
-        const golden = MACRO_REGISTRY['macro:goldenPatch'];
-        const publishedBuses = new Set(golden.publishers?.map(p => p.busName) || []);
-        
-    // phaseA is listened to, not published
-    expect(publishedBuses.has('phaseA')).toBe(false);
-    // pulse is not published by goldenPatch
-    expect(publishedBuses.has('pulse')).toBe(false);
-        expect(publishedBuses.has('energy')).toBe(true);
-        expect(publishedBuses.has('palette')).toBe(true);
-      });
+      // DELETED: Bus publication test (publishers field removed)
     });
   });
 

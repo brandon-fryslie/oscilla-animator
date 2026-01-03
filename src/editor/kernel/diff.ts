@@ -48,57 +48,20 @@ export function generateDiff(ops: readonly Op[]): DiffSummary {
 
       // Wire Ops
       case 'WireAdd':
-        diff.created = [...diff.created, { kind: 'wire', id: op.connection.id }];
+        diff.created = [...diff.created, { kind: 'wire', id: op.edge.id }];
         kinds.add('structural');
         break;
       case 'WireRemove':
-        diff.removed = [...diff.removed, { kind: 'wire', id: op.connectionId }];
+        diff.removed = [...diff.removed, { kind: 'wire', id: op.edgeId }];
         kinds.add('structural');
         break;
       case 'WireRetarget':
-        diff.updated = [...diff.updated, { ref: { kind: 'wire', id: op.connectionId }, keys: ['from', 'to'] }];
+        diff.updated = [...diff.updated, { ref: { kind: 'wire', id: op.edgeId }, keys: ['from', 'to'] }];
         kinds.add('structural');
         break;
 
-      // Bus Ops
-      case 'BusAdd':
-        diff.created = [...diff.created, { kind: 'bus', id: op.bus.id }];
-        kinds.add('structural');
-        break;
-      case 'BusRemove':
-        diff.removed = [...diff.removed, { kind: 'bus', id: op.busId }];
-        kinds.add('structural');
-        break;
-      case 'BusUpdate':
-        diff.updated = [...diff.updated, { ref: { kind: 'bus', id: op.busId }, keys: Object.keys(op.patch) }];
-        kinds.add('structural');
-        break;
-
-      // Binding Ops
-      case 'PublisherAdd':
-        diff.created = [...diff.created, { kind: 'publisher', id: op.publisher.id }];
-        kinds.add('structural');
-        break;
-      case 'PublisherRemove':
-        diff.removed = [...diff.removed, { kind: 'publisher', id: op.publisherId }];
-        kinds.add('structural');
-        break;
-      case 'PublisherUpdate':
-        diff.updated = [...diff.updated, { ref: { kind: 'publisher', id: op.publisherId }, keys: Object.keys(op.patch) }];
-        kinds.add('param'); // Often enabling/disabling or sorting
-        break;
-      case 'ListenerAdd':
-        diff.created = [...diff.created, { kind: 'listener', id: op.listener.id }];
-        kinds.add('structural');
-        break;
-      case 'ListenerRemove':
-        diff.removed = [...diff.removed, { kind: 'listener', id: op.listenerId }];
-        kinds.add('structural');
-        break;
-      case 'ListenerUpdate':
-        diff.updated = [...diff.updated, { ref: { kind: 'listener', id: op.listenerId }, keys: Object.keys(op.patch) }];
-        kinds.add('param'); // Lens changes are params
-        break;
+      // Bus Ops - REMOVED (buses are now BusBlocks, use BlockAdd/BlockRemove)
+      // Publisher/Listener Ops - REMOVED (use WireAdd/WireRemove for Edges)
 
       // Composite Ops
       case 'CompositeDefAdd':

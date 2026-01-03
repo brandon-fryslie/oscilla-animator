@@ -182,23 +182,23 @@ export class EmphasisStore {
 
   /**
    * Compute blocks related to the given block (upstream + downstream).
-   * Uses direct connections for now. Will integrate bus dependencies later.
+   * Uses direct edges for now. Will integrate bus dependencies later.
    */
   private computeRelatedBlocks(blockId: string): string[] {
     const related = new Set<string>();
 
     // Upstream: blocks that feed into this block
-    const connections = this.root.patchStore.connections;
-    for (const conn of connections) {
-      if (conn.to.blockId === blockId) {
-        related.add(conn.from.blockId);
+    const patchEdges = this.root.patchStore.edges;
+    for (const edge of patchEdges) {
+      if (edge.to.blockId === blockId) {
+        related.add(edge.from.blockId);
       }
     }
 
     // Downstream: blocks that this block feeds into
-    for (const conn of connections) {
-      if (conn.from.blockId === blockId) {
-        related.add(conn.to.blockId);
+    for (const edge of patchEdges) {
+      if (edge.from.blockId === blockId) {
+        related.add(edge.to.blockId);
       }
     }
 
@@ -213,38 +213,50 @@ export class EmphasisStore {
     edges: EdgeId[];
   } {
     const ports: PortRefString[] = [];
-    const edges: EdgeId[] = [];
+    const edgeIds: EdgeId[] = [];
 
-    const connections = this.root.patchStore.connections;
-    for (const conn of connections) {
-      if (conn.from.blockId === blockId || conn.to.blockId === blockId) {
-        ports.push(`${conn.from.blockId}:${conn.from.slotId}`);
-        ports.push(`${conn.to.blockId}:${conn.to.slotId}`);
-        edges.push(
-          `${conn.from.blockId}:${conn.from.slotId}->${conn.to.blockId}:${conn.to.slotId}`
+    const patchEdges = this.root.patchStore.edges;
+    for (const edge of patchEdges) {
+      if (edge.from.blockId === blockId || edge.to.blockId === blockId) {
+        ports.push(`${edge.from.blockId}:${edge.from.slotId}`);
+        ports.push(`${edge.to.blockId}:${edge.to.slotId}`);
+        edgeIds.push(
+          `${edge.from.blockId}:${edge.from.slotId}->${edge.to.blockId}:${edge.to.slotId}`
         );
       }
     }
 
-    return { ports, edges };
+    return { ports, edges: edgeIds };
   }
 
   /**
-   * Compute blocks related to the given bus (publishers + subscribers).
+   * Compute blocks related to the given bus.
+   *
+   * Bus-Block Unification: Finds blocks connected to/from the BusBlock.
+   * - Edges TO BusBlock = publishers (blocks sending to bus)
+   * - Edges FROM BusBlock = listeners (blocks receiving from bus)
    */
   private computeBusRelatedBlocks(busId: string): string[] {
     const related = new Set<string>();
 
-    // Publishers
-    const publishers = this.root.busStore.publishers.filter(p => p.busId === busId);
-    for (const pub of publishers) {
-      related.add(pub.from.blockId);
+    // Find the BusBlock for this bus (block ID = bus ID)
+    const busBlock = this.root.patchStore.busBlocks.find(b => b.id === busId);
+    if (busBlock === undefined) return [];
+
+    const patchEdges = this.root.patchStore.edges;
+
+    // Blocks connected TO the BusBlock (publishers)
+    for (const edge of patchEdges) {
+      if (edge.to.blockId === busBlock.id) {
+        related.add(edge.from.blockId);
+      }
     }
 
-    // Subscribers
-    const listeners = this.root.busStore.listeners.filter(l => l.busId === busId);
-    for (const listener of listeners) {
-      related.add(listener.to.blockId);
+    // Blocks connected FROM the BusBlock (listeners)
+    for (const edge of patchEdges) {
+      if (edge.from.blockId === busBlock.id) {
+        related.add(edge.to.blockId);
+      }
     }
 
     return Array.from(related);
@@ -252,28 +264,44 @@ export class EmphasisStore {
 
   /**
    * Compute ports and edges related to the given bus.
+   *
+   * Bus-Block Unification: Traces edges to/from BusBlock.
    */
   private computeBusRelatedPortsAndEdges(busId: string): {
     ports: PortRefString[];
     edges: EdgeId[];
   } {
     const ports: PortRefString[] = [];
-    const edges: EdgeId[] = [];
+    const edgeIds: EdgeId[] = [];
 
-    // Publishers
-    const publishers = this.root.busStore.publishers.filter(p => p.busId === busId);
-    for (const pub of publishers) {
-      ports.push(`${pub.from.blockId}:${pub.from.slotId}`);
+    // Find the BusBlock for this bus (block ID = bus ID)
+    const busBlock = this.root.patchStore.busBlocks.find(b => b.id === busId);
+    if (busBlock === undefined) return { ports, edges: edgeIds };
+
+    const patchEdges = this.root.patchStore.edges;
+
+    // Edges TO the BusBlock (publishers)
+    for (const edge of patchEdges) {
+      if (edge.to.blockId === busBlock.id) {
+        ports.push(`${edge.from.blockId}:${edge.from.slotId}`);
+        ports.push(`${edge.to.blockId}:${edge.to.slotId}`);
+        edgeIds.push(
+          `${edge.from.blockId}:${edge.from.slotId}->${edge.to.blockId}:${edge.to.slotId}`
+        );
+      }
     }
 
-    // Subscribers
-    const listeners = this.root.busStore.listeners.filter(l => l.busId === busId);
-    for (const listener of listeners) {
-      ports.push(`${listener.to.blockId}:${listener.to.slotId}`);
+    // Edges FROM the BusBlock (listeners)
+    for (const edge of patchEdges) {
+      if (edge.from.blockId === busBlock.id) {
+        ports.push(`${edge.from.blockId}:${edge.from.slotId}`);
+        ports.push(`${edge.to.blockId}:${edge.to.slotId}`);
+        edgeIds.push(
+          `${edge.from.blockId}:${edge.from.slotId}->${edge.to.blockId}:${edge.to.slotId}`
+        );
+      }
     }
 
-    // No direct edges for bus bindings (visual representation different)
-
-    return { ports, edges };
+    return { ports, edges: edgeIds };
   }
 }

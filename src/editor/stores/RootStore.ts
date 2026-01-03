@@ -4,7 +4,6 @@
  */
 import { makeObservable, computed, action, runInAction } from 'mobx';
 import { PatchStore } from './PatchStore';
-import { BusStore } from './BusStore';
 import { UIStateStore } from './UIStateStore';
 import { ViewStateStore } from './ViewStateStore';
 import { CompositeStore } from './CompositeStore';
@@ -24,7 +23,6 @@ import { DebugUIStore } from './DebugUIStore';
 import { Kernel } from '../kernel/PatchKernel';
 import type { PatchKernel } from '../kernel/types';
 import type { Block, Bus, Composite, Patch, Slot } from '../types';
-import { convertBusToBlock } from '../bus-block/conversion';
 
 export class RootStore {
   // Event dispatcher (created first so stores can set up listeners)
@@ -35,7 +33,6 @@ export class RootStore {
 
   // Stores
   patchStore: PatchStore;
-  busStore: BusStore;
   uiStore: UIStateStore;
   viewStore: ViewStateStore;
   compositeStore: CompositeStore;
@@ -73,10 +70,7 @@ export class RootStore {
     const initialPatch: Patch = {
       version: 2,
       blocks: [],
-      connections: [],
-      buses: [],
-      publishers: [],
-      listeners: [],
+      edges: [],
       defaultSources: [],
       settings: {
         seed: 0,
@@ -92,7 +86,6 @@ export class RootStore {
 
     // Create domain stores
     this.patchStore = new PatchStore(this);
-    this.busStore = new BusStore(this);
     this.uiStore = new UIStateStore(this);
     this.viewStore = new ViewStateStore(this);
     this.compositeStore = new CompositeStore(this);
@@ -110,7 +103,7 @@ export class RootStore {
 
     // Create diagnostic infrastructure (after patchStore)
     this.diagnosticHub = new DiagnosticHub(this.events, this.patchStore);
-    this.diagnosticStore = new DiagnosticStore(this.diagnosticHub);
+    this.diagnosticStore = new DiagnosticStore(this.diagnosticHub, this);
 
         // Create action executor (after stores and diagnostic hub)
 
@@ -135,9 +128,9 @@ export class RootStore {
       loadDemoAnimation: action,
     });
 
-    // Initialize default buses for a new patch
-    this.busStore.createDefaultBuses();
-
+    // Reset history (Sprint 3: Bus-Block Unification)
+    // This ensures tests start from a clean history state at revision 0
+    this.historyStore.reset();
     // Wire up event listeners
     this.setupEventListeners();
   }
@@ -214,29 +207,9 @@ export class RootStore {
       // Kernel.doc is actually a full Patch, safe to cast
       const patch = this.kernel.doc as unknown as Patch;
 
-      // Sync blocks (excluding BusBlocks - they come from buses array)
-      const nonBusBlocks = patch.blocks.filter(b => b.type !== 'BusBlock');
-      this.patchStore.blocks = nonBusBlocks.map(b => ({ ...b }));
-
-      // Sync buses → BusBlocks
-      if (patch.buses !== null && patch.buses !== undefined && patch.buses.length > 0) {
-        const busBlocks = patch.buses.map(convertBusToBlock);
-        // Add busBlocks to patchStore.blocks
-        this.patchStore.blocks = [...this.patchStore.blocks, ...busBlocks];
-      }
-
-      // Sync connections
-      this.patchStore.connections = patch.connections.map(c => ({ ...c }));
-
-      // Sync publishers
-      if (patch.publishers !== null && patch.publishers !== undefined && patch.publishers.length > 0) {
-        this.busStore.publishers = patch.publishers.map(p => ({ ...p }));
-      }
-
-      // Sync listeners
-      if (patch.listeners !== null && patch.listeners !== undefined && patch.listeners.length > 0) {
-        this.busStore.listeners = patch.listeners.map(l => ({ ...l }));
-      }
+      // Sync blocks and edges
+      this.patchStore.blocks = patch.blocks.map(b => ({ ...b }));
+      this.patchStore.edges = patch.edges.map(e => ({ ...e }));
 
       // Note: defaultSources are not in kernel yet
       // They remain in their respective stores for now
@@ -254,9 +227,9 @@ export class RootStore {
   }
 
   get selectedBus(): Bus | null {
-    const { selectedBusId } = this.uiStore.uiState;
-    if (selectedBusId === null || selectedBusId === undefined) return null;
-    return this.busStore.buses.find((b) => b.id === selectedBusId) ?? null;
+    // DELETED: BusStore removed. Buses are now BusBlocks.
+    // TODO: Remove this computed entirely - use selectionStore.selectedBusBlock instead
+    return null;
   }
 
   get selectedPortInfo(): { block: Block; slot: Slot; direction: 'input' | 'output' } | null {
@@ -281,10 +254,7 @@ export class RootStore {
     return {
       version: 2,
       blocks: this.patchStore.blocks.map((b) => ({ ...b })),
-      connections: this.patchStore.connections.map((c) => ({ ...c })),
-      buses: this.busStore.buses.map((b) => ({ ...b })),
-      publishers: this.busStore.publishers.map((p) => ({ ...p })),
-      listeners: this.busStore.listeners.map((l) => ({ ...l })),
+      edges: this.patchStore.edges.map((e) => ({ ...e })),
       defaultSources: Array.from(this.defaultSourceStore.sources.values()).map((s) => ({ ...s })),
       defaultSourceAttachments: Array.from(this.defaultSourceStore.attachmentsByTarget.values()),
       settings: {
@@ -293,22 +263,13 @@ export class RootStore {
     };
   }
 
-    loadPatch(patch: Patch): void {
+  loadPatch(patch: Patch): void {
     // Load into kernel first
     this.kernel = new Kernel(patch);
 
-    // Sync blocks (excluding BusBlocks - they come from buses array below)
-    const nonBusBlocks = patch.blocks.filter(b => b.type !== 'BusBlock');
-    this.patchStore.blocks = nonBusBlocks.map((block) => ({ ...block }));
-
-    // Convert legacy buses to BusBlocks and add to patchStore
-    if (patch.buses !== null && patch.buses !== undefined && patch.buses.length > 0) {
-      const busBlocks = patch.buses.map(convertBusToBlock);
-      this.patchStore.blocks = [...this.patchStore.blocks, ...busBlocks];
-    }
-
-    // Sync connections
-    this.patchStore.connections = patch.connections.map((connection) => ({ ...connection }));
+    // Sync blocks and edges
+    this.patchStore.blocks = patch.blocks.map((block) => ({ ...block }));
+    this.patchStore.edges = patch.edges.map((edge) => ({ ...edge }));
 
     // Load settings
     this.uiStore.settings = {
@@ -320,10 +281,6 @@ export class RootStore {
       warnBeforeDisconnect: patch.settings.warnBeforeDisconnect ?? true,
       filterByConnection: patch.settings.filterByConnection ?? false,
     };
-
-    // Load publishers/listeners (still in BusStore)
-    this.busStore.publishers = patch.publishers.map((publisher) => ({ ...publisher }));
-    this.busStore.listeners = patch.listeners.map((listener) => ({ ...listener }));
 
     this.defaultSourceStore.load(patch.defaultSources);
 
@@ -341,9 +298,7 @@ export class RootStore {
       this.defaultSourceStore.rebuildAttachmentsFromBlocks();
     }
 
-    // Create default buses if none exist in loaded patch
-    this.busStore.createDefaultBuses();
-
+    this.historyStore.reset();
     // Load legacy composites if present
     type PatchWithComposites = Patch & { composites?: Composite[] };
     const patchWithComposites = patch as PatchWithComposites;
@@ -358,21 +313,21 @@ export class RootStore {
       const parsed = parseInt(b.id.split('-')[1], 10);
       return Number.isNaN(parsed) ? 0 : parsed;
     });
-    const connectionIds = this.patchStore.connections.map((c) => {
-      const parsed = parseInt(c.id.split('-')[1], 10);
+    const edgeIds = this.patchStore.edges.map((e) => {
+      const parsed = parseInt(e.id.split('-')[1], 10);
       return Number.isNaN(parsed) ? 0 : parsed;
     });
     const hasBlockIds = blockIds.length > 0;
-    const hasConnectionIds = connectionIds.length > 0;
-    const hasIds = hasBlockIds || hasConnectionIds;
-    const maxId = hasIds ? Math.max(...blockIds, ...connectionIds) : 0;
+    const hasEdgeIds = edgeIds.length > 0;
+    const hasIds = hasBlockIds || hasEdgeIds;
+    const maxId = hasIds ? Math.max(...blockIds, ...edgeIds) : 0;
     this.nextId = maxId + 1;
 
     // Emit PatchLoaded event AFTER all state changes committed
     this.events.emit({
       type: 'PatchLoaded',
       blockCount: this.patchStore.blocks.length,
-      connectionCount: this.patchStore.connections.length,
+      connectionCount: this.patchStore.edges.length,
     });
   }
 
@@ -381,10 +336,7 @@ export class RootStore {
     const emptyPatch: Patch = {
       version: 2,
       blocks: [],
-      connections: [],
-      buses: [],
-      publishers: [],
-      listeners: [],
+      edges: [],
       defaultSources: [],
       settings: this.uiStore.settings,
     };
@@ -392,17 +344,12 @@ export class RootStore {
 
     // Clear MobX observables
     this.patchStore.blocks = [];
-    this.patchStore.connections = [];
-    // buses are now computed from patchStore.blocks, so clearing blocks clears buses
-    this.busStore.publishers = [];
-    this.busStore.listeners = [];
+    this.patchStore.edges = [];
     this.uiStore.uiState.selectedBlockId = null;
     this.uiStore.previewedDefinition = null;
 
-    // Create default buses for new empty patch
-    this.busStore.createDefaultBuses();
-
     // Emit PatchCleared event AFTER state changes committed
+    this.historyStore.reset();
     this.events.emit({ type: 'PatchCleared' });
   }
 
@@ -410,5 +357,65 @@ export class RootStore {
     // Load demo animation by expanding the rainbowGrid macro
     this.clearPatch();
     this.patchStore.addBlock('macro:rainbowGrid', {});
+  }
+
+  /**
+   * DEV: Load minimal steel thread test patch.
+   * Creates: TimeRoot + Domain + Positions + Color + RenderInstances2D
+   */
+  loadSteelThreadTest(): void {
+    console.log('[RootStore] Loading steel thread test patch...');
+    this.clearPatch();
+
+    // Add blocks for minimal render chain
+    const timeRoot = this.patchStore.addBlock('InfiniteTimeRoot', {});
+    const domain = this.patchStore.addBlock('DomainN', { n: 25 });
+    const positions = this.patchStore.addBlock('PositionMapGrid', { cols: 5, spacing: 40 });
+    const color = this.patchStore.addBlock('FieldConstColor', { value: '#ff6600' });
+    const radius = this.patchStore.addBlock('FieldConstNumber', { value: 15 });
+    const opacity = this.patchStore.addBlock('SignalConst', { value: 1.0 });
+    const render = this.patchStore.addBlock('RenderInstances2D', {});
+
+    console.log('[RootStore] Created blocks:', { timeRoot, domain, positions, color, radius, opacity, render });
+
+    // Wire them up
+    this.patchStore.addEdge({
+      id: 'wire-1',
+      from: { kind: 'port', blockId: domain, slotId: 'domain' },
+      to: { kind: 'port', blockId: positions, slotId: 'domain' },
+      enabled: true,
+    });
+    this.patchStore.addEdge({
+      id: 'wire-2',
+      from: { kind: 'port', blockId: positions, slotId: 'pos' },
+      to: { kind: 'port', blockId: render, slotId: 'positions' },
+      enabled: true,
+    });
+    this.patchStore.addEdge({
+      id: 'wire-3',
+      from: { kind: 'port', blockId: domain, slotId: 'domain' },
+      to: { kind: 'port', blockId: render, slotId: 'domain' },
+      enabled: true,
+    });
+    this.patchStore.addEdge({
+      id: 'wire-4',
+      from: { kind: 'port', blockId: color, slotId: 'out' },
+      to: { kind: 'port', blockId: render, slotId: 'color' },
+      enabled: true,
+    });
+    this.patchStore.addEdge({
+      id: 'wire-5',
+      from: { kind: 'port', blockId: radius, slotId: 'out' },
+      to: { kind: 'port', blockId: render, slotId: 'radius' },
+      enabled: true,
+    });
+    this.patchStore.addEdge({
+      id: 'wire-6',
+      from: { kind: 'port', blockId: opacity, slotId: 'out' },
+      to: { kind: 'port', blockId: render, slotId: 'opacity' },
+      enabled: true,
+    });
+
+    console.log('[RootStore] Steel thread patch loaded with', this.patchStore.blocks.length, 'blocks and', this.patchStore.edges.length, 'edges');
   }
 }

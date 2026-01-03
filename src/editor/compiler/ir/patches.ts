@@ -12,7 +12,7 @@
  * - design-docs/12-Compiler-Final/02-IR-Schema.md
  */
 
-import type { TypeDesc, BusIndex, SigExprId } from "./types";
+import type { TypeDesc, SigExprId } from "./types";
 import type { TimeModelIR } from "./schedule";
 import type { Edge } from "../../types";
 
@@ -48,142 +48,91 @@ export interface DefaultSourceAttachment {
 
   /** Constant pool reference for the default value */
   readonly constId: ConstId;
-
-  /** Type of the default value */
-  readonly type: TypeDesc;
 }
 
 // =============================================================================
-// NormalizedPatch - Output of Pass 1
+// Normalized Patch - Pass 1
 // =============================================================================
 
 /**
- * NormalizedPatch - output of Pass 1.
+ * Normalized patch representation.
  *
- * A structurally well-formed patch with:
- * - Frozen block ID -> BlockIndex mapping
- * - Default sources attached to unwired inputs
- * - Canonicalized publishers/listeners (sorted, enabled only)
- *
- * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
- * During migration, this supports both the new unified `edges` field and the
- * legacy separate arrays (wires, publishers, listeners) for backward compatibility.
- *
- * This is a generic interface that works with the existing Patch types.
+ * Normalization establishes:
+ * 1. Stable BlockIndex assignments (frozen block ordering)
+ * 2. Const pool with default source values
+ * 3. Default source attachments for unwired inputs
  */
-export interface NormalizedPatch<
-  TBlock = unknown,
-  TConnection = unknown,
-  TPublisher = unknown,
-  TListener = unknown,
-  TBus = unknown,
-> {
-  /** Stable mapping from BlockId to BlockIndex */
-  readonly blockIndexMap: Map<string, BlockIndex>;
+export interface NormalizedPatch {
+  /** Stable block indexing (frozen) */
+  readonly blockIndexMap: ReadonlyMap<string, BlockIndex>;
 
-  /** All blocks (order preserved from original patch) */
-  readonly blocks: readonly TBlock[];
+  /** Edges from the original patch (includes wires + bus connections) */
+  readonly edges: readonly Edge[];
 
-  /**
-   * Unified edges (Sprint 1: Phase 0 Architecture Refactoring)
-   * When present, this is the authoritative source for all connections.
-   * Compiler passes should prefer this over the legacy arrays below.
-   */
-  readonly edges?: readonly Edge[];
+  /** Default source attachments for unwired inputs */
+  readonly defaults: readonly DefaultSourceAttachment[];
 
-  /**
-   * All wires/connections
-   * @deprecated Use edges instead. Maintained for backward compatibility.
-   */
-  readonly wires: readonly TConnection[];
+  /** Const pool entries */
+  readonly constPool: ReadonlyMap<ConstId, unknown>;
 
-  /**
-   * Canonicalized publishers (enabled, sorted by sortKey)
-   * @deprecated Use edges instead. Maintained for backward compatibility.
-   */
-  readonly publishers: readonly TPublisher[];
+  // Forward the full patch for later passes
+  readonly blocks: ReadonlyMap<string, unknown>; // opaque block data
 
-  /**
-   * Canonicalized listeners (enabled)
-   * @deprecated Use edges instead. Maintained for backward compatibility.
-   */
-  readonly listeners: readonly TListener[];
-
-  /** Bus definitions */
-  readonly buses: readonly TBus[];
-
-  /** Default sources for unwired inputs */
-  readonly defaultSources: readonly DefaultSourceAttachment[];
+  // Thread through buses and publishers/listeners (legacy until bus-block unification)
+  readonly buses?: ReadonlyMap<string, unknown>;
+  readonly publishers?: readonly unknown[];
+  readonly listeners?: readonly unknown[];
 }
 
 // =============================================================================
-// TypedPatch - Output of Pass 2
+// Typed Patch - Pass 2
 // =============================================================================
 
 /**
- * TypedPatch - output of Pass 2.
+ * Typed patch with resolved types for all edges and defaults.
  *
- * All slots and buses have TypeDesc assigned.
- * Conversion paths precomputed for type mismatches.
+ * Pass 2 resolves TypeDesc for every connection and validates type compatibility.
  */
-export interface TypedPatch<
-  TBlock = unknown,
-  TConnection = unknown,
-  TPublisher = unknown,
-  TListener = unknown,
-  TBus = unknown,
-> extends NormalizedPatch<TBlock, TConnection, TPublisher, TListener, TBus> {
-  /** Type descriptor for each bus */
-  readonly busTypes: Map<string, TypeDesc>;
+export interface TypedPatch extends NormalizedPatch {
+  /** Type descriptors for each block output */
+  readonly blockOutputTypes: ReadonlyMap<string, ReadonlyMap<string, TypeDesc>>;
 
-  /**
-   * Conversion paths for edges that need type adaptation.
-   * Keyed by edge ID when using unified edges, or by TConnection when using legacy format.
-   */
-  readonly conversionPaths: Map<TConnection | string, readonly string[]>;
+  /** Type descriptors for bus outputs (if any buses exist) */
+  readonly busOutputTypes?: ReadonlyMap<string, TypeDesc>;
 }
 
 // =============================================================================
-// TimeResolvedPatch - Output of Pass 3
+// Time-Resolved Patch - Pass 3
 // =============================================================================
 
 /**
- * Canonical time signals created by Pass 3.
- */
-export interface TimeSignals {
-  /** Absolute time in milliseconds (monotonic) */
-  readonly tAbsMs: SigExprId;
-
-  /** Model time in milliseconds (after time model transformation) */
-  readonly tModelMs: SigExprId;
-
-  /** Phase 0..1 (cyclic models only) */
-  readonly phase01?: SigExprId;
-
-  /** Wrap event trigger (cyclic models only) */
-  readonly wrapEvent?: SigExprId;
-}
-
-/**
- * TimeResolvedPatch - output of Pass 3.
+ * Patch with time signals resolved and validated.
  *
- * Time topology established, TimeModel created.
+ * Pass 3 determines the time model and generates derived time signals.
  */
-export interface TimeResolvedPatch<
-  TBlock = unknown,
-  TConnection = unknown,
-  TPublisher = unknown,
-  TListener = unknown,
-  TBus = unknown,
-> extends TypedPatch<TBlock, TConnection, TPublisher, TListener, TBus> {
-  /** The authoritative time model for this patch */
+export interface TimeResolvedPatch extends TypedPatch {
+  /** Time model (authoritative for the patch) */
   readonly timeModel: TimeModelIR;
 
-  /** Index of the TimeRoot block */
-  readonly timeRootIndex: BlockIndex;
-
-  /** Canonical time signals */
+  /** Derived time signals available to all blocks */
   readonly timeSignals: TimeSignals;
+}
+
+/**
+ * Derived time signals generated from the time model.
+ */
+export interface TimeSignals {
+  /** Signal expression ID for tModelMs (model time) */
+  readonly tModelMs: SigExprId;
+
+  /** Signal expression ID for phase01 (cyclic only) */
+  readonly phase01?: SigExprId;
+
+  /** Signal expression ID for wrapEvent (cyclic only) */
+  readonly wrapEvent?: SigExprId;
+
+  /** Signal expression ID for progress01 (finite only) */
+  readonly progress01?: SigExprId;
 }
 
 // =============================================================================
@@ -192,10 +141,11 @@ export interface TimeResolvedPatch<
 
 /**
  * Node in the dependency graph.
+ *
+ * After bus-block unification, all nodes are BlockEval nodes.
+ * BusBlocks are treated like any other block.
  */
-export type DepNode =
-  | { readonly kind: "BlockEval"; readonly blockIndex: BlockIndex }
-  | { readonly kind: "BusValue"; readonly busIndex: BusIndex };
+export type DepNode = { readonly kind: "BlockEval"; readonly blockIndex: BlockIndex };
 
 /**
  * Edge in the dependency graph.
@@ -257,8 +207,14 @@ export function isBlockEval(node: DepNode): node is { kind: "BlockEval"; blockIn
 }
 
 /**
- * Type guard for BusValue nodes.
+ * Type guard for BusValue nodes (DEPRECATED).
+ *
+ * After bus-block unification, all buses are represented as BusBlocks,
+ * which are BlockEval nodes. This function is kept for backward compatibility
+ * but always returns false.
+ *
+ * @deprecated Buses are now BusBlocks - use isBlockEval instead
  */
-export function isBusValue(node: DepNode): node is { kind: "BusValue"; busIndex: BusIndex } {
-  return node.kind === "BusValue";
+export function isBusValue(_node: DepNode): boolean {
+  return false;
 }

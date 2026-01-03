@@ -1,0 +1,57 @@
+Agent: iterative-implementer | 2026-01-03
+Mode: manual
+Completed: Graph Normalization Layer - Type System + PatchStore Integration | Files: 4 | Commits: 2
+Status: in_progress - compiler integration remaining
+
+=== DELIVERABLES COMPLETED ===
+
+1. Type System Foundation (✅ Complete)
+   - Created src/editor/graph/types.ts
+   - RawGraph, NormalizedGraph, CompilerGraph types
+   - CompilerBlock/Edge boundary types (Omit<Block|Edge, 'role'>)
+   - toCompilerGraph() stripping function
+   - Anchor type for structural artifact identity
+
+2. GraphNormalizer Module (✅ Complete)
+   - Created src/editor/graph/GraphNormalizer.ts
+   - Migrated logic from pass0-materialize.ts
+   - Pure function: normalize(RawGraph) -> NormalizedGraph
+   - Deterministic IDs: ${blockId}_default_${slotId}
+   - Role metadata: structural blocks/edges tagged correctly
+
+3. PatchStore Integration (✅ Complete)
+   - Added getNormalizedGraph() method
+   - Eager normalization with caching
+   - Cache invalidation on all structural mutations
+   - Filter to user-only blocks/edges for RawGraph
+
+=== REMAINING WORK ===
+
+Per USER-RESPONSE-2026-01-03.md scope:
+- Compiler integration: use getNormalizedGraph() instead of pass0-materialize
+- Delete pass0-materialize.ts after migration
+- Run `just check` to verify
+
+NOT in scope (deferred):
+- Bus normalization
+- Wire-state blocks
+- Incremental normalization
+
+=== TECHNICAL NOTES ===
+
+- No StructuralMapping field (per user spec - role metadata IS the mapping)
+- SlotWorld defined locally in GraphNormalizer (not exported from types.ts)
+- PortRef fixed to match existing interface (no 'kind' field)
+- All blocks created with role: { kind: 'user' }
+- Structural artifacts created during normalization with role: { kind: 'structural', ... }
+
+=== NEXT STEPS ===
+
+The implementer should:
+1. Update compiler integration.ts to call patchStore.getNormalizedGraph()
+2. Remove materializeDefaultSources() call from compiler pipeline
+3. Delete src/editor/compiler/passes/pass0-materialize.ts
+4. Run `just check` to verify all tests pass
+5. Manual testing with Chrome DevTools to verify default sources work
+
+Cache invalidated: N/A (no cache entries for new files)

@@ -22,7 +22,6 @@ This evaluation assesses the current state of layout separation from patch seman
 
 The patch's semantic meaning must be completely determined by:
 - Blocks (types + params)
-- Relationships (wires, buses, publishers/listeners, composite bindings)
 - Time/root constraints
 - Project-level settings that affect compilation
 
@@ -39,7 +38,6 @@ Layouts are derived or stored separately as UI preferences. A layout may be pers
 {
   blocks: Block[]
   connections: Connection[]
-  buses/publishers/listeners
   timeRoot (explicit or validated)
   composites (defs)
   settings (semantic only: seed defaults, etc.)

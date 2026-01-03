@@ -18,7 +18,7 @@ describe('RootStore - Event Listeners', () => {
     it('clears selectedBusId when selected bus is deleted', () => {
       // Create and select a bus
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -36,13 +36,13 @@ describe('RootStore - Event Listeners', () => {
     it('preserves selectedBusId when non-selected bus is deleted', () => {
       // Create two buses
       const busId1 = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'bus1',
         'last'
       );
 
       const busId2 = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'bus2',
         'last'
       );
@@ -59,7 +59,7 @@ describe('RootStore - Event Listeners', () => {
 
     it('does nothing when no bus is selected', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -264,7 +264,7 @@ describe('RootStore - Event Listeners', () => {
   describe('Event listener invariants', () => {
     it('event handlers do not throw errors', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -277,7 +277,7 @@ describe('RootStore - Event Listeners', () => {
 
     it('event handlers are non-blocking (synchronous)', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );

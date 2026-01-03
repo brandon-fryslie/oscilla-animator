@@ -8,13 +8,11 @@ Source: HANDOFF.md §2, design-docs/12-Compiler-Final/07-Buses.md
 
 ## Sprint Goal
 
-**Implement bus combine evaluation for signals, enabling multiple publishers to contribute to a shared signal bus.**
 
 When complete, the evaluator can:
 - Combine multiple signal terms into one output
 - Support all combine modes: sum, average, min, max, first, last
 - Handle empty buses with default/silent values
-- Maintain deterministic publisher ordering
 
 ---
 
@@ -51,7 +49,6 @@ Sprint 2 must be complete:
 ### Out of Scope
 
 - Bus IR schema definition (Phase 2 topic)
-- Publisher sorting (compiler responsibility)
 - Bus subscription resolution (compiler responsibility)
 - Transform nodes (Sprint 4)
 
@@ -75,7 +72,6 @@ interface BusCombineNode {
 
 interface CombineSpec {
   mode: CombineMode;
-  default?: number;           // Value when no publishers (default: 0)
 }
 
 type CombineMode = 'sum' | 'average' | 'min' | 'max' | 'first' | 'last';
@@ -524,7 +520,6 @@ Update README with busCombine node documentation.
 - [ ] All combine modes documented with examples
 - [ ] Empty bus behavior documented
 - [ ] Debug tracing documented
-- [ ] Publisher ordering note (compiler responsibility)
 
 ---
 

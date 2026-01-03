@@ -8,7 +8,7 @@
  * Key features:
  * - Incremental updates (O(1)/O(log n) per change)
  * - Multiple index structures for different query patterns
- * - Supports wire edges, publisher edges, and listener edges
+ * - All edges are wire edges (port-to-port) after bus-block unification
  *
  * Reference: design-docs/10-Refactor-for-UI-prep/5-DivergentTypes.md
  */
@@ -17,12 +17,10 @@ import type {
   PatchDocument,
   PortKey,
   WireEdge,
-  PublisherEdge,
-  ListenerEdge,
   GraphEdge,
   BlockNode,
 } from './types';
-import { portKeyToString, portKeyFromConnection, portKeyFromPublisher, portKeyFromListener } from './types';
+import { portKeyToString } from './types';
 import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import type { TypeDesc } from '../types';
 
@@ -32,37 +30,23 @@ import type { TypeDesc } from '../types';
  * Indices maintained:
  * - incoming edges per input port
  * - outgoing edges per output port
- * - publishers per bus (sorted by sortKey)
- * - listeners per bus
  * - adjacency for cycle detection
  */
 export class SemanticGraph {
   /** All blocks in the graph */
   private blocks: Map<string, BlockNode> = new Map();
 
-  /** Incoming edges per port (wire edges only) */
+  /** Incoming edges per port */
   private incomingWires: Map<string, WireEdge[]> = new Map();
 
-  /** Outgoing edges per port (wire edges only) */
+  /** Outgoing edges per port */
   private outgoingWires: Map<string, WireEdge[]> = new Map();
 
-  /** Incoming edges per port (listener edges - bus to port) */
-  private incomingListeners: Map<string, ListenerEdge[]> = new Map();
-
-  /** Outgoing edges per port (publisher edges - port to bus) */
-  private outgoingPublishers: Map<string, PublisherEdge[]> = new Map();
-
-  /** All incoming edges per port (wires + listeners) */
+  /** All incoming edges per port (alias for incomingWires after unification) */
   private incomingEdges: Map<string, GraphEdge[]> = new Map();
 
-  /** All outgoing edges per port (wires + publishers) */
+  /** All outgoing edges per port (alias for outgoingWires after unification) */
   private outgoingEdges: Map<string, GraphEdge[]> = new Map();
-
-  /** Publishers per bus (sorted by sortKey for deterministic ordering) */
-  private busPublishers: Map<string, PublisherEdge[]> = new Map();
-
-  /** Listeners per bus */
-  private busListeners: Map<string, ListenerEdge[]> = new Map();
 
   /** Block adjacency for cycle detection (blockId -> downstream blockIds) */
   private adjacency: Map<string, Set<string>> = new Map();
@@ -91,12 +75,8 @@ export class SemanticGraph {
     this.blocks.clear();
     this.incomingWires.clear();
     this.outgoingWires.clear();
-    this.incomingListeners.clear();
-    this.outgoingPublishers.clear();
     this.incomingEdges.clear();
     this.outgoingEdges.clear();
-    this.busPublishers.clear();
-    this.busListeners.clear();
     this.adjacency.clear();
     this.typeByPort.clear();
     this.portsByBlock.clear();
@@ -131,75 +111,23 @@ export class SemanticGraph {
       }
     }
 
-    // Index wire edges
-    for (const conn of patch.connections) {
+    // Index wire edges (all edges are now wire edges after bus-block unification)
+    for (const patchEdge of patch.edges) {
       const edge: WireEdge = {
         kind: 'wire',
-        connectionId: conn.id,
-        from: portKeyFromConnection(conn, 'from'),
-        to: portKeyFromConnection(conn, 'to'),
+        connectionId: patchEdge.id,
+        from: { blockId: patchEdge.from.blockId, slotId: patchEdge.from.slotId, direction: 'output' },
+        to: { blockId: patchEdge.to.blockId, slotId: patchEdge.to.slotId, direction: 'input' },
       };
 
       this.addWireEdge(edge);
 
       // Update adjacency for cycle detection
-      this.addAdjacency(conn.from.blockId, conn.to.blockId);
+      this.addAdjacency(patchEdge.from.blockId, patchEdge.to.blockId);
     }
 
-    // Index publisher edges
-    if (patch.publishers != null) {
-      for (const pub of patch.publishers) {
-        if (pub.enabled === false) continue; // Skip disabled publishers
-
-        const edge: PublisherEdge = {
-          kind: 'publisher',
-          publisherId: pub.id,
-          from: portKeyFromPublisher(pub),
-          busId: pub.busId,
-          sortKey: pub.sortKey,
-        };
-
-        this.addPublisherEdge(edge);
-      }
-    }
-
-    // Index listener edges
-    if (patch.listeners != null) {
-      for (const listener of patch.listeners) {
-        if (listener.enabled === false) continue; // Skip disabled listeners
-
-        const edge: ListenerEdge = {
-          kind: 'listener',
-          listenerId: listener.id,
-          busId: listener.busId,
-          to: portKeyFromListener(listener),
-        };
-
-        this.addListenerEdge(edge);
-      }
-    }
-
-    // Add bus dependency adjacency: publisher block -> listener block
-    for (const [busId, listeners] of this.busListeners.entries()) {
-      const publishers = this.busPublishers.get(busId) ?? [];
-      for (const listener of listeners) {
-        for (const publisher of publishers) {
-          const fromId = publisher.from.blockId;
-          const toId = listener.to.blockId;
-          if (fromId !== toId) {
-            this.addAdjacency(fromId, toId);
-          }
-        }
-      }
-    }
-
-    // Sort bus publishers by sortKey for deterministic ordering
-    for (const publishers of this.busPublishers.values()) {
-      publishers.sort((a, b) => {
-        if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
-        return a.publisherId.localeCompare(b.publisherId);
-      });
-    }
+    // Note: After bus-block unification, all edges are wire edges.
+    // Bus connections are just regular edges to/from BusBlock ports.
   }
 
   // ===========================================================================
@@ -236,53 +164,8 @@ export class SemanticGraph {
     this.incomingEdges.get(toKey)!.push(edge);
   }
 
-  /**
-   * Add a publisher edge to the indices.
-   */
-  private addPublisherEdge(edge: PublisherEdge): void {
-    const fromKey = portKeyToString(edge.from);
-
-    // Add to outgoing publishers
-    if (!this.outgoingPublishers.has(fromKey)) {
-      this.outgoingPublishers.set(fromKey, []);
-    }
-    this.outgoingPublishers.get(fromKey)!.push(edge);
-
-    // Add to bus publishers
-    if (!this.busPublishers.has(edge.busId)) {
-      this.busPublishers.set(edge.busId, []);
-    }
-    this.busPublishers.get(edge.busId)!.push(edge);
-
-    if (!this.outgoingEdges.has(fromKey)) {
-      this.outgoingEdges.set(fromKey, []);
-    }
-    this.outgoingEdges.get(fromKey)!.push(edge);
-  }
-
-  /**
-   * Add a listener edge to the indices.
-   */
-  private addListenerEdge(edge: ListenerEdge): void {
-    const toKey = portKeyToString(edge.to);
-
-    // Add to incoming listeners
-    if (!this.incomingListeners.has(toKey)) {
-      this.incomingListeners.set(toKey, []);
-    }
-    this.incomingListeners.get(toKey)!.push(edge);
-
-    // Add to bus listeners
-    if (!this.busListeners.has(edge.busId)) {
-      this.busListeners.set(edge.busId, []);
-    }
-    this.busListeners.get(edge.busId)!.push(edge);
-
-    if (!this.incomingEdges.has(toKey)) {
-      this.incomingEdges.set(toKey, []);
-    }
-    this.incomingEdges.get(toKey)!.push(edge);
-  }
+  // NOTE: addPublisherEdge and addListenerEdge have been removed after bus-block unification.
+  // Buses are now BusBlocks and publishers/listeners are regular edges.
 
   /**
    * Add an adjacency edge for cycle detection.
@@ -331,41 +214,7 @@ export class SemanticGraph {
   }
 
   /**
-   * Get incoming listener edges for a port (bus to port).
-   * Returns empty array if no listeners.
-   */
-  getIncomingListeners(port: PortKey): ListenerEdge[] {
-    const key = portKeyToString(port);
-    return this.incomingListeners.get(key) ?? [];
-  }
-
-  /**
-   * Get outgoing publisher edges for a port (port to bus).
-   * Returns empty array if no publishers.
-   */
-  getOutgoingPublishers(port: PortKey): PublisherEdge[] {
-    const key = portKeyToString(port);
-    return this.outgoingPublishers.get(key) ?? [];
-  }
-
-  /**
-   * Get all publishers for a bus, sorted by sortKey.
-   * Returns empty array if bus has no publishers.
-   */
-  getBusPublishers(busId: string): PublisherEdge[] {
-    return this.busPublishers.get(busId) ?? [];
-  }
-
-  /**
-   * Get all listeners for a bus.
-   * Returns empty array if bus has no listeners.
-   */
-  getBusListeners(busId: string): ListenerEdge[] {
-    return this.busListeners.get(busId) ?? [];
-  }
-
-  /**
-   * Get all incoming edges for a port (wires + listeners).
+   * Get all incoming edges for a port.
    */
   getAllIncomingEdges(port: PortKey): GraphEdge[] {
     const key = portKeyToString(port);
@@ -373,7 +222,7 @@ export class SemanticGraph {
   }
 
   /**
-   * Get all outgoing edges for a port (wires + publishers).
+   * Get all outgoing edges for a port.
    */
   getAllOutgoingEdges(port: PortKey): GraphEdge[] {
     const key = portKeyToString(port);

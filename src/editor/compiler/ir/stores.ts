@@ -12,8 +12,7 @@
  * - HANDOFF.md Topic 2 (StateBuffer)
  */
 
-import type { ValueSlot, StateId, TypeDesc } from "./types";
-import type { ConstPool } from "./program";
+import type { ValueSlot, StateId, TypeDesc, ConstPool } from "./types";
 
 // ============================================================================
 // ValueStore Interface (HANDOFF.md Topic 1)
@@ -198,86 +197,82 @@ export interface StateLayout {
  *
  * Used for:
  * - Runtime state access (offset + size)
- * - Hot-swap matching (nodeId + role + layout hash)
- * - Debugging (nodeId + role labels)
+ * - Hot-swap migration (stateId matching)
+ * - Debugging (nodeId + role)
  */
 export interface StateCellLayout {
-  /** Stable state identifier */
+  /** Unique stable ID for this state cell */
   stateId: StateId;
 
-  /** Storage type */
+  /** Storage type (which typed array) */
   storage: "f64" | "f32" | "i32";
 
   /** Offset within the typed array */
   offset: number;
 
-  /** Number of elements (1 for scalar, N for ring buffers/delay lines) */
+  /** Size in array elements (e.g., 1 for scalar, N for vector) */
   size: number;
 
-  /** Node that owns this state (for hot-swap matching) */
+  /** Node that owns this state */
   nodeId: string;
 
-  /** Role/purpose of this state (e.g., 'accumulator', 'ringBuffer', 'phase') */
+  /** Semantic role (e.g., "accumulator", "delay", "oscillator") */
   role: string;
 
-  /** Optional initial value (constant ID) */
+  /** Optional initial value (const pool index) */
   initialConstId?: number;
-
-  /** State update policy */
-  policy?: "frame" | "timeMs"; // frame-based delay vs time-continuous state
 }
 
 // ============================================================================
-// Factory Functions (Implementation Contracts)
+// Factory Functions
 // ============================================================================
 
 /**
  * Create a ValueStore from slot metadata.
  *
- * Allocates typed arrays based on slot metadata and provides slot-based
- * read/write operations with single-writer enforcement.
+ * Allocates typed arrays and object array based on max offsets in slotMeta.
  *
- * @param slotMeta - Array of slot metadata
- * @returns Initialized ValueStore
+ * @param slotMeta - Metadata for all slots
+ * @returns New ValueStore instance
  */
-export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
-  // Calculate required array sizes by finding max offset for each storage type
-  const sizes = {
-    f64: 0,
-    f32: 0,
-    i32: 0,
-    u32: 0,
-    object: 0,
-  };
+export function createValueStore(slotMeta: readonly SlotMeta[]): ValueStore {
+  // Determine required sizes for each storage type
+  let f64Size = 0;
+  let f32Size = 0;
+  let i32Size = 0;
+  let u32Size = 0;
+  let objectSize = 0;
 
   for (const meta of slotMeta) {
     const requiredSize = meta.offset + 1;
-    sizes[meta.storage] = Math.max(sizes[meta.storage], requiredSize);
-  }
-
-  // Validate sizes before allocation
-  for (const [key, size] of Object.entries(sizes)) {
-    if (!Number.isFinite(size) || size < 0) {
-      console.error(`[ValueStore] Invalid size for ${key}:`, size, 'slotMeta:', slotMeta);
-      throw new Error(`Invalid ValueStore size for ${key}: ${size}`);
+    switch (meta.storage) {
+      case "f64":
+        f64Size = Math.max(f64Size, requiredSize);
+        break;
+      case "f32":
+        f32Size = Math.max(f32Size, requiredSize);
+        break;
+      case "i32":
+        i32Size = Math.max(i32Size, requiredSize);
+        break;
+      case "u32":
+        u32Size = Math.max(u32Size, requiredSize);
+        break;
+      case "object":
+        objectSize = Math.max(objectSize, requiredSize);
+        break;
     }
   }
 
   // Allocate typed arrays
-  const f64 = new Float64Array(sizes.f64);
-  const f32 = new Float32Array(sizes.f32);
-  const i32 = new Int32Array(sizes.i32);
-  const u32 = new Uint32Array(sizes.u32);
-  const objects = new Array(sizes.object).fill(undefined);
+  const f64 = new Float64Array(f64Size);
+  const f32 = new Float32Array(f32Size);
+  const i32 = new Int32Array(i32Size);
+  const u32 = new Uint32Array(u32Size);
+  const objects: unknown[] = new Array(objectSize);
 
-  // Track which slots have been written in current frame
+  // Track writes per frame (debug only)
   const writeLog = new Set<ValueSlot>();
-
-  // Build lookup map from slot to metadata for O(1) access
-  const slotLookup = new Map<ValueSlot, SlotMeta>();
-  for (const meta of slotMeta) {
-    slotLookup.set(meta.slot, meta);
-  }
 
   return {
     f64,
@@ -285,15 +280,14 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
     i32,
     u32,
     objects,
-    slotMeta,
+    slotMeta: [...slotMeta],
 
     read(slot: ValueSlot): unknown {
-      const meta = slotLookup.get(slot);
+      const meta = slotMeta.find((m) => m.slot === slot);
       if (meta === undefined) {
-        throw new Error(`ValueStore.read: slot ${slot} not found in slotMeta`);
+        throw new Error(`ValueStore.read: no metadata for slot ${slot}`);
       }
 
-      // Read from appropriate storage based on metadata
       switch (meta.storage) {
         case "f64":
           return f64[meta.offset];
@@ -313,30 +307,30 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
     },
 
     write(slot: ValueSlot, value: unknown): void {
-      // Enforce single-writer invariant
-      if (writeLog.has(slot)) {
-        throw new Error(`ValueStore.write: slot ${slot} already written this frame`);
+      // Debug assertion: single writer per slot per frame
+      if (import.meta.env?.DEV && writeLog.has(slot)) {
+        throw new Error(`ValueStore.write: slot ${slot} written multiple times this frame`);
       }
+
+      const meta = slotMeta.find((m) => m.slot === slot);
+      if (meta === undefined) {
+        throw new Error(`ValueStore.write: no metadata for slot ${slot}`);
+      }
+
       writeLog.add(slot);
 
-      const meta = slotLookup.get(slot);
-      if (meta === undefined) {
-        throw new Error(`ValueStore.write: slot ${slot} not found in slotMeta`);
-      }
-
-      // Write to appropriate storage based on metadata
       switch (meta.storage) {
         case "f64":
-          f64[meta.offset] = value as number;
+          f64[meta.offset] = Number(value);
           break;
         case "f32":
-          f32[meta.offset] = value as number;
+          f32[meta.offset] = Number(value);
           break;
         case "i32":
-          i32[meta.offset] = value as number;
+          i32[meta.offset] = Math.trunc(Number(value));
           break;
         case "u32":
-          u32[meta.offset] = value as number;
+          u32[meta.offset] = Math.trunc(Number(value)) >>> 0;
           break;
         case "object":
           objects[meta.offset] = value;
@@ -349,107 +343,55 @@ export function createValueStore(slotMeta: SlotMeta[]): ValueStore {
     },
 
     clear(): void {
-      // Reset write tracking for new frame
-      // Note: We don't clear the actual values - they persist until overwritten
-      // This is an optimization: old values will be overwritten on next write
       writeLog.clear();
+      // Note: We don't zero out arrays - relying on compile-time guarantee
+      // that all slots are written before read. Debug builds could add a
+      // "written" bitset to catch violations.
     },
 
     ensureF32(slot: ValueSlot, length: number): Float32Array {
-      // For ensureF32, we use object storage for the Float32Array
-      // First check if slot has metadata, if not we treat it as dynamic object slot
-      const meta = slotLookup.get(slot);
-
-      // Try to reuse existing buffer if size matches
-      const existing: unknown = meta?.storage === "object"
-        ? objects[meta.offset]
-        : objects[slot]; // Fallback to direct slot index if no metadata
-
+      const existing = objects[slot] as Float32Array | undefined;
       if (existing instanceof Float32Array && existing.length === length) {
         return existing;
       }
-
-      // Allocate new buffer
       const buffer = new Float32Array(length);
-
-      // Store in object array
-      if (meta !== undefined && meta.storage === "object") {
-        objects[meta.offset] = buffer;
-      } else {
-        // Ensure objects array is large enough
-        while (objects.length <= slot) {
-          objects.push(undefined);
-        }
-        objects[slot] = buffer;
-      }
-
+      objects[slot] = buffer;
       return buffer;
     },
 
     ensureU16(slot: ValueSlot, length: number): Uint16Array {
-      // For ensureU16, we use object storage for the Uint16Array
-      const meta = slotLookup.get(slot);
-
-      // Try to reuse existing buffer if size matches
-      const existing: unknown = meta?.storage === "object"
-        ? objects[meta.offset]
-        : objects[slot]; // Fallback to direct slot index if no metadata
-
+      const existing = objects[slot] as Uint16Array | undefined;
       if (existing instanceof Uint16Array && existing.length === length) {
         return existing;
       }
-
-      // Allocate new buffer
       const buffer = new Uint16Array(length);
-
-      // Store in object array
-      if (meta !== undefined && meta.storage === "object") {
-        objects[meta.offset] = buffer;
-      } else {
-        // Ensure objects array is large enough
-        while (objects.length <= slot) {
-          objects.push(undefined);
-        }
-        objects[slot] = buffer;
-      }
-
+      objects[slot] = buffer;
       return buffer;
     },
 
     ensureU32(slot: ValueSlot, length: number): Uint32Array {
-      const meta = slotLookup.get(slot);
-
-      const existing: unknown = meta?.storage === "object"
-        ? objects[meta.offset]
-        : objects[slot];
-
+      const existing = objects[slot] as Uint32Array | undefined;
       if (existing instanceof Uint32Array && existing.length === length) {
         return existing;
       }
-
       const buffer = new Uint32Array(length);
-
-      if (meta !== undefined && meta.storage === "object") {
-        objects[meta.offset] = buffer;
-      } else {
-        while (objects.length <= slot) {
-          objects.push(undefined);
-        }
-        objects[slot] = buffer;
-      }
-
+      objects[slot] = buffer;
       return buffer;
     },
   };
 }
 
+// ============================================================================
+// StateBuffer Implementation
+// ============================================================================
+
 /**
- * Create a StateBuffer from state layout.
+ * Create a StateBuffer from a StateLayout.
  *
- * Allocates typed arrays for persistent state storage based on layout sizes.
+ * Allocates typed arrays and initializes state cells.
  *
- * @param layout - State layout specification
- * @returns Initialized StateBuffer with allocated typed arrays
+ * @param layout - State layout (computed at compile time)
+ * @returns New StateBuffer instance
  */
 export function createStateBuffer(layout: StateLayout): StateBuffer {
   return {
@@ -460,59 +402,125 @@ export function createStateBuffer(layout: StateLayout): StateBuffer {
 }
 
 /**
- * Initialize state cells with default values.
+ * Initialize StateBuffer with values from ConstPool.
  *
- * Populates state cells with initial values from the constant pool.
- * If no initialConstId is specified, cells default to zero.
+ * Sets initial values for state cells that have initialConstId.
+ * This is called once at program startup.
  *
- * @param buffer - StateBuffer to initialize
- * @param layout - State layout
- * @param constPool - Constant pool for initial values
+ * For cells with size > 1 (e.g., ring buffers), fills all elements
+ * with the same initial value.
+ *
+ * @param state - StateBuffer to initialize
+ * @param layout - State layout (describes where to put values)
+ * @param constPool - Constant pool (source of initial values)
  */
 export function initializeState(
-  buffer: StateBuffer,
+  state: StateBuffer,
   layout: StateLayout,
-  constPool: ConstPool,
+  constPool: ConstPool
 ): void {
   for (const cell of layout.cells) {
-    // Determine initial value
-    let initialValue = 0; // Default to zero
-
-    if (cell.initialConstId !== undefined) {
-      // Lookup value in const pool
-      const constEntry = constPool.constIndex[cell.initialConstId];
-      if (constEntry === undefined) {
-        throw new Error(
-          `initializeState: constId ${cell.initialConstId} not found in constPool for state cell ${cell.stateId}`,
-        );
-      }
-
-      // Read value from appropriate const pool storage
-      switch (constEntry.k) {
-        case "f64":
-          initialValue = constPool.f64[constEntry.idx];
-          break;
-        case "f32":
-          initialValue = constPool.f32[constEntry.idx];
-          break;
-        case "i32":
-          initialValue = constPool.i32[constEntry.idx];
-          break;
-        default:
-          throw new Error(
-            `initializeState: invalid const type ${constEntry.k} for state cell ${cell.stateId}`,
-          );
-      }
+    if (cell.initialConstId === undefined) {
+      continue;
     }
 
-    // Write initial value to state buffer
-    const targetArray = buffer[cell.storage];
-    const startOffset = cell.offset;
-    const endOffset = startOffset + cell.size;
+    const value = constPool.json[cell.initialConstId];
+    if (value === undefined) {
+      throw new Error(
+        `initializeState: constant ${cell.initialConstId} not found for state cell ${cell.stateId}`
+      );
+    }
 
-    // Fill all elements (for ring buffers, size > 1)
-    for (let i = startOffset; i < endOffset; i++) {
-      targetArray[i] = initialValue;
+    // Write initial value to all elements in the cell
+    // For scalar cells (size=1), writes one element
+    // For ring buffers (size>1), fills all elements with the same value
+    switch (cell.storage) {
+      case "f64":
+        for (let i = 0; i < cell.size; i++) {
+          state.f64[cell.offset + i] = Number(value);
+        }
+        break;
+      case "f32":
+        for (let i = 0; i < cell.size; i++) {
+          state.f32[cell.offset + i] = Number(value);
+        }
+        break;
+      case "i32":
+        for (let i = 0; i < cell.size; i++) {
+          state.i32[cell.offset + i] = Math.trunc(Number(value));
+        }
+        break;
+      default: {
+        const exhaustiveCheck: never = cell.storage;
+        throw new Error(`initializeState: unknown storage type ${String(exhaustiveCheck)}`);
+      }
+    }
+  }
+}
+
+/**
+ * Preserve state cells during hot-swap.
+ *
+ * Migrates state values from old StateBuffer to new StateBuffer,
+ * matching cells by stateId.
+ *
+ * Hot-swap semantics:
+ * - Cells with matching stateId and storage type → copy value
+ * - Cells with matching stateId but different storage → skip (type changed)
+ * - New cells → use initial value from constPool
+ * - Removed cells → discard
+ *
+ * @param oldState - Old StateBuffer
+ * @param newState - New StateBuffer
+ * @param oldLayout - Old state layout
+ * @param newLayout - New state layout
+ */
+export function preserveState(
+  oldState: StateBuffer,
+  newState: StateBuffer,
+  oldLayout: StateLayout,
+  newLayout: StateLayout
+): void {
+  // Build index of old state cells
+  const oldCells = new Map<StateId, StateCellLayout>();
+  for (const cell of oldLayout.cells) {
+    oldCells.set(cell.stateId, cell);
+  }
+
+  // Migrate matching cells
+  for (const newCell of newLayout.cells) {
+    const oldCell = oldCells.get(newCell.stateId);
+    if (oldCell === undefined) {
+      // New cell - use initial value (already set by initializeState)
+      continue;
+    }
+
+    if (oldCell.storage !== newCell.storage) {
+      // Storage type changed - skip (incompatible)
+      console.warn(
+        `preserveState: stateId ${newCell.stateId} changed storage from ${oldCell.storage} to ${newCell.storage}, discarding old value`
+      );
+      continue;
+    }
+
+    // Compatible cell - copy value
+    switch (newCell.storage) {
+      case "f64":
+        newState.f64[newCell.offset] = oldState.f64[oldCell.offset];
+        break;
+      case "f32":
+        newState.f32[newCell.offset] = oldState.f32[oldCell.offset];
+        break;
+      case "i32":
+        newState.i32[newCell.offset] = oldState.i32[oldCell.offset];
+        break;
+      default: {
+        const exhaustiveCheck: never = newCell.storage;
+        console.warn(
+          `preserveState: unknown storage type ${String(exhaustiveCheck)}`
+        );
+        break;
+      }
     }
   }
 }

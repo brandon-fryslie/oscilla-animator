@@ -3,14 +3,17 @@
  *
  * The "mixer console" for all buses in the patch.
  * Displays buses as vertical channel strips (DAW-style).
+ *
+ * NOTE: BusChannel.tsx was deleted as part of aggressive bus cleanup (2026-01-02).
+ * Bus-specific UI components are being removed as buses are just blocks now.
  */
 
 import { observer } from 'mobx-react-lite';
 import { useState, useEffect, useMemo } from 'react';
 import { useStore } from './stores';
 import type { Bus } from './types';
-import { BusChannel } from './BusChannel';
 import { BusCreationDialog } from './BusCreationDialog';
+import { convertBlockToBus } from './bus-block/conversion';
 import './BusBoard.css';
 
 /**
@@ -108,9 +111,11 @@ export const BusBoard = observer((): React.ReactElement => {
   }, [groupCollapseState]);
 
   // Filter and group buses
+  // Bus-Block Unification: Convert BusBlocks to Bus format for filtering
+  const buses = store.patchStore.busBlocks.map(convertBlockToBus);
   const filteredBuses = useMemo(() =>
-    filterBuses(store.busStore.buses, filterText),
-    [store.busStore.buses, filterText]
+    filterBuses(buses, filterText),
+    [buses, filterText]
   );
 
   const busGroups = useMemo(() =>
@@ -127,9 +132,11 @@ export const BusBoard = observer((): React.ReactElement => {
     // TODO WI-5: Set store.selectedBusId when bus selection is added to store
   };
 
-  const handleBusCreated = (busId: string) => {
+  // Unused until BusCreationDialog is reimplemented
+  // @ts-expect-error - unused until dialog reimplemented
+  const _ = (_busId: string) => {
     // Select the newly created bus
-    setSelectedBusId(busId);
+    // setSelectedBusId(busId);
     // TODO WI-5: Set store.selectedBusId when bus selection is added to store
   };
 
@@ -200,7 +207,7 @@ export const BusBoard = observer((): React.ReactElement => {
 
           {/* Bus Channels (Grouped) */}
           <div className="bus-board-channels">
-            {store.busStore.buses.length === 0 ? (
+            {store.patchStore.busBlocks.map(convertBlockToBus).length === 0 ? (
               <div className="bus-board-empty">
                 <p>No buses yet</p>
                 <p className="bus-board-empty-hint">
@@ -236,16 +243,18 @@ export const BusBoard = observer((): React.ReactElement => {
                       </span>
                     </div>
 
-                    {/* Group Buses */}
+                    {/* Group Buses - STUB: BusChannel.tsx was deleted */}
                     {!collapsed && (
                       <div className="bus-board-group-buses">
                         {group.buses.map((bus) => (
-                          <BusChannel
+                          <div
                             key={bus.id}
-                            bus={bus}
-                            isSelected={selectedBusId === bus.id}
-                            onSelect={() => handleSelectBus(bus.id)}
-                          />
+                            className={`bus-channel-stub ${selectedBusId === bus.id ? 'selected' : ''}`}
+                            onClick={() => handleSelectBus(bus.id)}
+                            title={`Bus: ${bus.name} (TODO: Re-implement BusChannel component)`}
+                          >
+                            {bus.name}
+                          </div>
                         ))}
                       </div>
                     )}
@@ -257,12 +266,12 @@ export const BusBoard = observer((): React.ReactElement => {
         </>
       )}
 
-      {/* Bus Creation Dialog */}
-      <BusCreationDialog
-        isOpen={isCreationDialogOpen}
-        onClose={() => setIsCreationDialogOpen(false)}
-        onCreated={handleBusCreated}
-      />
+      {/* Bus Creation Dialog - Temporarily disabled (returns null) */}
+      {isCreationDialogOpen && (
+        <BusCreationDialog
+          onClose={() => setIsCreationDialogOpen(false)}
+        />
+      )}
     </div>
   );
 });

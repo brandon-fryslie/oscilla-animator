@@ -64,13 +64,8 @@ const dispose = reaction(
     connectionCount: store.patchStore.connections.length,
     connections: store.patchStore.connections.map((c: Connection) => `${c.from.blockId}:${c.from.slotId}->${c.to.blockId}:${c.to.slotId}`),
     seed: store.uiStore.settings.seed,
-    // Bus system - track publishers and listeners
     busCount: store.busStore.buses.length,
     buses: store.busStore.buses.map(b => `${b.id}:${b.name}`),
-    publisherCount: store.busStore.publishers.length,
-    publishers: store.busStore.publishers.map(p => `${p.id}:${p.from.blockId}.${p.from.slotId}->${p.busId}:${p.enabled}`),
-    listenerCount: store.busStore.listeners.length,
-    listeners: store.busStore.listeners.map(l => `${l.id}:${l.busId}->${l.to.blockId}.${l.to.slotId}:${l.enabled}`),
   }),
   // React to changes
   () => {
@@ -91,7 +86,6 @@ const dispose = reaction(
 The `setupAutoCompile` reaction does NOT track default source values. It tracks:
 - Blocks (count, types, params)
 - Connections
-- Buses, publishers, listeners
 - Seed
 
 But **completely misses** `store.defaultSourceStore.sources`.
@@ -181,7 +175,6 @@ Add default source tracking to the reaction:
     `${ds.id}:${JSON.stringify(ds.value)}`
   ),
 
-  // Bus system - track publishers and listeners
   busCount: store.busStore.buses.length,
   // ... rest unchanged
 })

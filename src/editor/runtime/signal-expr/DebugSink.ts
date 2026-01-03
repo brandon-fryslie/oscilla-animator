@@ -30,7 +30,7 @@ import type { SigCombineMode } from "../../compiler/ir/signalExpr";
  * ```typescript
  * const debug: DebugSink = {
  *   traceBusCombine: (info) => {
- *     console.log(`Bus ${info.busIndex}: ${info.mode} of ${info.termValues} = ${info.result}`);
+ *     console.log(`Combine: ${info.mode} of ${info.termValues} = ${info.result}`);
  *   }
  * };
  * ```
@@ -77,15 +77,11 @@ export interface DebugSink {
  * Bus combine trace information.
  *
  * Contains all information about a bus combine evaluation:
- * - Which bus (busIndex)
  * - Input terms (termIds and their evaluated values)
  * - Combine mode used
  * - Final result
  */
 export interface BusCombineTraceInfo {
-  /** Bus index (for identification) */
-  busIndex: number;
-
   /** Term signal IDs (pre-sorted by compiler) */
   termIds: SigExprId[];
 

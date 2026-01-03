@@ -1,0 +1,119 @@
+Agent: project-evaluator | 2026-01-02
+Scope: Sprint 3 P1 Type Cleanup (bus-block-unification)
+Completion: 95% | Gaps: 1 compilation blocker | Test Quality: UNKNOWN (blocked)
+Reused: 3 recent STATUS/PLAN docs | Fresh: Comprehensive code inspection + git history
+Cache updated: None (topic-specific evaluation)
+Ambiguities: 3 found (see STATUS) | Workflow: CONTINUE
+Next Action: Fix transform definition TypeErrors (P0), then verify P1 completion
+
+=== KEY FINDINGS ===
+
+P1 WORK STATUS: 95% COMPLETE
+- All compiler `kind === 'bus'` checks REMOVED (5 files, 8 commits)
+- Pass 1, 6, 7, 8, resolveWriters: ✅ CLEAN (no bus discrimination)
+- Store checks remain but may be legacy migration paths (needs investigation)
+
+BLOCKER (NOT P1 SCOPE):
+- 45 TypeScript compilation errors in transform definitions
+- Root cause: Missing `busEligible` field in TypeDesc literals
+- Impact: Cannot run tests to verify P1 completion
+- Estimated fix: 1-2 hours (mechanical change)
+
+SPRINT 3 P1 COMMITS (Dec 31 - Jan 2):
+- bfc2db9: Pass 1 publisher sorting removed
+- 181ef11: Pass 6 bus writer check removed
+- 096d4a0: Pass 7 legacy edge functions removed
+- 5377b27: Pass 8 comments updated
+- d64f76b: resolveWriters bus kind removed
+
+REMAINING WORK:
+- P0: Fix transform TypeErrors (unblock tests) - 1-2 hours
+- P1: Verify compiler tests pass - 30 minutes
+- P2: Investigate store legacy checks - 2-3 hours
+- P3: Manual testing verification - 1 hour
+
+=== STORE LEGACY CHECKS (P2 INVESTIGATION NEEDED) ===
+
+PatchStore.ts (lines 1368, 1378, 1416, 1426):
+  Event emission discriminates by `kind === 'bus'`
+  Question: Are these branches reachable with BusBlocks?
+
+SelectionStore.ts (line 79):
+  Legacy `selection.kind === 'bus'` check
+  Question: Does UI still use bus selection kind?
+
+DiagnosticStore.ts (line 186):
+  Legacy `target.kind === 'bus'` check
+  Question: Do diagnostics still use bus targets?
+
+Action: Grep for event listeners and UI usage before removal
+
+=== MIGRATION CODE (EXEMPT) ===
+
+edgeMigration.ts: Legitimately needs `kind === 'bus'` checks
+bus-block/migration.ts: Legitimately uses Bus types
+
+These are NOT in scope for P1 cleanup (migration utilities)
+
+=== TYPE SYSTEM STATE ===
+
+Endpoint union: Still has `{ kind: 'bus' }` variant (UNUSED)
+Bus interface: Still exported (used by BusStore facade)
+Edge fields: Legacy lensStack/adapterChain REMOVED ✅
+
+Recommendation: Mark Endpoint.bus variant as @deprecated
+
+=== FILES AFFECTED ===
+
+TO FIX (P0 - compilation blocker):
+- src/editor/transforms/definitions/adapters/ConstToSignal.ts (10 errors)
+- src/editor/transforms/definitions/lenses/arithmetic.ts (5 errors)
+- src/editor/transforms/definitions/lenses/ease.ts (15 errors)
+- src/editor/transforms/definitions/lenses/shaping.ts (7 errors)
+- src/editor/__tests__/lenses.test.ts (2 errors)
+
+TO VERIFY (P1):
+- src/editor/compiler/passes/pass1-normalize.ts ✅
+- src/editor/compiler/passes/pass6-block-lowering.ts ✅
+- src/editor/compiler/passes/pass7-bus-lowering.ts ✅
+- src/editor/compiler/passes/pass8-link-resolution.ts ✅
+- src/editor/compiler/passes/resolveWriters.ts ✅
+
+TO INVESTIGATE (P2):
+- src/editor/stores/PatchStore.ts (event emission)
+- src/editor/stores/SelectionStore.ts (selection detection)
+- src/editor/stores/DiagnosticStore.ts (diagnostic targeting)
+
+=== AMBIGUITIES ===
+
+1. Store legacy checks - Migration compatibility or dead code?
+   Options: Remove now | Keep for migration | Refactor to BusBlock detection
+
+2. Endpoint type union - Remove bus variant or mark deprecated?
+   Options: Breaking change | Deprecation | Replace with PortRef alias
+
+3. What constitutes P1 complete - Compiler only or stores too?
+   Resolution: P1 = compiler (DONE), P2 = stores (PARTIAL)
+
+=== SUCCESS CRITERIA ===
+
+P1 (Compiler):
+[x] Pass 1, 6, 7, 8 have no `kind === 'bus'` checks
+[x] resolveWriters has no bus writer kind
+[x] Comments updated for migration completion
+[ ] Tests pass (BLOCKED by compilation)
+
+P2 (Stores):
+[ ] PatchStore event emission investigated
+[ ] SelectionStore bus selection investigated
+[ ] DiagnosticStore bus targeting investigated
+[ ] Decision made on legacy check removal
+
+=== VERDICT ===
+
+CONTINUE with P1 verification after compilation fixed
+DO NOT remove store checks until investigated
+ESTIMATE 4-6 hours to fully verify Sprint 3 P1 scope
+
+P1 functional work is COMPLETE (all compiler changes committed)
+Blocker is unrelated transform definition issue (separate work item)

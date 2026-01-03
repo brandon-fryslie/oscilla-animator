@@ -1,0 +1,59 @@
+{
+  "$schema": "../../src/editor/schema/patch-schema.json",
+  "version": "1.0.0",
+  "name": "Steel Thread - IR Validation",
+  "description": "Minimal patch for validating IR compilation pipeline",
+  "blocks": [
+    {
+      "id": "time-root",
+      "type": "InfiniteTimeRoot",
+      "label": "TimeRoot",
+      "x": 100,
+      "y": 100,
+      "params": {
+        "periodMs": 3000
+      }
+    },
+    {
+      "id": "domain",
+      "type": "GridDomain",
+      "label": "Grid Domain",
+      "x": 100,
+      "y": 250,
+      "params": {
+        "rows": 5,
+        "cols": 5
+      }
+    },
+    {
+      "id": "render",
+      "type": "RenderInstances2D",
+      "label": "Render 2D",
+      "x": 400,
+      "y": 200,
+      "params": {}
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire-domain",
+      "fromBlockId": "domain",
+      "fromPortId": "domain",
+      "toBlockId": "render",
+      "toPortId": "domain"
+    },
+    {
+      "id": "wire-positions",
+      "fromBlockId": "domain",
+      "fromPortId": "pos0",
+      "toBlockId": "render",
+      "toPortId": "positions"
+    }
+  ],
+  "buses": [],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 1
+  }
+}

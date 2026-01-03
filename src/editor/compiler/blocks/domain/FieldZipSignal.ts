@@ -2,7 +2,7 @@
  * FieldZipSignal Block Compiler
  *
  * Combines a Field<float> with a Signal<float> using a binary operation.
- * The signal is evaluated once per frame and the operation is applied to each element.
+ * The signal is evaluated once per frame and combined with each field element.
  */
 
 import type { BlockCompiler, Field, CompileCtx, RuntimeCtx } from '../../types';
@@ -12,58 +12,47 @@ import { OpCode } from '../../ir/opcodes';
 
 /**
  * Extended context interface for field evaluation at runtime.
- * The compile-time context is extended with time information during rendering.
  */
 interface FieldEvalCtx extends CompileCtx {
   /** Current time in milliseconds (available at runtime) */
   t: number;
 }
 
-/**
- * Get the binary operation by name
- */
-function getZipOperation(fn: string): (a: number, b: number) => number {
-  switch (fn) {
-    case 'add':
-      return (a, b) => a + b;
-    case 'sub':
-      return (a, b) => a - b;
-    case 'mul':
-      return (a, b) => a * b;
-    case 'min':
-      return (a, b) => Math.min(a, b);
-    case 'max':
-      return (a, b) => Math.max(a, b);
-    default:
-      return (a, _b) => a; // default to first (field value)
-  }
-}
-
-/**
- * Map operation name to OpCode
- */
-function getOpCode(fn: string): OpCode {
-  switch (fn) {
-    case 'add':
-      return OpCode.Add;
-    case 'sub':
-      return OpCode.Sub;
-    case 'mul':
-      return OpCode.Mul;
-    case 'min':
-      return OpCode.Min;
-    case 'max':
-      return OpCode.Max;
-    default:
-      return OpCode.Add;
-  }
-}
-
 // =============================================================================
 // IR Lowering (Phase 3 Migration)
 // =============================================================================
 
-const lowerFieldZipSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
+/**
+ * Get OpCode for a given operation name.
+ */
+function getOpCode(fn: string): OpCode {
+  switch (fn) {
+    case 'add': return OpCode.Add;
+    case 'sub': return OpCode.Sub;
+    case 'mul': return OpCode.Mul;
+    case 'div': return OpCode.Div;
+    case 'min': return OpCode.Min;
+    case 'max': return OpCode.Max;
+    default: return OpCode.Add; // Default to add
+  }
+}
+
+/**
+ * Get operation function for a given operation name (legacy closure compiler).
+ */
+function getZipOperation(fn: string): (a: number, b: number) => number {
+  switch (fn) {
+    case 'add': return (a, b) => a + b;
+    case 'sub': return (a, b) => a - b;
+    case 'mul': return (a, b) => a * b;
+    case 'div': return (a, b) => (b !== 0 ? a / b : 0);
+    case 'min': return (a, b) => Math.min(a, b);
+    case 'max': return (a, b) => Math.max(a, b);
+    default: return (a, b) => a + b; // Default to add
+  }
+}
+
+const lowerFieldZipSignal: BlockLowerFn = ({ ctx, config, inputs }) => {
   const [field, signal] = inputs;
 
   if (field.k !== 'field') {
@@ -74,9 +63,9 @@ const lowerFieldZipSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
     throw new Error('FieldZipSignal requires signal input');
   }
 
-  // Extract operation from config
-  const configObj = config as { fn?: string } | undefined;
-  const fn = configObj?.fn ?? 'add';
+  // Read operation from config (defaults to 'add')
+  const configObj = (config != null && typeof config === 'object') ? config as Record<string, unknown> : {};
+  const fn = typeof configObj.fn === 'string' ? configObj.fn : 'add';
   const opcode = getOpCode(fn);
 
   // Strategy: broadcast signal to field, then zip the two fields
@@ -85,13 +74,14 @@ const lowerFieldZipSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   // Note: We need domain slot from the field input
   // For now, we'll create a placeholder - this will need proper domain tracking
-  const domainSlot = ctx.b.allocValueSlot();
+  const domainType = { world: "config" as const, domain: "int" as const, category: "internal" as const, busEligible: false };
+  const domainSlot = ctx.b.allocValueSlot(domainType, 'FieldZipSignal_domain');
   const broadcastField = ctx.b.broadcastSigToField(signal.id, domainSlot, outType);
 
   const fnRef = { kind: 'opcode' as const, opcode };
   const fieldId = ctx.b.fieldZip(field.id, broadcastField, fnRef, outType);
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldZipSignal_out');
   return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 

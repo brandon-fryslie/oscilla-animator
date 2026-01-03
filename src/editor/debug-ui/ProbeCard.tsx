@@ -1,161 +1,73 @@
 /**
- * ProbeCard Component
+ * Probe Card Component
  *
- * Floating popup that displays information about a hovered element
- * when in Probe Mode. Shows:
- * - For buses: name, type, current value, publisher/listener counts, sparkline
- * - For blocks: type, label, probe values from TraceController
+ * Displays debug probe information when hovering over buses or blocks
+ * in probe mode. Shows live signal values and connection info.
  */
 
 import { observer } from 'mobx-react-lite';
-import { useStore } from '../stores';
-import { BusValueMeter } from './BusValueMeter';
-import { TraceController } from '../debug/TraceController';
-import { valueRecordToSummary } from '../debug/valueRecordToSummary';
-import { formatValueSummary } from '../debug/types';
-import './ProbeCard.css';
-
-/**
- * Probe target types (mirrored from DebugUIStore for import simplicity)
- */
-type ProbeTarget =
-  | { type: 'bus'; busId: string }
-  | { type: 'block'; blockId: string }
-  | null;
+import type { ProbeTarget, CursorPosition } from '../stores/DebugUIStore';
 
 interface ProbeCardProps {
   target: ProbeTarget;
-  position: { x: number; y: number };
+  position: CursorPosition;
 }
 
 /**
- * ProbeCard - Floating inspection card for Probe Mode
+ * ProbeCard - Floating debug info card
+ *
+ * Renders near the cursor when probe mode is active and hovering over
+ * a valid target (bus or block).
  */
 export const ProbeCard = observer(function ProbeCard({ target, position }: ProbeCardProps) {
-  const { busStore, patchStore, debugUIStore } = useStore();
-
-  if (target === null) {
+  // Don't render if no target
+  if (!target) {
     return null;
   }
 
-  // Position card near cursor (offset +10px x, +10px y)
+  // Position card near cursor with offset
   const style: React.CSSProperties = {
-    left: position.x + 10,
-    top: position.y + 10,
+    position: 'fixed',
+    left: position.x + 16,
+    top: position.y + 16,
+    zIndex: 10000,
+    backgroundColor: 'var(--bg-elevated, #1a1a1a)',
+    border: '1px solid var(--border-color, #333)',
+    borderRadius: '4px',
+    padding: '8px 12px',
+    fontSize: '12px',
+    fontFamily: 'monospace',
+    color: 'var(--text-primary, #e0e0e0)',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+    pointerEvents: 'none',
+    maxWidth: '300px',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    color: 'var(--text-secondary, #888)',
+    fontSize: '10px',
+    textTransform: 'uppercase',
+    marginBottom: '4px',
+  };
+
+  const valueStyle: React.CSSProperties = {
+    fontWeight: 500,
   };
 
   if (target.type === 'bus') {
-    const bus = busStore.buses.find(b => b.id === target.busId);
-    if (bus === undefined) {
-      return null;
-    }
-
-    // Count publishers and listeners
-    const publisherCount = busStore.publishers.filter(p => p.busId === bus.id).length;
-    const listenerCount = busStore.listeners.filter(l => l.busId === bus.id).length;
-
-    // Get bus value from health snapshot if available
-    const snapshot = debugUIStore.latestHealthSnapshot;
-    const busValue = snapshot?.busValues?.[bus.id];
-
     return (
-      <div className="probe-card" style={style}>
-        <div className="probe-card-header">
-          <span className="probe-card-type">Bus</span>
-          <span className="probe-card-name">{bus.name}</span>
-        </div>
-
-        <div className="probe-card-body">
-          <div className="probe-card-row">
-            <span className="probe-card-label">Type:</span>
-            <span className="probe-card-value">{bus.type?.domain ?? 'unknown'}</span>
-          </div>
-
-          <div className="probe-card-row">
-            <span className="probe-card-label">Publishers:</span>
-            <span className="probe-card-value">{publisherCount}</span>
-          </div>
-
-          <div className="probe-card-row">
-            <span className="probe-card-label">Listeners:</span>
-            <span className="probe-card-value">{listenerCount}</span>
-          </div>
-
-          {busValue !== undefined && busValue !== null && (
-            <div className="probe-card-meter">
-              <BusValueMeter value={busValue} busType={bus.type?.domain ?? 'float'} />
-            </div>
-          )}
-
-          {(busValue === undefined || busValue === null) && (
-            <div className="probe-card-no-value">
-              No live value available
-            </div>
-          )}
-        </div>
+      <div style={style}>
+        <div style={labelStyle}>Bus</div>
+        <div style={valueStyle}>{target.busId}</div>
       </div>
     );
   }
 
   if (target.type === 'block') {
-    const block = patchStore.blocks.find(b => b.id === target.blockId);
-    if (block === undefined) {
-      return null;
-    }
-
-    // Get TraceController to read probe values
-    const traceController = TraceController.instance;
-
-    // Common port IDs to check for probes (based on DebugDisplay ports)
-    // In reality, any block input port could have a probe if registered
-    const commonPorts = ['signal', 'phase', 'field', 'domain', 'value', 'input'];
-
-    // Collect probe values for this block
-    const probeValues: Array<{ portId: string; value: string }> = [];
-
-    for (const portId of commonPorts) {
-      const probeId = `${block.id}:${portId}`;
-      const valueRecord = traceController.getProbeValue(probeId);
-
-      if (valueRecord !== undefined) {
-        const summary = valueRecordToSummary(valueRecord);
-        if (summary !== null) {
-          const formattedValue = formatValueSummary(summary);
-          probeValues.push({ portId, value: formattedValue });
-        }
-      }
-    }
-
     return (
-      <div className="probe-card" style={style}>
-        <div className="probe-card-header">
-          <span className="probe-card-type">Block</span>
-          <span className="probe-card-name">{(block.label !== undefined && block.label.length > 0) ? block.label : block.type}</span>
-        </div>
-
-        <div className="probe-card-body">
-          <div className="probe-card-row">
-            <span className="probe-card-label">Type:</span>
-            <span className="probe-card-value">{block.type}</span>
-          </div>
-
-          {probeValues.length === 0 && (
-            <div className="probe-card-placeholder">
-              No probes registered for this block
-            </div>
-          )}
-
-          {probeValues.length > 0 && (
-            <>
-              {probeValues.map(({ portId, value }) => (
-                <div key={portId} className="probe-card-row">
-                  <span className="probe-card-label">{portId}:</span>
-                  <span className="probe-card-value">{value}</span>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
+      <div style={style}>
+        <div style={labelStyle}>Block</div>
+        <div style={valueStyle}>{target.blockId}</div>
       </div>
     );
   }

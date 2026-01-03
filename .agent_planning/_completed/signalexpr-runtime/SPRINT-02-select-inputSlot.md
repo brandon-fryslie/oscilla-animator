@@ -371,4 +371,3 @@ Sprint 2 is complete when:
 
 ## Next Sprint
 
-Sprint 3: Bus Combine - Implement `busCombine` node evaluation with deterministic publisher ordering.

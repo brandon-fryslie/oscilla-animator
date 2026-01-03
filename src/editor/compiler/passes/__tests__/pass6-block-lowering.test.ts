@@ -60,7 +60,8 @@ function createGraph(
 
 describe("pass6BlockLowering", () => {
   describe("Scalar Artifacts", () => {
-    it("translates Scalar:float to constant signal", () => {
+    // Workstream 03: Scalars remain as scalarConst in IR (not converted to signals)
+    it("translates Scalar:float to scalarConst", () => {
       const block = createBlock("b1", "Constant");
       const { validated, blocks } = createGraph([block], [createTrivialSCC(0)]);
 
@@ -76,10 +77,10 @@ describe("pass6BlockLowering", () => {
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
       expect(outputs!.size).toBe(1);
-      expect(outputs!.get("out")?.k).toBe("sig");
+      expect(outputs!.get("out")?.k).toBe("scalarConst");
     });
 
-    it("translates Scalar:vec2 to constant signal", () => {
+    it("translates Scalar:vec2 to scalarConst", () => {
       const block = createBlock("b1", "Vec2Constant");
       const { validated, blocks } = createGraph([block], [createTrivialSCC(0)]);
 
@@ -92,10 +93,10 @@ describe("pass6BlockLowering", () => {
       expect(result.errors).toHaveLength(0);
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs!.get("out")?.k).toBe("sig");
+      expect(outputs!.get("out")?.k).toBe("scalarConst");
     });
 
-    it("translates Scalar:color to constant signal", () => {
+    it("translates Scalar:color to scalarConst", () => {
       const block = createBlock("b1", "ColorConstant");
       const { validated, blocks } = createGraph([block], [createTrivialSCC(0)]);
 
@@ -108,7 +109,7 @@ describe("pass6BlockLowering", () => {
       expect(result.errors).toHaveLength(0);
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
-      expect(outputs!.get("out")?.k).toBe("sig");
+      expect(outputs!.get("out")?.k).toBe("scalarConst");
     });
   });
 
@@ -256,6 +257,7 @@ describe("pass6BlockLowering", () => {
       const block = createBlock("b1", "Splitter", ["out1", "out2", "out3"]);
       const { validated, blocks } = createGraph([block], [createTrivialSCC(0)]);
 
+      // Workstream 03: Scalar outputs produce scalarConst (not signals)
       const compiledPortMap = new Map<string, Artifact>([
         ["b1:out1", { kind: "Scalar:float", value: 1 }],
         ["b1:out2", { kind: "Scalar:float", value: 2 }],
@@ -268,7 +270,7 @@ describe("pass6BlockLowering", () => {
       const outputs = result.blockOutputs.get(0 as BlockIndex);
       expect(outputs).toBeDefined();
       expect(outputs!.size).toBe(3);
-      expect(Array.from(outputs!.values()).every((ref) => ref.k === "sig")).toBe(true);
+      expect(Array.from(outputs!.values()).every((ref) => ref.k === "scalarConst")).toBe(true);
     });
   });
 

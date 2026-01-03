@@ -3,7 +3,7 @@
  * @description Helper functions for creating and managing custom composites
  */
 
-import type { Block, Connection, Composite, CompositeConnection, ExposedParam } from './types';
+import type { Block, Edge, Composite, ExposedParam } from './types';
 import type { ExposedPort } from './composites';
 import { getBlockDefinition } from './blocks';
 import type { ParamSchema } from './blocks/types';
@@ -21,7 +21,7 @@ export interface DetectedPorts {
 
 export function detectExposedPorts(
   selectedBlocks: Block[],
-  allConnections: Connection[]
+  allEdges: Edge[]
 ): DetectedPorts {
   const selectedBlockIds = new Set(selectedBlocks.map(b => b.id));
   const inputs: ExposedPort[] = [];
@@ -31,20 +31,20 @@ export function detectExposedPorts(
   const connectionsToSelected = new Set<string>(); // port refs going TO selected blocks
   const connectionsFromSelected = new Set<string>(); // port refs coming FROM selected blocks
 
-  for (const conn of allConnections) {
-    const fromInSelection = selectedBlockIds.has(conn.from.blockId);
-    const toInSelection = selectedBlockIds.has(conn.to.blockId);
+  for (const edge of allEdges) {
+    const fromInSelection = selectedBlockIds.has(edge.from.blockId);
+    const toInSelection = selectedBlockIds.has(edge.to.blockId);
 
     if (fromInSelection && toInSelection) {
       // Internal connection - mark both ends as connected
-      connectionsFromSelected.add(`${conn.from.blockId}:${conn.from.slotId}`);
-      connectionsToSelected.add(`${conn.to.blockId}:${conn.to.slotId}`);
+      connectionsFromSelected.add(`${edge.from.blockId}:${edge.from.slotId}`);
+      connectionsToSelected.add(`${edge.to.blockId}:${edge.to.slotId}`);
     } else if (fromInSelection) {
       // Connection from selection to outside - output is connected
-      connectionsFromSelected.add(`${conn.from.blockId}:${conn.from.slotId}`);
+      connectionsFromSelected.add(`${edge.from.blockId}:${edge.from.slotId}`);
     } else if (toInSelection) {
       // Connection from outside to selection - input is connected
-      connectionsToSelected.add(`${conn.to.blockId}:${conn.to.slotId}`);
+      connectionsToSelected.add(`${edge.to.blockId}:${edge.to.slotId}`);
     }
   }
 
@@ -53,8 +53,12 @@ export function detectExposedPorts(
     const definition = getBlockDefinition(block.type);
     if (!definition) continue;
 
+    // Get slots from definition
+    const inputSlots = definition.slots.filter(s => s.direction === 'input');
+    const outputSlots = definition.slots.filter(s => s.direction === 'output');
+
     // Check input slots
-    for (const slot of block.inputs) {
+    for (const slot of inputSlots) {
       const portKey = `${block.id}:${slot.id}`;
       // Input is exposed if it's NOT connected from another selected block
       const isConnectedInternally = connectionsToSelected.has(portKey);
@@ -72,7 +76,7 @@ export function detectExposedPorts(
     }
 
     // Check output slots
-    for (const slot of block.outputs) {
+    for (const slot of outputSlots) {
       const portKey = `${block.id}:${slot.id}`;
       // Output is exposed if it's NOT connected to another selected block
       const isConnectedInternally = connectionsFromSelected.has(portKey);
@@ -153,57 +157,38 @@ export function generateCompositeId(name: string): string {
 }
 
 /**
- * Convert selected blocks and connections to a Composite definition.
+ * Convert selected blocks and edges to a Composite definition.
  */
 export function createCompositeFromSelection(
   name: string,
-  description: string | undefined,
-  subcategory: string,
+  _description: string | undefined,
+  _subcategory: string,
   selectedBlocks: Block[],
-  allConnections: Connection[],
-    _exposedInputIds: Set<string>,
+  allEdges: Edge[],
+  _exposedInputIds: Set<string>,
   _exposedOutputIds: Set<string>,
   exposedParams: ExposedParam[]
 ): Composite {
   const selectedBlockIds = new Set(selectedBlocks.map(b => b.id));
 
-  // Filter connections that are internal to the selection
-  const internalConnections: CompositeConnection[] = [];
-  for (const conn of allConnections) {
-    if (selectedBlockIds.has(conn.from.blockId) && selectedBlockIds.has(conn.to.blockId)) {
-      internalConnections.push({
-        id: conn.id,
-        from: {
-          blockId: conn.from.blockId,
-          slotId: conn.from.slotId,
-          direction: 'output' as const,
-        },
-        to: {
-          blockId: conn.to.blockId,
-          slotId: conn.to.slotId,
-          direction: 'input' as const,
-        },
-      });
+  // Filter edges that are internal to the selection
+  const internalEdges: Edge[] = [];
+  for (const edge of allEdges) {
+    if (selectedBlockIds.has(edge.from.blockId) && selectedBlockIds.has(edge.to.blockId)) {
+      internalEdges.push(edge);
     }
   }
 
   const composite: Composite = {
     id: generateCompositeId(name),
     name,
-    description,
-    subcategory,
-    blocks: selectedBlocks.map(b => ({
-      id: b.id,
-      type: b.type,
-      label: b.label,
-      inputs: b.inputs,
-      outputs: b.outputs,
-      params: b.params,
-      category: b.category,
-      description: b.description,
-    })),
-    connections: internalConnections,
-    exposedParams,
+    // Store complete Block instances (not partial copies)
+    blocks: selectedBlocks,
+    // Store complete Edge instances (not converted to CompositeConnection)
+    edges: internalEdges,
+    exposedParams: exposedParams.length > 0 ?
+      Object.fromEntries(exposedParams.map(p => [p.name, { blockId: p.blockId, paramName: p.paramName }])) :
+      undefined,
   };
 
   return composite;

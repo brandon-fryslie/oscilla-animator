@@ -11,9 +11,13 @@
  * - Clear separation between structural validity (prevent) and runtime warnings (allow)
  *
  * Reference: design-docs/10-Refactor-for-UI-prep/5-DivergentTypes.md
+ *
+ * NOTE: This module is currently in transition after Bus-Block unification.
+ * Many types and functions here are obsolete or need updating to work with
+ * the new Edge-based architecture where buses are BusBlocks.
  */
 
-import type { BlockId, Connection, Publisher, Listener, Bus } from '../types';
+import type { BlockId, Edge } from '../types';
 import type { Diagnostic } from '../diagnostics/types';
 
 // =============================================================================
@@ -86,6 +90,8 @@ export interface PortNode {
 
 /**
  * Bus node in the semantic graph.
+ * NOTE: After Bus-Block unification, buses are now regular blocks with type='BusBlock'.
+ * This type may become obsolete.
  */
 export interface BusNode {
   kind: 'bus';
@@ -102,7 +108,9 @@ export type GraphNode = BlockNode | PortNode | BusNode;
 // =============================================================================
 
 /**
- * Wire edge - connects two ports via a Connection.
+ * Wire edge - connects two ports via an Edge.
+ * After bus-block unification, ALL edges are wire edges (port-to-port).
+ * Buses are now BusBlocks with input/output ports like any other block.
  */
 export interface WireEdge {
   kind: 'wire';
@@ -112,30 +120,9 @@ export interface WireEdge {
 }
 
 /**
- * Publisher edge - connects a port to a bus.
+ * Graph edge type. After bus-block unification, all edges are wire edges.
  */
-export interface PublisherEdge {
-  kind: 'publisher';
-  publisherId: string;
-  from: PortKey;
-  busId: string;
-  sortKey: number;
-}
-
-/**
- * Listener edge - connects a bus to a port.
- */
-export interface ListenerEdge {
-  kind: 'listener';
-  listenerId: string;
-  busId: string;
-  to: PortKey;
-}
-
-/**
- * Union of all graph edge types.
- */
-export type GraphEdge = WireEdge | PublisherEdge | ListenerEdge;
+export type GraphEdge = WireEdge;
 
 // =============================================================================
 // Patch Document (Minimal Interface)
@@ -145,6 +132,10 @@ export type GraphEdge = WireEdge | PublisherEdge | ListenerEdge;
  * Minimal patch document interface for semantic graph construction.
  * This is a subset of the full Patch type, containing only what's
  * needed for validation.
+ *
+ * UPDATED: After Bus-Block unification (2026-01-02)
+ * - connections → edges
+ * - buses/publishers/listeners removed (now just blocks + edges)
  */
 export interface PatchDocument {
   blocks: ReadonlyArray<{
@@ -153,10 +144,7 @@ export interface PatchDocument {
     readonly inputs: ReadonlyArray<{ readonly id: string; readonly type: string }>;
     readonly outputs: ReadonlyArray<{ readonly id: string; readonly type: string }>;
   }>;
-  connections: readonly Connection[];
-  buses: readonly Bus[];
-  publishers: readonly Publisher[];
-  listeners: readonly Listener[];
+  edges: readonly Edge[];
 }
 
 // =============================================================================
@@ -183,38 +171,19 @@ export function stringToPortKey(str: string): PortKey | null {
 }
 
 /**
- * Create a PortKey for a connection endpoint.
+ * Create a PortKey for an edge endpoint.
+ * NOTE: Updated for new Edge structure after unification.
+ * Direction is inferred: 'from' is always output, 'to' is always input.
  */
-export function portKeyFromConnection(
-  connection: Connection,
+export function portKeyFromEdge(
+  edge: Edge,
   end: 'from' | 'to'
 ): PortKey {
-  const endpoint = connection[end];
+  const endpoint = edge[end];
   return {
     blockId: endpoint.blockId,
     slotId: endpoint.slotId,
-    direction: endpoint.direction,
+    direction: end === 'from' ? 'output' : 'input',
   };
 }
 
-/**
- * Create a PortKey from a Publisher endpoint.
- */
-export function portKeyFromPublisher(publisher: Publisher): PortKey {
-  return {
-    blockId: publisher.from.blockId,
-    slotId: publisher.from.slotId,
-    direction: 'output',
-  };
-}
-
-/**
- * Create a PortKey from a Listener endpoint.
- */
-export function portKeyFromListener(listener: Listener): PortKey {
-  return {
-    blockId: listener.to.blockId,
-    slotId: listener.to.slotId,
-    direction: 'input',
-  };
-}

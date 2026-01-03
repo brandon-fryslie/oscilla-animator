@@ -11,7 +11,7 @@
  * - HANDOFF.md Topic 1: SignalExpr Schema
  */
 
-import type { TypeDesc, ValueSlot, BusIndex, StateId, TransformChainId, SigExprId, EventExprId } from "./types";
+import type { TypeDesc, ValueSlot, StateId, TransformChainId, SigExprId, EventExprId } from "./types";
 import type { PureFnRef } from "./transforms";
 
 // Re-export expression IDs for convenience
@@ -185,7 +185,6 @@ export interface SignalExprTransform {
 export interface SignalExprBusCombine {
   kind: "busCombine";
   type: TypeDesc;
-  busIndex: BusIndex;
   /** Pre-sorted by compiler - runtime never re-sorts */
   terms: SigExprId[];
   combine: SigCombineSpec;
@@ -404,7 +403,6 @@ export interface EventExprMerge {
 export interface EventExprBusCombine {
   kind: "eventBusCombine";
   type: TypeDesc;
-  busIndex: BusIndex;
   /** Pre-sorted by compiler - runtime never re-sorts */
   terms: EventExprId[];
   combine: EventCombineSpec;

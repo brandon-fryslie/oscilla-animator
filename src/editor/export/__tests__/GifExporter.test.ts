@@ -80,17 +80,7 @@ if (typeof globalThis !== 'undefined' && typeof OffscreenCanvas === 'undefined')
 }
 
 // Mock program for testing
-// Mock program for testing
 function createMockProgram(): CompiledProgramIR {
-  const renderAssembleStep = {
-    kind: 'renderAssemble',
-    id: 'render-assemble' as unknown as never,
-    deps: [],
-    instance2dListSlot: -1 as unknown as never,
-    pathBatchListSlot: -1 as unknown as never,
-    outFrameSlot: 0,
-  };
-
   return {
     irVersion: 1,
     patchId: 'test',
@@ -98,12 +88,10 @@ function createMockProgram(): CompiledProgramIR {
     compileId: 'test',
     seed: 42,
     timeModel: { kind: 'infinite', windowMs: 10000 },
-    types: { types: [] },
-    nodes: { nodes: [] },
-    buses: { buses: [] },
-    lenses: { lenses: [] },
-    adapters: { adapters: [] },
-    fields: { exprs: [] },
+    types: { typeIds: [] },
+    signalExprs: { nodes: [] },
+    fieldExprs: { nodes: [] },
+    eventExprs: { nodes: [] },
     constants: {
       json: [],
       f64: new Float64Array([]),
@@ -117,14 +105,24 @@ function createMockProgram(): CompiledProgramIR {
       f32Size: 0,
       i32Size: 0,
     },
+    slotMeta: [],
+    render: { sinks: [] },
+    cameras: { cameras: [], cameraIdToIndex: {} },
+    meshes: { meshes: [], meshIdToIndex: {} },
+    primaryCameraId: '__default__',
     schedule: {
-      steps: [renderAssembleStep],
+      steps: [],
       stepIdToIndex: {},
-      deps: { fwdDeps: {}, revDeps: {} },
-      determinism: { sortKeyRanges: {} },
-      caching: { perFrame: [], untilInvalidated: [] },
+      deps: { slotProducerStep: {}, slotConsumers: {} },
+      determinism: { allowedOrderingInputs: [], topoTieBreak: 'nodeIdLex' },
+      caching: { stepCache: {}, materializationCache: {} },
     },
-    outputs: [{ id: 'render', kind: 'renderFrame', slot: 0 as unknown as never }],
+    outputs: [],
+    debugIndex: {
+      stepToBlock: new Map(),
+      slotToBlock: new Map(),
+      labels: new Map(),
+    },
   } as unknown as CompiledProgramIR;
 }
 

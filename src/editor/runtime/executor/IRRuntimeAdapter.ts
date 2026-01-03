@@ -12,8 +12,7 @@
  * - Manage RuntimeState lifecycle across frames
  * - Support hot-swap via swapProgram()
  * - Stub Program.event() (events not implemented yet)
- * - BRIDGE MODE: Use legacy render closure while IR schedule manages time
- * - PURE IR MODE: Return RenderFrameIR directly from schedule execution
+ * - Return RenderFrameIR directly from schedule execution
  *
  * References:
  * - .agent_planning/compiler-rendering-integration/PLAN-2025-12-26-110434.md §P0-2
@@ -22,9 +21,8 @@
  */
 
 import type { CompiledProgramIR } from "../../compiler/ir";
-import type { RuntimeCtx, Program, KernelEvent } from "../../compiler/types";
+import type { Program, KernelEvent, RuntimeCtx } from "../../compiler/types";
 import type { RenderTree, GroupNode } from "../renderTree";
-import type { RenderTree as RenderCmdTree } from "../renderCmd";
 import type { RenderFrameIR } from "../../compiler/ir/renderIR";
 import type { ValueStore } from "../../compiler/ir/stores";
 import { ScheduleExecutor } from "./ScheduleExecutor";
@@ -37,10 +35,6 @@ import type { RuntimeState } from "./RuntimeState";
  * Manages the lifecycle of ScheduleExecutor and RuntimeState.
  * Provides Program.signal() and Program.event() for Player compatibility.
  *
- * Modes:
- * - BRIDGE MODE: Provide legacyRenderFn to use closure for rendering
- * - PURE IR MODE: Leave legacyRenderFn null, returns empty group (stub for tests)
- *
  * @example
  * ```typescript
  * const adapter = new IRRuntimeAdapter(compiledProgram);
@@ -52,29 +46,22 @@ export class IRRuntimeAdapter {
   private program: CompiledProgramIR;
   private readonly executor: ScheduleExecutor;
   private runtime: RuntimeState;
-  private legacyRenderFn: ((tMs: number, ctx: RuntimeCtx) => RenderCmdTree | RenderTree) | null;
 
   /**
    * Create a new IRRuntimeAdapter.
    *
    * @param program - Compiled program IR
-   * @param legacyRenderFn - Optional legacy render function (for bridge mode)
    */
-  constructor(
-    program: CompiledProgramIR,
-    legacyRenderFn?: (tMs: number, ctx: RuntimeCtx) => RenderCmdTree | RenderTree,
-  ) {
+  constructor(program: CompiledProgramIR) {
     this.program = program;
     this.executor = new ScheduleExecutor();
     this.runtime = createRuntimeState(program);
-    this.legacyRenderFn = legacyRenderFn ?? null;
-  }
-
-  /**
-   * Returns true if running in pure IR mode (no legacy render function).
-   */
-  get isPureIR(): boolean {
-    return this.legacyRenderFn === null;
+    console.log('[IRRuntimeAdapter] Created with program:', {
+      patchId: program.patchId,
+      scheduleSteps: program.schedule.steps.length,
+      stepKinds: program.schedule.steps.map(s => s.kind),
+      outputs: program.outputs?.length ?? 0,
+    });
   }
 
   /**
@@ -85,8 +72,18 @@ export class IRRuntimeAdapter {
    * @param tMs - Absolute time in milliseconds
    * @returns RenderFrameIR for direct rendering
    */
+  private frameCount = 0;
   executeAndGetFrame(tMs: number): RenderFrameIR {
-    return this.executor.executeFrame(this.program, this.runtime, tMs);
+    const frame = this.executor.executeFrame(this.program, this.runtime, tMs);
+    if (this.frameCount++ % 60 === 0) {
+      console.log('[IRRuntimeAdapter] Frame:', {
+        tMs,
+        passCount: frame.passes.length,
+        passKinds: frame.passes.map(p => p.kind),
+        clear: frame.clear.mode,
+      });
+    }
+    return frame;
   }
 
   /**
@@ -97,16 +94,12 @@ export class IRRuntimeAdapter {
   }
 
   /**
-   * Create Program<RenderTree> interface for Player (legacy compatibility).
+   * Create Program<RenderTree> interface for Player compatibility.
    *
    * Returns a Program object that calls ScheduleExecutor under the hood.
    * The Program's signal() method executes a frame.
    *
-   * BRIDGE MODE: If a legacy render function is provided, it's used for rendering
-   * while the IR schedule still manages frame lifecycle (time, caches, etc.).
-   * This enables incremental migration from closures to IR.
-   *
-   * PURE IR MODE: Use executeAndGetFrame() instead for direct RenderFrameIR access.
+   * For production rendering, use executeAndGetFrame() for direct RenderFrameIR access.
    *
    * RuntimeState is preserved across signal() calls (not recreated each frame).
    *
@@ -114,18 +107,11 @@ export class IRRuntimeAdapter {
    */
   createProgram(): Program<RenderTree> {
     return {
-      signal: (tMs: number, runtimeCtx: RuntimeCtx): RenderTree => {
+      signal: (tMs: number, _runtimeCtx: RuntimeCtx): RenderTree => {
         // Execute frame lifecycle using ScheduleExecutor
         const frame = this.executor.executeFrame(this.program, this.runtime, tMs);
 
-        // BRIDGE MODE: If legacy render function is provided, use it for actual rendering
-        // This allows IR to manage time/state while closures still produce the render tree
-        if (this.legacyRenderFn !== null) {
-          // Use legacy closure for rendering - cast needed because different RenderTree types
-          return this.legacyRenderFn(tMs, runtimeCtx) as unknown as RenderTree;
-        }
-
-        // Pure IR mode: Convert RenderFrameIR to a stub GroupNode for testing
+        // Convert RenderFrameIR to a stub GroupNode for Player compatibility
         // In production, use executeAndGetFrame() and process the RenderFrameIR directly
         const emptyGroup: GroupNode = {
           kind: "group",
@@ -154,7 +140,6 @@ export class IRRuntimeAdapter {
    * The Player will continue rendering without visual jank.
    *
    * @param newProgram - New compiled program to swap to
-   * @param newLegacyRenderFn - Optional new legacy render function (for bridge mode)
    *
    * @example
    * ```typescript
@@ -169,10 +154,7 @@ export class IRRuntimeAdapter {
    * playerProgram.signal(tMs, ctx);
    * ```
    */
-  swapProgram(
-    newProgram: CompiledProgramIR,
-    newLegacyRenderFn?: (tMs: number, ctx: RuntimeCtx) => RenderCmdTree | RenderTree,
-  ): void {
+  swapProgram(newProgram: CompiledProgramIR): void {
     // 1. Snapshot old state for preservation
     const oldStateF64 = this.runtime.state.f64.slice();
     const oldStateF32 = this.runtime.state.f32.slice();
@@ -209,10 +191,5 @@ export class IRRuntimeAdapter {
     // 5. Swap to new program and runtime
     this.program = newProgram;
     this.runtime = newRuntime;
-
-    // 6. Update legacy render function if provided
-    if (newLegacyRenderFn !== undefined) {
-      this.legacyRenderFn = newLegacyRenderFn;
-    }
   }
 }

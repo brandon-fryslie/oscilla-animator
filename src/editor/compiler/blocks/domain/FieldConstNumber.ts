@@ -27,7 +27,7 @@ const lowerFieldConstNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
   const outType = { world: "field" as const, domain: "float" as const, category: "core" as const, busEligible: true };
   const fieldId = ctx.b.fieldConst(value, outType);
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldConstNumber_out');
   return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 

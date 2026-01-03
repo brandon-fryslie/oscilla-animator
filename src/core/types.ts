@@ -513,6 +513,8 @@ export type InternalDomain =
   | 'renderCmds'   // Render commands
   | 'mesh'         // 3D mesh
   | 'camera'       // Camera
+  | 'matBuffer'    // Materialization buffer (Float32Array/Uint8Array/etc)
+  | 'renderFrame'  // Render frame output
   | 'unknown';     // Unknown type
 
 /**

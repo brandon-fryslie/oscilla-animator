@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RootStore } from '../../stores/RootStore';
 import { runTx } from '../TxBuilder';
-import type { Block, Bus, Connection } from '../../types';
+import type { Block, Bus, Edge } from '../../types';
 
 describe('TxBuilder', () => {
   let rootStore: RootStore;
@@ -32,8 +32,8 @@ describe('TxBuilder', () => {
         tx.add('blocks', block);
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(1);
-      expect(rootStore.patchStore.blocks[0]).toEqual(block);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(1);
+      expect(rootStore.patchStore.userBlocks[0]).toEqual(block);
       expect(result.ops).toHaveLength(1);
       expect(result.ops[0]).toMatchObject({
         type: 'Add',
@@ -93,7 +93,7 @@ describe('TxBuilder', () => {
         tx.remove('blocks', 'block-1');
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(0);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(0);
       expect(result.ops[0]).toMatchObject({
         type: 'Remove',
         table: 'blocks',
@@ -135,8 +135,8 @@ describe('TxBuilder', () => {
         tx.replace('blocks', 'block-1', updated);
       });
 
-      expect(rootStore.patchStore.blocks[0].label).toBe('Updated');
-      expect(rootStore.patchStore.blocks[0].params).toEqual({ value: 2 });
+      expect(rootStore.patchStore.userBlocks[0].label).toBe('Updated');
+      expect(rootStore.patchStore.userBlocks[0].params).toEqual({ value: 2 });
       expect(result.ops[0]).toMatchObject({
         type: 'Update',
         table: 'blocks',
@@ -157,7 +157,7 @@ describe('TxBuilder', () => {
 
       runTx(rootStore, { label: 'Add' }, tx => tx.add('blocks', block));
 
-      const originalReference = rootStore.patchStore.blocks[0];
+      const originalReference = rootStore.patchStore.userBlocks[0];
 
       const updated: Block = { ...block, label: 'Updated' };
 
@@ -166,8 +166,8 @@ describe('TxBuilder', () => {
       });
 
       // Same object reference (mutated in place)
-      expect(rootStore.patchStore.blocks[0]).toBe(originalReference);
-      expect(rootStore.patchStore.blocks[0].label).toBe('Updated');
+      expect(rootStore.patchStore.userBlocks[0]).toBe(originalReference);
+      expect(rootStore.patchStore.userBlocks[0].label).toBe('Updated');
     });
 
     it('throws if entity does not exist', () => {
@@ -238,7 +238,7 @@ describe('TxBuilder', () => {
         });
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(2);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(2);
       expect(result.ops).toHaveLength(1);
       expect(result.ops[0].type).toBe('Many');
       const manyOp = result.ops[0];
@@ -290,7 +290,7 @@ describe('TxBuilder', () => {
             entity: { type: 'test' }, // Missing id
           });
         });
-      }).toThrow('Add op missing entity id');
+      }).toThrow('Add op entity missing id');
     });
 
     it('applies ops atomically (all-or-nothing)', () => {
@@ -319,7 +319,7 @@ describe('TxBuilder', () => {
         tx.add('blocks', block2);
       });
 
-      expect(rootStore.patchStore.blocks).toHaveLength(2);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(2);
     });
   });
 
@@ -412,12 +412,12 @@ describe('TxBuilder', () => {
       }).toThrow('Intentional error');
 
       // Store should be unchanged
-      expect(rootStore.patchStore.blocks).toHaveLength(0);
+      expect(rootStore.patchStore.userBlocks).toHaveLength(0);
     });
   });
 
   describe('lookup helpers', () => {
-    it('getConnectionsForBlock returns all connections involving block', () => {
+    it('getEdgesForBlock returns all edges involving block', () => {
       const block1: Block = {
         id: 'block-1',
         type: 'test',
@@ -441,30 +441,32 @@ describe('TxBuilder', () => {
       runTx(rootStore, { label: 'Setup' }, tx => {
         tx.add('blocks', block1);
         tx.add('blocks', block2);
-        tx.add('connections', {
-          id: 'conn-1',
-          from: { blockId: 'block-1', slotId: 'out', direction: 'output' },
-          to: { blockId: 'block-2', slotId: 'in', direction: 'input' },
+        tx.add('edges', {
+          id: 'edge-1',
+          from: { kind: 'port', blockId: 'block-1', slotId: 'out' },
+          to: { kind: 'port', blockId: 'block-2', slotId: 'in' },
+          enabled: true,
+        role: { kind: 'user' },
         });
       });
 
-      let connections1: Connection[] = [];
-      let connections2: Connection[] = [];
+      let edges1: Edge[] = [];
+      let edges2: Edge[] = [];
 
       runTx(rootStore, { label: 'Query' }, tx => {
-        connections1 = tx.getConnectionsForBlock('block-1');
-        connections2 = tx.getConnectionsForBlock('block-2');
+        edges1 = tx.getEdgesForBlock('block-1');
+        edges2 = tx.getEdgesForBlock('block-2');
       });
 
-      expect(connections1).toHaveLength(1);
-      expect(connections2).toHaveLength(1);
+      expect(edges1).toHaveLength(1);
+      expect(edges2).toHaveLength(1);
     });
   });
 
   describe('cascade helpers', () => {
     describe('removeBlockCascade()', () => {
       it('removes block and all dependencies', () => {
-        // Setup: Create a block with connections, publishers, and listeners
+        // Setup: Create blocks with connections
         const block: Block = {
           id: 'block-1',
           type: 'test',
@@ -485,55 +487,23 @@ describe('TxBuilder', () => {
           category: 'Other',
         };
 
-        const bus: Bus = {
-          id: 'bus-1',
-          name: 'Test Bus',
-          type: {
-            world: 'signal',
-            domain: 'float',
-            category: 'core',
-            busEligible: true,
-          },
-          combine: { when: 'multi', mode: 'sum' },
-          defaultValue: 0,
-          sortKey: 0,
-        };
-
         runTx(rootStore, { label: 'Setup' }, tx => {
           tx.add('blocks', block);
           tx.add('blocks', otherBlock);
-          tx.add('buses', bus);
 
-          // Add connection from block-1 to block-2
-          tx.add('connections', {
-            id: 'conn-1',
-            from: { blockId: 'block-1', slotId: 'out', direction: 'output' },
-            to: { blockId: 'block-2', slotId: 'in', direction: 'input' },
-          });
-
-          // Add publisher from block-1
-          tx.add('publishers', {
-            id: 'pub-1',
-            busId: 'bus-1',
-            from: { blockId: 'block-1', slotId: 'out', direction: 'output' },
-            sortKey: 0,
+          // Add edge from block-1 to block-2
+          tx.add('edges', {
+            id: 'edge-1',
+            from: { kind: 'port', blockId: 'block-1', slotId: 'out' },
+            to: { kind: 'port', blockId: 'block-2', slotId: 'in' },
             enabled: true,
-          });
-
-          // Add listener to block-1
-          tx.add('listeners', {
-            id: 'lis-1',
-            busId: 'bus-1',
-            to: { blockId: 'block-1', slotId: 'in', direction: 'input' },
-            enabled: true,
+          role: { kind: 'user' },
           });
         });
 
         // Verify setup
-        expect(rootStore.patchStore.blocks).toHaveLength(2);
-        expect(rootStore.patchStore.connections).toHaveLength(1);
-        expect(rootStore.busStore.publishers).toHaveLength(1);
-        expect(rootStore.busStore.listeners).toHaveLength(1);
+        expect(rootStore.patchStore.userBlocks).toHaveLength(2);
+        expect(rootStore.patchStore.edges).toHaveLength(1);
 
         // Remove block with cascade
         const result = runTx(rootStore, { label: 'Remove Block Cascade' }, tx => {
@@ -541,17 +511,11 @@ describe('TxBuilder', () => {
         });
 
         // Verify block removed
-        expect(rootStore.patchStore.blocks).toHaveLength(1);
-        expect(rootStore.patchStore.blocks[0].id).toBe('block-2');
+        expect(rootStore.patchStore.userBlocks).toHaveLength(1);
+        expect(rootStore.patchStore.userBlocks[0].id).toBe('block-2');
 
-        // Verify connections removed
-        expect(rootStore.patchStore.connections).toHaveLength(0);
-
-        // Verify publishers removed
-        expect(rootStore.busStore.publishers).toHaveLength(0);
-
-        // Verify listeners removed
-        expect(rootStore.busStore.listeners).toHaveLength(0);
+        // Verify edges removed
+        expect(rootStore.patchStore.edges).toHaveLength(0);
 
         // Verify cascade generated Many op
         expect(result.ops).toHaveLength(1);
@@ -576,28 +540,8 @@ describe('TxBuilder', () => {
     });
 
     describe('removeBusCascade()', () => {
-      it('removes bus and all routing', () => {
-        // Setup: Create bus with publishers and listeners
-        const block1: Block = {
-          id: 'block-1',
-          type: 'test',
-          label: 'Block 1',
-          inputs: [],
-          outputs: [{ id: 'out', label: 'Out', type: 'Signal<float>', direction: 'output' }],
-          params: {},
-          category: 'Other',
-        };
-
-        const block2: Block = {
-          id: 'block-2',
-          type: 'test',
-          label: 'Block 2',
-          inputs: [{ id: 'in', label: 'In', type: 'Signal<float>', direction: 'input' }],
-          outputs: [],
-          params: {},
-          category: 'Other',
-        };
-
+      it('removes bus', () => {
+        // Setup: Create a bus (using BusBlock now)
         const bus: Bus = {
           id: 'bus-1',
           name: 'Test Bus',
@@ -612,34 +556,15 @@ describe('TxBuilder', () => {
           sortKey: 0,
         };
 
-        // Record initial counts (default buses exist)
-        const initialBusCount = rootStore.busStore.buses.length;
+        // Record initial counts
+        const initialBusBlockCount = rootStore.patchStore.busBlocks.length;
 
         runTx(rootStore, { label: 'Setup' }, tx => {
-          tx.add('blocks', block1);
-          tx.add('blocks', block2);
           tx.add('buses', bus);
-
-          tx.add('publishers', {
-            id: 'pub-1',
-            busId: 'bus-1',
-            from: { blockId: 'block-1', slotId: 'out', direction: 'output' },
-            sortKey: 0,
-            enabled: true,
-          });
-
-          tx.add('listeners', {
-            id: 'lis-1',
-            busId: 'bus-1',
-            to: { blockId: 'block-2', slotId: 'in', direction: 'input' },
-            enabled: true,
-          });
         });
 
-        // Verify setup (our bus added to defaults)
-        expect(rootStore.busStore.buses).toHaveLength(initialBusCount + 1);
-        expect(rootStore.busStore.publishers).toHaveLength(1);
-        expect(rootStore.busStore.listeners).toHaveLength(1);
+        // Verify setup (our bus added as BusBlock)
+        expect(rootStore.patchStore.busBlocks).toHaveLength(initialBusBlockCount + 1);
 
         // Remove bus with cascade
         const result = runTx(rootStore, { label: 'Remove Bus Cascade' }, tx => {
@@ -647,20 +572,14 @@ describe('TxBuilder', () => {
         });
 
         // Verify bus removed (back to initial count)
-        expect(rootStore.busStore.buses).toHaveLength(initialBusCount);
-
-        // Verify publishers removed
-        expect(rootStore.busStore.publishers).toHaveLength(0);
-
-        // Verify listeners removed
-        expect(rootStore.busStore.listeners).toHaveLength(0);
+        expect(rootStore.patchStore.busBlocks).toHaveLength(initialBusBlockCount);
 
         // Verify cascade generated Many op
         expect(result.ops).toHaveLength(1);
         expect(result.ops[0].type).toBe('Many');
         const manyOp = result.ops[0];
         if (manyOp.type === 'Many') {
-          expect(manyOp.ops).toHaveLength(3); // 1 publisher + 1 listener + 1 bus
+          expect(manyOp.ops).toHaveLength(1); // Just the bus
         }
       });
 

@@ -72,7 +72,7 @@ const lowerFieldZipNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
     opcode,
   }, outType);
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldZipNumber_out');
   return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 

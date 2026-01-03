@@ -31,7 +31,6 @@
 - [x] Shortcuts blocked when typing
 - [x] Platform detection (Mac vs Windows/Linux)
 - [x] Tooltips include shortcuts
-- [x] Event listeners cleaned up on unmount
 
 ### P1.2: Error Messages ✓ COMPLETE
 - [x] Error toast component

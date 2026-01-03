@@ -3,61 +3,16 @@
  *
  * Canonical bus semantics - ONLY place bus logic lives.
  *
- * CRITICAL: Use this module for all bus ordering/combine operations.
- * Do NOT duplicate this logic elsewhere (BusStore, compileBusAware, etc).
+ * NOTE: After Bus-Block unification (2026-01-02), buses are now BusBlocks
+ * and publishers/listeners are regular edges. The getSortedPublishers function
+ * has been removed. Edge sorting is now handled by the compiler based on
+ * edge.sortKey properties.
  *
- * Why this matters:
- * - BusStore and compileBusAware had DIFFERENT sorting implementations
- * - Same sortKey = different ordering in UI vs runtime
- * - Non-deterministic behavior when publisher order matters
- * - Single source of truth prevents these bugs
+ * This module now primarily provides artifact combination logic for multi-input
+ * reduction (sum, average, max, min, last, layer modes).
  */
 
-import type { Publisher } from '../types';
 import type { Artifact, RuntimeCtx, Vec2, Field, CompileCtx, Seed } from '../compiler/types';
-
-// =============================================================================
-// Publisher Sorting
-// =============================================================================
-
-/**
- * Get publishers for a bus, sorted deterministically.
- *
- * Sorting order:
- * 1. Primary: sortKey (ascending)
- * 2. Secondary: id.localeCompare (stable tie-breaker)
- *
- * This ensures identical ordering regardless of:
- * - Canvas layout changes
- * - Array insertion order
- * - Compilation order
- *
- * Per SORTKEY-CONTRACT.md, this is the ONLY way to sort publishers.
- *
- * @param busId - Bus ID to filter by
- * @param allPublishers - Complete list of publishers
- * @param includeDisabled - Include disabled publishers (default: false)
- */
-export function getSortedPublishers(
-  busId: string,
-  allPublishers: Publisher[],
-  includeDisabled = false
-): Publisher[] {
-  // Filter to bus and enabled state
-  const busPublishers = allPublishers.filter(
-    p => p.busId === busId && (includeDisabled || p.enabled)
-  );
-
-  // Sort by (sortKey, id) for deterministic ordering
-  return [...busPublishers].sort((a, b) => {
-    // Primary sort: sortKey ascending
-    if (a.sortKey !== b.sortKey) {
-      return a.sortKey - b.sortKey;
-    }
-    // Stable tie-breaker: id alphabetically
-    return a.id.localeCompare(b.id);
-  });
-}
 
 // =============================================================================
 // Signal Combination

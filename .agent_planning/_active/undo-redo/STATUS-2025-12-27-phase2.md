@@ -36,7 +36,6 @@ However, the "conservative migration" approach means most store methods still by
 
 ### Note on Test Failures
 The TypeScript errors are unrelated to undo-redo and appear to be from parallel IR/compiler work:
-- `BusChannel.tsx`: Missing `getPublishersByBus`, `getListenersByBus` methods
 - `buildSchedule.ts`: Missing `id` property on `StepMeshMaterialize`
 - `BusStore.ts`: Unused import warning
 
@@ -67,8 +66,6 @@ The TypeScript errors are unrelated to undo-redo and appear to be from parallel 
 **Status**: COMPLETE
 **Files**: `src/editor/transactions/TxBuilder.ts` (lines 336-421)
 
-- `removeBlockCascade(blockId)` removes block + connections + publishers + listeners + default sources + lane membership
-- `removeBusCascade(busId)` removes bus + all publishers + all listeners
 - Both generate Many ops with correct sub-op ordering
 - 4 tests for cascade helpers
 
@@ -149,21 +146,13 @@ The TypeScript errors are unrelated to undo-redo and appear to be from parallel 
 | `createBus()` | YES | Migrated |
 | `deleteBus()` | NO | Direct filter on arrays |
 | `updateBus()` | NO | Direct assignment |
-| `addPublisher()` | YES | Migrated |
-| `removePublisher()` | YES | Migrated |
-| `addListener()` | YES | Migrated |
-| `removeListener()` | YES | Migrated |
-| `updatePublisher()` | NO | Direct array modification |
-| `updateListener()` | NO | Direct array modification |
 | `addLensToStack()` | NO | Direct array modification |
 | `removeLensFromStack()` | NO | Direct array modification |
 | `clearLensStack()` | NO | Direct modification |
-| `reorderPublisher()` | NO | Direct sortKey modification |
 
 **Evidence from BusStore.ts**:
 - Lines 187-191: `deleteBus()` uses direct filter
 - Line 206-208: `updateBus()` uses direct assignment
-- Line 267-282: `updatePublisher()` uses direct array replacement
 
 ### Deferred Items from Sprint 1
 
@@ -190,10 +179,6 @@ The TypeScript errors are unrelated to undo-redo and appear to be from parallel 
 | Add block | OK | BYPASS | BYPASS | N/A | N/A |
 | Remove block | OK | BYPASS | BYPASS | N/A | N/A |
 | Update params | OK | BYPASS | BYPASS | N/A | N/A |
-| Add publisher | OK | runTx | OK | OK | OK |
-| Remove publisher | OK | runTx | OK | OK | OK |
-| Add listener | OK | runTx | OK | OK | OK |
-| Remove listener | OK | runTx | OK | OK | OK |
 | Replace block | OK | BYPASS | BYPASS | N/A | N/A |
 | Expand macro | OK | BYPASS | BYPASS | N/A | N/A |
 
@@ -321,7 +306,6 @@ Block positions are critical for undo (especially after drag operations).
 | Block position undo | Should block drag positions be undoable? | Deferred (SetBlockPosition is no-op) | Users can't undo block movements |
 | suppressGraphCommitted | When should this flag be used? | Used for "internal" calls | Complex operations don't get undo |
 | Snapshot intervals | Should snapshots be created automatically? | Not implemented | Missing performance optimization |
-| Event emission during undo | Should WireAdded/WireRemoved fire during undo? | No events during undo | Listeners might not update correctly |
 
 ---
 
@@ -340,7 +324,6 @@ These methods must use runTx() for undo to work:
 
 1. **deleteBus()** - Should use TxBuilder.removeBusCascade()
 2. **updateBus()** - Name changes, combine mode changes
-3. **updatePublisher()** / **updateListener()** - Enable/disable, sortKey
 
 ### Priority 3: Enable Position Undo (P1)
 

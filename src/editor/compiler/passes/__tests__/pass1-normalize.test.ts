@@ -2,7 +2,9 @@
  * Pass 1 Normalize Tests
  *
  * Tests for the pass1Normalize function.
- * Verifies block ID freezing, default source attachment, and publisher/listener canonicalization.
+ * Verifies block ID freezing, default source attachment, and edge canonicalization.
+ *
+ * TODO: Update tests for Edge-only architecture (Bus-Block unification)
  */
 
 import { describe, it, expect } from "vitest";
@@ -10,11 +12,12 @@ import { pass1Normalize } from "../pass1-normalize";
 import type {
   Patch,
   Block,
-  Connection,
-  Publisher,
-  Listener,
-  Bus,
+  // Connection,
+  // Publisher,
+  // Listener,
+  // Bus,
   Slot,
+  Edge,
 } from "../../../types";
 
 // Helper to create a minimal patch
@@ -22,10 +25,7 @@ function createPatch(overrides?: Partial<Patch>): Patch {
   return {
     version: 1,
     blocks: [],
-    connections: [],
-    buses: [],
-    publishers: [],
-    listeners: [],
+    edges: [],
     defaultSources: [],
     settings: {
       seed: 0,
@@ -64,68 +64,18 @@ function createSlot(
   } as Slot;
 }
 
-// Helper to create a connection
-function createConnection(
+// Helper to create an edge
+function createEdge(
   fromBlock: string,
   fromSlot: string,
   toBlock: string,
   toSlot: string
-): Connection {
+): Edge {
   return {
     id: `${fromBlock}.${fromSlot}->${toBlock}.${toSlot}`,
-    from: { blockId: fromBlock, slotId: fromSlot, direction: "output" as const },
-    to: { blockId: toBlock, slotId: toSlot, direction: "input" as const },
-  };
-}
-
-// Helper to create a publisher
-function createPublisher(
-  id: string,
-  busId: string,
-  fromBlock: string,
-  fromSlot: string,
-  sortKey: number,
-  enabled = true
-): Publisher {
-  return {
-    id,
-    busId,
-    from: { blockId: fromBlock, slotId: fromSlot, direction: "output" as const },
-    enabled,
-    sortKey,
-  };
-}
-
-// Helper to create a listener
-function createListener(
-  id: string,
-  busId: string,
-  toBlock: string,
-  toSlot: string,
-  enabled = true
-): Listener {
-  return {
-    id,
-    busId,
-    to: { blockId: toBlock, slotId: toSlot, direction: "input" as const },
-    enabled,
-  };
-}
-
-// Helper to create a bus
-function createBus(id: string): Bus {
-  return {
-    id,
-    name: id,
-    type: {
-      world: "signal",
-      domain: "float",
-      category: "core",
-      busEligible: true,
-    },
-    combine: { when: 'multi', mode: "last" },
-    defaultValue: 0,
-    sortKey: 0,
+    from: { kind: 'port', blockId: fromBlock, slotId: fromSlot },
+    to: { kind: 'port', blockId: toBlock, slotId: toSlot },
+    enabled: true,
   };
 }
 
@@ -180,13 +130,17 @@ describe("pass1Normalize", () => {
 
       const normalized = pass1Normalize(patch);
 
-      expect(normalized.defaultSources).toHaveLength(1);
-      const ds = normalized.defaultSources[0];
+      expect(normalized.defaults).toHaveLength(1);
+      const ds = normalized.defaults[0];
       expect(ds.blockId).toBe("b1");
       expect(ds.slotId).toBe("in1");
       expect(ds.constId).toBe(0);
-      expect(ds.type.world).toBe("signal");
-      expect(ds.type.domain).toBe("float");
+
+      // Verify the default value is stored in the const pool
+      const defaultValue = normalized.constPool.get(ds.constId) as { world: string; value: number };
+      expect(defaultValue).toBeDefined();
+      expect(defaultValue.world).toBe("signal");
+      expect(defaultValue.value).toBe(0.5);
     });
 
     it("does not attach default sources for wired inputs", () => {
@@ -206,18 +160,21 @@ describe("pass1Normalize", () => {
             ],
           }),
         ],
-        connections: [createConnection("b1", "out1", "b2", "in1")],
+        edges: [createEdge("b1", "out1", "b2", "in1")],
       });
 
       const normalized = pass1Normalize(patch);
 
-      expect(normalized.defaultSources).toHaveLength(0);
+      expect(normalized.defaults).toHaveLength(0);
     });
 
-    it("does not attach default sources for inputs with bus listeners", () => {
+    it("does not attach default sources for inputs with connected edges", () => {
       const patch = createPatch({
         blocks: [
           createBlock("b1", {
+            outputs: [createSlot("out1", "output")],
+          }),
+          createBlock("b2", {
             inputs: [
               createSlot("in1", "input", {
                 defaultSource: {
@@ -228,13 +185,13 @@ describe("pass1Normalize", () => {
             ],
           }),
         ],
-        buses: [createBus("bus1")],
-        listeners: [createListener("l1", "bus1", "b1", "in1", true)],
+        edges: [createEdge("b1", "out1", "b2", "in1")],
       });
 
       const normalized = pass1Normalize(patch);
 
-      expect(normalized.defaultSources).toHaveLength(0);
+      // Input is wired, so no default source should be attached
+      expect(normalized.defaults).toHaveLength(0);
     });
 
     it("assigns sequential constId to default sources", () => {
@@ -261,118 +218,58 @@ describe("pass1Normalize", () => {
 
       const normalized = pass1Normalize(patch);
 
-      expect(normalized.defaultSources).toHaveLength(2);
-      expect(normalized.defaultSources[0].constId).toBe(0);
-      expect(normalized.defaultSources[1].constId).toBe(1);
+      expect(normalized.defaults).toHaveLength(2);
+      expect(normalized.defaults[0].constId).toBe(0);
+      expect(normalized.defaults[1].constId).toBe(1);
     });
   });
 
-  describe("Publisher Canonicalization", () => {
-    it("filters disabled publishers", () => {
+  describe("Edge Canonicalization", () => {
+    it("preserves enabled edges", () => {
       const patch = createPatch({
-        blocks: [createBlock("b1", { outputs: [createSlot("out1", "output")] })],
-        buses: [createBus("bus1")],
-        publishers: [
-          createPublisher("p1", "bus1", "b1", "out1", 0, true),
-          createPublisher("p2", "bus1", "b1", "out1", 1, false),
+        blocks: [
+          createBlock("b1", { outputs: [createSlot("out1", "output")] }),
+          createBlock("b2", { inputs: [createSlot("in1", "input")] }),
         ],
+        edges: [createEdge("b1", "out1", "b2", "in1")],
       });
 
       const normalized = pass1Normalize(patch);
 
-      expect(normalized.publishers).toHaveLength(1);
-      expect(normalized.publishers[0].id).toBe("p1");
+      expect(normalized.edges?.length).toBe(1);
+      expect(normalized.edges?.[0]?.enabled).toBe(true);
     });
 
-    it("sorts publishers by sortKey", () => {
+    it("filters disabled edges", () => {
+      const disabledEdge = createEdge("b1", "out1", "b2", "in1");
+      (disabledEdge as { enabled: boolean }).enabled = false;
+
       const patch = createPatch({
-        blocks: [createBlock("b1", { outputs: [createSlot("out1", "output")] })],
-        buses: [createBus("bus1")],
-        publishers: [
-          createPublisher("p1", "bus1", "b1", "out1", 2, true),
-          createPublisher("p2", "bus1", "b1", "out1", 0, true),
-          createPublisher("p3", "bus1", "b1", "out1", 1, true),
+        blocks: [
+          createBlock("b1", { outputs: [createSlot("out1", "output")] }),
+          createBlock("b2", { inputs: [createSlot("in1", "input")] }),
         ],
+        edges: [disabledEdge],
       });
 
       const normalized = pass1Normalize(patch);
 
-      expect(normalized.publishers).toHaveLength(3);
-      expect(normalized.publishers[0].id).toBe("p2");
-      expect(normalized.publishers[1].id).toBe("p3");
-      expect(normalized.publishers[2].id).toBe("p1");
-    });
-
-    it("sorts publishers by id when sortKey is equal", () => {
-      const patch = createPatch({
-        blocks: [createBlock("b1", { outputs: [createSlot("out1", "output")] })],
-        buses: [createBus("bus1")],
-        publishers: [
-          createPublisher("p3", "bus1", "b1", "out1", 0, true),
-          createPublisher("p1", "bus1", "b1", "out1", 0, true),
-          createPublisher("p2", "bus1", "b1", "out1", 0, true),
-        ],
-      });
-
-      const normalized = pass1Normalize(patch);
-
-      expect(normalized.publishers).toHaveLength(3);
-      expect(normalized.publishers[0].id).toBe("p1");
-      expect(normalized.publishers[1].id).toBe("p2");
-      expect(normalized.publishers[2].id).toBe("p3");
-    });
-  });
-
-  describe("Listener Canonicalization", () => {
-    it("filters disabled listeners", () => {
-      const patch = createPatch({
-        blocks: [createBlock("b1", { inputs: [createSlot("in1", "input")] })],
-        buses: [createBus("bus1")],
-        listeners: [
-          createListener("l1", "bus1", "b1", "in1", true),
-          createListener("l2", "bus1", "b1", "in1", false),
-        ],
-      });
-
-      const normalized = pass1Normalize(patch);
-
-      expect(normalized.listeners).toHaveLength(1);
-      expect(normalized.listeners[0].id).toBe("l1");
-    });
-
-    it("preserves listener order", () => {
-      const patch = createPatch({
-        blocks: [createBlock("b1", { inputs: [createSlot("in1", "input")] })],
-        buses: [createBus("bus1")],
-        listeners: [
-          createListener("l1", "bus1", "b1", "in1", true),
-          createListener("l2", "bus1", "b1", "in1", true),
-          createListener("l3", "bus1", "b1", "in1", true),
-        ],
-      });
-
-      const normalized = pass1Normalize(patch);
-
-      expect(normalized.listeners).toHaveLength(3);
-      expect(normalized.listeners[0].id).toBe("l1");
-      expect(normalized.listeners[1].id).toBe("l2");
-      expect(normalized.listeners[2].id).toBe("l3");
+      // Disabled edges are filtered during normalization
+      expect(normalized.edges).toHaveLength(0);
     });
   });
 
   describe("Preserves Patch Structure", () => {
-    it("preserves blocks, wires, and buses", () => {
+    it("preserves blocks and edges", () => {
       const patch = createPatch({
         blocks: [createBlock("b1"), createBlock("b2")],
-        connections: [createConnection("b1", "out1", "b2", "in1")],
-        buses: [createBus("bus1"), createBus("bus2")],
+        edges: [createEdge("b1", "out1", "b2", "in1")],
       });
 
       const normalized = pass1Normalize(patch);
 
-      expect(normalized.blocks).toBe(patch.blocks);
-      expect(normalized.wires).toBe(patch.connections);
-      expect(normalized.buses).toBe(patch.buses);
+      expect(normalized.blocks.size).toBe(2);
+      expect(normalized.edges).toHaveLength(1);
     });
   });
 });

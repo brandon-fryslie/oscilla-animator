@@ -1,0 +1,9 @@
+Agent: status-planner | 2026-01-01-082134
+Topic: bus-block-unification
+Files: PLAN-2026-01-01-sprint3-completion.md, DOD-2026-01-01-sprint3-completion.md, PLAN-2026-01-01-sprint4-lens-bindings.md, DOD-2026-01-01-sprint4-lens-bindings.md
+
+Sprint 3 Items: 9 (P0: 1, P1: 5, P2: 3)
+Sprint 4 Items: 4 (P0: 1, P1: 1, P2: 1, P3: 1)
+
+Sprint 3 Critical: Fix 43 failing tests BEFORE any other work (P0 gate)
+Sprint 4 Blocker: Sprint 3 must complete FIRST (bus bindings need busRoots)

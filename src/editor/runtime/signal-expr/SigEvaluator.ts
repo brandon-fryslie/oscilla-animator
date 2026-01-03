@@ -358,7 +358,7 @@ function evalBusCombine(
   env: SigEnv,
   nodes: SignalExprIR[]
 ): number {
-  const { terms, combine, busIndex } = node;
+  const { terms, combine } = node;
 
   // Empty bus: return default value
   if (terms.length === 0) {
@@ -379,7 +379,6 @@ function evalBusCombine(
   // Optional debug tracing (zero overhead when disabled)
   if (env.debug?.traceBusCombine !== null && env.debug?.traceBusCombine !== undefined) {
     env.debug.traceBusCombine({
-      busIndex,
       termIds: terms,
       termValues: values,
       mode: combine.mode,

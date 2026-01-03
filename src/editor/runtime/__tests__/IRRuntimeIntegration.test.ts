@@ -26,14 +26,12 @@ import type { CompiledProgramIR } from "../../compiler/ir";
 
 /**
  * Create a minimal IR program for testing.
- * This is a hand-constructed program that tests the adapter layer.
+ * Hand-constructed minimal program for testing the adapter layer.
  */
 function createMinimalProgram(seed: number = 42): CompiledProgramIR {
   return {
     irVersion: 1,
     patchId: "test-patch",
-    patchRevision: 1,
-    compileId: `test-compile-${seed}`,
     seed,
     timeModel: { kind: "infinite", windowMs: 10000 },
     types: { typeIds: [] },
@@ -53,10 +51,6 @@ function createMinimalProgram(seed: number = 42): CompiledProgramIR {
     signalTable: { nodes: [] },
     constants: {
       json: [42],
-      f64: new Float64Array([42.0]),
-      f32: new Float32Array([]),
-      i32: new Int32Array([]),
-      constIndex: [{ k: "f64", idx: 0 }],
     },
     stateLayout: {
       cells: [],
@@ -70,8 +64,6 @@ function createMinimalProgram(seed: number = 42): CompiledProgramIR {
       deps: {
         slotProducerStep: {},
         slotConsumers: {},
-        busDependsOnSlots: {},
-        busProvidesSlot: {},
       },
       determinism: {
         allowedOrderingInputs: [],
@@ -87,7 +79,7 @@ function createMinimalProgram(seed: number = 42): CompiledProgramIR {
       sourceMap: {},
       names: { nodes: {}, buses: {}, steps: {} },
     },
-  };
+  } as unknown as CompiledProgramIR;
 }
 
 // ============================================================================

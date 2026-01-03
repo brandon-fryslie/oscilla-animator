@@ -18,7 +18,6 @@ This document indexes all sprint plans for Phase 4: SignalExpr Runtime. The goal
 |--------|------|-------|------------------|--------|
 | 1 | Core Evaluator | Foundation | Types, Cache, Env, evalSig | PLANNED |
 | 2 | Select & InputSlot | Conditional + Inputs | select, inputSlot nodes | PLANNED |
-| 3 | Bus Combine | Multi-publisher | busCombine, CombineMode | PLANNED |
 | 4 | Transform | Adapters/Lenses | TransformChain, EasingCurves | PLANNED |
 | 5 | Stateful Ops | State Management | StateBuffer, integrate/delay/slew | PLANNED |
 | 6 | Closure Bridge | Migration Support | ClosureRegistry, fallback | PLANNED |
@@ -85,7 +84,6 @@ src/runtime/signal-expr/
 - Optional DebugSink tracing
 
 **Key Features:**
-- Deterministic publisher ordering (from compiler)
 - Empty bus returns default value
 - All terms evaluated before combining
 
@@ -180,7 +178,6 @@ src/runtime/signal-expr/
 | zip | 1 | Binary pure function |
 | select | 2 | Conditional (short-circuit) |
 | inputSlot | 2 | External value reference |
-| busCombine | 3 | Multi-publisher combine |
 | transform | 4 | Transform chain |
 | stateful | 5 | Stateful operations |
 | closureBridge | 6 | Legacy closure fallback |
@@ -257,7 +254,6 @@ src/runtime/signal-expr/
 2. **Per-frame caching** - Cache hit is O(1) array lookup with stamp comparison
 3. **Typed arrays for state** - Float64Array, Uint32Array for performance
 4. **Short-circuit select** - Only evaluate taken branch
-5. **Deterministic ordering** - Publisher order set by compiler, not runtime
 6. **Gradual migration** - Closure bridge enables block-by-block migration
 7. **Constant deduplication** - Same values share pool slots
 

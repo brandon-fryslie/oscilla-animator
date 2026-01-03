@@ -14,63 +14,73 @@ import {
 } from '../serialize';
 
 describe('IR Serialization', () => {
-  // Minimal test program
+  // Minimal test program aligned to current CompiledProgramIR schema
   const createTestProgram = (): CompiledProgramIR => ({
+    // Identity and versioning
     irVersion: 1,
     patchId: 'test-patch',
-    patchRevision: 1,
-    compileId: 'test-compile-id',
     seed: 12345,
+
+    // Time model
     timeModel: {
       kind: 'cyclic',
       periodMs: 1000,
       mode: 'loop',
       phaseDomain: '0..1',
     },
+
+    // Type system
     types: {
       typeIds: [],
     },
-    nodes: {
+
+    // Execution tables
+    signalExprs: {
       nodes: [],
     },
-    buses: {
-      buses: [],
-    },
-    lenses: {
-      lenses: [],
-    },
-    adapters: {
-      adapters: [],
-    },
-    fields: {
+    fieldExprs: {
       nodes: [],
     },
+    eventExprs: {
+      nodes: [],
+    },
+
+    // Constants (JSON-only)
     constants: {
       json: [null, true, 'test', 42],
-      f64: new Float64Array([1.1, 2.2, 3.3]),
-      f32: new Float32Array([4.4, 5.5, 6.6]),
-      i32: new Int32Array([7, 8, 9]),
-      constIndex: [
-        { k: 'json', idx: 0 },
-        { k: 'f64', idx: 0 },
-        { k: 'f32', idx: 0 },
-        { k: 'i32', idx: 0 },
-      ],
     },
+
+    // State layout
     stateLayout: {
       cells: [],
       f64Size: 0,
       f32Size: 0,
       i32Size: 0,
     },
+
+    // Slot metadata
+    slotMeta: [],
+
+    // Render & 3D
+    render: {
+      sinks: [],
+    },
+    cameras: {
+      cameras: [],
+      cameraIdToIndex: {},
+    },
+    meshes: {
+      meshes: [],
+      meshIdToIndex: {},
+    },
+
+    // Schedule
     schedule: {
       steps: [],
       stepIdToIndex: {},
       deps: {
         slotProducerStep: {},
         slotConsumers: {},
-        busDependsOnSlots: {},
-        busProvidesSlot: {},
       },
       determinism: {
         allowedOrderingInputs: [],
@@ -81,14 +91,14 @@ describe('IR Serialization', () => {
         materializationCache: {},
       },
     },
+
+    // Outputs
     outputs: [],
-    meta: {
-      sourceMap: {},
-      names: {
-        nodes: {},
-        buses: {},
-        steps: {},
-      },
+
+    // Debug index (mandatory)
+    debugIndex: {
+      stepToBlock: new Map<string, string>(),
+      slotToBlock: new Map<number, string>(),
     },
   });
 
@@ -102,16 +112,12 @@ describe('IR Serialization', () => {
       expect(serialized.patchId).toBe('test-patch');
       expect(serialized.seed).toBe(12345);
 
-      // Check typed arrays are converted to regular arrays
-      expect(Array.isArray(serialized.constants.f64)).toBe(true);
-      expect(Array.isArray(serialized.constants.f32)).toBe(true);
-      expect(Array.isArray(serialized.constants.i32)).toBe(true);
+      // Check constants are preserved
+      expect(serialized.constants.json).toEqual([null, true, 'test', 42]);
 
-      // Check values are preserved (f64 is exact, f32 has precision loss)
-      expect(serialized.constants.f64).toEqual([1.1, 2.2, 3.3]);
-      expect(serialized.constants.f32.length).toBe(3);
-      // Float32 precision is different, just check length
-      expect(serialized.constants.i32).toEqual([7, 8, 9]);
+      // Check Maps are converted to objects
+      expect(serialized.debugIndex.stepToBlock).toEqual({});
+      expect(serialized.debugIndex.slotToBlock).toEqual({});
     });
 
     it('should preserve all fields', () => {
@@ -120,10 +126,19 @@ describe('IR Serialization', () => {
 
       expect(serialized.timeModel).toEqual(program.timeModel);
       expect(serialized.types).toEqual(program.types);
-      expect(serialized.nodes).toEqual(program.nodes);
-      expect(serialized.buses).toEqual(program.buses);
       expect(serialized.schedule).toEqual(program.schedule);
-      expect(serialized.meta).toEqual(program.meta);
+    });
+
+    it('should convert debug index Maps to objects', () => {
+      const program = createTestProgram();
+      // Cast to mutable Map to add test data
+      (program.debugIndex.stepToBlock as Map<string, string>).set('step1', 'block1');
+      (program.debugIndex.slotToBlock as Map<number, string>).set(42, 'block2');
+
+      const serialized = serializeProgram(program);
+
+      expect(serialized.debugIndex.stepToBlock).toEqual({ step1: 'block1' });
+      expect(serialized.debugIndex.slotToBlock).toEqual({ '42': 'block2' });
     });
   });
 
@@ -138,16 +153,12 @@ describe('IR Serialization', () => {
       expect(deserialized.patchId).toBe('test-patch');
       expect(deserialized.seed).toBe(12345);
 
-      // Check typed arrays are restored
-      expect(deserialized.constants.f64).toBeInstanceOf(Float64Array);
-      expect(deserialized.constants.f32).toBeInstanceOf(Float32Array);
-      expect(deserialized.constants.i32).toBeInstanceOf(Int32Array);
+      // Check constants are preserved
+      expect(deserialized.constants.json).toEqual([null, true, 'test', 42]);
 
-      // Check values are preserved
-      expect(Array.from(deserialized.constants.f64)).toEqual([1.1, 2.2, 3.3]);
-      // Float32 has precision loss, but round-trip is consistent
-      expect(deserialized.constants.f32.length).toBe(3);
-      expect(Array.from(deserialized.constants.i32)).toEqual([7, 8, 9]);
+      // Check objects are converted back to Maps
+      expect(deserialized.debugIndex.stepToBlock).toBeInstanceOf(Map);
+      expect(deserialized.debugIndex.slotToBlock).toBeInstanceOf(Map);
     });
 
     it('should round-trip serialize/deserialize correctly', () => {
@@ -161,8 +172,20 @@ describe('IR Serialization', () => {
       expect(deserialized.seed).toBe(program.seed);
       expect(deserialized.timeModel).toEqual(program.timeModel);
       expect(deserialized.types).toEqual(program.types);
-      expect(deserialized.nodes).toEqual(program.nodes);
       expect(deserialized.constants.json).toEqual(program.constants.json);
+    });
+
+    it('should restore debug index Maps correctly', () => {
+      const program = createTestProgram();
+      // Cast to mutable Map to add test data
+      (program.debugIndex.stepToBlock as Map<string, string>).set('step1', 'block1');
+      (program.debugIndex.slotToBlock as Map<number, string>).set(42, 'block2');
+
+      const serialized = serializeProgram(program);
+      const deserialized = deserializeProgram(serialized);
+
+      expect(deserialized.debugIndex.stepToBlock.get('step1')).toBe('block1');
+      expect(deserialized.debugIndex.slotToBlock.get(42)).toBe('block2');
     });
   });
 
@@ -219,19 +242,35 @@ describe('IR Serialization', () => {
       const json = serializeProgramToJSON(program);
       const restored = deserializeProgramFromJSON(json);
 
-      // Check constants round-trip (values may differ due to Float32 precision)
-      const originalF64 = Array.from(program.constants.f64);
-      const restoredF64 = Array.from(restored.constants.f64);
-      expect(restoredF64).toEqual(originalF64);
+      // Check constants round-trip
+      expect(restored.constants.json).toEqual(program.constants.json);
 
-      // Float32 precision - check that values round-trip consistently
-      const originalF32 = Array.from(program.constants.f32);
-      const restoredF32 = Array.from(restored.constants.f32);
-      expect(restoredF32).toEqual(originalF32); // Same precision loss on both sides
+      // Check all major sections round-trip
+      expect(restored.timeModel).toEqual(program.timeModel);
+      expect(restored.types).toEqual(program.types);
+      expect(restored.schedule).toEqual(program.schedule);
+      expect(restored.stateLayout).toEqual(program.stateLayout);
+    });
 
-      const originalI32 = Array.from(program.constants.i32);
-      const restoredI32 = Array.from(restored.constants.i32);
-      expect(restoredI32).toEqual(originalI32);
+    it('should preserve debug index through round-trip', () => {
+      const program = createTestProgram();
+      // Cast to mutable Map to add test data
+      (program.debugIndex.stepToBlock as Map<string, string>).set('step1', 'block1');
+      (program.debugIndex.stepToBlock as Map<string, string>).set('step2', 'block2');
+      (program.debugIndex.slotToBlock as Map<number, string>).set(10, 'blockA');
+      (program.debugIndex.slotToBlock as Map<number, string>).set(20, 'blockB');
+
+      const json = serializeProgramToJSON(program);
+      const restored = deserializeProgramFromJSON(json);
+
+      // Check Maps are restored with correct values
+      expect(restored.debugIndex.stepToBlock.size).toBe(2);
+      expect(restored.debugIndex.stepToBlock.get('step1')).toBe('block1');
+      expect(restored.debugIndex.stepToBlock.get('step2')).toBe('block2');
+
+      expect(restored.debugIndex.slotToBlock.size).toBe(2);
+      expect(restored.debugIndex.slotToBlock.get(10)).toBe('blockA');
+      expect(restored.debugIndex.slotToBlock.get(20)).toBe('blockB');
     });
   });
 });

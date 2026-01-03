@@ -120,10 +120,9 @@ export function validateForIRMode(
       if (!def.compileToIR) {
         errors.push({
           code: 'UnsupportedAdapterInIRMode',
-          message: `Adapter '${def.label}' is not yet supported in IR compilation mode. ` +
-                   `This adapter requires special runtime handling that hasn't been implemented in the IR compiler. ` +
-                   `To use this adapter, either:\n` +
-                   `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
+          message: `Adapter '${def.label}' is not yet supported in IR compilation. ` +
+                   `This adapter requires implementation in the IR compiler. ` +
+                   `To resolve this:\n` +
                    `  - Remove this adapter from your patch\n` +
                    `  - Use an alternative adapter if available`,
         });
@@ -142,10 +141,9 @@ export function validateForIRMode(
       if (!def.compileToIR) {
         errors.push({
           code: 'UnsupportedLensInIRMode',
-          message: `Lens '${def.label}' is not yet supported in IR compilation mode. ` +
-                   `This lens requires stateful operation or special runtime handling that hasn't been implemented in the IR compiler. ` +
-                   `To use this lens, either:\n` +
-                   `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
+          message: `Lens '${def.label}' is not yet supported in IR compilation. ` +
+                   `This lens requires implementation in the IR compiler. ` +
+                   `To resolve this:\n` +
                    `  - Remove this lens from your patch\n` +
                    `  - Use an alternative lens with similar functionality`,
         });

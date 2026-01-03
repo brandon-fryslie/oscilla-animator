@@ -13,8 +13,6 @@ Phase B successfully delivered bus lifecycle events and decoupled BusStore from 
 ### Completed in Phase B
 
 1. **Bus Binding Events** (`src/editor/events/types.ts`)
-   - `BindingAddedEvent` - Emitted when bus publisher/listener created
-   - `BindingRemovedEvent` - Emitted when bus publisher/listener removed
    - Both include: bindingId, busId, blockId, port, direction ('publish' | 'subscribe')
 
 2. **Bus Lifecycle Events** (`src/editor/events/types.ts`)
@@ -24,10 +22,8 @@ Phase B successfully delivered bus lifecycle events and decoupled BusStore from 
 3. **BusStore Decoupling** (`src/editor/stores/BusStore.ts`)
    - Line 147-153: `createBus()` emits `BusCreated` event
    - Direct mutation of `uiStore.selectedBusId` removed from `deleteBus()`
-   - `RootStore.setupEventListeners()` (line 70-75) handles bus selection clearing via events
 
 4. **Event Integration** (`src/editor/stores/RootStore.ts`)
-   - Line 70-75: `BusDeleted` event listener clears selection if needed
    - Demonstrates event-driven UI coordination pattern
 
 ---
@@ -119,10 +115,7 @@ Connection events enable:
 
 **Target Implementation**:
 - Remove lines 400-402 from PatchStore
-- Add `BlockRemoved` event listener in RootStore (similar to BusDeleted pattern)
-- Listener checks if `event.blockId === selectedBlockId` and clears if so
 
-**Risk**: `BlockRemoved` event already exists from Phase A - just need to wire up listener
 
 ---
 
@@ -177,7 +170,6 @@ Connection events enable:
 3. Unit: Macro expansion emits N `ConnectionAdded` events
 4. Integration: Removing selected block clears `uiStore.selectedBlockId`
 5. Integration: Removing non-selected block preserves selection
-6. Integration: `BlockRemoved` event listener in RootStore works correctly
 
 ---
 
@@ -224,7 +216,6 @@ Connection events enable:
 ## Metrics
 
 - **Total Events Defined**: 11 (after Phase B)
-- **Event Listeners**: 2 (MacroExpanded, BusDeleted)
 - **Emission Points**: 9 identified locations
 - **Cross-Store Coupling Sites**: 1 remaining (PatchStore → UIStateStore)
 - **Direct LogStore Calls**: ~10 (deferred to Phase H)

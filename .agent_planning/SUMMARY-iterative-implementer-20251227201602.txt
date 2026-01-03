@@ -1,0 +1,25 @@
+Agent: iterative-implementer | 2025-12-27 20:12:00
+Mode: manual
+Completed: Fixed TypeScript errors in bus-compilation and field-bus-compilation test files | Files: 2 | Commits: 0
+Cache invalidated: None (only test files modified, no source code changes)
+Status: complete
+
+Fixed Issues:
+1. Added type annotations to BlockCompiler.compile function parameters to fix implicit 'any' errors:
+   - Line 80, 98: `{ params }` → `{ params }: { params: Record<string, unknown> }`
+   - Line 107: `{ inputs }` → `{ inputs }: { inputs: Record<string, Artifact> }`
+
+2. Updated PortRef usage to include required slotId and direction fields:
+   - Changed `{ blockId: 'sink1', port: 'program' }` 
+   - To: `{ blockId: 'sink1', slotId: 'program', direction: 'output' }`
+
+3. Kept blocks as Map<BlockId, BlockInstance> format (matches CompilerPatch interface)
+4. Added defaultSources: [] to patch objects (CompilerPatch.defaultSources is optional but expected)
+
+Test Files Modified:
+- src/editor/__tests__/bus-compilation.test.ts
+- src/editor/__tests__/field-bus-compilation.test.ts
+
+All TypeScript errors in these two files have been resolved. The test files now properly type their function parameters and use the correct CompilerPatch structure.
+
+Note: Tests cannot run yet due to unrelated TypeScript errors in other parts of the codebase (compile.ts, compileBusAware.ts, error-decorations.ts, etc.). These are separate issues not related to the test file fixes.

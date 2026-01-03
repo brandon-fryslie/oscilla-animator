@@ -189,7 +189,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
         const player = playerRef.current;
         if (!player) return;
 
-        // IR Path - the only compilation path (legacy compiler removed)
+        // IR compilation path
         if (result.programIR) {
           // IR compilation succeeded - use IR path
           // Pure IR mode: schedule produces RenderFrameIR directly
@@ -255,7 +255,7 @@ export const PreviewPanel = observer(({ compilerService, isPlaying, onShowHelp }
       if (playState === 'playing' || playState === 'paused') {
         const tMs = currentTime;
 
-        // IR mode only - legacy compiler removed
+        // IR runtime adapter
         const adapter = irAdapterRef.current;
         if (adapter) {
           const frame = adapter.executeAndGetFrame(tMs);

@@ -5,25 +5,19 @@
  * 1. Converting SlotType strings to IR TypeDesc
  * 2. Validating bus type eligibility (only scalars can be buses)
  * 3. Enforcing reserved bus type constraints (phaseA, pulse, energy, palette)
- * 4. Precomputing type conversion paths for wired connections
+ * 4. Building block output types map
  *
  * This pass establishes the type system foundation for all subsequent passes.
  *
- * Sprint: Phase 0 - Sprint 1: Unify Connections → Edge Type
- * Updated to use unified edges when available, with fallback to legacy arrays.
+ * NOTE: After Bus-Block Unification (2026-01-02), all connections use unified edges.
  *
  * References:
  * - HANDOFF.md Topic 3: Pass 2 - Type Graph
  * - design-docs/12-Compiler-Final/15-Canonical-Lowering-Pipeline.md § Pass 2
- * - .agent_planning/phase0-architecture-refactoring/PLAN-2025-12-31-170000-sprint1-connections.md
  */
 
 import type {
   Block,
-  Connection,
-  Publisher,
-  Listener,
-  Bus,
   Edge,
   Endpoint,
 } from "../../types";
@@ -112,7 +106,7 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
   }
 
   // Special types without generic syntax
-  // Use 'special' world for compatibility with existing IR runtime
+  // Use 'config' world for compile-time types
   const specialTypes: Record<string, TypeDesc> = {
     Scene: { world: "config", domain: "scene", category: "internal", busEligible: false },
     SceneTargets: { world: "config", domain: "sceneTargets", category: "internal", busEligible: false },
@@ -144,7 +138,7 @@ function slotTypeToTypeDesc(slotType: string): TypeDesc {
  * - field world: only if domain is scalar (float, int, boolean, color)
  * - scalar world: not bus-eligible (compile-time only)
  * - event world: bus-eligible (for event buses)
- * - special world: not bus-eligible
+ * - config world: not bus-eligible
  */
 export function isBusEligible(type: Pick<TypeDesc, 'world' | 'domain'>): boolean {
   if (type.world === "signal") {
@@ -161,7 +155,7 @@ export function isBusEligible(type: Pick<TypeDesc, 'world' | 'domain'>): boolean
     return scalarDomains.includes(type.domain);
   }
 
-  // scalar and special are not bus-eligible
+  // scalar and config are not bus-eligible
   return false;
 }
 
@@ -288,74 +282,27 @@ function isTypeCompatible(from: TypeDesc, to: TypeDesc): boolean {
 }
 
 /**
- * Compute type conversion path for wired connections.
- *
- * Returns an array of conversion steps needed to transform 'from' type to 'to' type.
- * Empty array means direct assignment (no conversion needed).
- * null means no conversion path exists.
- *
- * Current implementation:
- * - Direct compatibility → empty array (no conversion)
- * - Incompatible types → null (no conversion path)
- *
- * Future enhancements:
- * - Adapter chain computation (e.g., number→vec2 via broadcast adapter)
- * - Lens transformations
- * - Multi-step conversion paths
- *
- * @param fromType - Source type descriptor
- * @param toType - Target type descriptor
- * @returns Array of conversion step IDs, or null if no path exists
- */
-function computeConversionPath(
-  fromType: TypeDesc,
-  toType: TypeDesc
-): string[] | null {
-  // Check if types are compatible (using compatibility rules)
-  if (isTypeCompatible(fromType, toType)) {
-    return []; // No conversion needed - direct assignment
-  }
-
-  // TODO: Future enhancement - query adapter registry for conversion chains
-  // For example:
-  // - number → vec2 (broadcast to both components)
-  // - color → number (luminance extraction)
-  // - vec2 → number (magnitude)
-  //
-  // This would involve:
-  // 1. Graph search through adapter registry
-  // 2. Cost-based path selection
-  // 3. Validation of adapter applicability
-  //
-  // For now, we only support direct compatibility (no adapters)
-
-  return null; // No conversion path exists
-}
-
-/**
- * Get the type of an endpoint (port or bus).
+ * Get the type of an endpoint (port).
+ * Bus-Block Unification: Endpoints are now only ports - buses are BusBlocks.
  */
 function getEndpointType(
   endpoint: Endpoint,
-  blocks: readonly Block[],
-  busTypes: Map<string, TypeDesc>
+  blocks: ReadonlyMap<string, unknown>,
+  _busTypes: Map<string, TypeDesc>
 ): TypeDesc | null {
-  if (endpoint.kind === 'port') {
-    // Find the block and slot
-    const block = blocks.find(b => b.id === endpoint.blockId);
-    if (block === null || block === undefined) return null;
+  // Bus-Block Unification: All endpoints are port kind now
+  // Find the block and slot
+  const blockData = blocks.get(endpoint.blockId);
+  if (blockData === null || blockData === undefined) return null;
 
-    const slot = [...block.inputs, ...block.outputs].find(s => s.id === endpoint.slotId);
-    if (slot === null || slot === undefined) return null;
+  const block = blockData as Block;
+  const slot = [...block.inputs, ...block.outputs].find(s => s.id === endpoint.slotId);
+  if (slot === null || slot === undefined) return null;
 
-    try {
-      return slotTypeToTypeDesc(slot.type);
-    } catch {
-      return null;
-    }
-  } else {
-    // Bus endpoint
-    return busTypes.get(endpoint.busId) ?? null;
+  try {
+    return slotTypeToTypeDesc(slot.type);
+  } catch {
+    return null;
   }
 }
 
@@ -363,46 +310,70 @@ function getEndpointType(
  * Pass 2: Type Graph Construction
  *
  * Establishes types for every slot and bus, validates bus eligibility,
- * and precomputes conversion paths.
+ * and builds block output types map.
  *
  * @param normalized - The normalized patch from Pass 1
  * @returns A typed patch with type information, or throws on error
  */
 export function pass2TypeGraph(
-  normalized: NormalizedPatch<Block, Connection, Publisher, Listener, Bus>
-): TypedPatch<Block, Connection, Publisher, Listener, Bus> {
+  normalized: NormalizedPatch
+): TypedPatch {
   const errors: Pass2Error[] = [];
 
-  // Step 1: Build bus type map and validate bus eligibility
-  const busTypes = new Map<string, TypeDesc>();
+  // Step 1: Build bus type map from BusBlocks and validate bus eligibility
+  // After Bus-Block Unification, bus info is in BusBlock params
+  const busOutputTypes = new Map<string, TypeDesc>();
 
-  for (const bus of normalized.buses) {
+  // Use Array.from() to avoid downlevelIteration issues
+  for (const blockData of Array.from(normalized.blocks.values())) {
+    const block = blockData as Block;
+    if (block.type !== 'BusBlock') continue;
+
+    const busId = block.id;
+    const busName = (block.params as Record<string, unknown>)?.busName as string | undefined ?? block.label ?? 'Unnamed';
+    const busTypeDesc = (block.params as Record<string, unknown>)?.busType as { domain: string; world: string } | undefined;
+
+    if (busTypeDesc == null) {
+      // BusBlock without type info - skip (shouldn't happen)
+      continue;
+    }
+
     // Convert editor TypeDesc to core TypeDesc
-    const busType = asTypeDesc(bus.type);
+    const busType = asTypeDesc({
+      domain: busTypeDesc.domain as TypeDomain,
+      world: busTypeDesc.world as 'signal' | 'field' | 'event' | 'scalar',
+    });
 
     // Validate bus eligibility
     if (!isBusEligible(busType)) {
       errors.push({
         kind: "BusIneligibleType",
-        busId: bus.id,
-        busName: bus.name,
+        busId,
+        busName,
         typeDesc: busType,
-        message: `Bus '${bus.name}' (${bus.id}) has ineligible type ${busType.world}<${busType.domain}>. Only signal, event, and scalar-domain field types can be buses.`,
+        message: `Bus '${busName}' (${busId}) has ineligible type ${busType.world}<${busType.domain}>. Only signal, event, and scalar-domain field types can be buses.`,
       });
     }
 
     // Validate reserved bus constraints
-    const reservedError = validateReservedBus(bus.id, bus.name, busType);
+    const reservedError = validateReservedBus(busId, busName, busType);
     if (reservedError !== null) {
       errors.push(reservedError);
     }
 
-    busTypes.set(bus.id, busType);
+    busOutputTypes.set(busId, busType);
   }
 
-  // Step 2: Validate all slot types can be parsed
-  for (const block of normalized.blocks) {
-    for (const slot of [...block.inputs, ...block.outputs]) {
+  // Step 2: Build block output types map and validate all slot types can be parsed
+  const blockOutputTypes = new Map<string, ReadonlyMap<string, TypeDesc>>();
+
+  // Use Array.from() to avoid downlevelIteration issues
+  for (const blockData of Array.from(normalized.blocks.values())) {
+    const block = blockData as Block;
+    const outputTypes = new Map<string, TypeDesc>();
+
+    // Parse input types (for validation)
+    for (const slot of block.inputs) {
       try {
         slotTypeToTypeDesc(slot.type);
       } catch (error) {
@@ -415,92 +386,49 @@ export function pass2TypeGraph(
         });
       }
     }
-  }
 
-  // Step 3: Precompute conversion paths
-  // Use unified edges if available, otherwise fall back to legacy wires
-  const conversionPaths = new Map<Connection | string, readonly string[]>();
-
-  if (normalized.edges !== undefined && normalized.edges !== null && normalized.edges.length > 0) {
-    // New unified edge format
-    const edges: readonly Edge[] = normalized.edges;
-    for (const edge of edges) {
-      // Only check edges with port endpoints (wires and listeners)
-      // Publishers (port→bus) don't need type checking here
-      if (edge.to.kind !== 'port') {
-        continue;
-      }
-
-      // Get source and target types
-      const fromType = getEndpointType(edge.from, normalized.blocks, busTypes);
-      const toType = getEndpointType(edge.to, normalized.blocks, busTypes);
-
-      if (fromType === null || toType === null) {
-        // Dangling reference - will be caught by Pass 4
-        continue;
-      }
-
-      // Compute conversion path
-      const path = computeConversionPath(fromType, toType);
-
-      if (path === null) {
+    // Parse and store output types
+    for (const slot of block.outputs) {
+      try {
+        const typeDesc = slotTypeToTypeDesc(slot.type);
+        outputTypes.set(slot.id, typeDesc);
+      } catch (error) {
         errors.push({
-          kind: "NoConversionPath",
-          connectionId: edge.id,
-          fromType,
-          toType,
-          message: `No conversion path from ${fromType.world}<${fromType.domain}> to ${toType.world}<${toType.domain}> for edge ${edge.id}`,
+          kind: "PortTypeUnknown",
+          blockId: block.id,
+          slotId: slot.id,
+          slotType: slot.type,
+          message: `Cannot parse slot type '${slot.type}' on block ${block.id}.${slot.id}: ${error instanceof Error ? error.message : String(error)}`,
         });
-      } else if (path.length > 0) {
-        // Store non-empty conversion paths (keyed by edge id)
-        conversionPaths.set(edge.id, path);
       }
     }
-  } else {
-    // Legacy wire format (backward compatibility)
-    for (const wire of normalized.wires) {
-      // Find source and target blocks
-      const fromBlock = normalized.blocks.find(
-        (b: Block) => b.id === wire.from.blockId
-      );
-      const toBlock = normalized.blocks.find((b: Block) => b.id === wire.to.blockId);
 
-      if (fromBlock === undefined || toBlock === undefined) {
-        // Dangling connection - will be caught by Pass 4
-        continue;
-      }
+    blockOutputTypes.set(block.id, outputTypes);
+  }
 
-      // Find source and target slots
-      const fromSlot = fromBlock.outputs.find((s) => s.id === wire.from.slotId);
-      const toSlot = toBlock.inputs.find((s) => s.id === wire.to.slotId);
+  // Step 3: Validate type compatibility for edges
+  const edges: readonly Edge[] = normalized.edges ?? [];
+  for (const edge of edges) {
+    if (!edge.enabled) continue;
 
-      if (fromSlot === undefined || toSlot === undefined) {
-        // Dangling slot reference - will be caught by Pass 4
-        continue;
-      }
+    // Get source and target types
+    const fromType = getEndpointType(edge.from, normalized.blocks, busOutputTypes);
+    const toType = getEndpointType(edge.to, normalized.blocks, busOutputTypes);
 
-      try {
-        const fromType = slotTypeToTypeDesc(fromSlot.type);
-        const toType = slotTypeToTypeDesc(toSlot.type);
+    if (fromType === null || toType === null) {
+      // Dangling reference - will be caught by Pass 4
+      continue;
+    }
 
-        const path = computeConversionPath(fromType, toType);
-
-        if (path === null) {
-          errors.push({
-            kind: "NoConversionPath",
-            connectionId: wire.id,
-            fromType,
-            toType,
-            message: `No conversion path from ${fromType.world}<${fromType.domain}> to ${toType.world}<${toType.domain}> for wire ${wire.id}`,
-          });
-        } else if (path.length > 0) {
-          // Store non-empty conversion paths (keyed by Connection object)
-          conversionPaths.set(wire, path);
-        }
-      } catch {
-        // Type parsing error already recorded in step 2
-        continue;
-      }
+    // Check type compatibility
+    if (!isTypeCompatible(fromType, toType)) {
+      errors.push({
+        kind: "NoConversionPath",
+        connectionId: edge.id,
+        fromType,
+        toType,
+        message: `Type mismatch: cannot connect ${fromType.world}<${fromType.domain}> to ${toType.world}<${toType.domain}> for edge ${edge.id}`,
+      });
     }
   }
 
@@ -517,7 +445,7 @@ export function pass2TypeGraph(
   // Return typed patch
   return {
     ...normalized,
-    busTypes,
-    conversionPaths,
+    blockOutputTypes,
+    busOutputTypes: busOutputTypes.size > 0 ? busOutputTypes : undefined,
   };
 }

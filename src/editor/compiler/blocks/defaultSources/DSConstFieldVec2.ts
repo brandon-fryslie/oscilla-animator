@@ -23,7 +23,7 @@ const lowerDSConstFieldVec2: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
     throw new Error(`DSConstFieldVec2: expected field input for value, got ${value.k}`);
   }
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'DSConstFieldVec2_out');
 
   // Pass-through: output is same as input
   return {

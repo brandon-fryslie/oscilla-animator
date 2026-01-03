@@ -17,7 +17,7 @@ function createMockRootStore(): import('../RootStore').RootStore {
       emit: vi.fn(),
     },
     patchStore: { patchRevision: 1 },
-    busStore: { buses: [] },
+    // Buses are now BusBlocks in patchStore.blocks
   } as unknown as import('../RootStore').RootStore;
 }
 

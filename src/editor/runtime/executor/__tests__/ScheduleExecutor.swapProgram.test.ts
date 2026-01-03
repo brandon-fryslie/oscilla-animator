@@ -19,41 +19,51 @@ import type { CompiledProgramIR, StateLayout, StepIR } from "../../../compiler/i
 
 /**
  * Create minimal program for testing
+ *
+ * When steps include slot operations (tAbsMsSlot, out.tModelMs), slotMeta is required.
  */
 function createTestProgram(
   stateLayout: StateLayout,
   steps: StepIR[] = [],
   seed = 42
 ): CompiledProgramIR {
+  // Determine if steps touch slots - if so, we need slotMeta
+  const hasSlotOperations = steps.some(
+    (s) =>
+      (s.kind === "timeDerive" && (s.tAbsMsSlot !== undefined || s.out !== undefined))
+  );
+
+  // Provide slotMeta for timeDerive steps (slot 0 = tAbsMs, slot 1 = tModelMs)
+  const slotMeta = hasSlotOperations
+    ? [
+        { slot: 0, storage: "f64" as const, offset: 0, type: { world: "signal" as const, domain: "timeMs" as const, category: "internal" as const, busEligible: false }, debugName: "tAbsMs" },
+        { slot: 1, storage: "f64" as const, offset: 1, type: { world: "signal" as const, domain: "timeMs" as const, category: "internal" as const, busEligible: false }, debugName: "tModelMs" },
+      ]
+    : [];
+
   return {
     irVersion: 1,
     patchId: "test-patch",
-    patchRevision: 1,
-    compileId: `test-compile-${seed}`,
     seed,
     timeModel: { kind: "infinite", windowMs: 10000 },
     types: { typeIds: [] },
-    nodes: { nodes: [] },
-    buses: { buses: [] },
-    lenses: { lenses: [] },
-    adapters: { adapters: [] },
-    fields: { nodes: [] },
+    signalExprs: { nodes: [] },
+    fieldExprs: { nodes: [] },
+    eventExprs: { nodes: [] },
     constants: {
-      json: [],
-      f64: new Float64Array([42.0]),
-      f32: new Float32Array([]),
-      i32: new Int32Array([]),
-      constIndex: [{ k: "f64", idx: 0 }],
+      json: [42.0],
     },
     stateLayout,
+    slotMeta,
+    render: { sinks: [] },
+    cameras: { cameras: [], cameraIdToIndex: {} },
+    meshes: { meshes: [], meshIdToIndex: {} },
     schedule: {
       steps,
       stepIdToIndex: Object.fromEntries(steps.map((s, i) => [s.id, i])),
       deps: {
         slotProducerStep: {},
         slotConsumers: {},
-        busDependsOnSlots: {},
-        busProvidesSlot: {},
       },
       determinism: {
         allowedOrderingInputs: [],
@@ -65,9 +75,9 @@ function createTestProgram(
       },
     },
     outputs: [],
-    meta: {
-      sourceMap: {},
-      names: { nodes: {}, buses: {}, steps: {} },
+    debugIndex: {
+      stepToBlock: new Map<string, string>(),
+      slotToBlock: new Map<number, string>(),
     },
   };
 }

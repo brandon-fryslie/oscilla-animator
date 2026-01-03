@@ -24,7 +24,6 @@ Each new lens should appear in at least one macro to demonstrate real-world usag
 
 **Change:** Add clamp to envelope output before energy bus:
 ```typescript
-listeners: [
   {
     busName: 'energy',
     toRef: 'render',
@@ -42,11 +41,8 @@ listeners: [
 
 **File:** `src/editor/macros.ts`
 
-**Current State:** No listeners with lenses
 
-**Change:** Add listener from phaseA to a render parameter with offset:
 ```typescript
-listeners: [
   {
     busName: 'phaseA',
     toRef: 'render',
@@ -68,7 +64,6 @@ listeners: [
 
 **Change:** Add deadzone to position drift:
 ```typescript
-listeners: [
   {
     busName: 'energy',
     toRef: 'jitter',
@@ -90,7 +85,6 @@ listeners: [
 
 **Change:** Replace with explicit mapRange:
 ```typescript
-listeners: [
   {
     busName: 'phaseA',
     toRef: 'render',

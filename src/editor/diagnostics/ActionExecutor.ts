@@ -167,28 +167,28 @@ export class ActionExecutor {
 
   /**
    * Insert an adapter/lens between two connected ports.
-   * Finds the connection from the specified port, inserts an adapter block,
-   * and rewires the connections to go through the adapter.
+   * Finds the edge from the specified port, inserts an adapter block,
+   * and rewires the edges to go through the adapter.
    */
   addAdapter(fromPort: PortTargetRef, adapterType: string): boolean {
     const portRef = fromPort.portRef;
-    // 1. Find the connection from this port
-    const connection = this.patchStore.connections.find(
-      (c) => c.from.blockId === portRef.blockId && c.from.slotId === portRef.slotId
+    // 1. Find the edge from this port
+    const edge = this.patchStore.edges.find(
+      (e) => e.from.blockId === portRef.blockId && e.from.slotId === portRef.slotId
     );
 
-    if (connection === undefined || connection === null) {
-      console.warn('[ActionExecutor] No connection found from port:', portRef);
+    if (edge === undefined || edge === null) {
+      console.warn('[ActionExecutor] No edge found from port:', portRef);
       return false;
     }
 
     // 2. Add the adapter block
     const adapterId = this.patchStore.addBlock(adapterType);
 
-    // 3. Rewire: remove old connection
-    this.patchStore.disconnect(connection.id);
+    // 3. Rewire: remove old edge
+    this.patchStore.disconnect(edge.id);
 
-    // 4. Rewire: add new connections through adapter
+    // 4. Rewire: add new edges through adapter
     // Adapter blocks typically have 'in' input and 'out' output ports
     // For blocks like ClampSignal, Shaper, etc.
     const adapterBlock = this.patchStore.blocks.find((b) => b.id === adapterId);
@@ -216,12 +216,12 @@ export class ActionExecutor {
         inputs: adapterBlock.inputs.map((i) => i.id),
         outputs: adapterBlock.outputs.map((o) => o.id),
       });
-      // Restore the original connection
+      // Restore the original edge
       this.patchStore.connect(
-        connection.from.blockId,
-        connection.from.slotId,
-        connection.to.blockId,
-        connection.to.slotId
+        edge.from.blockId,
+        edge.from.slotId,
+        edge.to.blockId,
+        edge.to.slotId
       );
       // Remove the failed adapter block
       this.patchStore.removeBlock(adapterId);
@@ -230,8 +230,8 @@ export class ActionExecutor {
 
     // Connect: source -> adapter input
     this.patchStore.connect(
-      connection.from.blockId,
-      connection.from.slotId,
+      edge.from.blockId,
+      edge.from.slotId,
       adapterId,
       adapterInput.id
     );
@@ -240,8 +240,8 @@ export class ActionExecutor {
     this.patchStore.connect(
       adapterId,
       adapterOutput.id,
-      connection.to.blockId,
-      connection.to.slotId
+      edge.to.blockId,
+      edge.to.slotId
     );
 
     // Select the adapter for user to configure parameters

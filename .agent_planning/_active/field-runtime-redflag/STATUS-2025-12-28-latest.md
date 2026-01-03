@@ -116,8 +116,6 @@ if (portDecl?.defaultSource !== undefined) {
 // P0.5: No silent fallback - missing inputs without defaultSource are compile errors
 throw new Error(
   `Missing input "${inputPort.id}" for block "${block.type}" (${block.id}). ` +
-  `No wire, bus listener, or defaultSource provides a value. ` +
-  `Fix: Connect a wire, add a bus listener, or define a defaultSource for this port.`
 );
 ```
 

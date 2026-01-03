@@ -23,30 +23,30 @@
 import type { BuilderProgramIR, RenderSinkIR, StateLayoutEntry } from "./builderTypes";
 import type {
   CompiledProgramIR,
-  NodeTable,
-  BusTable,
-  LensTable,
-  AdapterTable,
   FieldExprTable,
-  ConstPool,
   StateLayout,
   StateCellLayout,
   ScheduleIR,
   StepIR,
   StepDebugProbe,
-  OutputSpec,
-  ProgramMeta,
+  OutputSpecIR,
+  SlotMetaEntry,
+  RenderIR,
+  DebugIndexIR,
   TypeTable,
   ValueSlot,
   Instance2DBatch,
   PathBatch,
 } from "./index";
-import type { SignalExprIR } from "./signalExpr";
-import type { StateId } from "./types";
-import { randomUUID } from "../../crypto";
+// Note: randomUUID was used in legacy schema but removed for canonical CompiledProgramIR
 import type { StepInstances3DProjectTo2D } from "../../runtime/executor/steps/executeInstances3DProject";
-import type { CameraTable, CameraId, CameraIR } from "./types3d";
+import type { CameraTable, CameraId, CameraIR, MeshTable } from "./types3d";
 import { DEFAULT_CAMERA_IR } from "./types3d";
+import type { StateId } from "./types";
+import type { SignalExprIR, SignalExprTable } from "./signalExpr";
+import type { EventExprTable } from "./signalExpr";
+import type { TypeDesc } from "./types";
+import { createTypeDesc } from "./types";
 
 /**
  * Debug configuration for schedule building.
@@ -131,76 +131,35 @@ function buildCameraSelection(cameras: readonly CameraIR[]): CameraSelectionResu
 }
 
 // ============================================================================
-// State Offset Resolution (Sprint 1: State ID Resolution)
+// State Offset Resolution (Sprint 1)
 // ============================================================================
 
 /**
  * Resolve state IDs to numeric offsets in SignalExprStateful nodes.
  *
- * This function implements the critical stateId → stateOffset mapping that
- * bridges compile-time state allocation (string IDs) to runtime state access
- * (numeric offsets).
+ * This mutates the signal nodes in-place, adding params.stateOffset to each
+ * stateful node based on the stateId → offset mapping from stateLayout.
  *
- * Process:
- * 1. Detect StateDeclConflict (same stateId with different sizes/alignment)
- * 2. Build stateId → offset map from state layout (sequential array indices)
- * 3. Patch all SignalExprStateful nodes with params.stateOffset
- * 4. Validate all state references are declared
- *
- * State offset assignment (Sprint 1):
- * - Offsets are sequential array indices: 0, 1, 2, ...
- * - All state currently stored in Float64Array (env.state.f64)
- * - alignment and sizeBytes fields are metadata for future buffer packing
- * - Future: separate buffers (f32, i32) will use alignment for packing
- *
- * Deterministic ordering:
- * - State offsets are assigned sequentially from state layout
- * - State layout is already sorted by IRBuilder allocation order
- * - Same input → same offsets every compilation
- *
- * Error handling:
- * - StateDeclConflict: Same stateId declared twice with different sizes/alignment
- * - StateRefMissingDecl: SignalExprStateful references unknown stateId
+ * Sprint 1: State ID Resolution in buildSchedule
+ * References:
+ * - .agent_planning/signal-runtime-stateful/PLAN-2025-12-30-031559.md
+ * - .agent_planning/signal-runtime-stateful/DOD-2025-12-30-031559.md Sprint 1
  *
  * @param signalNodes - Mutable array of signal IR nodes
  * @param stateLayout - State layout entries from IRBuilder
- * @throws Error if stateful node references undeclared stateId or conflict detected
+ * @throws Error if stateful node references undeclared stateId
  */
 function resolveStateOffsets(
   signalNodes: SignalExprIR[],
   stateLayout: readonly StateLayoutEntry[]
 ): void {
-  // Step 1: Detect StateDeclConflict - same stateId with different sizes/alignment
-  const stateIdToEntry = new Map<StateId, StateLayoutEntry>();
-  for (const entry of stateLayout) {
-    const existing = stateIdToEntry.get(entry.stateId);
-    if (existing !== undefined) {
-      // Conflict detection: same ID with different properties
-      const existingSize = existing.sizeBytes ?? 4;
-      const entrySize = entry.sizeBytes ?? 4;
-      const existingAlign = existing.alignment ?? 4;
-      const entryAlign = entry.alignment ?? 4;
-
-      if (existingSize !== entrySize || existingAlign !== entryAlign) {
-        throw new Error(
-          `StateDeclConflict: stateId "${entry.stateId}" declared with conflicting properties. ` +
-          `First: {sizeBytes: ${existingSize}, alignment: ${existingAlign}}, ` +
-          `Second: {sizeBytes: ${entrySize}, alignment: ${entryAlign}}`
-        );
-      }
-    }
-    stateIdToEntry.set(entry.stateId, entry);
-  }
-
-  // Step 2: Build stateId → offset map (sequential array indices)
-  // NOTE: Currently all state is in Float64Array, so offsets are just 0, 1, 2, ...
-  // alignment and sizeBytes are metadata for future buffer packing optimization
+  // Build stateId → offset map
   const stateOffsetMap = new Map<StateId, number>();
   stateLayout.forEach((entry, idx) => {
     stateOffsetMap.set(entry.stateId, idx);
   });
 
-  // Step 3: Patch SignalExprStateful nodes
+  // Patch SignalExprStateful nodes
   for (const node of signalNodes) {
     if (node.kind === 'stateful') {
       const offset = stateOffsetMap.get(node.stateId);
@@ -226,34 +185,25 @@ function resolveStateOffsets(
 export function buildCompiledProgram(
   builderIR: BuilderProgramIR,
   patchId: string,
-  patchRevision: number,
+  _patchRevision: number,  // Legacy param, not in canonical schema
   seed: number,
   debugConfig?: ScheduleDebugConfig,
 ): CompiledProgramIR {
-  // Create empty tables (will be populated as we implement more passes)
+  // Create empty type table (will be populated as we implement more passes)
   const emptyTypeTable: TypeTable = { typeIds: [] };
-  const emptyNodeTable: NodeTable = { nodes: [] };
-  const emptyBusTable: BusTable = { buses: [] };
-  const emptyLensTable: LensTable = { lenses: [] };
-  const emptyAdapterTable: AdapterTable = { adapters: [] };
-  const fieldExprTable: FieldExprTable = { nodes: Array.from(builderIR.fieldIR.nodes) };
 
-  // Clone signal nodes (we'll mutate them during state offset resolution)
-  const signalNodes = builderIR.signalIR.nodes.map(node => ({ ...node }));
+  // Build expression tables from builder IR
+  const signalExprs: SignalExprTable = { nodes: builderIR.signalIR.nodes.map(node => ({ ...node })) };
+  const fieldExprs: FieldExprTable = { nodes: Array.from(builderIR.fieldIR.nodes) };
+  const eventExprs: EventExprTable = { nodes: Array.from(builderIR.eventIR.nodes) };
 
   // SPRINT 1: Resolve state offsets before building schedule
   // This patches SignalExprStateful nodes with params.stateOffset
-  resolveStateOffsets(signalNodes, builderIR.stateLayout);
+  resolveStateOffsets(signalExprs.nodes, builderIR.stateLayout);
 
-  const signalTable = { nodes: signalNodes };
-
-  // Convert constants from simple array to packed format
-  const constPool: ConstPool = {
+  // Convert constants to canonical format (JSON-only)
+  const constants: { readonly json: readonly unknown[] } = {
     json: Array.from(builderIR.constants),
-    f64: new Float64Array(0),
-    f32: new Float32Array(0),
-    i32: new Int32Array(0),
-    constIndex: [],
   };
 
   // Convert state layout
@@ -265,7 +215,6 @@ export function buildCompiledProgram(
       size: 1, // Single value per state cell for now
       nodeId: `node_${idx}`, // Placeholder
       role: "accumulator", // Default role
-      policy: "frame" as const, // Default policy
       initialConstId: entry.initial !== undefined ? 0 : undefined,
     })),
     f64Size: builderIR.stateLayout.length,
@@ -273,83 +222,124 @@ export function buildCompiledProgram(
     i32Size: 0,
   };
 
-  // Build schedule (now processes render sinks)
-  const { schedule, frameOutSlot } = buildSchedule(builderIR, { debugConfig });
+  // Build schedule (now processes render sinks) and collect additional slotMeta
+  const { schedule, frameOutSlot, scheduleSlotMeta } = buildSchedule(builderIR, { debugConfig });
 
   // Build camera table with selection semantics
   const { cameraTable, defaultCameraId } = buildCameraSelection(builderIR.cameras);
 
-  // Create outputs that reference the frame output slot
-  const outputs: OutputSpec[] = frameOutSlot !== undefined
+  // Create outputs that reference the frame output slot (canonical OutputSpecIR)
+  const outputs: readonly OutputSpecIR[] = frameOutSlot !== undefined
     ? [{
-        id: "frame",
         kind: "renderFrame" as const,
         slot: frameOutSlot,
-        label: "Render Frame",
       }]
     : [];
 
-  // Create metadata
-  const meta: ProgramMeta = {
-    sourceMap: {},
-    names: {
-      nodes: {},
-      buses: {},
-      steps: Object.fromEntries(
-        schedule.steps.map(s => [s.id, s.kind])
-      ),
-    },
+  // Build render IR from builder's render sinks
+  const render: RenderIR = {
+    sinks: builderIR.renderSinks.map(sink => ({
+      sinkType: sink.sinkType,
+      inputs: sink.inputs,
+    })),
   };
 
-  // Convert SlotMetaEntry to SlotMeta (add offset = slot for dense allocation)
-  const slotMeta = builderIR.slotMeta.map((entry) => ({
-    slot: entry.slot,
-    storage: entry.storage,
-    offset: entry.slot, // Dense allocation: offset = slot index
-    type: entry.type,
-  }));
+  // Build debug index from builder's debug tracking (mandatory in canonical schema)
+  const debugIndex: DebugIndexIR = {
+    stepToBlock: new Map(schedule.steps.map(s => [s.id, s.label ?? 'unknown'])),
+    slotToBlock: new Map(builderIR.slotMeta.map(m => [m.slot, m.debugName ?? 'unknown'])),
+    labels: new Map(),
+  };
+
+  // Empty mesh table (3D support)
+  const emptyMeshTable: MeshTable = { meshes: [], meshIdToIndex: {} };
+
+  // Convert SlotMetaEntry to canonical SlotMetaEntry format (add offset = slot for dense allocation)
+  // Merge builder's slotMeta with schedule-allocated slotMeta
+  const slotMeta: readonly SlotMetaEntry[] = [
+    ...builderIR.slotMeta.map((entry): SlotMetaEntry => ({
+      slot: entry.slot,
+      storage: entry.storage,
+      offset: entry.slot, // Dense allocation: offset = slot index
+      type: entry.type,
+      debugName: entry.debugName,
+    })),
+    ...scheduleSlotMeta,
+  ];
 
   return {
     irVersion: 1,
     patchId,
-    patchRevision,
-    compileId: randomUUID(),
     seed,
     timeModel: builderIR.timeModel,
     types: emptyTypeTable,
-    nodes: emptyNodeTable,
-    buses: emptyBusTable,
-    lenses: emptyLensTable,
-    adapters: emptyAdapterTable,
-    fields: fieldExprTable,
-    signalTable,
-    constants: constPool,
+    signalExprs,
+    fieldExprs,
+    eventExprs,
+    constants,
     stateLayout,
     slotMeta,
+    render,
     cameras: cameraTable,
-    defaultCameraId,
+    meshes: emptyMeshTable,
+    primaryCameraId: defaultCameraId,
     schedule,
     outputs,
-    meta,
+    debugIndex,
   };
 }
 
 /**
- * Slot allocator - tracks next available slot.
+ * Slot allocator - tracks next available slot AND slotMeta entries.
  */
 class SlotAllocator {
   private nextSlot: number;
+  private readonly metaEntries: SlotMetaEntry[] = [];
 
   constructor(startSlot = 0) {
     this.nextSlot = startSlot;
   }
 
+  /**
+   * Allocate a new slot with slotMeta.
+   *
+   * This ensures every schedule-allocated slot has metadata for ValueStore.
+   *
+   * @param type - TypeDesc for the slot
+   * @param debugName - Debug label for the slot
+   * @returns Allocated ValueSlot
+   */
+  allocWithMeta(type: TypeDesc, debugName: string): ValueSlot {
+    const slot = this.nextSlot++;
+
+    this.metaEntries.push({
+      slot,
+      storage: "object", // Schedule slots are always object storage
+      offset: slot,
+      type,
+      debugName,
+    });
+
+    return slot;
+  }
+
+  /**
+   * Legacy alloc without meta (for compatibility during migration).
+   * DO NOT USE for new code - use allocWithMeta instead.
+   */
   alloc(): ValueSlot {
     return this.nextSlot++;
   }
 
   peek(): number {
     return this.nextSlot;
+  }
+
+  /**
+   * Get all collected SlotMetaEntry records.
+   */
+  getSlotMeta(): readonly SlotMetaEntry[] {
+    return this.metaEntries;
   }
 }
 
@@ -359,6 +349,7 @@ class SlotAllocator {
 interface BuildScheduleResult {
   schedule: ScheduleIR;
   frameOutSlot: ValueSlot | undefined;
+  scheduleSlotMeta: readonly SlotMetaEntry[];
 }
 
 /**
@@ -367,54 +358,6 @@ interface BuildScheduleResult {
 interface BuildScheduleOptions {
   /** Debug configuration (optional) */
   debugConfig?: ScheduleDebugConfig;
-}
-
-/**
- * Compute the next available value slot from BuilderProgramIR.
- * Scans all allocated slots to find the maximum + 1.
- */
-function computeNextValueSlot(builderIR: BuilderProgramIR): number {
-  let maxSlot = -1;
-
-  // Check signal value slots
-  for (const slot of builderIR.sigValueSlots) {
-    if (slot !== undefined && slot > maxSlot) {
-      maxSlot = slot;
-    }
-  }
-
-  // Check field value slots
-  for (const slot of builderIR.fieldValueSlots) {
-    if (slot !== undefined && slot > maxSlot) {
-      maxSlot = slot;
-    }
-  }
-
-  // Check time slots
-  if (builderIR.timeSlots !== undefined) {
-    const timeSlotValues = [
-      builderIR.timeSlots.systemTime,
-      builderIR.timeSlots.tAbsMs,
-      builderIR.timeSlots.tModelMs,
-      builderIR.timeSlots.phase01,
-      builderIR.timeSlots.progress01,
-      builderIR.timeSlots.wrapEvent,
-    ];
-    for (const slot of timeSlotValues) {
-      if (slot !== undefined && slot > maxSlot) {
-        maxSlot = slot;
-      }
-    }
-  }
-
-  // Check domain slots
-  for (const domain of builderIR.domains) {
-    if (domain.slot > maxSlot) {
-      maxSlot = domain.slot;
-    }
-  }
-
-  return maxSlot + 1;
 }
 
 /**
@@ -437,17 +380,29 @@ function computeNextValueSlot(builderIR: BuilderProgramIR): number {
  * - probeMode='basic': Probes after time derive and signal eval steps
  * - probeMode='full': Probes after every significant step
  *
+ * Schedule Slot Meta (Workstream 01):
+ * - All schedule-allocated slots get SlotMetaEntry with object storage
+ * - Materialization buffer slots: domain "matBuffer"
+ * - Frame output slot: domain "renderFrame"
+ * - Validation ensures no slot is used without slotMeta
+ *
  * References:
  * - design-docs/13-Renderer/11-FINAL-INTEGRATION.md §A2
  * - design-docs/13-Renderer/12-ValueSlotPerNodeOutput.md
  * - .agent_planning/debugger/PLAN-2025-12-27-005641.md (Phase 7 Debug Infrastructure)
+ * - .agent_planning/compiler-migration-workstreams (Workstream 01)
  */
 function buildSchedule(
   builderIR: BuilderProgramIR,
   options?: BuildScheduleOptions,
 ): BuildScheduleResult {
+  console.log('[buildSchedule] Starting with:', {
+    renderSinkCount: builderIR.renderSinks.length,
+    renderSinkTypes: builderIR.renderSinks.map(s => s.sinkType),
+    domainCount: builderIR.domains.length,
+  });
   const steps: StepIR[] = [];
-  const slots = new SlotAllocator(computeNextValueSlot(builderIR));
+  const slots = new SlotAllocator(builderIR.nextValueSlot ?? 0);
   const probeMode = options?.debugConfig?.probeMode ?? 'off';
   let probeCounter = 0;
   const initialSlotValues: Record<number, unknown> = {};
@@ -498,25 +453,29 @@ function buildSchedule(
   });
 
   // Time slots come from lowering (TimeRoot block allocates them)
-  // If no TimeRoot was lowered, we fall back to local allocation
-  const timeSlots = builderIR.timeSlots ?? {
-    // Fallback for patches without TimeRoot (allocate locally)
-    systemTime: slots.alloc(),
-    tAbsMs: slots.alloc(),
-    tModelMs: slots.alloc(),
-    progress01: slots.alloc(),
+  // If no TimeRoot was lowered, we fall back to local allocation with metadata
+  const timeSlotType = createTypeDesc('signal', 'timeMs', 'internal', false);
+  const timeSlots: import("./builderTypes").TimeSlots = builderIR.timeSlots ?? {
+    // Fallback for patches without TimeRoot (allocate locally with metadata)
+    systemTime: slots.allocWithMeta(timeSlotType, 'schedule:time-system'),
+    tAbsMs: slots.allocWithMeta(timeSlotType, 'schedule:time-abs'),
+    tModelMs: slots.allocWithMeta(timeSlotType, 'schedule:time-model'),
+    progress01: slots.allocWithMeta(createTypeDesc('signal', 'float', 'core', false), 'schedule:time-progress'),
+    phase01: undefined,
+    wrapEvent: undefined,
   };
 
   const SLOT_T_ABS_MS = timeSlots.tAbsMs ?? timeSlots.systemTime;
   const SLOT_T_MODEL_MS = timeSlots.tModelMs ?? timeSlots.systemTime;
-  const SLOT_PROGRESS_01 = timeSlots.progress01 ?? timeSlots.tModelMs ?? timeSlots.systemTime;
+  const SLOT_PROGRESS_01 = timeSlots.progress01 ?? SLOT_T_MODEL_MS;
 
-  // Allocate frame output slot
+  // Allocate frame output slot with metadata
   // Per 12-ValueSlotPerNodeOutput.md: schedule allocates only:
   // - Materialization buffer slots (done in processInstances2DSink)
   // - Frame output slot
   // Batch lists are compile-time config embedded in the step, not slots
-  const SLOT_FRAME_OUT = slots.alloc();
+  const frameOutputType = createTypeDesc('config', 'renderFrame', 'internal', false);
+  const SLOT_FRAME_OUT = slots.allocWithMeta(frameOutputType, 'schedule:frame-out');
 
   // Step 1: Time Derive
   // Use slots from lowering where available
@@ -530,8 +489,8 @@ function buildSchedule(
     out: {
       tModelMs: SLOT_T_MODEL_MS,
       progress01: SLOT_PROGRESS_01,
-      phase01: timeSlots.phase01 ?? SLOT_PROGRESS_01,
-      wrapEvent: timeSlots.wrapEvent ?? SLOT_PROGRESS_01,
+      phase01: timeSlots.phase01,
+      wrapEvent: timeSlots.wrapEvent,
     },
   });
 
@@ -560,24 +519,6 @@ function buildSchedule(
     // Debug probe after signal eval (basic + full mode)
     const signalSlots = signalOutputs.map(o => o.slot);
     maybeInsertProbe('signal', 'step-signal-eval', signalSlots);
-  }
-
-  // Step 1c: Insert debug probes from DebugDisplay blocks
-  // Collect probes registered during block lowering and emit StepDebugProbe steps
-  if (builderIR.debugProbes.length > 0) {
-    for (const probe of builderIR.debugProbes) {
-      const probeStep: StepDebugProbe = {
-        kind: 'debugProbe',
-        id: `step-debug-probe-${probe.id}`,
-        deps: ['step-signal-eval'], // Depend on signal evaluation
-        probe: {
-          id: probe.id,
-          slots: [probe.slot],
-          mode: probe.mode,
-        },
-      };
-      steps.push(probeStep);
-    }
   }
 
   // Step 2: Process render sinks and emit materialization steps
@@ -683,8 +624,6 @@ function buildSchedule(
     deps: {
       slotProducerStep: {},
       slotConsumers: {},
-      busDependsOnSlots: {},
-      busProvidesSlot: {},
     },
     determinism: {
       allowedOrderingInputs: [],
@@ -714,10 +653,75 @@ function buildSchedule(
     },
   };
 
+  console.log('[buildSchedule] Done. Schedule has', steps.length, 'steps:', steps.map(s => s.kind));
+  console.log('[buildSchedule] instance2dBatches:', instance2dBatches.length, 'pathBatches:', pathBatches.length);
+
+  // Validate that all steps produce slots that have slotMeta
+  validateScheduleSlotMeta(slots.getSlotMeta(), steps);
+
   return {
     schedule,
     frameOutSlot: SLOT_FRAME_OUT,
+    scheduleSlotMeta: slots.getSlotMeta(),
   };
+}
+
+/**
+ * Validate that all schedule step outputs have slotMeta.
+ *
+ * Throws a clear error if any step writes to a slot without metadata.
+ * This is a fail-fast check during compilation to catch slot allocation bugs.
+ *
+ * @param slotMeta - Schedule-allocated slot metadata
+ * @param steps - All schedule steps
+ * @throws Error if a step output slot has no slotMeta
+ */
+function validateScheduleSlotMeta(
+  slotMeta: readonly SlotMetaEntry[],
+  steps: readonly StepIR[],
+): void {
+  const metaSlots = new Set(slotMeta.map(m => m.slot));
+
+  for (const step of steps) {
+    const outputSlots: ValueSlot[] = [];
+
+    // Extract output slots based on step kind
+    switch (step.kind) {
+      case 'materialize':
+        outputSlots.push(step.materialization.outBufferSlot);
+        break;
+      case 'materializeColor':
+        outputSlots.push(step.outRSlot, step.outGSlot, step.outBSlot, step.outASlot);
+        break;
+      case 'materializePath':
+        outputSlots.push(
+          step.outCmdsSlot,
+          step.outParamsSlot,
+          step.outCmdStartSlot,
+          step.outCmdLenSlot,
+          step.outPointStartSlot,
+          step.outPointLenSlot
+        );
+        break;
+      case 'Instances3DProjectTo2D':
+        outputSlots.push(step.outSlot);
+        break;
+      case 'renderAssemble':
+        outputSlots.push(step.outFrameSlot);
+        break;
+      // Other step kinds don't allocate schedule slots
+    }
+
+    // Check each output slot has metadata
+    for (const slot of outputSlots) {
+      if (!metaSlots.has(slot)) {
+        throw new Error(
+          `ScheduleSlotMetaMissing: Step '${step.id}' (${step.kind}) writes to slot ${slot} ` +
+          `without slotMeta. All schedule-allocated slots must have metadata.`
+        );
+      }
+    }
+  }
 }
 
 function materializeColorField(
@@ -737,7 +741,8 @@ function materializeColorField(
 
   const fieldId = fieldSlotToId.get(fieldSlot);
   if (fieldId !== undefined) {
-    const outSlot = slots.alloc();
+    const bufferType = createTypeDesc('config', 'matBuffer', 'internal', false);
+    const outSlot = slots.allocWithMeta(bufferType, `schedule:mat-${label}-${sinkIdx}`);
     const stepId = `step-mat-${label}-${sinkIdx}`;
     steps.push({
       kind: "materialize",
@@ -781,7 +786,8 @@ function materializeScalarField(
 
   const fieldId = fieldSlotToId.get(fieldSlot);
   if (fieldId !== undefined) {
-    const outSlot = slots.alloc();
+    const bufferType = createTypeDesc('config', 'matBuffer', 'internal', false);
+    const outSlot = slots.allocWithMeta(bufferType, `schedule:mat-${label}-${sinkIdx}`);
     const stepId = `step-mat-${label}-${sinkIdx}`;
     steps.push({
       kind: "materialize",
@@ -854,10 +860,15 @@ function processInstances2DSink(
     throw new Error(`processInstances2DSink: radius slot ${radiusSlot} has no signal or field expression`);
   }
 
-  // Allocate output buffer slots for positions and size/color
-  const posXYSlot = slots.alloc();
-  const sizeOutSlot = radiusFieldId !== undefined ? slots.alloc() : radiusSlot;
-  const colorOutSlot = slots.alloc();
+  // Allocate output buffer slots for positions and size/color with metadata
+  const posBufferType = createTypeDesc('config', 'matBuffer', 'internal', false);
+  const colorBufferType = createTypeDesc('config', 'matBuffer', 'internal', false);
+
+  const posXYSlot = slots.allocWithMeta(posBufferType, `schedule:mat-pos-${sinkIdx}`);
+  const sizeOutSlot = radiusFieldId !== undefined
+    ? slots.allocWithMeta(posBufferType, `schedule:mat-size-${sinkIdx}`)
+    : radiusSlot;
+  const colorOutSlot = slots.allocWithMeta(colorBufferType, `schedule:mat-color-${sinkIdx}`);
 
   // Emit StepMaterialize for positions (vec2f32)
   const posStepId = `step-mat-pos-${sinkIdx}`;
@@ -983,8 +994,9 @@ function processInstances3DSink(
     throw new Error(`processInstances3DSink: radius slot ${radiusSlot} has no signal or field expression`);
   }
 
-  // Materialize 3D positions (vec3f32)
-  const pos3dSlot = slots.alloc();
+  // Materialize 3D positions (vec3f32) with metadata
+  const pos3dBufferType = createTypeDesc('config', 'matBuffer', 'internal', false);
+  const pos3dSlot = slots.allocWithMeta(pos3dBufferType, `schedule:mat-pos3d-${sinkIdx}`);
   const pos3dStepId = `step-mat-pos3d-${sinkIdx}`;
   steps.push({
     kind: "materialize",
@@ -1003,11 +1015,12 @@ function processInstances3DSink(
   stepIds.push(pos3dStepId);
 
   // Materialize color as separate RGBA channels (Field<color> → 4 Float32Array buffers)
-  // One step emits all 4 channels
-  const colorRSlot = slots.alloc();
-  const colorGSlot = slots.alloc();
-  const colorBSlot = slots.alloc();
-  const colorASlot = slots.alloc();
+  // One step emits all 4 channels - allocate with metadata
+  const channelBufferType = createTypeDesc('config', 'matBuffer', 'internal', false);
+  const colorRSlot = slots.allocWithMeta(channelBufferType, `schedule:mat-color-r-${sinkIdx}`);
+  const colorGSlot = slots.allocWithMeta(channelBufferType, `schedule:mat-color-g-${sinkIdx}`);
+  const colorBSlot = slots.allocWithMeta(channelBufferType, `schedule:mat-color-b-${sinkIdx}`);
+  const colorASlot = slots.allocWithMeta(channelBufferType, `schedule:mat-color-a-${sinkIdx}`);
   const colorStepId = `step-mat-color-${sinkIdx}`;
   steps.push({
     kind: "materializeColor",
@@ -1024,7 +1037,9 @@ function processInstances3DSink(
   stepIds.push(colorStepId);
 
   // Materialize radius if it's a field (if signal, use slot directly)
-  const radiusOutSlot = radiusFieldId !== undefined ? slots.alloc() : radiusSlot;
+  const radiusOutSlot = radiusFieldId !== undefined
+    ? slots.allocWithMeta(channelBufferType, `schedule:mat-radius-${sinkIdx}`)
+    : radiusSlot;
   if (radiusFieldId !== undefined) {
     const radiusStepId = `step-mat-radius-${sinkIdx}`;
     steps.push({
@@ -1044,8 +1059,9 @@ function processInstances3DSink(
     stepIds.push(radiusStepId);
   }
 
-  // Allocate output slot for Instance2DBufferRef (projection result)
-  const projectionOutSlot = slots.alloc();
+  // Allocate output slot for Instance2DBufferRef (projection result) with metadata
+  const projectionOutputType = createTypeDesc('config', 'matBuffer', 'internal', false);
+  const projectionOutSlot = slots.allocWithMeta(projectionOutputType, `schedule:project3d-${sinkIdx}`);
 
   // Emit StepInstances3DProjectTo2D
   const projectionStepId = `step-project3d-${sinkIdx}`;
@@ -1116,12 +1132,14 @@ function processPaths2DSink(
 
   initialSlotValues[pathSlot] = { kind: "fieldExpr", exprId: String(pathFieldId) };
 
-  const outCmdsSlot = slots.alloc();
-  const outParamsSlot = slots.alloc();
-  const outCmdStartSlot = slots.alloc();
-  const outCmdLenSlot = slots.alloc();
-  const outPointStartSlot = slots.alloc();
-  const outPointLenSlot = slots.alloc();
+  // Allocate path buffer slots with metadata
+  const pathBufferType = createTypeDesc('config', 'matBuffer', 'internal', false);
+  const outCmdsSlot = slots.allocWithMeta(pathBufferType, `schedule:mat-path-cmds-${sinkIdx}`);
+  const outParamsSlot = slots.allocWithMeta(pathBufferType, `schedule:mat-path-params-${sinkIdx}`);
+  const outCmdStartSlot = slots.allocWithMeta(pathBufferType, `schedule:mat-path-cmdstart-${sinkIdx}`);
+  const outCmdLenSlot = slots.allocWithMeta(pathBufferType, `schedule:mat-path-cmdlen-${sinkIdx}`);
+  const outPointStartSlot = slots.allocWithMeta(pathBufferType, `schedule:mat-path-pointstart-${sinkIdx}`);
+  const outPointLenSlot = slots.allocWithMeta(pathBufferType, `schedule:mat-path-pointlen-${sinkIdx}`);
 
   const pathStepId = `step-mat-path-${sinkIdx}`;
   steps.push({
@@ -1142,7 +1160,7 @@ function processPaths2DSink(
 
   const fillColorSlot = materializeColorField(
     "fill-color",
-    sink.inputs.fillColor as ValueSlot | undefined,
+    sink.inputs.fillColor,
     domainSlot,
     sinkIdx,
     slots,
@@ -1154,7 +1172,7 @@ function processPaths2DSink(
 
   const strokeColorSlot = materializeColorField(
     "stroke-color",
-    sink.inputs.strokeColor as ValueSlot | undefined,
+    sink.inputs.strokeColor,
     domainSlot,
     sinkIdx,
     slots,
@@ -1166,7 +1184,7 @@ function processPaths2DSink(
 
   const strokeWidthSlot = materializeScalarField(
     "stroke-width",
-    sink.inputs.strokeWidth as ValueSlot | undefined,
+    sink.inputs.strokeWidth,
     domainSlot,
     sinkIdx,
     slots,

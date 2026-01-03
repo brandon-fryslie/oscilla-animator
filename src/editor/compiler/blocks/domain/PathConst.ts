@@ -36,7 +36,7 @@ const lowerPathConst: BlockLowerFn = ({ ctx, inputs, config }) => {
   const outType = { world: "field" as const, domain: "path" as const, category: "internal" as const, busEligible: false };
   const fieldId = ctx.b.fieldConst(pathExpr, outType);
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'PathConst_out');
   return { outputs: [{ k: 'field', id: fieldId, slot }] };
 };
 

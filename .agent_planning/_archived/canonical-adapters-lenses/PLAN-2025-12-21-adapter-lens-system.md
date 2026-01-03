@@ -12,26 +12,22 @@ This plan implements the canonical separation between **adapters** (type compati
 2. **Auto-adapter selection** - Intelligent pathfinding with policy classes (AUTO/SUGGEST/EXPLICIT/FORBIDDEN)
 3. **Canonical lens catalog** - Domain-specific, type-preserving transformations
 4. **Default sources** - Lens parameters become animatable inputs, not opaque parameters
-5. **Deterministic evaluation order** - publisher adapter → publisher lens → bus combine → listener adapter → listener lens
 
 ## Current State Analysis
 
 ### Existing Implementation
 - ✅ Bus-aware compiler complete (WP2)
 - ✅ Basic lens system exists (`src/editor/lenses.ts`, 506 lines)
-- ✅ Publishers/listeners have `adapterChain` and `lensStack` fields
 - ✅ Type validation system in place
 - ❌ No adapter registry or selection algorithm
 - ❌ Lenses mixed with adapters (conceptual confusion)
 - ❌ No default sources for lens parameters
 - ❌ No type-preserving validation for lenses
-- ❌ No publisher lens support
 
 ### Key Issues to Resolve
 1. **Conceptual confusion** - Current `lenses.ts` contains both adapters (broadcast) and lenses
 2. **Missing adapter system** - No auto-selection, no canonical adapter table
 3. **Parameter opacity** - Lens params are constants, not animatable inputs
-4. **No publisher lenses** - Only listener lenses supported
 5. **No validation** - Type preservation not enforced
 
 ## Phase 1: Core Type System Updates
@@ -80,20 +76,15 @@ export interface DefaultSourceState {
   readonly rangeHint?: { min?: number; max?: number; step?: number; log?: boolean };
 }
 
-// Enhanced Publisher with lens support (Doc 16)
-export interface Publisher {
   readonly id: string;
   readonly busId: string;
   readonly from: BindingEndpoint;
   readonly adapterChain?: AdapterStep[];
-  readonly lensStack?: LensInstance[];  // Added - publisher lenses
   readonly enabled: boolean;
   readonly weight?: number;
   readonly sortKey: number;
 }
 
-// Enhanced Listener (clarify lens vs lensStack)
-export interface Listener {
   readonly id: string;
   readonly busId: string;
   readonly to: BindingEndpoint;
@@ -113,7 +104,6 @@ export interface LensRegistryEntry {
   readonly paramSpecs: Record<string, LensParamSpec>;
   readonly costHint: 'cheap' | 'medium' | 'heavy';
   readonly stabilityHint: 'scrubSafe' | 'transportOnly' | 'either';
-  readonly allowedOn: 'publisher' | 'listener' | 'both';
 }
 
 // Lens parameter specification
@@ -168,7 +158,6 @@ export interface LensRegistry {
   get(id: string): LensRegistryEntry | undefined;
 
   // Get lenses for domain and endpoint type
-  getLensesForDomain(domain: Domain, endpointType: 'publisher' | 'listener'): LensRegistryEntry[];
 
   // Validate lens preserves type
   validateTypePreservation(lens: LensRegistryEntry): boolean;
@@ -193,7 +182,6 @@ export interface DefaultSourceStore {
 
 // Context for adapter selection
 export interface AdapterContext {
-  readonly edgeKind: 'wire' | 'publisher' | 'listener' | 'lensParam';
   readonly allowHeavy: boolean = false;
   readonly allowExplicit: boolean = false;
 }
@@ -793,7 +781,6 @@ import type {
 
 // Number domain lenses (Doc 17, Section 0)
 const NUMBER_LENSES: LensRegistryEntry[] = [
-  // Publisher-allowed (pre-combine)
   {
     id: 'gain',
     label: 'Gain',
@@ -906,7 +893,6 @@ const NUMBER_LENSES: LensRegistryEntry[] = [
     }
   },
 
-  // Listener-only (post-combine)
   {
     id: 'ease',
     label: 'Ease',
@@ -915,7 +901,6 @@ const NUMBER_LENSES: LensRegistryEntry[] = [
     outputType: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
-    allowedOn: 'listener',
     paramSpecs: {
       curve: {
         type: { world: 'scalar', domain: 'string', category: 'internal', busEligible: false },
@@ -948,7 +933,6 @@ const NUMBER_LENSES: LensRegistryEntry[] = [
     outputType: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
-    allowedOn: 'listener',
     paramSpecs: {
       inMin: {
         type: { world: 'scalar', domain: 'number', category: 'internal', busEligible: false },
@@ -1188,7 +1172,6 @@ export class LensRegistryImpl implements LensRegistry {
     return Array.from(this.lenses.values());
   }
 
-  getLensesForDomain(domain: Domain, endpointType: 'publisher' | 'listener'): LensRegistryEntry[] {
     const domainLenses = this.lensesByDomain.get(domain) || [];
 
     return domainLenses.filter(lens =>
@@ -1605,7 +1588,6 @@ Update bus compilation to apply adapters and lenses in correct order:
  * Implements evaluation order from Doc 16, Section 2
  */
 
-import type { Publisher, Listener, Artifact } from '../types';
 import type { AdapterRegistry } from '../registry/registryInterfaces';
 import type { LensRegistry } from '../registry/registryInterfaces';
 import { BindingResolver } from './bindingResolver';
@@ -1626,74 +1608,55 @@ export class BusCompiler {
   }
 
   /**
-   * Compile publisher with adapter chain and lens stack
    * Order: block output → adapterChain → lensStack → bus
    */
-  async compilePublisher(publisher: Publisher): Promise<Artifact> {
-    // Get publisher block output
-    const outputArtifact = await this.compileBlockOutput(publisher.from);
 
     if (outputArtifact.kind === 'Error') {
       return outputArtifact;
     }
 
-    // Apply publisher adapter chain (compatibility)
     const adaptedArtifact = this.applyAdapterChain(
       outputArtifact,
-      publisher.adapterChain
     );
 
     if (adaptedArtifact.kind === 'Error') {
       return adaptedArtifact;
     }
 
-    // Apply publisher lens stack (expression)
     const lensedArtifact = await this.applyLensStack(
       adaptedArtifact,
-      publisher.lensStack || []
     );
 
     return lensedArtifact;
   }
 
   /**
-   * Compile listener with adapter chain and lens stack
    * Order: bus → adapterChain → lensStack → block input
    */
-  async compileListener(
-    listener: Listener,
     busArtifact: Artifact
   ): Promise<Artifact> {
-    // Apply listener adapter chain (compatibility)
     const adaptedArtifact = this.applyAdapterChain(
       busArtifact,
-      listener.adapterChain
     );
 
     if (adaptedArtifact.kind === 'Error') {
       return adaptedArtifact;
     }
 
-    // Apply listener lens stack (expression)
     const lensedArtifact = await this.applyLensStack(
       adaptedArtifact,
-      listener.lensStack || []
     );
 
     return lensedArtifact;
   }
 
   /**
-   * Validate publisher type compatibility
    */
-  validatePublisher(publisher: Publisher, busType: TypeDesc): ValidationResult {
-    const blockOutputType = this.getBlockOutputType(publisher.from);
 
     // Find adapter path
     const adapterPath = this.adapterRegistry.findPath(
       blockOutputType,
       busType,
-      { edgeKind: 'publisher', allowHeavy: false, allowExplicit: false }
     );
 
     if (!adapterPath) {
@@ -1705,9 +1668,7 @@ export class BusCompiler {
     }
 
     // Validate adapter chain
-    if (publisher.adapterChain) {
       const chainValidation = this.adapterRegistry.validateChain(
-        publisher.adapterChain,
         blockOutputType,
         busType
       );
@@ -1718,8 +1679,6 @@ export class BusCompiler {
     }
 
     // Validate lens stack type preservation
-    if (publisher.lensStack) {
-      for (const lens of publisher.lensStack) {
         const lensDef = this.lensRegistry.get(lens.lensId);
         if (!lensDef) {
           return {
@@ -1747,16 +1706,12 @@ export class BusCompiler {
   }
 
   /**
-   * Validate listener type compatibility
    */
-  validateListener(listener: Listener, busType: TypeDesc): ValidationResult {
-    const blockInputType = this.getBlockInputType(listener.to);
 
     // Find adapter path
     const adapterPath = this.adapterRegistry.findPath(
       busType,
       blockInputType,
-      { edgeKind: 'listener', allowHeavy: false, allowExplicit: false }
     );
 
     if (!adapterPath) {
@@ -1767,7 +1722,6 @@ export class BusCompiler {
       };
     }
 
-    // Similar validation as publisher...
     // (Implementation omitted for brevity)
 
     return { isValid: true, errors: [], warnings: [] };
@@ -1783,65 +1737,38 @@ export class BusCompiler {
 
 **File**: `src/editor/stores/BusStore.ts`
 
-Add lens stack support for publishers:
 
 ```typescript
 // Add to constructor observable actions:
-addLensToPublisher: action,
-removeLensFromPublisher: action,
-clearPublisherLensStack: action,
 
 // Add methods:
 /**
- * Add lens to publisher lens stack
  */
-addLensToPublisher(publisherId: string, lens: LensInstance): void {
-  const publisher = this.publishers.find(p => p.id === publisherId);
-  if (!publisher) return;
 
-  if (!publisher.lensStack) {
-    publisher.lensStack = [];
   }
 
-  publisher.lensStack.push(lens);
 
   this.root.events.emit({
-    type: 'PublisherLensAdded',
-    publisherId,
     lens
   });
 }
 
 /**
- * Remove lens from publisher lens stack
  */
-removeLensFromPublisher(publisherId: string, lensIndex: number): void {
-  const publisher = this.publishers.find(p => p.id === publisherId);
-  if (!publisher || !publisher.lensStack) return;
 
-  const removed = publisher.lensStack.splice(lensIndex, 1)[0];
 
   if (removed) {
     this.root.events.emit({
-      type: 'PublisherLensRemoved',
-      publisherId,
       lensIndex
     });
   }
 }
 
 /**
- * Clear publisher lens stack
  */
-clearPublisherLensStack(publisherId: string): void {
-  const publisher = this.publishers.find(p => p.id === publisherId);
-  if (!publisher) return;
 
-  publisher.lensStack = undefined;
 
   this.root.events.emit({
-    type: 'PublisherLensStackCleared',
-    publisherId
   });
 }
 ```
@@ -1871,29 +1798,20 @@ bindingResolver: BindingResolver;
 
 ## Phase 7: UI Integration
 
-### 7.1 Bus Board Publisher Lenses
 
 **File**: `src/editor/components/BusBoard.tsx`
 
-Add publisher lens controls:
 
 ```tsx
-// Publisher lens rendering
-const PublisherLensStrip = ({ publisher }: { publisher: Publisher }) => {
   const [showLenses, setShowLenses] = useState(false);
 
   return (
-    <div className="publisher-lens-strip">
       {/* Enable toggle */}
       <Toggle
-        checked={publisher.enabled}
-        onChange={(enabled) => busStore.updatePublisher(publisher.id, { enabled })}
       />
 
       {/* Primary lens control (if any) */}
-      {publisher.lensStack && publisher.lensStack.length > 0 && (
         <div className="primary-lens-control">
-          <span>{publisher.lensStack[0].lensId}</span>
           <Button
             size="sm"
             onClick={() => setShowLenses(!showLenses)}
@@ -1904,10 +1822,7 @@ const PublisherLensStrip = ({ publisher }: { publisher: Publisher }) => {
       )}
 
       {/* Expanded lens stack */}
-      {showLenses && publisher.lensStack && (
         <LensStackEditor
-          lenses={publisher.lensStack}
-          onChange={(lenses) => busStore.updatePublisher(publisher.id, { lensStack: lenses })}
         />
       )}
     </div>
@@ -2090,21 +2005,13 @@ export function migrateLensDefinition(
 }
 
 /**
- * Migrate legacy listener.lens to listener.lensStack
  */
-export function migrateListener(
-  listener: Listener,
   defaultSourceStore: DefaultSourceStore
-): Listener {
-  if (listener.lens && !listener.lensStack) {
     return {
-      ...listener,
-      lensStack: [migrateLensDefinition(listener.lens, listener.id, defaultSourceStore)],
       lens: undefined // Remove legacy field
     };
   }
 
-  return listener;
 }
 ```
 
@@ -2126,7 +2033,6 @@ export function migrateListener(
 - [ ] Update stores (Phase 6)
 
 ### Week 4: UI and Migration
-- [ ] Add UI components for publisher lenses
 - [ ] Implement migration path (Phase 9)
 - [ ] Add validation and testing (Phase 8)
 

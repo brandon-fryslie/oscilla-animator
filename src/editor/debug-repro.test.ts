@@ -68,11 +68,7 @@ class RootStore {
   uiStore = {
     settings: { seed: 123 },
   };
-  busStore = {
-    buses: [],
-    publishers: [],
-    listeners: [],
-  };
+  // Buses are now BusBlocks in patchStore.blocks, not a separate store
   defaultSourceStore = new DefaultSourceStore();
 }
 

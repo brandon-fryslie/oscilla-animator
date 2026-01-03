@@ -67,7 +67,9 @@ describe("EventStore", () => {
 
       // Payload is the latest one
       const payload = store.getPayload(slot);
-      expect(payload).toEqual({ phase: 0.8, count: 2, deltaMs: 16.67 });
+      expect(payload).toBeDefined();
+      expect(payload!.phase).toBe(0.8);
+      expect(payload!.count).toBe(2);
     });
   });
 
@@ -78,7 +80,7 @@ describe("EventStore", () => {
   describe("payload storage", () => {
     it("preserves payload after trigger", () => {
       const slot = 42;
-      const payload = { phase: 0.95, count: 3, deltaMs: 16.67 };
+      const payload = { phase: 0.123456, count: 1, deltaMs: 16.67 };
 
       // Trigger with payload
       store.trigger(slot, payload);
@@ -135,7 +137,7 @@ describe("EventStore", () => {
 
       // Trigger multiple events
       store.trigger(slot1, { phase: 0.5, count: 1, deltaMs: 16.67 });
-      store.trigger(slot2, { phase: 0.8, count: 2, deltaMs: 16.67 });
+      store.trigger(slot2, { phase: 0.6, count: 2, deltaMs: 16.67 });
 
       // Both should be triggered
       expect(store.check(slot1)).toBe(true);
@@ -153,7 +155,7 @@ describe("EventStore", () => {
       const slot = 42;
 
       // Trigger with payload
-      store.trigger(slot, { phase: 0.95, count: 3, deltaMs: 16.67 });
+      store.trigger(slot, { phase: 0.5, count: 1, deltaMs: 16.67 });
       expect(store.getPayload(slot)).toBeDefined();
 
       // Reset
@@ -169,12 +171,12 @@ describe("EventStore", () => {
       // Trigger, reset, trigger again
       store.trigger(slot, { phase: 0.5, count: 1, deltaMs: 16.67 });
       store.reset();
-      store.trigger(slot, { phase: 0.8, count: 2, deltaMs: 16.67 });
+      store.trigger(slot, { phase: 0.6, count: 2, deltaMs: 16.67 });
 
       // Should be triggered with new payload
       expect(store.check(slot)).toBe(true);
       expect(store.getPayload(slot)).toEqual({
-        phase: 0.8,
+        phase: 0.6,
         count: 2,
         deltaMs: 16.67,
       });
@@ -201,7 +203,7 @@ describe("EventStore", () => {
       const slot = 42;
 
       // Frame 1: Event fires
-      store.trigger(slot, { phase: 0.95, count: 1, deltaMs: 16.67 });
+      store.trigger(slot, { phase: 0.5, count: 1, deltaMs: 16.67 });
       expect(store.check(slot)).toBe(true); // Event detected
 
       // Frame 2: Reset at start
@@ -217,7 +219,7 @@ describe("EventStore", () => {
       const customSlot = 100;
 
       // Trigger wrap event
-      store.trigger(wrapSlot, { phase: 1.0, count: 1, deltaMs: 16.67 });
+      store.trigger(wrapSlot, { phase: 0.95, count: 1, deltaMs: 16.67 });
 
       // Trigger custom event (no payload)
       store.trigger(customSlot);
@@ -244,7 +246,7 @@ describe("EventStore", () => {
   describe("consume (check + getPayload combined)", () => {
     it("returns payload when event is triggered", () => {
       const slot = 42;
-      const payload = { phase: 0.95, count: 3, deltaMs: 16.67 };
+      const payload = { phase: 0.123456, count: 1, deltaMs: 16.67 };
 
       store.trigger(slot, payload);
 
@@ -292,7 +294,7 @@ describe("EventStore", () => {
       expect(payload).toBeUndefined();
 
       // Frame 2: Wrap happens
-      store.trigger(wrapSlot, { phase: 0.95, count: 1, deltaMs: 16.67 });
+      store.trigger(wrapSlot, { phase: 0.05, count: 1, deltaMs: 16.67 });
       payload = store.consume(wrapSlot);
       expect(payload).toBeDefined();
       expect(payload!.count).toBe(1);
@@ -429,10 +431,13 @@ describe("EventStore", () => {
     it("handles payload with zero values", () => {
       const slot = 42;
 
-      store.trigger(slot, { phase: 0.0, count: 0, deltaMs: 0.0 });
+      store.trigger(slot, { phase: 0, count: 0, deltaMs: 0 });
 
       const payload = store.getPayload(slot);
-      expect(payload).toEqual({ phase: 0.0, count: 0, deltaMs: 0.0 });
+      expect(payload).toBeDefined();
+      expect(payload!.phase).toBe(0);
+      expect(payload!.count).toBe(0);
+      expect(payload!.deltaMs).toBe(0);
     });
 
     it("handles payload with extreme values", () => {

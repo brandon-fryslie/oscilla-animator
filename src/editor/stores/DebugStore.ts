@@ -48,29 +48,12 @@ interface StoreConnection {
   toSlot: string;
 }
 
-interface StoreBus {
-  id: string;
-  name: string;
-  typeDesc?: { type: string };
-}
-
-interface StoreBinding {
-  blockId: string;
-  busId: string;
-  slotId: string;
-}
-
 interface RootStore {
   patchStore?: {
     blocks?: StoreBlock[];
     connections?: StoreConnection[];
     patchRevision?: number;
     incrementRevision?: () => void;
-  };
-  busStore?: {
-    buses?: StoreBus[];
-    publishers?: StoreBinding[];
-    listeners?: StoreBinding[];
   };
   uiStore?: {
     uiState?: {
@@ -441,9 +424,9 @@ export class DebugStore {
     this.log('output', '');
     this.log('output', '━━━ IR & Schedule ━━━');
     this.log('output', '  ir           Show IR summary');
-    this.log('output', '  ir nodes     List all IR nodes');
-    this.log('output', '  ir buses     List all IR buses');
-    this.log('output', '  ir node <id> Inspect specific IR node');
+    this.log('output', '  ir steps     List schedule steps');
+    this.log('output', '  ir slots     List value slots');
+    this.log('output', '  ir step <id> Inspect specific schedule step');
     this.log('output', '  schedule     Show schedule overview');
     this.log('output', '  schedule step <n> Inspect step at index');
     this.log('output', '');
@@ -552,26 +535,6 @@ export class DebugStore {
       }
     }
 
-    // Show bus connections
-    const allPublishers = store.busStore?.publishers ?? [];
-    const allListeners = store.busStore?.listeners ?? [];
-    const publishers = allPublishers.filter((p) => p.blockId === block.id);
-    const listeners = allListeners.filter((l) => l.blockId === block.id);
-
-    if (publishers.length > 0) {
-      this.log('output', '  Publishing to:');
-      for (const pub of publishers) {
-        this.log('output', `    ${pub.slotId} → bus:${pub.busId}`);
-      }
-    }
-
-    if (listeners.length > 0) {
-      this.log('output', '  Listening to:');
-      for (const lis of listeners) {
-        this.log('output', `    ${lis.slotId} ← bus:${lis.busId}`);
-      }
-    }
-
     // Show parameters
     const paramKeys = Object.keys(block.params ?? {});
     if (paramKeys.length > 0) {
@@ -640,20 +603,18 @@ export class DebugStore {
 
   private listBuses(): void {
     const store = this.getStore();
-    const buses = store.busStore?.buses ?? [];
-    const allPubs = store.busStore?.publishers ?? [];
-    const allLis = store.busStore?.listeners ?? [];
+    const blocks = store.patchStore?.blocks ?? [];
+    const busBlocks = blocks.filter((b: StoreBlock) => b.type === 'BusBlock');
 
-    if (buses.length === 0) {
+    if (busBlocks.length === 0) {
       this.log('output', 'No buses');
       return;
     }
 
-    this.log('output', `━━━ Buses (${buses.length}) ━━━`);
-    for (const bus of buses) {
-      const pubCount = allPubs.filter((p) => p.busId === bus.id).length;
-      const lisCount = allLis.filter((l) => l.busId === bus.id).length;
-      this.log('output', `  ${bus.id}: "${bus.name}" (${bus.typeDesc?.type ?? '?'}) - ${pubCount}p/${lisCount}l`);
+    this.log('output', `━━━ Buses (${busBlocks.length}) ━━━`);
+    for (const busBlock of busBlocks) {
+      const busName = busBlock.params.name as string;
+      this.log('output', `  ${busBlock.id}: "${busName}"`);
     }
   }
 
@@ -664,38 +625,21 @@ export class DebugStore {
     }
 
     const store = this.getStore();
-    const buses = store.busStore?.buses ?? [];
-    const bus = buses.find(
-      (b) => b.id === busId || b.name.toLowerCase() === busId.toLowerCase()
+    const blocks = store.patchStore?.blocks ?? [];
+    const busBlocks = blocks.filter((b: StoreBlock) => b.type === 'BusBlock');
+    const busBlock = busBlocks.find(
+      (b: StoreBlock) => b.id === busId || (b.params.name as string).toLowerCase() === busId.toLowerCase()
     );
 
-    if (bus === undefined) {
+    if (busBlock === undefined) {
       this.log('error', `Bus not found: ${busId}`);
       return;
     }
 
-    this.log('output', `━━━ Bus: ${bus.name} ━━━`);
-    this.log('output', `  ID: ${bus.id}`);
-    this.log('output', `  Type: ${bus.typeDesc?.type ?? 'unknown'}`);
-
-    const allPubs = store.busStore?.publishers ?? [];
-    const allLis = store.busStore?.listeners ?? [];
-    const publishers = allPubs.filter((p) => p.busId === bus.id);
-    const listeners = allLis.filter((l) => l.busId === bus.id);
-
-    if (publishers.length > 0) {
-      this.log('output', '  Publishers:');
-      for (const pub of publishers) {
-        this.log('output', `    ${pub.blockId}.${pub.slotId}`);
-      }
-    }
-
-    if (listeners.length > 0) {
-      this.log('output', '  Listeners:');
-      for (const lis of listeners) {
-        this.log('output', `    ${lis.blockId}.${lis.slotId}`);
-      }
-    }
+    const busName = busBlock.params.name as string;
+    this.log('output', `━━━ Bus: ${busName} ━━━`);
+    this.log('output', `  ID: ${busBlock.id}`);
+    this.log('output', '  (BusBlocks connect via regular edges)');
   }
 
   private showState(): void {
@@ -716,7 +660,7 @@ export class DebugStore {
   }
 
   /**
-   * IR inspection commands: `ir`, `ir errors`, `ir nodes`, `ir buses`, `ir node <id>`
+   * IR inspection commands: `ir`, `ir errors`, `ir steps`, `ir slots`, `ir step <id>`
    */
   private inspectIR(args: string[]): void {
     const result = this.getCompileResult();
@@ -763,18 +707,23 @@ export class DebugStore {
     }
 
     if (subCmd === undefined) {
-      // Show IR summary
+      // Show IR summary using new canonical schema
       this.log('output', '━━━ IR Summary ━━━');
       this.log('output', `  Status: ${result?.ok === true ? 'OK' : 'FAILED'}`);
       this.log('output', `  IR Version: ${programIR.irVersion}`);
       this.log('output', `  Patch ID: ${programIR.patchId}`);
       this.log('output', `  Seed: ${programIR.seed}`);
 
-      const nodeCount = programIR.nodes?.nodes?.length ?? 0;
-      const busCount = programIR.buses?.buses?.length ?? 0;
+      // Use canonical schema: schedule.steps and debugIndex
+      const stepCount = programIR.schedule?.steps?.length ?? 0;
+      const slotCount = programIR.slotMeta?.length ?? 0;
+      const debugStepCount = programIR.debugIndex?.stepToBlock?.size ?? 0;
+      const debugSlotCount = programIR.debugIndex?.slotToBlock?.size ?? 0;
 
-      this.log('output', `  Node Count: ${nodeCount}`);
-      this.log('output', `  Bus Count: ${busCount}`);
+      this.log('output', `  Schedule Steps: ${stepCount}`);
+      this.log('output', `  Value Slots: ${slotCount}`);
+      this.log('output', `  Debug Index Steps: ${debugStepCount}`);
+      this.log('output', `  Debug Index Slots: ${debugSlotCount}`);
       this.log('output', `  Time Model: ${programIR.timeModel.kind}`);
 
       if (programIR.timeModel.kind === 'cyclic' && 'periodMs' in programIR.timeModel) {
@@ -785,63 +734,80 @@ export class DebugStore {
       return;
     }
 
-    if (subCmd === 'nodes') {
-      // List all nodes
-      const nodes = programIR.nodes?.nodes ?? [];
-      if (nodes.length === 0) {
-        this.log('output', 'No nodes in IR');
+    if (subCmd === 'steps') {
+      // List all schedule steps (replaces 'ir nodes')
+      const steps = programIR.schedule?.steps ?? [];
+      if (steps.length === 0) {
+        this.log('output', 'No schedule steps in IR');
         return;
       }
 
-      this.log('output', `━━━ IR Nodes (${nodes.length}) ━━━`);
-      for (const node of nodes) {
-        this.log('output', `  ${node.id}: typeId=${node.typeId} (${node.inputCount} in, ${node.outputCount} out)`);
+      this.log('output', `━━━ Schedule Steps (${steps.length}) ━━━`);
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        const blockId = programIR.debugIndex?.stepToBlock?.get(step.id) ?? 'unknown';
+        const label = programIR.debugIndex?.labels?.get(step.id) ?? '';
+        const labelStr = label.length > 0 ? ` "${label}"` : '';
+        this.log('output', `  [${i}] ${step.id}: kind=${step.kind} block=${blockId}${labelStr}`);
       }
       return;
     }
 
-    if (subCmd === 'buses') {
-      // List all buses
-      const buses = programIR.buses?.buses ?? [];
-      if (buses.length === 0) {
-        this.log('output', 'No buses in IR');
+    if (subCmd === 'slots') {
+      // List all value slots (new command)
+      const slots = programIR.slotMeta ?? [];
+      if (slots.length === 0) {
+        this.log('output', 'No value slots in IR');
         return;
       }
 
-      this.log('output', `━━━ IR Buses (${buses.length}) ━━━`);
-      for (const bus of buses) {
-        const busType = bus.type !== undefined ? JSON.stringify(bus.type) : 'unknown';
-        this.log('output', `  ${bus.id}: ${busType}`);
+      this.log('output', `━━━ Value Slots (${slots.length}) ━━━`);
+      for (const slotMeta of slots) {
+        const blockId = programIR.debugIndex?.slotToBlock?.get(slotMeta.slot) ?? 'unknown';
+        const debugName = slotMeta.debugName ?? '';
+        const nameStr = debugName.length > 0 ? ` "${debugName}"` : '';
+        const typeStr = slotMeta.type !== undefined ? `${slotMeta.type.world}/${slotMeta.type.domain}` : 'unknown';
+        this.log('output', `  slot=${slotMeta.slot}: ${typeStr} storage=${slotMeta.storage} offset=${slotMeta.offset} block=${blockId}${nameStr}`);
       }
       return;
     }
 
-    if (subCmd === 'node') {
-      // Inspect specific node
-      const nodeId = args[1];
-      if (nodeId === undefined || nodeId.length === 0) {
-        this.log('error', 'Usage: ir node <id>');
+    if (subCmd === 'step') {
+      // Inspect specific schedule step (replaces 'ir node <id>')
+      const stepId = args[1];
+      if (stepId === undefined || stepId.length === 0) {
+        this.log('error', 'Usage: ir step <id>');
         return;
       }
 
-      const node = programIR.nodes.nodes.find((n) => n.id === nodeId);
-      if (node === undefined) {
-        this.log('error', `IR node not found: ${nodeId}`);
+      const steps = programIR.schedule?.steps ?? [];
+      const step = steps.find((s) => s.id === stepId);
+      if (step === undefined) {
+        this.log('error', `Schedule step not found: ${stepId}`);
         return;
       }
 
-      this.log('output', `━━━ IR Node: ${nodeId} ━━━`);
-      this.log('output', `  TypeId: ${node.typeId}`);
-      this.log('output', `  Inputs: ${node.inputCount}`);
-      this.log('output', `  Outputs: ${node.outputCount}`);
-      if (node.compilerTag !== undefined) {
-        this.log('output', `  CompilerTag: ${node.compilerTag}`);
+      const blockId = programIR.debugIndex?.stepToBlock?.get(step.id) ?? 'unknown';
+      const label = programIR.debugIndex?.labels?.get(step.id) ?? '';
+
+      this.log('output', `━━━ Schedule Step: ${stepId} ━━━`);
+      this.log('output', `  Kind: ${step.kind}`);
+      this.log('output', `  Source Block: ${blockId}`);
+      if (label.length > 0) {
+        this.log('output', `  Label: ${label}`);
+      }
+
+      // Show step details as JSON
+      this.log('output', '  Details:');
+      const stepJson = JSON.stringify(step, null, 2);
+      for (const line of stepJson.split('\n')) {
+        this.log('output', `    ${line}`);
       }
       return;
     }
 
     this.log('error', `Unknown IR subcommand: ${subCmd}`);
-    this.log('error', 'Usage: ir | ir errors | ir nodes | ir buses | ir node <id>');
+    this.log('error', 'Usage: ir | ir errors | ir steps | ir slots | ir step <id>');
   }
 
   /**
@@ -897,8 +863,12 @@ export class DebugStore {
       }
 
       const step = steps[stepIndex];
+      const blockId = programIR.debugIndex?.stepToBlock?.get(step.id) ?? 'unknown';
+
       this.log('output', `━━━ Schedule Step ${stepIndex} ━━━`);
+      this.log('output', `  ID: ${step.id}`);
       this.log('output', `  Kind: ${step.kind}`);
+      this.log('output', `  Source Block: ${blockId}`);
 
       // Show step details as JSON
       const stepJson = JSON.stringify(step, null, 2);
@@ -923,7 +893,6 @@ export class DebugStore {
       const context = {
         store,
         patchStore: store?.patchStore,
-        busStore: store?.busStore,
         uiStore: store?.uiStore,
         debugStore: this,
         probes: this.probes,
@@ -1054,98 +1023,6 @@ export class DebugStore {
     return result;
   }
 
-  // ===========================================================================
-  // Legacy API (for backward compatibility with debugSampler)
-  // ===========================================================================
-
-  /** @deprecated Use isBlockProbed */
-  isBlockDebugging(blockId: string): boolean {
-    return this.isBlockProbed(blockId);
-  }
-
-  /** @deprecated Use probedBlockIds */
-  get debuggingBlockIds(): string[] {
-    return this.probedBlockIds;
-  }
-
-  /** @deprecated Use toggleBlockProbe */
-  toggleBlockDebug(blockId: string): void {
-    this.toggleBlockProbe(blockId);
-  }
-
-  /** @deprecated Use updateProbe */
-  setEntry(entry: {
-    id: string;
-    label: string;
-    posX: number;
-    posY: number;
-    values: {
-      signal?: number;
-      phase?: number;
-      domainCount?: number;
-      fieldSample?: float[];
-    };
-    timestamp: number;
-  }): void {
-    const probeId = createProbeId({ kind: 'block', blockId: entry.id });
-    let probe = this.probes.get(probeId);
-
-    if (probe === undefined) {
-      // Create probe if it doesn't exist
-      probe = {
-        id: probeId,
-        target: { kind: 'block', blockId: entry.id },
-        label: entry.label,
-        artifactKind: entry.values.phase !== undefined ? 'Signal:phase' : 'Signal:float',
-        blockType: undefined,
-        currentSample: undefined,
-        history: [],
-        historyCapacity: HISTORY_CAPACITY,
-        active: true,
-        position: { x: entry.posX, y: entry.posY },
-      };
-      this.probes.set(probeId, probe);
-    }
-
-    // Create value summary
-    let value: ValueSummary;
-    if (entry.values.phase !== undefined) {
-      value = { t: 'phase', v: entry.values.phase };
-    } else if (entry.values.signal !== undefined) {
-      value = { t: 'num', v: entry.values.signal };
-    } else if (entry.values.domainCount !== undefined) {
-      value = { t: 'num', v: entry.values.domainCount };
-    } else {
-      value = { t: 'none' };
-    }
-
-    const sample: Sample = {
-      timestamp: entry.timestamp,
-      tMs: 0, // Not available in legacy API
-      value,
-    };
-
-    probe.currentSample = sample;
-    probe.history.push(sample);
-    if (probe.history.length > probe.historyCapacity) {
-      probe.history.shift();
-    }
-  }
-
-  /** @deprecated Use consoleLines */
-  get replLines(): ConsoleLine[] {
-    return this.consoleLines;
-  }
-
-  /** @deprecated Use clearConsole */
-  clearRepl(): void {
-    this.clearConsole();
-  }
-
-  /** @deprecated Use log */
-  addReplLine(type: ConsoleLine['type'], content: string): void {
-    this.log(type, content);
-  }
 }
 
 // =============================================================================

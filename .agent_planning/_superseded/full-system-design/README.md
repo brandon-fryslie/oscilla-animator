@@ -13,7 +13,6 @@ These documents are organized by topic and provide the verbatim source of truth 
 | `01-time-and-phase.md` | Time & Phase | Phase clocks, derived vs stateful, multi-scale looping, the three time spaces |
 | `02-signals.md` | Signals | Global temporal abstraction, evaluation model, phase as first-class domain |
 | `03-fields.md` | Fields | Lazy evaluation, FieldExpr DAGs, element identity, domain rules |
-| `04-buses.md` | Buses | Bus architecture, combine modes, publisher ordering, default buses |
 | `05-lenses.md` | Lenses | Per-port perception stacks, lens steps library, compilation model |
 | `06-compiler-runtime.md` | Compiler & Runtime | Evaluation pipeline, compilation responsibilities, composite expansion |
 | `07-live-editing.md` | Live Editing | Jank prevention, state handling during swaps, crossfades |

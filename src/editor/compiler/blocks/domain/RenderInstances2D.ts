@@ -46,6 +46,7 @@ const DEFAULT_CTX = {
  * And registers a render sink with these inputs.
  */
 const lowerRenderInstances2D: BlockLowerFn = ({ ctx, inputs }) => {
+  console.log('[RenderInstances2D] lower called with inputs:', inputs.map(i => ({ k: i.k, slot: 'slot' in i ? i.slot : 'n/a' })));
   const [domain, positions, radius, color, opacity] = inputs;
 
   // Validate inputs

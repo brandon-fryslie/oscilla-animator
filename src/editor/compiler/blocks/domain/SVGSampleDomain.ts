@@ -314,7 +314,7 @@ const lowerSVGSampleDomain: BlockLowerFn = ({ ctx, config }) => {
   // Create position field as const
   const posField = ctx.b.fieldConst(sampledPoints, { world: "field", domain: "vec2", category: "core", busEligible: true });
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'SVGSampleDomain_out');
   return {
     outputs: [
       { k: 'special', tag: 'domain', id: domainSlot },

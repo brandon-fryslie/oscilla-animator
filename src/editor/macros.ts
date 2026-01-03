@@ -38,36 +38,8 @@ export interface MacroConnection {
   toSlot: string;
 }
 
-/**
- * A bus publisher definition in a macro expansion.
- * Publishes a block output to a named bus.
- */
-export interface MacroPublisher {
-  /** Block ref that produces the value */
-  fromRef: string;
-  /** Output port name on that block */
-  fromSlot: string;
-  /** Bus name to publish to (e.g., 'phaseA') */
-  busName: string;
-}
-
-/**
- * A bus listener definition in a macro expansion.
- * Subscribes a block input to a named bus.
- */
-export interface MacroListener {
-  /** Bus name to listen from */
-  busName: string;
-  /** Block ref that receives the value */
-  toRef: string;
-  /** Input port name on that block */
-  toSlot: string;
-  /** Optional lens to transform the bus value */
-  lens?: {
-    type: string;
-    params: Record<string, unknown>;
-  };
-}
+// Legacy MacroPublisher and MacroListener interfaces removed
+// Buses have been migrated to BusBlocks - use regular connections instead
 
 /**
  * A macro expansion definition.
@@ -77,10 +49,6 @@ export interface MacroExpansion {
   blocks: MacroBlock[];
   /** Connections to wire */
   connections: MacroConnection[];
-  /** Bus publishers (optional) */
-  publishers?: MacroPublisher[];
-  /** Bus listeners (optional) */
-  listeners?: MacroListener[];
 }
 
 /**
@@ -117,8 +85,6 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'radius', fromSlot: 'out', toRef: 'render', toSlot: 'radius' },
       { fromRef: 'color', fromSlot: 'out', toRef: 'render', toSlot: 'color' },
     ],
-    publishers: [],
-    listeners: [],
   },
 
   // =============================================================================
@@ -142,17 +108,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 10, offset: 3 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // Legacy listeners removed - buses migrated to BusBlocks
   },
 
   // 2. Animated Circle Ring - Circle layout with oscillating radius and rainbow colors
@@ -175,17 +131,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'circle', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 10, offset: 4 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // Legacy listeners removed - buses migrated to BusBlocks
   },
 
   // 3. Line Wave - Line of dots with breathing size and color shift
@@ -208,17 +154,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'line', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 12, offset: 4 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // Legacy listeners removed - buses migrated to BusBlocks
   },
 
   // 4. Rainbow Grid - Grid with rainbow cycling and pulsing size
@@ -245,15 +181,6 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'colorExpr', fromSlot: 'field', toRef: 'toColor', toSlot: 'strings' },
       { fromRef: 'toColor', fromSlot: 'colors', toRef: 'render', toSlot: 'color' },
     ],
-    publishers: [
-      { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorExpr', toSlot: 'signal' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 8, offset: 3 } } },
-    ],
   },
 
   // 5. Pulsing Grid - Grid with pulse-driven radius and warm colors
@@ -275,17 +202,6 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'divider', fromSlot: 'tick', toRef: 'envelope', toSlot: 'trigger' },
       { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
-    ],
-    publishers: [
-      { fromRef: 'envelope', fromSlot: 'env', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'divider', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 8, offset: 3 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
     ],
   },
 
@@ -318,18 +234,6 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'jitter', fromSlot: 'drift', toRef: 'posAdd', toSlot: 'b' },
       { fromRef: 'posAdd', fromSlot: 'out', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'jitter', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 8, offset: 4 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
   },
 
   // 7. Multi-Ring - Multiple concentric circles with purple gradient
@@ -357,13 +261,13 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'hash', fromSlot: 'u01', toRef: 'sizeField', toSlot: 'x' },
       { fromRef: 'sizeField', fromSlot: 'y', toRef: 'render', toSlot: 'radius' },
     ],
-    publishers: [
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // publishers: [
+    //   { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+    // ],
+    // listeners: [
+    //   { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
+    //   { busName: 'palette', toRef: 'render', toSlot: 'color' },
+    // ],
   },
 
   // 8. Breathing Line - Line with breathing animation and green tones
@@ -389,17 +293,17 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'line', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'shaper', fromSlot: 'out', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 12, offset: 3 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // publishers: [
+    //   { fromRef: 'shaper', fromSlot: 'out', busName: 'energy' },
+    //   { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+    // ],
+    // listeners: [
+    //   { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
+    //   { busName: 'energy', toRef: 'render', toSlot: 'radius',
+    //     lens: { type: 'scale', params: { scale: 12, offset: 3 } } },
+    //   { busName: 'palette', toRef: 'render', toSlot: 'color' },
+    // ],
   },
 
   // 9. Color Pulse - Grid with animated color and breathing size
@@ -420,17 +324,17 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 10, offset: 4 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // publishers: [
+    //   { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
+    //   { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+    // ],
+    // listeners: [
+    //   { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
+    //   { busName: 'energy', toRef: 'render', toSlot: 'radius',
+    //     lens: { type: 'scale', params: { scale: 10, offset: 4 } } },
+    //   { busName: 'palette', toRef: 'render', toSlot: 'color' },
+    // ],
   },
 
   // 10. Rhythmic Dots - Grid with PulseDivider envelope and electric colors
@@ -453,17 +357,17 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'envelope', fromSlot: 'env', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'divider', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 5, offset: 2 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // publishers: [
+    //   { fromRef: 'envelope', fromSlot: 'env', busName: 'energy' },
+    //   { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+    // ],
+    // listeners: [
+    //   { busName: 'phaseA', toRef: 'divider', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
+    //   { busName: 'energy', toRef: 'render', toSlot: 'radius',
+    //     lens: { type: 'scale', params: { scale: 5, offset: 2 } } },
+    //   { busName: 'palette', toRef: 'render', toSlot: 'color' },
+    // ],
   },
 
   // =============================================================================
@@ -496,12 +400,12 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'colorExpr', fromSlot: 'field', toRef: 'toColor', toSlot: 'strings' },
       { fromRef: 'toColor', fromSlot: 'colors', toRef: 'render', toSlot: 'color' },
     ],
-    publishers: [],
-    listeners: [
-      // FieldFromExpression auto-connects to phaseA via defaultBus
-      { busName: 'phaseA', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'mapRange', params: { inMin: 0, inMax: 1, outMin: 3, outMax: 15 } } },
-    ],
+    // publishers: [],
+    // listeners: [
+    //   // FieldFromExpression auto-connects to phaseA via defaultBus
+    //   { busName: 'phaseA', toRef: 'render', toSlot: 'radius',
+    //     lens: { type: 'mapRange', params: { inMin: 0, inMax: 1, outMin: 3, outMax: 15 } } },
+    // ],
   },
 
   // Slice 1: Breathing Wave - Oscillator + Shaper for smooth breathing with teal color
@@ -528,17 +432,17 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'grid', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'shaper', fromSlot: 'out', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 10, offset: 3 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // publishers: [
+    //   { fromRef: 'shaper', fromSlot: 'out', busName: 'energy' },
+    //   { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+    // ],
+    // listeners: [
+    //   { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
+    //   { busName: 'energy', toRef: 'render', toSlot: 'radius',
+    //     lens: { type: 'scale', params: { scale: 10, offset: 3 } } },
+    //   { busName: 'palette', toRef: 'render', toSlot: 'color' },
+    // ],
   },
 
   // Slice 2: Rhythmic Pulse - PulseDivider + EnvelopeAD with red accent
@@ -564,17 +468,17 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'grid', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'envelope', fromSlot: 'env', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'divider', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 10, offset: 2 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // publishers: [
+    //   { fromRef: 'envelope', fromSlot: 'env', busName: 'energy' },
+    //   { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+    // ],
+    // listeners: [
+    //   { busName: 'phaseA', toRef: 'divider', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
+    //   { busName: 'energy', toRef: 'render', toSlot: 'radius',
+    //     lens: { type: 'scale', params: { scale: 10, offset: 2 } } },
+    //   { busName: 'palette', toRef: 'render', toSlot: 'color' },
+    // ],
   },
 
   // Slice 3: Color Drift - ColorLFO for slow hue cycling with breathing radius
@@ -598,17 +502,17 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'domain', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'circle', fromSlot: 'pos', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 8, offset: 4 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // publishers: [
+    //   { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
+    //   { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+    // ],
+    // listeners: [
+    //   { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
+    //   { busName: 'energy', toRef: 'render', toSlot: 'radius',
+    //     lens: { type: 'scale', params: { scale: 8, offset: 4 } } },
+    //   { busName: 'palette', toRef: 'render', toSlot: 'color' },
+    // ],
   },
 
   // Slice 4: Stable Grid - GridDomain + StableIdHash with per-element color gradient
@@ -633,14 +537,14 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'hash', fromSlot: 'u01', toRef: 'colorize', toSlot: 'values' },
       { fromRef: 'colorize', fromSlot: 'colors', toRef: 'render', toSlot: 'color' },
     ],
-    publishers: [
-      { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 8, offset: 3 } } },
-    ],
+    // publishers: [
+    //   { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
+    // ],
+    // listeners: [
+    //   { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
+    //   { busName: 'energy', toRef: 'render', toSlot: 'radius',
+    //     lens: { type: 'scale', params: { scale: 8, offset: 3 } } },
+    // ],
   },
 
   // Slice 5: Phase Spread - FieldZipSignal for per-element phase offsets with gradient
@@ -674,16 +578,16 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'broadcast', fromSlot: 'field', toRef: 'zip', toSlot: 'signal' },
       { fromRef: 'baseRadius', fromSlot: 'out', toRef: 'render', toSlot: 'radius' },
     ],
-    publishers: [
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'render', toSlot: 'opacity',
-        lens: { type: 'scale', params: { scale: 1, offset: 0.3 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+  //   publishers: [
+  //     { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+  //   ],
+  //   listeners: [
+  //     { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
+  //     { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
+  //     { busName: 'phaseA', toRef: 'render', toSlot: 'opacity',
+  //       lens: { type: 'scale', params: { scale: 1, offset: 0.3 } } },
+  //     { busName: 'palette', toRef: 'render', toSlot: 'color' },
+  //   // ],
   },
 
   // Slice 6: Drifting Dots - JitterFieldVec2 + FieldAddVec2 with indigo colors
@@ -714,14 +618,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'posAdd', fromSlot: 'out', toRef: 'render', toSlot: 'positions' },
       { fromRef: 'radius', fromSlot: 'out', toRef: 'render', toSlot: 'radius' },
     ],
-    publishers: [
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'jitter', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // Legacy publishers/listeners removed - buses migrated to BusBlocks
   },
 
   // Slice 7: Styled Elements - FieldColorize + FieldOpacity for visual variety
@@ -771,17 +668,7 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       { fromRef: 'grid', fromSlot: 'domain', toRef: 'render', toSlot: 'domain' },
       { fromRef: 'grid', fromSlot: 'pos0', toRef: 'render', toSlot: 'positions' },
     ],
-    publishers: [
-      { fromRef: 'osc', fromSlot: 'out', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'osc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 10, offset: 5 } } },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // Legacy publishers/listeners removed - buses migrated to BusBlocks
   },
 
   // Slice 9: Golden Patch - Complete Breathing Constellation
@@ -843,17 +730,17 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       // Radius
       { fromRef: 'radius', fromSlot: 'out', toRef: 'render', toSlot: 'radius' },
     ],
-    publishers: [
-      { fromRef: 'energyAdd', fromSlot: 'out', busName: 'energy' },
-      { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
-    ],
-    listeners: [
-      { busName: 'phaseA', toRef: 'breathOsc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'divider', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'jitter', toSlot: 'phase' },
-      { busName: 'palette', toRef: 'render', toSlot: 'color' },
-    ],
+    // publishers: [
+    //   { fromRef: 'energyAdd', fromSlot: 'out', busName: 'energy' },
+    //   { fromRef: 'colorLfo', fromSlot: 'color', busName: 'palette' },
+    // ],
+    // listeners: [
+    //   { busName: 'phaseA', toRef: 'breathOsc', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'divider', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'colorLfo', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'jitter', toSlot: 'phase' },
+    //   { busName: 'palette', toRef: 'render', toSlot: 'color' },
+    // ],
   },
 
   // 11. Full Showcase - Demonstrates multiple animated properties
@@ -914,21 +801,21 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
       // Opacity (direct wire)
       { fromRef: 'opacityOsc', fromSlot: 'out', toRef: 'render', toSlot: 'opacity' },
     ],
-    publishers: [
-      // Use energy bus for size
-      { fromRef: 'sizeOsc', fromSlot: 'out', busName: 'energy' },
-    ],
-    listeners: [
-      // PhaseA drives all oscillators
-      { busName: 'phaseA', toRef: 'colorOsc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'swirlJitter', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'sizeOsc', toSlot: 'phase' },
-      { busName: 'phaseA', toRef: 'opacityOsc', toSlot: 'phase' },
-
-      // Connect render radius to energy bus
-      { busName: 'energy', toRef: 'render', toSlot: 'radius',
-        lens: { type: 'scale', params: { scale: 10, offset: 2 } } },
-    ],
+    // publishers: [
+    //   // Use energy bus for size
+    //   { fromRef: 'sizeOsc', fromSlot: 'out', busName: 'energy' },
+    // ],
+    // listeners: [
+    //   // PhaseA drives all oscillators
+    //   { busName: 'phaseA', toRef: 'colorOsc', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'swirlJitter', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'sizeOsc', toSlot: 'phase' },
+    //   { busName: 'phaseA', toRef: 'opacityOsc', toSlot: 'phase' },
+    //
+    //   // Connect render radius to energy bus
+    //   { busName: 'energy', toRef: 'render', toSlot: 'radius',
+    //     lens: { type: 'scale', params: { scale: 10, offset: 2 } } },
+    // ],
   },
 
   // =============================================================================
@@ -1031,14 +918,14 @@ export const MACRO_REGISTRY: Record<string, MacroExpansion> = {
     ],
 
     // Publish Time Root outputs to standard buses for reference
-    publishers: [
-      { fromRef: 'timeRoot', fromSlot: 'phase', busName: 'phaseA' },
-      { fromRef: 'envelope', fromSlot: 'value', busName: 'energy' },
-      { fromRef: 'pulseDivider', fromSlot: 'tick', busName: 'pulse' },
-    ],
-
-    // NO LISTENERS - User will connect via buses or direct wires
-    listeners: [],
+    // publishers: [
+    //   { fromRef: 'timeRoot', fromSlot: 'phase', busName: 'phaseA' },
+    //   { fromRef: 'envelope', fromSlot: 'value', busName: 'energy' },
+    //   { fromRef: 'pulseDivider', fromSlot: 'tick', busName: 'pulse' },
+    // ],
+    //
+    // // NO LISTENERS - User will connect via buses or direct wires
+    // listeners: [],
   },
 };
 

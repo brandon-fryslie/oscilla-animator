@@ -14,7 +14,6 @@ Each macro lists: purpose, internal graph, recommended bus bindings, exposed con
 - `pulse`: signal:trigger
 - `palette`: signal:color
 
-And v1 with listener-side lenses (most variation happens there).
 
 ---
 

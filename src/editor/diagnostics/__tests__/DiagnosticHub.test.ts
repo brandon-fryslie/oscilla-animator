@@ -23,12 +23,7 @@ function createMockPatchStore(
   const mockRoot = {
     patchStore: {
       blocks,
-      connections: [],
-    },
-    busStore: {
-      buses: [],
-      publishers: [],
-      listeners: [],
+      edges: [],  // Edge-based architecture (unified connections)
     },
   };
   return {

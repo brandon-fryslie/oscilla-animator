@@ -68,7 +68,7 @@ const lowerPositionMapCircle: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Create position field as const
   const posField = ctx.b.fieldConst(positions, { world: "field", domain: "vec2", category: "core", busEligible: true });
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'PositionMapCircle_out');
   return {
     outputs: [{ k: 'field', id: posField, slot }],
   };

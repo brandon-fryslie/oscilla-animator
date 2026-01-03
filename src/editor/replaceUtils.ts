@@ -5,7 +5,7 @@
  * when replacing one block with another.
  */
 
-import type { Block, Connection, BlockId, Slot } from './types';
+import type { Block, Edge, BlockId, Slot } from './types';
 import type { BlockDefinition } from './blocks/types';
 import { getBlockForm } from './blocks/types';
 import { areTypesCompatible } from './portUtils';
@@ -44,19 +44,19 @@ export interface ReplacementResult {
  */
 export function findCompatibleReplacements(
   block: Block,
-  connections: Connection[],
+  edges: Edge[],
   allDefinitions: readonly BlockDefinition[]
 ): BlockDefinition[] {
   // Get connected slots
   const connectedInputs = new Set<string>();
   const connectedOutputs = new Set<string>();
 
-  for (const conn of connections) {
-    if (conn.to.blockId === block.id) {
-      connectedInputs.add(conn.to.slotId);
+  for (const edge of edges) {
+    if (edge.to.blockId === block.id) {
+      connectedInputs.add(edge.to.slotId);
     }
-    if (conn.from.blockId === block.id) {
-      connectedOutputs.add(conn.from.slotId);
+    if (edge.from.blockId === block.id) {
+      connectedOutputs.add(edge.from.slotId);
     }
   }
 
@@ -93,28 +93,28 @@ export function findCompatibleReplacements(
 }
 
 /**
- * Map connections from old block to new block definition.
- * Returns which connections can be preserved and which must be dropped.
+ * Map edges from old block to new block definition.
+ * Returns which edges can be preserved and which must be dropped.
  */
 export function mapConnections(
   oldBlock: Block,
   newDef: BlockDefinition,
-  connections: Connection[]
+  edges: Edge[]
 ): ConnectionMapping {
   const preserved: ConnectionMapping['preserved'] = [];
   const dropped: ConnectionMapping['dropped'] = [];
 
-  // Track which new slots have been used (for inputs - only one connection per input)
+  // Track which new slots have been used (for inputs - only one edge per input)
   const usedInputSlots = new Set<string>();
 
-  for (const conn of connections) {
-    // Handle input connections (to this block)
-    if (conn.to.blockId === oldBlock.id) {
-      const oldSlot = oldBlock.inputs.find(s => s.id === conn.to.slotId);
+  for (const edge of edges) {
+    // Handle input edges (to this block)
+    if (edge.to.blockId === oldBlock.id) {
+      const oldSlot = oldBlock.inputs.find(s => s.id === edge.to.slotId);
       if (!oldSlot) {
         dropped.push({
-          connectionId: conn.id,
-          reason: `Old slot ${conn.to.slotId} not found`,
+          connectionId: edge.id,
+          reason: `Old slot ${edge.to.slotId} not found`,
         });
         continue;
       }
@@ -124,44 +124,44 @@ export function mapConnections(
       if (newSlot) {
         usedInputSlots.add(newSlot.id);
         preserved.push({
-          connectionId: conn.id,
-          fromBlockId: conn.from.blockId,
-          fromSlot: conn.from.slotId,
+          connectionId: edge.id,
+          fromBlockId: edge.from.blockId,
+          fromSlot: edge.from.slotId,
           toBlockId: oldBlock.id, // Will be replaced with new block ID
           toSlot: newSlot.id,
         });
       } else {
         dropped.push({
-          connectionId: conn.id,
+          connectionId: edge.id,
           reason: `No compatible input slot for ${oldSlot.label} (${oldSlot.type})`,
         });
       }
     }
 
-    // Handle output connections (from this block)
-    if (conn.from.blockId === oldBlock.id) {
-      const oldSlot = oldBlock.outputs.find(s => s.id === conn.from.slotId);
+    // Handle output edges (from this block)
+    if (edge.from.blockId === oldBlock.id) {
+      const oldSlot = oldBlock.outputs.find(s => s.id === edge.from.slotId);
       if (!oldSlot) {
         dropped.push({
-          connectionId: conn.id,
-          reason: `Old slot ${conn.from.slotId} not found`,
+          connectionId: edge.id,
+          reason: `Old slot ${edge.from.slotId} not found`,
         });
         continue;
       }
 
-      // Find compatible new output slot (outputs can have multiple connections)
+      // Find compatible new output slot (outputs can have multiple edges)
       const newSlot = findCompatibleSlot(oldSlot, newDef.outputs, new Set());
       if (newSlot) {
         preserved.push({
-          connectionId: conn.id,
+          connectionId: edge.id,
           fromBlockId: oldBlock.id, // Will be replaced with new block ID
           fromSlot: newSlot.id,
-          toBlockId: conn.to.blockId,
-          toSlot: conn.to.slotId,
+          toBlockId: edge.to.blockId,
+          toSlot: edge.to.slotId,
         });
       } else {
         dropped.push({
-          connectionId: conn.id,
+          connectionId: edge.id,
           reason: `No compatible output slot for ${oldSlot.label} (${oldSlot.type})`,
         });
       }

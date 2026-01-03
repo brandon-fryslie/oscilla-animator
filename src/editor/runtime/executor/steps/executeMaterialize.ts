@@ -281,11 +281,11 @@ function buildMaterializerEnv(
     domainId: 0, // Default domain
   };
 
-  const fieldNodes = convertFieldNodes(program.fields.nodes);
+  const fieldNodes = convertFieldNodes(program.fieldExprs.nodes);
 
-  const signalTable = program.signalTable?.nodes;
+  const signalTable = program.signalExprs?.nodes;
   if (signalTable === undefined) {
-    throw new Error("executeMaterialize: program.signalTable is missing");
+    throw new Error("executeMaterialize: program.signalExprs is missing");
   }
 
   const constPool = program.constants?.json ?? [];

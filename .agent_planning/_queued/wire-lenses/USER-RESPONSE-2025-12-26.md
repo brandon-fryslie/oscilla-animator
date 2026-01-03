@@ -11,13 +11,11 @@ User requested: **Do NOT defer any work**
 
 Previously deferred items now IN SCOPE:
 - LensChainEditor component (shared across all connection types)
-- Publisher lens UI
 - Advanced lens parameter binding UI
 
 ## Final Scope
 All work items from original plan PLUS:
 - P1-5: LensChainEditor embedded component for all connection types
-- P1-6: Publisher lens UI in ConnectionInspector
 - P1-7: Lens parameter binding to wire/bus sources
 
 ## Approval

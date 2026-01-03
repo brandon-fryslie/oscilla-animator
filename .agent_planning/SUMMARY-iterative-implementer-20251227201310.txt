@@ -1,0 +1,27 @@
+Agent: iterative-implementer | 2025-12-27
+Mode: manual
+Completed: Fixed TypeScript export and import errors | Files: 3 | Commits: 0
+Cache invalidated: N/A (no cache entries affected)
+Status: complete
+
+## Summary
+
+Fixed three TypeScript errors related to missing exports and imports:
+
+1. **BlockRegistry export**: Added `export type BlockRegistry = Record<string, BlockCompiler>` to `src/editor/compiler/types.ts`
+2. **PortRef re-export**: Added `PortRef` to the re-export list in `src/editor/compiler/types.ts`
+3. **ParamSchema import**: Added `ParamSchema` to the import in `src/editor/blocks/factory.ts` (auto-fixed by linter)
+4. **AutoPublication export**: Added `export interface AutoPublication` to `src/editor/compiler/types.ts`
+5. **CompilerPatch interface**: Updated to use `Map<BlockId, BlockInstance>` for blocks field (auto-fixed by linter)
+
+## Files Modified
+- src/editor/compiler/types.ts (added BlockRegistry, PortRef, AutoPublication, updated CompilerPatch)
+- src/editor/blocks/factory.ts (import ParamSchema - auto-fixed)
+
+## Verification
+All requested TypeScript errors are now resolved:
+- No "has no exported member 'BlockRegistry'" errors
+- No "ParamSchema is used but not imported" errors
+- No "has no exported member 'AutoPublication'" errors
+
+Other TypeScript errors remain in the codebase but are unrelated to this task.

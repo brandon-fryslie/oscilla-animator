@@ -49,37 +49,12 @@ export interface BusDef {
 }
 
 /**
- * Publisher (block output to bus).
- */
-export interface PublisherDef {
-  readonly id?: string;
-  readonly blockId: string;
-  readonly busId: string;
-  readonly port: string;
-  readonly sortKey: number;
-  readonly disabled?: boolean;
-}
-
-/**
- * Listener (bus to block input).
- */
-export interface ListenerDef {
-  readonly id?: string;
-  readonly blockId: string;
-  readonly busId: string;
-  readonly port: string;
-  readonly disabled?: boolean;
-}
-
-/**
  * Patch definition (input to compiler).
  */
 export interface PatchDefinition {
   readonly blocks: Map<string, BlockInstance>;
   readonly connections: ConnectionDef[];
   readonly buses?: Map<string, BusDef> | BusDef[];
-  readonly publishers?: PublisherDef[];
-  readonly listeners?: ListenerDef[];
 }
 
 /**
@@ -111,8 +86,6 @@ export interface CompiledBus {
   readonly combineMode?: string;
   readonly defaultValue?: unknown;
   readonly evaluator: Evaluator;
-  readonly publishers: Array<{ blockId: string; port: string }>;
-  readonly listeners: Array<{ blockId: string; port: string }>;
 }
 
 /**
@@ -272,25 +245,6 @@ export class UnifiedCompiler {
     for (const conn of patch.connections) {
       this.graph.addConnectionEdge(conn.from.blockId, conn.to.blockId);
     }
-
-    // Add publish edges (block to bus)
-    if (patch.publishers != null) {
-      for (const pub of patch.publishers) {
-        if (pub.disabled !== true) {
-          this.graph.addPublishEdge(pub.blockId, pub.busId);
-        }
-      }
-    }
-
-    // Add listen edges (bus to block)
-    if (patch.listeners != null) {
-      for (const listener of patch.listeners) {
-        if (listener.disabled !== true) {
-          this.graph.addListenEdge(listener.busId, listener.blockId);
-        }
-      }
-    }
-
   }
 
   /**
@@ -348,19 +302,8 @@ export class UnifiedCompiler {
       const bus = buses.find((b) => b.id === nodeId);
       if (bus == null) continue; // Skip blocks
 
-      // Find publishers for this bus
-      const publishers = (patch.publishers ?? [])
-        .filter((p) => p.busId === bus.id && p.disabled !== true)
-        .sort((a, b) => a.sortKey - b.sortKey)
-        .map((p) => ({ blockId: p.blockId, port: p.port }));
-
-      // Find listeners for this bus
-      const listeners = (patch.listeners ?? [])
-        .filter((l) => l.busId === bus.id && l.disabled !== true)
-        .map((l) => ({ blockId: l.blockId, port: l.port }));
-
-      // Create bus evaluator
-      const evaluator = this.createBusEvaluator(publishers);
+      // Create bus evaluator (placeholder - actual implementation depends on connections)
+      const evaluator = this.createBusEvaluator();
 
       compiledBuses.push({
         id: bus.id,
@@ -368,8 +311,6 @@ export class UnifiedCompiler {
         combineMode: bus.combineMode,
         defaultValue: bus.defaultValue,
         evaluator,
-        publishers,
-        listeners,
       });
     }
 
@@ -406,14 +347,10 @@ export class UnifiedCompiler {
   /**
    * Create evaluator for a bus.
    */
-  private createBusEvaluator(publishers: Array<{ blockId: string; port: string }>): Evaluator {
-    return (inputs: Record<string, unknown>, _state: StateMemory | null, _ctx: TimeCtx) => {
-      // Combine publisher outputs
-      // For now, just return the first publisher's value
-      if (publishers.length > 0) {
-        const firstPub = publishers[0];
-        return { value: inputs[`${firstPub.blockId}.${firstPub.port}`] };
-      }
+  private createBusEvaluator(): Evaluator {
+    return (_inputs: Record<string, unknown>, _state: StateMemory | null, _ctx: TimeCtx) => {
+      // Bus evaluation depends on connection information
+      // In a real implementation, this would combine publisher values
       return { value: undefined };
     };
   }

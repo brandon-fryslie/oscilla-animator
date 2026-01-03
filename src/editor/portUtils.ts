@@ -8,7 +8,7 @@
  * is retained for UI display purposes (badges, hints).
  */
 
-import type { SlotType, Connection, Block, Slot, PortRef, Listener } from './types';
+import type { SlotType, Edge, Block, Slot, PortRef } from './types';
 import { areSlotTypesCompatible, getCompatibilityHint } from './semantic';
 
 // =============================================================================
@@ -183,7 +183,7 @@ export function findCompatiblePorts(
   port: PortRef,
   sourceSlot: Slot,
   blocks: Block[],
-  connections: Connection[]
+  edges: Edge[]
 ): Array<{ block: Block; slot: Slot; portRef: PortRef }> {
   const compatible: Array<{ block: Block; slot: Slot; portRef: PortRef }> = [];
 
@@ -205,12 +205,12 @@ export function findCompatiblePorts(
 
       if (!isCompatible) continue;
 
-      // Check if already connected (inputs can only have one connection)
+      // Check if already connected (inputs can only have one edge)
       if (lookingForDirection === 'input') {
-        const existingConnection = connections.find(
-          (c) => c.to.blockId === block.id && c.to.slotId === slot.id
+        const existingEdge = edges.find(
+          (e) => e.to.blockId === block.id && e.to.slotId === slot.id
         );
-        if (existingConnection) continue; // Input already has a connection
+        if (existingEdge) continue; // Input already has an edge
       }
 
       // Check for cycles (would need graph traversal - simplified for now)
@@ -265,20 +265,20 @@ export function getConnectionColor(connectionIndex: number): string {
  * Connected ports share the same color.
  */
 export function buildPortColorMap(
-  connections: Connection[]
+  edges: Edge[]
 ): Map<string, string> {
   const colorMap = new Map<string, string>();
 
-  connections.forEach((conn, index) => {
+  edges.forEach((edge, index) => {
     const color = getConnectionColor(index);
-    const fromKey = `${conn.from.blockId}:${conn.from.slotId}`;
-    const toKey = `${conn.to.blockId}:${conn.to.slotId}`;
+    const fromKey = `${edge.from.blockId}:${edge.from.slotId}`;
+    const toKey = `${edge.to.blockId}:${edge.to.slotId}`;
 
-    // Outputs can have multiple connections, so take the first color assigned
+    // Outputs can have multiple edges, so take the first color assigned
     if (!colorMap.has(fromKey)) {
       colorMap.set(fromKey, color);
     }
-    // Inputs should only have one connection
+    // Inputs should only have one edge
     colorMap.set(toKey, color);
   });
 
@@ -297,41 +297,41 @@ export function getPortColor(
 }
 
 /**
- * Check if a port has any connections.
+ * Check if a port has any edges.
  */
 export function isPortConnected(
   blockId: string,
   slotId: string,
   direction: 'input' | 'output',
-  connections: Connection[]
+  edges: Edge[]
 ): boolean {
   if (direction === 'output') {
-    return connections.some(
-      (c) => c.from.blockId === blockId && c.from.slotId === slotId
+    return edges.some(
+      (e) => e.from.blockId === blockId && e.from.slotId === slotId
     );
   } else {
-    return connections.some(
-      (c) => c.to.blockId === blockId && c.to.slotId === slotId
+    return edges.some(
+      (e) => e.to.blockId === blockId && e.to.slotId === slotId
     );
   }
 }
 
 /**
- * Get all connections for a specific port.
+ * Get all edges for a specific port.
  */
-export function getConnectionsForPort(
+export function getEdgesForPort(
   blockId: string,
   slotId: string,
   direction: 'input' | 'output',
-  connections: Connection[]
-): Connection[] {
+  edges: Edge[]
+): Edge[] {
   if (direction === 'output') {
-    return connections.filter(
-      (c) => c.from.blockId === blockId && c.from.slotId === slotId
+    return edges.filter(
+      (e) => e.from.blockId === blockId && e.from.slotId === slotId
     );
   } else {
-    return connections.filter(
-      (c) => c.to.blockId === blockId && c.to.slotId === slotId
+    return edges.filter(
+      (e) => e.to.blockId === blockId && e.to.slotId === slotId
     );
   }
 }
@@ -339,8 +339,8 @@ export function getConnectionsForPort(
 /**
  * Check if an input port is "driven" by an external source.
  * An input is driven if it has either:
- * - A wire connection from another block's output
- * - A bus listener attached
+ * - A wire edge from another block's output
+ * - A bus listener attached (edge from BusBlock)
  *
  * When an input is NOT driven, its DefaultSource provides the value.
  * When an input IS driven, the DefaultSource is inactive (but still exists).
@@ -348,18 +348,14 @@ export function getConnectionsForPort(
 export function isInputDriven(
   blockId: string,
   slotId: string,
-  connections: readonly Connection[],
-  listeners: readonly Listener[]
+  edges: readonly Edge[],
 ): boolean {
-  // Check for wire connection
-  const hasWire = connections.some(
-    (c) => c.to.blockId === blockId && c.to.slotId === slotId
+  // Check for wire edge
+  const hasWire = edges.some(
+    (e) => e.to.blockId === blockId && e.to.slotId === slotId
   );
   if (hasWire) return true;
 
-  // Check for bus listener
-  const hasListener = listeners.some(
-    (l) => l.to.blockId === blockId && l.to.slotId === slotId
-  );
-  return hasListener;
+  // Bus listeners are now implicit as edges from BusBlock
+  return false;
 }

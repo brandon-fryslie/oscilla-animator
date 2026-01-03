@@ -944,17 +944,6 @@ code.wiring-info-value {
   color: #888;
 }
 
-/* Legacy classes for backwards compat */
-.port-connected-icon {
-  color: #4ade80;
-  cursor: pointer;
-  font-size: 10px;
-}
-
-.port-connected-icon:hover {
-  color: #86efac;
-}
-
 /* Port context menu */
 .port-context-backdrop {
   position: fixed;

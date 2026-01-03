@@ -29,10 +29,6 @@ function blockNode(index: number): DepNode {
   return { kind: "BlockEval", blockIndex: index as BlockIndex };
 }
 
-// Helper to create a BusValue node
-function busNode(index: number): DepNode {
-  return { kind: "BusValue", busIndex: index };
-}
 
 // Helper to create an edge
 function edge(from: DepNode, to: DepNode): DepEdge {
@@ -266,49 +262,49 @@ describe("pass5CycleValidation", () => {
     });
   });
 
-  describe("Bus Cycles", () => {
-    it("handles cycles through buses", () => {
-      // Block 0 → Bus 0 → Block 1 → Block 0 (cycle via bus)
-      const graph: DepGraph = {
-        nodes: [blockNode(0), busNode(0), blockNode(1)],
-        edges: [
-          edge(blockNode(0), busNode(0)),
-          edge(busNode(0), blockNode(1)),
-          edge(blockNode(1), blockNode(0)),
-        ],
-      };
-
-      const blocks = [
-        createBlock("b1", "Add"),
-        createBlock("b2", "Multiply"),
-      ];
-
-      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
-
-      // Cycle without state boundary should error
-      expect(result.errors).toHaveLength(1);
-    });
-
-    it("accepts bus cycle with state boundary", () => {
-      const graph: DepGraph = {
-        nodes: [blockNode(0), busNode(0), blockNode(1)],
-        edges: [
-          edge(blockNode(0), busNode(0)),
-          edge(busNode(0), blockNode(1)),
-          edge(blockNode(1), blockNode(0)),
-        ],
-      };
-
-      const blocks = [
-        createBlock("b1", "FeedbackDelay"),
-        createBlock("b2", "Multiply"),
-      ];
-
-      const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
-
-      expect(result.errors).toHaveLength(0);
-    });
-  });
+// OBSOLETE (Bus cycles removed in Edge migration):   describe("Bus Cycles", () => {
+// OBSOLETE (Bus cycles removed in Edge migration):     it("handles cycles through buses", () => {
+// OBSOLETE (Bus cycles removed in Edge migration):       // Block 0 → Bus 0 → Block 1 → Block 0 (cycle via bus)
+// OBSOLETE (Bus cycles removed in Edge migration):       const graph: DepGraph = {
+// OBSOLETE (Bus cycles removed in Edge migration):         nodes: [blockNode(0), busNode(0), blockNode(1)],
+// OBSOLETE (Bus cycles removed in Edge migration):         edges: [
+// OBSOLETE (Bus cycles removed in Edge migration):           edge(blockNode(0), busNode(0)),
+// OBSOLETE (Bus cycles removed in Edge migration):           edge(busNode(0), blockNode(1)),
+// OBSOLETE (Bus cycles removed in Edge migration):           edge(blockNode(1), blockNode(0)),
+// OBSOLETE (Bus cycles removed in Edge migration):         ],
+// OBSOLETE (Bus cycles removed in Edge migration):       };
+// OBSOLETE (Bus cycles removed in Edge migration): 
+// OBSOLETE (Bus cycles removed in Edge migration):       const blocks = [
+// OBSOLETE (Bus cycles removed in Edge migration):         createBlock("b1", "Add"),
+// OBSOLETE (Bus cycles removed in Edge migration):         createBlock("b2", "Multiply"),
+// OBSOLETE (Bus cycles removed in Edge migration):       ];
+// OBSOLETE (Bus cycles removed in Edge migration): 
+// OBSOLETE (Bus cycles removed in Edge migration):       const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
+// OBSOLETE (Bus cycles removed in Edge migration): 
+// OBSOLETE (Bus cycles removed in Edge migration):       // Cycle without state boundary should error
+// OBSOLETE (Bus cycles removed in Edge migration):       expect(result.errors).toHaveLength(1);
+// OBSOLETE (Bus cycles removed in Edge migration):     });
+// OBSOLETE (Bus cycles removed in Edge migration): 
+// OBSOLETE (Bus cycles removed in Edge migration):     it("accepts bus cycle with state boundary", () => {
+// OBSOLETE (Bus cycles removed in Edge migration):       const graph: DepGraph = {
+// OBSOLETE (Bus cycles removed in Edge migration):         nodes: [blockNode(0), busNode(0), blockNode(1)],
+// OBSOLETE (Bus cycles removed in Edge migration):         edges: [
+// OBSOLETE (Bus cycles removed in Edge migration):           edge(blockNode(0), busNode(0)),
+// OBSOLETE (Bus cycles removed in Edge migration):           edge(busNode(0), blockNode(1)),
+// OBSOLETE (Bus cycles removed in Edge migration):           edge(blockNode(1), blockNode(0)),
+// OBSOLETE (Bus cycles removed in Edge migration):         ],
+// OBSOLETE (Bus cycles removed in Edge migration):       };
+// OBSOLETE (Bus cycles removed in Edge migration): 
+// OBSOLETE (Bus cycles removed in Edge migration):       const blocks = [
+// OBSOLETE (Bus cycles removed in Edge migration):         createBlock("b1", "FeedbackDelay"),
+// OBSOLETE (Bus cycles removed in Edge migration):         createBlock("b2", "Multiply"),
+// OBSOLETE (Bus cycles removed in Edge migration):       ];
+// OBSOLETE (Bus cycles removed in Edge migration): 
+// OBSOLETE (Bus cycles removed in Edge migration):       const result = pass5CycleValidation(wrapWithTimeModel(graph), blocks);
+// OBSOLETE (Bus cycles removed in Edge migration): 
+// OBSOLETE (Bus cycles removed in Edge migration):       expect(result.errors).toHaveLength(0);
+// OBSOLETE (Bus cycles removed in Edge migration):     });
+// OBSOLETE (Bus cycles removed in Edge migration):   });
 
   describe("State Boundary Detection", () => {
     it("recognizes Delay blocks as state boundaries", () => {

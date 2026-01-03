@@ -17,7 +17,7 @@ import type {
   CompiledProgramIR,
   StateLayout,
   StepIR,
-  OutputSpec,
+  OutputSpecIR,
 } from "../../../compiler/ir";
 import type { RuntimeCtx, KernelEvent } from "../../../compiler/types";
 
@@ -31,47 +31,32 @@ import type { RuntimeCtx, KernelEvent } from "../../../compiler/types";
 function createTestProgram(
   stateLayout: StateLayout,
   steps: StepIR[] = [],
-  outputs: OutputSpec[] = [],
+  outputs: OutputSpecIR[] = [],
   seed = 42
 ): CompiledProgramIR {
   return {
     irVersion: 1,
     patchId: "test-patch",
-    patchRevision: 1,
-    compileId: `test-compile-${seed}`,
     seed,
     timeModel: { kind: "infinite", windowMs: 10000 },
     types: { typeIds: [] },
-    nodes: { nodes: [] },
-    buses: { buses: [] },
-    lenses: { lenses: [] },
-    adapters: { adapters: [] },
-    fields: {
-      nodes: [
-        {
-          kind: "const",
-          type: { world: "field", domain: "float", category: "core", busEligible: true },
-          constId: 0,
-        },
-      ],
-    },
-    signalTable: { nodes: [] },
+    signalExprs: { nodes: [] },
+    fieldExprs: { nodes: [] },
+    eventExprs: { nodes: [] },
     constants: {
       json: [42],
-      f64: new Float64Array([42.0]),
-      f32: new Float32Array([]),
-      i32: new Int32Array([]),
-      constIndex: [{ k: "f64", idx: 0 }],
     },
     stateLayout,
+    slotMeta: [],
+    render: { sinks: [] },
+    cameras: { cameras: [], cameraIdToIndex: {} },
+    meshes: { meshes: [], meshIdToIndex: {} },
     schedule: {
       steps,
       stepIdToIndex: Object.fromEntries(steps.map((s, i) => [s.id, i])),
       deps: {
         slotProducerStep: {},
         slotConsumers: {},
-        busDependsOnSlots: {},
-        busProvidesSlot: {},
       },
       determinism: {
         allowedOrderingInputs: [],
@@ -83,9 +68,9 @@ function createTestProgram(
       },
     },
     outputs,
-    meta: {
-      sourceMap: {},
-      names: { nodes: {}, buses: {}, steps: {} },
+    debugIndex: {
+      stepToBlock: new Map<string, string>(),
+      slotToBlock: new Map<number, string>(),
     },
   };
 }

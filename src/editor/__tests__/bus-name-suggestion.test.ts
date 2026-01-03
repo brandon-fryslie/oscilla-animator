@@ -13,14 +13,13 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
   beforeEach(() => {
     store = new RootStore();
     // Clear default buses for clean test slate
-    // Sprint 3: Buses are now BusBlocks in patchStore.blocks
-    store.patchStore.blocks = store.patchStore.blocks.filter(b => b.type !== 'BusBlock');
+    store.busStore.buses = [];
   });
 
   describe('Default names by domain', () => {
-    it('should use "energy" for float domain', () => {
+    it('should use "energy" for number domain', () => {
       const busId = store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'energy',
         'sum'
       );
@@ -38,7 +37,7 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
 
     it('should use "phaseA" for phase domain', () => {
       const busId = store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phaseA',
         'last'
       );
@@ -50,7 +49,7 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
     it('should increment phaseA to phaseB when phaseA exists', () => {
       // Create phaseA first
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phaseA',
         'last'
       );
@@ -65,7 +64,7 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
 
       // Create phaseB
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phaseB',
         'last'
       );
@@ -75,17 +74,17 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
 
     it('should handle sequence phaseA → phaseB → phaseC', () => {
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phaseA',
         'last'
       );
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phaseB',
         'last'
       );
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phaseC',
         'last'
       );
@@ -99,7 +98,7 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
     it('should use numeric suffix when name has no letter', () => {
       // Create energy first
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'energy',
         'sum'
       );
@@ -107,7 +106,7 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
       // Next should be energyA (handled by suggestion logic)
       // But if we want numeric, we'd create energy1
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'energy1',
         'sum'
       );
@@ -119,14 +118,14 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
     it('should handle exhausted letters (phaseZ → phase1)', () => {
       // Create phase with letter Z
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phaseZ',
         'last'
       );
 
       // Next would be phase1
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phase1',
         'last'
       );
@@ -139,7 +138,7 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
   describe('Case-insensitive collision detection', () => {
     it('should reject duplicate names regardless of case', () => {
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'energy',
         'sum'
       );
@@ -147,7 +146,7 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
       // Should not allow "Energy" or "ENERGY"
       expect(() =>
         store.busStore.createBus(
-          { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+          { world: 'signal', domain: 'number', category: 'core', busEligible: true },
           'Energy',
           'sum'
         )
@@ -155,7 +154,7 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
 
       expect(() =>
         store.busStore.createBus(
-          { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+          { world: 'signal', domain: 'number', category: 'core', busEligible: true },
           'ENERGY',
           'sum'
         )
@@ -169,7 +168,7 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
 
       validNames.forEach(name => {
         const busId = store.busStore.createBus(
-          { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+          { world: 'signal', domain: 'number', category: 'core', busEligible: true },
           name,
           'sum'
         );
@@ -182,17 +181,17 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
     it('should handle multiple phase buses with auto-increment', () => {
       // Simulating user creating multiple phase buses
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phaseA',
         'last'
       );
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phaseB',
         'last'
       );
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true, semantics: 'phase(0..1)' },
+        { world: 'signal', domain: 'phase', category: 'core', busEligible: true },
         'phaseC',
         'last'
       );
@@ -205,17 +204,17 @@ describe('Bus Name Auto-suggestion (WI-11)', () => {
     it('should handle mixed collision strategies', () => {
       // energy → energyA → energyB
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'energy',
         'sum'
       );
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'energyA',
         'sum'
       );
       store.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'energyB',
         'sum'
       );

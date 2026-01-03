@@ -25,7 +25,6 @@ import type {
   ValueSlot,
   StateId,
   TransformChainId,
-  BusIndex,
 } from "./types";
 import type { EventCombineMode } from "./signalExpr";
 import type { TransformStepIR, PureFnRef } from "./transforms";
@@ -193,10 +192,9 @@ export interface IRBuilder {
   sigTransform(src: SigExprId, chain: TransformChainId): SigExprId;
 
   /**
-   * Combine multiple signals using a bus combine mode.
+   * Combine multiple signals using a combine mode.
    */
   sigCombine(
-    busIndex: BusIndex,
     terms: readonly SigExprId[],
     mode: "sum" | "average" | "max" | "min" | "last",
     outputType: TypeDesc
@@ -248,7 +246,6 @@ export interface IRBuilder {
    * Combine multiple fields.
    */
   fieldCombine(
-    busIndex: BusIndex,
     terms: readonly FieldExprId[],
     mode: "sum" | "average" | "max" | "min" | "last" | "product",
     outputType: TypeDesc
@@ -337,10 +334,9 @@ export interface IRBuilder {
   eventMerge(sources: readonly EventExprId[], outputType: TypeDesc): EventExprId;
 
   /**
-   * Combine multiple event streams using a bus combine mode.
+   * Combine multiple event streams using a combine mode.
    */
   eventCombine(
-    busIndex: BusIndex,
     terms: readonly EventExprId[],
     mode: EventCombineMode,
     outputType: TypeDesc

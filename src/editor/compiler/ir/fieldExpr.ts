@@ -11,12 +11,32 @@
  * - HANDOFF.md Topic 1: SignalExpr Schema (field variant)
  */
 
-import type { TypeDesc, ValueSlot, BusIndex, TransformChainId, FieldExprId, SigExprId } from "./types";
-import type { CombineSpec } from "./schedule";
+import type { TypeDesc, ValueSlot, TransformChainId, FieldExprId, SigExprId } from "./types";
 import type { PureFnRef } from "./transforms";
 
 // Re-export FieldExprId for convenience
 export type { FieldExprId } from "./types";
+
+// =============================================================================
+// Field Expression Combine Types
+// =============================================================================
+
+/**
+ * Combine mode for field bus aggregation.
+ *
+ * Defines how multiple field terms are combined per-element.
+ */
+export type FieldCombineMode = "last" | "sum" | "average" | "max" | "min" | "product";
+
+/**
+ * Combine specification for field bus combine nodes.
+ *
+ * Specifies how to aggregate multiple field publishers into a single bus value.
+ */
+export interface FieldCombineSpec {
+  /** Combine mode */
+  mode: FieldCombineMode;
+}
 
 // =============================================================================
 // Field Expression Table
@@ -168,8 +188,7 @@ export interface FieldExprTransform {
 export interface FieldExprBusCombine {
   kind: "busCombine";
   type: TypeDesc;
-  busIndex: BusIndex;
   /** Pre-sorted by compiler - runtime never re-sorts */
   terms: FieldExprId[];
-  combine: CombineSpec;
+  combine: FieldCombineSpec;
 }

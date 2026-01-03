@@ -34,8 +34,6 @@ export type {
   GraphNode,
   GraphEdge,
   WireEdge,
-  PublisherEdge,
-  ListenerEdge,
   BlockNode,
   PortNode,
   BusNode,
@@ -43,14 +41,13 @@ export type {
 export {
   portKeyToString,
   stringToPortKey,
-  portKeyFromConnection,
-  portKeyFromPublisher,
-  portKeyFromListener,
+  portKeyFromEdge,
 } from './types';
 
-// Bus Semantics Module
+// Bus Semantics Module - artifact combination for multi-input reduction
+// NOTE: getSortedPublishers has been removed after bus-block unification.
+// Edge sorting is now handled by the compiler based on edge.sortKey properties.
 export {
-  getSortedPublishers,
   combineSignalArtifacts,
   combineFieldArtifacts,
   validateCombineMode,

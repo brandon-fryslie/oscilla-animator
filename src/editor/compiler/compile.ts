@@ -112,15 +112,15 @@ export function topoSortBlocks(
     indeg.set(id, 0);
   }
 
-  for (const c of patch.connections) {
-    const a = c.from.block;
-    const b = c.to.block;
+  for (const e of patch.edges) {
+    const a = e.from.blockId;
+    const b = e.to.blockId;
     if (!adj.has(a) || !adj.has(b)) {
-      // Connection references non-existent block
+      // Edge references non-existent block
       errors.push({
         code: 'BlockMissing',
-        message: `Connection references missing block: ${a} or ${b}`,
-        where: { connection: c },
+        message: `Edge references missing block: ${a} or ${b}`,
+        where: { edgeId: e.id },
       });
       continue;
     }

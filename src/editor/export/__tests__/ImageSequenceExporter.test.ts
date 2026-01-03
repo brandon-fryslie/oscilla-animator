@@ -7,7 +7,6 @@ import { ImageSequenceExporter } from '../ImageSequenceExporter';
 import type { ImageSequenceExportConfig } from '../types';
 import { InvalidExportConfigError, ExportCancelledError } from '../types';
 import type { CompiledProgramIR } from '../../compiler/ir/program';
-import type { StepRenderAssemble } from '../../compiler/ir/schedule';
 
 // Track the current program seed for mock determinism
 let currentProgramSeed = 42;
@@ -49,20 +48,33 @@ function createTestProgram(seed = 42): CompiledProgramIR {
   // Set global seed for mock to use
   currentProgramSeed = seed;
 
-  const renderAssembleStep: StepRenderAssemble = {
-    kind: 'renderAssemble', id: 'render-assemble' as unknown as never, deps: [],
-    instance2dListSlot: -1 as unknown as never, pathBatchListSlot: -1 as unknown as never, outFrameSlot: 0,
-  };
   return {
     irVersion: 1, patchId: 'test', patchRevision: 1, compileId: 'test', seed,
     timeModel: { kind: 'infinite', windowMs: 10000 },
-    types: { types: [] }, nodes: { nodes: [] }, buses: { buses: [] }, lenses: { lenses: [] },
-    adapters: { adapters: [] }, fields: { exprs: [] },
+    types: { typeIds: [] },
+    signalExprs: { nodes: [] },
+    fieldExprs: { nodes: [] },
+    eventExprs: { nodes: [] },
     constants: { json: [], f64: new Float64Array([]), f32: new Float32Array([]), i32: new Int32Array([]), constIndex: [] },
     stateLayout: { cells: [], f64Size: 0, f32Size: 0, i32Size: 0 },
-    schedule: { steps: [renderAssembleStep], stepIdToIndex: {}, deps: { fwdDeps: {}, revDeps: {} },
-      determinism: { sortKeyRanges: {} }, caching: { perFrame: [], untilInvalidated: [] } },
-    outputs: [{ id: 'render', kind: 'renderFrame', slot: 0 as unknown as never }],
+    slotMeta: [],
+    render: { sinks: [] },
+    cameras: { cameras: [], cameraIdToIndex: {} },
+    meshes: { meshes: [], meshIdToIndex: {} },
+    primaryCameraId: '__default__',
+    schedule: {
+      steps: [],
+      stepIdToIndex: {},
+      deps: { slotProducerStep: {}, slotConsumers: {} },
+      determinism: { allowedOrderingInputs: [], topoTieBreak: 'nodeIdLex' },
+      caching: { stepCache: {}, materializationCache: {} },
+    },
+    outputs: [],
+    debugIndex: {
+      stepToBlock: new Map(),
+      slotToBlock: new Map(),
+      labels: new Map(),
+    },
   } as unknown as CompiledProgramIR;
 }
 

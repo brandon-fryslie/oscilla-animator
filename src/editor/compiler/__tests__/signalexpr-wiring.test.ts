@@ -31,10 +31,8 @@ describe("SignalExprTable Wiring", () => {
 
     const patch: CompilerPatch = {
       blocks: [timeRoot],
-      connections: [],
+      edges: [],
       buses: [],
-      publishers: [],
-      listeners: [],
       defaultSources: {},
       output: { blockId: "timeroot", slotId: "systemTime", direction: "output" },
     };
@@ -66,10 +64,8 @@ describe("SignalExprTable Wiring", () => {
 
     const patch: CompilerPatch = {
       blocks: [timeRoot],
-      connections: [],
+      edges: [],
       buses: [],
-      publishers: [],
-      listeners: [],
       defaultSources: {},
       output: { blockId: "timeroot", slotId: "systemTime", direction: "output" },
     };
@@ -93,10 +89,8 @@ describe("SignalExprTable Wiring", () => {
     // Empty patch - no blocks at all
     const patch: CompilerPatch = {
       blocks: [],
-      connections: [],
+      edges: [],
       buses: [],
-      publishers: [],
-      listeners: [],
       defaultSources: {},
     };
 

@@ -8,7 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { createStateBuffer, initializeState } from "../stores";
 import type { StateLayout } from "../stores";
-import type { ConstPool } from "../program";
+import type { ConstPool } from "../types";
 
 describe("StateBuffer", () => {
   describe("Allocation", () => {
@@ -120,10 +120,6 @@ describe("StateBuffer", () => {
 
       const constPool: ConstPool = {
         json: [],
-        f64: new Float64Array([]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([]),
-        constIndex: [],
       };
 
       const buffer = createStateBuffer(layout);
@@ -151,11 +147,7 @@ describe("StateBuffer", () => {
       };
 
       const constPool: ConstPool = {
-        json: [],
-        f64: new Float64Array([3.14]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([]),
-        constIndex: [{ k: "f64", idx: 0 }],
+        json: [3.14],
       };
 
       const buffer = createStateBuffer(layout);
@@ -183,11 +175,7 @@ describe("StateBuffer", () => {
       };
 
       const constPool: ConstPool = {
-        json: [],
-        f64: new Float64Array([1.5]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([]),
-        constIndex: [{ k: "f64", idx: 0 }],
+        json: [1.5],
       };
 
       const buffer = createStateBuffer(layout);
@@ -229,14 +217,7 @@ describe("StateBuffer", () => {
       };
 
       const constPool: ConstPool = {
-        json: [],
-        f64: new Float64Array([100.0, 200.0]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([]),
-        constIndex: [
-          { k: "f64", idx: 0 },
-          { k: "f64", idx: 1 },
-        ],
+        json: [100.0, 200.0],
       };
 
       const buffer = createStateBuffer(layout);
@@ -265,11 +246,7 @@ describe("StateBuffer", () => {
       };
 
       const constPool: ConstPool = {
-        json: [],
-        f64: new Float64Array([]),
-        f32: new Float32Array([2.5]),
-        i32: new Int32Array([]),
-        constIndex: [{ k: "f32", idx: 0 }],
+        json: [2.5],
       };
 
       const buffer = createStateBuffer(layout);
@@ -297,11 +274,7 @@ describe("StateBuffer", () => {
       };
 
       const constPool: ConstPool = {
-        json: [],
-        f64: new Float64Array([]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([42]),
-        constIndex: [{ k: "i32", idx: 0 }],
+        json: [42],
       };
 
       const buffer = createStateBuffer(layout);
@@ -347,15 +320,7 @@ describe("StateBuffer", () => {
       };
 
       const constPool: ConstPool = {
-        json: [],
-        f64: new Float64Array([1.1]),
-        f32: new Float32Array([2.2]),
-        i32: new Int32Array([33]),
-        constIndex: [
-          { k: "f64", idx: 0 },
-          { k: "f32", idx: 0 },
-          { k: "i32", idx: 0 },
-        ],
+        json: [1.1, 2.2, 33],
       };
 
       const buffer = createStateBuffer(layout);
@@ -386,16 +351,12 @@ describe("StateBuffer", () => {
 
       const constPool: ConstPool = {
         json: [],
-        f64: new Float64Array([]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([]),
-        constIndex: [],
       };
 
       const buffer = createStateBuffer(layout);
 
       expect(() => initializeState(buffer, layout, constPool)).toThrow(
-        "constId 99 not found in constPool",
+        "initializeState: constant 99 not found for state cell state-1",
       );
     });
 
@@ -409,10 +370,6 @@ describe("StateBuffer", () => {
 
       const constPool: ConstPool = {
         json: [],
-        f64: new Float64Array([]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([]),
-        constIndex: [],
       };
 
       const buffer = createStateBuffer(layout);
@@ -448,14 +405,7 @@ describe("StateBuffer", () => {
       };
 
       const constPool: ConstPool = {
-        json: [],
-        f64: new Float64Array([10.0, 20.0]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([]),
-        constIndex: [
-          { k: "f64", idx: 0 },
-          { k: "f64", idx: 1 },
-        ],
+        json: [10.0, 20.0],
       };
 
       const buffer = createStateBuffer(layout);

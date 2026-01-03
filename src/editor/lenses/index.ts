@@ -1,4 +1,4 @@
-// Re-exports removed - use TRANSFORM_REGISTRY directly from '../transforms/TransformRegistry'
+export * from './LensRegistry';
 export * from './lensResolution';
 
 import type { Artifact, RuntimeCtx } from '../compiler/types';
@@ -90,18 +90,18 @@ export function isValidLensType(type: string): boolean {
 // Apply Lens - Main Entry Point
 // =============================================================================
 
-type SignalArtifact = { kind: 'Signal:float' | 'Signal:int' | 'Signal:Unit'; value: (t: number, ctx: RuntimeCtx) => float };
+type SignalArtifact = { kind: 'Signal:number' | 'Signal:Unit'; value: (t: number, ctx: RuntimeCtx) => number };
 
 function isSignalArtifact(art: Artifact): art is SignalArtifact {
-  return art.kind === 'Signal:float' || art.kind === 'Signal:int' || art.kind === 'Signal:Unit';
+  return art.kind === 'Signal:number' || art.kind === 'Signal:Unit';
 }
 
-function clamp(v: float, min: float, max: float): float {
+function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
 }
 
 // Hash function for per-element offsets
-function simpleHash(seed: int, index: int): float {
+function simpleHash(seed: number, index: number): number {
   let h = seed ^ index;
   h = Math.imul(h ^ (h >>> 16), 2246822507);
   h = Math.imul(h ^ (h >>> 13), 3266489909);
@@ -114,7 +114,7 @@ export function applyLens(input: Artifact, lens: LensDefinition): Artifact {
     return { kind: 'Error', message: `Unknown lens type: ${lens.type}` };
   }
 
-  const params = lens.params ?? {};
+  const params = lens.params || {};
 
   switch (lens.type) {
     case 'ease':
@@ -153,16 +153,12 @@ function applyEaseLens(input: Artifact, params: Record<string, unknown>): Artifa
     return { kind: 'Error', message: 'Ease lens requires Signal input' };
   }
 
-  const easingName = (typeof params.easing === 'string' && params.easing.length > 0)
-    ? params.easing
-    : 'easeInOutSine';
-  const easingFn = (easingName in easingFunctions)
-    ? easingFunctions[easingName]
-    : easingFunctions.easeInOutSine;
+  const easingName = (params.easing as string) || 'easeInOutSine';
+  const easingFn = easingFunctions[easingName] || easingFunctions.easeInOutSine;
   const sig = input.value;
 
   return {
-    kind: 'Signal:float',
+    kind: 'Signal:number',
     value: (t: number, ctx: RuntimeCtx) => {
       const v = sig(t, ctx);
       const clamped = clamp(v, 0, 1);
@@ -184,7 +180,7 @@ function applySlewLens(input: Artifact, params: Record<string, unknown>): Artifa
   let lastTime: number | null = null;
 
   return {
-    kind: 'Signal:float',
+    kind: 'Signal:number',
     value: (t: number, ctx: RuntimeCtx) => {
       const target = sig(t, ctx);
 
@@ -217,7 +213,7 @@ function applyQuantizeLens(input: Artifact, params: Record<string, unknown>): Ar
   const sig = input.value;
 
   return {
-    kind: 'Signal:float',
+    kind: 'Signal:number',
     value: (t: number, ctx: RuntimeCtx) => {
       const v = sig(t, ctx);
       // Snap to nearest step
@@ -236,7 +232,7 @@ function applyScaleLens(input: Artifact, params: Record<string, unknown>): Artif
   const sig = input.value;
 
   return {
-    kind: 'Signal:float',
+    kind: 'Signal:number',
     value: (t: number, ctx: RuntimeCtx) => {
       return sig(t, ctx) * scale + offset;
     },
@@ -252,7 +248,7 @@ function applyWarpLens(input: Artifact, params: Record<string, unknown>): Artifa
   const sig = input.value;
 
   return {
-    kind: 'Signal:float',
+    kind: 'Signal:number',
     value: (t: number, ctx: RuntimeCtx) => {
       const v = clamp(sig(t, ctx), 0, 1);
       return Math.pow(v, power);
@@ -268,13 +264,13 @@ function applyBroadcastLens(input: Artifact, _params: Record<string, unknown>): 
   const sig = input.value;
 
   return {
-    kind: 'Field:float',
-    value: (_seed: number, n: number, _ctx: unknown): number[] => {
+    kind: 'Field:number',
+    value: (_seed: number, n: number, _ctx: unknown) => {
       // Broadcast the signal value to all elements
       // Note: We evaluate at t=0 since Field is compile-time
       const ctx: RuntimeCtx = { viewport: { w: 800, h: 600, dpr: 1 } };
       const v = sig(0, ctx);
-      return Array(n).fill(v) as number[];
+      return Array(n).fill(v);
     },
   };
 }
@@ -288,8 +284,8 @@ function applyPerElementOffsetLens(input: Artifact, params: Record<string, unkno
   const sig = input.value;
 
   return {
-    kind: 'Field:float',
-    value: (seed: number, n: number, _ctx: unknown): number[] => {
+    kind: 'Field:number',
+    value: (seed: number, n: number, _ctx: unknown) => {
       const ctx: RuntimeCtx = { viewport: { w: 800, h: 600, dpr: 1 } };
       const baseValue = sig(0, ctx);
       return Array.from({ length: n }, (_, i) => {
@@ -310,7 +306,7 @@ function applyClampLens(input: Artifact, params: Record<string, unknown>): Artif
   const sig = input.value;
 
   return {
-    kind: 'Signal:float',
+    kind: 'Signal:number',
     value: (t: number, ctx: RuntimeCtx) => {
       return clamp(sig(t, ctx), min, max);
     },
@@ -326,7 +322,7 @@ function applyOffsetLens(input: Artifact, params: Record<string, unknown>): Arti
   const sig = input.value;
 
   return {
-    kind: 'Signal:float',
+    kind: 'Signal:number',
     value: (t: number, ctx: RuntimeCtx) => {
       return sig(t, ctx) + amount;
     },
@@ -342,7 +338,7 @@ function applyDeadzoneLens(input: Artifact, params: Record<string, unknown>): Ar
   const sig = input.value;
 
   return {
-    kind: 'Signal:float',
+    kind: 'Signal:number',
     value: (t: number, ctx: RuntimeCtx) => {
       const v = sig(t, ctx);
       return Math.abs(v) < threshold ? 0 : v;
@@ -362,7 +358,7 @@ function applyMapRangeLens(input: Artifact, params: Record<string, unknown>): Ar
   const sig = input.value;
 
   return {
-    kind: 'Signal:float',
+    kind: 'Signal:number',
     value: (t: number, ctx: RuntimeCtx) => {
       const v = sig(t, ctx);
       // Linear interpolation from input range to output range

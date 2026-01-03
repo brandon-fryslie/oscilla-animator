@@ -96,7 +96,6 @@ A Field bus combines FieldExprs, not arrays.
 
 ### Combination Semantics:
 - Combination is per element
-- All publishers must share the same Domain
 - Combine functions are lifted pointwise
 
 For example:

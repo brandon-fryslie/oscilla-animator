@@ -11,11 +11,10 @@ import type { StandaloneExportConfig } from '../types';
 import { InvalidExportConfigError } from '../types';
 
 describe('StandaloneExporter', () => {
-  // Minimal test program
+  // Minimal test program fixture for standalone exporter tests
   const createTestProgram = (): CompiledProgramIR => ({
     irVersion: 1,
     patchId: 'test-patch',
-    patchRevision: 1,
     compileId: 'test-compile-id',
     seed: 12345,
     timeModel: {
@@ -27,27 +26,17 @@ describe('StandaloneExporter', () => {
     types: {
       typeIds: [],
     },
-    nodes: {
+    signalExprs: {
       nodes: [],
     },
-    buses: {
-      buses: [],
+    fieldExprs: {
+      nodes: [],
     },
-    lenses: {
-      lenses: [],
-    },
-    adapters: {
-      adapters: [],
-    },
-    fields: {
+    eventExprs: {
       nodes: [],
     },
     constants: {
       json: [],
-      f64: new Float64Array([]),
-      f32: new Float32Array([]),
-      i32: new Int32Array([]),
-      constIndex: [],
     },
     stateLayout: {
       cells: [],
@@ -55,14 +44,25 @@ describe('StandaloneExporter', () => {
       f32Size: 0,
       i32Size: 0,
     },
+    slotMeta: [],
+    render: {
+      sinks: [],
+    },
+    cameras: {
+      cameras: [],
+      cameraIdToIndex: {},
+    },
+    meshes: {
+      meshes: [],
+      meshIdToIndex: {},
+    },
+    primaryCameraId: '__default__',
     schedule: {
       steps: [],
       stepIdToIndex: {},
       deps: {
         slotProducerStep: {},
         slotConsumers: {},
-        busDependsOnSlots: {},
-        busProvidesSlot: {},
       },
       determinism: {
         allowedOrderingInputs: [],
@@ -74,15 +74,12 @@ describe('StandaloneExporter', () => {
       },
     },
     outputs: [],
-    meta: {
-      sourceMap: {},
-      names: {
-        nodes: {},
-        buses: {},
-        steps: {},
-      },
+    debugIndex: {
+      stepToBlock: new Map(),
+      slotToBlock: new Map(),
+      labels: new Map(),
     },
-  });
+  }) as unknown as CompiledProgramIR;
 
   const createTestConfig = (): StandaloneExportConfig => ({
     width: 1920,

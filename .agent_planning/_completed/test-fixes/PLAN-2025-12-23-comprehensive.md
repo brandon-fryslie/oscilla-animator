@@ -306,10 +306,6 @@ hub2 = new DiagnosticHub(events, patchStore);
 
 #### Fix 8.1-8.7: All bus compilation tests
 **Tests**:
-1. "compiles single Signal<number> bus with one publisher and one listener"
-2. "returns default value when bus has no publishers"
-3. "combines multiple publishers with 'last' mode - highest sortKey wins"
-4. "combines multiple publishers with 'sum' mode"
 5. "stable results with same sortKeys using id tie-breaker"
 6. "result changes when sortKeys swap"
 7. "rejects unsupported combine mode for Signal bus"
@@ -338,15 +334,12 @@ Then update test expectations based on actual compiler output.
 
 **File**: `src/editor/semantic/__tests__/validator.test.ts`
 
-#### Fix 9.1: Multiple publishers warning
-**Test**: "should warn about multiple publishers on control buses" (line 864)
 
 **Current expectation** (line 864):
 ```typescript
 expect(multiplePubWarnings).toHaveLength(1);
 ```
 
-**Problem**: Validator not emitting warning for multiple publishers on control bus.
 
 **Possible causes**:
 - Validator disabled
@@ -358,7 +351,6 @@ expect(multiplePubWarnings).toHaveLength(1);
 
 **Action**: Review test setup (lines 850-863) to verify bus is correctly configured as control bus. Check if warning code or severity changed.
 
-**Verification**: `pnpm vitest run src/editor/semantic/__tests__/validator.test.ts -t "should warn about multiple publishers on control buses"`
 
 ---
 
@@ -371,10 +363,8 @@ expect(multiplePubWarnings).toHaveLength(1);
 
 **Current expectation** (line 69):
 ```typescript
-expect(listener).toHaveBeenCalled();
 ```
 
-**Problem**: Listener not called during macro expansion, suggesting:
 - Macro expansion doesn't emit WireAdded events
 - Event subscription not working
 - Macro expansion itself not working

@@ -83,7 +83,6 @@ Formally:
 
 When a Signal is consumed:
 - the bus value is never mutated
-- interpretation happens at the **listener port**
 
 This keeps Signals:
 - pure
@@ -144,7 +143,6 @@ This guarantees:
 ### Domain Mismatch is a Compile Error
 
 - A Field bus combines FieldExprs, not arrays
-- All publishers must share the same Domain
 - Combine functions are lifted pointwise
 - There is no implicit zipping or broadcasting across domains
 

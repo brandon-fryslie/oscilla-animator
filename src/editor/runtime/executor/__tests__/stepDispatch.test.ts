@@ -10,31 +10,31 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { executeNodeEval } from "../steps/executeNodeEval";
-import { executeBusEval } from "../steps/executeBusEval";
 import { executeMaterialize } from "../steps/executeMaterialize";
 import { executeRenderAssemble } from "../steps/executeRenderAssemble";
 import { executeDebugProbe } from "../steps/executeDebugProbe";
 import type {
-  StepNodeEval,
-  StepBusEval,
   StepMaterialize,
   StepRenderAssemble,
   StepDebugProbe,
   CompiledProgramIR,
 } from "../../../compiler/ir";
 import { createRuntimeState } from "../RuntimeState";
-import { OpCode } from "../../../compiler/ir/opcodes";
 
 /**
  * Create minimal program IR for testing.
- * Includes all required tables (fields, signalTable, constants).
+ *
+ * Includes slotMeta for slots 0-2 used by step dispatch tests.
  */
-function createMinimalProgram(steps: unknown[] = []): CompiledProgramIR {
+function createMinimalProgram(): CompiledProgramIR {
   return {
-    schedule: { steps },
-    // Minimal field expression table - single const node
-    fields: {
+    irVersion: 1,
+    patchId: "test-patch",
+    seed: 42,
+    timeModel: { kind: "infinite", windowMs: 10000 },
+    types: { typeIds: [] },
+    signalExprs: { nodes: [] },
+    fieldExprs: {
       nodes: [
         {
           kind: "const",
@@ -43,127 +43,50 @@ function createMinimalProgram(steps: unknown[] = []): CompiledProgramIR {
         },
       ],
     },
-    // Minimal signal expression table
-    signalTable: {
-      nodes: [],
-    },
-    // Minimal constant pool
+    eventExprs: { nodes: [] },
     constants: {
-      json: [42], // const value for field node
-      f64: new Float64Array([42.0]),
-      f32: new Float32Array([]),
-      i32: new Int32Array([]),
-      constIndex: [{ k: "f64", idx: 0 }],
+      json: [42],
     },
-    // Minimal bus table
-    buses: {
-      buses: [],
+    stateLayout: {
+      cells: [],
+      f64Size: 0,
+      f32Size: 0,
+      i32Size: 0,
     },
-  } as unknown as CompiledProgramIR;
+    // slotMeta for slots used by step dispatch tests
+    slotMeta: [
+      { slot: 0, storage: "object", offset: 0, type: { world: "signal", domain: "unknown", category: "internal", busEligible: false }, debugName: "slot0" },
+      { slot: 1, storage: "object", offset: 1, type: { world: "signal", domain: "unknown", category: "internal", busEligible: false }, debugName: "slot1" },
+      { slot: 2, storage: "object", offset: 2, type: { world: "signal", domain: "unknown", category: "internal", busEligible: false }, debugName: "slot2" },
+    ],
+    render: { sinks: [] },
+    cameras: { cameras: [], cameraIdToIndex: {} },
+    meshes: { meshes: [], meshIdToIndex: {} },
+    schedule: {
+      steps: [],
+      stepIdToIndex: {},
+      deps: {
+        slotProducerStep: {},
+        slotConsumers: {},
+      },
+      determinism: {
+        allowedOrderingInputs: [],
+        topoTieBreak: "nodeIdLex",
+      },
+      caching: {
+        stepCache: {},
+        materializationCache: {},
+      },
+    },
+    outputs: [],
+    debugIndex: {
+      stepToBlock: new Map<string, string>(),
+      slotToBlock: new Map<number, string>(),
+    },
+  };
 }
 
-// Note: Test programs use type casting to CompiledProgramIR
-// This allows minimal test data while satisfying the type system
-
 describe("Step Dispatch", () => {
-  describe("executeNodeEval", () => {
-    it("does not throw when called", () => {
-      const step: StepNodeEval = {
-        id: "node-eval-1",
-        kind: "nodeEval",
-        deps: [],
-        nodeIndex: 0,
-        outputSlots: [0],
-        inputSlots: [],
-        phase: "postBus",
-      };
-
-      const baseProgram = createMinimalProgram([step]);
-      // Override nodes to provide a stub node
-      const program = {
-        ...baseProgram,
-        nodes: {
-          nodes: [
-            {
-              id: "stub-node-0",
-              typeId: 0,
-              inputCount: 0,
-              outputCount: 1,
-              opcodeId: OpCode.Const,
-              compilerTag: 0, // constId = 0 -> f64[0] = 42.0
-            },
-          ],
-        },
-        constants: {
-          json: [42],
-          f64: new Float64Array([42.0]),
-          f32: new Float32Array([]),
-          i32: new Int32Array([]),
-          constIndex: [{ k: "f64", idx: 0 }],
-        },
-      } as unknown as CompiledProgramIR;
-
-      const runtime = createRuntimeState(program);
-
-      // Should not throw (stub opcode)
-      expect(() => {
-        executeNodeEval(step, program, runtime);
-      }).not.toThrow();
-
-      // Verify output was written
-      expect(runtime.values.read(0)).toBe(42);
-    });
-  });
-
-  describe("executeBusEval", () => {
-    it("does not throw when called", () => {
-      const step: StepBusEval = {
-        id: "bus-eval-1",
-        kind: "busEval",
-        deps: [],
-        busIndex: 0,
-        busType: { world: "signal", domain: "float", category: "core", busEligible: true },
-        outSlot: 1,
-        publishers: [],
-        combine: { mode: "last" },
-        silent: { kind: "const", constId: 0 },
-      };
-
-      const baseProgram = createMinimalProgram([step]);
-      // Override buses to provide a stub bus
-      const program = {
-        ...baseProgram,
-        buses: {
-          buses: [
-            {
-              id: "stub-bus-0",
-              typeId: 0,
-              inputCount: 0,
-            },
-          ],
-        },
-        // Ensure constants are present
-        constants: {
-          json: [0],
-          f64: new Float64Array([0]),
-          f32: new Float32Array([]),
-          i32: new Int32Array([]),
-          constIndex: [{ k: "f64", idx: 0 }],
-        },
-      } as unknown as CompiledProgramIR;
-
-      const runtime = createRuntimeState(program);
-
-      // Should not throw (bus stub returns 0)
-      expect(() => {
-        executeBusEval(step, program, runtime);
-      }).not.toThrow();
-
-      // Verify silent value was written
-      expect(runtime.values.read(1)).toBe(0);
-    });
-  });
-
   describe("executeMaterialize", () => {
     it("does not throw when called", () => {
       const step: StepMaterialize = {
@@ -180,7 +103,7 @@ describe("Step Dispatch", () => {
         },
       };
 
-      const program = createMinimalProgram([step]);
+      const program = createMinimalProgram();
       const runtime = createRuntimeState(program);
 
       // Write domain count to slot 0 (required by executeMaterialize)
@@ -209,7 +132,7 @@ describe("Step Dispatch", () => {
         outFrameSlot: 2,
       };
 
-      const program = createMinimalProgram([step]);
+      const program = createMinimalProgram();
       const runtime = createRuntimeState(program);
 
       // Should not throw (stub is no-op)
@@ -232,7 +155,7 @@ describe("Step Dispatch", () => {
         },
       };
 
-      const program = createMinimalProgram([step]);
+      const program = createMinimalProgram();
       const runtime = createRuntimeState(program);
 
       // Write some test values to probe

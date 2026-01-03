@@ -28,18 +28,18 @@ export type BlockTagValue =
 export type BlockTags = Record<string, BlockTagValue>;
 
 // =============================================================================
-// Legacy Parameter Schema Types (DEPRECATED - use defaultSource on inputs instead)
+// Parameter Schema Types (for composites and exposed params)
 // =============================================================================
 
 /**
- * @deprecated Legacy parameter schema type. Use defaultSource on input slots instead.
- * Kept for backward compatibility with tests only.
+ * Parameter types for UI generation.
+ * Used by composites to expose internal block parameters.
  */
 export type ParamType = 'number' | 'string' | 'boolean' | 'select' | 'color';
 
 /**
- * @deprecated Legacy parameter schema interface. Use defaultSource on input slots instead.
- * Kept for backward compatibility with tests only.
+ * Parameter schema for exposed composite parameters.
+ * Defines the type and constraints for a user-editable parameter.
  */
 export interface ParamSchema {
   readonly key: string;
@@ -87,8 +87,8 @@ interface BlockDefinitionBase {
   readonly defaultParams: BlockParams;
 
   /**
-   * @deprecated Legacy parameter schema. Use defaultSource on input slots instead.
-   * Kept for backward compatibility with existing code.
+   * Parameter schema for exposed params (used by composites).
+   * For primitive blocks, params are typically derived from input slots with defaultSource.
    */
   readonly paramSchema?: readonly ParamSchema[];
 

@@ -28,7 +28,7 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete, valid patch
-      store.patchStore.addBlock('InfiniteTimeRoot');
+      store.patchStore.addBlock('CycleTimeRoot');
       const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
@@ -40,8 +40,8 @@ describe('Bus Diagnostics', () => {
       store.busStore.buses.push({
         id: 'custom-bus',
         name: 'customBus',
-        type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-        combine: { when: 'multi', mode: 'last' },
+        type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+        combineMode: 'last',
         defaultValue: 0,
         sortKey: 0,
       });
@@ -72,7 +72,7 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete, valid patch
-      store.patchStore.addBlock('InfiniteTimeRoot', { periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot', { periodMs: 3000 });
       const domainBlock = store.patchStore.addBlock('GridDomain', { rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D', {});
 
@@ -84,8 +84,8 @@ describe('Bus Diagnostics', () => {
       store.busStore.buses.push({
         id: 'custom-bus',
         name: 'customBus',
-        type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-        combine: { when: 'multi', mode: 'last' },
+        type: { world: 'signal', domain: 'number', category: 'core', busEligible: true },
+        combineMode: 'last',
         defaultValue: 0,
         sortKey: 0,
       });
@@ -123,7 +123,7 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a TimeRoot
-      store.patchStore.addBlock('InfiniteTimeRoot',{ periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
 
       // Add two GridDomains, only connect one fully
       const domainBlock1 = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
@@ -158,8 +158,8 @@ describe('Bus Diagnostics', () => {
     it('should NOT emit W_GRAPH_UNUSED_OUTPUT for TimeRoot outputs', () => {
       const service = createCompilerService(store);
 
-      // Add just a InfiniteTimeRoot - its outputs (phase, pulse) are auto-published
-      store.patchStore.addBlock('InfiniteTimeRoot',{ periodMs: 3000 });
+      // Add just a CycleTimeRoot - its outputs (phase, wrap) are auto-published
+      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
       const domainBlock = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D',{});
 
@@ -174,9 +174,9 @@ describe('Bus Diagnostics', () => {
       const diagnostics = finishedEvents[0].diagnostics;
       const unusedOutputWarnings = diagnostics.filter((d): d is Diagnostic => d.code === 'W_GRAPH_UNUSED_OUTPUT');
 
-      // Should not have any warnings about TimeRoot outputs (phase, pulse)
+      // Should not have any warnings about TimeRoot outputs (phase, wrap)
       const timeRootWarnings = unusedOutputWarnings.filter(
-        (w) => w.primaryTarget.kind === 'port' && w.primaryTarget.portRef?.slotId !== undefined && ['phase', 'pulse'].includes(w.primaryTarget.portRef.slotId)
+        (w) => w.primaryTarget.kind === 'port' && w.primaryTarget.portRef?.slotId !== undefined && ['phase', 'wrap'].includes(w.primaryTarget.portRef.slotId)
       );
       expect(timeRootWarnings).toHaveLength(0);
     });
@@ -185,7 +185,7 @@ describe('Bus Diagnostics', () => {
       const service = createCompilerService(store);
 
       // Add a complete patch
-      store.patchStore.addBlock('InfiniteTimeRoot',{ periodMs: 3000 });
+      store.patchStore.addBlock('CycleTimeRoot',{ periodMs: 3000 });
       const domainBlock = store.patchStore.addBlock('GridDomain',{ rows: 5, cols: 5 });
       const renderBlock = store.patchStore.addBlock('RenderInstances2D',{});
 

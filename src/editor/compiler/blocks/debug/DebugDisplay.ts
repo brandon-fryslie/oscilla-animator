@@ -177,12 +177,11 @@ export const DebugDisplayBlock: BlockCompiler = {
 
   compile({ id, inputs }) {
     // Read from inputs - values come from defaultSource or explicit connections
-    const labelArtifact = inputs.label;
-    const label = labelArtifact !== undefined && 'value' in labelArtifact ? String(labelArtifact.value) : '';
-    const posXArtifact = inputs.posX;
-    const posX = posXArtifact !== undefined && 'value' in posXArtifact ? Number(posXArtifact.value) : 0;
-    const posYArtifact = inputs.posY;
-    const posY = posYArtifact !== undefined && 'value' in posYArtifact ? Number(posYArtifact.value) : 0;
+    // Label and position are no longer used with the new updateProbe API
+    // (the probe system handles positioning and labeling internally)
+    void inputs.label;
+    void inputs.posX;
+    void inputs.posY;
 
     // Extract input artifacts
     const signalArtifact = inputs.signal;
@@ -250,15 +249,20 @@ export const DebugDisplayBlock: BlockCompiler = {
           values.fieldSample = [...fieldValues];
         }
 
-        // Update debug store
-        debugStore.setEntry({
-          id,
-          label,
-          posX,
-          posY,
-          values,
-          timestamp: tMs,
-        });
+        // Update debug store via updateProbe
+        const probeId = `block:${id}`;
+        type ValueSummary = { t: 'num'; v: number } | { t: 'phase'; v: number } | { t: 'none' };
+        let valueSummary: ValueSummary;
+        if (values.phase !== undefined) {
+          valueSummary = { t: 'phase', v: values.phase };
+        } else if (values.signal !== undefined) {
+          valueSummary = { t: 'num', v: values.signal };
+        } else if (values.domainCount !== undefined) {
+          valueSummary = { t: 'num', v: values.domainCount };
+        } else {
+          valueSummary = { t: 'none' };
+        }
+        debugStore.updateProbe(probeId, valueSummary, tMs);
       }
 
       // Return empty group (no visual output)

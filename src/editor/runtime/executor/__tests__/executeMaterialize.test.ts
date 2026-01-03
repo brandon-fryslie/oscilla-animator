@@ -25,26 +25,47 @@ const defaultTime = { tAbsMs: 1000, tModelMs: 1000, phase01: 0.5 };
  * Only includes the fields needed by executeMaterialize.
  */
 function createMinimalProgram(step: StepMaterialize): CompiledProgramIR {
+  // Determine which slots are used in the step
+  const domainSlot = step.materialization.domainSlot;
+  const outSlot = step.materialization.outBufferSlot;
+
+  // Create slotMeta for all slots used (domain and output)
+  const maxSlot = Math.max(domainSlot, outSlot);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const slotMeta: any[] = [];
+
+  for (let i = 0; i <= maxSlot; i++) {
+    slotMeta.push({
+      slot: i,
+      storage: "object",
+      offset: i,
+      type: { world: "signal", domain: "unknown", category: "internal", busEligible: false },
+      debugName: `slot${i}`,
+    });
+  }
+
   return {
     schedule: { steps: [step] },
     // Minimal field expression table - single const node
-    fields: {
+    fieldExprs: {
       nodes: [
         {
           kind: "const",
-          type: { world: "field", domain: "float", channels: 1 },
+          type: { world: "field", domain: "float", category: "core", busEligible: true },
           constId: 0,
         },
       ],
     },
     // Minimal signal expression table
-    signalTable: {
+    signalExprs: {
       nodes: [],
     },
     // Minimal constant pool
     constants: {
       json: [42], // const value for field node
     },
+    // SlotMeta required for materialize steps
+    slotMeta,
   } as unknown as CompiledProgramIR;
 }
 

@@ -301,7 +301,7 @@ export interface TargetScene {
 // Patch Graph Data Model
 // =============================================================================
 
-import type { BlockType, BlockId, BlockCategory, Bus, Publisher, Listener } from '../types';
+import type { BlockType, BlockId, BlockCategory, Bus } from '../types';
 export type { BlockType, BlockId, BlockCategory };
 
 export interface BlockInstance {
@@ -318,25 +318,12 @@ export interface BlockInstance {
 // Import types from main editor types for use in CompilerPatch
 import type { LensInstance, AdapterStep } from '../types';
 // Re-export for consumers
-export type { Bus, Publisher, Listener, LensInstance, AdapterStep };
+export type { Bus, LensInstance, AdapterStep };
 
 // Import Domain from unified compiler
 import type { Domain } from './unified/Domain';
 // Re-export Domain for consumers
 export type { Domain };
-
-export interface CompilerConnection {
-  /** Optional unique ID (from store Connection) */
-  id?: string;
-  from: { block: BlockId; port: string };
-  to: { block: BlockId; port: string };
-  /** Optional lens stack for value transformation (applied after adapters) */
-  lensStack?: LensInstance[];
-  /** Optional adapter chain for type conversion (applied before lenses) */
-  adapterChain?: AdapterStep[];
-  /** Whether this connection is enabled (default: true) */
-  enabled?: boolean;
-}
 
 /**
  * Discriminated union of artifacts.
@@ -497,14 +484,13 @@ export type CompileErrorCode =
   | 'UnsupportedLensInIRMode'
   // P1: Pass 8 hardening (type-contracts-ir-plumbing)
   | 'MissingOutputRegistration'
-  | 'BusWithoutPublisher'
   // Sprint 2 P2: Bus-Block Unification
   | 'UnmigratedBusEdge';
 
 export interface CompileError {
   code: CompileErrorCode;
   message: string;
-  where?: { blockId?: string; port?: string; connection?: CompilerConnection; busId?: string; blockType?: string; outputType?: unknown };
+  where?: { blockId?: string; port?: string; edgeId?: string; busId?: string; blockType?: string; outputType?: unknown };
 }
 
 // Import LinkedGraphIR for dual-emit support (Sprint 2, P0-4)
@@ -544,14 +530,17 @@ export interface CompileResult {
 }
 
 /**
- * Full patch representation including blocks, connections, buses, and metadata.
+ * Full patch representation including blocks, edges, buses, and metadata.
+ *
+ * Sprint: Edge-based architecture migration (2026-01-02)
+ * - Uses Edge type from editor/types.ts (unified connection type)
+ * - Buses are BusBlocks in the blocks array
  */
 export interface CompilerPatch {
   blocks: readonly BlockInstance[];
-  connections: readonly CompilerConnection[];
+  /** Unified edges - all connections are port-to-port */
+  edges: readonly import('../types').Edge[];
   buses: readonly Bus[];
-  listeners: readonly Listener[];
-  publishers: readonly Publisher[];
   /** Default sources keyed by "blockId:slotId" */
   defaultSources?: Record<string, unknown>;
   /** Default source values keyed by "blockId:slotId" */

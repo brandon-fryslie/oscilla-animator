@@ -37,21 +37,21 @@ export function executeSignalEval(
   runtime: RuntimeState,
   effectiveTime: { tAbsMs: number; tModelMs?: number; phase01?: number; wrapEvent?: number },
 ): void {
-  // VALIDATION: Hard-fail if signalTable is missing but step has outputs
+  // VALIDATION: Hard-fail if signalExprs is missing but step has outputs
   // This prevents silent failures where slots remain uninitialized
-  if (program.signalTable === undefined || program.signalTable.nodes === undefined) {
+  if (program.signalExprs === undefined || program.signalExprs.nodes === undefined) {
     if (step.outputs.length > 0) {
       throw new Error(
-        `executeSignalEval: signalTable is required when step has outputs. ` +
-        `Step has ${step.outputs.length} outputs but program.signalTable is missing. ` +
-        `Ensure compiler emits signalTable for patches with signal expressions.`
+        `executeSignalEval: signalExprs is required when step has outputs. ` +
+        `Step has ${step.outputs.length} outputs but program.signalExprs is missing. ` +
+        `Ensure compiler emits signalExprs for patches with signal expressions.`
       );
     }
-    // No outputs and no signalTable - this is valid (noop step)
+    // No outputs and no signalExprs - this is valid (noop step)
     return;
   }
 
-  const signalTable = program.signalTable.nodes;
+  const signalTable = program.signalExprs.nodes;
   const constPool = program.constants?.json ?? [];
   const numbers = constPool.map((value) => (typeof value === "number" ? value : NaN));
 

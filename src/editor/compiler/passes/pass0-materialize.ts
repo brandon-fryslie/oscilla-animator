@@ -11,18 +11,26 @@
  * - compiler-final/ARCHITECTURE-RECOMMENDATIONS.md Part 2
  */
 
-import type { CompilerPatch, CompilerConnection, BlockInstance } from '../types';
-import type { SlotWorld } from '../../types';
+import type { CompilerPatch, BlockInstance } from '../types';
+import type { SlotWorld, Edge } from '../../types';
 import type { TypeDesc } from '../ir/types';
 import { getBlockDefinition } from '../../blocks';
 
 /**
- * Map world + domain to DSConst* block type.
+ * Map world + domain to provider block type.
  * Returns the appropriate provider block type for a given input's type.
+ *
+ * Workstream 03: Domain defaults use DomainN, not DSConstSignalFloat.
  */
 function selectProviderType(world: SlotWorld, domain: string): string {
   // Normalize world: 'config' becomes 'scalar' at compile time
   const normalizedWorld = world === 'config' ? 'scalar' : world;
+
+  // Special case: config/domain uses DomainN structural block
+  // Workstream 03: Domain inputs get structural defaults (DomainN) instead of signal constants
+  if (world === 'config' && domain === 'domain') {
+    return 'DomainN';
+  }
 
   const key = `${normalizedWorld}:${domain}`;
 
@@ -65,18 +73,19 @@ function isInputDriven(
   blockId: string,
   slotId: string
 ): boolean {
-  // Check for wire: any connection to this input
-  const hasWire = patch.connections.some(
-    c => c.to.block === blockId && c.to.port === slotId
+  // Check for edge: any edge to this input
+  const hasEdge = patch.edges.some(
+    e => e.to.blockId === blockId && e.to.slotId === slotId
   );
 
-  // Check for listener: any enabled bus listener to this input
-  const hasListener = patch.listeners.some(
-    l => l.to?.blockId === blockId && l.to?.slotId === slotId && l.enabled
+  // Bus-Block Unification: Check for edge from any BusBlock to this input
+  const busBlockIds = new Set(patch.blocks.filter(b => b.type === 'BusBlock').map(b => b.id));
+  const hasListener = patch.edges.some(
+    e => busBlockIds.has(e.from.blockId) && e.to.blockId === blockId && e.to.slotId === slotId
   );
 
-  // Returns true if EITHER check is true (has wire OR has listener)
-  return hasWire || hasListener;
+  // Returns true if EITHER check is true (has edge OR has listener)
+  return hasEdge || hasListener;
 }
 
 /**
@@ -95,23 +104,26 @@ function generateProviderId(blockId: string, slotId: string): string {
  *
  * This function runs FIRST in the pipeline. It scans all blocks for inputs that:
  * 1. Have a defaultSource defined in block metadata
- * 2. Are not connected via any CompilerConnection
+ * 2. Are not connected via any Edge
  * 3. Are not connected via any enabled bus Listener
  *
  * For each such input, it:
- * 1. Creates a hidden DSConst* provider block with the default value
- * 2. Creates a CompilerConnection from the provider to the input
+ * 1. Creates a hidden provider block (DSConst* or DomainN) with the default value
+ * 2. Creates an Edge from the provider to the input
  *
  * The result is a patch where simple defaults are materialized as blocks.
  * Advanced defaults (from System 1) will be injected later and will skip inputs
  * that already have connections from System 2.
+ *
+ * Workstream 03 (P0): Domain defaults create DomainN blocks, not DSConst* blocks.
+ * This fixes render sinks that expect structural domain providers.
  *
  * @param patch - The CompilerPatch from editorToPatch
  * @returns A new CompilerPatch with materialized default sources as hidden blocks
  */
 export function materializeDefaultSources(patch: CompilerPatch): CompilerPatch {
   const newBlocks: BlockInstance[] = [];
-  const newConnections: CompilerConnection[] = [];
+  const newEdges: Edge[] = [];
 
   // Scan all blocks for unconnected inputs with defaults
   for (const block of patch.blocks) {
@@ -166,30 +178,52 @@ export function materializeDefaultSources(patch: CompilerPatch): CompilerPatch {
         continue;
       }
 
+      // Workstream 03: Domain defaults create DomainN with N from defaultSource.value
+      // DomainN expects { n: int, seed: int } params
+      let providerParams: Record<string, unknown>;
+      if (providerType === 'DomainN') {
+        // Domain default: wire defaultSource.value to DomainN.n
+        const count = typeof defaultSource.value === 'number'
+          ? Math.max(1, Math.floor(defaultSource.value))
+          : 30; // Safe default if value is invalid
+
+        providerParams = {
+          n: count,
+          seed: 0, // Default seed
+        };
+      } else {
+        // Standard DSConst* block: { value: T }
+        providerParams = { value: defaultSource.value };
+      }
+
       // Create the hidden provider BlockInstance (minimal format for CompilerPatch)
       const provider: BlockInstance = {
         id: providerId,
         type: providerType,
-        params: { value: defaultSource.value },
+        params: providerParams,
         position: 0, // Hidden blocks have no position in CompilerPatch
       };
 
-      // Create CompilerConnection from provider output to block input
-      const connection: CompilerConnection = {
-        id: `${providerId}_conn`,
-        from: { block: providerId, port: 'out' },
-        to: { block: block.id, port: inputDef.id },
+      // Create Edge from provider output to block input
+      // DomainN output port is 'domain', DSConst* output port is 'out'
+      const providerOutputPort = providerType === 'DomainN' ? 'domain' : 'out';
+
+      const edge: Edge = {
+        id: `${providerId}_edge`,
+        from: { kind: 'port', blockId: providerId, slotId: providerOutputPort },
+        to: { kind: 'port', blockId: block.id, slotId: inputDef.id },
+        enabled: true,
       };
 
       newBlocks.push(provider);
-      newConnections.push(connection);
+      newEdges.push(edge);
     }
   }
 
-  // Return new patch with augmented blocks and connections
+  // Return new patch with augmented blocks and edges
   return {
     ...patch,
     blocks: [...patch.blocks, ...newBlocks],
-    connections: [...patch.connections, ...newConnections],
+    edges: [...patch.edges, ...newEdges],
   };
 }

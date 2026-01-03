@@ -1,0 +1,81 @@
+Agent: project-evaluator | 2025-12-31
+Scope: phase0-architecture-refactoring (all 4 topics)
+Completion: 0% complete | Gaps: 4 major refactors | Test Quality: 0/5 (no tests for refactors yet)
+Reused: 3 eval-cache files (HIGH confidence) | Fresh: Full comprehensive evaluation
+Cache updated: None (phase0 is new topic)
+Ambiguities: 1 found (hidden providers confusion) | Workflow: CONTINUE
+-> Start with Topic 1 (unify-connections-edge), 2-3 weeks total effort
+
+=== DETAILED FINDINGS ===
+
+Topic 1: unify-connections-edge [NOT STARTED]
+- Problem: 3 separate types (Connection, Publisher, Listener) duplicated across compiler passes
+- Impact: Every pass (2,6,7,8) has three-way handling logic
+- Target: Unified Edge type with discriminated Endpoint union
+- Effort: 2-3 days | Risk: MEDIUM | Files: 6 major
+
+Topic 2: unify-default-sources-blocks [NOT STARTED]
+- Problem: Default sources are metadata, not blocks (special-case resolution)
+- Impact: Three-way priority logic (wire > listener > default)
+- Target: Hidden DSConst* blocks, ALL inputs connected via edges
+- Effort: 2-3 days | Risk: MEDIUM-HIGH | Files: 4 major
+- CONFLICT: 18-sprint hidden providers work may overlap (needs clarification)
+
+Topic 3: v2-adapter-implementation [NOT STARTED]
+- Problem: V2 adapter is complete stub (returns Error artifacts)
+- Impact: Legacy bridge blocks cannot use new IR compiler
+- Target: Full implementation with V1/V2 closure mixing
+- Effort: 3-5 days | Risk: MEDIUM | Files: 3 major
+
+Topic 4: unify-lenses-adapters [NOT STARTED - LOWER PRIORITY]
+- Problem: Two separate registries (LensRegistry, AdapterRegistry)
+- Impact: Duplicated transform logic, complex application
+- Target: Unified TransformRegistry with kind discriminator
+- Effort: 2-3 days | Risk: LOW-MEDIUM | Files: 6 major
+- NOTE: Lower priority, can defer until after other topics
+
+=== CRITICAL PATH ===
+1. unify-connections-edge (required first)
+2. unify-default-sources-blocks (required second)
+3. v2-adapter-implementation (required third)
+4. unify-lenses-adapters (optional cleanup)
+
+Total: 10-16 days (2-3 weeks)
+
+=== RISKS ===
+HIGH RISK:
+- Serialization format changes (Topics 1 & 2) - all saved patches need migration
+- V2 Adapter runtime safety (Topic 3) - mixed V1/V2 execution could fail silently
+- Hidden providers confusion (Topic 2) - two different systems may conflict
+
+MEDIUM RISK:
+- Compiler pass refactoring - multiple passes need simultaneous updates
+- UI updates - connection rendering, inspector panels need changes
+
+=== TEST STATUS ===
+Existing: 302 test files, all passing with minor warnings
+Phase 0: NO TESTS YET (0 tests for any refactor)
+Required: ~12-16 new test suites (3-4 per topic)
+
+=== EVAL CACHE REUSED ===
+1. workstream-alignment.md (HIGH) - 18 sprints hidden providers work
+2. type-contracts-divergence.md (HIGH) - TypeDesc incompatibilities
+3. adapter-application-status.md (HIGH) - Pass 8 application
+
+=== OPEN QUESTIONS ===
+1. Relationship between "default sources as blocks" (Topic 2) and 18-sprint hidden providers work
+2. User approval for serialization format changes (Topics 1 & 2)
+3. Priority: Should we complete Phase 0 before returning to field runtime primitives?
+
+=== COMPLETION GATE (FROM ROADMAP) ===
+Before moving to Phase 6 or other work:
+- [ ] All edges use unified Edge type
+- [ ] All inputs connected via edges (no special default source handling)
+- [ ] V2 adapter compiles legacy bridge blocks
+- [ ] Golden patch compiles and runs with new structure
+
+=== NEXT IMMEDIATE ACTION ===
+1. Clarify hidden providers confusion (Topic 2)
+2. Get user approval for serialization changes
+3. Start Topic 1 (unify-connections-edge)
+4. Write tests FIRST for edge type conversions

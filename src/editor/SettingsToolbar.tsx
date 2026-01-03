@@ -308,8 +308,8 @@ function validatePatchStructure(patch: unknown): string | null {
     return 'Invalid patch file. Missing required field: blocks';
   }
 
-  if (!Array.isArray(p.connections)) {
-    return 'Invalid patch file. Missing required field: connections';
+  if (!Array.isArray(p.edges)) {
+    return 'Invalid patch file. Missing required field: edges';
   }
 
   return null;
@@ -631,7 +631,7 @@ export const SettingsToolbar = observer(({
         <div className="toolbar-divider" />
 
         <span className="toolbar-status">
-          {store.patchStore.blocks.length} blocks · {store.patchStore.connections.length} connections
+          {store.patchStore.blocks.length} blocks · {store.patchStore.edges.length} edges
         </span>
       </div>
     </div>

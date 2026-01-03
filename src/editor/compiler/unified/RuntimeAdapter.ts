@@ -122,20 +122,12 @@ export class RuntimeAdapter {
 
   /**
    * Evaluate a single bus.
+   * NOTE: Bus evaluation requires connection information from the graph.
+   * This implementation is a placeholder that returns undefined.
    */
   private evaluateBus(bus: CompiledBus, ctx: TimeCtx): void {
-    // Collect publisher outputs
+    // Call bus evaluator (no inputs for now - would need connection info)
     const inputs: Record<string, unknown> = {};
-
-    for (const pub of bus.publishers) {
-      const blockOutputs = this.blockOutputs.get(pub.blockId);
-      if (blockOutputs != null) {
-        const key = `${pub.blockId}.${pub.port}`;
-        inputs[key] = blockOutputs[pub.port];
-      }
-    }
-
-    // Call bus evaluator
     const output = bus.evaluator(inputs, null, ctx);
 
     // Store bus output
@@ -144,6 +136,8 @@ export class RuntimeAdapter {
 
   /**
    * Collect inputs for a block from connection sources.
+   * NOTE: This requires connection information from the dependency graph.
+   * The current implementation returns empty inputs.
    */
   private collectBlockInputs(blockId: string): Record<string, unknown> {
     const inputs: Record<string, unknown> = {};
@@ -164,17 +158,8 @@ export class RuntimeAdapter {
       }
     }
 
-    // Collect from bus listeners
-    for (const bus of this.compilation.buses) {
-      for (const listener of bus.listeners) {
-        if (listener.blockId === blockId) {
-          const busValue = this.busOutputs.get(bus.id);
-          if (busValue !== undefined) {
-            inputs[listener.port] = busValue;
-          }
-        }
-      }
-    }
+    // NOTE: Bus subscriptions would go here, but require graph connection info
+    // which is not currently tracked in CompiledBus
 
     return inputs;
   }

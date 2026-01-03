@@ -4,11 +4,14 @@
  * Verifies that PatchStore uses kernel transactions correctly and maintains
  * MobX reactivity after kernel commits.
  *
- * NOTE: These tests are currently marked as .todo() because the actual
- * PatchStore-to-Kernel integration has not been implemented yet.
- * See: .agent_planning/ui-prep-refactor/DELIVERABLE-3-PROGRESS.md
+ * STATUS: FUTURE FUNCTIONALITY
+ * These tests document planned integration between PatchStore and PatchKernel.
+ * Currently, PatchStore uses TxBuilder for mutations (separate from PatchKernel).
+ * When kernel integration is prioritized, remove .todo() and implement the bridge.
  *
- * Once Deliverable 3 is complete, remove .todo() and these tests should pass.
+ * Working tests (Transaction Isolation) verify current TxBuilder behavior.
+ * Future tests (Kernel State Sync, Transaction History, Complex Operations)
+ * are marked .todo() until kernel integration is implemented.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -22,7 +25,8 @@ describe('PatchStore - Kernel Transaction Integration', () => {
     root = new RootStore();
   });
 
-  describe.todo('Transaction Isolation', () => {
+  // These tests work with current TxBuilder implementation
+  describe('Transaction Isolation', () => {
     it('should not corrupt patch state when transaction validation fails', () => {
       // Add a valid block
       const blockId = root.patchStore.addBlock('FieldConstNumber', { value: 42 });
@@ -62,6 +66,7 @@ describe('PatchStore - Kernel Transaction Integration', () => {
     });
   });
 
+  // FUTURE: These tests require PatchStore-to-Kernel integration
   describe.todo('Kernel State Sync', () => {
     it('should keep kernel.doc in sync with observable state', () => {
       // Add block via PatchStore
@@ -85,17 +90,18 @@ describe('PatchStore - Kernel Transaction Integration', () => {
       root.patchStore.connect(source, 'value', sink, 'value');
 
       // Verify kernel state
-      expect(root.kernel.doc.connections).toHaveLength(1);
-      expect(root.kernel.doc.connections[0].from.blockId).toBe(source);
-      expect(root.kernel.doc.connections[0].to.blockId).toBe(sink);
+      expect(root.kernel.doc.edges).toHaveLength(1);
+      expect(root.kernel.doc.edges[0].from.blockId).toBe(source);
+      expect(root.kernel.doc.edges[0].to.blockId).toBe(sink);
 
       // Verify observable state
-      expect(root.patchStore.connections).toHaveLength(1);
-      expect(root.patchStore.connections[0].from.blockId).toBe(source);
-      expect(root.patchStore.connections[0].to.blockId).toBe(sink);
+      expect(root.patchStore.edges).toHaveLength(1);
+      expect(root.patchStore.edges[0].from.blockId).toBe(source);
+      expect(root.patchStore.edges[0].to.blockId).toBe(sink);
     });
   });
 
+  // FUTURE: These tests require PatchStore-to-Kernel integration
   describe.todo('Transaction History', () => {
     it('should support undo after adding block', () => {
       // Add a block
@@ -129,6 +135,7 @@ describe('PatchStore - Kernel Transaction Integration', () => {
     });
   });
 
+  // FUTURE: These tests require PatchStore-to-Kernel integration
   describe.todo('Complex Operations', () => {
     it('should handle block removal with cascade (connections removed)', () => {
       // Create blocks and connection
@@ -137,18 +144,18 @@ describe('PatchStore - Kernel Transaction Integration', () => {
       root.patchStore.connect(source, 'value', sink, 'value');
 
       expect(root.patchStore.blocks).toHaveLength(2);
-      expect(root.patchStore.connections).toHaveLength(1);
+      expect(root.patchStore.edges).toHaveLength(1);
 
       // Remove source block
       root.patchStore.removeBlock(source);
 
       // Both block and connection should be gone
       expect(root.patchStore.blocks).toHaveLength(1);
-      expect(root.patchStore.connections).toHaveLength(0);
+      expect(root.patchStore.edges).toHaveLength(0);
 
       // Kernel state should match
       expect(root.kernel.doc.blocks).toHaveLength(1);
-      expect(root.kernel.doc.connections).toHaveLength(0);
+      expect(root.kernel.doc.edges).toHaveLength(0);
     });
   });
 });

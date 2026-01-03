@@ -11,10 +11,7 @@ import type {
   Block,
   BlockId,
   BlockType,
-  Connection,
-  Bus,
-  Publisher,
-  Listener,
+  Edge,
   Patch,
   PortRef,
 } from '../types';
@@ -60,74 +57,18 @@ export type BlockPatchParams = {
 
 export type WireAdd = {
   op: 'WireAdd';
-  connection: Connection; // includes id, from/to PortRef
+  edge: Edge; // includes id, from/to Endpoint, transforms
 };
 
 export type WireRemove = {
   op: 'WireRemove';
-  connectionId: string;
+  edgeId: string;
 };
 
 export type WireRetarget = {
   op: 'WireRetarget';
-  connectionId: string;
+  edgeId: string;
   next: { from?: PortRef; to?: PortRef };
-};
-
-// =============================================================================
-// Bus Ops
-// =============================================================================
-
-export type BusAdd = {
-  op: 'BusAdd';
-  bus: Bus;
-};
-
-export type BusRemove = {
-  op: 'BusRemove';
-  busId: string;
-};
-
-export type BusUpdate = {
-  op: 'BusUpdate';
-  busId: string;
-  patch: Partial<Pick<Bus, 'name' | 'combine' | 'defaultValue' | 'sortKey'>>;
-};
-
-// =============================================================================
-// Binding Ops (Publishers / Listeners)
-// =============================================================================
-
-export type PublisherAdd = {
-  op: 'PublisherAdd';
-  publisher: Publisher;
-};
-
-export type PublisherRemove = {
-  op: 'PublisherRemove';
-  publisherId: string;
-};
-
-export type PublisherUpdate = {
-  op: 'PublisherUpdate';
-  publisherId: string;
-  patch: Partial<Pick<Publisher, 'enabled' | 'sortKey' | 'adapterChain' | 'lensStack'>>;
-};
-
-export type ListenerAdd = {
-  op: 'ListenerAdd';
-  listener: Listener;
-};
-
-export type ListenerRemove = {
-  op: 'ListenerRemove';
-  listenerId: string;
-};
-
-export type ListenerUpdate = {
-  op: 'ListenerUpdate';
-  listenerId: string;
-  patch: Partial<Pick<Listener, 'enabled' | 'adapterChain' | 'lensStack'>>;
 };
 
 // =============================================================================
@@ -155,9 +96,7 @@ export type CompositeDefReplaceGraph = {
   defId: string;
   nextGraph: {
     nodes: Block[];
-    edges: Connection[];
-    publishers?: Publisher[];
-    listeners?: Listener[];
+    edges: Edge[];
   };
   // TODO: Define ExposedPort type if not in imports
   nextExposed: { inputs: unknown[]; outputs: unknown[] };
@@ -210,15 +149,6 @@ export type Op =
   | WireAdd
   | WireRemove
   | WireRetarget
-  | BusAdd
-  | BusRemove
-  | BusUpdate
-  | PublisherAdd
-  | PublisherRemove
-  | PublisherUpdate
-  | ListenerAdd
-  | ListenerRemove
-  | ListenerUpdate
   | CompositeDefAdd
   | CompositeDefRemove
   | CompositeDefUpdate

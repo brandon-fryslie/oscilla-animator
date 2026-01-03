@@ -60,7 +60,6 @@ type PortRef = {
 5. Compilation never mutates the document
 
 **5. Test Requirements** (Section 11)
-- Composite bus listener survives internal change
 - Diagnostics location stable across compilation
 - No document mutation during compile
 
@@ -90,7 +89,6 @@ type PortRef = {
 - **Status**: COMPLETE
 - **Evidence**: `src/editor/compiler/compileBusAware.ts:527-565`
   - Wire connection source port validation (lines 530-545)
-  - Publisher source port validation (lines 548-563)
   - Emits `PortMissing` diagnostic with context
 - **What it fixed**: Fail-fast validation prevents cryptic `UpstreamError` at runtime
 
@@ -120,7 +118,6 @@ type PortRef = {
 **3. Composite Boundary Enforcement**
 - **Spec requirement**: Composites define `portMap` (external → internal)
 - **Current state**: Composite expansion is document-level (macro-style)
-- **Impact**: Bus listeners cannot target composite inputs (they break on expansion)
 - **Evidence**:
   - `src/editor/composites.ts` has no `portMap` field
   - Composite compilation still expands into flat graph
@@ -232,12 +229,8 @@ The port identity quick fix sprint was **well-scoped and unambiguous**:
 
 **Rationale**: The spec's "coffin nail" tests (Section 11) are missing.
 
-**Test 1**: Composite bus listener survives internal change
 ```typescript
-it('composite bus listener survives when internal graph changes', () => {
-  // 1. Create composite with bus listener on external port
   // 2. Modify composite internal wiring
-  // 3. Verify listener still resolves and affects output
 });
 ```
 
@@ -287,7 +280,6 @@ it('compilation does not mutate patch document', () => {
 - **Deliverables**:
   - Add `portMap` to `CompositeDefinition`
   - Implement two-phase compilation (port graph → block compilation)
-  - Update bus listeners to resolve through composite boundaries
   - Add "coffin nail" tests from spec
 
 ### Long-Term (P2): Type-Based Port Resolution

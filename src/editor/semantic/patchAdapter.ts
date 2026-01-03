@@ -17,10 +17,7 @@ import type { RootStore } from '../stores/RootStore';
 export function storeToPatchDocument(root: RootStore): PatchDocument {
   return {
     blocks: root.patchStore.blocks.map(blockToDocumentBlock),
-    connections: root.patchStore.connections,
-    buses: root.busStore.buses,
-    publishers: root.busStore.publishers,
-    listeners: root.busStore.listeners,
+    edges: root.patchStore.edges,
   };
 }
 

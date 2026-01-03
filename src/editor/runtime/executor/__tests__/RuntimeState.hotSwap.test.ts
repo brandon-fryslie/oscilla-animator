@@ -17,13 +17,12 @@ import type { CompiledProgramIR, StateLayout } from "../../../compiler/ir";
 // ============================================================================
 
 /**
- * Create minimal program for testing
+ * Creates a minimal test program for state hot-swap testing.
  */
 function createTestProgram(stateLayout: StateLayout, seed = 42): CompiledProgramIR {
   return {
     irVersion: 1,
     patchId: "test-patch",
-    patchRevision: 1,
     compileId: `test-compile-${seed}`,
     seed,
     timeModel: { kind: "infinite", windowMs: 10000 },
@@ -34,24 +33,22 @@ function createTestProgram(stateLayout: StateLayout, seed = 42): CompiledProgram
     adapters: { adapters: [] },
     fields: { nodes: [] },
     constants: {
-      json: [],
-      f64: new Float64Array([42.0, 100.0]),
-      f32: new Float32Array([]),
-      i32: new Int32Array([]),
-      constIndex: [
-        { k: "f64", idx: 0 },
-        { k: "f64", idx: 1 },
-      ],
+      json: [42.0, 100.0],
     },
     stateLayout,
+    // Signal and field expr tables must have non-zero length for cache tests
+    signalExprs: {
+      nodes: [{ kind: "const", constId: 0, type: { world: "signal", domain: "float", category: "core", busEligible: true } }],
+    },
+    fieldExprs: {
+      nodes: [{ kind: "const", constId: 0, type: { world: "field", domain: "float", category: "core", busEligible: true } }],
+    },
     schedule: {
       steps: [],
       stepIdToIndex: {},
       deps: {
         slotProducerStep: {},
         slotConsumers: {},
-        busDependsOnSlots: {},
-        busProvidesSlot: {},
       },
       determinism: {
         allowedOrderingInputs: [],
@@ -67,7 +64,7 @@ function createTestProgram(stateLayout: StateLayout, seed = 42): CompiledProgram
       sourceMap: {},
       names: { nodes: {}, buses: {}, steps: {} },
     },
-  };
+  } as unknown as CompiledProgramIR;
 }
 
 // ============================================================================

@@ -15,7 +15,7 @@
  * 3. User dropped a block to satisfy a specific input port
  */
 
-import type { Block, BlockId, Connection, SlotType } from './types';
+import type { Block, BlockId, Edge, SlotType } from './types';
 import { areTypesCompatible } from './portUtils';
 import type { BlockDefinition } from './blocks';
 
@@ -27,8 +27,8 @@ export interface AutoWireContext {
   /** All blocks in the patch */
   blocks: readonly Block[];
 
-  /** All existing connections */
-  connections: readonly Connection[];
+  /** All existing edges */
+  edges: readonly Edge[];
 
   /** The block just created */
   newBlockId: BlockId;
@@ -103,11 +103,11 @@ export function computeAutoWire(ctx: AutoWireContext): AutoWireResult {
  * Case 1: User wants to satisfy a specific input port with the new block.
  */
 function wireToExplicitInput(ctx: AutoWireContext): AutoWireResult {
-  const { toPort, newBlockId, newBlockDef, connections } = ctx;
+  const { toPort, newBlockId, newBlockDef, edges } = ctx;
   if (toPort === undefined) return { connections: [], reason: 'no toPort' };
 
   // Cannot overwrite existing input connection
-  if (hasIncomingConnection(connections, toPort.blockId, toPort.slotId)) {
+  if (hasIncomingConnection(edges, toPort.blockId, toPort.slotId)) {
     return { connections: [], reason: 'toPort already wired' };
   }
 
@@ -137,7 +137,7 @@ function wireToExplicitInput(ctx: AutoWireContext): AutoWireResult {
   };
 
   // Check for cycles
-  if (wouldCreateCycle(ctx.blocks, ctx.connections, candidate)) {
+  if (wouldCreateCycle(ctx.blocks, ctx.edges, candidate)) {
     return { connections: [], reason: 'would create cycle' };
   }
 
@@ -148,14 +148,14 @@ function wireToExplicitInput(ctx: AutoWireContext): AutoWireResult {
  * Case 2: User dragged from an output port and dropped a new block.
  */
 function wireFromExplicitOutput(ctx: AutoWireContext): AutoWireResult {
-  const { fromPort, newBlockId, newBlockDef, connections } = ctx;
+  const { fromPort, newBlockId, newBlockDef, edges } = ctx;
   if (fromPort === undefined) return { connections: [], reason: 'no fromPort' };
 
   // Find inputs on new block that match the source output type AND are free
   const matchingInputs = newBlockDef.inputs.filter((inp) => {
     if (!areTypesCompatible(fromPort.slotType, inp.type)) return false;
     // Must not already have an incoming connection
-    return !hasIncomingConnection(connections, newBlockId, inp.id);
+    return !hasIncomingConnection(edges, newBlockId, inp.id);
   });
 
   if (matchingInputs.length === 0) {
@@ -179,7 +179,7 @@ function wireFromExplicitOutput(ctx: AutoWireContext): AutoWireResult {
   };
 
   // Check for cycles
-  if (wouldCreateCycle(ctx.blocks, ctx.connections, candidate)) {
+  if (wouldCreateCycle(ctx.blocks, ctx.edges, candidate)) {
     return { connections: [], reason: 'would create cycle' };
   }
 
@@ -193,7 +193,7 @@ function wireFromExplicitOutput(ctx: AutoWireContext): AutoWireResult {
  * output in the entire patch that can satisfy it (and isn't already connected).
  */
 function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
-  const { blocks, connections, newBlockId, newBlockDef, getDefinition } = ctx;
+  const { blocks, edges, newBlockId, newBlockDef, getDefinition } = ctx;
   const result: AutoWireResult['connections'] = [];
 
   if (getDefinition === undefined) {
@@ -203,7 +203,7 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
   // For each input on the new block
   for (const newInput of newBlockDef.inputs) {
     // Skip if already has an incoming connection
-    if (hasIncomingConnection(connections, newBlockId, newInput.id)) continue;
+    if (hasIncomingConnection(edges, newBlockId, newInput.id)) continue;
     // Skip if already claimed by earlier autowire in this batch
     if (result.some((r) => r.toSlotId === newInput.id)) continue;
 
@@ -222,8 +222,8 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
 
         // Check this output isn't already connected to something
         // (optional: we could allow fan-out, but for now keep it simple)
-        const alreadyConnected = connections.some(
-          (c) => c.from.blockId === block.id && c.from.slotId === output.id
+        const alreadyConnected = edges.some(
+          (e) => e.from.blockId === block.id && e.from.slotId === output.id
         );
         if (alreadyConnected) continue;
 
@@ -234,7 +234,7 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
           toBlockId: newBlockId,
           toSlotId: newInput.id,
         };
-        if (wouldCreateCycle(blocks, [...connections, ...result.map(toConnection)], candidate)) {
+        if (wouldCreateCycle(blocks, [...edges, ...result.map(toEdge)], candidate)) {
           continue;
         }
 
@@ -271,23 +271,25 @@ function wireFromAllBlocks(ctx: AutoWireContext): AutoWireResult {
  * Check if an input port already has an incoming connection.
  */
 function hasIncomingConnection(
-  connections: readonly Connection[],
+  edges: readonly Edge[],
   blockId: BlockId,
   slotId: string
 ): boolean {
-  return connections.some(
-    (c) => c.to.blockId === blockId && c.to.slotId === slotId
+  return edges.some(
+    (e) => e.to.blockId === blockId && e.to.slotId === slotId
   );
 }
 
 /**
- * Convert our simple connection format to a Connection-like shape for cycle check.
+ * Convert our simple connection format to an Edge-like shape for cycle check.
  */
-function toConnection(c: AutoWireResult['connections'][0]): Connection {
+function toEdge(c: AutoWireResult['connections'][0]): Edge {
   return {
     id: 'temp',
-    from: { blockId: c.fromBlockId, slotId: c.fromSlotId, direction: 'output' },
-    to: { blockId: c.toBlockId, slotId: c.toSlotId, direction: 'input' },
+    from: { kind: 'port', blockId: c.fromBlockId, slotId: c.fromSlotId },
+    to: { kind: 'port', blockId: c.toBlockId, slotId: c.toSlotId },
+    enabled: true,
+    role: { kind: 'auto', meta: { reason: 'portMoved' } },
   };
 }
 
@@ -298,7 +300,7 @@ function toConnection(c: AutoWireResult['connections'][0]): Connection {
  */
 function wouldCreateCycle(
   blocks: readonly Block[],
-  existingConnections: readonly Connection[],
+  existingEdges: readonly Edge[],
   candidate: { fromBlockId: BlockId; toBlockId: BlockId }
 ): boolean {
   const src = candidate.fromBlockId;
@@ -312,8 +314,8 @@ function wouldCreateCycle(
   for (const block of blocks) {
     adj.set(block.id, new Set());
   }
-  for (const conn of existingConnections) {
-    adj.get(conn.from.blockId)?.add(conn.to.blockId);
+  for (const edge of existingEdges) {
+    adj.get(edge.from.blockId)?.add(edge.to.blockId);
   }
 
   // Add the candidate edge

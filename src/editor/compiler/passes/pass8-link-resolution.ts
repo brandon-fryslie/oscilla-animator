@@ -7,26 +7,34 @@
  * This pass finalizes the IR by ensuring every port has a concrete value
  * and there are no dangling references.
  *
- * Sprint: Bus-Block Unification - Sprint 2 (Compiler Unification)
- * P2: Unified edge processing - all edges are port→port after migration
+ * Sprint: Bus-Block Unification - Aggressive Cleanup (2026-01-02)
+ * - Removed Pass 7 (bus lowering) - buses are just blocks
+ * - Removed bus-specific validation
+ * - Removed migration utilities
+ *
+ * Workstream 04: Render Sink Emission Policy (2026-01-03)
+ * - Split applyRenderLowering into applyCameraLowering (cameras only)
+ * - Render blocks are lowered in pass6, not pass8
+ * - Prevents duplicate render sink registration
+ *
+ * Phase 0.5 Sprint 4: Deprecated Type Cleanup (2026-01-03)
+ * - Removed unused _wires parameter (CompilerConnection deprecated)
+ * - All connections now use Edge type exclusively
  *
  * References:
  * - design-docs/12-Compiler-Final/15-Canonical-Lowering-Pipeline.md § Pass 8
- * - PLAN-2025-12-25-200731.md P0-3: Pass 8 - Link Resolution
- * - .agent_planning/bus-block-unification/PLAN-2026-01-01-sprint2.md P2
+ * - .agent_planning/bus-block-unification/DOD-2026-01-02-121323.md
  */
 
-import type { Block, Listener, AdapterStep, LensInstance, TransformStep } from "../../types";
+import type { Block, TransformStep, AdapterStep, Edge } from "../../types";
 import type { BlockIndex } from "../ir/patches";
-import type { BusIndex } from "../ir/types";
 import type { IRBuilder } from "../ir/IRBuilder";
-import type { IRWithBusRoots, ValueRefPacked } from "./pass7-bus-lowering";
-import type { CompilerConnection, CompileError } from "../types";
+import type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
+import type { CompileError } from "../types";
 import { getBlockType } from "../ir/lowerTypes";
 import type { LowerCtx } from "../ir/lowerTypes";
-import { TRANSFORM_REGISTRY, isAdapterTransform, isLensTransform } from "../../transforms";
+import { TRANSFORM_REGISTRY } from "../../transforms";
 import type { TransformIRCtx } from "../../transforms";
-import { getEdgeTransforms } from "../../transforms/migrate";
 
 // =============================================================================
 // Types
@@ -63,9 +71,6 @@ export interface LinkedGraphIR {
   /** IRBuilder instance containing all emitted nodes */
   builder: IRBuilder;
 
-  /** Bus combine nodes */
-  busRoots: Map<BusIndex, ValueRefPacked>;
-
   /** Block output port mappings */
   blockOutputRoots: BlockOutputRootIR;
 
@@ -85,26 +90,24 @@ export interface LinkedGraphIR {
  *
  * Resolves all ports to concrete ValueRefs.
  *
- * Input: IRWithBusRoots (from Pass 7) + blocks + wires + listeners
+ * Input: UnlinkedIRFragments (from Pass 6) + blocks + edges
  * Output: LinkedGraphIR with complete port mappings
  *
  * For each block:
  * - Output ports: already in blockOutputs from Pass 6
- * - Input ports: resolve via wire → bus listener
+ * - Input ports: resolve via edges
  *
  * Note: Default sources are handled by Pass 0 (materializeDefaultSources),
- * which creates hidden provider blocks and wires for all unconnected inputs
+ * which creates hidden provider blocks and edges for all unconnected inputs
  * with defaultSource metadata. By the time Pass 8 runs, those inputs have
- * wires and don't need special handling.
+ * edges and don't need special handling.
  */
 export function pass8LinkResolution(
-  irWithBusRoots: IRWithBusRoots,
+  fragments: UnlinkedIRFragments,
   blocks: readonly Block[],
-  wires: readonly CompilerConnection[],
-  listeners: readonly Listener[],
-  edges?: readonly import("../../types").Edge[]
+  edges: readonly Edge[]
 ): LinkedGraphIR {
-  const { builder, busRoots, blockOutputs, errors: inheritedErrors } = irWithBusRoots;
+  const { builder, blockOutputs, errors: inheritedErrors } = fragments;
   const errors: CompileError[] = [...inheritedErrors];
 
   // Build BlockOutputRootIR from Pass 6 results
@@ -119,27 +122,21 @@ export function pass8LinkResolution(
   // This ensures downstream code can rely on field slots being registered
   registerFieldSlots(builder, blockOutputRoots);
 
-  // Build BlockInputRootIR by resolving wires, listeners, and defaults
+  // Build BlockInputRootIR by resolving edges (all port→port connections)
   const blockInputRoots = buildBlockInputRoots(
     blocks,
-    wires,
-    listeners,
-    busRoots,
     blockOutputs,
     builder,
     errors,
     edges
   );
 
-  applyRenderLowering(builder, blocks, blockInputRoots, blockOutputRoots, errors);
-
-  // P1 Validation 2: Bus Publisher Validation
-  // After bus lowering (pass7), verify buses have publishers
-  validateBusPublishers(busRoots, blockOutputs, blocks, errors);
+  // Workstream 04: Only apply camera lowering in pass8
+  // Render blocks are already lowered in pass6 and register their sinks there
+  applyCameraLowering(builder, blocks, blockInputRoots, blockOutputRoots, errors);
 
   return {
     builder,
-    busRoots,
     blockOutputRoots,
     blockInputRoots,
     errors,
@@ -157,15 +154,24 @@ function registerFieldSlots(
   }
 }
 
-function applyRenderLowering(
+/**
+ * Apply camera lowering in pass8.
+ *
+ * Camera blocks produce Special<cameraRef> outputs that are needed by
+ * render blocks. These must be lowered in pass8 (after input resolution)
+ * so that camera outputs are available when render blocks need them.
+ *
+ * Workstream 04: Split from applyRenderLowering to prevent duplicate
+ * render sink registration. Render blocks are lowered in pass6.
+ */
+function applyCameraLowering(
   builder: IRBuilder,
   blocks: readonly Block[],
   blockInputRoots: BlockInputRootIR,
   blockOutputRoots: BlockOutputRootIR,
   errors: CompileError[],
 ): void {
-  // Phase 1: Process Camera blocks (produce Special<cameraRef> outputs)
-  // These must run before render blocks so camera outputs are available
+  // Process Camera blocks (produce Special<cameraRef> outputs)
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx];
     if (block.type !== "Camera") {
@@ -203,7 +209,7 @@ function applyRenderLowering(
         errors.push({
           code: "MissingInput",
           message: `Missing required input for ${block.type}.${inputDecl.portId}. ` +
-                   `No wire connection found and no default source was materialized by Pass 0.`,
+                   `No edge connection found and no default source was materialized by Pass 0.`,
           where: { blockId: block.id, port: inputDecl.portId },
         });
         missingInput = true;
@@ -246,66 +252,20 @@ function applyRenderLowering(
     }
   }
 
-  // Phase 2: Process render blocks
+
+  // Workstream 04: Guard against render blocks in pass8
+  // Render blocks should be lowered in pass6 (via lowerBlockInstance)
+  // If we encounter any here, it indicates a compiler bug
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx];
     const decl = getBlockType(block.type);
-    if (decl === undefined || decl.capability !== "render") {
-      continue;
+    if (decl !== undefined && decl.capability === "render") {
+      console.warn(
+        `[Pass 8] Render block "${block.type}" (${block.id}) encountered in pass8. ` +
+        `Render blocks should be lowered in pass6 to avoid duplicate render sink registration. ` +
+        `This is likely a compiler bug.`
+      );
     }
-
-    const inputs: ValueRefPacked[] = [];
-    let missingInput = false;
-
-    for (const inputDecl of decl.inputs) {
-      // Scalar types are compile-time config values, not runtime IR
-      // They're passed to block lowering via config, not resolved here
-      if (inputDecl.type.world === "scalar") {
-        continue;
-      }
-
-      const portIdx = block.inputs.findIndex((p) => p.id === inputDecl.portId);
-      if (portIdx < 0) {
-        missingInput = true;
-        break;
-      }
-      const ref = blockInputRoots.refs[blockInputRoots.indexOf(blockIdx as BlockIndex, portIdx)];
-      if (ref === undefined) {
-        // Note: Pass 0 materializes all default sources as hidden provider blocks.
-        // If ref is undefined here, the input is missing and required.
-        // No need for defaultSource fallback - that's handled by Pass 0.
-        errors.push({
-          code: "MissingInput",
-          message: `Missing required input for ${block.type}.${inputDecl.portId}. ` +
-                   `No wire connection found and no default source was materialized by Pass 0.`,
-          where: { blockId: block.id, port: inputDecl.portId },
-        });
-        missingInput = true;
-        break;
-      }
-      inputs.push(ref);
-    }
-
-    if (missingInput) {
-      continue;
-    }
-
-    const ctx: LowerCtx = {
-      blockIdx: blockIdx as BlockIndex,
-      blockType: block.type,
-      instanceId: block.id,
-      label: block.label,
-      inTypes: decl.inputs.map((input) => input.type),
-      outTypes: decl.outputs.map((output) => output.type),
-      b: builder,
-      seedConstId: builder.allocConstId(0),
-    };
-
-    decl.lower({
-      ctx,
-      inputs,
-      config: block.params,
-    });
   }
 }
 
@@ -344,146 +304,139 @@ function buildBlockOutputRoots(
 }
 
 // =============================================================================
-// Transform Application (Track A.4 - Unified Transform Application)
+// Transform Application (Phase 2: Unified IR Dispatcher)
 // =============================================================================
 
 /**
- * Apply a single adapter transform step to a value reference.
+ * Get transform steps from an edge.
  *
- * Applies the adapter's compileToIR function. If the adapter doesn't support
- * IR compilation or fails to compile, adds an error and returns the input unchanged.
- *
- * Track A.4: Helper function extracted from legacy applyAdapterChain.
+ * All edges must have a 'transforms' field - no legacy format support.
  */
-function applyAdapterStep(
-  valueRef: ValueRefPacked,
-  step: AdapterStep,
-  builder: IRBuilder,
-  errors: CompileError[],
-  context: string
-): ValueRefPacked {
-  const transformDef = TRANSFORM_REGISTRY.getTransform(step.adapterId);
-
-  if (transformDef === undefined) {
-    errors.push({
-      code: "UnsupportedAdapterInIRMode",
-      message: `Unknown adapter '${step.adapterId}' in ${context}. This adapter is not registered.`,
-    });
-    return valueRef; // Continue with original value
-  }
-
-  if (!isAdapterTransform(transformDef)) {
-    errors.push({
-      code: "UnsupportedAdapterInIRMode",
-      message: `Transform '${transformDef.label}' used in ${context} is not an adapter (it's a ${transformDef.kind}).`,
-    });
-    return valueRef;
-  }
-
-  if (transformDef.compileToIR === undefined) {
-    errors.push({
-      code: "UnsupportedAdapterInIRMode",
-      message: `Adapter '${transformDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
-               `This adapter requires special runtime handling that hasn't been implemented in the IR compiler. ` +
-               `To use this adapter, either:\n` +
-               `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
-               `  - Remove this adapter from your connection\n` +
-               `  - Use an alternative adapter if available`,
-    });
-    return valueRef; // Continue with original value
-  }
-
-  // Apply the adapter's IR compilation
-  const irCtx: TransformIRCtx = {
-    builder,
-    transformId: step.adapterId,
-    params: step.params,
-  };
-
-  const transformed = transformDef.compileToIR(valueRef, {}, irCtx);
-  if (transformed === null) {
-    errors.push({
-      code: "UnsupportedAdapterInIRMode",
-      message: `Adapter '${transformDef.label}' in ${context} failed to compile to IR. ` +
-               `The input type may be incompatible with this adapter.`,
-    });
-    return valueRef; // Continue with original value
-  }
-
-  return transformed;
+function getEdgeTransforms(edge: Edge): readonly TransformStep[] {
+  return edge.transforms ?? [];
 }
 
 /**
- * Apply a single lens transform step to a value reference.
+ * Apply a single transform step to a value reference in IR mode.
  *
- * Applies the lens's compileToIR function. If the lens doesn't support
- * IR compilation or fails to compile, adds an error and returns the input unchanged.
+ * Phase 2 Deliverable: Unified single-step IR application.
+ * Works identically for adapters and lenses.
  *
- * Track A.4: Helper function extracted from legacy applyLensStack.
+ * Note: This function handles the TransformStep format where:
+ * - Adapters are AdapterStep (no 'kind' field)
+ * - Lenses are { kind: 'lens', lens: LensInstance }
+ *
+ * @param valueRef - Input value reference
+ * @param step - Transform step (adapter or lens)
+ * @param builder - IR builder for creating new IR nodes
+ * @param errors - Array to collect compilation errors
+ * @param context - Human-readable context for error messages
+ * @returns Transformed value reference (or original if transform fails)
  */
-function applyLensStep(
+function applyTransformStepIR(
   valueRef: ValueRefPacked,
-  lensInstance: LensInstance,
+  step: TransformStep,
   builder: IRBuilder,
   errors: CompileError[],
   context: string
 ): ValueRefPacked {
-  const transformDef = TRANSFORM_REGISTRY.getTransform(lensInstance.lensId);
+  // Discriminate between adapter and lens using 'kind' field
+  const isLens = 'kind' in step && step.kind === 'lens';
+
+  // Check if lens is disabled (adapters don't have enabled field yet)
+  if (isLens && step.lens.enabled === false) {
+    return valueRef;
+  }
+
+  // Get transform ID based on type
+  const transformId = isLens ? step.lens.lensId : (step as AdapterStep).adapterId;
+
+  // Get transform definition from registry
+  const transformDef = TRANSFORM_REGISTRY.getTransform(transformId);
 
   if (transformDef === undefined) {
+    const transformKind = isLens ? 'lens' : 'adapter';
+    const errorCode = isLens ? 'UnsupportedLensInIRMode' : 'UnsupportedAdapterInIRMode';
     errors.push({
-      code: "UnsupportedLensInIRMode",
-      message: `Unknown lens '${lensInstance.lensId}' in ${context}. This lens is not registered.`,
+      code: errorCode,
+      message: `Unknown ${transformKind} '${transformId}' in ${context}. This ${transformKind} is not registered.`,
     });
     return valueRef; // Continue with original value
   }
 
-  if (!isLensTransform(transformDef)) {
+  // Validate transform kind matches step type
+  const expectedKind = isLens ? 'lens' : 'adapter';
+  if (transformDef.kind !== expectedKind) {
+    const errorCode = isLens ? 'UnsupportedLensInIRMode' : 'UnsupportedAdapterInIRMode';
     errors.push({
-      code: "UnsupportedLensInIRMode",
-      message: `Transform '${transformDef.label}' used in ${context} is not a lens (it's a ${transformDef.kind}).`,
+      code: errorCode,
+      message: `Transform '${transformDef.label}' used in ${context} is not a ${expectedKind} (it's a ${transformDef.kind}).`,
     });
     return valueRef;
   }
 
+  // Check if transform supports IR compilation
   if (transformDef.compileToIR === undefined) {
+    const errorCode = isLens ? 'UnsupportedLensInIRMode' : 'UnsupportedAdapterInIRMode';
+    const helpText = isLens
+      ? `This lens requires stateful operation or special runtime handling that hasn't been implemented in the IR compiler.`
+      : `This adapter requires special runtime handling that hasn't been implemented in the IR compiler.`;
+
     errors.push({
-      code: "UnsupportedLensInIRMode",
-      message: `Lens '${transformDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
-               `This lens requires stateful operation or special runtime handling that hasn't been implemented in the IR compiler. ` +
-               `To use this lens, either:\n` +
+      code: errorCode,
+      message: `${expectedKind.charAt(0).toUpperCase() + expectedKind.slice(1)} '${transformDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
+               `${helpText} ` +
+               `To use this ${expectedKind}, either:\n` +
                `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
-               `  - Remove this lens from your connection\n` +
-               `  - Use an alternative lens with similar functionality`,
+               `  - Remove this ${expectedKind} from your connection\n` +
+               `  - Use an alternative ${expectedKind} if available`,
     });
     return valueRef; // Continue with original value
   }
 
-  // Convert lens params to ValueRefPacked
+  // Resolve parameters based on transform type
   const paramsMap: Record<string, ValueRefPacked> = {};
-  for (const [paramId, binding] of Object.entries(lensInstance.params)) {
-    if (binding.kind === 'literal') {
-      // Convert literal values to scalar constants
-      const constId = builder.allocConstId(binding.value);
-      paramsMap[paramId] = { k: 'scalarConst', constId };
+  let irCtx: TransformIRCtx;
+
+  if (isLens) {
+    // Lenses: convert params to ValueRefPacked
+    const lens = step.lens;
+    for (const [paramId, binding] of Object.entries(lens.params)) {
+      if (typeof binding === 'object' && binding !== null && 'kind' in binding && binding.kind === 'literal') {
+        // Convert literal values to scalar constants
+        const constId = builder.allocConstId(binding.value);
+        paramsMap[paramId] = { k: 'scalarConst', constId };
+      }
+      // Only literal bindings are supported in IR mode (bus/wire removed)
     }
-    // TODO: Handle other binding kinds (bus, wire, default) in future sprints
-    // For now, only literal bindings are supported in IR mode
+
+    irCtx = {
+      builder,
+      transformId,
+      params: lens.params,
+    };
+  } else {
+    // Adapters: params are simple Record<string, unknown>
+    const adapterStep = step as AdapterStep;
+    irCtx = {
+      builder,
+      transformId,
+      params: adapterStep.params,
+    };
+    // Adapters don't use paramsMap in IR mode (they use ctx.params)
   }
 
-  // Apply the lens's IR compilation
-  const irCtx: TransformIRCtx = {
-    builder,
-    transformId: lensInstance.lensId,
-    params: lensInstance.params,
-  };
-
+  // Apply the transform's IR compilation
   const transformed = transformDef.compileToIR(valueRef, paramsMap, irCtx);
   if (transformed === null) {
+    const errorCode = isLens ? 'UnsupportedLensInIRMode' : 'UnsupportedAdapterInIRMode';
+    const reason = isLens
+      ? `The input type may be incompatible with this lens, or the lens parameters are not yet supported.`
+      : `The input type may be incompatible with this adapter.`;
+
     errors.push({
-      code: "UnsupportedLensInIRMode",
-      message: `Lens '${transformDef.label}' in ${context} failed to compile to IR. ` +
-               `The input type may be incompatible with this lens, or the lens parameters are not yet supported.`,
+      code: errorCode,
+      message: `${expectedKind.charAt(0).toUpperCase() + expectedKind.slice(1)} '${transformDef.label}' in ${context} failed to compile to IR. ${reason}`,
     });
     return valueRef; // Continue with original value
   }
@@ -492,13 +445,10 @@ function applyLensStep(
 }
 
 /**
- * Apply a sequence of transform steps (adapters and lenses) to a value reference.
+ * Apply a sequence of transform steps to a value reference in IR mode.
  *
- * Iterates through the transform array and applies each transform based on its kind.
- * Uses explicit kind branching to handle adapter vs lens application semantics.
- *
- * Track A.4: Unified transform application function.
- * Replaces separate applyAdapterChain and applyLensStack calls.
+ * Phase 2 Deliverable: Unified IR dispatcher that iterates transform chain.
+ * Single entry point for all IR transform application.
  *
  * @param valueRef - Input value reference to transform
  * @param transforms - Array of transform steps to apply in order
@@ -507,7 +457,7 @@ function applyLensStep(
  * @param context - Human-readable context for error messages
  * @returns Transformed value reference (or original if transforms fail)
  */
-function applyTransforms(
+function applyTransformsIR(
   valueRef: ValueRefPacked,
   transforms: readonly TransformStep[],
   builder: IRBuilder,
@@ -517,18 +467,7 @@ function applyTransforms(
   let result = valueRef;
 
   for (const step of transforms) {
-    // Branch based on transform kind (unavoidable due to signature incompatibility)
-    // LensApplyFn uses (RuntimeCtx, Artifact params)
-    // AdapterApplyFn uses (CompileCtx, unknown params)
-    // TransformStep = AdapterStep | { kind: 'lens'; lens: LensInstance }
-    // Use 'kind' in step to discriminate between adapter and lens
-    if ('kind' in step && step.kind === 'lens') {
-      // Lens transform step
-      result = applyLensStep(result, step.lens, builder, errors, context);
-    } else {
-      // Adapter transform step (no 'kind' field, has 'adapterId')
-      result = applyAdapterStep(result, step as AdapterStep, builder, errors, context);
-    }
+    result = applyTransformStepIR(result, step, builder, errors, context);
   }
 
   return result;
@@ -537,31 +476,22 @@ function applyTransforms(
 /**
  * Build BlockInputRootIR by resolving input sources.
  *
- * Resolution priority:
- * 1. Unified edges (if provided) - assumes all edges are port→port after migration
- * 2. Legacy wires (direct block-to-block)
- * 3. Legacy listeners (bus → input)
- *
- * Sprint 2 P2 Note: When using unified edges, this function assumes all edges
- * have been migrated by migrateEdgesToPortOnly(). Bus edges (edge.from.kind === 'bus')
- * should have been converted to BusBlock port edges (edge.from.kind === 'port').
+ * All edges are port→port after Sprint 2 migration. BusBlock.out edges are
+ * regular port edges, not special. Legacy format no longer supported.
  *
  * Note: Default sources are handled by Pass 0 (materializeDefaultSources),
- * which creates hidden provider blocks and wires for all unconnected inputs
+ * which creates hidden provider blocks and edges for all unconnected inputs
  * with defaultSource metadata. By the time this function runs, those inputs
- * already have wires and don't need special handling.
+ * already have edges and don't need special handling.
  *
- * If no source is found (no wire, no listener), it's a missing required input error.
+ * If no source is found (no edge), it's a missing required input error.
  */
 function buildBlockInputRoots(
   blocks: readonly Block[],
-  wires: readonly CompilerConnection[],
-  listeners: readonly Listener[],
-  busRoots: Map<BusIndex, ValueRefPacked>,
   blockOutputs: Map<number, Map<string, ValueRefPacked>>,
   builder: IRBuilder,
   errors: CompileError[],
-  edges?: readonly import("../../types").Edge[]
+  edges: readonly Edge[]
 ): BlockInputRootIR {
   const refs: ValueRefPacked[] = [];
 
@@ -574,21 +504,6 @@ function buildBlockInputRoots(
     blockIdToIndex.set(block.id, idx);
   });
 
-  // Create a map from busId to busIndex
-  // For Sprint 2, we'll use the bus position in the array as index
-  // In Phase 4, this will come from the normalized patch
-  const busIdToIndex = new Map<string, BusIndex>();
-  listeners.forEach((listener) => {
-    if (!busIdToIndex.has(listener.busId)) {
-      // Assign sequential bus indices
-      busIdToIndex.set(listener.busId, busIdToIndex.size);
-    }
-  });
-
-
-  // Determine whether to use unified edges or legacy lookup
-  const useUnifiedEdges = edges !== undefined && edges.length > 0;
-
   // Process each block's inputs
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx];
@@ -599,177 +514,59 @@ function buildBlockInputRoots(
 
       let resolved = false;
 
-      if (useUnifiedEdges) {
-        // Sprint 2 P2: Unified edge processing
-        // After migration, ALL edges are port→port (including BusBlock edges)
-        // No edge-kind discrimination needed - all edges handled uniformly
-        const edge = edges.find(
-          (e) => e.to.kind === 'port' && e.to.blockId === block.id && e.to.slotId === input.id
-        );
+      // All edges are port→port after Sprint 2 migration
+      // No edge-kind discrimination needed - all edges handled uniformly
+      const edge = edges.find(
+        (e) => e.to.kind === 'port' && e.to.blockId === block.id && e.to.slotId === input.id
+      );
 
-        if (edge !== undefined) {
-          // All edges are port→port after migration
-          // This includes:
-          // - Regular wire connections (block.out → block.in)
-          // - BusBlock subscriber connections (BusBlock.out → block.in)
-          // - BusBlock publisher connections (block.out → BusBlock.in) - handled in Pass 7
+      if (edge !== undefined) {
+        // All edges are port→port after migration
+        // This includes regular block-to-block connections and BusBlock connections
 
-          // Verify edge has port source (migration should guarantee this)
-          if (edge.from.kind !== 'port') {
-            errors.push({
-              code: "UnmigratedBusEdge",
-              message: `Edge to ${block.id}:${input.id} has unmigrated bus endpoint. ` +
-                       `All edges should be port→port after migration. ` +
-                       `Run migrateEdgesToPortOnly() before compilation.`,
-            });
-            continue;
-          }
+        // Resolve upstream block output
+        const upstreamBlockIdx = blockIdToIndex.get(edge.from.blockId);
 
-          // Resolve upstream block output
-          const upstreamBlockIdx = blockIdToIndex.get(edge.from.blockId);
-
-          if (upstreamBlockIdx === undefined) {
-            errors.push({
-              code: "DanglingConnection",
-              message: `Edge to ${block.id}:${input.id} from unknown block ${edge.from.blockId}`,
-            });
-            continue;
-          }
-
-          const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
-          let ref = upstreamOutputs?.get(edge.from.slotId);
-
-          if (ref !== undefined) {
-            // Track A.4: Use unified transform application
-            const transforms = getEdgeTransforms(edge);
-            if (transforms.length > 0) {
-              ref = applyTransforms(
-                ref,
-                transforms,
-                builder,
-                errors,
-                `edge to ${block.type}.${input.id}`
-              );
-            }
-
-            refs[flatIdx] = ref;
-            resolved = true;
-            continue;
-          }
-
-          // Edge exists but upstream port has no IR representation
-          // This is expected for non-IR types (events, domains, etc.)
-          resolved = true;
+        if (upstreamBlockIdx === undefined) {
+          errors.push({
+            code: "DanglingConnection",
+            message: `Edge to ${block.id}:${input.id} from unknown block ${edge.from.blockId}`,
+          });
           continue;
         }
-      } else {
-        // Fall back to legacy wires/listeners lookup
-        // Priority 1: Check for wire connection
-        const wire = wires.find(
-          (w) => w.to.block === block.id && w.to.port === input.id
-        );
 
-        if (wire !== undefined) {
-          // Resolve upstream block output
-          const upstreamBlockIdx = blockIdToIndex.get(wire.from.block);
+        const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
+        let ref = upstreamOutputs?.get(edge.from.slotId);
 
-          if (upstreamBlockIdx === undefined) {
-            // Upstream block wasn't processed - this is a real error
-            errors.push({
-              code: "DanglingConnection",
-              message: `Wire to ${block.id}:${input.id} from unknown block ${wire.from.block}`,
-            });
-            continue;
+        if (ref !== undefined) {
+          // Phase 2: Use unified IR transform application
+          const transforms = getEdgeTransforms(edge);
+          if (transforms.length > 0) {
+            ref = applyTransformsIR(
+              ref,
+              transforms,
+              builder,
+              errors,
+              `edge to ${block.type}.${input.id}`
+            );
           }
 
-          const upstreamOutputs = blockOutputs.get(upstreamBlockIdx);
-          let ref = upstreamOutputs?.get(wire.from.port);
-
-          if (ref !== undefined) {
-            // Track A.4: Use unified transform application
-            const transforms = getEdgeTransforms(wire);
-            if (transforms.length > 0) {
-              ref = applyTransforms(
-                ref,
-                transforms,
-                builder,
-                errors,
-                `wire to ${block.type}.${input.id}`
-              );
-            }
-
-            refs[flatIdx] = ref;
-            resolved = true;
-            continue;
-          }
-
-          // P1 Validation 3: Null ValueRef Documentation
-          // Wire exists but upstream port has no IR representation.
-          //
-          // When null is EXPECTED (not an error):
-          // - Event ports: Events are discrete streams with no default values
-          // - Domain ports: Domain handles are config-time, not runtime IR
-          // - Config ports: Non-runtime-evaluated types
-          //
-          // When null is ERROR (missing data):
-          // - Signal/Field/Scalar ports: IR types require concrete values
-          //
-          // For now, we continue silently for non-IR types (backward compatibility).
-          // In future sprints, we could emit a diagnostic for IR types with null refs
-          // by checking the port's TypeDesc.world against IR type worlds.
+          refs[flatIdx] = ref;
           resolved = true;
           continue;
         }
 
-        // Priority 2: Check for bus listener
-        const listener = listeners.find(
-          (l) => l.to.blockId === block.id && l.to.slotId === input.id
-        );
-
-        if (listener !== undefined) {
-          const busIdx = busIdToIndex.get(listener.busId);
-
-          if (busIdx === undefined) {
-            // Bus not found - this is a real error
-            errors.push({
-              code: "DanglingBindingEndpoint",
-              message: `Listener to ${block.id}:${input.id} from unknown bus ${listener.busId}`,
-            });
-            continue;
-          }
-
-          let busRef = busRoots.get(busIdx);
-
-          if (busRef !== undefined) {
-            // Track A.4: Use unified transform application
-            const transforms = getEdgeTransforms(listener);
-            if (transforms.length > 0) {
-              busRef = applyTransforms(
-                busRef,
-                transforms,
-                builder,
-                errors,
-                `bus listener for ${block.type}.${input.id}`
-              );
-            }
-
-            refs[flatIdx] = busRef;
-            resolved = true;
-            continue;
-          }
-
-          // Bus exists but has no IR representation (e.g., event bus)
-          // This is expected for non-IR bus types - NOT an error
-          resolved = true;
-          continue;
-        }
+        // Edge exists but upstream port has no IR representation
+        // This is expected for non-IR types (events, domains, etc.)
+        resolved = true;
+        continue;
       }
 
-      // If not resolved via edge/wire/listener, check if it's a scalar or optional
+      // If not resolved via edge, check if it's a scalar or optional
       if (!resolved) {
         // Note: Pass 0 (materializeDefaultSources) creates hidden provider blocks
         // for all unconnected inputs with defaultSource metadata. By the time we
-        // reach this point, those inputs already have wires. If we're here, either:
+        // reach this point, those inputs already have edges. If we're here, either:
         // 1. The input is scalar (compile-time config, not runtime IR)
         // 2. The input is optional (can be missing)
         // 3. The input is required and missing (error)
@@ -783,13 +580,13 @@ function buildBlockInputRoots(
           continue; // Successfully resolved via config
         }
 
-        // No wire, no bus, and not a scalar - this is a missing required input
+        // No edge and not a scalar - this is a missing required input
         // Report error unless the input is marked as optional
         if (inputDef?.optional !== true) {
           errors.push({
             code: "MissingInput",
             message: `Missing required input for ${block.type}.${input.id}. ` +
-                     `No wire connection, no bus listener, and no default source was materialized by Pass 0. ` +
+                     `No edge connection and no default source was materialized by Pass 0. ` +
                      `Ensure the input is either connected, has a defaultSource in the block definition, or is marked optional.`,
             where: { blockId: block.id, port: input.id },
           });
@@ -805,6 +602,7 @@ function buildBlockInputRoots(
     },
   };
 }
+
 /**
  * P1 Validation 1: Output Slot Validation
  *
@@ -869,30 +667,4 @@ function validateOutputSlots(
       }
     }
   }
-}
-
-/**
- * P1 Validation 2: Bus Publisher Validation
- *
- * After bus lowering (pass7), verify that each bus has at least one publisher.
- * Emits BusWithoutPublisher diagnostic if a bus has zero publishers.
- *
- * NOTE: This validation is currently a placeholder. A proper implementation requires
- * modifying pass7 to track publisher counts and pass them to pass8 for validation.
- * For now, we rely on pass7's existing validation logic for empty buses.
- *
- * Future enhancement:
- * - Modify IRWithBusRoots to include publisherCount metadata for each bus
- * - Validate publisherCount > 0 for each bus
- * - Emit BusWithoutPublisher if count === 0
- */
-function validateBusPublishers(
-  _busRoots: Map<BusIndex, ValueRefPacked>,
-  _blockOutputs: Map<number, Map<string, ValueRefPacked>>,
-  _blocks: readonly Block[],
-  _errors: CompileError[]
-): void {
-  // TODO: Implement proper bus publisher validation
-  // This requires modifying pass7 to track and pass publisher counts to pass8.
-  // For now, this is a no-op - we rely on pass7's existing empty bus handling.
 }

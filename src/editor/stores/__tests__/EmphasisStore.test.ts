@@ -112,7 +112,7 @@ describe('EmphasisStore', () => {
   describe('focusBus', () => {
     it('sets bus focus mode', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -126,7 +126,7 @@ describe('EmphasisStore', () => {
 
     it('highlights publisher blocks', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -141,7 +141,7 @@ describe('EmphasisStore', () => {
 
     it('highlights subscriber blocks', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -156,7 +156,7 @@ describe('EmphasisStore', () => {
 
     it('highlights both publishers and subscribers', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -174,7 +174,7 @@ describe('EmphasisStore', () => {
 
     it('highlights bus-related ports', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -189,12 +189,12 @@ describe('EmphasisStore', () => {
 
     it('replaces previous bus focus', () => {
       const bus1 = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'bus1',
         'last'
       );
       const bus2 = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'bus2',
         'last'
       );
@@ -208,7 +208,7 @@ describe('EmphasisStore', () => {
     it('clears block focus when focusing bus', () => {
       const blockId = root.patchStore.addBlock('FieldConstNumber', {});
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -257,7 +257,7 @@ describe('EmphasisStore', () => {
     it('does not override bus focus mode', () => {
       const blockId = root.patchStore.addBlock('FieldConstNumber', {});
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -284,7 +284,7 @@ describe('EmphasisStore', () => {
 
     it('clears bus focus', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -335,7 +335,7 @@ describe('EmphasisStore', () => {
 
     it('does not clear bus focus mode', () => {
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );
@@ -376,12 +376,12 @@ describe('EmphasisStore', () => {
 
     it('only one bus focused at a time', () => {
       const bus1 = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'bus1',
         'last'
       );
       const bus2 = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'bus2',
         'last'
       );
@@ -395,7 +395,7 @@ describe('EmphasisStore', () => {
     it('block focus clears bus focus', () => {
       const blockId = root.patchStore.addBlock('FieldConstNumber', {});
       const busId = root.busStore.createBus(
-        { world: 'signal', domain: 'float', category: 'core', busEligible: true },
+        { world: 'signal', domain: 'number', category: 'core', busEligible: true },
         'testBus',
         'last'
       );

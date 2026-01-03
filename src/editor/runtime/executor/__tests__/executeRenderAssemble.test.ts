@@ -44,32 +44,46 @@ function createTestContext(outFrameSlot: number = 100): TestContext {
   const program: CompiledProgramIR = {
     irVersion: 1,
     patchId: "test",
-    patchRevision: 1,
-    compileId: "test",
     seed: 42,
     timeModel: { kind: "infinite", windowMs: 10000 },
-    types: { types: [] },
-    nodes: { nodes: [] },
-    buses: { buses: [] },
-    lenses: { lenses: [] },
-    adapters: { adapters: [] },
-    fields: { exprs: [] },
+    types: { typeIds: [] },
+    signalExprs: { nodes: [] },
+    fieldExprs: { nodes: [] },
+    eventExprs: { nodes: [] },
     constants: {
       json: [],
-      f64: new Float64Array([42, 99, 3.14]),
-      f32: new Float32Array([]),
-      i32: new Int32Array([]),
-      constIndex: [],
     },
     stateLayout: { cells: [], f64Size: 0, f32Size: 0, i32Size: 0 },
+    // slotMeta for slots used by renderAssemble step
+    slotMeta: [
+      { slot: 0, storage: "object", offset: 0, type: { world: "signal", domain: "renderCmds", category: "internal", busEligible: false }, debugName: "instance2dList" },
+      { slot: 1, storage: "object", offset: 1, type: { world: "signal", domain: "renderCmds", category: "internal", busEligible: false }, debugName: "pathBatchList" },
+      { slot: outFrameSlot, storage: "object", offset: 2, type: { world: "signal", domain: "renderTree", category: "internal", busEligible: false }, debugName: "outFrame" },
+    ],
+    render: { sinks: [] },
+    cameras: { cameras: [], cameraIdToIndex: {} },
+    meshes: { meshes: [], meshIdToIndex: {} },
     schedule: {
       steps: [renderAssembleStep],
       stepIdToIndex: {},
-      deps: { fwdDeps: {}, revDeps: {} },
-      determinism: { sortKeyRanges: {} },
-      caching: { perFrame: [], untilInvalidated: [] },
+      deps: {
+        slotProducerStep: {},
+        slotConsumers: {},
+      },
+      determinism: {
+        allowedOrderingInputs: [],
+        topoTieBreak: "nodeIdLex",
+      },
+      caching: {
+        stepCache: {},
+        materializationCache: {},
+      },
     },
-    outputs: { outputs: [] },
+    outputs: [],
+    debugIndex: {
+      stepToBlock: new Map<string, string>(),
+      slotToBlock: new Map<number, string>(),
+    },
   } as unknown as CompiledProgramIR;
 
   const runtime = createRuntimeState(program);
@@ -132,32 +146,41 @@ describe("executeRenderAssemble - Error Handling", () => {
     const program: CompiledProgramIR = {
       irVersion: 1,
       patchId: "test",
-      patchRevision: 1,
-      compileId: "test",
       seed: 42,
       timeModel: { kind: "infinite", windowMs: 10000 },
-      types: { types: [] },
-      nodes: { nodes: [] },
-      buses: { buses: [] },
-      lenses: { lenses: [] },
-      adapters: { adapters: [] },
-      fields: { exprs: [] },
+      types: { typeIds: [] },
+      signalExprs: { nodes: [] },
+      fieldExprs: { nodes: [] },
+      eventExprs: { nodes: [] },
       constants: {
         json: [],
-        f64: new Float64Array([]),
-        f32: new Float32Array([]),
-        i32: new Int32Array([]),
-        constIndex: [],
       },
       stateLayout: { cells: [], f64Size: 0, f32Size: 0, i32Size: 0 },
+      slotMeta: [], // Empty slotMeta - no slots allocated
+      render: { sinks: [] },
+      cameras: { cameras: [], cameraIdToIndex: {} },
+      meshes: { meshes: [], meshIdToIndex: {} },
       schedule: {
         steps: [], // No steps - slot not allocated
         stepIdToIndex: {},
-        deps: { fwdDeps: {}, revDeps: {} },
-        determinism: { sortKeyRanges: {} },
-        caching: { perFrame: [], untilInvalidated: [] },
+        deps: {
+          slotProducerStep: {},
+          slotConsumers: {},
+        },
+        determinism: {
+          allowedOrderingInputs: [],
+          topoTieBreak: "nodeIdLex",
+        },
+        caching: {
+          stepCache: {},
+          materializationCache: {},
+        },
       },
-      outputs: { outputs: [] },
+      outputs: [],
+      debugIndex: {
+        stepToBlock: new Map<string, string>(),
+        slotToBlock: new Map<number, string>(),
+      },
     } as unknown as CompiledProgramIR;
 
     const runtime = createRuntimeState(program);
@@ -174,7 +197,7 @@ describe("executeRenderAssemble - Error Handling", () => {
     // ValueStore throws when slot not in slotMeta
     expect(() => {
       executeRenderAssemble(step, {} as unknown as CompiledProgramIR, runtime);
-    }).toThrow(/slot.*not found/i);
+    }).toThrow("ValueStore.write: no metadata for slot 9999");
   });
 });
 

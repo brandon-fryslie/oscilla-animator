@@ -1,0 +1,42 @@
+Agent: project-evaluator | 2026-01-03-133000
+Scope: project/structural-block-roles
+Completion: 15% | Gaps: 9 critical | Test Quality: 0/5 (no tests exist)
+Reused: 0 findings | Fresh: 15 findings
+Cache updated: [0 files] (recommended: structural-block-roles.md)
+Ambiguities: 5 found | Workflow: CONTINUE
+Next Action: Implement discriminated union types for BlockRole and EdgeRole
+
+Key Findings:
+- BlockRole exists but is WRONG TYPE (string union instead of discriminated)
+- EdgeRole MISSING ENTIRELY (no role field on Edge interface)
+- Both role fields OPTIONAL (spec requires them)
+- No validation function (validateRoleInvariants missing)
+- User block filtering uses wrong logic (filters by hidden, not role)
+
+Critical Gaps:
+1. BlockRole discriminated union not implemented
+2. StructuralMeta type missing
+3. EdgeRole type missing entirely
+4. Block.role optional (should be required)
+5. Edge.role field doesn't exist
+6. hidden and role are redundant
+7. validateRoleInvariants() not implemented
+8. User block detection uses wrong logic
+9. Default edges have no role metadata
+
+Ambiguities (design decisions, not blockers):
+1. Migration path for existing patches
+2. Should hidden field be removed or derived?
+3. Validation timing (eager vs lazy)
+4. Are BusBlocks structural or user?
+5. What role for macro-expanded blocks?
+
+References:
+- Spec: design-docs/final-System-Invariants/15-Block-Edge-Roles.md
+- Spec: design-docs/final-System-Invariants/16-Graph-Normalization.md
+- Code: src/editor/types.ts (BlockRole, Edge)
+- Code: src/editor/stores/PatchStore.ts
+- Code: src/editor/compiler/passes/pass0-materialize.ts
+- Plan: .agent_planning/structural-block-roles/PLAN-2026-01-02-block-edge-roles.md
+
+Output: .agent_planning/structural-block-roles/EVALUATION-2026-01-03.md

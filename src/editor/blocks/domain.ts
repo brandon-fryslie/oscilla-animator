@@ -624,7 +624,7 @@ export const JitterFieldVec2 = createBlock({
     }),
     input('phase', 'Phase', 'Signal<phase>', {
       tier: 'primary',
-      defaultSource: { value: 0, world: 'signal', defaultBus: 'phaseA', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 } },
+      defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 } },
     }),
     input('amount', 'Amount', 'Signal<float>', {
       tier: 'primary',

@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import type { LensDefinition } from '../types';
 import { LENS_PRESETS, createLensFromPreset } from '../lens-presets';
-import { getEasingNames } from '../lenses';
+import { getEasingNames } from "../lenses/easing";
 import './LensSelector.css';
 
 interface LensSelectorProps {

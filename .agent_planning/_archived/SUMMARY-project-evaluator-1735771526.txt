@@ -1,0 +1,31 @@
+Agent: project-evaluator | 2026-01-01 16:45
+Scope: Sprint 3 (bus-block-unification) - P0 completion check
+Completion: 88% (5 failing tests down from 43) | Gaps: 5 composite tests | Test Quality: Good
+Reused: Previous STATUS findings | Fresh: Test failure analysis, commit review
+Cache updated: None (no stable patterns to cache yet)
+Ambiguities: Composite test failures - need investigation to triage
+Workflow: INVESTIGATE FIRST, then CONTINUE
+
+Key Findings:
+- 38 tests fixed across 8 files (HistoryStore, TxBuilder, ops, BusStore.events, migrations)
+- Pattern: userBlocks helper excludes BusBlocks from counts (resolves most failures)
+- Pattern: Unified transforms field migration complete (Track A.5)
+- Blocker: 5 composite.expansion.test.ts failures - compilation errors, not logged
+- Uncommitted: BusBlock skip logic in compileBusAware.ts (lines 513-518, 608-612)
+- Root cause unknown: Need error logging in D1/D2 tests to diagnose
+
+Recommended Action:
+1. Add error logging to composite tests (like line 87-89 pattern)
+2. Run tests to see actual compile errors
+3. Triage: Bus-related (fix now) vs Lens-binding (skip, defer Sprint 4)
+4. Clear P0 gate, then start P1-A (remove Pass 6 bus check)
+
+Sprint 3 P1/P2 work is READY once P0 gate clears (all 8 files analyzed, changes safe)
+
+Next Steps:
+-> Investigate composite test failures (1 hour)
+-> Decide: fix or skip based on error type
+-> If skipped: Begin Sprint 3 P1 (remove compiler bus checks)
+-> If bus-related: Debug and fix before P1
+
+Output: STATUS-2026-01-01-update.md

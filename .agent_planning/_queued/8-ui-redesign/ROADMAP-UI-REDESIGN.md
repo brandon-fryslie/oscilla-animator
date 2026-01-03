@@ -429,7 +429,6 @@ Reference: `design-docs/8-UI-Redesign/`
 **Acceptance Criteria:**
 - [ ] PortBindingVM: unbound | inlineLiteral | bus | direct
 - [ ] Input port clicks: unbound→chooser, bus→editor, direct→popover
-- [ ] Output port: publisher editor, consumer list
 - [ ] Detach inline literal → spawn block
 
 ---
@@ -443,7 +442,6 @@ Reference: `design-docs/8-UI-Redesign/`
 ### Topics
 
 #### bus-board [PROPOSED]
-**Description:** Implement `<BusBoard />`: vertical list of buses, show name, type, combine mode, silent value, publisher/subscriber counts, live viz.
 **Spec:** 4-ReactComponentTree (§G1-G2)
 **Dependencies:** focus-emphasis-store
 **Labels:** ui, components, buses
@@ -453,11 +451,9 @@ Reference: `design-docs/8-UI-Redesign/`
 - [ ] Name (editable), type badge
 - [ ] Combine mode dropdown
 - [ ] Silent value control
-- [ ] Publisher/subscriber counts
 - [ ] Sparkline/swatch live viz
 
 #### bus-focus-mode [PROPOSED]
-**Description:** Click bus → focus mode: dim unrelated blocks, highlight publishers/subscribers, expand binding chips.
 **Spec:** 4-ReactComponentTree (§G3)
 **Dependencies:** bus-board, focus-emphasis-store
 **Labels:** ui, interaction, focus
@@ -491,7 +487,6 @@ Reference: `design-docs/8-UI-Redesign/`
 - [ ] Diagnostics section
 
 #### inspector-bus-mode [PROPOSED]
-**Description:** Bus inspector: combine mode, silent value, publisher list (sorted by sortKey), per-publisher mute/solo, subscriber list, "go to" buttons.
 **Spec:** 4-ReactComponentTree (§H1.2)
 **Dependencies:** inspector-panel
 **Labels:** ui, components, inspector
@@ -499,7 +494,6 @@ Reference: `design-docs/8-UI-Redesign/`
 **Acceptance Criteria:**
 - [ ] Combine mode control
 - [ ] Silent value control
-- [ ] Publisher list with mute/solo
 - [ ] Subscriber list
 - [ ] "Go to" scrolls board + focuses
 
@@ -620,7 +614,6 @@ Reference: `design-docs/8-UI-Redesign/`
 - [ ] User confirmation for heavy
 
 #### convert-direct-to-bus [PROPOSED]
-**Description:** User action: click direct chip → "Convert to Bus..." → creates bus, publisher, listener, removes direct binding.
 **Spec:** 7-InteractionSpec (§6)
 **Dependencies:** mutation-controller
 **Labels:** ui, mutation, conversion
@@ -632,7 +625,6 @@ Reference: `design-docs/8-UI-Redesign/`
 - [ ] Bus chips appear
 
 #### convert-bus-to-direct [PROPOSED]
-**Description:** Rare action: convert bus→direct only if exactly one publisher, one subscriber, passthrough combine, and within Lmax.
 **Spec:** 7-InteractionSpec (§7)
 **Dependencies:** mutation-controller
 **Labels:** ui, mutation, conversion

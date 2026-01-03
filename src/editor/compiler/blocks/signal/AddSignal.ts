@@ -23,13 +23,13 @@ const lowerAddSignal: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
     throw new Error('AddSignal requires signal inputs');
   }
 
-  const outType = { world: "signal" as const, domain: "float" as const, category: "core" as const, busEligible: true };
+  const outType = ctx.outTypes[0];
   const sigId = ctx.b.sigZip(a.id, b.id, {
     kind: 'opcode',
     opcode: OpCode.Add,
   }, outType);
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(outType, 'AddSignal_out');
   return {
     outputs: [], // Legacy - empty for fully migrated blocks
     outputsById: { out: { k: 'sig', id: sigId, slot } },

@@ -593,7 +593,7 @@ describe("IRBuilder", () => {
       const mapped = builder.sigMap(const1, { kind: "kernel", kernelId: "sin" }, type);
       const zipped = builder.sigZip(const1, const1, { kind: "kernel", kernelId: "add" }, type);
       const selected = builder.sigSelect(const1, const1, const1, type);
-      const combined = builder.sigCombine(0 as import("../types").BusIndex, [const1], "sum", type);
+      const combined = builder.sigCombine([const1], "sum", type);
 
       const ir = builder.build();
 
@@ -623,7 +623,7 @@ describe("IRBuilder", () => {
       const fieldZipped = builder.fieldZip(fieldConst, fieldConst, { kind: "kernel", kernelId: "add" }, fieldType);
       const fieldSelected = builder.fieldSelect(fieldConst, fieldConst, fieldConst, fieldType);
       const broadcast = builder.broadcastSigToField(const1, domainSlot, fieldType);
-      const combined = builder.fieldCombine(0 as import("../types").BusIndex, [fieldConst], "sum", fieldType);
+      const combined = builder.fieldCombine([fieldConst], "sum", fieldType);
 
       const ir = builder.build();
 

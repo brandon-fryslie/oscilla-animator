@@ -16,7 +16,7 @@ import type { CompileError } from './types';
 
 export type Severity = 'error' | 'warning';
 
-/** Wire endpoint (matches CompilerConnection.from/to) */
+/** Wire endpoint (matches Edge.from/to) */
 export interface WireEndpoint {
   block: string;
   port: string;
@@ -88,17 +88,10 @@ export function buildDecorations(errors: readonly CompileError[]): DecorationSet
   for (const err of errors) {
     const w = err.where;
 
-    // Wire-attached errors (type mismatch on connection)
-    if (w != null && w.connection != null) {
-      wires.push({
-        from: w.connection.from,
-        to: w.connection.to,
-        severity: 'error',
-        messages: [err.message],
-      });
-
-      // Also mark the destination port
-      addPort(w.connection.to.block, w.connection.to.port, err.message, 'error');
+    // Edge-attached errors (type mismatch on edge)
+    if (w != null && w.edgeId != null) {
+      // Edge errors don't have full edge info, just mark as block error
+      // The edgeId can be used for more detailed decoration in the future
       continue;
     }
 

@@ -20,13 +20,10 @@ import type { PatchDocument, PortKey, ValidationResult } from './types';
 import { SemanticGraph } from './graph';
 import { createDiagnostic, type Diagnostic } from '../diagnostics/types';
 import { areSlotTypesCompatible } from './index';
-import type { SlotType, BusCombineMode } from '../types';
-import {
-  RESERVED_BUS_CONTRACTS,
-  validateReservedBus,
-  validateCombineModeCompatibility,
-  validateBusIRSupport,
-} from './busContracts';
+import type { SlotType } from '../types';
+// NOTE: After bus-block unification (2026-01-02), bus contract validation is
+// handled by BusBlock definitions. The following imports are no longer needed:
+// import { RESERVED_BUS_CONTRACTS, validateReservedBus, validateCombineModeCompatibility, validateBusIRSupport } from './busContracts';
 
 /**
  * Validator provides validation operations for patch graphs.
@@ -75,29 +72,19 @@ export class Validator {
     const endpointErrors = this.validateEndpoints(patch);
     errors.push(...endpointErrors);
 
-    // Rule 6: Reserved bus validation (NEW P0)
-    const reservedBusErrors = this.validateReservedBuses(patch);
-    errors.push(...reservedBusErrors);
-
-    // Rule 7: TimeRoot upstream dependency validation (NEW P0)
+    // Rule 6: TimeRoot upstream dependency validation
     const timeRootDepErrors = this.validateTimeRootDependencies(patch);
     errors.push(...timeRootDepErrors);
 
-    // Rule 8: Combine mode compatibility validation (NEW P1)
-    const combineModeErrors = this.validateCombineModeCompatibility(patch);
-    errors.push(...combineModeErrors);
-
-    // Rule 9: Bus IR type support validation (Sprint 19 P1)
-    const busIRSupportErrors = this.validateBusIRSupport(patch);
-    errors.push(...busIRSupportErrors);
-
-    // Warning: Empty buses
-    const emptyBusWarnings = this.warnEmptyBuses(patch);
-    warnings.push(...emptyBusWarnings);
-
-    // Warning: Multiple publishers on control-plane buses
-    const multiPubWarnings = this.warnMultiplePublishersOnControlBuses(patch);
-    warnings.push(...multiPubWarnings);
+    // NOTE: After bus-block unification (2026-01-02), buses are now BusBlocks.
+    // Reserved bus validation, combine mode validation, and IR support validation
+    // are handled differently - BusBlocks validate themselves via their block definition.
+    // The following validations have been removed:
+    // - validateReservedBuses (buses are now BusBlocks with proper TypeDesc)
+    // - validateCombineModeCompatibility (BusBlock validates this internally)
+    // - validateBusIRSupport (handled by compiler)
+    // - warnEmptyBuses (edge connections are visible in graph)
+    // - warnMultiplePublishersOnControlBuses (edges to BusBlocks are explicit)
 
     return {
       ok: errors.length === 0,
@@ -182,16 +169,13 @@ export class Validator {
         };
 
         const incomingWires = this.graph.getIncomingWires(portKey);
-        const incomingListeners = this.graph.getIncomingListeners(portKey);
 
-        const totalWriters = incomingWires.length + incomingListeners.length;
+        // After bus-block unification, all edges are wire edges
+        const totalWriters = incomingWires.length;
 
         if (totalWriters > 1) {
           // Multiple writers to same input - error
-          const connections = [
-            ...incomingWires.map((e) => e.connectionId),
-            ...incomingListeners.map((e) => e.listenerId),
-          ];
+          const connections = incomingWires.map((e) => e.connectionId);
 
           errors.push(
             createDiagnostic({
@@ -229,18 +213,18 @@ export class Validator {
   private validateConnectionTypes(patch: PatchDocument): Diagnostic[] {
     const errors: Diagnostic[] = [];
 
-    // Check wire connections
-    for (const conn of patch.connections) {
-      const fromBlock = patch.blocks.find((b) => b.id === conn.from.blockId);
-      const toBlock = patch.blocks.find((b) => b.id === conn.to.blockId);
+    // Check wire connections (edges after bus-block unification)
+    for (const edge of patch.edges) {
+      const fromBlock = patch.blocks.find((b) => b.id === edge.from.blockId);
+      const toBlock = patch.blocks.find((b) => b.id === edge.to.blockId);
 
       if (!fromBlock || !toBlock) {
         // Endpoint validation will catch this
         continue;
       }
 
-      const fromSlot = fromBlock.outputs.find((s) => s.id === conn.from.slotId);
-      const toSlot = toBlock.inputs.find((s) => s.id === conn.to.slotId);
+      const fromSlot = fromBlock.outputs.find((s) => s.id === edge.from.slotId);
+      const toSlot = toBlock.inputs.find((s) => s.id === edge.to.slotId);
 
       if (!fromSlot || !toSlot) {
         // Endpoint validation will catch this
@@ -290,7 +274,8 @@ export class Validator {
       }
     }
 
-    // TODO Phase 2: Check publisher/listener type compatibility with buses
+    // NOTE: After bus-block unification, publishers/listeners are just regular edges
+    // to/from BusBlock blocks. Type compatibility is checked uniformly above.
 
     return errors;
   }
@@ -337,9 +322,9 @@ export class Validator {
   private validateEndpoints(patch: PatchDocument): Diagnostic[] {
     const errors: Diagnostic[] = [];
 
-    for (const conn of patch.connections) {
+    for (const edge of patch.edges) {
       // Check from endpoint
-      const fromBlock = patch.blocks.find((b) => b.id === conn.from.blockId);
+      const fromBlock = patch.blocks.find((b) => b.id === edge.from.blockId);
       if (!fromBlock) {
         errors.push(
           createDiagnostic({
@@ -348,17 +333,17 @@ export class Validator {
             domain: 'compile',
             primaryTarget: {
               kind: 'block',
-              blockId: conn.from.blockId,
+              blockId: edge.from.blockId,
             },
             title: 'Invalid connection source',
-            message: `Connection references missing block: ${conn.from.blockId}`,
+            message: `Edge references missing block: ${edge.from.blockId}`,
             patchRevision: this.patchRevision,
           })
         );
         continue;
       }
 
-      const fromSlot = fromBlock.outputs.find((s) => s.id === conn.from.slotId);
+      const fromSlot = fromBlock.outputs.find((s) => s.id === edge.from.slotId);
       if (!fromSlot) {
         errors.push(
           createDiagnostic({
@@ -368,20 +353,20 @@ export class Validator {
             primaryTarget: {
               kind: 'port',
               portRef: {
-                blockId: conn.from.blockId,
-                slotId: conn.from.slotId,
+                blockId: edge.from.blockId,
+                slotId: edge.from.slotId,
                 direction: 'output',
               },
             },
             title: 'Invalid connection source',
-            message: `Connection references missing output slot: ${conn.from.blockId}.${conn.from.slotId}`,
+            message: `Edge references missing output slot: ${edge.from.blockId}.${edge.from.slotId}`,
             patchRevision: this.patchRevision,
           })
         );
       }
 
       // Check to endpoint
-      const toBlock = patch.blocks.find((b) => b.id === conn.to.blockId);
+      const toBlock = patch.blocks.find((b) => b.id === edge.to.blockId);
       if (!toBlock) {
         errors.push(
           createDiagnostic({
@@ -390,17 +375,17 @@ export class Validator {
             domain: 'compile',
             primaryTarget: {
               kind: 'block',
-              blockId: conn.to.blockId,
+              blockId: edge.to.blockId,
             },
             title: 'Invalid connection target',
-            message: `Connection references missing block: ${conn.to.blockId}`,
+            message: `Edge references missing block: ${edge.to.blockId}`,
             patchRevision: this.patchRevision,
           })
         );
         continue;
       }
 
-      const toSlot = toBlock.inputs.find((s) => s.id === conn.to.slotId);
+      const toSlot = toBlock.inputs.find((s) => s.id === edge.to.slotId);
       if (!toSlot) {
         errors.push(
           createDiagnostic({
@@ -410,64 +395,14 @@ export class Validator {
             primaryTarget: {
               kind: 'port',
               portRef: {
-                blockId: conn.to.blockId,
-                slotId: conn.to.slotId,
+                blockId: edge.to.blockId,
+                slotId: edge.to.slotId,
                 direction: 'input',
               },
             },
             title: 'Invalid connection target',
-            message: `Connection references missing input slot: ${conn.to.blockId}.${conn.to.slotId}`,
+            message: `Edge references missing input slot: ${edge.to.blockId}.${edge.to.slotId}`,
             patchRevision: this.patchRevision,
-          })
-        );
-      }
-    }
-
-    return errors;
-  }
-
-  /**
-   * Rule: Reserved buses must match their canonical contracts.
-   * NEW P0: Validates that reserved buses have correct TypeDesc and combine mode.
-   */
-  private validateReservedBuses(patch: PatchDocument): Diagnostic[] {
-    const errors: Diagnostic[] = [];
-
-    // Check if patch has buses (may not exist in older patches)
-    if (patch.buses == null) {
-      return errors;
-    }
-
-    for (const bus of patch.buses) {
-      const validationErrors = validateReservedBus(
-        bus.name,
-        bus.type,
-        bus.combine.mode as BusCombineMode
-      );
-
-      for (const validationError of validationErrors) {
-        errors.push(
-          createDiagnostic({
-            code: validationError.code,
-            severity: 'error',
-            domain: 'compile',
-            primaryTarget: {
-              kind: 'bus',
-              busId: bus.id,
-            },
-            title: validationError.code === 'E_RESERVED_BUS_TYPE_MISMATCH'
-              ? 'Reserved bus type mismatch'
-              : 'Reserved bus combine mode mismatch',
-            message: validationError.message,
-            patchRevision: this.patchRevision,
-            payload: {
-              kind: 'generic',
-              data: {
-                busName: bus.name,
-                expected: validationError.expected,
-                actual: validationError.actual,
-              },
-            },
           })
         );
       }
@@ -494,17 +429,18 @@ export class Validator {
 
     const errors: Diagnostic[] = [];
 
-    // Check wire connections to TimeRoot inputs
-    const incomingWires = patch.connections.filter(
-      (c) => c.to.blockId === timeRoot.id
+    // Check incoming edges to TimeRoot inputs
+    const incomingEdges = patch.edges.filter(
+      (e) => e.to.blockId === timeRoot.id
     );
-    for (const wire of incomingWires) {
-      const sourceBlock = patch.blocks.find((b) => b.id === wire.from.blockId);
+    for (const edge of incomingEdges) {
+      const sourceBlock = patch.blocks.find((b) => b.id === edge.from.blockId);
       if (!sourceBlock) {
         continue; // Endpoint validation will catch this
       }
 
       // Check if source is whitelisted (DefaultSource, Config, UIControl, ExternalIO)
+      // NOTE: After bus-block unification, BusBlocks are also forbidden as TimeRoot sources
       if (!isWhitelistedTimeRootSource(sourceBlock)) {
         errors.push(
           createDiagnostic({
@@ -529,203 +465,7 @@ export class Validator {
       }
     }
 
-    // Check bus listeners on TimeRoot inputs
-    const timeRootListeners = (patch.listeners ?? []).filter(
-      (l) => l.to.blockId === timeRoot.id
-    );
-    for (const listener of timeRootListeners) {
-      // Bus listeners are inherently evaluated signals, so always forbidden
-      errors.push(
-        createDiagnostic({
-          code: 'E_TIME_ROOT_BUS_LISTENER',
-          severity: 'error',
-          domain: 'compile',
-          primaryTarget: {
-            kind: 'timeRoot',
-            blockId: timeRoot.id,
-          },
-          affectedTargets: [
-            {
-              kind: 'bus',
-              busId: listener.busId,
-            },
-          ],
-          title: 'TimeRoot cannot subscribe to buses',
-          message: `TimeRoot cannot have bus listeners. Bus "${listener.busId}" feeds into TimeRoot, which is forbidden.`,
-          patchRevision: this.patchRevision,
-        })
-      );
-    }
-
     return errors;
-  }
-
-  /**
-   * Rule: Combine mode must be compatible with TypeDesc domain.
-   * NEW P1: Validates semantic meaning of combine operations per domain.
-   */
-  private validateCombineModeCompatibility(patch: PatchDocument): Diagnostic[] {
-    const errors: Diagnostic[] = [];
-
-    if (patch.buses == null) {
-      return errors;
-    }
-
-    for (const bus of patch.buses) {
-      // Skip reserved buses - they have their own validation
-      if (RESERVED_BUS_CONTRACTS[bus.name] != null) {
-        continue;
-      }
-
-      // Validate combine mode compatibility with domain
-      const compatibilityError = validateCombineModeCompatibility(
-        bus.type.domain,
-        bus.combine.mode as BusCombineMode
-      );
-
-      if (compatibilityError) {
-        errors.push(
-          createDiagnostic({
-            code: compatibilityError.code,
-            severity: 'error',
-            domain: 'compile',
-            primaryTarget: {
-              kind: 'bus',
-              busId: bus.id,
-            },
-            title: 'Incompatible combine mode',
-            message: `${compatibilityError.message}. Allowed modes: ${compatibilityError.expected.join(', ')}`,
-            patchRevision: this.patchRevision,
-            payload: {
-              kind: 'generic',
-              data: {
-                busName: bus.name,
-                domain: bus.type.domain,
-                combineMode: bus.combine.mode,
-                allowedModes: compatibilityError.expected,
-              },
-            },
-          })
-        );
-      }
-    }
-
-    return errors;
-  }
-
-  /**
-   * Rule: Bus types must be supported in IR mode.
-   * Sprint 19 P1: Non-numeric buses (vec2/vec3/color) not yet supported in IR mode.
-   */
-  private validateBusIRSupport(patch: PatchDocument): Diagnostic[] {
-    const errors: Diagnostic[] = [];
-
-    if (patch.buses == null) {
-      return errors;
-    }
-
-    for (const bus of patch.buses) {
-      const irSupportError = validateBusIRSupport(bus.id, bus.type);
-
-      if (irSupportError) {
-        errors.push(
-          createDiagnostic({
-            code: irSupportError.code,
-            severity: 'error',
-            domain: 'compile',
-            primaryTarget: {
-              kind: 'bus',
-              busId: bus.id,
-            },
-            title: 'Unsupported bus type in IR mode',
-            message: irSupportError.message,
-            patchRevision: this.patchRevision,
-            payload: {
-              kind: 'generic',
-              data: {
-                busId: irSupportError.busId,
-                domain: irSupportError.domain,
-              },
-            },
-          })
-        );
-      }
-    }
-
-    return errors;
-  }
-
-  /**
-   * Warning: Empty buses should have publishers.
-   */
-  private warnEmptyBuses(patch: PatchDocument): Diagnostic[] {
-    const warnings: Diagnostic[] = [];
-
-    if (patch.buses == null || patch.publishers == null) {
-      return warnings;
-    }
-
-    for (const bus of patch.buses) {
-      const publishers = patch.publishers.filter((p) => p.busId === bus.id);
-      if (publishers.length === 0) {
-        warnings.push(
-          createDiagnostic({
-            code: 'W_BUS_NO_PUBLISHERS',
-            severity: 'warn',
-            domain: 'compile',
-            primaryTarget: {
-              kind: 'bus',
-              busId: bus.id,
-            },
-            title: 'Bus has no publishers',
-            message: `Bus "${bus.name}" has no publishers. It will use its default value.`,
-            patchRevision: this.patchRevision,
-          })
-        );
-      }
-    }
-
-    return warnings;
-  }
-
-  /**
-   * Warning: Multiple publishers on control-plane buses.
-   * Control-plane buses (phaseA, progress, palette) use 'last' combine mode
-   * and typically expect a single publisher. Multiple publishers can cause conflicts.
-   */
-  private warnMultiplePublishersOnControlBuses(patch: PatchDocument): Diagnostic[] {
-    const warnings: Diagnostic[] = [];
-
-    if (patch.buses == null || patch.publishers == null) {
-      return warnings;
-    }
-
-    // Control-plane buses use 'last' combine mode
-    const controlBuses = patch.buses.filter((b) => b.combine.mode === 'last');
-
-    for (const bus of controlBuses) {
-      const enabledPublishers = patch.publishers.filter(
-        (p) => p.busId === bus.id && p.enabled !== false
-      );
-      if (enabledPublishers.length > 1) {
-        warnings.push(
-          createDiagnostic({
-            code: 'W_BUS_MULTIPLE_PUBLISHERS_CONTROL',
-            severity: 'warn',
-            domain: 'compile',
-            primaryTarget: {
-              kind: 'bus',
-              busId: bus.id,
-            },
-            title: 'Multiple publishers on control bus',
-            message: `Control-plane bus "${bus.name || bus.id}" has ${enabledPublishers.length} publishers. With 'last' combine mode, only the highest sortKey publisher's value will be used.`,
-            patchRevision: this.patchRevision,
-          })
-        );
-      }
-    }
-
-    return warnings;
   }
 
   // ===========================================================================
@@ -863,8 +603,8 @@ export class Validator {
     }
 
     // Check for multiple writers
-    const existingWires = patch.connections.filter(
-      (c) => c.to.blockId === to.blockId && c.to.slotId === to.slotId
+    const existingWires = patch.edges.filter(
+      (e) => e.to.blockId === to.blockId && e.to.slotId === to.slotId
     );
 
     if (existingWires.length > 0) {

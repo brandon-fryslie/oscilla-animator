@@ -308,13 +308,14 @@ export class TutorialStore {
 
     const criteria = step.criteria;
 
+    // Bus-Block Unification: Find BusBlock by ID (block ID = bus ID)
     if (criteria.type === 'busListener' && event.direction === 'subscribe') {
-      const bus = this.root.busStore.buses.find(b => b.id === event.busId);
+      const busBlock = this.root.patchStore.busBlocks.find(b => b.id === event.busId);
       const blockLabel = this.blockIdToLabel.get(event.blockId);
 
       if (
-        bus !== null && bus !== undefined &&
-        bus.name === criteria.busName &&
+        busBlock !== null && busBlock !== undefined &&
+        busBlock.params.name === criteria.busName &&
         blockLabel === criteria.toBlock &&
         event.port === criteria.toSlot
       ) {
@@ -323,12 +324,12 @@ export class TutorialStore {
     }
 
     if (criteria.type === 'busPublisher' && event.direction === 'publish') {
-      const bus = this.root.busStore.buses.find(b => b.id === event.busId);
+      const busBlock = this.root.patchStore.busBlocks.find(b => b.id === event.busId);
       const blockLabel = this.blockIdToLabel.get(event.blockId);
 
       if (
-        bus !== null && bus !== undefined &&
-        bus.name === criteria.busName &&
+        busBlock !== null && busBlock !== undefined &&
+        busBlock.params.name === criteria.busName &&
         blockLabel === criteria.fromBlock &&
         event.port === criteria.fromSlot
       ) {

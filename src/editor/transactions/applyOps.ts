@@ -16,13 +16,17 @@
  * Sprint 3: Bus-Block Unification
  * - 'buses' table ops now convert Bus ↔ BusBlock and operate on patchStore.blocks
  *
+ * Phase 0.5: Connection → Edge Migration Complete
+ * - 'connections' table is an alias for 'edges' (backward compatibility)
+ * - All new code uses 'edges' table
+ *
  * @see design-docs/6-Transactions/2-Ops.md
  */
 
 import { runInAction } from 'mobx';
 import type { Op, TableName, Entity } from './ops';
 import type { RootStore } from '../stores/RootStore';
-import type { Block, Connection, Bus, Publisher, Listener, Composite, DefaultSourceState, Edge } from '../types';
+import type { Block, Bus, Composite, DefaultSourceState, Edge } from '../types';
 import { convertBusToBlock, convertBlockToBus } from '../bus-block/conversion';
 
 /**
@@ -92,6 +96,10 @@ function applyOp(op: Op, store: RootStore): void {
  *
  * Sprint 3: Bus-Block Unification
  * - 'buses' table: Convert Bus → BusBlock and add to patchStore.blocks
+ *
+ * Phase 0.5: Connection → Edge Migration Complete
+ * - 'connections' table: Legacy alias for 'edges' table (backward compatibility)
+ * - Entity is always Edge type (Connection type is deprecated)
  */
 function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
   switch (table) {
@@ -99,7 +107,9 @@ function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
       store.patchStore.blocks.push(entity as Block);
       break;
     case 'connections':
-      store.patchStore.connections.push(entity as Connection);
+      // Legacy compatibility: 'connections' table is an alias for 'edges'
+      // All connection entities are now stored in patchStore.edges
+      store.patchStore.edges.push(entity as Edge);
       break;
     case 'buses': {
       // Convert Bus → BusBlock and add to patchStore.blocks
@@ -108,17 +118,11 @@ function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
       store.patchStore.blocks.push(busBlock);
       break;
     }
-    case 'publishers':
-      store.busStore.publishers.push(entity as Publisher);
-      break;
-    case 'listeners':
-      store.busStore.listeners.push(entity as Listener);
-      break;
     case 'composites':
       store.compositeStore.composites.push(entity as Composite);
       break;
     case 'defaultSources':
-      store.defaultSourceStore.sources.set(entity.id, entity as DefaultSourceState);
+      store.defaultSourceStore.sources.set((entity as DefaultSourceState).id, entity as DefaultSourceState);
       break;
     case 'edges':
       store.patchStore.edges.push(entity as Edge);
@@ -135,6 +139,9 @@ function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
  *
  * Sprint 3: Bus-Block Unification
  * - 'buses' table: Remove BusBlock from patchStore.blocks (match by busId in params)
+ *
+ * Phase 0.5: Connection → Edge Migration Complete
+ * - 'connections' table: Legacy alias for 'edges' table (backward compatibility)
  */
 function applyRemove(table: TableName, id: string, store: RootStore): void {
   switch (table) {
@@ -142,21 +149,16 @@ function applyRemove(table: TableName, id: string, store: RootStore): void {
       store.patchStore.blocks = store.patchStore.blocks.filter(b => b.id !== id);
       break;
     case 'connections':
-      store.patchStore.connections = store.patchStore.connections.filter(c => c.id !== id);
+      // Legacy compatibility: 'connections' table is an alias for 'edges'
+      store.patchStore.edges = store.patchStore.edges.filter(c => c.id !== id);
       break;
     case 'buses': {
-      // Remove BusBlock from patchStore.blocks (match by busId in params)
+      // Remove BusBlock from patchStore.blocks (block ID = bus ID)
       store.patchStore.blocks = store.patchStore.blocks.filter(b =>
-        !(b.type === 'BusBlock' && b.params.busId === id)
+        !(b.type === 'BusBlock' && b.id === id)
       );
       break;
     }
-    case 'publishers':
-      store.busStore.publishers = store.busStore.publishers.filter(p => p.id !== id);
-      break;
-    case 'listeners':
-      store.busStore.listeners = store.busStore.listeners.filter(l => l.id !== id);
-      break;
     case 'composites':
       store.compositeStore.composites = store.compositeStore.composites.filter(c => c.id !== id);
       break;
@@ -179,6 +181,9 @@ function applyRemove(table: TableName, id: string, store: RootStore): void {
  *
  * Sprint 3: Bus-Block Unification
  * - 'buses' table: Find BusBlock, convert to Bus, apply updates, convert back, update BusBlock
+ *
+ * Phase 0.5: Connection → Edge Migration Complete
+ * - 'connections' table: Legacy alias for 'edges' table (backward compatibility)
  */
 function applyUpdate(table: TableName, id: string, next: Entity, store: RootStore): void {
   switch (table) {
@@ -190,16 +195,17 @@ function applyUpdate(table: TableName, id: string, next: Entity, store: RootStor
       break;
     }
     case 'connections': {
-      const conn = store.patchStore.connections.find(c => c.id === id);
+      // Legacy compatibility: 'connections' table is an alias for 'edges'
+      const conn = store.patchStore.edges.find(c => c.id === id);
       if (conn) {
         Object.assign(conn, next);
       }
       break;
     }
     case 'buses': {
-      // Find BusBlock by busId in params
+      // Find BusBlock by ID (block ID = bus ID)
       const busBlock = store.patchStore.blocks.find(b =>
-        b.type === 'BusBlock' && b.params.busId === id
+        b.type === 'BusBlock' && b.id === id
       );
       if (busBlock) {
         // Convert current BusBlock → Bus
@@ -210,20 +216,6 @@ function applyUpdate(table: TableName, id: string, next: Entity, store: RootStor
         const updatedBusBlock = convertBusToBlock(updatedBus);
         // Update the BusBlock in place
         Object.assign(busBlock, updatedBusBlock);
-      }
-      break;
-    }
-    case 'publishers': {
-      const pub = store.busStore.publishers.find(p => p.id === id);
-      if (pub) {
-        Object.assign(pub, next);
-      }
-      break;
-    }
-    case 'listeners': {
-      const listener = store.busStore.listeners.find(l => l.id === id);
-      if (listener) {
-        Object.assign(listener, next);
       }
       break;
     }

@@ -2,6 +2,7 @@
  * Selection Store Tests
  *
  * Tests for multi-select and selection management.
+ * Note: Bus selection now works via BusBlocks (block selection).
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -56,12 +57,13 @@ describe('SelectionStore', () => {
       expect(selection.selectedBlockIds).toEqual(['block-1', 'block-2']);
     });
 
-    it('starts new selection when additive=true but no prior block selection', () => {
+    it('starts new selection when additive=true but prior selection is bus (now block)', () => {
       selection.selectBus('bus-1');
       selection.selectBlock('block-1', true);
 
       expect(selection.kind).toBe('block');
-      expect(selection.selectedBlockIds).toEqual(['block-1']);
+      // Additive to existing block selection from selectBus
+      expect(selection.selectedBlockIds).toContain('block-1');
     });
   });
 
@@ -118,36 +120,39 @@ describe('SelectionStore', () => {
       expect(selection.kind).toBe('none');
     });
 
-    it('converts non-block selection to block selection', () => {
+    it('adds to existing bus selection (which is now block selection)', () => {
       selection.selectBus('bus-1');
       selection.toggleBlockSelection('block-1');
 
       expect(selection.kind).toBe('block');
-      expect(selection.selectedBlockIds).toEqual(['block-1']);
+      // Now contains both the bus (as block) and the new block
+      expect(selection.selectedBlockIds).toContain('bus-1');
+      expect(selection.selectedBlockIds).toContain('block-1');
     });
   });
 
   describe('selectBus', () => {
-    it('selects a bus', () => {
+    it('selects a bus as a block', () => {
       selection.selectBus('bus-1');
 
-      expect(selection.kind).toBe('bus');
-      expect(selection.selectedBusId).toBe('bus-1');
+      // In unified architecture, selecting a bus means selecting its BusBlock
+      expect(selection.kind).toBe('block');
+      expect(selection.selectedBlockIds).toEqual(['bus-1']);
     });
 
     it('replaces previous bus selection', () => {
       selection.selectBus('bus-1');
       selection.selectBus('bus-2');
 
-      expect(selection.selectedBusId).toBe('bus-2');
+      expect(selection.selectedBlockIds).toEqual(['bus-2']);
     });
 
-    it('clears block selection', () => {
+    it('replaces block selection', () => {
       selection.selectBlock('block-1');
       selection.selectBus('bus-1');
 
-      expect(selection.kind).toBe('bus');
-      expect(selection.selectedBlockIds).toEqual([]);
+      expect(selection.kind).toBe('block');
+      expect(selection.selectedBlockIds).toEqual(['bus-1']);
     });
   });
 
@@ -175,7 +180,7 @@ describe('SelectionStore', () => {
       expect(selection.selectedBlockIds).toEqual([]);
     });
 
-    it('clears bus selection', () => {
+    it('clears bus selection (which is block selection)', () => {
       selection.selectBus('bus-1');
       selection.selectPort({ blockId: 'block-1', portId: 'input' });
 
@@ -193,7 +198,7 @@ describe('SelectionStore', () => {
       expect(selection.selectedBlockIds).toEqual([]);
     });
 
-    it('clears bus selection', () => {
+    it('clears bus selection (which is block selection)', () => {
       selection.selectBus('bus-1');
       selection.clearSelection();
 
@@ -242,10 +247,11 @@ describe('SelectionStore', () => {
       expect(selection.isBlockSelected('block-1')).toBe(false);
     });
 
-    it('returns false when other selection types active', () => {
+    it('returns true for bus block when bus is selected', () => {
       selection.selectBus('bus-1');
 
-      expect(selection.isBlockSelected('block-1')).toBe(false);
+      // selectBus now creates a block selection
+      expect(selection.isBlockSelected('bus-1')).toBe(true);
     });
   });
 
@@ -257,7 +263,8 @@ describe('SelectionStore', () => {
       expect(selection.kind).toBe('block');
 
       selection.selectBus('bus-1');
-      expect(selection.kind).toBe('bus');
+      // selectBus now creates block selection
+      expect(selection.kind).toBe('block');
 
       selection.selectPort({ blockId: 'block-1', portId: 'input' });
       expect(selection.kind).toBe('port');
@@ -282,8 +289,11 @@ describe('SelectionStore', () => {
     it('selectedBusId is reactive', () => {
       expect(selection.selectedBusId).toBeNull();
 
+      // selectedBusId only returns a value if a BusBlock is selected
+      // Since we don't have actual BusBlocks in this test, it returns null
       selection.selectBus('bus-1');
-      expect(selection.selectedBusId).toBe('bus-1');
+      // Without a real BusBlock in the store, selectedBusId is null
+      expect(selection.selectedBusId).toBeNull();
 
       selection.clearSelection();
       expect(selection.selectedBusId).toBeNull();
@@ -302,18 +312,20 @@ describe('SelectionStore', () => {
   });
 
   describe('Mutual Exclusivity', () => {
-    it('selecting block clears bus', () => {
+    it('selecting block replaces bus selection', () => {
       selection.selectBus('bus-1');
       selection.selectBlock('block-1');
 
-      expect(selection.selectedBusId).toBeNull();
+      // Both are block selections now, but selectBlock replaces
+      expect(selection.selectedBlockIds).toEqual(['block-1']);
     });
 
-    it('selecting bus clears blocks', () => {
+    it('selecting bus replaces blocks', () => {
       selection.selectBlocks(['block-1', 'block-2']);
       selection.selectBus('bus-1');
 
-      expect(selection.selectedBlockIds).toEqual([]);
+      // selectBus replaces with single block selection
+      expect(selection.selectedBlockIds).toEqual(['bus-1']);
     });
 
     it('selecting port clears blocks and bus', () => {

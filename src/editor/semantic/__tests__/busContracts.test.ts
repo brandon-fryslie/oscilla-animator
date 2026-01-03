@@ -25,7 +25,7 @@ describe('Bus Contracts', () => {
           category: 'core',
           busEligible: true,
         },
-        combine: { when: 'multi', mode: 'last' },
+        combineMode: 'last',
         description: 'Primary phase signal',
       });
 
@@ -37,7 +37,7 @@ describe('Bus Contracts', () => {
           category: 'core',
           busEligible: true,
         },
-        combine: { when: 'multi', mode: 'sum' },
+        combineMode: 'sum',
         description: 'Energy/intensity contributions from multiple sources',
       });
     });

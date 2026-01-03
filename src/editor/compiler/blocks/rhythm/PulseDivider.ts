@@ -76,7 +76,7 @@ const lowerPulseDivider: BlockLowerFn = ({ ctx, inputs, config }) => {
     { divisions }
   );
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'PulseDivider_out');
   return {
     outputs: [{ k: 'sig', id: outputId, slot }],
   };

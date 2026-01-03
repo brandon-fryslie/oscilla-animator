@@ -17,10 +17,7 @@
 
 import type {
   Block,
-  Connection,
   Bus,
-  Publisher,
-  Listener,
   Composite,
   DefaultSourceState,
   Edge,
@@ -28,26 +25,28 @@ import type {
 
 /**
  * Table names for entity collections in patch state.
+ *
+ * Note: 'connections' is maintained for backward compatibility with
+ * serialized undo/redo history, but all new operations use 'edges'.
  */
 export type TableName =
   | 'blocks'
   | 'connections'
   | 'buses'
-  | 'publishers'
-  | 'listeners'
   | 'composites'
   | 'defaultSources'
   | 'edges';
 
 /**
  * Entity union type - all entities that can be stored in tables.
+ *
+ * Note: Connection type is deprecated and removed from this union.
+ * All connections are now edges. The 'connections' table name is
+ * kept for backward compatibility but only accepts Edge entities.
  */
 export type Entity =
   | Block
-  | Connection
   | Bus
-  | Publisher
-  | Listener
   | Composite
   | DefaultSourceState
   | Edge;

@@ -88,13 +88,13 @@ describe('PatchStore - Wire Events', () => {
 
       const event = listener.mock.calls[0][0] as WireAddedEvent;
 
-      // Verify connection exists in store
-      const connection = root.patchStore.connections.find(c => c.id === event.wireId);
-      expect(connection).toBeDefined();
-      expect(connection?.from.blockId).toBe(event.from.blockId);
-      expect(connection?.from.slotId).toBe(event.from.slotId);
-      expect(connection?.to.blockId).toBe(event.to.blockId);
-      expect(connection?.to.slotId).toBe(event.to.slotId);
+      // Verify edge exists in store
+      const edge = root.patchStore.edges.find(e => e.id === event.wireId);
+      expect(edge).toBeDefined();
+      expect(edge?.from.blockId).toBe(event.from.blockId);
+      expect(edge?.from.slotId).toBe(event.from.slotId);
+      expect(edge?.to.blockId).toBe(event.to.blockId);
+      expect(edge?.to.slotId).toBe(event.to.slotId);
     });
   });
 
@@ -137,7 +137,7 @@ describe('PatchStore - Wire Events', () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
-    it('emits WireRemoved via removeConnection() (consolidated)', () => {
+    it('emits WireRemoved via removeEdge() (consolidated)', () => {
       const removeListener = vi.fn();
       root.events.on('WireRemoved', removeListener);
 
@@ -145,10 +145,10 @@ describe('PatchStore - Wire Events', () => {
       const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       root.patchStore.connect(block1, 'value', block2, 'value');
-      const wireId = root.patchStore.connections[0]?.id ?? '';
+      const wireId = root.patchStore.edges[0]?.id ?? '';
 
-      // Use removeConnection() which should delegate to disconnect()
-      root.patchStore.removeConnection(wireId);
+      // Use removeEdge() to remove the connection
+      root.patchStore.removeEdge(wireId);
 
       // Event should be emitted
       expect(removeListener).toHaveBeenCalledTimes(1);
@@ -162,7 +162,7 @@ describe('PatchStore - Wire Events', () => {
       const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       root.patchStore.connect(block1, 'value', block2, 'value');
-      const wireId = root.patchStore.connections[0]?.id ?? '';
+      const wireId = root.patchStore.edges[0]?.id ?? '';
 
       root.patchStore.disconnect(wireId);
 
@@ -175,9 +175,9 @@ describe('PatchStore - Wire Events', () => {
       expect(event.to.blockId).toBe(block2);
       expect(event.to.slotId).toBe('value');
 
-      // Connection should no longer exist in store
-      const connection = root.patchStore.connections.find(c => c.id === wireId);
-      expect(connection).toBeUndefined();
+      // Edge should no longer exist in store
+      const edge = root.patchStore.edges.find(e => e.id === wireId);
+      expect(edge).toBeUndefined();
     });
   });
 
@@ -202,19 +202,19 @@ describe('PatchStore - Wire Events', () => {
       root.patchStore.connect(block2, 'out', block3, 'a');     // block2 involved
       root.patchStore.connect(block1, 'out', block3, 'b');     // block2 NOT involved
 
-      expect(root.patchStore.connections.length).toBe(3);
+      expect(root.patchStore.edges.length).toBe(3);
 
       // Remove block2
       root.patchStore.removeBlock(block2);
 
-      // Cascade deletion emits WireRemoved for each removed connection
-      // 2 connections involve block2: (block1->block2) and (block2->block3)
+      // Cascade deletion emits WireRemoved for each removed edge
+      // 2 edges involve block2: (block1->block2) and (block2->block3)
       expect(wireRemovedListener).toHaveBeenCalledTimes(2);
       expect(blockRemovedListener).toHaveBeenCalledTimes(1);
 
-      // But connections ARE actually removed
-      // Only 1 connection should remain (block1 -> block3)
-      expect(root.patchStore.connections.length).toBe(1);
+      // But edges ARE actually removed
+      // Only 1 edge should remain (block1 -> block3)
+      expect(root.patchStore.edges.length).toBe(1);
     });
 
     it('emits correct number of WireRemoved events for complex block', () => {
@@ -228,20 +228,20 @@ describe('PatchStore - Wire Events', () => {
       root.patchStore.connect(block1, 'out', block2, 'b');    // block2 involved (2)
       root.patchStore.connect(block2, 'value', block3, 'a');  // block2 involved (3)
 
-      expect(root.patchStore.connections.length).toBe(3);
+      expect(root.patchStore.edges.length).toBe(3);
 
       // Subscribe AFTER setup to only capture cascade events
       const wireRemovedListener = vi.fn();
       root.events.on('WireRemoved', wireRemovedListener);
 
-      // Remove block2 (has 3 connections)
+      // Remove block2 (has 3 edges)
       root.patchStore.removeBlock(block2);
 
-      // Cascade deletion emits WireRemoved for each removed connection
+      // Cascade deletion emits WireRemoved for each removed edge
       expect(wireRemovedListener).toHaveBeenCalledTimes(3);
 
-      // But connections ARE removed (all involved block2)
-      expect(root.patchStore.connections.length).toBe(0);
+      // But edges ARE removed (all involved block2)
+      expect(root.patchStore.edges.length).toBe(0);
     });
 
     it('does not emit WireRemoved when removing block with no connections', () => {
@@ -260,19 +260,19 @@ describe('PatchStore - Wire Events', () => {
 
   describe('Event order and consistency', () => {
     it('emits events in correct order: WireAdded after creation', () => {
-      let connectionExistsAtEventTime = false;
+      let edgeExistsAtEventTime = false;
       const block1 = root.patchStore.addBlock('FieldConstNumber');
       const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       root.events.on('WireAdded', (event) => {
-        // Connection should already exist in store when event fires
-        const exists = root.patchStore.connections.some(c => c.id === event.wireId);
-        connectionExistsAtEventTime = exists;
+        // Edge should already exist in store when event fires
+        const exists = root.patchStore.edges.some(e => e.id === event.wireId);
+        edgeExistsAtEventTime = exists;
       });
 
       root.patchStore.connect(block1, 'value', block2, 'value');
 
-      expect(connectionExistsAtEventTime).toBe(true);
+      expect(edgeExistsAtEventTime).toBe(true);
     });
 
     it('emits events in correct order: WireRemoved after deletion', () => {
@@ -280,19 +280,19 @@ describe('PatchStore - Wire Events', () => {
       const block2 = root.patchStore.addBlock('FieldConstNumber');
 
       root.patchStore.connect(block1, 'value', block2, 'value');
-      const wireId = root.patchStore.connections[0]?.id ?? '';
+      const wireId = root.patchStore.edges[0]?.id ?? '';
 
-      let connectionExistsAtEventTime = true;
+      let edgeExistsAtEventTime = true;
 
       root.events.on('WireRemoved', (event) => {
-        // Connection should NOT exist in store when event fires
-        const exists = root.patchStore.connections.some(c => c.id === event.wireId);
-        connectionExistsAtEventTime = exists;
+        // Edge should NOT exist in store when event fires
+        const exists = root.patchStore.edges.some(e => e.id === event.wireId);
+        edgeExistsAtEventTime = exists;
       });
 
       root.patchStore.disconnect(wireId);
 
-      expect(connectionExistsAtEventTime).toBe(false);
+      expect(edgeExistsAtEventTime).toBe(false);
     });
   });
 });

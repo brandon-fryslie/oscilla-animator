@@ -838,7 +838,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [],
           combine: { mode: "sum" },
         },
@@ -852,7 +852,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [],
           combine: { mode: "sum", default: 100 },
         },
@@ -878,7 +878,7 @@ describe("evalSig - busCombine nodes", () => {
           {
             kind: "busCombine",
             type: numberType,
-            busIndex: 0,
+            
             terms: [],
             combine: { mode, default: 42 },
           },
@@ -895,7 +895,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0],
           combine: { mode: "sum" },
         },
@@ -922,7 +922,7 @@ describe("evalSig - busCombine nodes", () => {
           {
             kind: "busCombine",
             type: numberType,
-            busIndex: 0,
+            
             terms: [0],
             combine: { mode },
           },
@@ -940,7 +940,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1],
           combine: { mode: "sum" },
         },
@@ -959,7 +959,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2, 3, 4],
           combine: { mode: "sum" },
         },
@@ -976,7 +976,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2],
           combine: { mode: "sum" },
         },
@@ -995,7 +995,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2],
           combine: { mode: "average" },
         },
@@ -1013,7 +1013,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2, 3],
           combine: { mode: "average" },
         },
@@ -1032,7 +1032,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2],
           combine: { mode: "min" },
         },
@@ -1049,7 +1049,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2],
           combine: { mode: "min" },
         },
@@ -1066,7 +1066,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2],
           combine: { mode: "min" },
         },
@@ -1085,7 +1085,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2],
           combine: { mode: "max" },
         },
@@ -1102,7 +1102,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2],
           combine: { mode: "max" },
         },
@@ -1121,7 +1121,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2],
           combine: { mode: "first" },
         },
@@ -1139,7 +1139,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           // Compiler sorted in this order
           terms: [1, 2, 0],
           combine: { mode: "first" },
@@ -1160,7 +1160,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2],
           combine: { mode: "last" },
         },
@@ -1177,7 +1177,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           // Compiler sorted in this order
           terms: [1, 2, 0],
           combine: { mode: "last" },
@@ -1197,7 +1197,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0],
           combine: { mode: "sum" },
         },
@@ -1217,7 +1217,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1],
           combine: { mode: "sum" },
         },
@@ -1241,7 +1241,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1, 2],
           combine: { mode: "sum" },
         },
@@ -1276,7 +1276,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 42,
+          
           terms: [0, 1],
           combine: { mode: "sum" },
         },
@@ -1286,7 +1286,6 @@ describe("evalSig - busCombine nodes", () => {
       evalSig(2, env, nodes);
 
       expect(traceInfo).toHaveLength(1);
-      expect(traceInfo[0].busIndex).toBe(42);
       expect(traceInfo[0].termIds).toEqual([0, 1]);
       expect(traceInfo[0].termValues).toEqual([10, 20]);
       expect(traceInfo[0].mode).toBe("sum");
@@ -1304,7 +1303,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0],
           combine: { mode: "sum" },
         },
@@ -1323,7 +1322,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0],
           combine: { mode: "sum" },
         },
@@ -1344,7 +1343,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 99,
+          
           terms: [],
           combine: { mode: "sum", default: 100 },
         },
@@ -1368,7 +1367,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 1,
+          
           terms: [0],
           combine: { mode: "sum" },
         },
@@ -1402,7 +1401,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [2, 3],
           combine: { mode: "sum" },
         }, // 3 + 5.7 = 8.7
@@ -1433,7 +1432,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [3, 4],
           combine: { mode: "max" },
         }, // max(15, 15) = 15
@@ -1449,7 +1448,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 0,
+          
           terms: [0, 1],
           combine: { mode: "sum" },
         }, // 10 + 20 = 30
@@ -1457,7 +1456,7 @@ describe("evalSig - busCombine nodes", () => {
         {
           kind: "busCombine",
           type: numberType,
-          busIndex: 1,
+          
           terms: [2, 3],
           combine: { mode: "average" },
         }, // (30 + 5) / 2 = 17.5

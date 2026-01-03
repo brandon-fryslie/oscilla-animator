@@ -13,7 +13,7 @@ export function createLensInstanceFromDefinition(
   _defaultSourceStore: DefaultSourceStore
 ): LensInstance {
   const transform = TRANSFORM_REGISTRY.getTransform(lens.type);
-  const def = transform && isLensTransform(transform) ? transform : null;
+  const def = transform != null && isLensTransform(transform) ? transform : null;
 
   if (def == null) {
     // Unknown lens type - just pass through params as literals
@@ -62,7 +62,6 @@ export function lensInstanceToDefinition(
         params[paramKey] = source.value;
       }
     }
-    // bus bindings are not editable in the UI, skip them
   }
   return { type: lens.lensId, params };
 }

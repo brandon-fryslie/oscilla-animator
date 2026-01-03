@@ -24,7 +24,7 @@ import type { RootStore } from '../stores/RootStore';
 import type { Op, TableName, Entity, Position } from './ops';
 import { computeInverse, validateOp } from './ops';
 import { applyOps } from './applyOps';
-import type { Connection, Publisher, Listener } from '../types';
+import type { Edge } from '../types';
 import type { GraphDiffSummary } from '../events/types';
 
 /**
@@ -244,18 +244,14 @@ export class TxBuilder {
       case 'blocks':
         return this.root.patchStore.blocks.find(b => b.id === id);
       case 'connections':
-        return this.root.patchStore.connections.find(c => c.id === id);
+        return this.root.patchStore.edges.find(c => c.id === id);
       case 'buses':
-        return this.root.busStore.buses.find(b => b.id === id);
-      case 'publishers':
-        return this.root.busStore.publishers.find(p => p.id === id);
-      case 'listeners':
-        return this.root.busStore.listeners.find(l => l.id === id);
+        return this.root.patchStore.busBlocks.find(b => b.id === id);
       case 'composites':
         return this.root.compositeStore.composites.find(c => c.id === id);
-      case 'defaultSources':
       case 'edges':
         return this.root.patchStore.edges.find(e => e.id === id);
+      case 'defaultSources':
         return this.root.defaultSourceStore.sources.get(id);
       default: {
         const _exhaustive: never = table;
@@ -265,58 +261,21 @@ export class TxBuilder {
   }
 
   /**
-   * Get all connections involving a block.
+   * Get all edges involving a block.
    */
-  getConnectionsForBlock(blockId: string): Connection[] {
-    return this.root.patchStore.connections.filter(
-      c => c.from.blockId === blockId || c.to.blockId === blockId
+  getEdgesForBlock(blockId: string): Edge[] {
+    return this.root.patchStore.edges.filter(
+      e => e.from.blockId === blockId || e.to.blockId === blockId
     );
   }
 
   /**
-   * Get all publishers for a block.
+   * Get all edges to a specific input port.
    */
-  getPublishersForBlock(blockId: string): Publisher[] {
-    return this.root.busStore.publishers.filter(p => p.from.blockId === blockId);
-  }
-
-  /**
-   * Get all listeners for a block.
-   */
-  getListenersForBlock(blockId: string): Listener[] {
-    return this.root.busStore.listeners.filter(l => l.to.blockId === blockId);
-  }
-
-  /**
-   * Get all listeners for a specific input port.
-   */
-  getListenersForPort(blockId: string, slotId: string): Listener[] {
-    return this.root.busStore.listeners.filter(
-      l => l.to.blockId === blockId && l.to.slotId === slotId
+  getEdgesToPort(blockId: string, slotId: string): Edge[] {
+    return this.root.patchStore.edges.filter(
+      e => e.to.blockId === blockId && e.to.slotId === slotId
     );
-  }
-
-  /**
-   * Get all connections to a specific input port.
-   */
-  getConnectionsToPort(blockId: string, slotId: string): Connection[] {
-    return this.root.patchStore.connections.filter(
-      c => c.to.blockId === blockId && c.to.slotId === slotId
-    );
-  }
-
-  /**
-   * Get all publishers for a bus.
-   */
-  getPublishersForBus(busId: string): Publisher[] {
-    return this.root.busStore.publishers.filter(p => p.busId === busId);
-  }
-
-  /**
-   * Get all listeners for a bus.
-   */
-  getListenersForBus(busId: string): Listener[] {
-    return this.root.busStore.listeners.filter(l => l.busId === busId);
   }
 
   /**
@@ -342,11 +301,9 @@ export class TxBuilder {
    * Remove a block and all its dependencies in correct order.
    *
    * Removal order:
-   * 1. All connections to/from the block
-   * 2. All bus publishers from the block
-   * 3. All bus listeners to the block
-   * 4. All default sources for the block's inputs
-   * 5. The block itself
+   * 1. All edges to/from the block
+   * 2. All default sources for the block's inputs
+   * 3. The block itself
    *
    * This generates a Many op containing all sub-ops.
    * The inverse will recreate everything in reverse order.
@@ -362,31 +319,19 @@ export class TxBuilder {
     }
 
     this.many(() => {
-      // 1. Remove all connections to/from this block
-      const connections = this.getConnectionsForBlock(blockId);
-      for (const conn of connections) {
-        this.remove('connections', conn.id);
+      // 1. Remove all edges to/from this block
+      const edges = this.getEdgesForBlock(blockId);
+      for (const edge of edges) {
+        this.remove('edges', edge.id);
       }
 
-      // 2. Remove all publishers from this block
-      const publishers = this.getPublishersForBlock(blockId);
-      for (const pub of publishers) {
-        this.remove('publishers', pub.id);
-      }
-
-      // 3. Remove all listeners to this block
-      const listeners = this.getListenersForBlock(blockId);
-      for (const listener of listeners) {
-        this.remove('listeners', listener.id);
-      }
-
-      // 4. Remove default sources for this block's inputs
+      // 2. Remove default sources for this block's inputs
       const defaultSources = this.getDefaultSourcesForBlock(blockId);
       for (const dsId of defaultSources) {
         this.remove('defaultSources', dsId);
       }
 
-      // 5. Remove the block itself
+      // 3. Remove the block itself
       this.remove('blocks', blockId);
     });
   }
@@ -394,13 +339,8 @@ export class TxBuilder {
   /**
    * Remove a bus and all its routing in correct order.
    *
-   * Removal order:
-   * 1. All publishers on this bus
-   * 2. All listeners on this bus
-   * 3. The bus itself
-   *
-   * This generates a Many op containing all sub-ops.
-   * The inverse will recreate everything in reverse order.
+   * Post Bus-Block unification: Buses are now BusBlocks. This method
+   * removes the BusBlock from the buses table.
    *
    * @param busId The bus ID to remove
    * @throws if bus doesn't exist
@@ -413,19 +353,7 @@ export class TxBuilder {
     }
 
     this.many(() => {
-      // 1. Remove all publishers on this bus
-      const publishers = this.getPublishersForBus(busId);
-      for (const pub of publishers) {
-        this.remove('publishers', pub.id);
-      }
-
-      // 2. Remove all listeners on this bus
-      const listeners = this.getListenersForBus(busId);
-      for (const listener of listeners) {
-        this.remove('listeners', listener.id);
-      }
-
-      // 3. Remove the bus itself
+      // Remove the bus itself
       this.remove('buses', busId);
     });
   }
@@ -559,7 +487,7 @@ function computeDiffSummary(ops: Op[]): GraphDiffSummary {
           }
         }
         if (op.table === 'buses') busesAdded++;
-        if (op.table === 'connections' || op.table === 'publishers' || op.table === 'listeners') {
+        if (op.table === 'connections' || op.table === 'edges') {
           bindingsChanged++;
         }
         break;
@@ -574,7 +502,7 @@ function computeDiffSummary(ops: Op[]): GraphDiffSummary {
           }
         }
         if (op.table === 'buses') busesRemoved++;
-        if (op.table === 'connections' || op.table === 'publishers' || op.table === 'listeners') {
+        if (op.table === 'connections' || op.table === 'edges') {
           bindingsChanged++;
         }
         break;
@@ -611,19 +539,11 @@ function extractAffectedBlockIds(ops: Op[]): string[] {
         if (op.table === 'blocks' && typeof op.entity === 'object' && op.entity !== null && 'id' in op.entity) {
           blockIds.add(op.entity.id);
         }
-        // For connections, add both source and target block IDs
-        if (op.table === 'connections' && typeof op.entity === 'object' && op.entity !== null) {
+        // For connections/edges, add both source and target block IDs
+        if ((op.table === 'connections' || op.table === 'edges') && typeof op.entity === 'object' && op.entity !== null) {
           const conn = op.entity as { from?: { blockId?: string }; to?: { blockId?: string } };
           const fromBlockId = conn.from?.blockId;
           const toBlockId = conn.to?.blockId;
-          if (fromBlockId !== null && fromBlockId !== undefined) blockIds.add(fromBlockId);
-          if (toBlockId !== null && toBlockId !== undefined) blockIds.add(toBlockId);
-        }
-        // For publishers/listeners, add the block ID
-        if ((op.table === 'publishers' || op.table === 'listeners') && typeof op.entity === 'object' && op.entity !== null) {
-          const binding = op.entity as { from?: { blockId?: string }; to?: { blockId?: string } };
-          const fromBlockId = binding.from?.blockId;
-          const toBlockId = binding.to?.blockId;
           if (fromBlockId !== null && fromBlockId !== undefined) blockIds.add(fromBlockId);
           if (toBlockId !== null && toBlockId !== undefined) blockIds.add(toBlockId);
         }

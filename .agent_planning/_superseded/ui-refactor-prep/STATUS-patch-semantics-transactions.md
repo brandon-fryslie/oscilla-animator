@@ -46,7 +46,6 @@
 **Current State:**
 - ✅ SemanticGraph indices implemented correctly
 - ✅ Port identity using canonical PortKey
-- ✅ WireEdge, PublisherEdge, ListenerEdge types defined
 - ⚠️ Validator exists but incomplete (missing adapter validation, implicit bindings)
 - ❌ No suggested fixes system
 - ❌ No incremental validation hooks
@@ -66,9 +65,6 @@
 **Buses (3)**:
 - BusAdd, BusRemove, BusUpdate
 
-**Publishers/Listeners (6)**:
-- PublisherAdd, PublisherRemove, PublisherUpdate
-- ListenerAdd, ListenerRemove, ListenerUpdate
 
 **Composites (4)**:
 - CompositeDefAdd, CompositeDefRemove, CompositeDefUpdate, CompositeDefReplaceGraph
@@ -174,8 +170,6 @@ interface TxView {
   // Neighborhood queries
   getIncoming(ref: PortRef): IncomingSummary
   getOutgoing(ref: PortRef): OutgoingSummary
-  getBusPublishers(busId): Publisher[]
-  getBusListeners(busId): Listener[]
 
   // Time topology
   readonly time: TimeTopologyView
@@ -219,7 +213,6 @@ interface ActionsAPI {
 
 **1. graph.ts** - SemanticGraph ✅ (95% complete)
 - Builds indices from PatchDocument
-- Supports wire, publisher, listener edges
 - Cycle detection (Tarjan's SCC algorithm)
 - Incremental query methods
 - **Gap**: No incremental update methods (rebuild only)
@@ -238,7 +231,6 @@ interface ActionsAPI {
 - Implicit binding resolution (e.g., "phase defaults to phaseA")
 - Suggested fixes generation
 - Delta validation (incremental)
-- Publisher sortKey ordering validation
 - Bus type compatibility checks
 
 **3. types.ts** - Core types ✅ (100% complete)
@@ -317,7 +309,6 @@ interface ActionsAPI {
    - **Recommendation**: Both - preflight prevents invalid attempts, delta catches emergent issues
 
 3. **Implicit Bindings**
-   - Spec mentions "phase exists without wiring" via implicit listeners
    - When/how are these resolved?
    - **Recommendation**: Resolve at compile time, expose in TxView, don't store in doc
 
@@ -442,7 +433,6 @@ interface ActionsAPI {
 ### Missing Rules
 
 1. **Bus Type Compatibility**
-   - Spec requires: Publisher type must be compatible with bus type (with adapters)
    - Current: Not checked
 
 2. **Adapter Chain Validation**
@@ -457,8 +447,6 @@ interface ActionsAPI {
 
    - Current: Not validated (BusStore handles this manually)
 
-5. **Publisher SortKey Ordering**
-   - Spec requires: Publishers sorted deterministically by sortKey
    - Current: SemanticGraph sorts, but not validated as invariant
 
 6. **Implicit Bindings**

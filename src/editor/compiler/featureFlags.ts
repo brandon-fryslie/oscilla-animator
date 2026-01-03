@@ -44,7 +44,7 @@ const DEFAULT_FLAGS: CompilerFeatureFlags = {
   strictStateValidation: true,
   timeCtxPropagation: true,
   requireTimeRoot: true,
-  emitIR: false, // Temporarily disabled - set to true to enable IR compilation
+  emitIR: true, // Enabled for steel thread testing
 };
 
 /**

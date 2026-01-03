@@ -141,7 +141,6 @@ This is the visual analog of:
 
 When a Signal is consumed:
 - the bus value is never mutated
-- interpretation happens at the **listener port**
 
 This keeps Signals:
 - pure

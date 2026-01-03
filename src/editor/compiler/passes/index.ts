@@ -1,10 +1,13 @@
 /**
  * Compiler Passes - Public API
  *
- * Canonical 11-pass compilation pipeline.
+ * Canonical compilation pipeline.
  * Sprint 1: Passes 1-5 (normalization, types, time, deps, SCC)
- * Sprint 2: Passes 6-8 (block lowering, bus lowering, link resolution)
+ * Sprint 2: Passes 6-8 (block lowering, link resolution)
  * Sprint 3: Passes 9-11 (render lowering, constants, debug index)
+ *
+ * Note: Pass 7 (bus lowering) has been removed - buses are now treated
+ * identically to other blocks in Pass 6.
  */
 
 // Pass 1: Normalize Patch
@@ -32,11 +35,7 @@ export type { AcyclicOrLegalGraph } from "../ir/patches";
 export { pass6BlockLowering } from "./pass6-block-lowering";
 export type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
 
-// Pass 7: Bus Lowering
-export { pass7BusLowering } from "./pass7-bus-lowering";
-export type { IRWithBusRoots } from "./pass7-bus-lowering";
-
-// Pass 8: Link Resolution
+// Pass 8: Link Resolution (Pass 7 removed - buses are just blocks)
 export { pass8LinkResolution } from "./pass8-link-resolution";
 export type { LinkedGraphIR, BlockInputRootIR, BlockOutputRootIR } from "./pass8-link-resolution";
 
@@ -44,4 +43,3 @@ export type { LinkedGraphIR, BlockInputRootIR, BlockOutputRootIR } from "./pass8
 // TODO: Re-enable when pass9-codegen type issues are fixed
 // Currently using buildSchedule.ts directly in the IR pipeline
 // export { pass9Codegen } from "./pass9-codegen";
-

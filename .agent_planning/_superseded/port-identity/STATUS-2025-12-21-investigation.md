@@ -50,7 +50,6 @@ export interface BindingEndpoint {
 **Not changed** (70+ locations still using old API):
 ```typescript
 // Example from bus-compilation.test.ts:102
-publishers: [{
   from: { blockId: 'block-1', port: 'out' },  // ❌ Should be: slotId + dir
   // ...
 }]
@@ -317,7 +316,6 @@ for (const outDef of compiler.outputs) {
 
 **Current**: No `portMap` in composite definitions. Expansion rewrites IDs without preserving addressability.
 
-**Impact**: Bus listeners targeting composite ports fail after expansion.
 
 ---
 
@@ -331,8 +329,6 @@ These questions should be clarified before Fix 3:
 
 **Examples**:
 - Wire connections: `{ from: PortRef, to: PortRef }` - direction is implicit
-- Bus publishers: `{ from: PortRef, busId }` - must be output
-- Bus listeners: `{ to: PortRef, busId }` - must be input
 
 **Question**: Should `PortRef` always require explicit `dir`, or can it be inferred from context?
 
@@ -341,7 +337,6 @@ These questions should be clarified before Fix 3:
 **Practical concern**: Redundant in wire connections (from is always output, to is always input).
 
 **Recommendation**:
-- Keep `dir` required in `BindingEndpoint` (bus publishers/listeners)
 - Allow `dir` optional in wire `Connection` type (inferred from from/to position)
 
 ### Q2: Port Name vs SlotId
@@ -480,9 +475,7 @@ From `design-docs/10-Refactor-for-UI-prep/2-PortIdentity.md`, section 11:
 
 ### Coffin Nails Tests
 
-1. **Composite bus listener survives internal change**
    - ❌ Not tested (no test file exists)
-   - Requires: Composite with portMap + bus listener
 
 2. **Composite swapping preserves bindings when slotIds unchanged**
    - ❌ Not tested

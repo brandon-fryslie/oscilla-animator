@@ -1,0 +1,26 @@
+Agent: project-evaluator | 2026-01-03-114500
+Scope: topic/graph-normalization
+Completion: 15% | Gaps: 9 major components | Test Quality: N/A (not implemented)
+Reused: 0 findings | Fresh: Full evaluation
+Cache updated: None (architecture eval only)
+Ambiguities: 4 critical questions need answers
+Workflow: PAUSE - Ambiguities block implementation
+
+Key Findings:
+- Target: RawGraph → NormalizedGraph separation (spec §16)
+- Current: Ad-hoc normalization in compiler (pass0-materialize.ts)
+- MISSING: RawGraph/NormalizedGraph types, GraphNormalizer module, anchor-based IDs
+- MISSING: Role metadata on edges, wire-state blocks, incremental normalization
+- PARTIAL: Default sources materialized as blocks (✅) but in compiler (❌)
+- PARTIAL: BusBlock unification complete (✅) but no anchor IDs (❌)
+
+Blockers (PAUSE reasons):
+1. Eager vs lazy normalization strategy - architecture decision needed
+2. Wire-state block semantics - spec unclear, can't implement undefined feature
+3. Hash algorithm for anchor IDs - spec says "hash" but doesn't specify which
+4. BusBlock classification - user-created vs structural (affects anchor system)
+
+Next Action:
+→ User/researcher must resolve 4 ambiguities in EVALUATION-2026-01-03.md §Ambiguities
+→ After resolution: define types (RawGraph, Anchor), create module structure
+→ Estimated effort: 5-7 days (large architectural refactor)

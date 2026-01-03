@@ -8,7 +8,7 @@
  * Critical: Block ID MUST equal Bus ID for stable references during migration.
  */
 
-import type { Bus, Block, Slot, TypeDesc, SlotType } from '../types';
+import type { Bus, Block, TypeDesc, SlotType } from '../types';
 
 /**
  * Convert TypeDesc to SlotType string.
@@ -34,40 +34,32 @@ function typeDescToSlotType(_typeDesc: TypeDesc): SlotType {
  * @returns Block instance representing the bus
  */
 export function convertBusToBlock(bus: Bus): Block {
-  const inputSlot: Slot = {
-    id: 'in',
-    label: 'Publishers',
-    type: typeDescToSlotType(bus.type),
-    direction: 'input',
-    combine: bus.combine, // This makes it multi-input capable
-  };
-
-  const outputSlot: Slot = {
-    id: 'out',
-    label: bus.name,
-    type: typeDescToSlotType(bus.type),
-    direction: 'output',
-  };
-
   return {
-    id: bus.id, // CRITICAL: Same ID for stable references
+    id: bus.id, // Block ID = Bus ID (unified)
     type: 'BusBlock',
     label: bus.name,
-    inputs: [inputSlot],
-    outputs: [outputSlot],
+    position: { x: 0, y: 0 }, // Hidden blocks don't need meaningful positions
+    form: 'primitive',
     params: {
-      busId: bus.id,
-      busName: bus.name,
+      // Bus-specific metadata (no redundant busId/busName - use block.id and block.label)
+      name: bus.name, // Programmatic name for lookups
       busType: bus.type,
       combine: bus.combine,
       defaultValue: bus.defaultValue,
       sortKey: bus.sortKey,
       origin: bus.origin,
     },
-    category: 'Other',
-    description: `Bus: ${bus.name}`,
     hidden: true,
-    role: 'internal',
+    role: {
+      kind: 'structural',
+      meta: {
+        kind: 'globalBus',
+        target: {
+          kind: 'bus',
+          busId: bus.id,
+        },
+      },
+    },
   };
 }
 
@@ -87,8 +79,7 @@ export function convertBlockToBus(block: Block): Bus {
   }
 
   const {
-    busId,
-    busName,
+    name,
     busType,
     combine,
     defaultValue,
@@ -96,13 +87,12 @@ export function convertBlockToBus(block: Block): Bus {
     origin,
   } = block.params;
 
+  // Use block.id as bus ID (unified model)
+  const busId = block.id;
+  // Use params.name for bus name (or fallback to block.label)
+  const busName = (typeof name === 'string') ? name : (block.label ?? block.id);
+
   // Validate required parameters
-  if (typeof busId !== 'string') {
-    throw new Error('BusBlock params.busId must be a string');
-  }
-  if (typeof busName !== 'string') {
-    throw new Error('BusBlock params.busName must be a string');
-  }
   if (typeof busType !== 'object' || busType === null) {
     throw new Error('BusBlock params.busType must be a TypeDesc object');
   }
@@ -111,8 +101,8 @@ export function convertBlockToBus(block: Block): Bus {
   }
 
   return {
-    id: busId as string,
-    name: busName as string,
+    id: busId,
+    name: busName,
     type: busType as TypeDesc,
     combine: combine as Bus['combine'],
     defaultValue,

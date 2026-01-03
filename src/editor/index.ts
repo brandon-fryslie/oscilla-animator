@@ -21,7 +21,6 @@ export type {
   BlockCategory,
   Slot,
   SlotType,
-  Connection,
   Patch,
   EditorUIState,
   Template,

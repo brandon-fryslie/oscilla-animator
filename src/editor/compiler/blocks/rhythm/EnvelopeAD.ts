@@ -95,7 +95,7 @@ const lowerEnvelopeAD: BlockLowerFn = ({ ctx, inputs, config }) => {
   // Keep reference to avoid unused variable warning
   void wasTriggeredStateId;
 
-  const slot = ctx.b.allocValueSlot();
+  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'EnvelopeAD_out');
   return {
     outputs: [{ k: 'sig', id: outputId, slot }],
   };

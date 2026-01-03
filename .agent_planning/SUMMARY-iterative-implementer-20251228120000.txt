@@ -1,0 +1,103 @@
+Agent: iterative-implementer | 2025-12-28-120000
+Mode: manual
+Completed: Deliverable 2 - IR Compilation Mandatory | Files: 1 | Commits: 1
+Tests: Manual verification (TDD mode not applicable)
+Cache invalidated: None (compileBusAware.ts restored and modified)
+Status: complete
+
+=============================================================================
+DELIVERABLE SUMMARY
+=============================================================================
+
+Sprint 0: Compiler IR-Only Blockers
+
+DELIVERABLE 1: Block Registry Capability Propagation
+Status: ALREADY COMPLETE (commit 72874c3)
+- createBlock() factory auto-infers capability from KERNEL_PRIMITIVES
+- All blocks now validate correctly
+- Implementation verified in src/editor/blocks/factory.ts
+
+DELIVERABLE 2: IR Compilation Made Mandatory
+Status: COMPLETE (commit 214da9c)
+- Restored working compileBusAware.ts from commit 4c4423c
+- Modified attachIR() function to throw fatal errors instead of warnings
+- When emitIR=true, IR failures are now MANDATORY fatal errors
+- When emitIR=false, legacy-only compilation still works
+- No silent fallback to legacy execution exists
+
+=============================================================================
+IMPLEMENTATION DETAILS
+=============================================================================
+
+File Modified:
+- src/editor/compiler/compileBusAware.ts (1,283 insertions, 175 deletions)
+
+Changes Made:
+1. Restored working version from commit 4c4423c (previous commits had broken stubs)
+2. Modified attachIR() function (lines 771-852):
+   - Line 780-783: Keep early return when emitIR=false (legacy mode still works)
+   - Line 788-793: IR undefined → throw Error (was: return warning)
+   - Line 796-801: IR errors → throw Error (was: return warnings)
+   - Updated logging to indicate "MANDATORY" when IR is enabled
+
+Expected Behavior:
+- emitIR=false: Legacy-only compilation succeeds (backward compatible)
+- emitIR=true + IR success: Both legacy and IR available
+- emitIR=true + IR failure: Compilation throws fatal error (no silent fallback)
+
+=============================================================================
+VALIDATION
+=============================================================================
+
+TypeScript Compilation:
+- compileBusAware.ts: NO ERRORS ✓
+- Remaining errors are in out-of-scope files:
+  * Camera.ts (1 error)
+  * IRBuilderImpl.ts (13 errors)
+- These are expected and documented for future sprints
+
+Test Infrastructure:
+- Manual mode validation (no existing tests for this functionality)
+- Verified that compileBusAware.ts compiles without errors
+- Verified that IR emission logic is correctly enforced
+
+=============================================================================
+KNOWN LIMITATIONS (EXPECTED)
+=============================================================================
+
+The following are OUT OF SCOPE for Sprint 0 and are EXPECTED limitations:
+- TimeModel threading (Sprint 1)
+- timeDerive tAbsMs write (Sprint 1)
+- Pass 6 block lowering (Sprint 2)
+- Default source lowering (Sprint 1)
+- Bus evaluation steps (Sprint 3)
+- Event bus lowering (Sprint 3)
+- Type conversions (Sprint 4+)
+
+Most patches will fail IR compilation due to missing features above.
+This is CORRECT BEHAVIOR - we want visible failures, not silent fallback.
+
+=============================================================================
+NEXT STEPS
+=============================================================================
+
+Sprint 1 Should Focus On:
+1. TimeModel threading from Pass 3 to schedule
+2. timeDerive tAbsMs slot write
+3. Default source lowering
+4. Feature flag parsing bug fix
+
+Reference:
+- DOD: .agent_planning/compiler-audit-redflag/DOD-2025-12-28-165200.md
+- PLAN: .agent_planning/compiler-audit-redflag/PLAN-2025-12-28-165200.md
+- STATUS: .agent_planning/compiler-audit-redflag/STATUS.md
+
+=============================================================================
+COMMITS
+=============================================================================
+
+214da9c fix(compiler): Make IR compilation mandatory when enabled
+
+Previous Related Commits:
+a4ea0c1 fix(compiler): Make IR compilation mandatory when enabled (BROKEN - created stubs)
+72874c3 fix(compiler): Auto-infer block capability from KERNEL_PRIMITIVES (DELIVERABLE 1)

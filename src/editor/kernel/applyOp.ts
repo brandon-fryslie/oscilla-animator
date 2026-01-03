@@ -82,44 +82,40 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     }
 
     // =========================================================================
-    // Wire Ops
+    // Wire Ops (operate on edges array)
     // =========================================================================
     case 'WireAdd': {
-      const existing = doc.connections.find(c => c.id === op.connection.id);
+      const existing = doc.edges.find(e => e.id === op.edge.id);
       if (existing !== undefined) {
-        return { ok: false, error: `Connection with id '${op.connection.id}' already exists` };
+        return { ok: false, error: `Edge with id '${op.edge.id}' already exists` };
       }
-      const fromBlock = doc.blocks.find(b => b.id === op.connection.from.blockId);
-      const toBlock = doc.blocks.find(b => b.id === op.connection.to.blockId);
+      const fromBlock = doc.blocks.find(b => b.id === op.edge.from.blockId);
+      const toBlock = doc.blocks.find(b => b.id === op.edge.to.blockId);
       if (fromBlock === undefined) {
-        return { ok: false, error: `Source block '${op.connection.from.blockId}' not found` };
+        return { ok: false, error: `Source block '${op.edge.from.blockId}' not found` };
       }
       if (toBlock === undefined) {
-        return { ok: false, error: `Target block '${op.connection.to.blockId}' not found` };
+        return { ok: false, error: `Target block '${op.edge.to.blockId}' not found` };
       }
-      if (op.connection.from.direction !== 'output') {
-        return { ok: false, error: `Wire source must be an output (got ${op.connection.from.direction})` };
-      }
-      if (op.connection.to.direction !== 'input') {
-        return { ok: false, error: `Wire target must be an input (got ${op.connection.to.direction})` };
-      }
-      doc.connections.push(op.connection);
+
+      // Edge is already in the correct format
+      doc.edges.push(op.edge);
       return { ok: true };
     }
 
     case 'WireRemove': {
-      const index = doc.connections.findIndex(c => c.id === op.connectionId);
+      const index = doc.edges.findIndex(e => e.id === op.edgeId);
       if (index === -1) {
-        return { ok: false, error: `Connection '${op.connectionId}' not found` };
+        return { ok: false, error: `Edge '${op.edgeId}' not found` };
       }
-      doc.connections.splice(index, 1);
+      doc.edges.splice(index, 1);
       return { ok: true };
     }
 
     case 'WireRetarget': {
-      const conn = doc.connections.find(c => c.id === op.connectionId);
-      if (conn === undefined) {
-        return { ok: false, error: `Connection '${op.connectionId}' not found` };
+      const edge = doc.edges.find(e => e.id === op.edgeId);
+      if (edge === undefined) {
+        return { ok: false, error: `Edge '${op.edgeId}' not found` };
       }
       const newFrom = op.next.from;
       if (newFrom !== undefined) {
@@ -127,10 +123,11 @@ export function applyOp(doc: Patch, op: Op): OpResult {
         if (fromBlock === undefined) {
           return { ok: false, error: `Source block '${newFrom.blockId}' not found` };
         }
-        if (newFrom.direction !== 'output') {
-          return { ok: false, error: `Wire source must be an output (got ${newFrom.direction})` };
-        }
-        (conn as { from: typeof newFrom }).from = newFrom;
+        (edge as { from: import('../types').Endpoint }).from = {
+          kind: 'port',
+          blockId: newFrom.blockId,
+          slotId: newFrom.slotId,
+        };
       }
       const newTo = op.next.to;
       if (newTo !== undefined) {
@@ -138,146 +135,17 @@ export function applyOp(doc: Patch, op: Op): OpResult {
         if (toBlock === undefined) {
           return { ok: false, error: `Target block '${newTo.blockId}' not found` };
         }
-        if (newTo.direction !== 'input') {
-          return { ok: false, error: `Wire target must be an input (got ${newTo.direction})` };
-        }
-        (conn as { to: typeof newTo }).to = newTo;
+        (edge as { to: import('../types').Endpoint }).to = {
+          kind: 'port',
+          blockId: newTo.blockId,
+          slotId: newTo.slotId,
+        };
       }
       return { ok: true };
     }
 
-    // =========================================================================
-    // Bus Ops
-    // =========================================================================
-    case 'BusAdd': {
-      if (doc.buses === undefined) doc.buses = [];
-      const existing = doc.buses.find(b => b.id === op.bus.id);
-      if (existing !== undefined) {
-        return { ok: false, error: `Bus with id '${op.bus.id}' already exists` };
-      }
-      doc.buses.push(op.bus);
-      return { ok: true };
-    }
-
-    case 'BusRemove': {
-      if (doc.buses === undefined) {
-        return { ok: false, error: `Bus '${op.busId}' not found (no buses defined)` };
-      }
-      const index = doc.buses.findIndex(b => b.id === op.busId);
-      if (index === -1) {
-        return { ok: false, error: `Bus '${op.busId}' not found` };
-      }
-      doc.buses.splice(index, 1);
-      return { ok: true };
-    }
-
-    case 'BusUpdate': {
-      if (doc.buses === undefined) {
-        return { ok: false, error: `Bus '${op.busId}' not found (no buses defined)` };
-      }
-      const bus = doc.buses.find(b => b.id === op.busId);
-      if (bus === undefined) {
-        return { ok: false, error: `Bus '${op.busId}' not found` };
-      }
-      Object.assign(bus, op.patch);
-      return { ok: true };
-    }
-
-    // =========================================================================
-    // Binding Ops (Publishers)
-    // =========================================================================
-    case 'PublisherAdd': {
-      if (doc.publishers === undefined) doc.publishers = [];
-      const existing = doc.publishers.find(p => p.id === op.publisher.id);
-      if (existing !== undefined) {
-        return { ok: false, error: `Publisher with id '${op.publisher.id}' already exists` };
-      }
-      if (doc.buses === undefined) {
-        return { ok: false, error: `Bus '${op.publisher.busId}' not found (no buses defined)` };
-      }
-      const bus = doc.buses.find(b => b.id === op.publisher.busId);
-      if (bus === undefined) {
-        return { ok: false, error: `Bus '${op.publisher.busId}' not found` };
-      }
-      const block = doc.blocks.find(b => b.id === op.publisher.from.blockId);
-      if (block === undefined) {
-        return { ok: false, error: `Source block '${op.publisher.from.blockId}' not found` };
-      }
-      doc.publishers.push(op.publisher);
-      return { ok: true };
-    }
-
-    case 'PublisherRemove': {
-      if (doc.publishers === undefined) {
-        return { ok: false, error: `Publisher '${op.publisherId}' not found (no publishers defined)` };
-      }
-      const index = doc.publishers.findIndex(p => p.id === op.publisherId);
-      if (index === -1) {
-        return { ok: false, error: `Publisher '${op.publisherId}' not found` };
-      }
-      doc.publishers.splice(index, 1);
-      return { ok: true };
-    }
-
-    case 'PublisherUpdate': {
-      if (doc.publishers === undefined) {
-        return { ok: false, error: `Publisher '${op.publisherId}' not found (no publishers defined)` };
-      }
-      const pub = doc.publishers.find(p => p.id === op.publisherId);
-      if (pub === undefined) {
-        return { ok: false, error: `Publisher '${op.publisherId}' not found` };
-      }
-      Object.assign(pub, op.patch);
-      return { ok: true };
-    }
-
-    // =========================================================================
-    // Binding Ops (Listeners)
-    // =========================================================================
-    case 'ListenerAdd': {
-      if (doc.listeners === undefined) doc.listeners = [];
-      const existing = doc.listeners.find(l => l.id === op.listener.id);
-      if (existing !== undefined) {
-        return { ok: false, error: `Listener with id '${op.listener.id}' already exists` };
-      }
-      if (doc.buses === undefined) {
-        return { ok: false, error: `Bus '${op.listener.busId}' not found (no buses defined)` };
-      }
-      const bus = doc.buses.find(b => b.id === op.listener.busId);
-      if (bus === undefined) {
-        return { ok: false, error: `Bus '${op.listener.busId}' not found` };
-      }
-      const block = doc.blocks.find(b => b.id === op.listener.to.blockId);
-      if (block === undefined) {
-        return { ok: false, error: `Target block '${op.listener.to.blockId}' not found` };
-      }
-      doc.listeners.push(op.listener);
-      return { ok: true };
-    }
-
-    case 'ListenerRemove': {
-      if (doc.listeners === undefined) {
-        return { ok: false, error: `Listener '${op.listenerId}' not found (no listeners defined)` };
-      }
-      const index = doc.listeners.findIndex(l => l.id === op.listenerId);
-      if (index === -1) {
-        return { ok: false, error: `Listener '${op.listenerId}' not found` };
-      }
-      doc.listeners.splice(index, 1);
-      return { ok: true };
-    }
-
-    case 'ListenerUpdate': {
-      if (doc.listeners === undefined) {
-        return { ok: false, error: `Listener '${op.listenerId}' not found (no listeners defined)` };
-      }
-      const listener = doc.listeners.find(l => l.id === op.listenerId);
-      if (listener === undefined) {
-        return { ok: false, error: `Listener '${op.listenerId}' not found` };
-      }
-      Object.assign(listener, op.patch);
-      return { ok: true };
-    }
+    // Bus Ops - REMOVED (buses are now BusBlocks, use BlockAdd/BlockRemove)
+    // Publisher/Listener Ops - REMOVED (use WireAdd/WireRemove for Edges)
 
     // =========================================================================
     // Composite Ops
@@ -330,8 +198,6 @@ export function applyOp(doc: Patch, op: Op): OpResult {
         graph: {
           blocks: unknown[];
           connections: unknown[];
-          publishers: unknown[];
-          listeners: unknown[];
         };
         exposedPorts: unknown;
       }
@@ -340,8 +206,6 @@ export function applyOp(doc: Patch, op: Op): OpResult {
       defWithGraph.graph = {
         blocks: op.nextGraph.nodes,
         connections: op.nextGraph.edges,
-        publishers: op.nextGraph.publishers ?? [],
-        listeners: op.nextGraph.listeners ?? [],
       };
       defWithGraph.exposedPorts = op.nextExposed;
       return { ok: true };

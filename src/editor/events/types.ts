@@ -9,7 +9,7 @@
  * - Events are scoped per RootStore instance
  */
 
-import type { TypeDesc, PortRef } from '../types';
+import type { TypeDesc, Endpoint } from '../types';
 import type { Diagnostic } from '../diagnostics/types';
 
 /**
@@ -119,16 +119,16 @@ export interface BlockReplacedEvent {
  *
  * Emitted when a wire connection is created between two blocks.
  * Emitted by: PatchStore.connect()
- * When: After connection added to store
+ * When: After edge added to store
  */
 export interface WireAddedEvent {
   type: 'WireAdded';
-  /** ID of the wire connection */
+  /** ID of the edge */
   wireId: string;
-  /** Source block and port */
-  from: PortRef;
-  /** Target block and port */
-  to: PortRef;
+  /** Source block and port (direction is always 'output') */
+  from: Endpoint;
+  /** Target block and port (direction is always 'input') */
+  to: Endpoint;
 }
 
 /**
@@ -136,30 +136,32 @@ export interface WireAddedEvent {
  *
  * Emitted when a wire connection is removed.
  * Emitted by: PatchStore.disconnect(), PatchStore.removeBlock() (cascade deletion)
- * When: After connection removed from store
+ * When: After edge removed from store
  */
 export interface WireRemovedEvent {
   type: 'WireRemoved';
-  /** ID of the wire connection */
+  /** ID of the edge */
   wireId: string;
-  /** Source block and port */
-  from: PortRef;
-  /** Target block and port */
-  to: PortRef;
+  /** Source block and port (direction is always 'output') */
+  from: Endpoint;
+  /** Target block and port (direction is always 'input') */
+  to: Endpoint;
 }
+
+
 
 /**
  * BindingAdded event.
  *
- * Emitted when a bus binding is added (publisher or listener).
- * Emitted by: BusStore.addPublisher() or BusStore.addListener()
- * When: After binding created and added to store
+ * Emitted when a bus binding is created (publisher or listener).
+ * After Bus-Block unification, this is emitted when an edge connects
+ * to or from a BusBlock.
  */
 export interface BindingAddedEvent {
   type: 'BindingAdded';
-  /** ID of the binding (publisher or listener) */
+  /** ID of the binding (edge ID) */
   bindingId: string;
-  /** ID of the bus */
+  /** ID of the bus (BusBlock ID) */
   busId: string;
   /** ID of the block being connected */
   blockId: string;
@@ -173,7 +175,7 @@ export interface BindingAddedEvent {
  * BindingRemoved event.
  *
  * Emitted when a bus binding is removed (publisher or listener).
- * Emitted by: BusStore.removePublisher() or BusStore.removeListener()
+ * Emitted by: PatchStore.removeEdge() when edge connects to/from BusBlock
  * When: After binding removed from store
  */
 export interface BindingRemovedEvent {
@@ -337,7 +339,7 @@ export interface CompiledProgramMeta {
   /** Kind of TimeRoot used */
   timeRootKind: 'FiniteTimeRoot' | 'InfiniteTimeRoot' | 'none';
   /** Optional bus usage summary */
-  busUsageSummary?: Record<string, { publishers: number; listeners: number }>;
+  // busUsageSummary?: Record<string, { publishers: number; listeners: number }>;
 }
 
 /**

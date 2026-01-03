@@ -96,8 +96,8 @@ const lowerPhaseClock: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   return {
     outputs: [
-      { k: 'sig', id: phaseId, slot: ctx.b.allocValueSlot() }, // phase
-      { k: 'sig', id: uId, slot: ctx.b.allocValueSlot() },     // u
+      { k: 'sig', id: phaseId, slot: ctx.b.allocValueSlot(phaseType, 'PhaseClock_phase') }, // phase
+      { k: 'sig', id: uId, slot: ctx.b.allocValueSlot(phaseType, 'PhaseClock_u') },     // u
     ],
   };
 };

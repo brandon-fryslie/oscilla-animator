@@ -27,36 +27,26 @@ function createTestProgram(stateLayout: StateLayout): CompiledProgramIR {
   return {
     irVersion: 1,
     patchId: "test-patch",
-    patchRevision: 1,
-    compileId: "test-compile",
     seed: 42,
     timeModel: { kind: "infinite", windowMs: 10000 },
     types: { typeIds: [] },
-    nodes: { nodes: [] },
-    buses: { buses: [] },
-    lenses: { lenses: [] },
-    adapters: { adapters: [] },
-    fields: { nodes: [] },
+    signalExprs: { nodes: [] },
+    fieldExprs: { nodes: [] },
+    eventExprs: { nodes: [] },
     constants: {
-      json: [],
-      f64: new Float64Array([42.0, 100.0, 3.14]),
-      f32: new Float32Array([]),
-      i32: new Int32Array([]),
-      constIndex: [
-        { k: "f64", idx: 0 },
-        { k: "f64", idx: 1 },
-        { k: "f64", idx: 2 },
-      ],
+      json: [42.0, 100.0, 3.14],
     },
     stateLayout,
+    slotMeta: [],
+    render: { sinks: [] },
+    cameras: { cameras: [], cameraIdToIndex: {} },
+    meshes: { meshes: [], meshIdToIndex: {} },
     schedule: {
       steps: [],
       stepIdToIndex: {},
       deps: {
         slotProducerStep: {},
         slotConsumers: {},
-        busDependsOnSlots: {},
-        busProvidesSlot: {},
       },
       determinism: {
         allowedOrderingInputs: [],
@@ -68,9 +58,9 @@ function createTestProgram(stateLayout: StateLayout): CompiledProgramIR {
       },
     },
     outputs: [],
-    meta: {
-      sourceMap: {},
-      names: { nodes: {}, buses: {}, steps: {} },
+    debugIndex: {
+      stepToBlock: new Map<string, string>(),
+      slotToBlock: new Map<number, string>(),
     },
   };
 }

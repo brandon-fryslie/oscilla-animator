@@ -68,12 +68,6 @@ This sprint delivers **2 deliverables** from P1:
 - [ ] Existing `BlockRemoved` event emission unchanged (line 405-409 kept as-is)
 - [ ] No other code changes in `PatchStore.removeBlock()` method
 
-#### Add Event Listener
-- [ ] `RootStore.setupEventListeners()` adds `BlockRemoved` event listener
-- [ ] Listener checks if `event.blockId === uiStore.selectedBlockId`
-- [ ] Listener sets `uiStore.selectedBlockId = null` if condition true
-- [ ] Listener does nothing if condition false (no spurious mutations)
-- [ ] Listener pattern matches `BusDeleted` listener (line 70-75) for consistency
 
 #### Verify Zero Coupling
 - [ ] Grep verification: `grep -r "uiStore" src/editor/stores/PatchStore.ts` returns zero matches (or only type imports)
@@ -109,10 +103,6 @@ This sprint delivers **2 deliverables** from P1:
 
 **File**: `src/editor/stores/__tests__/RootStore.test.ts`
 
-- [ ] Test: `BlockRemoved` event listener registered in `setupEventListeners()`
-- [ ] Test: Listener clears selection when removed block was selected
-- [ ] Test: Listener does NOT clear selection when different block removed
-- [ ] Test: Listener handles null selectedBlockId gracefully (no error)
 
 ### Integration Tests - Selection Decoupling
 
@@ -129,7 +119,6 @@ This sprint delivers **2 deliverables** from P1:
 
 ### Event System Invariants
 - [ ] All events emitted AFTER state changes committed (post-commit principle)
-- [ ] Event handlers in `RootStore.setupEventListeners()` are non-blocking
 - [ ] Event handlers do not mutate domain store state (only UI state allowed)
 - [ ] Event payloads are plain data objects (no methods, no store references)
 - [ ] Event payloads include all data needed to reconstruct operation (for undo/redo)
@@ -142,7 +131,6 @@ This sprint delivers **2 deliverables** from P1:
 
 ### Code Consistency
 - [ ] Connection event emission pattern matches existing patterns (BlockAdded, BusCreated)
-- [ ] Selection clearing listener pattern matches BusDeleted listener
 - [ ] Event naming follows convention (PastTenseAction + Event suffix)
 - [ ] Event type discriminants use string literals (not enums)
 
@@ -232,7 +220,6 @@ These remain in the backlog for future sprints.
 
 **Code Health**:
 - Event coverage: 13 event types
-- Event listeners: 3 (MacroExpanded, BusDeleted, BlockRemoved)
 - Emission points: 11+ identified locations
 - Test coverage: 20+ event-related tests
 

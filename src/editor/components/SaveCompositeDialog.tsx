@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Block, Connection, Composite, ExposedParam } from '../types';
+import type { Block, Edge, Composite, ExposedParam } from '../types';
 import type { ExposedPort } from '../composites';
 import { getTypeDesc } from '../semantic';
 import {
@@ -24,7 +24,7 @@ interface SaveCompositeDialogProps {
   /** Selected blocks to include in the composite */
   selectedBlocks: Block[];
   /** All connections in the patch (to filter internal ones) */
-  allConnections: Connection[];
+  allEdges: Edge[];
   /** Existing composites (for duplicate detection) */
   existingComposites: Composite[];
   /** Callback when save is clicked */
@@ -45,7 +45,7 @@ type Tab = 'ports' | 'parameters';
 
 export function SaveCompositeDialog({
   selectedBlocks,
-  allConnections,
+  allEdges,
   existingComposites,
   onSave,
   onCancel,
@@ -58,8 +58,8 @@ export function SaveCompositeDialog({
 
   // Auto-detect exposed ports
   const detectedPorts = useMemo(
-    () => detectExposedPorts(selectedBlocks, allConnections),
-    [selectedBlocks, allConnections]
+    () => detectExposedPorts(selectedBlocks, allEdges),
+    [selectedBlocks, allEdges]
   );
   const [exposedInputIds, setExposedInputIds] = useState<Set<string>>(
     () => new Set(detectedPorts.inputs.map(p => p.id))
@@ -162,7 +162,7 @@ export function SaveCompositeDialog({
       description.length > 0 ? description : undefined,
       subcategory,
       selectedBlocks,
-      allConnections,
+      allEdges,
       exposedInputIds,
       exposedOutputIds,
       exposedParams

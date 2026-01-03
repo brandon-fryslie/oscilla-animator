@@ -15,7 +15,6 @@ User approved the Phase 2 sprint plan which includes:
 - P0: PatchStore full migration (addBlock, removeBlock, updateBlock, setTimeRoot)
 - P0: Remove suppressGraphCommitted pattern
 - P0: Integration tests (20+)
-- P1: BusStore full migration (deleteBus, updateBus, updatePublisher, updateListener)
 
 Deferred to Phase 3:
 - replaceBlock, expandMacro

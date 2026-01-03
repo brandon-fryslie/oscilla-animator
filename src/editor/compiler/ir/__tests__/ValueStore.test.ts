@@ -199,7 +199,7 @@ describe("ValueStore", () => {
 
       const store = createValueStore(slotMeta);
 
-      expect(() => store.write(99, 1.0)).toThrow("slot 99 not found in slotMeta");
+      expect(() => store.write(99, 1.0)).toThrow("ValueStore.write: no metadata for slot 99");
     });
   });
 
@@ -267,7 +267,7 @@ describe("ValueStore", () => {
 
       const store = createValueStore(slotMeta);
 
-      expect(() => store.read(99)).toThrow("slot 99 not found in slotMeta");
+      expect(() => store.read(99)).toThrow("ValueStore.read: no metadata for slot 99");
     });
 
     it("reads correct value with multiple slots at different offsets", () => {
@@ -311,7 +311,7 @@ describe("ValueStore", () => {
       const store = createValueStore(slotMeta);
 
       store.write(0, 1.0);
-      expect(() => store.write(0, 2.0)).toThrow("slot 0 already written this frame");
+      expect(() => store.write(0, 2.0)).toThrow("ValueStore.write: slot 0 written multiple times this frame");
     });
 
     it("error message includes slot index for debugging", () => {
@@ -322,7 +322,7 @@ describe("ValueStore", () => {
       const store = createValueStore(slotMeta);
 
       store.write(5, 1.0);
-      expect(() => store.write(5, 2.0)).toThrow("slot 5 already written");
+      expect(() => store.write(5, 2.0)).toThrow("ValueStore.write: slot 5 written multiple times this frame");
     });
 
     it("allows write to different slots in same frame", () => {
@@ -435,7 +435,7 @@ describe("ValueStore", () => {
 
       const store = createValueStore(slotMeta);
 
-      expect(store.slotMeta).toBe(slotMeta);
+      expect(store.slotMeta).toStrictEqual(slotMeta);
     });
 
     it("preserves type information in slotMeta", () => {

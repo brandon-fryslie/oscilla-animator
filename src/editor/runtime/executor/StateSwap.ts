@@ -172,28 +172,16 @@ function initializeStateCell(
   let initialValue = 0; // Default to zero
 
   if (cell.initialConstId !== undefined) {
-    // Lookup value in const pool
-    const constEntry = constPool.constIndex[cell.initialConstId];
+    // Lookup value in const pool (canonical JSON-only format)
+    const value = constPool.json[cell.initialConstId];
 
-    if (constEntry !== undefined) {
-      // Read value from appropriate const pool storage
-      switch (constEntry.k) {
-        case "f64":
-          initialValue = constPool.f64[constEntry.idx];
-          break;
-        case "f32":
-          initialValue = constPool.f32[constEntry.idx];
-          break;
-        case "i32":
-          initialValue = constPool.i32[constEntry.idx];
-          break;
-        default:
-          // Invalid const type - fall back to zero
-          console.warn(
-            `StateSwap: invalid const type ${constEntry.k} for initialConstId ${cell.initialConstId} - using zero`
-          );
-          break;
-      }
+    if (value !== undefined && typeof value === "number") {
+      initialValue = value;
+    } else if (value !== undefined) {
+      // Value exists but is not a number - warn and fall back to zero
+      console.warn(
+        `StateSwap: constId ${cell.initialConstId} is not a number - using zero`
+      );
     } else {
       // Missing const pool entry - fall back to zero
       console.warn(

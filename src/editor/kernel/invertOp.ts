@@ -7,7 +7,7 @@
  * Reference: design-docs/10-Refactor-for-UI-prep/9-TransactionBuilderContract.md
  */
 
-import type { Patch, Block, Connection, Publisher, Listener } from '../types';
+import type { Patch, Block, Edge } from '../types';
 import type { Op } from './ops';
 
 /**
@@ -96,151 +96,40 @@ export function invertOp(doc: Patch, op: Op): Op | null {
       // Inverse of add is remove
       return {
         op: 'WireRemove',
-        connectionId: op.connection.id,
+        edgeId: op.edge.id,
       };
     }
 
     case 'WireRemove': {
-      // Inverse of remove is add (need to capture the connection)
-      const conn = doc.connections.find(c => c.id === op.connectionId);
-      if (conn === undefined) return null;
+      // Inverse of remove is add (need to capture the edge)
+      const edge = doc.edges.find(e => e.id === op.edgeId);
+      if (edge === undefined) return null;
 
+      // Edge is already in correct format
       return {
         op: 'WireAdd',
-        connection: { ...conn }, // Shallow clone
+        edge: { ...edge }, // Shallow clone
       };
     }
 
     case 'WireRetarget': {
       // Inverse is retarget back to original endpoints
-      const conn = doc.connections.find(c => c.id === op.connectionId);
-      if (conn === undefined) return null;
+      const edge = doc.edges.find(e => e.id === op.edgeId);
+      if (edge === undefined) return null;
 
-      const next: { from?: typeof conn.from; to?: typeof conn.to } = {};
-      if (op.next.from !== undefined) next.from = conn.from;
-      if (op.next.to !== undefined) next.to = conn.to;
+      // Convert Edge endpoints to PortRef format
+      const next: { from?: import('../types').PortRef; to?: import('../types').PortRef } = {};
+      if (op.next.from !== undefined) {
+        next.from = { blockId: edge.from.blockId, slotId: edge.from.slotId, direction: 'output' };
+      }
+      if (op.next.to !== undefined) {
+        next.to = { blockId: edge.to.blockId, slotId: edge.to.slotId, direction: 'input' };
+      }
 
       return {
         op: 'WireRetarget',
-        connectionId: op.connectionId,
+        edgeId: op.edgeId,
         next,
-      };
-    }
-
-    // =========================================================================
-    // Bus Ops
-    // =========================================================================
-    case 'BusAdd': {
-      // Inverse of add is remove
-      return {
-        op: 'BusRemove',
-        busId: op.bus.id,
-      };
-    }
-
-    case 'BusRemove': {
-      // Inverse of remove is add (need to capture the bus)
-      const bus = doc.buses?.find(b => b.id === op.busId);
-      if (bus === undefined) return null;
-
-      return {
-        op: 'BusAdd',
-        bus: { ...bus }, // Shallow clone
-      };
-    }
-
-    case 'BusUpdate': {
-      // Inverse is patch back to original values
-      const bus = doc.buses?.find(b => b.id === op.busId);
-      if (bus === undefined) return null;
-
-      const oldValues: Record<string, unknown> = {};
-      for (const key of Object.keys(op.patch)) {
-        oldValues[key] = (bus as unknown as Record<string, unknown>)[key];
-      }
-
-      return {
-        op: 'BusUpdate',
-        busId: op.busId,
-        patch: oldValues,
-      };
-    }
-
-    // =========================================================================
-    // Binding Ops (Publishers)
-    // =========================================================================
-    case 'PublisherAdd': {
-      // Inverse of add is remove
-      return {
-        op: 'PublisherRemove',
-        publisherId: op.publisher.id,
-      };
-    }
-
-    case 'PublisherRemove': {
-      // Inverse of remove is add (need to capture the publisher)
-      const pub = doc.publishers?.find(p => p.id === op.publisherId);
-      if (pub === undefined) return null;
-
-      return {
-        op: 'PublisherAdd',
-        publisher: { ...pub }, // Shallow clone
-      };
-    }
-
-    case 'PublisherUpdate': {
-      // Inverse is patch back to original values
-      const pub = doc.publishers?.find(p => p.id === op.publisherId);
-      if (pub === undefined) return null;
-
-      const oldValues: Record<string, unknown> = {};
-      for (const key of Object.keys(op.patch)) {
-        oldValues[key] = (pub as unknown as Record<string, unknown>)[key];
-      }
-
-      return {
-        op: 'PublisherUpdate',
-        publisherId: op.publisherId,
-        patch: oldValues,
-      };
-    }
-
-    // =========================================================================
-    // Binding Ops (Listeners)
-    // =========================================================================
-    case 'ListenerAdd': {
-      // Inverse of add is remove
-      return {
-        op: 'ListenerRemove',
-        listenerId: op.listener.id,
-      };
-    }
-
-    case 'ListenerRemove': {
-      // Inverse of remove is add (need to capture the listener)
-      const listener = doc.listeners?.find(l => l.id === op.listenerId);
-      if (listener === undefined) return null;
-
-      return {
-        op: 'ListenerAdd',
-        listener: { ...listener }, // Shallow clone
-      };
-    }
-
-    case 'ListenerUpdate': {
-      // Inverse is patch back to original values
-      const listener = doc.listeners?.find(l => l.id === op.listenerId);
-      if (listener === undefined) return null;
-
-      const oldValues: Record<string, unknown> = {};
-      for (const key of Object.keys(op.patch)) {
-        oldValues[key] = (listener as unknown as Record<string, unknown>)[key];
-      }
-
-      return {
-        op: 'ListenerUpdate',
-        listenerId: op.listenerId,
-        patch: oldValues,
       };
     }
 
@@ -292,9 +181,7 @@ export function invertOp(doc: Patch, op: Op): Op | null {
       interface DefWithGraph {
         graph?: {
           blocks?: Block[];
-          connections?: Connection[];
-          publishers?: Publisher[];
-          listeners?: Listener[];
+          connections?: Edge[];
         };
         exposedPorts?: { inputs: unknown[]; outputs: unknown[] };
       }
@@ -309,8 +196,6 @@ export function invertOp(doc: Patch, op: Op): Op | null {
         nextGraph: {
           nodes: oldGraph?.blocks ?? [],
           edges: oldGraph?.connections ?? [],
-          publishers: oldGraph?.publishers ?? [],
-          listeners: oldGraph?.listeners ?? [],
         },
         nextExposed: oldExposed ?? { inputs: [], outputs: [] },
       };

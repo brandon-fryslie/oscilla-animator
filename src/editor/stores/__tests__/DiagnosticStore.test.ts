@@ -12,18 +12,9 @@ describe('DiagnosticStore', () => {
 
   beforeEach(() => {
     rootStore = new RootStore();
-
-    // Remove the palette bus (color domain) to avoid P1 validation errors
-    // P1 correctly validates that non-numeric buses are not yet supported in IR mode
-    // These tests are about DiagnosticStore behavior, not bus validation
-    const paletteBus = rootStore.busStore.buses.find(b => b.name === 'palette');
-    if (paletteBus !== undefined && paletteBus !== null) {
-      rootStore.busStore.deleteBus(paletteBus.id);
-    }
-
     // Add a TimeRoot block so authoring validators pass
     // (otherwise we get a "Missing TimeRoot" diagnostic)
-    rootStore.patchStore.addBlock('InfiniteTimeRoot');
+    rootStore.patchStore.addBlock('CycleTimeRoot');
   });
 
   describe('Initialization', () => {
@@ -46,13 +37,6 @@ describe('DiagnosticStore', () => {
     it('should have Missing TimeRoot diagnostic without TimeRoot', () => {
       // Create a fresh RootStore WITHOUT adding TimeRoot
       const freshStore = new RootStore();
-
-      // Remove palette bus to avoid P1 validation errors
-      const paletteBus = freshStore.busStore.buses.find(b => b.name === 'palette');
-      if (paletteBus !== undefined && paletteBus !== null) {
-        freshStore.busStore.deleteBus(paletteBus.id);
-      }
-
       // Initial authoring validation should find missing TimeRoot
       expect(freshStore.diagnosticStore.activeDiagnostics).toHaveLength(1);
       expect(freshStore.diagnosticStore.activeDiagnostics[0].code).toBe('E_TIME_ROOT_MISSING');

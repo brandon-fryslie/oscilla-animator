@@ -14,7 +14,7 @@
 import { OpCode } from "../../../compiler/ir/opcodes";
 import { Vec2 } from "../../../../core/types";
 import type { RuntimeState } from "../RuntimeState";
-import type { NodeIR, CompiledProgramIR } from "../../../compiler/ir/program";
+import type { CompiledProgramIR } from "../../../compiler/ir/program";
 import { colorHSLToRGB, colorShiftHue, colorLerp, colorScaleSat, colorScaleLight } from "../kernels/color";
 
 // ============================================================================
@@ -22,12 +22,25 @@ import { colorHSLToRGB, colorShiftHue, colorLerp, colorScaleSat, colorScaleLight
 // ============================================================================
 
 /**
+ * Node evaluation metadata.
+ *
+ * Minimal interface for metadata needed during OpCode evaluation.
+ * Used for operations that require compile-time metadata (e.g., const pool indices).
+ */
+interface NodeEvalMetadata {
+  /** Compiler tag for metadata (e.g., const pool index for OpCode.Const) */
+  compilerTag?: number;
+  /** OpCode ID (if needed for verification/debugging) */
+  opcodeId?: number;
+}
+
+/**
  * Evaluate an OpCode with given inputs.
  *
  * @param opcode - The operation to perform
  * @param inputs - Array of input values
  * @param state - Runtime state (for time, state buffers, etc.)
- * @param node - The node being evaluated (for metadata, state bindings, etc.)
+ * @param node - Node metadata (for const pool indices, state bindings, etc.)
  * @param program - Compiled program (for const pool access)
  * @returns Array of output values
  */
@@ -35,7 +48,7 @@ export function evaluateOp(
   opcode: OpCode,
   inputs: unknown[],
   _state: RuntimeState,
-  node: NodeIR,
+  node: NodeEvalMetadata,
   program?: CompiledProgramIR
 ): unknown[] {
   switch (opcode) {
@@ -101,46 +114,21 @@ export function evaluateOp(
     // Constants (0-9)
     // ========================================================================
     case OpCode.Const: {
-      // Constants are read from the constant pool.
-      // The node.compilerTag holds the constId.
-      if (program === undefined || program.constants === undefined) {
-        console.warn("OpCode.Const: no program or constant pool available");
+      // Constants are JSON-only per canonical contract
+      if (program?.constants?.json === undefined) {
+        console.warn("OpCode.Const: no constant pool available");
         return [0];
       }
 
       const constId = node.compilerTag ?? 0;
-      const constPool = program.constants;
+      const value = program.constants.json[constId];
 
-      // Use constIndex to find the storage location
-      if (
-        constPool.constIndex !== undefined &&
-        constId < constPool.constIndex.length
-      ) {
-        const entry = constPool.constIndex[constId];
-        switch (entry.k) {
-          case "f64":
-            return [constPool.f64[entry.idx]];
-          case "f32":
-            return [constPool.f32[entry.idx]];
-          case "i32":
-            return [constPool.i32[entry.idx]];
-          case "json":
-            return [constPool.json[entry.idx]];
-        }
+      if (value === undefined) {
+        console.warn(`OpCode.Const: constId ${constId} not found in pool`);
+        return [0];
       }
 
-      // Fallback: try f64 pool directly
-      if (constId < constPool.f64.length) {
-        return [constPool.f64[constId]];
-      }
-
-      // Last fallback: try json pool
-      if (constId < constPool.json.length) {
-        return [constPool.json[constId]];
-      }
-
-      console.warn(`OpCode.Const: constId ${constId} not found in pool`);
-      return [0];
+      return [value];
     }
 
     // ========================================================================

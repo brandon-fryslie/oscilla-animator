@@ -88,7 +88,7 @@ export const BlockContextMenu = observer(() => {
   const visibleDefinitions = allDefinitions.filter(def => !isBlockHidden(def));
   const compatibleBlocks = findCompatibleReplacements(
     block,
-    store.patchStore.connections,
+    store.patchStore.edges,
     visibleDefinitions
   );
 
@@ -292,7 +292,7 @@ export const BlockContextMenu = observer(() => {
       {showSaveCompositeDialog && (
         <SaveCompositeDialog
           selectedBlocks={selectedBlocks}
-          allConnections={store.patchStore.connections}
+          allEdges={store.patchStore.edges}
           existingComposites={store.compositeStore.composites}
           onSave={handleSaveComposite}
           onCancel={handleCancelSaveComposite}
