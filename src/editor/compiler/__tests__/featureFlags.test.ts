@@ -1,11 +1,11 @@
 /**
  * Feature Flags Tests (P1-2)
  *
- * Tests for compiler feature flags, specifically the useUnifiedCompiler flag
+ * Tests for compiler feature flags, specifically the emitIR flag
  * that controls whether IR-based rendering is used.
  *
  * Validates:
- * - Default flag values (new IR compiler is default)
+ * - Default flag values (IR compilation is enabled by default)
  * - Flag mutation (set/reset)
  * - Toggling between paths
  *
@@ -27,9 +27,9 @@ describe("Feature Flags", () => {
   });
 
   describe("Default Values", () => {
-    it("should have useUnifiedCompiler defaulting to false (legacy compiler is default)", () => {
+    it("should have emitIR defaulting to true (IR compilation enabled)", () => {
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.emitIR).toBe(true);
     });
 
     it("should have strictStateValidation defaulting to true", () => {
@@ -49,26 +49,26 @@ describe("Feature Flags", () => {
   });
 
   describe("Flag Mutation", () => {
-    it("should allow setting useUnifiedCompiler to false (legacy mode)", () => {
-      setFeatureFlags({ useUnifiedCompiler: false });
+    it("should allow setting emitIR to false (disable IR compilation)", () => {
+      setFeatureFlags({ emitIR: false });
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.emitIR).toBe(false);
     });
 
-    it("should allow setting useUnifiedCompiler back to true", () => {
-      setFeatureFlags({ useUnifiedCompiler: false });
-      setFeatureFlags({ useUnifiedCompiler: true });
+    it("should allow setting emitIR back to true", () => {
+      setFeatureFlags({ emitIR: false });
+      setFeatureFlags({ emitIR: true });
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(true);
+      expect(flags.emitIR).toBe(true);
     });
 
     it("should preserve other flags when setting one flag", () => {
-      setFeatureFlags({ useUnifiedCompiler: false });
+      setFeatureFlags({ emitIR: false });
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.emitIR).toBe(false);
       expect(flags.strictStateValidation).toBe(true);
       expect(flags.timeCtxPropagation).toBe(true);
       expect(flags.requireTimeRoot).toBe(true);
@@ -76,25 +76,25 @@ describe("Feature Flags", () => {
 
     it("should allow setting multiple flags at once", () => {
       setFeatureFlags({
-        useUnifiedCompiler: false,
+        emitIR: false,
         strictStateValidation: false,
       });
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.emitIR).toBe(false);
       expect(flags.strictStateValidation).toBe(false);
     });
 
     it("should reset all flags to defaults", () => {
       setFeatureFlags({
-        useUnifiedCompiler: true, // Set to non-default
+        emitIR: false, // Set to non-default
         strictStateValidation: false,
       });
 
       resetFeatureFlags();
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false); // Default is now false
+      expect(flags.emitIR).toBe(true); // Default is true
       expect(flags.strictStateValidation).toBe(true);
       expect(flags.requireTimeRoot).toBe(true);
     });
@@ -103,12 +103,12 @@ describe("Feature Flags", () => {
   describe("enableUnifiedArchitecture()", () => {
     it("should enable all unified architecture flags", () => {
       // First disable some flags
-      setFeatureFlags({ useUnifiedCompiler: false, strictStateValidation: false });
+      setFeatureFlags({ emitIR: false, strictStateValidation: false });
 
       enableUnifiedArchitecture();
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(true);
+      expect(flags.emitIR).toBe(true);
       expect(flags.strictStateValidation).toBe(true);
       expect(flags.timeCtxPropagation).toBe(true);
       expect(flags.requireTimeRoot).toBe(true);
@@ -119,57 +119,57 @@ describe("Feature Flags", () => {
       enableUnifiedArchitecture();
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(true);
+      expect(flags.emitIR).toBe(true);
     });
   });
 
-  describe("Flag Behavior - Legacy Path", () => {
-    it("should allow legacy path with useUnifiedCompiler: false", () => {
-      setFeatureFlags({ useUnifiedCompiler: false });
+  describe("Flag Behavior - Closure-Only Mode", () => {
+    it("should allow closure-only mode with emitIR: false", () => {
+      setFeatureFlags({ emitIR: false });
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.emitIR).toBe(false);
 
       // This test just verifies the flag state
-      // Actual legacy compiler behavior is tested in integration.test.ts
+      // Actual compiler behavior is tested in integration.test.ts
     });
   });
 
   describe("Flag Behavior - IR Path", () => {
-    it("should have IR path disabled by default", () => {
+    it("should have IR path enabled by default", () => {
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false); // Default is now false (IR disabled)
+      expect(flags.emitIR).toBe(true); // Default is true (IR enabled)
 
       // This test just verifies the flag state
       // Actual IR rendering behavior is tested in IRRuntimeIntegration.test.ts
     });
 
-    it("should allow toggling between legacy and IR paths", () => {
-      // Start with legacy (default)
-      expect(getFeatureFlags().useUnifiedCompiler).toBe(false);
+    it("should allow toggling between closure-only and IR paths", () => {
+      // Start with IR enabled (default)
+      expect(getFeatureFlags().emitIR).toBe(true);
 
-      // Switch to IR
-      setFeatureFlags({ useUnifiedCompiler: true });
-      expect(getFeatureFlags().useUnifiedCompiler).toBe(true);
+      // Disable IR
+      setFeatureFlags({ emitIR: false });
+      expect(getFeatureFlags().emitIR).toBe(false);
 
-      // Switch back to legacy
-      setFeatureFlags({ useUnifiedCompiler: false });
-      expect(getFeatureFlags().useUnifiedCompiler).toBe(false);
+      // Enable IR again
+      setFeatureFlags({ emitIR: true });
+      expect(getFeatureFlags().emitIR).toBe(true);
 
-      // Switch to IR again
-      setFeatureFlags({ useUnifiedCompiler: true });
-      expect(getFeatureFlags().useUnifiedCompiler).toBe(true);
+      // Disable IR again
+      setFeatureFlags({ emitIR: false });
+      expect(getFeatureFlags().emitIR).toBe(false);
     });
   });
 
   describe("Flag Read", () => {
     it("should return current flags (TypeScript readonly)", () => {
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false); // Default is now false (IR disabled)
+      expect(flags.emitIR).toBe(true); // Default is true (IR enabled)
 
       // This verifies that getFeatureFlags() returns the current state
-      setFeatureFlags({ useUnifiedCompiler: true });
+      setFeatureFlags({ emitIR: false });
       const updatedFlags = getFeatureFlags();
-      expect(updatedFlags.useUnifiedCompiler).toBe(true);
+      expect(updatedFlags.emitIR).toBe(false);
     });
   });
 
@@ -177,7 +177,7 @@ describe("Feature Flags", () => {
     it("should allow partial updates without affecting other flags", () => {
       // Set some flags to false
       setFeatureFlags({
-        useUnifiedCompiler: false,
+        emitIR: false,
         strictStateValidation: false,
       });
 
@@ -185,18 +185,18 @@ describe("Feature Flags", () => {
       setFeatureFlags({ timeCtxPropagation: false });
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.emitIR).toBe(false);
       expect(flags.strictStateValidation).toBe(false);
       expect(flags.timeCtxPropagation).toBe(false);
       expect(flags.requireTimeRoot).toBe(true); // Unchanged from default
     });
 
     it("should handle empty partial updates", () => {
-      setFeatureFlags({ useUnifiedCompiler: false });
+      setFeatureFlags({ emitIR: false });
       setFeatureFlags({});
 
       const flags = getFeatureFlags();
-      expect(flags.useUnifiedCompiler).toBe(false);
+      expect(flags.emitIR).toBe(false);
     });
   });
 });
