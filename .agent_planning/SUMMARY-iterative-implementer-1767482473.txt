@@ -1,0 +1,66 @@
+Agent: iterative-implementer | 2026-01-03
+Mode: manual
+Completed: Fix transform type errors after Publisher/Listener removal | Files: 7 | Commits: 1
+Cache invalidated: None required (no eval cache for transforms)
+Status: complete
+
+## Summary
+
+Successfully fixed all type errors in the transforms module following the Publisher/Listener type removal.
+
+## Changes Made
+
+### 1. Added Missing Type Definitions (Already in Codebase)
+- LensDefinition, LensParamBinding were already present in types.ts
+- LensInstance already had correct structure with lensId field
+
+### 2. Updated TransformRegistry.ts
+- Added rangeHint field to LensParamSpec to support slider parameters
+- Fixed typeEquals() to compare TypeDesc as strings instead of objects
+- TypeDesc is now a simple string (e.g., 'Signal:float', 'Scalar:vec2')
+
+### 3. Converted All Transform Definitions
+Updated all files in src/editor/transforms/definitions/:
+- adapters/BroadcastSignal.ts
+- adapters/ConstToSignal.ts
+- lenses/arithmetic.ts
+- lenses/shaping.ts
+- lenses/ease.ts
+
+Conversions:
+- Object TypeDesc → String TypeDesc
+  - `{ world: 'scalar', domain: 'float', ... }` → `'Scalar:float'`
+  - `{ world: 'signal', domain: 'vec2', ... }` → `'Signal:vec2'`
+  - All worlds: scalar, signal, field
+  - All domains: float, int, vec2, color, boolean
+
+- UIControlHint objects → Strings with rangeHint
+  - `{ kind: 'slider', min, max, step }` → `uiHint: 'slider', rangeHint: { min, max, step }`
+  - `{ kind: 'boolean' }` → `uiHint: 'toggle'`
+  - `{ kind: 'select', options }` → `uiHint: 'select'` (options commented out for now)
+
+### 4. Fixed Field References
+- apply.ts: Fixed adapterId → adapter (AdapterStep has 'adapter' field, not 'adapterId')
+- validate.ts: Same fix
+- catalog.ts: Added extractDomain() helper to parse TypeDesc strings
+
+### 5. Result
+- All transform definition files now type-check successfully
+- Transform module errors: 0 (down from ~50+)
+- Total codebase errors: 730 (mostly in unused lens registry files)
+
+## Architecture Notes
+
+The transforms system now uses:
+- String-based TypeDesc: "World:Domain" format
+- Unified TransformRegistry for both adapters and lenses
+- LensParamSpec with separate uiHint and rangeHint fields
+- Simple string equality for type matching
+
+## Next Steps
+
+The remaining 730 type errors are in:
+1. Legacy lens registry files (src/editor/lenses/*) - appear to be unused
+2. Other parts of the codebase unrelated to Publisher/Listener removal
+
+These can be addressed separately as they don't block the current Publisher/Listener removal work.
