@@ -109,8 +109,8 @@ TRANSFORM_REGISTRY.registerAdapter({
 TRANSFORM_REGISTRY.registerAdapter({
   id: 'ConstToSignal:bool',
   label: 'Const to Signal (bool)',
-  inputType: { world: 'scalar', domain: 'boolean', category: 'core', busEligible: true },
-  outputType: { world: 'signal', domain: 'boolean', category: 'core', busEligible: true },
+  inputType: 'Scalar:boolean',
+  outputType: 'Signal:boolean',
   policy: 'AUTO',
   cost: 0.1,
   apply: (artifact: Artifact, _params: Record<string, unknown>, _ctx: CompileCtx): Artifact => {

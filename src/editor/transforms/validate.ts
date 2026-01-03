@@ -84,7 +84,7 @@ export function validateTransformStack(
     }
 
     if (step.kind === 'adapter') {
-      validateAdapterScope(step.step.adapterId, scope, errors);
+      validateAdapterScope(step.step.adapter, scope, errors);
     } else {
       validateLensScope(step.lens.lensId, scope, errors);
     }
@@ -107,11 +107,11 @@ export function validateForIRMode(
     }
 
     if (step.kind === 'adapter') {
-      const def = getAdapter(step.step.adapterId);
+      const def = getAdapter(step.step.adapter);
       if (!def) {
         errors.push({
           code: 'UnsupportedAdapterInIRMode',
-          message: `Unknown adapter '${step.step.adapterId}' cannot be used in IR mode.`,
+          message: `Unknown adapter '${step.step.adapter}' cannot be used in IR mode.`,
         });
         continue;
       }

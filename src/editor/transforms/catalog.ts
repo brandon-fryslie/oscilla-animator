@@ -56,6 +56,19 @@ export interface LensDef {
 }
 
 // =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * Extract domain from TypeDesc string.
+ * TypeDesc format: "World:Domain" (e.g., "Signal:float", "Scalar:vec2")
+ */
+function extractDomain(typeDesc: TypeDesc): string {
+  const parts = typeDesc.split(':');
+  return parts.length > 1 ? parts[1] : typeDesc;
+}
+
+// =============================================================================
 // Catalog Functions
 // =============================================================================
 
@@ -86,11 +99,12 @@ export function listLenses(): LensDef[] {
  */
 export function listLensesFor(scope: TransformScope, typeDesc: TypeDesc): LensDef[] {
   const allLenses = TRANSFORM_REGISTRY.getAllLenses();
+  const domain = extractDomain(typeDesc);
 
   return allLenses
     .filter((lens) => {
       // Check domain compatibility
-      if (lens.domain !== typeDesc.domain) {
+      if (lens.domain && lens.domain !== domain) {
         return false;
       }
 

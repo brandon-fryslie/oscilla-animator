@@ -116,7 +116,7 @@ export function applyTransformStep(
   }
 
   // Get transform ID
-  const id = step.kind === 'adapter' ? step.step.adapterId : step.lens.lensId;
+  const id = step.kind === 'adapter' ? step.step.adapter : step.lens.lensId;
 
   // Get transform definition from registry
   const def = TRANSFORM_REGISTRY.getTransform(id);
