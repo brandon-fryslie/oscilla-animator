@@ -74,6 +74,8 @@ describe('findCompatibleReplacements', () => {
       type: 'Add',
     });
 
+    const edges: Edge[] = [];
+
     const candidates = [
       createMockDefinition({
         type: 'Multiply',
@@ -83,7 +85,7 @@ describe('findCompatibleReplacements', () => {
       }),
     ];
 
-    const result = findCompatibleReplacements(sourceBlock, candidates);
+    const result = findCompatibleReplacements(sourceBlock, edges, candidates);
     expect(result).toHaveLength(2);
   });
 
@@ -92,13 +94,15 @@ describe('findCompatibleReplacements', () => {
       type: 'Add',
     });
 
+    const edges: Edge[] = [];
+
     const candidates = [
       createMockDefinition({
         type: 'Multiply',
       }),
     ];
 
-    const result = findCompatibleReplacements(sourceBlock, candidates);
+    const result = findCompatibleReplacements(sourceBlock, edges, candidates);
     expect(result.length).toBeGreaterThanOrEqual(0);
   });
 
@@ -107,13 +111,15 @@ describe('findCompatibleReplacements', () => {
       type: 'Add',
     });
 
+    const edges: Edge[] = [];
+
     const candidates = [
       createMockDefinition({
         type: 'TimeRoot',
       }),
     ];
 
-    const result = findCompatibleReplacements(sourceBlock, candidates);
+    const result = findCompatibleReplacements(sourceBlock, edges, candidates);
     // Result depends on actual compatibility logic
     expect(Array.isArray(result)).toBe(true);
   });
@@ -122,6 +128,8 @@ describe('findCompatibleReplacements', () => {
     const sourceBlock = createMockBlock({
       type: 'Add',
     });
+
+    const edges: Edge[] = [];
 
     const candidates = [
       createMockDefinition({
@@ -134,7 +142,7 @@ describe('findCompatibleReplacements', () => {
       }),
     ];
 
-    const result = findCompatibleReplacements(sourceBlock, candidates);
+    const result = findCompatibleReplacements(sourceBlock, edges, candidates);
     // Should filter based on capability
     expect(Array.isArray(result)).toBe(true);
   });
@@ -158,8 +166,8 @@ describe('mapConnections', () => {
       type: 'NewBlock',
     });
 
-    const result = mapConnections(edges, sourceBlock.id, targetDef);
-    expect(Array.isArray(result)).toBe(true);
+    const result = mapConnections(sourceBlock, targetDef, edges);
+    expect(result).toBeDefined();
   });
 
   it('handles missing slots gracefully', () => {
@@ -175,8 +183,8 @@ describe('mapConnections', () => {
       type: 'NewBlock',
     });
 
-    const result = mapConnections(edges, sourceBlock.id, targetDef);
-    expect(Array.isArray(result)).toBe(true);
+    const result = mapConnections(sourceBlock, targetDef, edges);
+    expect(result).toBeDefined();
   });
 
   it('preserves connections not involving the replaced block', () => {
@@ -193,8 +201,8 @@ describe('mapConnections', () => {
       type: 'NewBlock',
     });
 
-    const result = mapConnections(edges, sourceBlock.id, targetDef);
-    expect(Array.isArray(result)).toBe(true);
+    const result = mapConnections(sourceBlock, targetDef, edges);
+    expect(result).toBeDefined();
   });
 
   it('handles input slot name changes', () => {
@@ -210,8 +218,8 @@ describe('mapConnections', () => {
       type: 'NewBlock',
     });
 
-    const result = mapConnections(edges, sourceBlock.id, targetDef);
-    expect(Array.isArray(result)).toBe(true);
+    const result = mapConnections(sourceBlock, targetDef, edges);
+    expect(result).toBeDefined();
   });
 
   it('handles output slot name changes', () => {
@@ -227,8 +235,8 @@ describe('mapConnections', () => {
       type: 'NewBlock',
     });
 
-    const result = mapConnections(edges, sourceBlock.id, targetDef);
-    expect(Array.isArray(result)).toBe(true);
+    const result = mapConnections(sourceBlock, targetDef, edges);
+    expect(result).toBeDefined();
   });
 });
 
@@ -238,67 +246,57 @@ describe('mapConnections', () => {
 
 describe('copyCompatibleParams', () => {
   it('copies matching parameters', () => {
-    const sourceBlock = createMockBlock({
-      params: { freq: 440, phase: 0 },
-    });
+    const sourceParams = { freq: 440, phase: 0 };
 
     const targetDef = createMockDefinition({
       defaultParams: { freq: 220, amplitude: 1 },
     });
 
-    const result = copyCompatibleParams(sourceBlock, targetDef);
+    const result = copyCompatibleParams(sourceParams, targetDef);
     expect(result.freq).toBe(440);
   });
 
   it('uses default for non-matching params', () => {
-    const sourceBlock = createMockBlock({
-      params: { freq: 440 },
-    });
+    const sourceParams = { freq: 440 };
 
     const targetDef = createMockDefinition({
       defaultParams: { amplitude: 1 },
     });
 
-    const result = copyCompatibleParams(sourceBlock, targetDef);
+    const result = copyCompatibleParams(sourceParams, targetDef);
     expect(result.amplitude).toBe(1);
   });
 
   it('handles empty source params', () => {
-    const sourceBlock = createMockBlock({
-      params: {},
-    });
+    const sourceParams = {};
 
     const targetDef = createMockDefinition({
       defaultParams: { freq: 440 },
     });
 
-    const result = copyCompatibleParams(sourceBlock, targetDef);
+    const result = copyCompatibleParams(sourceParams, targetDef);
     expect(result.freq).toBe(440);
   });
 
   it('handles empty target defaults', () => {
-    const sourceBlock = createMockBlock({
-      params: { freq: 440 },
-    });
+    const sourceParams = { freq: 440 };
 
     const targetDef = createMockDefinition({
       defaultParams: {},
     });
 
-    const result = copyCompatibleParams(sourceBlock, targetDef);
+    const result = copyCompatibleParams(sourceParams, targetDef);
     expect(Object.keys(result).length).toBe(0);
   });
 
   it('preserves parameter types', () => {
-    const sourceBlock = createMockBlock({
-      params: { enabled: true, count: 42, name: 'test' },
-    });
+    const sourceParams = { enabled: true, count: 42, name: 'test' };
 
     const targetDef = createMockDefinition({
       defaultParams: { enabled: false, count: 0, name: '' },
     });
 
-    const result = copyCompatibleParams(sourceBlock, targetDef);
+    const result = copyCompatibleParams(sourceParams, targetDef);
     expect(result.enabled).toBe(true);
     expect(result.count).toBe(42);
     expect(result.name).toBe('test');
