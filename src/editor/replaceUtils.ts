@@ -5,10 +5,11 @@
  * when replacing one block with another.
  */
 
-import type { Block, Edge, BlockId, Slot } from './types';
+import type { Block, Edge, BlockId, SlotDef } from './types';
 import type { BlockDefinition } from './blocks/types';
 import { getBlockForm } from './blocks/types';
 import { areTypesCompatible } from './portUtils';
+import { getBlockDefinition } from './blocks/registry';
 
 export interface ConnectionMapping {
   /** Connections that can be preserved with direct remapping */
@@ -47,6 +48,12 @@ export function findCompatibleReplacements(
   edges: Edge[],
   allDefinitions: readonly BlockDefinition[]
 ): BlockDefinition[] {
+  // Get block definition from registry to access inputs/outputs
+  const blockDef = getBlockDefinition(block.type);
+  if (!blockDef) {
+    return [];
+  }
+
   // Get connected slots
   const connectedInputs = new Set<string>();
   const connectedOutputs = new Set<string>();
@@ -61,8 +68,8 @@ export function findCompatibleReplacements(
   }
 
   // Find matching slots
-  const inputSlots = block.inputs.filter(s => connectedInputs.has(s.id));
-  const outputSlots = block.outputs.filter(s => connectedOutputs.has(s.id));
+  const inputSlots = blockDef.inputs.filter((s: SlotDef) => connectedInputs.has(s.id));
+  const outputSlots = blockDef.outputs.filter((s: SlotDef) => connectedOutputs.has(s.id));
 
   // Filter compatible definitions
   return allDefinitions.filter(def => {
@@ -104,13 +111,28 @@ export function mapConnections(
   const preserved: ConnectionMapping['preserved'] = [];
   const dropped: ConnectionMapping['dropped'] = [];
 
+  // Get old block definition from registry to access inputs/outputs
+  const oldBlockDef = getBlockDefinition(oldBlock.type);
+  if (!oldBlockDef) {
+    // If we can't find the old block definition, drop all connections
+    for (const edge of edges) {
+      if (edge.to.blockId === oldBlock.id || edge.from.blockId === oldBlock.id) {
+        dropped.push({
+          connectionId: edge.id,
+          reason: `Old block type ${oldBlock.type} not found in registry`,
+        });
+      }
+    }
+    return { preserved, dropped };
+  }
+
   // Track which new slots have been used (for inputs - only one edge per input)
   const usedInputSlots = new Set<string>();
 
   for (const edge of edges) {
     // Handle input edges (to this block)
     if (edge.to.blockId === oldBlock.id) {
-      const oldSlot = oldBlock.inputs.find(s => s.id === edge.to.slotId);
+      const oldSlot = oldBlockDef.inputs.find((s: SlotDef) => s.id === edge.to.slotId);
       if (!oldSlot) {
         dropped.push({
           connectionId: edge.id,
@@ -140,7 +162,7 @@ export function mapConnections(
 
     // Handle output edges (from this block)
     if (edge.from.blockId === oldBlock.id) {
-      const oldSlot = oldBlock.outputs.find(s => s.id === edge.from.slotId);
+      const oldSlot = oldBlockDef.outputs.find((s: SlotDef) => s.id === edge.from.slotId);
       if (!oldSlot) {
         dropped.push({
           connectionId: edge.id,
@@ -176,10 +198,10 @@ export function mapConnections(
  * Prefers exact position match first, then type match.
  */
 function findCompatibleSlot(
-  oldSlot: Slot,
-  candidateSlots: readonly Slot[],
+  oldSlot: SlotDef,
+  candidateSlots: readonly SlotDef[],
   usedSlots: Set<string>
-): Slot | null {
+): SlotDef | null {
   // Try exact type match first
   for (const candidate of candidateSlots) {
     if (usedSlots.has(candidate.id)) continue;

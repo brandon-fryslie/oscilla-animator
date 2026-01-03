@@ -1,4 +1,6 @@
-import type { TypeDesc, UIControlHint, CoreDomain } from '../types';
+import type { CoreDomain } from '../ir/types/TypeDesc';
+import type { UIControlHint } from '../compiler/ir/defaultSources';
+import type { TypeDesc } from '../ir/types/TypeDesc';
 import type { Artifact, RuntimeCtx } from '../compiler/types';
 import { getEasingFunction } from './easing';
 import { pushPrintLog } from './printSink';
@@ -44,7 +46,7 @@ export function getAllLenses(): LensDef[] {
 }
 
 // Helpers for params
-const SCALAR_NUM: TypeDesc = { world: 'scalar', domain: 'number', category: 'core', busEligible: false };
+const SCALAR_NUM: TypeDesc = { world: 'scalar', domain: 'float', category: 'core', busEligible: false };
 const SCALAR_VEC2: TypeDesc = { world: 'scalar', domain: 'vec2', category: 'core', busEligible: false };
 const SCALAR_BOOL: TypeDesc = { world: 'scalar', domain: 'boolean', category: 'core', busEligible: false };
 const SCALAR_ENUM: TypeDesc = { world: 'scalar', domain: 'string', category: 'internal', busEligible: false };
@@ -61,8 +63,8 @@ function wrapPhase(value: number): number {
 
 function resolveNumberParam(param: Artifact | undefined, t: number, ctx: RuntimeCtx): number {
   if (param == null) return 0;
-  if (param.kind === 'Scalar:number') return param.value;
-  if (param.kind === 'Signal:number') return param.value(t, ctx);
+  if (param.kind === 'Scalar:float') return param.value;
+  if (param.kind === 'Signal:float') return param.value(t, ctx);
   if (param.kind === 'Scalar:boolean') return param.value ? 1 : 0;
   return 0;
 }
@@ -70,8 +72,8 @@ function resolveNumberParam(param: Artifact | undefined, t: number, ctx: Runtime
 function resolveBooleanParam(param: Artifact | undefined, t: number, ctx: RuntimeCtx): boolean {
   if (param == null) return false;
   if (param.kind === 'Scalar:boolean') return param.value;
-  if (param.kind === 'Signal:number') return param.value(t, ctx) !== 0;
-  if (param.kind === 'Scalar:number') return param.value !== 0;
+  if (param.kind === 'Signal:float') return param.value(t, ctx) !== 0;
+  if (param.kind === 'Scalar:float') return param.value !== 0;
   return false;
 }
 
@@ -86,27 +88,27 @@ function mapNumberArtifact(
   map: (value: number, t?: number, ctx?: RuntimeCtx) => number
 ): Artifact {
   switch (artifact.kind) {
-    case 'Scalar:number':
-      return { kind: 'Scalar:number', value: map(artifact.value) };
-    case 'Signal:number':
+    case 'Scalar:float':
+      return { kind: 'Scalar:float', value: map(artifact.value) };
+    case 'Signal:float':
       return {
-        kind: 'Signal:number',
+        kind: 'Signal:float',
         value: (t, ctx) => map(artifact.value(t, ctx), t, ctx),
       };
     case 'Signal:Unit':
       return {
-        kind: 'Signal:number',
+        kind: 'Signal:float',
         value: (t, ctx) => map(artifact.value(t, ctx), t, ctx),
       };
     case 'Signal:phase':
       // Phase is numerically 0-1, can be treated as number for mapping
       return {
-        kind: 'Signal:number',
+        kind: 'Signal:float',
         value: (t, ctx) => map(artifact.value(t, ctx), t, ctx),
       };
-    case 'Field:number':
+    case 'Field:float':
       return {
-        kind: 'Field:number',
+        kind: 'Field:float',
         value: (seed, n, ctx) => {
           const values = artifact.value(seed, n, ctx);
           return values.map((v) => map(v));
@@ -122,8 +124,8 @@ function mapPhaseArtifact(
   map: (value: number, t?: number, ctx?: RuntimeCtx) => number
 ): Artifact {
   switch (artifact.kind) {
-    case 'Scalar:number':
-      return { kind: 'Scalar:number', value: map(artifact.value) };
+    case 'Scalar:float':
+      return { kind: 'Scalar:float', value: map(artifact.value) };
     case 'Signal:phase':
       return {
         kind: 'Signal:phase',
@@ -149,7 +151,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'scale',
     label: 'Gain',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -179,7 +181,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'polarity',
     label: 'Polarity',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -199,7 +201,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'clamp',
     label: 'Clamp',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -221,7 +223,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'softclip',
     label: 'Softclip',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'medium',
     stabilityHint: 'scrubSafe',
@@ -259,7 +261,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'deadzone',
     label: 'Deadzone',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -279,7 +281,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'slew',
     label: 'Slew',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'medium',
     stabilityHint: 'transportOnly',
@@ -288,7 +290,7 @@ export function initLensRegistry(): void {
       fallMs: { type: SCALAR_NUM, default: 120, uiHint: { kind: 'number', min: 0 } },
     },
     apply: (artifact, params) => {
-      if (artifact.kind !== 'Signal:number') {
+      if (artifact.kind !== 'Signal:float') {
         return { kind: 'Error', message: 'Slew lens requires Signal:number input' };
       }
 
@@ -296,7 +298,7 @@ export function initLensRegistry(): void {
       let lastValue = 0;
 
       return {
-        kind: 'Signal:number',
+        kind: 'Signal:float',
         value: (t, ctx) => {
           const input = artifact.value(t, ctx);
           if (lastT === null) {
@@ -331,7 +333,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'quantize',
     label: 'Quantize',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -370,7 +372,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'ease',
     label: 'Ease',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['listener'],
     costHint: 'medium',
     stabilityHint: 'scrubSafe',
@@ -378,7 +380,7 @@ export function initLensRegistry(): void {
       easing: { type: SCALAR_ENUM, default: 'easeInOutSine', uiHint: { kind: 'text' } },
     },
     apply: (artifact, params) => {
-      if (artifact.kind !== 'Signal:number' && artifact.kind !== 'Signal:Unit') {
+      if (artifact.kind !== 'Signal:float' && artifact.kind !== 'Signal:Unit') {
         return { kind: 'Error', message: 'Ease lens requires Signal:number input' };
       }
 
@@ -387,7 +389,7 @@ export function initLensRegistry(): void {
       const signal = artifact.value;
 
       return {
-        kind: 'Signal:number',
+        kind: 'Signal:float',
         value: (t, ctx) => {
           const v = clamp(signal(t, ctx), 0, 1);
           return easing(v);
@@ -400,7 +402,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'mapRange',
     label: 'Map Range',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -433,7 +435,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'hysteresis',
     label: 'Hysteresis',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['listener'],
     costHint: 'medium',
     stabilityHint: 'transportOnly',
@@ -442,14 +444,14 @@ export function initLensRegistry(): void {
       high: { type: SCALAR_NUM, default: 0.6, uiHint: { kind: 'number' } },
     },
     apply: (artifact, params) => {
-      if (artifact.kind !== 'Signal:number') {
+      if (artifact.kind !== 'Signal:float') {
         return { kind: 'Error', message: 'Hysteresis lens requires Signal:number input' };
       }
 
       let state = false;
 
       return {
-        kind: 'Signal:number',
+        kind: 'Signal:float',
         value: (t, ctx) => {
           const low = resolveNumberParam(params.low, t, ctx);
           const high = resolveNumberParam(params.high, t, ctx);
@@ -469,7 +471,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'print',
     label: 'Print',
-    domain: 'number',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -486,11 +488,11 @@ export function initLensRegistry(): void {
       let lastLogTime = 0;
 
       switch (artifact.kind) {
-        case 'Scalar:number':
+        case 'Scalar:float':
           pushPrintLog(label, artifact.value);
           return artifact;
 
-        case 'Signal:number':
+        case 'Signal:float':
         case 'Signal:Unit':
         case 'Signal:phase': {
           const signal = artifact.value;
@@ -507,10 +509,10 @@ export function initLensRegistry(): void {
           } as typeof artifact;
         }
 
-        case 'Field:number': {
+        case 'Field:float': {
           let logged = false;
           return {
-            kind: 'Field:number',
+            kind: 'Field:float',
             value: (seed, n, ctx) => {
               const values = artifact.value(seed, n, ctx);
               if (!logged) {
@@ -535,7 +537,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'phaseOffset',
     label: 'Phase Offset',
-    domain: 'phase',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -553,7 +555,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'pingPong',
     label: 'Ping Pong',
-    domain: 'phase',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -573,7 +575,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'phaseScale',
     label: 'Phase Scale',
-    domain: 'phase',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -591,7 +593,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'phaseQuantize',
     label: 'Phase Quantize',
-    domain: 'phase',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -611,7 +613,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'wrapMode',
     label: 'Wrap Mode',
-    domain: 'phase',
+    domain: 'float',
     allowedScopes: ['publisher', 'listener'],
     costHint: 'cheap',
     stabilityHint: 'scrubSafe',
@@ -644,7 +646,7 @@ export function initLensRegistry(): void {
   registerLens({
     id: 'phaseWindow',
     label: 'Phase Window',
-    domain: 'phase',
+    domain: 'float',
     allowedScopes: ['listener'],
     costHint: 'medium',
     stabilityHint: 'scrubSafe',

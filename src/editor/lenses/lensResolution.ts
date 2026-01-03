@@ -1,5 +1,15 @@
 import type {Artifact, CompileCtx, Vec2} from '../compiler';
-import type { DefaultSourceState, LensParamBinding } from '../types';
+import type { LensParamBinding } from '../types';
+import type { TypeDesc } from '../ir/types/TypeDesc';
+
+// Local definition of DefaultSourceState with proper TypeDesc
+interface DefaultSourceState {
+  id: string;
+  type: TypeDesc;
+  value: unknown;
+  uiHint?: unknown;
+  rangeHint?: { min?: number; max?: number; step?: number; log?: boolean };
+}
 
 export interface ParamResolutionContext {
   defaultSources: Map<string, DefaultSourceState>;

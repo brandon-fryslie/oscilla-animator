@@ -17,7 +17,7 @@ import { useDroppable, useDraggable } from '@dnd-kit/core';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import { useStore } from './stores';
-import type { Block, Slot, PortRef, TypeDesc } from './types';
+import type { Block, PortRef, TypeDesc, UIControlHint } from './types';
 import type { LaneViewLane as Lane, LaneViewKind as LaneKind } from './lanes/types';
 import { getBlockDefinition } from './blocks';
 import { BlockContextMenu } from './BlockContextMenu';
@@ -49,7 +49,21 @@ function getBusDomainColorFromType(typeDesc: TypeDesc | undefined): string {
     trigger: '#ef4444', // red
   };
   if (!typeDesc) return '#666';
-  return domainColors[typeDesc.domain] ?? '#666';
+
+  // TypeDesc is a string like "Signal<float>" or "float"
+  // Extract domain from type string
+  const match = typeDesc.match(/<([^>]+)>$/);
+  const domain = match ? match[1] : typeDesc;
+
+  return domainColors[domain] ?? '#666';
+}
+
+/**
+ * Get BusBlocks from the patch store.
+ * BusBlocks are regular blocks with type 'BusBlock'.
+ */
+function getBusBlocks(store: RootStore): Block[] {
+  return store.patchStore.blocks.filter(b => b.type === 'BusBlock');
 }
 
 /**
@@ -64,7 +78,7 @@ function getInputConnectionInfo(
   slotId: string
 ): ConnectionInfo {
   const edges = store.patchStore.edges;
-  const busBlocks = store.patchStore.busBlocks;
+  const busBlocks = getBusBlocks(store);
   const busBlockIds = new Set(busBlocks.map(b => b.id));
 
   // Find edges where this port is the destination
@@ -118,7 +132,7 @@ function getOutputConnectionInfo(
   slotId: string
 ): ConnectionInfo {
   const edges = store.patchStore.edges;
-  const busBlocks = store.patchStore.busBlocks;
+  const busBlocks = getBusBlocks(store);
   const busBlockIds = new Set(busBlocks.map(b => b.id));
 
   // Find edges where this port is the source
@@ -177,7 +191,7 @@ interface ConnectionInfo {
 interface DefaultSourceInfo {
   hasDefaultSource: boolean;
   value?: unknown;
-  uiHint?: { kind: string };
+  uiHint?: UIControlHint;
 }
 
 /**
@@ -255,6 +269,16 @@ function CollapsedPortIndicator({
       </div>
     </Tippy>
   );
+}
+
+/**
+ * Slot interface - represents an input or output port on a block.
+ * This matches the structure in BlockDefinition.
+ */
+interface Slot {
+  id: string;
+  label: string;
+  type: TypeDesc;
 }
 
 /**
@@ -543,8 +567,10 @@ const DraggablePatchBlock = observer(({
     ? (() => {
         const sourceBlock = store.patchStore.blocks.find((b) => b.id === sourcePort.blockId);
         if (!sourceBlock) return null;
+        const sourceDef = getBlockDefinition(sourceBlock.type);
+        if (!sourceDef) return null;
         const slots =
-          sourcePort.direction === 'input' ? sourceBlock.inputs : sourceBlock.outputs;
+          sourcePort.direction === 'input' ? sourceDef.inputs : sourceDef.outputs;
         return slots.find((s) => s.id === sourcePort.slotId) ?? null;
       })()
     : null;
@@ -593,8 +619,8 @@ const DraggablePatchBlock = observer(({
       }
     : undefined;
 
-  const hasInputs = block.inputs.length > 0;
-  const hasOutputs = block.outputs.length > 0;
+  const hasInputs = definition && definition.inputs.length > 0;
+  const hasOutputs = definition && definition.outputs.length > 0;
 
   // Handle block context menu (right-click on block content, not ports)
   const handleBlockContextMenu = (e: React.MouseEvent) => {
@@ -623,16 +649,16 @@ const DraggablePatchBlock = observer(({
       <div className="block-color-indicator" style={{ backgroundColor: blockColor }} />
 
       {/* Input ports (left side) */}
-      {hasInputs && (
+      {hasInputs && definition && (
         <div className="block-ports inputs">
-          {block.inputs.length > 4 ? (
+          {definition.inputs.length > 4 ? (
             <CollapsedPortIndicator
-              count={block.inputs.length}
+              count={definition.inputs.length}
               direction="input"
               onClick={() => store.uiStore.selectBlock(block.id)}
             />
           ) : (
-            block.inputs.map((slot) => {
+            definition.inputs.map((slot) => {
               const portConnColor = getPortColor(block.id, slot.id, portColorMap);
               const isThisHovered =
                 hoveredPort?.blockId === block.id &&
@@ -688,16 +714,16 @@ const DraggablePatchBlock = observer(({
       </div>
 
       {/* Output ports (right side) */}
-      {hasOutputs && (
+      {hasOutputs && definition && (
         <div className="block-ports outputs">
-          {block.outputs.length > 4 ? (
+          {definition.outputs.length > 4 ? (
             <CollapsedPortIndicator
-              count={block.outputs.length}
+              count={definition.outputs.length}
               direction="output"
               onClick={() => store.uiStore.selectBlock(block.id)}
             />
           ) : (
-            block.outputs.map((slot) => {
+            definition.outputs.map((slot) => {
               const portConnColor = getPortColor(block.id, slot.id, portColorMap);
               const isThisHovered =
                 hoveredPort?.blockId === block.id &&

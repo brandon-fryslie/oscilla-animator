@@ -1,0 +1,28 @@
+Agent: iterative-implementer | 2026-01-03
+Mode: manual
+Completed: Fix missing type definitions in blocks/types.ts | Files: 3 | Commits: 1
+Cache invalidated: None (no eval-cache exists)
+Status: complete
+
+Summary:
+Fixed 14 TypeScript errors in src/editor/blocks/types.ts by defining missing types that were being imported from '../types' but did not exist there.
+
+Defined types:
+- KernelCapability: 'time' | 'identity' | 'state' | 'render' | 'io'
+- KernelId: keyof typeof KERNEL_PRIMITIVES
+- PureCompileKind: 'operator' | 'composite' | 'spec'
+- Capability: KernelCapability | 'pure'
+- BlockSubcategory: 'Sources' | 'Fields' | 'Timing' | ... | 'Other'
+- SlotWorld: 'signal' | 'field' | 'scalar' | 'config'
+- SlotTier: 'compile' | 'frame' | 'element'
+- Slot: alias for SlotDef
+- DefaultSource: deprecated type for backward compat
+
+Updated imports in factory.ts and kernel-primitives.ts to import from './types'.
+
+Verification:
+- just typecheck shows 0 errors in blocks/types.ts, factory.ts, kernel-primitives.ts
+- All 14 original errors resolved
+- Commit: 3e3b612
+
+Next: There are 901 total TypeScript errors remaining in the codebase (unrelated to this fix)

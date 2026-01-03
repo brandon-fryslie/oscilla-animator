@@ -1,0 +1,23 @@
+Agent: iterative-implementer | 2026-01-03 16:29
+Mode: manual
+Completed: Fixed obsolete test files | Files: 2 (deleted 2) | Commits: 1
+Tests: N/A (type errors fixed, not runtime tests)
+Cache invalidated: None (no cache entries for test files)
+Status: complete
+
+Summary:
+- Deleted obsolete test files that tested deprecated Bus/BusBlock APIs:
+  * pass0-materialize.test.ts (tested addBus, busBlocks, getBusById - all removed)
+  * composite.expansion.test.ts (tested deprecated Bus system)
+
+- Fixed type errors in lenses.test.ts:
+  * Signal:number → Signal:float (4 occurrences)
+  * Scalar:number → Scalar:float (2 occurrences)
+
+- Fixed function signature errors in replaceUtils.test.ts:
+  * findCompatibleReplacements: added edges parameter
+  * mapConnections: reordered parameters to (oldBlock, newDef, edges)
+  * copyCompatibleParams: changed from (block, def) to (params, def)
+
+Root cause: TypeDesc refactored from object format to string format (e.g., "Signal:float")
+and Bus system APIs were deprecated/removed in recent refactoring.

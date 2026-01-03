@@ -11,8 +11,8 @@
 
 import { makeObservable, observable, computed, action } from 'mobx';
 import type { RootStore } from '../stores/RootStore';
-import { SLOT_TYPE_TO_TYPE_DESC, isDirectlyCompatible } from '../types';
-import type { TypeDesc, Slot, LensDefinition, AdapterStep, BusCombineMode } from '../types';
+import { isDirectlyCompatible } from '../semantic';
+import type { TypeDesc, SlotDef, LensDefinition, AdapterStep, CombineMode } from '../types';
 import { findAdapterPath } from '../adapters/autoAdapter';
 import { getBlockDefinition } from '../blocks/registry';
 import { convertBlockToBus } from '../bus-block/conversion';
@@ -302,17 +302,24 @@ export class ModulationTableStore {
   // =============================================================================
 
   /**
+   * Get all bus blocks from the patch.
+   */
+  private getBusBlocks() {
+    return this.root.patchStore.blocks.filter(b => b.type === 'BusBlock');
+  }
+
+  /**
    * Derive columns from all buses.
    */
   get columns(): readonly TableColumn[] {
     const index = this.patchIndex;
 
-    return this.root.patchStore.busBlocks.map(convertBlockToBus).map((bus) => {
+    return this.getBusBlocks().map(convertBlockToBus).map((bus) => {
       const publisherIds = index.publishersByBus.get(bus.id) ?? [];
       const listenerIds = index.listenersByBus.get(bus.id) ?? [];
 
       // Calculate activity based on listener count (normalized)
-      const maxListeners = Math.max(1, ...this.root.patchStore.busBlocks.map(convertBlockToBus).map(
+      const maxListeners = Math.max(1, ...this.getBusBlocks().map(convertBlockToBus).map(
         (b) => (index.listenersByBus.get(b.id) ?? []).length
       ));
       const activity = listenerIds.length / maxListeners;
@@ -321,7 +328,7 @@ export class ModulationTableStore {
         busId: bus.id,
         name: bus.name,
         type: bus.type,
-        combineMode: bus.combine.mode as BusCombineMode,
+        combineMode: bus.combine.mode as CombineMode,
         enabled: true, // TODO: Add bus enabled state
         publisherCount: publisherIds.length,
         listenerCount: listenerIds.length,
@@ -403,7 +410,7 @@ export class ModulationTableStore {
   get cells(): readonly TableCell[] {
     const cells: TableCell[] = [];
     const patchStore = this.root.patchStore;
-    const busBlocks = patchStore.busBlocks;
+    const busBlocks = this.getBusBlocks();
     const edges = patchStore.edges;
 
     // Build a map of bus ID -> BusBlock ID for quick lookup
@@ -657,7 +664,7 @@ export class ModulationTableStore {
     const patchStore = this.root.patchStore;
 
     // Find the BusBlock for this busId
-    const busBlock = patchStore.busBlocks.find(b => b.params.busId === busId || b.id === busId);
+    const busBlock = this.getBusBlocks().find(b => b.params.busId === busId || b.id === busId);
     if (!busBlock) {
       console.warn(`[ModulationTableStore] BusBlock not found for busId: ${busId}`);
       return;
@@ -689,21 +696,23 @@ export class ModulationTableStore {
 
     if (direction === 'input') {
       // Listening: BusBlock output → block input
-      patchStore.addEdge({
+      patchStore.connect({
         id: edgeId,
         from: { kind: 'port', blockId: busBlock.id, slotId: 'out' },
         to: { kind: 'port', blockId, slotId: portId },
         transforms: transforms.length > 0 ? transforms : undefined,
         enabled: true,
+        role: { kind: 'user' },
       });
     } else {
       // Publishing: block output → BusBlock input
-      patchStore.addEdge({
+      patchStore.connect({
         id: edgeId,
         from: { kind: 'port', blockId, slotId: portId },
         to: { kind: 'port', blockId: busBlock.id, slotId: 'in' },
         transforms: transforms.length > 0 ? transforms : undefined,
         enabled: true,
+        role: { kind: 'user' },
       });
     }
   }
@@ -723,7 +732,7 @@ export class ModulationTableStore {
     const patchStore = this.root.patchStore;
 
     // Find the edge(s) connecting this port to/from a BusBlock
-    const busBlockIds = new Set(patchStore.busBlocks.map(b => b.id));
+    const busBlockIds = new Set(this.getBusBlocks().map(b => b.id));
     const edges = patchStore.edges;
 
     let edgesToRemove: string[] = [];
@@ -735,7 +744,7 @@ export class ModulationTableStore {
           e.to.blockId === blockId &&
           e.to.slotId === portId &&
           busBlockIds.has(e.from.blockId) &&
-          (!busId || patchStore.busBlocks.find(b => b.id === e.from.blockId)?.params.busId === busId || e.from.blockId === busId)
+          (!busId || this.getBusBlocks().find(b => b.id === e.from.blockId)?.params.busId === busId || e.from.blockId === busId)
         )
         .map(e => e.id);
     } else {
@@ -745,7 +754,7 @@ export class ModulationTableStore {
           e.from.blockId === blockId &&
           e.from.slotId === portId &&
           busBlockIds.has(e.to.blockId) &&
-          (!busId || patchStore.busBlocks.find(b => b.id === e.to.blockId)?.params.busId === busId || e.to.blockId === busId)
+          (!busId || this.getBusBlocks().find(b => b.id === e.to.blockId)?.params.busId === busId || e.to.blockId === busId)
         )
         .map(e => e.id);
     }
@@ -755,7 +764,7 @@ export class ModulationTableStore {
     }
 
     for (const edgeId of edgesToRemove) {
-      patchStore.removeEdge(edgeId);
+      patchStore.disconnect(edgeId);
     }
   }
 
@@ -778,7 +787,7 @@ export class ModulationTableStore {
     }
 
     // Find the BusBlock edge for this input port
-    const busBlockIds = new Set(patchStore.busBlocks.map(b => b.id));
+    const busBlockIds = new Set(this.getBusBlocks().map(b => b.id));
     const edge = patchStore.edges.find(e =>
       e.to.blockId === blockId &&
       e.to.slotId === portId &&
@@ -804,15 +813,9 @@ export class ModulationTableStore {
 
     const newTransforms = [...adapters, ...newLenses];
 
-    // Update the edge - remove and re-add since we don't have WireUpdate
-    // Note: We could use patchStore.updateEdge if available
-    patchStore.removeEdge(edge.id);
-    patchStore.addEdge({
-      id: edge.id, // Preserve edge ID
-      from: edge.from,
-      to: edge.to,
+    // Update the edge using updateEdge
+    patchStore.updateEdge(edge.id, {
       transforms: newTransforms.length > 0 ? newTransforms : undefined,
-      enabled: edge.enabled,
     });
   }
 
@@ -821,10 +824,11 @@ export class ModulationTableStore {
   // =============================================================================
 
   /**
-   * Convert a Slot to TypeDesc.
+   * Convert a SlotDef to TypeDesc.
    */
-  private slotToTypeDesc(slot: Slot): TypeDesc | undefined {
-    return SLOT_TYPE_TO_TYPE_DESC[slot.type];
+  private slotToTypeDesc(slot: SlotDef): TypeDesc | undefined {
+    // Slots now directly contain TypeDesc objects
+    return slot.type;
   }
 
   /**
@@ -834,16 +838,16 @@ export class ModulationTableStore {
 //     if (listener) {
 //       return 'bound';
 //     }
-// 
+//
 //     // For listeners, bus type is source, row type is target
 //     if (this.isTypeCompatible(column.type, row.type)) {
 //       return 'empty';
 //     }
-// 
+//
 //     if (this.isTypeConvertible(column.type, row.type)) {
 //       return 'convertible';
 //     }
-// 
+//
 //     return 'incompatible';
 //   }
 
@@ -854,16 +858,16 @@ export class ModulationTableStore {
 //     if (publisher) {
 //       return 'bound';
 //     }
-// 
+//
 //     // For publishers, row type is source, bus type is target
 //     if (this.isTypeCompatible(row.type, column.type)) {
 //       return 'empty';
 //     }
-// 
+//
 //     if (this.isTypeConvertible(row.type, column.type)) {
 //       return 'convertible';
 //     }
-// 
+//
 //     return 'incompatible';
 //   }
 
@@ -881,7 +885,7 @@ export class ModulationTableStore {
 //     const result = findAdapterPath(source, target, 'listener');
 //     return !!result.ok || !!(result.suggestions && result.suggestions.length > 0);
 //   }
-// 
+//
   /**
    * Get suggested lens chain for type conversion.
    */
@@ -898,12 +902,12 @@ export class ModulationTableStore {
 //     if (column.type.world === 'signal' && row.type.world === 'field') {
 //       return 'cheap';
 //     }
-// 
+//
 //     // Same world conversions are cheap
 //     if (column.type.world === row.type.world) {
 //       return 'cheap';
 //     }
-// 
+//
 //     return 'moderate';
 //   }
 }

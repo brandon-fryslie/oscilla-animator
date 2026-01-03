@@ -77,10 +77,10 @@ registerBlockType({
   type: 'SignalExpression',
   capability: 'pure',
   inputs: [
-    { portId: 'value', label: 'Value', dir: 'in', type: { world: 'signal', domain: 'number' } },
+    { portId: 'value', label: 'Value', dir: 'in', type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, lanes: [1] } },
   ],
   outputs: [
-    { portId: 'out', label: 'Output', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'out', label: 'Output', dir: 'out', type: { world: 'signal', domain: 'float', category: 'core', busEligible: true, lanes: [1] } },
   ],
   lower: lowerSignalExpression,
 });
@@ -93,12 +93,12 @@ export const SignalExpressionBlock: BlockCompiler = {
   type: 'SignalExpression',
 
   inputs: [
-    { name: 'value', type: { kind: 'Signal:number' }, required: false },
+    { name: 'value', type: { kind: 'Signal:float' }, required: false },
     { name: 'expression', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Signal:number' } },
+    { name: 'out', type: { kind: 'Signal:float' } },
   ],
 
   compile({ inputs }) {
@@ -109,13 +109,20 @@ export const SignalExpressionBlock: BlockCompiler = {
     if (valueArtifact === undefined) {
       // No input connected - use constant 0
       inputSignal = () => 0;
-    } else if (valueArtifact.kind === 'Signal:number') {
+    } else if (valueArtifact.kind === 'Signal:float') {
       inputSignal = valueArtifact.value as Signal<number>;
-    } else if (valueArtifact.kind === 'Signal:phase') {
+    } else if (valueArtifact.kind === 'Signal:int') {
+      // Also accept int signals
+      inputSignal = valueArtifact.value as Signal<number>;
+    } else if (valueArtifact.kind === 'Signal:phase' || valueArtifact.kind === 'Signal:phase01') {
       // Also accept phase signals (they're just numbers 0-1)
       inputSignal = valueArtifact.value as Signal<number>;
-    } else if (valueArtifact.kind === 'Scalar:number') {
+    } else if (valueArtifact.kind === 'Scalar:float') {
       // Lift scalar to constant signal
+      const constVal = valueArtifact.value as number;
+      inputSignal = () => constVal;
+    } else if (valueArtifact.kind === 'Scalar:int') {
+      // Lift int scalar to constant signal
       const constVal = valueArtifact.value as number;
       inputSignal = () => constVal;
     } else {
@@ -142,7 +149,7 @@ export const SignalExpressionBlock: BlockCompiler = {
     };
 
     return {
-      out: { kind: 'Signal:number', value: signal },
+      out: { kind: 'Signal:float', value: signal },
     };
   },
 };

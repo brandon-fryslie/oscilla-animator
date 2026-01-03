@@ -15,8 +15,8 @@
  * Updated: Multi-Input Blocks Integration (2026-01-01)
  */
 
-import type { BusCombineMode, CombineMode, CombinePolicy, Edge, SlotWorld } from "../../types";
-import type { TypeDesc, CoreDomain } from "../../../core/types";
+import type { CombineMode, Edge } from "../../types";
+import type { TypeDesc, CoreDomain, TypeWorld } from "../../../core/types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import type { ValueRefPacked } from "./pass6-block-lowering";
 import type { EventExprId } from "../ir/types";
@@ -25,6 +25,25 @@ import type { EventCombineMode } from "../ir/signalExpr";
 // =============================================================================
 // Types
 // =============================================================================
+
+/**
+ * Combine policy - controls when and how multiple writers are combined.
+ *
+ * This type was removed from editor/types.ts but is needed by the compiler.
+ * Redefined here for compiler internal use.
+ */
+export type CombinePolicy =
+  | { when: 'multi'; mode: CombineMode }
+  | { when: 'always'; mode: CombineMode }
+  | { when: 'multi'; mode: 'error' };
+
+/**
+ * SlotWorld - subset of TypeWorld for runtime-evaluated values.
+ *
+ * This type was removed from editor/types.ts but is needed by the compiler.
+ * Redefined here for compiler internal use.
+ */
+export type SlotWorld = 'signal' | 'field' | 'scalar' | 'config';
 
 /**
  * Result of combine mode validation.
@@ -59,19 +78,13 @@ export interface CombineModeValidation {
  * @returns Validation result with reason if invalid
  */
 export function validateCombineMode(
-  mode: CombineMode,
+  mode: CombineMode | 'error' | 'layer',
   world: SlotWorld,
   domain: CoreDomain
 ): CombineModeValidation {
   // 'error' mode is special - it rejects multiple writers
   if (mode === 'error') {
     return { valid: true }; // Validated separately in caller
-  }
-
-  // Custom modes need registry validation (not implemented yet)
-  if (typeof mode === 'object' && mode.kind === 'custom') {
-    // TODO: Check custom combine registry
-    return { valid: true }; // Assume valid for now
   }
 
   // 'last' and 'first' are always valid for all worlds and domains
@@ -167,32 +180,28 @@ export function shouldCombine(policy: CombinePolicy, writerCount: number): boole
 // =============================================================================
 
 /**
- * Normalize CombineMode to BusCombineMode for IR emission.
+ * Normalize CombineMode to a standard mode for IR emission.
  *
  * Maps:
  * - 'first' → 'last' (inverse of sorted writer order)
- * - 'layer' → 'last' (semantic alias)
  * - 'error' → Should never reach here (validated earlier)
- * - Custom → TODO: Look up in custom registry
  *
  * @param mode - CombineMode to normalize
- * @returns BusCombineMode for IR emission
+ * @returns Normalized mode for IR emission
  */
-function normalizeCombineMode(mode: CombineMode): BusCombineMode {
+function normalizeCombineMode(mode: CombineMode | 'error' | 'layer'): CombineMode {
   if (mode === 'first') {
     return 'last'; // 'first' is 'last' with reversed order
   }
   if (mode === 'error') {
     throw new Error('Internal error: combine mode "error" should be validated before combine node creation');
   }
-  if (typeof mode === 'object' && mode.kind === 'custom') {
-    // TODO: Look up custom combine implementation
-    // For now, fallback to 'last'
-    console.warn(`Custom combine mode "${mode.id}" not implemented, using 'last'`);
+  if (mode === 'layer') {
+    // layer is semantic alias for last in field context
     return 'last';
   }
-  // Must be BusCombineMode
-  return mode as BusCombineMode;
+  // Must be a standard CombineMode
+  return mode as CombineMode;
 }
 
 /**
@@ -218,7 +227,7 @@ function normalizeCombineMode(mode: CombineMode): BusCombineMode {
  * @returns Combined ValueRefPacked or null if no inputs
  */
 export function createCombineNode(
-  mode: CombineMode,
+  mode: CombineMode | 'error' | 'layer',
   inputs: readonly ValueRefPacked[],
   type: TypeDesc,
   builder: IRBuilder
@@ -228,7 +237,7 @@ export function createCombineNode(
     return null;
   }
 
-  // Normalize mode to BusCombineMode
+  // Normalize mode
   const normalizedMode = normalizeCombineMode(mode);
 
   // Handle 'first' mode by reversing input order
@@ -258,7 +267,7 @@ export function createCombineNode(
       return null; // No valid signal terms
     }
 
-    // Map BusCombineMode to Signal combine mode
+    // Map to Signal combine mode
     const validModes = ["sum", "average", "max", "min", "last"];
     const safeMode = validModes.includes(normalizedMode) ? normalizedMode : "last";
     const combineMode = safeMode as "sum" | "average" | "max" | "min" | "last";
@@ -275,7 +284,7 @@ export function createCombineNode(
       return null; // No valid field terms
     }
 
-    // Map BusCombineMode to Field combine mode
+    // Map to Field combine mode
     const validModes = ["sum", "average", "max", "min", "last", "product"];
     const safeMode = validModes.includes(normalizedMode) ? normalizedMode : "product";
     const combineMode = safeMode as "sum" | "average" | "max" | "min" | "last" | "product";

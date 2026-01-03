@@ -21,6 +21,26 @@ import { SemanticGraph as GraphImpl } from '../semantic/graph';
 import { Validator } from '../semantic/validator';
 import TransactionBuilder from './TransactionBuilder';
 import { applyOp } from './applyOp';
+import { BLOCK_REGISTRY } from '../blocks/registry';
+
+/**
+ * Convert a Patch to PatchDocument format expected by semantic layer.
+ * This adapter extracts the necessary structural information from the full patch.
+ */
+function toPatchDocument(patch: Patch): PatchDocument {
+  return {
+    blocks: patch.blocks.map(block => {
+      const def = BLOCK_REGISTRY.get(block.type);
+      return {
+        id: block.id,
+        type: block.type,
+        inputs: def?.inputs.map(slot => ({ id: slot.id, type: slot.type })) ?? [],
+        outputs: def?.outputs.map(slot => ({ id: slot.id, type: slot.type })) ?? [],
+      };
+    }),
+    edges: patch.edges,
+  };
+}
 
 export class Kernel implements PatchKernel {
   // State
@@ -41,12 +61,12 @@ export class Kernel implements PatchKernel {
 
   constructor(initialPatch: Readonly<Patch>) {
     this._doc = JSON.parse(JSON.stringify(initialPatch)) as Patch;
-    this._graph = GraphImpl.fromPatch(this._doc);
+    this._graph = GraphImpl.fromPatch(toPatchDocument(this._doc));
     this._report = { ok: true, errors: [], warnings: [] }; // Initial assumption
   }
 
   get doc(): PatchDocument {
-    return this._doc as PatchDocument;
+    return toPatchDocument(this._doc);
   }
 
   get graph(): SemanticGraph {
@@ -83,9 +103,9 @@ export class Kernel implements PatchKernel {
     }
 
     // 3. Update graph and validation
-    this._graph = GraphImpl.fromPatch(this._doc);
-    const validator = new Validator(this._doc);
-    this._report = validator.validateAll(this._doc);
+    this._graph = GraphImpl.fromPatch(toPatchDocument(this._doc));
+    const validator = new Validator(toPatchDocument(this._doc));
+    this._report = validator.validateAll(toPatchDocument(this._doc));
 
     // 4. Update history
     this.history.nodes.set(tx.id, tx);
@@ -114,9 +134,9 @@ export class Kernel implements PatchKernel {
     }
 
     // Update graph/validation
-    this._graph = GraphImpl.fromPatch(this._doc);
-    const validator = new Validator(this._doc);
-    this._report = validator.validateAll(this._doc);
+    this._graph = GraphImpl.fromPatch(toPatchDocument(this._doc));
+    const validator = new Validator(toPatchDocument(this._doc));
+    this._report = validator.validateAll(toPatchDocument(this._doc));
 
     // Move head pointer
     this.history.head = tx.parentId;
@@ -145,9 +165,9 @@ export class Kernel implements PatchKernel {
         }
 
         // Update graph/validation
-        this._graph = GraphImpl.fromPatch(this._doc);
-        const validator = new Validator(this._doc);
-        this._report = validator.validateAll(this._doc);
+        this._graph = GraphImpl.fromPatch(toPatchDocument(this._doc));
+        const validator = new Validator(toPatchDocument(this._doc));
+        this._report = validator.validateAll(toPatchDocument(this._doc));
 
         // Move head
         this.history.head = nextId;

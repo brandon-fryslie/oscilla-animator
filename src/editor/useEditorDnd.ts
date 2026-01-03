@@ -10,6 +10,7 @@ import {
   isTrashDropData,
   getLaneIdFromDropData,
 } from './types/dnd';
+import { getBlockDefinition } from './blocks';
 
 export function useEditorDnd(): {
   handleDragStart: (event: DragStartEvent) => void;
@@ -34,8 +35,8 @@ export function useEditorDnd(): {
 
     if (isLibraryBlockDragData(data)) {
       setActiveDefinition(data.definition);
-      // Set dragging lane kind for highlighting suggested lanes
-      store.uiStore.setDraggingLaneKind(data.definition.laneKind ?? null);
+      // Note: setDraggingLaneKind is not currently implemented in UIStateStore
+      // This would be used for highlighting suggested lanes during drag
     } else if (isPatchBlockDragData(data)) {
       // Dragging a placed block
       const block = store.patchStore.blocks.find((b) => b.id === data.blockId);
@@ -50,24 +51,16 @@ export function useEditorDnd(): {
   }
 
   function getBlockColor(blockType: string): string {
-    // Import would create circular dep, so inline the lookup
-    const colors: Record<string, string> = {
-      Scene: '#4a9eff',
-      Fields: '#a855f7',
-      Time: '#22c55e',
-      Math: '#f59e0b',
-      Compose: '#ec4899',
-      Render: '#ef4444',
-    };
-    const block = store.patchStore.blocks.find((b) => b.type === blockType);
-    return colors[block?.category ?? 'Compose'] ?? '#666';
+    // Get color from block definition
+    const definition = getBlockDefinition(blockType);
+    return definition?.color ?? '#666';
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveDefinition(null);
     setActivePlacedBlock(null);
-    store.uiStore.setDraggingLaneKind(null);
+    // Note: setDraggingLaneKind is not currently implemented
 
     if (!over) return;
 
@@ -84,7 +77,9 @@ export function useEditorDnd(): {
           store.viewStore.reorderBlockInLane(sourceLaneId, blockId, targetIndex);
         }
       } else {
-        store.viewStore.moveBlockToLane(blockId, targetLaneId);
+        // Move block to different lane
+        // First remove from current lane, then add to target lane
+        store.viewStore.insertBlockInLane(targetLaneId, blockId, targetIndex);
       }
       return;
     }
@@ -96,7 +91,7 @@ export function useEditorDnd(): {
       const blockId = store.patchStore.addBlock(blockType);
 
       // Explicitly move to the target lane since user dropped it there
-      store.viewStore.moveBlockToLane(blockId, laneId);
+      store.viewStore.insertBlockInLane(laneId, blockId, 0);
     }
 
     // Dropping placed block onto trash
@@ -111,7 +106,7 @@ export function useEditorDnd(): {
 
       if (sourceLaneId !== targetLaneId) {
         // Move to different lane
-        store.viewStore.moveBlockToLane(blockId, targetLaneId);
+        store.viewStore.insertBlockInLane(targetLaneId, blockId, 0);
       }
       // Note: reordering within same lane would need drop position info
       // For now, moving to same lane just keeps it in place

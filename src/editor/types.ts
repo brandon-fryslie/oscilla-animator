@@ -50,6 +50,18 @@ export type Phase = number;
  */
 export type TypeDesc = string; // e.g., 'Number', 'Vec2', 'Field<Number>', 'Signal<Vec2>'
 
+/**
+ * TypeWorld - world classification for values (signal, field, scalar, config).
+ * Re-exported from ir/types/TypeDesc.ts for convenience.
+ */
+export type { TypeWorld } from './ir/types/TypeDesc';
+
+/**
+ * Domain - type domain classification.
+ * Re-exported from compiler types for convenience.
+ */
+export type { Domain } from './compiler/unified/Domain';
+
 // =============================================================================
 // UI Hints (for block configuration)
 // =============================================================================
@@ -158,6 +170,12 @@ export type CombineMode =
   | 'min';      // Numeric minimum
 
 /**
+ * CombinePolicy - legacy type for bus combination policy.
+ * @deprecated Use CombineMode instead
+ */
+export type CombinePolicy = CombineMode;
+
+/**
  * Bus - global signal distribution point.
  * Publishers send values, subscribers receive combined value.
  */
@@ -207,9 +225,45 @@ export interface MacroOutputBinding {
 export type SlotDirection = 'input' | 'output';
 
 /**
- * SlotDef defines a block's input or output port.
+ * World classification for slots.
+ * Determines evaluation timing and hot-swap behavior.
  */
-export interface SlotDef {
+export type SlotWorld =
+  | 'signal'    // Time-indexed, continuous, per-frame evaluation
+  | 'field'     // Per-element, lazy, bulk evaluation
+  | 'scalar'    // Compile-time constant (for domain size, seed, etc.)
+  | 'config';   // Compile-time selection (enum/bool), stepwise changes only
+
+/**
+ * UI presentation tier for inputs.
+ * Controls visibility and layout in Inspector.
+ */
+export type SlotTier =
+  | 'primary'    // Always visible on block face
+  | 'secondary'; // Tucked under "More" / "Advanced"
+
+/**
+ * DefaultSource - default value definition for an input slot.
+ * Represents the implicit constant value when nothing is connected.
+ */
+export interface DefaultSource {
+  /** The constant value (typed per SlotType) */
+  readonly value: unknown;
+  /** UI control metadata for inline editing */
+  readonly uiHint?: UIControlHint;
+  /** World classification */
+  readonly world?: SlotWorld;
+  /** Range hint for numeric controls */
+  readonly rangeHint?: { min?: number; max?: number; step?: number; log?: boolean };
+}
+
+/**
+ * Slot - defines a block's input or output port.
+ * This is the interface expected by blocks/types.ts and other parts of the codebase.
+ *
+ * Note: This is aliased to SlotDef for backward compatibility.
+ */
+export interface Slot {
   readonly id: string;
   readonly label: string;
   readonly type: TypeDesc;
@@ -218,7 +272,73 @@ export interface SlotDef {
   readonly defaultValue?: unknown;
   readonly uiHint?: UIControlHint;
   readonly rangeHint?: { min?: number; max?: number; step?: number; log?: boolean };
+  readonly defaultSource?: DefaultSource;
+  readonly tier?: SlotTier;
 }
+
+/**
+ * SlotDef defines a block's input or output port.
+ * This is an alias for Slot to maintain backward compatibility.
+ */
+export type SlotDef = Slot;
+
+// =============================================================================
+// Block Categories and Subcategories
+// =============================================================================
+
+/**
+ * BlockCategory - high-level block categorization.
+ */
+export type BlockCategory = string;
+
+/**
+ * BlockSubcategory - subcategory within a block form for organization.
+ * Examples: 'Sources', 'Fields', 'Timing', 'Spatial', 'Math', etc.
+ */
+export type BlockSubcategory = string;
+
+/**
+ * ALL_SUBCATEGORIES - complete list of all block subcategories.
+ * Used for UI organization and filtering.
+ */
+export const ALL_SUBCATEGORIES: readonly BlockSubcategory[] = [
+  'Sources',
+  'Fields',
+  'Timing',
+  'Spatial',
+  'Math',
+  'Combinators',
+  'Filters',
+  'Effects',
+  'Render',
+  'Utility',
+] as const;
+
+// =============================================================================
+// Kernel Primitives and Capabilities
+// =============================================================================
+
+/**
+ * KernelCapability - the five fundamental authorities.
+ * Kernel blocks have special privileges based on their capability.
+ */
+export type KernelCapability = 'time' | 'identity' | 'state' | 'render' | 'io';
+
+/**
+ * Capability - either a kernel capability or pure (no special authority).
+ */
+export type Capability = KernelCapability | 'pure';
+
+/**
+ * KernelId - unique identifier for kernel primitive blocks.
+ * Must match the block type for kernel blocks.
+ */
+export type KernelId = string;
+
+/**
+ * PureCompileKind - how a pure block compiles.
+ */
+export type PureCompileKind = 'operator' | 'composite' | 'spec';
 
 // =============================================================================
 // Block Definition (from Registry)
@@ -350,6 +470,28 @@ export type TransformStep = AdapterStep | { readonly kind: 'lens'; readonly lens
  * Phase 3: Branded types, compile-time verification.
  */
 export type SlotType = TypeDesc;
+
+/**
+ * SLOT_TYPE_TO_TYPE_DESC - mapping from SlotType to TypeDesc.
+ * @deprecated This is a stub for backward compatibility. Use TypeDesc directly.
+ */
+export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc | undefined> = {} as any;
+
+// =============================================================================
+// Type Compatibility Functions
+// =============================================================================
+
+/**
+ * createTypeDesc - create a TypeDesc from partial information.
+ * Re-exported from ir/types/TypeDesc.ts for convenience.
+ */
+export { createTypeDesc } from './ir/types/TypeDesc';
+
+/**
+ * isDirectlyCompatible - check if two TypeDescs are directly compatible.
+ * Re-exported from semantic/index.ts for convenience.
+ */
+export { isDirectlyCompatible } from './semantic/index';
 
 // =============================================================================
 // Diagnostics (Compile-time Errors/Warnings)
@@ -632,6 +774,28 @@ export interface DefaultSourceState {
   rangeHint?: { min?: number; max?: number; step?: number; log?: boolean };
 }
 
+// =============================================================================
+// Composite Types
+// =============================================================================
+
+/**
+ * ExposedParam - exposed parameter definition for composites.
+ * Maps a composite's external parameter to an internal block parameter.
+ */
+export interface ExposedParam {
+  /** External parameter name */
+  readonly name: string;
+  /** Internal block ID */
+  readonly blockId: string;
+  /** Internal parameter name */
+  readonly paramName: string;
+  /** UI label */
+  readonly label?: string;
+  /** UI control hint */
+  readonly uiHint?: UIControlHint;
+  /** Default value */
+  readonly defaultValue?: unknown;
+}
 
 /**
  * Composite - a saved group of blocks and connections that can be instantiated.

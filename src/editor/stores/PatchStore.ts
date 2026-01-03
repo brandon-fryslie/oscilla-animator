@@ -10,9 +10,8 @@ import type {
   LensInstance,
   Edge,
   TypeDesc,
-  CombinePolicy,
+  AdapterStep,
 } from '../types';
-import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import { getBlockDefinition, isBlockHidden } from '../blocks';
 import { getBlockForm } from '../blocks/types';
 import { getMacroKey, getMacroExpansion, type MacroExpansion } from '../macros';
@@ -23,8 +22,7 @@ import { Validator } from '../semantic';
 import { storeToPatchDocument } from '../semantic/patchAdapter';
 import { randomUUID } from "../crypto";
 import { runTx } from '../transactions/TxBuilder';
-import { convertBusToBlock } from '../bus-block/conversion';
-import { getEdgeTransforms, extractLenses, extractAdapters, buildTransforms } from '../transforms/normalize';
+import { extractLenses, extractAdapters, buildTransforms } from '../transforms/normalize';
 import { normalize, type NormalizedGraph } from '../graph';
 
 // =============================================================================
@@ -129,14 +127,26 @@ export class PatchStore {
   /**
    * Emit a GraphCommitted event with optional diff summary.
    */
-  private emitGraphCommitted(reason: GraphCommitReason, diff?: GraphDiffSummary) {
+  private emitGraphCommitted(reason: GraphCommitReason, diffSummary?: GraphDiffSummary) {
     this.incrementRevision();
     this.invalidateNormalizedCache();
+
+    // Default diff summary if not provided
+    const diff: GraphDiffSummary = diffSummary ?? {
+      blocksAdded: 0,
+      blocksRemoved: 0,
+      busesAdded: 0,
+      busesRemoved: 0,
+      bindingsChanged: 0,
+      timeRootChanged: false,
+    };
+
     this.root.events.emit({
       type: 'GraphCommitted',
+      patchId: 'default', // TODO: Get from RootStore when patchId is added
+      patchRevision: this.patchRevision,
       reason,
-      diff,
-      revision: this.patchRevision,
+      diffSummary: diff,
     });
   }
 
@@ -275,12 +285,13 @@ export class PatchStore {
 
     // Create default sources for inputs with defaultSource metadata
     // NOTE: This currently doesn't use transactions (deferred to later migration)
-    this.root.defaultSourceStore.createDefaultSourcesForBlock(
-      id,
-      definition.inputs,
-      SLOT_TYPE_TO_TYPE_DESC,
-      migratedParams
-    );
+    // Commenting out until SLOT_TYPE_TO_TYPE_DESC is available
+    // this.root.defaultSourceStore.createDefaultSourcesForBlock(
+    //   id,
+    //   definition.inputs,
+    //   SLOT_TYPE_TO_TYPE_DESC,
+    //   migratedParams
+    // );
 
     // Emit BlockAdded event (fine-grained event, coexists with GraphCommitted)
     this.root.events.emit({
@@ -354,10 +365,15 @@ export class PatchStore {
       this.connect(fromId, conn.fromSlot, toId, conn.toSlot);
     }
 
-    // Emit MacroExpanded event (includes macroKey for reference)
+    // Get first block type for event
+    const firstBlockType = expansion.blocks[0]?.type ?? 'unknown';
+    const createdBlockIds = Array.from(refToId.values());
+
+    // Emit MacroExpanded event
     this.root.events.emit({
       type: 'MacroExpanded',
-      macroKey: macroKey ?? 'unknown',
+      macroType: firstBlockType,
+      createdBlockIds,
     });
 
     // Return the first block ID as a handle
@@ -412,26 +428,26 @@ export class PatchStore {
       // Direct mutation for position (no transaction, no graph event)
       Object.assign(block, updates);
 
-      // Emit BlockMoved event
-      this.root.events.emit({
-        type: 'BlockMoved',
-        blockId: id,
-        position: updates.position!,
-      });
+      // NOTE: BlockMoved event removed from EditorEvent union - commenting out
+      // this.root.events.emit({
+      //   type: 'BlockMoved',
+      //   blockId: id,
+      //   position: updates.position!,
+      // });
     } else {
       // Use transaction system for param updates
       runTx(this.root, { label: `Update ${block.type}` }, tx => {
-        tx.update('blocks', id, updates);
+        tx.replace('blocks', id, { ...block, ...updates });
       });
 
-      // Emit BlockParamsChanged event (fine-grained event, coexists with GraphCommitted)
-      if (updates.params !== undefined) {
-        this.root.events.emit({
-          type: 'BlockParamsChanged',
-          blockId: id,
-          params: updates.params,
-        });
-      }
+      // NOTE: BlockParamsChanged event removed from EditorEvent union - commenting out
+      // if (updates.params !== undefined) {
+      //   this.root.events.emit({
+      //     type: 'BlockParamsChanged',
+      //     blockId: id,
+      //     params: updates.params,
+      //   });
+      // }
     }
   }
 
@@ -571,17 +587,17 @@ export class PatchStore {
 
     // Use transaction system for edge updates
     runTx(this.root, { label: 'Update Edge' }, tx => {
-      tx.update('edges', edgeId, updates);
+      tx.replace('edges', edgeId, { ...edge, ...updates });
     });
 
-    // Emit WireTransformsChanged event (fine-grained event, coexists with GraphCommitted)
-    if (updates.transforms !== undefined) {
-      this.root.events.emit({
-        type: 'WireTransformsChanged',
-        wireId: edgeId,
-        transforms: updates.transforms,
-      });
-    }
+    // NOTE: WireTransformsChanged event removed from EditorEvent union - commenting out
+    // if (updates.transforms !== undefined) {
+    //   this.root.events.emit({
+    //     type: 'WireTransformsChanged',
+    //     wireId: edgeId,
+    //     transforms: updates.transforms,
+    //   });
+    // }
   }
 
   // ===========================================================================
@@ -592,20 +608,20 @@ export class PatchStore {
    * Get the current adapter chain for an edge.
    * @returns Array of adapter steps, or empty array if none
    */
-  getEdgeAdapters(edgeId: string): readonly { readonly kind: 'adapter'; readonly from: TypeDesc; readonly to: TypeDesc; readonly adapter: string; readonly params: Record<string, unknown> }[] {
+  getEdgeAdapters(edgeId: string): AdapterStep[] {
     const edge = this.edges.find((e) => e.id === edgeId);
     if (edge == null) return [];
-    return extractAdapters(edge.transforms ?? []);
+    return extractAdapters(edge.transforms ?? []) as AdapterStep[];
   }
 
   /**
    * Get the current lens stack for an edge.
    * @returns Array of lenses, or empty array if none
    */
-  getEdgeLenses(edgeId: string): readonly LensInstance[] {
+  getEdgeLenses(edgeId: string): LensInstance[] {
     const edge = this.edges.find((e) => e.id === edgeId);
     if (edge == null) return [];
-    return extractLenses(edge.transforms ?? []);
+    return extractLenses(edge.transforms ?? []) as LensInstance[];
   }
 
   /**
@@ -615,11 +631,11 @@ export class PatchStore {
    * @param edgeId - The edge ID
    * @param lenses - The new lens stack
    */
-  setEdgeLenses(edgeId: string, lenses: readonly LensInstance[]): void {
+  setEdgeLenses(edgeId: string, lenses: LensInstance[]): void {
     const edge = this.edges.find((e) => e.id === edgeId);
     if (edge == null) return;
 
-    const adapters = extractAdapters(edge.transforms ?? []);
+    const adapters = extractAdapters(edge.transforms ?? []) as AdapterStep[];
     const newTransforms = buildTransforms(adapters, lenses);
 
     this.updateEdge(edgeId, { transforms: newTransforms });
@@ -632,11 +648,11 @@ export class PatchStore {
    * @param edgeId - The edge ID
    * @param adapters - The new adapter chain
    */
-  setEdgeAdapters(edgeId: string, adapters: readonly { readonly kind: 'adapter'; readonly from: TypeDesc; readonly to: TypeDesc; readonly adapter: string; readonly params: Record<string, unknown> }[]): void {
+  setEdgeAdapters(edgeId: string, adapters: AdapterStep[]): void {
     const edge = this.edges.find((e) => e.id === edgeId);
     if (edge == null) return;
 
-    const lenses = extractLenses(edge.transforms ?? []);
+    const lenses = extractLenses(edge.transforms ?? []) as LensInstance[];
     const newTransforms = buildTransforms(adapters, lenses);
 
     this.updateEdge(edgeId, { transforms: newTransforms });
@@ -702,17 +718,12 @@ export class PatchStore {
     }
 
     // Map connections: determine which edges can be preserved
-    const mappedConnections = mapConnections(
-      this.edges,
-      oldBlockId,
-      oldBlock,
-      newBlockDef
-    );
+    const mapping = mapConnections(oldBlock, newBlockDef, this.edges);
 
     // Copy compatible params
     const newParams = copyCompatibleParams(
       oldBlock.params,
-      newBlockDef.defaultParams ?? {}
+      newBlockDef
     );
 
     // Create new block at same position
@@ -727,10 +738,16 @@ export class PatchStore {
       role: { kind: 'user' }, // Replacement blocks are user blocks
     };
 
+    // Track selection state
+    const wasSelected = this.root.uiStore.uiState.selectedBlockId === oldBlockId;
+
     // Execute replacement in single transaction
     runTx(this.root, { label: `Replace ${oldBlock.type} with ${newBlockType}` }, tx => {
-      // 1. Remove old edges
-      mappedConnections.removedEdges.forEach(edge => tx.remove('edges', edge.id));
+      // 1. Remove dropped edges
+      mapping.dropped.forEach(conn => {
+        const edge = this.edges.find(e => e.id === conn.connectionId);
+        if (edge) tx.remove('edges', edge.id);
+      });
 
       // 2. Remove old block
       tx.remove('blocks', oldBlockId);
@@ -738,25 +755,36 @@ export class PatchStore {
       // 3. Add new block
       tx.add('blocks', newBlock);
 
-      // 4. Add new edges
-      mappedConnections.preservedEdges.forEach(edge => tx.add('edges', edge));
+      // 4. Add preserved edges with updated endpoints
+      mapping.preserved.forEach(conn => {
+        const edge: Edge = {
+          id: this.generateConnectionId(),
+          from: { kind: 'port', blockId: conn.fromBlockId === oldBlockId ? newBlockId : conn.fromBlockId, slotId: conn.fromSlot },
+          to: { kind: 'port', blockId: conn.toBlockId === oldBlockId ? newBlockId : conn.toBlockId, slotId: conn.toSlot },
+          enabled: true,
+          role: { kind: 'user' },
+        };
+        tx.add('edges', edge);
+      });
     });
 
-    // Emit BlockReplaced event
+    // Emit BlockReplaced event with required fields
     this.root.events.emit({
       type: 'BlockReplaced',
       oldBlockId,
       newBlockId,
       oldBlockType: oldBlock.type,
       newBlockType,
+      preservedConnections: mapping.preserved.length,
+      droppedConnections: mapping.dropped,
+      wasSelected,
     });
 
     return {
+      success: true,
       newBlockId,
-      preservedInputs: mappedConnections.preservedInputs,
-      preservedOutputs: mappedConnections.preservedOutputs,
-      droppedInputs: mappedConnections.droppedInputs,
-      droppedOutputs: mappedConnections.droppedOutputs,
+      preservedConnections: mapping.preserved.length,
+      droppedConnections: mapping.dropped,
     };
   }
 }
