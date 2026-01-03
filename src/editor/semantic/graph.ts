@@ -21,8 +21,7 @@ import type {
   BlockNode,
 } from './types';
 import { portKeyToString } from './types';
-import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
-import type { TypeDesc } from '../types';
+import type { TypeDesc } from '../ir/types/TypeDesc';
 
 /**
  * SemanticGraph provides fast indexed access to patch structure.
@@ -94,21 +93,23 @@ export class SemanticGraph {
         outputs: block.outputs.map((output) => output.id),
       });
 
-      for (const input of block.inputs) {
-        const desc = SLOT_TYPE_TO_TYPE_DESC[input.type as keyof typeof SLOT_TYPE_TO_TYPE_DESC];
-        if (desc != null) {
-          const key = portKeyToString({ blockId: block.id, slotId: input.id, direction: 'input' });
-          this.typeByPort.set(key, desc);
-        }
-      }
+      // TODO: SLOT_TYPE_TO_TYPE_DESC was removed from types.ts
+      // Port type mapping needs to be reimplemented
+      // for (const input of block.inputs) {
+      //   const desc = SLOT_TYPE_TO_TYPE_DESC[input.type as keyof typeof SLOT_TYPE_TO_TYPE_DESC];
+      //   if (desc != null) {
+      //     const key = portKeyToString({ blockId: block.id, slotId: input.id, direction: 'input' });
+      //     this.typeByPort.set(key, desc);
+      //   }
+      // }
 
-      for (const output of block.outputs) {
-        const desc = SLOT_TYPE_TO_TYPE_DESC[output.type as keyof typeof SLOT_TYPE_TO_TYPE_DESC];
-        if (desc != null) {
-          const key = portKeyToString({ blockId: block.id, slotId: output.id, direction: 'output' });
-          this.typeByPort.set(key, desc);
-        }
-      }
+      // for (const output of block.outputs) {
+      //   const desc = SLOT_TYPE_TO_TYPE_DESC[output.type as keyof typeof SLOT_TYPE_TO_TYPE_DESC];
+      //   if (desc != null) {
+      //     const key = portKeyToString({ blockId: block.id, slotId: output.id, direction: 'output' });
+      //     this.typeByPort.set(key, desc);
+      //   }
+      // }
     }
 
     // Index wire edges (all edges are now wire edges after bus-block unification)

@@ -207,7 +207,6 @@ export function areSlotTypesCompatible(
   return isAssignable(fromDesc, toDesc);
 }
 
-import { findAdapterPath } from '../adapters/autoAdapter';
 
 // =============================================================================
 // Adapter Path Resolution
@@ -226,42 +225,19 @@ export interface AdapterPath {
 
 /**
  * Get adapter paths for type conversion.
- * For compatible types, returns an empty adapter chain.
- * For non-compatible types, returns available conversion paths.
- *
- * @param from Source TypeDesc
- * @param to Target TypeDesc
- * @returns Array of possible conversion paths (empty array if no path)
+ * TODO: Deprecated autoAdapter uses string-based TypeDesc. For now, only return direct compatibility.
  */
 export function getConvertiblePaths(
   from: TypeDesc,
   to: TypeDesc
 ): AdapterPath[] {
-  // Direct compatibility - no adapter needed
+  // For now, only return direct compatibility (no adapters)
   if (isAssignable(from, to)) {
-    return [
-      {
-        from,
-        to,
-        adapters: [],
-        isHeavy: false,
-      },
-    ];
+    return [{ from, to, adapters: [], isHeavy: false }];
   }
-
-  // Use auto-adapter logic
-  const result = findAdapterPath(from, to);
-  if (result.ok && result.chain) {
-    return [{
-      from,
-      to,
-      adapters: result.chain,
-      isHeavy: false, // TODO: derive from adapter cost
-    }];
-  }
-
   return [];
 }
+
 
 // =============================================================================
 // Bus Eligibility

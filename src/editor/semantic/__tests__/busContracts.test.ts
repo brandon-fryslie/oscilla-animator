@@ -5,7 +5,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { CombineMode } from '../../types';
 import type { TypeDesc } from '../../ir/types/TypeDesc';
 import {
   RESERVED_BUS_CONTRACTS,

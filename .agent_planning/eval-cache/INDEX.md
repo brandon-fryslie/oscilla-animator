@@ -22,7 +22,9 @@
 - runtime-integration.md (INVALIDATED 2025-12-26 - CompilerRuntime added, select/transform nodes added)
 - compiler-integration.md (INVALIDATED 2025-12-26 - CompiledProgram type extended with SignalExpr IR)
 
-## Removed in This Session
+## Removed in This Session (2026-01-03)
+- bus-semantics.md (INVALIDATED 2026-01-03 - BusStore deleted, Publisher/Listener removed)
+- findings-buses-init.md (INVALIDATED 2026-01-03 - Bus system refactored to BusBlocks)
 - architecture.md (INVALIDATED 2025-12-26 04:14 - Compiler pipeline modified: SignalExprTable extraction added to compileBusAware)
 - compiler-architecture.md (INVALIDATED 2025-12-26 - Signal blocks migrated to IR lowering, P1-8 through P1-13 completed)
 - bus-compiler-architecture.md (INVALIDATED 2025-12-26 - removed as stale)
