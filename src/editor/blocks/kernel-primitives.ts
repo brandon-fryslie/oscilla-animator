@@ -12,7 +12,7 @@
  * @see design-docs/7-Primitives/3-Registry-Gating.md
  */
 
-import type { KernelCapability, KernelId } from '../types';
+import type { KernelCapability, KernelId } from './types';
 
 /**
  * Exhaustive mapping of kernel primitive IDs to their capabilities.
@@ -63,7 +63,7 @@ export const KERNEL_PRIMITIVES = {
   'TextSource': 'io',
   'ImageSource': 'io',
   'DebugDisplay': 'io',
-} as const satisfies Record<KernelId, KernelCapability>;
+} as const satisfies Record<string, KernelCapability>;
 
 /**
  * Type-safe accessor for checking if a block type is a kernel primitive.
@@ -80,7 +80,7 @@ export function getKernelCapability(blockType: string): KernelCapability | undef
   if (!isKernelPrimitive(blockType)) {
     return undefined;
   }
-  return KERNEL_PRIMITIVES[blockType];
+  return KERNEL_PRIMITIVES[blockType as KernelId];
 }
 
 /**

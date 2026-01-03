@@ -1,23 +1,79 @@
-import type { BlockForm, BlockSubcategory, Slot, BlockParams, KernelCapability, KernelId, PureCompileKind } from '../types';
+import type { BlockForm, BlockParams, SlotDef, UIControlHint } from '../types';
 import type { CompositeDefinition } from '../composites';
+import type { KERNEL_PRIMITIVES } from './kernel-primitives';
+
+// =============================================================================
+// Block Type System Types
+// =============================================================================
+
+/**
+ * KernelCapability - the five kernel authorities.
+ * Only kernel blocks may claim these capabilities.
+ */
+export type KernelCapability = 'time' | 'identity' | 'state' | 'render' | 'io';
+
+/**
+ * KernelId - the set of all kernel primitive block types.
+ * Derived from the KERNEL_PRIMITIVES allowlist.
+ */
+export type KernelId = keyof typeof KERNEL_PRIMITIVES;
+
+/**
+ * PureCompileKind - how pure blocks compile.
+ */
+export type PureCompileKind = 'operator' | 'composite' | 'spec';
+
+/**
+ * Capability - union of kernel capabilities and pure.
+ */
+export type Capability = KernelCapability | 'pure';
+
+/**
+ * BlockSubcategory - organizational subcategories for blocks.
+ * Used for palette organization and filtering.
+ */
+export type BlockSubcategory =
+  | 'Sources'
+  | 'Fields'
+  | 'Timing'
+  | 'Spatial'
+  | 'Math'
+  | 'Logic'
+  | 'Render'
+  | 'State'
+  | 'Utility'
+  | 'Other';
+
+/**
+ * SlotWorld - type of value domain (scalar, signal, field, config).
+ */
+export type SlotWorld = 'signal' | 'field' | 'scalar' | 'config';
+
+/**
+ * SlotTier - evaluation tier for slots.
+ */
+export type SlotTier = 'compile' | 'frame' | 'element';
+
+/**
+ * DefaultSource - configuration for default value sources.
+ * @deprecated Use DefaultSourceAttachment from defaultSources system
+ */
+export type DefaultSource = {
+  readonly type: string;
+  readonly value: unknown;
+};
+
+/**
+ * Slot - alias for SlotDef (block input/output port definition).
+ */
+export type Slot = SlotDef;
 
 // Re-export types that are used by other modules
 export type {
   BlockForm,
-  Slot,
-  SlotType,
-  BlockSubcategory,
-  // New types for "Remove Parameters" refactor (Phase 1)
-  SlotWorld,
-  SlotTier,
+  SlotDef,
   UIControlHint,
-  DefaultSource,
-  // New types for Capability Enforcement
-  Capability,
-  KernelCapability,
-  KernelId,
-  PureCompileKind,
-} from '../types';
+};
 
 export type BlockTagValue =
   | string

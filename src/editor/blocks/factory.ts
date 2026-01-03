@@ -1,7 +1,6 @@
-import type { BlockDefinition, ParamSchema } from './types';
+import type { BlockDefinition, ParamSchema, KernelId } from './types';
 import { isNonEmptyString } from '../types/helpers';
 import { isKernelPrimitive, getKernelCapability } from './kernel-primitives';
-import type { KernelId } from '../types';
 
 export function createBlock(
   definition: Partial<BlockDefinition> & {
