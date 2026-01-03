@@ -168,21 +168,7 @@ export const BlockContextMenu = observer(() => {
             name,
             blockId: binding.blockId,
             paramName: binding.paramName,
-            name,
-            blockId: binding.blockId,
-            paramName: binding.paramName,
-            name,
-            blockId: binding.blockId,
-            paramName: binding.paramName,
-            name,
-            blockId: binding.blockId,
-            paramName: binding.paramName,
-            name,
-            blockId: binding.blockId,
-            paramName: binding.paramName,
-            name,
-            blockId: binding.blockId,
-            paramName: binding.paramName,
+          }))
         : [];
 
       const compositeDefinition: CompositeDefinition = {

@@ -17,7 +17,7 @@ import type { Block } from '../../types';
  * Pass empty array explicitly to test missing TimeRoot scenarios.
  */
 function createMockPatchStore(
-  blocks: Block[] = [{ id: 'time-root', type: 'InfiniteTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' }]
+  blocks: Block[] = [{ id: 'time-root', type: 'InfiniteTimeRoot', label: 'TimeRoot', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const }}]
 ): PatchStore {
   // Create a mock that provides the full root structure needed by storeToPatchDocument
   const mockRoot = {
@@ -93,7 +93,7 @@ describe('DiagnosticHub', () => {
     it('should not create missing TimeRoot diagnostic when TimeRoot exists', () => {
       // Create a patchStore with a InfiniteTimeRoot block
       patchStore = createMockPatchStore([
-        { id: 'block-1', type: 'InfiniteTimeRoot', label: 'TimeRoot', inputs: [], outputs: [], params: {}, category: 'Time' },
+        { id: 'block-1', type: 'InfiniteTimeRoot', label: 'TimeRoot', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const }},
       ]);
       hub = new DiagnosticHub(events, patchStore);
 

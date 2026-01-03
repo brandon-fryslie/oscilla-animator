@@ -18,7 +18,7 @@ const createMockPatchStore = (): Partial<PatchStore> => {
     edges: [],
     addBlock: vi.fn((_type: string, _params?: Record<string, unknown>) => {
       const newBlockId = `block-${Date.now()}`;
-      blocks.push({ id: newBlockId, type: _type, label: _type, inputs: [], outputs: [], params: {}, category: 'Other' });
+      blocks.push({ id: newBlockId, type: _type, label: _type, params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const } });
       return newBlockId;
     }),
     removeBlock: vi.fn(),
@@ -144,7 +144,7 @@ describe('ActionExecutor', () => {
   describe('removeBlock', () => {
     it('should remove a block', () => {
       mockPatchStore.blocks = [
-        { id: 'block-1' as BlockId, type: 'SineWave', label: 'Sine', inputs: [], outputs: [], params: {}, category: 'Math', description: '' },
+        { id: 'block-1' as BlockId, type: 'SineWave', label: 'Sine', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const } },
       ];
 
       const result = actionExecutor.execute({
@@ -202,8 +202,8 @@ describe('ActionExecutor', () => {
 
     it('should remove existing TimeRoots before creating new one', () => {
       mockPatchStore.blocks = [
-        { id: 'block-1' as BlockId, type: 'InfiniteTimeRoot', label: 'Cycle', inputs: [], outputs: [], params: {}, category: 'Time', description: '' },
-        { id: 'block-2' as BlockId, type: 'FiniteTimeRoot', label: 'Finite', inputs: [], outputs: [], params: {}, category: 'Time', description: '' },
+        { id: 'block-1' as BlockId, type: 'InfiniteTimeRoot', label: 'Cycle', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const } },
+        { id: 'block-2' as BlockId, type: 'FiniteTimeRoot', label: 'Finite', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const } },
       ];
 
       const result = actionExecutor.execute({
@@ -256,33 +256,21 @@ describe('ActionExecutor', () => {
         id: 'source-block' as BlockId,
         type: 'Oscillator',
         label: 'Source',
-        inputs: [],
-        outputs: [{ id: 'out', label: 'Output', type: 'Signal<float>', direction: 'output' }],
-        params: {},
-        category: 'Time',
-        description: 'Source block',
+        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const },
       };
 
       const targetBlock: Block = {
         id: 'target-block' as BlockId,
         type: 'ClampSignal',
         label: 'Target',
-        inputs: [{ id: 'in', label: 'Input', type: 'Signal<float>', direction: 'input' }],
-        outputs: [],
-        params: {},
-        category: 'Math',
-        description: 'Target block',
+        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const },
       };
 
       const adapterBlock: Block = {
         id: 'adapter-block' as BlockId,
         type: 'ClampSignal',
         label: 'Clamp',
-        inputs: [{ id: 'in', label: 'Input', type: 'Signal<float>', direction: 'input' }],
-        outputs: [{ id: 'out', label: 'Output', type: 'Signal<float>', direction: 'output' }],
-        params: {},
-        category: 'Math',
-        description: 'Adapter block',
+        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const },
       };
 
       const edge: Edge = {
@@ -354,11 +342,7 @@ describe('ActionExecutor', () => {
         id: 'adapter-block' as BlockId,
         type: 'BadAdapter',
         label: 'Bad Adapter',
-        inputs: [{ id: 'nonstandard-input', label: 'Input', type: 'Signal<float>', direction: 'input' }],
-        outputs: [{ id: 'nonstandard-output', label: 'Output', type: 'Signal<float>', direction: 'output' }],
-        params: {},
-        category: 'Math',
-        description: 'Bad adapter',
+        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const },
       };
 
       // Override addBlock to add bad adapter
@@ -383,8 +367,6 @@ describe('ActionExecutor', () => {
         '[ActionExecutor] Adapter block missing expected ports:',
         expect.objectContaining({
           adapterType: 'BadAdapter',
-          inputs: ['nonstandard-input'],
-          outputs: ['nonstandard-output'],
         })
       );
 
