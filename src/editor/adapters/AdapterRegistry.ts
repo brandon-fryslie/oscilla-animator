@@ -48,7 +48,7 @@ class AdapterRegistry {
    * NOTE: This implementation assumes object-based TypeDesc but the current
    * system uses string-based TypeDesc. This needs to be rewritten or deprecated.
    */
-  findAdapters(from: TypeDesc, to: TypeDesc): AdapterDef[] {
+  findAdapters(_from: TypeDesc, _to: TypeDesc): AdapterDef[] {
     // TODO: This method needs to be updated for string-based TypeDesc
     // For now, return empty array to avoid type errors
     console.warn('AdapterRegistry.findAdapters() is deprecated and non-functional with string-based TypeDesc');
@@ -70,7 +70,7 @@ class AdapterRegistry {
    *
    * NOTE: Commented out because TypeDesc is now a string, not an object
    */
-  private matchesType(source: TypeDesc, target: TypeDesc): boolean {
+  private _matchesType(source: TypeDesc, target: TypeDesc): boolean {
     // TODO: Update for string-based TypeDesc or remove entirely
     return source === target;
 

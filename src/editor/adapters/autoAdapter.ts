@@ -1,6 +1,23 @@
-import { isDirectlyCompatible } from '../types';
+/**
+ * DEPRECATED: Legacy auto-adapter pathfinding
+ *
+ * This file is part of the old adapter system and is being phased out.
+ * The new unified transform system (TransformRegistry) should be used instead.
+ *
+ * TODO: Migrate remaining usages to TRANSFORM_REGISTRY and remove this file.
+ * See: src/editor/transforms/TransformRegistry.ts
+ */
+
 import type { TypeDesc, AdapterStep, AdapterPolicy } from '../types';
 import { TRANSFORM_REGISTRY } from '../transforms/TransformRegistry';
+
+/**
+ * Check if two types are directly compatible (no adapter needed).
+ * With string-based TypeDesc, this is just string equality.
+ */
+function isDirectlyCompatible(from: TypeDesc, to: TypeDesc): boolean {
+  return from === to;
+}
 
 export interface AutoAdapterResult {
   ok: boolean;
@@ -10,6 +27,11 @@ export interface AutoAdapterResult {
   requiresExplicit?: boolean;
 }
 
+/**
+ * Find an adapter path from one type to another.
+ *
+ * @deprecated Use TRANSFORM_REGISTRY.findAdapters() instead
+ */
 export function findAdapterPath(
   from: TypeDesc,
   to: TypeDesc,
@@ -19,16 +41,17 @@ export function findAdapterPath(
     return { ok: true, chain: [] };
   }
 
-  const cacheKey = `${context}|${from.world}:${from.domain}:${from.category}->${to.world}:${to.domain}:${to.category}`;
+  const cacheKey = `${context}|${from}->${to}`;
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
+  // Use TRANSFORM_REGISTRY to find adapters
   const allAdapters = TRANSFORM_REGISTRY.getAllAdapters().map(transform => ({
     id: transform.id,
-    policy: transform.policy ?? 'EXPLICIT',
+    policy: (transform.policy ?? 'EXPLICIT') as AdapterPolicy,
     cost: transform.cost ?? 0,
-    from: transform.inputType === 'same' ? from : transform.inputType,
-    to: transform.outputType === 'same' ? to : transform.outputType,
+    from: transform.inputType === 'same' ? from : (transform.inputType as TypeDesc),
+    to: transform.outputType === 'same' ? to : (transform.outputType as TypeDesc),
   }));
 
   const candidates = findCandidatePaths(from, to, allAdapters);
@@ -38,7 +61,14 @@ export function findAdapterPath(
     const best = chooseBestPath(autoPaths);
     const result = {
       ok: true,
-      chain: best.map((step) => ({ adapterId: step.id, params: {} })),
+      chain: best.map((step) => ({
+        kind: 'adapter' as const,
+        adapterId: step.id,
+        params: {},
+        from,
+        to,
+        adapter: step.id,
+      })),
     };
     cache.set(cacheKey, result);
     return result;
@@ -49,7 +79,14 @@ export function findAdapterPath(
     const result = {
       ok: false,
       reason: 'Adapter requires suggestion',
-      suggestions: chooseBestPaths(suggestPaths).map((path) => path.map((step) => ({ adapterId: step.id, params: {} }))),
+      suggestions: chooseBestPaths(suggestPaths).map((path) => path.map((step) => ({
+        kind: 'adapter' as const,
+        adapterId: step.id,
+        params: {},
+        from,
+        to,
+        adapter: step.id,
+      }))),
     };
     cache.set(cacheKey, result);
     return result;
@@ -61,7 +98,14 @@ export function findAdapterPath(
       ok: false,
       reason: 'Adapter requires explicit confirmation',
       requiresExplicit: true,
-      suggestions: chooseBestPaths(explicitPaths).map((path) => path.map((step) => ({ adapterId: step.id, params: {} }))),
+      suggestions: chooseBestPaths(explicitPaths).map((path) => path.map((step) => ({
+        kind: 'adapter' as const,
+        adapterId: step.id,
+        params: {},
+        from,
+        to,
+        adapter: step.id,
+      }))),
     };
     cache.set(cacheKey, result);
     return result;
@@ -69,7 +113,7 @@ export function findAdapterPath(
 
   const result = {
     ok: false,
-    reason: `No adapter found from ${from.world}:${from.domain} to ${to.world}:${to.domain}`,
+    reason: `No adapter found from ${from} to ${to}`,
   };
   cache.set(cacheKey, result);
   return result;
@@ -80,7 +124,8 @@ const MAX_CHAIN_LENGTH = 2;
 const COST_HEAVY_THRESHOLD = 100;
 
 function typeKey(desc: TypeDesc): string {
-  return `${desc.world}:${desc.domain}:${desc.category}`;
+  // With string-based TypeDesc, the key is just the string itself
+  return desc;
 }
 
 function findCandidatePaths(from: TypeDesc, to: TypeDesc, adapters: Array<{ from: TypeDesc; to: TypeDesc; id: string; policy: AdapterPolicy; cost: number }>) {
@@ -141,6 +186,8 @@ function chooseBestPaths(paths: Array<Array<{ id: string; policy: AdapterPolicy;
 function scorePath(path: Array<{ cost: number; from: TypeDesc; to: TypeDesc }>): number {
   const costScore = path.reduce((sum, step) => sum + step.cost, 0);
   const hopPenalty = path.length * 0.5;
-  const worldPenalty = path.reduce((sum, step) => (step.from.world === step.to.world ? sum : sum + 5), 0);
+  // With string-based TypeDesc, we can't check world differences
+  // Just use a simple heuristic
+  const worldPenalty = 0;
   return costScore + hopPenalty + worldPenalty;
 }
