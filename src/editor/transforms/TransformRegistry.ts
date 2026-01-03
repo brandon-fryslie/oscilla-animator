@@ -26,6 +26,7 @@ export interface LensParamSpec {
   type: TypeDesc;
   default: unknown;
   uiHint: UIControlHint;
+  rangeHint?: { min?: number; max?: number; step?: number; log?: boolean };
 }
 
 /**
@@ -287,16 +288,13 @@ export class TransformRegistry {
       return false; // Adapters cannot be type-preserving
     }
 
+    // TypeDesc is now a simple string, so use string equality
     return this.typeEquals(adapter.inputType, from) && this.typeEquals(adapter.outputType, to);
   }
 
   private typeEquals(a: TypeDesc, b: TypeDesc): boolean {
-    return (
-      a.world === b.world &&
-      a.domain === b.domain &&
-      a.category === b.category &&
-      a.semantics === b.semantics
-    );
+    // TypeDesc is now a simple string (e.g., 'Signal:float', 'Scalar:int')
+    return a === b;
   }
 }
 

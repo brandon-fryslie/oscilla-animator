@@ -349,7 +349,7 @@ function applyTransformStepIR(
   }
 
   // Get transform ID based on type
-  const transformId = isLens ? step.lens.lensId : (step as AdapterStep).adapterId;
+  const transformId = isLens ? step.lens.lensId : (step as AdapterStep).adapterId ?? (step as AdapterStep).adapter;
 
   // Get transform definition from registry
   const transformDef = TRANSFORM_REGISTRY.getTransform(transformId);

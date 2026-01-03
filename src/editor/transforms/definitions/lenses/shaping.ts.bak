@@ -23,7 +23,7 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     threshold: {
-      type: 'Scalar:float',
+      type: { world: 'scalar', domain: 'float', category: 'core', busEligible: true },
       default: 0.05,
       uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
     },
@@ -61,7 +61,7 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     steps: {
-      type: 'Scalar:int',
+      type: { world: 'scalar', domain: 'int', category: 'core', busEligible: true },
       default: 4,
       uiHint: { kind: 'slider', min: 2, max: 32, step: 1 },
     },
@@ -99,22 +99,22 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     inMin: {
-      type: 'Scalar:float',
+      type: { world: 'scalar', domain: 'float', category: 'core', busEligible: true },
       default: 0,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
     },
     inMax: {
-      type: 'Scalar:float',
+      type: { world: 'scalar', domain: 'float', category: 'core', busEligible: true },
       default: 1,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
     },
     outMin: {
-      type: 'Scalar:float',
+      type: { world: 'scalar', domain: 'float', category: 'core', busEligible: true },
       default: 0,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
     },
     outMax: {
-      type: 'Scalar:float',
+      type: { world: 'scalar', domain: 'float', category: 'core', busEligible: true },
       default: 1,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
     },

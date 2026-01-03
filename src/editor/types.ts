@@ -120,9 +120,10 @@ export interface AdapterStep {
   readonly kind: 'adapter';
   readonly from: TypeDesc;
   readonly to: TypeDesc;
-  readonly adapter: string; // adapter function name
+  readonly adapter: string; // adapter function name (legacy)
+  readonly adapterId?: string; // new unified field
+  readonly params?: Record<string, unknown>; // adapter parameters
 }
-
 /**
  * Adapter policy levels.
  * Determines when an adapter can be automatically inserted.
