@@ -562,8 +562,9 @@ function LensParamsEditor({
       {Object.entries(def.params ?? {}).map(([key, spec]) => {
         const value = lens.params[key] ?? spec.default;
         const hint = spec.uiHint;
+        const rangeHint = spec.rangeHint;
 
-        switch (hint.kind) {
+        switch (hint) {
           case 'number':
             return (
               <div key={key} className="lens-param-row">
@@ -572,9 +573,9 @@ function LensParamsEditor({
                   type="number"
                   className="lens-param-input"
                   value={value as number}
-                  step={hint.step ?? 1}
-                  min={hint.min}
-                  max={hint.max}
+                  step={rangeHint?.step ?? 1}
+                  min={rangeHint?.min}
+                  max={rangeHint?.max}
                   onChange={(e) => onChange(key, parseFloat(e.target.value) || spec.default as number)}
                 />
               </div>
@@ -588,9 +589,9 @@ function LensParamsEditor({
                   type="range"
                   className="lens-param-slider"
                   value={value as number}
-                  min={hint.min ?? 0}
-                  max={hint.max ?? 1}
-                  step={hint.step ?? 0.01}
+                  min={rangeHint?.min ?? 0}
+                  max={rangeHint?.max ?? 1}
+                  step={rangeHint?.step ?? 0.01}
                   onChange={(e) => onChange(key, parseFloat(e.target.value))}
                 />
                 <span className="lens-param-value">
@@ -599,7 +600,7 @@ function LensParamsEditor({
               </div>
             );
 
-          case 'boolean':
+          case 'toggle':
             return (
               <div key={key} className="lens-param-row">
                 <label className="lens-param-label">{key}</label>
@@ -625,47 +626,36 @@ function LensParamsEditor({
             );
 
           case 'select':
+            // For select, we expect the options to be commented in the definition
+            // or we can hardcode common ones here. For now, render a text input as fallback
             return (
               <div key={key} className="lens-param-row">
                 <label className="lens-param-label">{key}</label>
-                <select
+                <input
+                  type="text"
                   className="lens-param-input"
                   value={value as string}
                   onChange={(e) => onChange(key, e.target.value)}
-                >
-                  {hint.options.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             );
 
-          case 'xy':
+          case 'color':
             return (
               <div key={key} className="lens-param-row">
                 <label className="lens-param-label">{key}</label>
-                <div className="lens-param-xy">
-                  <input
-                    type="number"
-                    className="lens-param-input lens-param-xy-input"
-                    value={(value as { x: number; y: number }).x}
-                    step={0.1}
-                    onChange={(e) => onChange(key, { ...(value as { x: number; y: number }), x: parseFloat(e.target.value) })}
-                    placeholder="x"
-                  />
-                  <input
-                    type="number"
-                    className="lens-param-input lens-param-xy-input"
-                    value={(value as { x: number; y: number }).y}
-                    step={0.1}
-                    onChange={(e) => onChange(key, { ...(value as { x: number; y: number }), y: parseFloat(e.target.value) })}
-                    placeholder="y"
-                  />
-                </div>
+                <input
+                  type="color"
+                  className="lens-param-input"
+                  value={value as string}
+                  onChange={(e) => onChange(key, e.target.value)}
+                />
               </div>
             );
+
+          case 'hidden':
+            // Don't render hidden params
+            return null;
 
           default:
             return (

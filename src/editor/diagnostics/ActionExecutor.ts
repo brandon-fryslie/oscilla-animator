@@ -15,6 +15,7 @@ import type { DiagnosticAction, TargetRef, PortTargetRef } from './types';
 import type { PatchStore } from '../stores/PatchStore';
 import type { UIStateStore } from '../stores/UIStateStore';
 import type { DiagnosticHub } from './DiagnosticHub';
+import { getBlockDefinition } from '../blocks/registry';
 
 /**
  * ActionExecutor executes diagnostic fix actions by delegating to stores.
@@ -197,13 +198,28 @@ export class ActionExecutor {
       return false;
     }
 
+    // Get the block definition to access inputs/outputs
+    const adapterDef = getBlockDefinition(adapterBlock.type);
+    if (!adapterDef) {
+      console.warn('[ActionExecutor] Block definition not found:', adapterBlock.type);
+      // Restore the original edge
+      this.patchStore.connect(
+        edge.from.blockId,
+        edge.from.slotId,
+        edge.to.blockId,
+        edge.to.slotId
+      );
+      this.patchStore.removeBlock(adapterId);
+      return false;
+    }
+
     // Find the input port on the adapter (typically 'in' or 'input')
-    const adapterInput = adapterBlock.inputs.find((inp) =>
+    const adapterInput = adapterDef.inputs.find((inp) =>
       inp.id === 'in' || inp.id === 'input'
     );
 
     // Find the output port on the adapter (typically 'out' or 'output')
-    const adapterOutput = adapterBlock.outputs.find((out) =>
+    const adapterOutput = adapterDef.outputs.find((out) =>
       out.id === 'out' || out.id === 'output'
     );
 
@@ -213,8 +229,8 @@ export class ActionExecutor {
     ) {
       console.warn('[ActionExecutor] Adapter block missing expected ports:', {
         adapterType,
-        inputs: adapterBlock.inputs.map((i) => i.id),
-        outputs: adapterBlock.outputs.map((o) => o.id),
+        inputs: adapterDef.inputs.map((i) => i.id),
+        outputs: adapterDef.outputs.map((o) => o.id),
       });
       // Restore the original edge
       this.patchStore.connect(
@@ -251,34 +267,11 @@ export class ActionExecutor {
   }
 
   /**
-   * Add a missing TimeRoot block.
-   * Clears existing TimeRoots (if any) and adds a new one.
+   * Create a TimeRoot block.
    */
-  createTimeRoot(timeRootKind: 'Finite' | 'Cycle' | 'Infinite'): boolean {
-    // Remove existing TimeRoot blocks (if any)
-    const existingTimeRoots = this.patchStore.blocks.filter(
-      (block) =>
-        block.type === 'FiniteTimeRoot' ||
-        block.type === 'InfiniteTimeRoot'
-    );
-
-    for (const timeRoot of existingTimeRoots) {
-      this.patchStore.removeBlock(timeRoot.id);
-    }
-
-    // Determine the block type to create
-    const blockType = timeRootKind === 'Finite' ? 'FiniteTimeRoot' : 'InfiniteTimeRoot';
-
-    // Add the new TimeRoot block
-    const newBlockId = this.patchStore.addBlock(blockType);
-
-    // Auto-publish to buses (handled by PatchStore.addBlock via processAutoBusConnections)
-    // InfiniteTimeRoot auto-publishes 'phase' -> 'phaseA' and 'wrap' -> 'pulse'
-    // FiniteTimeRoot auto-publishes 'progress' -> 'progress'
-
-    // Select the new TimeRoot
-    this.uiStore.selectBlock(newBlockId);
-
+  createTimeRoot(timeRootKind: string): boolean {
+    const blockId = this.patchStore.addBlock(timeRootKind);
+    this.uiStore.selectBlock(blockId);
     return true;
   }
 }

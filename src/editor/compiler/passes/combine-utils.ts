@@ -16,7 +16,7 @@
  */
 
 import type { CombineMode, Edge } from "../../types";
-import type { TypeDesc, CoreDomain, TypeWorld } from "../../../core/types";
+import type { TypeDesc, CoreDomain } from "../../../core/types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import type { ValueRefPacked } from "./pass6-block-lowering";
 import type { EventExprId } from "../ir/types";

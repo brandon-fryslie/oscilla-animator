@@ -14,7 +14,7 @@ import { registerComposite as registerCompositeDefinition } from './composites';
 import { registerComposite as registerCompositeCompiler } from './composite-bridge';
 import type { BlockDefinition } from './blocks/types';
 import type { CompositeDefinition, ExposedPort } from './composites';
-import type { Composite, BlockSubcategory } from './types';
+import type { Composite, BlockSubcategory, ExposedParam } from './types';
 import './BlockContextMenu.css';
 
 /**
@@ -145,9 +145,10 @@ export const BlockContextMenu = observer(() => {
         };
       }
 
-      const edges = composite.connections.map(conn => ({
-        from: `${conn.from.blockId}:${conn.from.slotId}`,
-        to: `${conn.to.blockId}:${conn.to.slotId}`,
+      // Composite uses 'edges' not 'connections'
+      const edges = composite.edges.map(edge => ({
+        from: `${edge.from.blockId}:${edge.from.slotId}`,
+        to: `${edge.to.blockId}:${edge.to.slotId}`,
       }));
 
       // Build input/output maps
@@ -161,11 +162,21 @@ export const BlockContextMenu = observer(() => {
         outputMap[output.id] = `${output.nodeId}:${output.nodePort}`;
       }
 
+      // Convert exposedParams from Record to ExposedParam[]
+      const exposedParamsArray: ExposedParam[] = composite.exposedParams
+        ? Object.entries(composite.exposedParams).map(([id, binding]) => ({
+            id,
+            label: id, // Use id as label, could be improved
+            blockId: binding.blockId,
+            paramName: binding.paramName,
+          }))
+        : [];
+
       const compositeDefinition: CompositeDefinition = {
         id: composite.id.replace('user:', ''), // Remove prefix for definition ID
         label: composite.name,
-        description: composite.description,
-        subcategory: (composite.subcategory ?? 'Other') as BlockSubcategory,
+        description: '', // Composite doesn't have description field
+        subcategory: 'Other' as BlockSubcategory, // Composite doesn't have subcategory field
         graph: {
           nodes,
           edges,
@@ -174,7 +185,7 @@ export const BlockContextMenu = observer(() => {
         },
         exposedInputs,
         exposedOutputs,
-        exposedParams: composite.exposedParams,
+        exposedParams: exposedParamsArray,
       };
 
       // Register in the composite registry

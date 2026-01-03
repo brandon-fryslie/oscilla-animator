@@ -9,7 +9,7 @@
  * Cells = Lens chains binding sources to targets
  */
 
-import type { BlockId, TypeDesc, BusCombineMode, LensDefinition } from '../types';
+import type { BlockId, TypeDesc, CombineMode, LensDefinition } from '../types';
 import type { BlockDefinition } from '../blocks/types';
 
 // =============================================================================
@@ -115,7 +115,7 @@ export interface TableColumn {
   readonly type: TypeDesc;
 
   /** How multiple publishers are combined */
-  readonly combineMode: BusCombineMode;
+  readonly combineMode: CombineMode;
 
   /** Whether the bus is active */
   readonly enabled: boolean;

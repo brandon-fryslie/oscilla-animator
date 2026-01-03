@@ -80,7 +80,8 @@ export function getKernelCapability(blockType: string): KernelCapability | undef
   if (!isKernelPrimitive(blockType)) {
     return undefined;
   }
-  return KERNEL_PRIMITIVES[blockType as KernelId];
+  // Type guard has narrowed blockType to KernelId, access directly
+  return KERNEL_PRIMITIVES[blockType];
 }
 
 /**

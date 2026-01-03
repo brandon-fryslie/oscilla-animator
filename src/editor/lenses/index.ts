@@ -90,10 +90,10 @@ export function isValidLensType(type: string): boolean {
 // Apply Lens - Main Entry Point
 // =============================================================================
 
-type SignalArtifact = { kind: 'Signal:number' | 'Signal:Unit'; value: (t: number, ctx: RuntimeCtx) => number };
+type SignalArtifact = { kind: 'Signal:float' | 'Signal:int' | 'Signal:Unit'; value: (t: number, ctx: RuntimeCtx) => number };
 
 function isSignalArtifact(art: Artifact): art is SignalArtifact {
-  return art.kind === 'Signal:number' || art.kind === 'Signal:Unit';
+  return art.kind === 'Signal:float' || art.kind === 'Signal:int' || art.kind === 'Signal:Unit';
 }
 
 function clamp(v: number, min: number, max: number): number {
@@ -158,7 +158,7 @@ function applyEaseLens(input: Artifact, params: Record<string, unknown>): Artifa
   const sig = input.value;
 
   return {
-    kind: 'Signal:number',
+    kind: 'Signal:float',
     value: (t: number, ctx: RuntimeCtx) => {
       const v = sig(t, ctx);
       const clamped = clamp(v, 0, 1);
@@ -180,7 +180,7 @@ function applySlewLens(input: Artifact, params: Record<string, unknown>): Artifa
   let lastTime: number | null = null;
 
   return {
-    kind: 'Signal:number',
+    kind: 'Signal:float',
     value: (t: number, ctx: RuntimeCtx) => {
       const target = sig(t, ctx);
 
@@ -213,7 +213,7 @@ function applyQuantizeLens(input: Artifact, params: Record<string, unknown>): Ar
   const sig = input.value;
 
   return {
-    kind: 'Signal:number',
+    kind: 'Signal:float',
     value: (t: number, ctx: RuntimeCtx) => {
       const v = sig(t, ctx);
       // Snap to nearest step
@@ -232,7 +232,7 @@ function applyScaleLens(input: Artifact, params: Record<string, unknown>): Artif
   const sig = input.value;
 
   return {
-    kind: 'Signal:number',
+    kind: 'Signal:float',
     value: (t: number, ctx: RuntimeCtx) => {
       return sig(t, ctx) * scale + offset;
     },
@@ -248,7 +248,7 @@ function applyWarpLens(input: Artifact, params: Record<string, unknown>): Artifa
   const sig = input.value;
 
   return {
-    kind: 'Signal:number',
+    kind: 'Signal:float',
     value: (t: number, ctx: RuntimeCtx) => {
       const v = clamp(sig(t, ctx), 0, 1);
       return Math.pow(v, power);
@@ -264,7 +264,7 @@ function applyBroadcastLens(input: Artifact, _params: Record<string, unknown>): 
   const sig = input.value;
 
   return {
-    kind: 'Field:number',
+    kind: 'Field:float',
     value: (_seed: number, n: number, _ctx: unknown) => {
       // Broadcast the signal value to all elements
       // Note: We evaluate at t=0 since Field is compile-time
@@ -284,7 +284,7 @@ function applyPerElementOffsetLens(input: Artifact, params: Record<string, unkno
   const sig = input.value;
 
   return {
-    kind: 'Field:number',
+    kind: 'Field:float',
     value: (seed: number, n: number, _ctx: unknown) => {
       const ctx: RuntimeCtx = { viewport: { w: 800, h: 600, dpr: 1 } };
       const baseValue = sig(0, ctx);
@@ -306,7 +306,7 @@ function applyClampLens(input: Artifact, params: Record<string, unknown>): Artif
   const sig = input.value;
 
   return {
-    kind: 'Signal:number',
+    kind: 'Signal:float',
     value: (t: number, ctx: RuntimeCtx) => {
       return clamp(sig(t, ctx), min, max);
     },
@@ -322,7 +322,7 @@ function applyOffsetLens(input: Artifact, params: Record<string, unknown>): Arti
   const sig = input.value;
 
   return {
-    kind: 'Signal:number',
+    kind: 'Signal:float',
     value: (t: number, ctx: RuntimeCtx) => {
       return sig(t, ctx) + amount;
     },
@@ -338,7 +338,7 @@ function applyDeadzoneLens(input: Artifact, params: Record<string, unknown>): Ar
   const sig = input.value;
 
   return {
-    kind: 'Signal:number',
+    kind: 'Signal:float',
     value: (t: number, ctx: RuntimeCtx) => {
       const v = sig(t, ctx);
       return Math.abs(v) < threshold ? 0 : v;
@@ -358,7 +358,7 @@ function applyMapRangeLens(input: Artifact, params: Record<string, unknown>): Ar
   const sig = input.value;
 
   return {
-    kind: 'Signal:number',
+    kind: 'Signal:float',
     value: (t: number, ctx: RuntimeCtx) => {
       const v = sig(t, ctx);
       // Linear interpolation from input range to output range

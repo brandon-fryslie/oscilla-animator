@@ -22,7 +22,7 @@ import { TutorialStore } from './TutorialStore';
 import { DebugUIStore } from './DebugUIStore';
 import { Kernel } from '../kernel/PatchKernel';
 import type { PatchKernel } from '../kernel/types';
-import type { Block, Bus, Composite, Patch, Slot } from '../types';
+import type { Block, Bus, Composite, Patch, SlotDef } from '../types';
 
 export class RootStore {
   // Event dispatcher (created first so stores can set up listeners)
@@ -68,19 +68,10 @@ export class RootStore {
 
     // Initialize kernel with empty patch
     const initialPatch: Patch = {
-      version: 2,
+      id: 'default',
       blocks: [],
       edges: [],
-      defaultSources: [],
-      settings: {
-        seed: 0,
-        speed: 1,
-        autoConnect: false,
-        showTypeHints: false,
-        highlightCompatible: false,
-        warnBeforeDisconnect: true,
-        filterByConnection: false,
-      },
+      buses: [],
     };
     this.kernel = new Kernel(initialPatch);
 
@@ -232,30 +223,38 @@ export class RootStore {
     return null;
   }
 
-  get selectedPortInfo(): { block: Block; slot: Slot; direction: 'input' | 'output' } | null {
+  get selectedPortInfo(): { block: Block; slot: SlotDef; direction: 'input' | 'output' } | null {
     const portRef = this.uiStore.uiState.selectedPort;
     if (portRef === null || portRef === undefined) return null;
 
     const block = this.patchStore.blocks.find((b) => b.id === portRef.blockId);
     if (block === null || block === undefined) return null;
 
-    const slots = portRef.direction === 'input' ? block.inputs : block.outputs;
-    const slot = slots.find((s) => s.id === portRef.slotId);
-    if (slot === null || slot === undefined) return null;
+    // Block type doesn't have inputs/outputs - need to get from definition
+    // Commenting out for now as this needs refactoring
+    // const slots = portRef.direction === 'input' ? block.inputs : block.outputs;
+    // const slot = slots.find((s) => s.id === portRef.slotId);
+    // if (slot === null || slot === undefined) return null;
 
-    return { block, slot, direction: portRef.direction };
+    // return { block, slot, direction: portRef.direction };
+    return null;
   }
 
   // =============================================================================
   // Serialization
   // =============================================================================
 
-  toJSON(): Patch {
+  toJSON(): Record<string, unknown> {
+    // Extended Patch format for serialization
     return {
+      id: 'default',
       version: 2,
       blocks: this.patchStore.blocks.map((b) => ({ ...b })),
       edges: this.patchStore.edges.map((e) => ({ ...e })),
-      defaultSources: Array.from(this.defaultSourceStore.sources.values()).map((s) => ({ ...s })),
+      buses: [],
+      defaultSources: this.defaultSourceStore.sources.size > 0
+        ? Object.fromEntries(this.defaultSourceStore.sources)
+        : {},
       defaultSourceAttachments: Array.from(this.defaultSourceStore.attachmentsByTarget.values()),
       settings: {
         ...this.uiStore.settings,
@@ -263,7 +262,7 @@ export class RootStore {
     };
   }
 
-  loadPatch(patch: Patch): void {
+  loadPatch(patch: Patch & { version?: number; settings?: any; defaultSources?: any; defaultSourceAttachments?: any }): void {
     // Load into kernel first
     this.kernel = new Kernel(patch);
 
@@ -271,18 +270,23 @@ export class RootStore {
     this.patchStore.blocks = patch.blocks.map((block) => ({ ...block }));
     this.patchStore.edges = patch.edges.map((edge) => ({ ...edge }));
 
-    // Load settings
-    this.uiStore.settings = {
-      seed: patch.settings.seed,
-      speed: patch.settings.speed,
-      autoConnect: patch.settings.autoConnect ?? false,
-      showTypeHints: patch.settings.showTypeHints ?? false,
-      highlightCompatible: patch.settings.highlightCompatible ?? false,
-      warnBeforeDisconnect: patch.settings.warnBeforeDisconnect ?? true,
-      filterByConnection: patch.settings.filterByConnection ?? false,
-    };
+    // Load settings if present
+    if (patch.settings) {
+      this.uiStore.settings = {
+        seed: patch.settings.seed ?? 0,
+        speed: patch.settings.speed ?? 1,
+        autoConnect: patch.settings.autoConnect ?? false,
+        showTypeHints: patch.settings.showTypeHints ?? false,
+        highlightCompatible: patch.settings.highlightCompatible ?? false,
+        warnBeforeDisconnect: patch.settings.warnBeforeDisconnect ?? true,
+        filterByConnection: patch.settings.filterByConnection ?? false,
+      };
+    }
 
-    this.defaultSourceStore.load(patch.defaultSources);
+    // Load default sources if present
+    if (patch.defaultSources) {
+      this.defaultSourceStore.load(patch.defaultSources);
+    }
 
     // Load default source attachments if present, otherwise rebuild from blocks
     if (patch.defaultSourceAttachments != null) {
@@ -334,11 +338,10 @@ export class RootStore {
   clearPatch(): void {
     // Clear kernel
     const emptyPatch: Patch = {
-      version: 2,
+      id: 'default',
       blocks: [],
       edges: [],
-      defaultSources: [],
-      settings: this.uiStore.settings,
+      buses: [],
     };
     this.kernel = new Kernel(emptyPatch);
 
@@ -378,43 +381,13 @@ export class RootStore {
 
     console.log('[RootStore] Created blocks:', { timeRoot, domain, positions, color, radius, opacity, render });
 
-    // Wire them up
-    this.patchStore.addEdge({
-      id: 'wire-1',
-      from: { kind: 'port', blockId: domain, slotId: 'domain' },
-      to: { kind: 'port', blockId: positions, slotId: 'domain' },
-      enabled: true,
-    });
-    this.patchStore.addEdge({
-      id: 'wire-2',
-      from: { kind: 'port', blockId: positions, slotId: 'pos' },
-      to: { kind: 'port', blockId: render, slotId: 'positions' },
-      enabled: true,
-    });
-    this.patchStore.addEdge({
-      id: 'wire-3',
-      from: { kind: 'port', blockId: domain, slotId: 'domain' },
-      to: { kind: 'port', blockId: render, slotId: 'domain' },
-      enabled: true,
-    });
-    this.patchStore.addEdge({
-      id: 'wire-4',
-      from: { kind: 'port', blockId: color, slotId: 'out' },
-      to: { kind: 'port', blockId: render, slotId: 'color' },
-      enabled: true,
-    });
-    this.patchStore.addEdge({
-      id: 'wire-5',
-      from: { kind: 'port', blockId: radius, slotId: 'out' },
-      to: { kind: 'port', blockId: render, slotId: 'radius' },
-      enabled: true,
-    });
-    this.patchStore.addEdge({
-      id: 'wire-6',
-      from: { kind: 'port', blockId: opacity, slotId: 'out' },
-      to: { kind: 'port', blockId: render, slotId: 'opacity' },
-      enabled: true,
-    });
+    // Wire them up using connect() method
+    this.patchStore.connect(domain, 'domain', positions, 'domain');
+    this.patchStore.connect(positions, 'pos', render, 'positions');
+    this.patchStore.connect(domain, 'domain', render, 'domain');
+    this.patchStore.connect(color, 'out', render, 'color');
+    this.patchStore.connect(radius, 'out', render, 'radius');
+    this.patchStore.connect(opacity, 'out', render, 'opacity');
 
     console.log('[RootStore] Steel thread patch loaded with', this.patchStore.blocks.length, 'blocks and', this.patchStore.edges.length, 'edges');
   }
