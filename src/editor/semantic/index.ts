@@ -16,8 +16,8 @@
  * Reference: design-docs/10-Refactor-for-UI-prep/5-DivergentTypes.md
  */
 
-import type { TypeDesc, SlotType, AdapterPath } from '../types';
-import { SLOT_TYPE_TO_TYPE_DESC } from '../types';
+import type { SlotType } from '../types';
+import type { TypeDesc } from '../ir/types/TypeDesc';
 import type { ValueKind, PortType } from '../compiler/types';
 
 // =============================================================================
@@ -166,6 +166,11 @@ export function isAssignable(from: TypeDesc, to: TypeDesc): boolean {
 // SlotType Integration
 // =============================================================================
 
+// TODO: SLOT_TYPE_TO_TYPE_DESC was removed from types.ts.
+// This mapping needs to be rebuilt or SlotType usage needs to be migrated to TypeDesc.
+// For now, create a minimal implementation:
+const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc | undefined> = {} as any;
+
 /**
  * Get the TypeDesc for a SlotType.
  * Returns undefined if the SlotType is not recognized.
@@ -207,6 +212,17 @@ import { findAdapterPath } from '../adapters/autoAdapter';
 // =============================================================================
 // Adapter Path Resolution
 // =============================================================================
+
+/**
+ * AdapterPath - represents a conversion path from one type to another.
+ * TODO: This type was removed from types.ts, needs to be redefined or imported from elsewhere.
+ */
+export interface AdapterPath {
+  from: TypeDesc;
+  to: TypeDesc;
+  adapters: Array<{ adapterId: string; params: Record<string, unknown> }>;
+  isHeavy: boolean;
+}
 
 /**
  * Get adapter paths for type conversion.

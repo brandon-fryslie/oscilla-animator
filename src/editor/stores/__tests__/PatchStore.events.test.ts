@@ -148,7 +148,7 @@ describe('PatchStore - Wire Events', () => {
       const wireId = root.patchStore.edges[0]?.id ?? '';
 
       // Use removeEdge() to remove the connection
-      root.patchStore.removeEdge(wireId);
+      root.patchStore.disconnect(wireId);
 
       // Event should be emitted
       expect(removeListener).toHaveBeenCalledTimes(1);

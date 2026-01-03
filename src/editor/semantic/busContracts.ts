@@ -8,7 +8,8 @@
  * Reference: design-docs/3-Synthesized/03-Buses.md lines 48-85
  */
 
-import type { TypeDesc, BusCombineMode } from '../types';
+import type { CombineMode } from '../types';
+import type { TypeDesc } from '../ir/types/TypeDesc';
 
 /**
  * Reserved bus contract specification.
@@ -17,7 +18,7 @@ interface ReservedBusContract {
   /** Canonical TypeDesc for this bus */
   readonly type: TypeDesc;
   /** Required combine mode for this bus */
-  readonly combineMode: BusCombineMode;
+  readonly combineMode: CombineMode;
   /** Description of what this bus represents */
   readonly description: string;
 }
@@ -121,7 +122,7 @@ export const RESERVED_BUS_NAMES = new Set(Object.keys(RESERVED_BUS_CONTRACTS));
  * For example: phase signals should use 'last' because phases
  * represent positions in a cycle, not additive values.
  */
-export const COMBINE_MODE_COMPATIBILITY: Record<string, BusCombineMode[]> = {
+export const COMBINE_MODE_COMPATIBILITY: Record<string, CombineMode[]> = {
   // Signal domains - numeric only (runtime constraint: executeBusEval.ts line 58-64)
   'float': ['sum', 'average', 'max', 'min', 'last'],
   'int': ['sum', 'average', 'max', 'min', 'last'],
@@ -189,7 +190,7 @@ export function getReservedBusContract(busName: string): ReservedBusContract | u
 export function validateReservedBus(
   busName: string,
   actualType: TypeDesc,
-  actualCombineMode: BusCombineMode
+  actualCombineMode: CombineMode
 ): Array<{
   code: 'E_RESERVED_BUS_TYPE_MISMATCH' | 'E_RESERVED_BUS_COMBINE_MODE_MISMATCH';
   message: string;
@@ -263,12 +264,12 @@ export function validateReservedBus(
  */
 export function validateCombineModeCompatibility(
   domain: string,
-  combineMode: BusCombineMode
+  combineMode: CombineMode
 ): {
   code: 'E_BUS_COMBINE_MODE_INCOMPATIBLE';
   message: string;
-  expected: BusCombineMode[];
-  actual: BusCombineMode;
+  expected: CombineMode[];
+  actual: CombineMode;
 } | null {
   const allowedModes = COMBINE_MODE_COMPATIBILITY[domain];
 

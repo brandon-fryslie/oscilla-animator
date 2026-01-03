@@ -5,7 +5,7 @@
  * ordering and transform chains.
  *
  * Key responsibilities:
- * - Collect sorted publishers using busSemantics.getSortedPublishers
+ * - Collect sorted publishers (TODO: Update for edge-based architecture)
  * - Create sigCombine/fieldCombine nodes based on bus type
  * - Detect unsupported adapters/lenses and emit compile-time errors
  * - Handle empty buses with default values
@@ -13,6 +13,10 @@
  * References:
  * - design-docs/12-Compiler-Final/15-Canonical-Lowering-Pipeline.md § Pass 7
  * - PLAN-2025-12-25-200731.md P0-2: Pass 7 - Bus Lowering to IR
+ *
+ * TODO: This file needs to be updated to work with the new edge-based bus architecture.
+ * Publisher/Listener types have been removed. Buses are now BusBlocks with regular edges.
+ * Edge sorting is handled by edge.sortKey properties, not getSortedPublishers().
  */
 
 import type { Bus, Publisher, Block } from "../../types";
@@ -21,7 +25,8 @@ import type { IRBuilder } from "../ir/IRBuilder";
 import type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
 import type { CompileError } from "../types";
 import type { EventCombineMode } from "../ir/signalExpr";
-import { getSortedPublishers } from "../../semantic/busSemantics";
+// TODO: getSortedPublishers has been removed. Edge sorting now uses edge.sortKey.
+// import { getSortedPublishers } from "../../semantic/busSemantics";
 
 // Re-export ValueRefPacked for downstream consumers
 export type { ValueRefPacked } from "./pass6-block-lowering";
@@ -78,7 +83,7 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
  * Output: IRWithBusRoots with bus combine nodes
  *
  * For each bus:
- * 1. Collect sorted publishers using getSortedPublishers()
+ * 1. Collect sorted publishers (TODO: Update to use edges with sortKey)
  * 2. Validate that no adapters/lenses are used (unsupported in IR mode)
  * 3. Resolve publisher source ValueRefs from blockOutputs
  * 4. Create combine node (sigCombine/fieldCombine)
@@ -104,8 +109,10 @@ export function pass7BusLowering(
   for (let busIdx = 0; busIdx < buses.length; busIdx++) {
     const bus = buses[busIdx];
 
+    // TODO: Replace getSortedPublishers with edge-based sorting
     // Get sorted publishers for this bus (enabled only)
-    const busPublishers = getSortedPublishers(bus.id, publishers as Publisher[], false);
+    // const busPublishers = getSortedPublishers(bus.id, publishers as Publisher[], false);
+    const busPublishers: Publisher[] = []; // TEMPORARY: Empty array until edge-based sorting is implemented
 
     // Validate no adapters/lenses are used (not yet supported in IR mode)
     for (const pub of busPublishers) {

@@ -3,6 +3,7 @@
 // =============================================================================
 
 import type { Observable } from './core/Observable';
+import type { CoreDomain } from '../core/types';
 
 /**
  * Unique identifier for a patch.
@@ -71,14 +72,42 @@ export type UIControlHint =
 // =============================================================================
 
 /**
- * LensInstance - a transformation function with metadata.
- * Used in transform chains to modify values flowing through edges.
+ * LensDefinition - simple lens representation for UI/serialization.
+ * Contains just the lens type and its parameter values.
  */
-export interface LensInstance {
-  readonly id: string;
+export interface LensDefinition {
   readonly type: string;
   readonly params: Record<string, unknown>;
 }
+
+/**
+ * LensParamBinding - how a lens parameter gets its value.
+ * - literal: Direct value embedded in the lens
+ * - default: Reference to a default source (deprecated, for backward compat)
+ */
+export type LensParamBinding =
+  | { readonly kind: 'literal'; readonly value: unknown }
+  | { readonly kind: 'default'; readonly defaultSourceId: string };
+
+/**
+ * LensInstance - a transformation function with metadata and parameter bindings.
+ * Used in transform chains to modify values flowing through edges.
+ *
+ * This is the compiled form of a LensDefinition with resolved parameter bindings.
+ */
+export interface LensInstance {
+  /** Lens type identifier (references transform registry) */
+  readonly lensId: string;
+  /** Parameter bindings (how each parameter gets its value) */
+  readonly params: Record<string, LensParamBinding>;
+  /** Whether this lens is enabled */
+  readonly enabled?: boolean;
+  /** Sort key for ordering in lens chains */
+  readonly sortKey?: number;
+}
+
+// Re-export CoreDomain for convenience
+export type { CoreDomain };
 
 // =============================================================================
 // Adapter System Types
@@ -93,6 +122,19 @@ export interface AdapterStep {
   readonly to: TypeDesc;
   readonly adapter: string; // adapter function name
 }
+
+/**
+ * Adapter policy levels.
+ * Determines when an adapter can be automatically inserted.
+ */
+export type AdapterPolicy = 'AUTO' | 'SUGGEST' | 'EXPLICIT' | 'FORBIDDEN';
+
+/**
+ * Adapter cost (lower is better).
+ * Used for pathfinding when multiple adapter chains are possible.
+ */
+export type AdapterCost = number;
+
 
 // =============================================================================
 // Bus System Types

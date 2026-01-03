@@ -1,5 +1,14 @@
-import type { AdapterCost, AdapterPolicy, TypeDesc } from '../types';
-import { CORE_DOMAIN_DEFAULTS } from '../types';
+/**
+ * DEPRECATED: Legacy adapter registry
+ *
+ * This file is part of the old adapter system and is being phased out.
+ * The new unified transform system (TransformRegistry) should be used instead.
+ *
+ * TODO: Migrate remaining usages to TRANSFORM_REGISTRY and remove this file.
+ * See: src/editor/transforms/TransformRegistry.ts
+ */
+
+import type { AdapterPolicy, AdapterCost, TypeDesc } from '../types';
 
 export interface AdapterDef {
   id: string;
@@ -13,6 +22,8 @@ export interface AdapterDef {
 
 /**
  * Registry for adapter definitions.
+ *
+ * @deprecated Use TRANSFORM_REGISTRY from transforms/TransformRegistry.ts instead
  */
 class AdapterRegistry {
   private adapters: Map<string, AdapterDef> = new Map();
@@ -33,8 +44,17 @@ class AdapterRegistry {
 
   /**
    * Find adapters that convert from one type to another.
+   *
+   * NOTE: This implementation assumes object-based TypeDesc but the current
+   * system uses string-based TypeDesc. This needs to be rewritten or deprecated.
    */
   findAdapters(from: TypeDesc, to: TypeDesc): AdapterDef[] {
+    // TODO: This method needs to be updated for string-based TypeDesc
+    // For now, return empty array to avoid type errors
+    console.warn('AdapterRegistry.findAdapters() is deprecated and non-functional with string-based TypeDesc');
+    return [];
+
+    /* COMMENTED OUT - requires object-based TypeDesc
     const result: AdapterDef[] = [];
     for (const adapter of this.adapters.values()) {
       if (this.matchesType(adapter.from, from) && this.matchesType(adapter.to, to)) {
@@ -42,17 +62,25 @@ class AdapterRegistry {
       }
     }
     return result.sort((a, b) => a.cost - b.cost);
+    */
   }
 
   /**
    * Check if a type description matches a target type.
+   *
+   * NOTE: Commented out because TypeDesc is now a string, not an object
    */
   private matchesType(source: TypeDesc, target: TypeDesc): boolean {
+    // TODO: Update for string-based TypeDesc or remove entirely
+    return source === target;
+
+    /* COMMENTED OUT - requires object-based TypeDesc
     return (
       source.world === target.world &&
       source.domain === target.domain &&
       source.category === target.category
     );
+    */
   }
 
   /**
@@ -65,6 +93,12 @@ class AdapterRegistry {
 
 // Global adapter registry instance
 export const adapterRegistry = new AdapterRegistry();
+
+// NOTE: The initialization code below is commented out because it relies on
+// object-based TypeDesc and CORE_DOMAIN_DEFAULTS which don't exist in the current type system.
+// Use TRANSFORM_REGISTRY for adapter functionality instead.
+
+/* COMMENTED OUT - requires object-based TypeDesc and CORE_DOMAIN_DEFAULTS
 
 const COST_CHEAP = 1;
 const COST_MEDIUM = 10;
@@ -214,3 +248,5 @@ export function initAdapterRegistry(): void {
 }
 
 initAdapterRegistry();
+
+*/

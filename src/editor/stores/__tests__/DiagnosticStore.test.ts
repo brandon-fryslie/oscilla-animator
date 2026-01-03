@@ -50,7 +50,7 @@ describe('DiagnosticStore', () => {
       const event: CompileFinishedEvent = {
         type: 'CompileFinished',
         compileId: 'test-compile-1',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         status: 'failed',
         durationMs: 10,
@@ -93,7 +93,7 @@ describe('DiagnosticStore', () => {
       // Also emit ProgramSwapped to set active revision
       rootStore.events.emit({
         type: 'ProgramSwapped',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         compileId: 'test-compile-1',
         swapMode: 'hard',
@@ -115,7 +115,7 @@ describe('DiagnosticStore', () => {
       rootStore.events.emit({
         type: 'CompileFinished',
         compileId: 'test-compile-1',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         status: 'failed',
         durationMs: 10,
@@ -141,7 +141,7 @@ describe('DiagnosticStore', () => {
       // Set active revision
       rootStore.events.emit({
         type: 'ProgramSwapped',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         compileId: 'test-compile-1',
         swapMode: 'hard',
@@ -157,7 +157,7 @@ describe('DiagnosticStore', () => {
       rootStore.events.emit({
         type: 'CompileFinished',
         compileId: 'test-compile-1',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         status: 'ok',
         durationMs: 10,
@@ -182,7 +182,7 @@ describe('DiagnosticStore', () => {
 
       rootStore.events.emit({
         type: 'ProgramSwapped',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         compileId: 'test-compile-1',
         swapMode: 'hard',
@@ -199,7 +199,7 @@ describe('DiagnosticStore', () => {
       rootStore.events.emit({
         type: 'CompileFinished',
         compileId: 'test-compile-1',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         status: 'failed',
         durationMs: 10,
@@ -239,7 +239,7 @@ describe('DiagnosticStore', () => {
 
       rootStore.events.emit({
         type: 'ProgramSwapped',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         compileId: 'test-compile-1',
         swapMode: 'hard',
@@ -272,7 +272,7 @@ describe('DiagnosticStore', () => {
       rootStore.events.emit({
         type: 'CompileFinished',
         compileId: 'test-compile-2',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 2,
         status: 'ok',
         durationMs: 10,
@@ -297,7 +297,7 @@ describe('DiagnosticStore', () => {
 
       rootStore.events.emit({
         type: 'ProgramSwapped',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 2,
         compileId: 'test-compile-2',
         swapMode: 'hard',
@@ -316,7 +316,7 @@ describe('DiagnosticStore', () => {
 
       rootStore.events.emit({
         type: 'ProgramSwapped',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 5,
         compileId: 'test-compile-1',
         swapMode: 'hard',
@@ -334,7 +334,7 @@ describe('DiagnosticStore', () => {
       rootStore.events.emit({
         type: 'CompileFinished',
         compileId: 'test-compile-1',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         status: 'ok',
         durationMs: 10,
@@ -349,7 +349,7 @@ describe('DiagnosticStore', () => {
 
       rootStore.events.emit({
         type: 'ProgramSwapped',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         compileId: 'test-compile-1',
         swapMode: 'hard',
@@ -364,7 +364,7 @@ describe('DiagnosticStore', () => {
 
       rootStore.events.emit({
         type: 'GraphCommitted',
-        patchId: rootStore.patchStore.patchId,
+        patchId: "test-patch-id",
         patchRevision: 1,
         reason: 'userEdit',
         diffSummary: {

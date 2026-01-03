@@ -14,10 +14,6 @@
 
 import type {
   Artifact,
-  BlockId,
-  BlockInstance,
-  BlockRegistry,
-  CompileCtx,
   CompileError,
   CompileResult,
   CompilerPatch,
@@ -26,8 +22,6 @@ import type {
   RenderTree,
   RuntimeCtx,
   Seed,
-  TimeModel,
-  Vec2,
 } from './types';
 
 import type { Bus, LensInstance, AdapterStep } from '../types';
@@ -38,7 +32,7 @@ export type { Bus, LensInstance, AdapterStep };
 
 // Import IR passes
 import { pass1Normalize } from './passes/pass1-normalize';
-import { pass2TypeGraph } from './passes/pass2-type-graph';
+import { pass2TypeGraph } from './passes/pass2-types';
 import { pass3TimeTopology } from './passes/pass3-time-topology';
 import { pass4DepGraph } from './passes/pass4-dep-graph';
 import { pass5Validate } from './passes/pass5-validate';
@@ -58,7 +52,7 @@ import { pass5Validate } from './passes/pass5-validate';
  */
 export function compileBusAware(
   patch: CompilerPatch,
-  registry: BlockRegistry
+  registry: import('./types').BlockRegistry
 ): CompileResult {
   const errors: CompileError[] = [];
 
@@ -96,7 +90,7 @@ export function compileBusAware(
  */
 function compileBlocks(
   patch: CompilerPatch,
-  registry: BlockRegistry,
+  registry: import('./types').BlockRegistry,
   errors: CompileError[]
 ): Map<string, Artifact> {
   const compiledPortMap = new Map<string, Artifact>();
@@ -299,3 +293,6 @@ function getBusCombineMode(bus: Bus): 'last' | 'sum' | 'average' | 'max' | 'min'
 
 // Re-export for consumers
 export { getBusCombineMode };
+
+// Backward compatibility alias
+export { compileBusAware as compileBusAwarePatch };
