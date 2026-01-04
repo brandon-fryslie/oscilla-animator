@@ -165,9 +165,10 @@ export const BlockContextMenu = observer(() => {
       // Convert exposedParams from Record to ExposedParam[]
       const exposedParamsArray: ExposedParam[] = composite.exposedParams
         ? Object.entries(composite.exposedParams).map(([name, binding]) => ({
-            name,
+            id: `${binding.blockId}:${binding.paramName}`,
             blockId: binding.blockId,
-            paramName: binding.paramName,
+            paramKey: binding.paramName,
+            label: name,
           }))
         : [];
 
