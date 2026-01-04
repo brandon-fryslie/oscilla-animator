@@ -255,31 +255,6 @@ export type {
 } from "./transforms";
 
 // ============================================================================
-// Default Sources
-// ============================================================================
-
-export type {
-  // Table
-  DefaultSourceTable,
-  DefaultSourceIR,
-
-  // Value references
-  ValueRef,
-  ValueRefConst,
-  ValueRefExpr,
-
-  // UI hints
-  UIControlHint,
-  UIControlHintSlider,
-  UIControlHintNumber,
-  UIControlHintSelect,
-  UIControlHintColor,
-  UIControlHintBoolean,
-  UIControlHintText,
-  UIControlHintXY,
-} from "./defaultSources";
-
-// ============================================================================
 // Field Expressions
 // ============================================================================
 

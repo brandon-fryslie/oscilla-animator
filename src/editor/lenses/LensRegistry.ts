@@ -1,5 +1,5 @@
 import type { CoreDomain } from '../ir/types/TypeDesc';
-import type { UIControlHint } from '../compiler/ir/defaultSources';
+import type { UIControlHint } from '../types';
 import type { TypeDesc } from '../ir/types/TypeDesc';
 import type { Artifact, RuntimeCtx } from '../compiler/types';
 import { getEasingFunction } from './easing';

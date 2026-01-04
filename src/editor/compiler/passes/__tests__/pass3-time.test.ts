@@ -20,8 +20,6 @@ function createTypedPatch(
     blockIndexMap: new Map<string, BlockIndex>(),
     blocks: new Map<string, unknown>(),
     edges: [],
-    defaults: [],
-    constPool: new Map(),
     blockOutputTypes: new Map(),
     ...overrides,
   };
