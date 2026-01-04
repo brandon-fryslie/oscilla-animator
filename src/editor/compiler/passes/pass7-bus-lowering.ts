@@ -21,11 +21,12 @@
 
 import type { Bus, Block } from "../../types";
 import type { TypeDesc } from "../../../core/types";
-import type { EventExprId } from "../ir/types";
+// UNUSED: EventExprId and EventCombineMode are not used in this file
+// import type { EventExprId } from "../ir/types";
+// import type { EventCombineMode } from "../ir/signalExpr";
 import type { IRBuilder } from "../ir/IRBuilder";
 import type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
 import type { CompileError } from "../types";
-import type { EventCombineMode } from "../ir/signalExpr";
 
 // Re-export ValueRefPacked for downstream consumers
 export type { ValueRefPacked } from "./pass6-block-lowering";
@@ -69,7 +70,7 @@ export interface IRWithBusRoots {
  * Convert editor TypeDesc (string) to IR TypeDesc (object).
  * For Sprint 2, we extract world and domain and add missing fields.
  */
-function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
+function toIRTypeDesc(_busType: import("../../types").TypeDesc): TypeDesc {
   // busType is now a string in editor/types.ts
   // We need to parse it or have metadata
   // For now, create a minimal TypeDesc - this is a stub
