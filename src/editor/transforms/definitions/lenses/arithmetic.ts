@@ -25,12 +25,14 @@ TRANSFORM_REGISTRY.registerLens({
     scale: {
       type: 'Scalar:float',
       default: 1,
-      uiHint: 'slider', rangeHint: { min: -10, max: 10, step: 0.1 },
+      uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      rangeHint: { min: -10, max: 10, step: 0.1 },
     },
     offset: {
       type: 'Scalar:float',
       default: 0,
-      uiHint: 'slider', rangeHint: { min: -10, max: 10, step: 0.1 },
+      uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      rangeHint: { min: -10, max: 10, step: 0.1 },
     },
   },
   costHint: 'cheap',
@@ -66,7 +68,8 @@ TRANSFORM_REGISTRY.registerLens({
     amount: {
       type: 'Scalar:float',
       default: 0,
-      uiHint: 'slider', rangeHint: { min: -10, max: 10, step: 0.1 },
+      uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      rangeHint: { min: -10, max: 10, step: 0.1 },
     },
   },
   costHint: 'cheap',
@@ -101,12 +104,14 @@ TRANSFORM_REGISTRY.registerLens({
     min: {
       type: 'Scalar:float',
       default: 0,
-      uiHint: 'slider', rangeHint: { min: -10, max: 10, step: 0.1 },
+      uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      rangeHint: { min: -10, max: 10, step: 0.1 },
     },
     max: {
       type: 'Scalar:float',
       default: 1,
-      uiHint: 'slider', rangeHint: { min: -10, max: 10, step: 0.1 },
+      uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
+      rangeHint: { min: -10, max: 10, step: 0.1 },
     },
   },
   costHint: 'cheap',
