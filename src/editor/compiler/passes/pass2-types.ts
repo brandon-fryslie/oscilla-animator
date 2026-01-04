@@ -21,10 +21,9 @@ import type {
   Edge,
   Endpoint,
 } from "../../types";
-import type { TypeDesc, TypeDomain } from "../ir/types";
+import type { TypeDesc, TypeDomain } from "../../ir/types/TypeDesc";
+import { createTypeDesc } from "../../ir/types/TypeDesc";
 import type { NormalizedPatch, TypedPatch } from "../ir";
-import { domainFromString } from "../../ir/types/typeConversion";
-import { asTypeDesc } from "../ir/types";
 import { getBlockDefinition } from "../../blocks/registry";
 
 /**
@@ -293,8 +292,8 @@ export function pass2TypeGraph(
       continue;
     }
 
-    // Convert editor TypeDesc to core TypeDesc
-    const busType = asTypeDesc({
+    // Create TypeDesc using editor TypeDesc (from ir/types/TypeDesc)
+    const busType = createTypeDesc({
       domain: busTypeDesc.domain as TypeDomain,
       world: busTypeDesc.world as 'signal' | 'field' | 'event' | 'scalar',
     });
@@ -400,10 +399,11 @@ export function pass2TypeGraph(
     );
   }
 
+
   // Return typed patch
   return {
     ...normalized,
-    blockOutputTypes,
+    blockOutputTypes: blockOutputTypes,
     busOutputTypes: busOutputTypes.size > 0 ? busOutputTypes : undefined,
-  };
+  } as TypedPatch;
 }

@@ -25,7 +25,7 @@ import type { AcyclicOrLegalGraph, BlockIndex } from "../ir/patches";
 import type { Block, Edge, SlotWorld } from "../../types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import { IRBuilderImpl } from "../ir/IRBuilderImpl";
-import type { TypeDesc } from "../ir/types";
+import type { TypeDesc } from "../../ir/types/TypeDesc";
 import type { CompileError } from "../types";
 import type { ValueRefPacked, LowerCtx } from "../ir/lowerTypes";
 import { getBlockType } from "../ir/lowerTypes";
@@ -222,8 +222,8 @@ function artifactToValueRef(
   ) {
     const type = artifactKindToTypeDesc(kind);
     // Create constant field as placeholder
-    const fieldId = builder.fieldConst(0, type);
-    const slot = builder.allocValueSlot(type);
+    const fieldId = builder.fieldConst(0, type as any);
+    const slot = builder.allocValueSlot(type as any);
     builder.registerFieldSlot(fieldId, slot);
     return { k: "field", id: fieldId, slot };
   }
@@ -255,6 +255,19 @@ function artifactToValueRef(
     `[Pass 6] Unknown artifact kind "${kind}" for block ${blockId}:${portId} - skipping IR emission`
   );
   return null;
+}
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * Check if a domain is a CoreDomain from core/types.
+ * CoreDomains: float, int, vec2, vec3, color, boolean, time, rate, trigger
+ */
+function isCoreDomain(domain: string): domain is import("../../../core/types").CoreDomain {
+  const coreDomains = ['float', 'int', 'vec2', 'vec3', 'color', 'boolean', 'time', 'rate', 'trigger'];
+  return coreDomains.includes(domain);
 }
 
 // =============================================================================
@@ -302,9 +315,9 @@ function resolveInputsWithMultiInput(
     }
 
     // Validate combine mode against port type
-    // Only validate for slot worlds (signal, field, scalar, config)
-    // Event world is not in SlotWorld type, so skip validation
-    if (combine.mode !== 'error' && portType.world !== 'event') {
+    // Only validate for slot worlds (signal, field, scalar, config) and core domains
+    // Skip validation for event world and internal domains
+    if (combine.mode !== 'error' && portType.world !== 'event' && isCoreDomain(portType.domain)) {
       const modeValidation = validateCombineMode(
         combine.mode,
         portType.world as SlotWorld,
@@ -360,7 +373,7 @@ function resolveInputsWithMultiInput(
     const combinedRef = createCombineNode(
       combine.mode,
       writerRefs,
-      portType,
+      portType as any,
       builder
     );
 
@@ -430,15 +443,15 @@ function getWriterValueRef(
     }
 
     if (type.world === 'signal') {
-      const sigId = builder.sigConst(0, type);
-      const slot = builder.allocValueSlot(type);
+      const sigId = builder.sigConst(0, type as any);
+      const slot = builder.allocValueSlot(type as any);
       builder.registerSigSlot(sigId, slot);
       return { k: 'sig', id: sigId, slot };
     }
 
     if (type.world === 'field') {
-      const fieldId = builder.fieldConst(0, type);
-      const slot = builder.allocValueSlot(type);
+      const fieldId = builder.fieldConst(0, type as any);
+      const slot = builder.allocValueSlot(type as any);
       builder.registerFieldSlot(fieldId, slot);
       return { k: 'field', id: fieldId, slot };
     }

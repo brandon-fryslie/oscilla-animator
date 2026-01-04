@@ -14,6 +14,7 @@
 import { createBlock } from './factory';
 import { input, output } from './utils';
 import type { KernelBlockDefinition } from './types';
+import { parseTypeDesc } from '../ir/types/TypeDesc';
 
 /**
  * FiniteTimeRoot - Finite performance with known duration.
@@ -30,7 +31,7 @@ export const FiniteTimeRoot: KernelBlockDefinition = createBlock({
   capability: 'time',
   kernelId: 'FiniteTimeRoot',
   inputs: [
-    input('durationMs', 'Duration (ms)', 'Signal<float>', {
+    input('durationMs', 'Duration (ms)', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 5000,
@@ -40,11 +41,11 @@ export const FiniteTimeRoot: KernelBlockDefinition = createBlock({
     }),
   ],
   outputs: [
-    output('systemTime', 'System Time', 'Signal<time>'),
-    output('progress', 'Progress', 'Signal<float>'),
-    output('phase', 'Phase', 'Signal<phase>'),
-    output('end', 'End Event', 'Event<any>'),
-    output('energy', 'Energy', 'Signal<float>'),
+    output('systemTime', 'System Time', parseTypeDesc('Signal:time')),
+    output('progress', 'Progress', parseTypeDesc('Signal:float')),
+    output('phase', 'Phase', parseTypeDesc('Signal:float')),
+    output('end', 'End Event', parseTypeDesc('Event:trigger')),
+    output('energy', 'Energy', parseTypeDesc('Signal:float')),
   ],
   color: '#ef4444', // Red for finite
   subcategory: 'TimeRoot',
@@ -72,7 +73,7 @@ export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
   capability: 'time',
   kernelId: 'InfiniteTimeRoot',
   inputs: [
-    input('windowMs', 'Preview Window (ms)', 'Signal<float>', {
+    input('windowMs', 'Preview Window (ms)', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 10000,
@@ -80,7 +81,7 @@ export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
         uiHint: { kind: 'slider', min: 1000, max: 60000, step: 1000 },
       },
     }),
-    input('periodMs', 'Ambient Period (ms)', 'Signal<float>', {
+    input('periodMs', 'Ambient Period (ms)', parseTypeDesc('Signal:float'), {
       tier: 'secondary',
       defaultSource: {
         value: 10000,
@@ -90,10 +91,10 @@ export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
     }),
   ],
   outputs: [
-    output('systemTime', 'System Time', 'Signal<time>'),
-    output('phase', 'Ambient Phase', 'Signal<phase>'),
-    output('pulse', 'Ambient Pulse', 'Event<any>'),
-    output('energy', 'Energy', 'Signal<float>'),
+    output('systemTime', 'System Time', parseTypeDesc('Signal:time')),
+    output('phase', 'Ambient Phase', parseTypeDesc('Signal:float')),
+    output('pulse', 'Ambient Pulse', parseTypeDesc('Event:trigger')),
+    output('energy', 'Energy', parseTypeDesc('Signal:float')),
   ],
   color: '#8b5cf6', // Purple for infinite
   subcategory: 'TimeRoot',

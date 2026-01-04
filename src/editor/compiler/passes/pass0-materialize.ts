@@ -13,7 +13,6 @@
 
 import type { CompilerPatch, BlockInstance } from '../types';
 import type { SlotWorld, Edge } from '../../types';
-import type { TypeDesc } from '../ir/types';
 import { getBlockDefinition } from '../../blocks';
 
 /**
