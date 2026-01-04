@@ -1,0 +1,39 @@
+Agent: project-evaluator | 2026-01-04-010000
+Scope: project/full (default source normalization)
+Completion: 100% evaluated | Gaps: 5 systems doing same work | Test Quality: N/A
+Reused: 0 findings | Fresh: Complete inventory
+Cache updated: N/A (no stable findings to cache - all ephemeral bugs)
+Ambiguities: 4 found | Workflow: PAUSE
+
+FINDINGS:
+- 5 systems doing default source normalization
+- GraphNormalizer.ts (NEW) = intended single source of truth ✅ KEEP
+- pass0-materialize.ts (OLD) = duplicate, causes double providers ❌ DELETE
+- pass1-normalize.ts = creates redundant metadata ⚠️ SIMPLIFY
+- DefaultSourceStore.ts = uses different provider mapping ⚠️ SIMPLIFY
+- constProviders.ts = defines conflicting mapping ❌ DELETE
+
+ROOT CAUSE: Incomplete migration - old systems never deleted
+
+CRITICAL ISSUES:
+1. pass0 and GraphNormalizer BOTH create providers for same inputs
+2. Different provider type selection logic causes type mismatches
+3. Different ID formats: ${blockId}_default_${slotId} vs ds_${blockId}_${inputId}
+
+AMBIGUITIES (need user input):
+1. Which ID format is canonical?
+2. Delete old structural blocks on migration?
+3. Keep ANY attachment logic in DefaultSourceStore?
+4. Are all provider type mappings covered?
+
+RECOMMENDATIONS:
+1. DELETE pass0-materialize.ts (critical - causing duplicates)
+2. DELETE constProviders.ts (causing type mismatches)
+3. DELETE compiler/ir/defaultSources.ts (no longer needed)
+4. SIMPLIFY pass1-normalize.ts → pass1-canonicalize.ts
+5. SIMPLIFY DefaultSourceStore.ts (value storage only)
+6. ADD missing provider mappings to GraphNormalizer
+
+Workflow: PAUSE - need answers to 4 ambiguities before proceeding
+
+Output: /Users/bmf/code/oscilla-animator_codex/.agent_planning/normalization-single-source/EVALUATION-20260104.md

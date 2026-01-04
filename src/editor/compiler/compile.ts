@@ -4,16 +4,15 @@
  * Compiles a visual patch graph into a runnable V4 Program<RenderTree>.
  *
  * Architecture (Pass-Based Pipeline):
- * 1. Pass 0: Materialize - Add default source provider blocks
- * 2. Pass 1: Normalize - Freeze block IDs, canonicalize edges
- * 3. Pass 2: Type Graph - Build type system, validate bus eligibility
- * 4. Pass 3: Time Topology - Find TimeRoot, establish time model
- * 5. Pass 4: Dependency Graph - Build dependency graph
- * 6. Pass 5: SCC Validation - Detect illegal cycles
- * 7. Pass 6: Block Lowering - Lower blocks to IR fragments
- * 8. Pass 8: Link Resolution - Resolve all port references (Pass 7 removed - buses are blocks)
- * 9. Build Schedule - Generate execution schedule from IR
- * 10. Create Program - Wrap in IRRuntimeAdapter for Player
+ * 1. Pass 1: Normalize - Freeze block IDs, canonicalize edges
+ * 2. Pass 2: Type Graph - Build type system, validate bus eligibility
+ * 3. Pass 3: Time Topology - Find TimeRoot, establish time model
+ * 4. Pass 4: Dependency Graph - Build dependency graph
+ * 5. Pass 5: SCC Validation - Detect illegal cycles
+ * 6. Pass 6: Block Lowering - Lower blocks to IR fragments
+ * 7. Pass 8: Link Resolution - Resolve all port references (Pass 7 removed - buses are blocks)
+ * 8. Build Schedule - Generate execution schedule from IR
+ * 9. Create Program - Wrap in IRRuntimeAdapter for Player
  */
 
 import type {
@@ -27,7 +26,6 @@ import type {
   Seed,
 } from './types';
 import { getBlockDefinition } from '../blocks';
-import { pass0Materialize } from './passes/pass0-materialize';
 import { pass1Normalize } from './passes/pass1-normalize';
 import { pass2TypeGraph } from './passes/pass2-types';
 import { pass3TimeTopology } from './passes/pass3-time';
@@ -91,14 +89,14 @@ function compilerPatchToPatch(compilerPatch: CompilerPatch): Patch {
  * Compile a patch using the pass-based compiler pipeline.
  *
  * This replaces the deprecated compileBusAwarePatch stub with the actual
- * IR compiler implementation (passes 0-8).
+ * IR compiler implementation (passes 1-8).
  *
  * Error Handling:
  * - Passes 2, 3, 4 THROW on errors (wrapped in try-catch)
  * - Passes 5, 6, 8 ACCUMULATE errors in result object
  * - Early return if any pass fails
  *
- * @param patch - Input patch from editor
+ * @param patch - Input patch from editor (already normalized by GraphNormalizer)
  * @param _registry - Block registry for compiling blocks (unused - blocks self-register)
  * @param seed - Random seed for deterministic compilation
  * @param _ctx - Compilation context (unused in current implementation)
@@ -113,12 +111,9 @@ export function compilePatch(
   options?: { emitIR?: boolean }
 ): CompileResult {
   try {
-    // Pass 0: Materialize default sources
-    // Adds hidden provider blocks for unconnected inputs with defaultSource
-    const materialized = pass0Materialize(patch);
-
     // Convert CompilerPatch to Patch for pass pipeline
-    const patchForPasses = compilerPatchToPatch(materialized);
+    // Note: Default source provider blocks are already in the patch from GraphNormalizer
+    const patchForPasses = compilerPatchToPatch(patch);
 
     // Pass 1: Normalize
     // Freezes block IDs to indices, canonicalizes edges

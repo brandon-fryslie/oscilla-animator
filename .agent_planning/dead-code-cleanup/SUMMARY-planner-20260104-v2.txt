@@ -1,0 +1,5 @@
+Agent: status-planner | 2026-01-04-005000
+Topic: dead-code-cleanup
+Files: PLAN-20260104-v2.md, DOD-20260104-v2.md
+Items: 2 (P0: 2, P1: 0, P2: 0)
+Focus: Adapter migration and compileBusAware migration only

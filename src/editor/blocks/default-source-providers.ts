@@ -40,7 +40,7 @@ export const DSConstSignalFloat = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', parseTypeDesc('Signal<float>'), {
+    input('value', 'Value', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -51,7 +51,7 @@ export const DSConstSignalFloat = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', parseTypeDesc('Signal<float>')),
+    output('out', 'Output', parseTypeDesc('Signal:float')),
   ],
 
   tags: {
@@ -75,7 +75,7 @@ export const DSConstSignalInt = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', parseTypeDesc('Signal<int>'), {
+    input('value', 'Value', parseTypeDesc('Signal:int'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -86,7 +86,7 @@ export const DSConstSignalInt = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', parseTypeDesc('Signal<int>')),
+    output('out', 'Output', parseTypeDesc('Signal:int')),
   ],
 
   tags: {
@@ -109,7 +109,7 @@ export const DSConstSignalColor = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', parseTypeDesc('Signal<color>'), {
+    input('value', 'Value', parseTypeDesc('Signal:color'), {
       tier: 'primary',
       defaultSource: {
         value: '#ffffff',
@@ -120,7 +120,7 @@ export const DSConstSignalColor = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', parseTypeDesc('Signal<color>')),
+    output('out', 'Output', parseTypeDesc('Signal:color')),
   ],
 
   tags: {
@@ -143,7 +143,7 @@ export const DSConstSignalPoint = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', parseTypeDesc('Signal<point>'), {
+    input('value', 'Value', parseTypeDesc('Signal:point'), {
       tier: 'primary',
       defaultSource: {
         value: { x: 0, y: 0 },
@@ -154,7 +154,75 @@ export const DSConstSignalPoint = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', parseTypeDesc('Signal<point>')),
+    output('out', 'Output', parseTypeDesc('Signal:point')),
+  ],
+
+  tags: {
+    role: 'defaultSourceProvider',
+    hidden: true,
+  },
+
+  color: '#6B7280',
+  priority: 1000,
+});
+
+/**
+ * DSConstSignalPhase - Constant provider for Signal:phase inputs
+ */
+export const DSConstSignalPhase = createBlock({
+  type: 'DSConstSignalPhase',
+  label: 'Constant (Signal:phase)',
+  description: 'Hidden provider block for Signal:phase default sources',
+  capability: 'pure',
+  compileKind: 'operator',
+
+  inputs: [
+    input('value', 'Value', parseTypeDesc('Signal:phase'), {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
+      },
+    }),
+  ],
+
+  outputs: [
+    output('out', 'Output', parseTypeDesc('Signal:phase')),
+  ],
+
+  tags: {
+    role: 'defaultSourceProvider',
+    hidden: true,
+  },
+
+  color: '#6B7280',
+  priority: 1000,
+});
+
+/**
+ * DSConstSignalTime - Constant provider for Signal:time inputs
+ */
+export const DSConstSignalTime = createBlock({
+  type: 'DSConstSignalTime',
+  label: 'Constant (Signal:time)',
+  description: 'Hidden provider block for Signal:time default sources',
+  capability: 'pure',
+  compileKind: 'operator',
+
+  inputs: [
+    input('value', 'Value', parseTypeDesc('Signal:time'), {
+      tier: 'primary',
+      defaultSource: {
+        value: 0,
+        world: 'signal',
+        uiHint: { kind: 'slider', min: 0, max: 60, step: 0.1 },
+      },
+    }),
+  ],
+
+  outputs: [
+    output('out', 'Output', parseTypeDesc('Signal:time')),
   ],
 
   tags: {
@@ -177,7 +245,7 @@ export const DSConstFieldFloat = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', parseTypeDesc('Field<float>'), {
+    input('value', 'Value', parseTypeDesc('Field:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -188,7 +256,7 @@ export const DSConstFieldFloat = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', parseTypeDesc('Field<float>')),
+    output('out', 'Output', parseTypeDesc('Field:float')),
   ],
 
   tags: {
@@ -211,7 +279,7 @@ export const DSConstFieldVec2 = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', parseTypeDesc('Field<vec2>'), {
+    input('value', 'Value', parseTypeDesc('Field:vec2'), {
       tier: 'primary',
       defaultSource: {
         value: { x: 0, y: 0 },
@@ -222,7 +290,7 @@ export const DSConstFieldVec2 = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', parseTypeDesc('Field<vec2>')),
+    output('out', 'Output', parseTypeDesc('Field:vec2')),
   ],
 
   tags: {
@@ -245,7 +313,7 @@ export const DSConstFieldColor = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', parseTypeDesc('Field<color>'), {
+    input('value', 'Value', parseTypeDesc('Field:color'), {
       tier: 'primary',
       defaultSource: {
         value: '#ffffff',
@@ -256,7 +324,7 @@ export const DSConstFieldColor = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', parseTypeDesc('Field<color>')),
+    output('out', 'Output', parseTypeDesc('Field:color')),
   ],
 
   tags: {

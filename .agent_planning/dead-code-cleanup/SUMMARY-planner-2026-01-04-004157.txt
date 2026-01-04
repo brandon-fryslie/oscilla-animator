@@ -1,0 +1,9 @@
+Agent: status-planner | 2026-01-04-004157
+Topic: dead-code-cleanup
+Files: PLAN-2026-01-04-004157.md, DOD-2026-01-04-004157.md
+Items: 4 (P0: 2, P1: 2)
+Deferred: 4 items captured to beads
+  - oscilla-57n: Remove @dnd-kit/sortable (P3 chore)
+  - oscilla-7ca: DefaultSource refactor (P3 task)
+  - oscilla-1pe: Fix ModulationTableStore tests (P2 task)
+  - oscilla-wz0: Verify TRANSFORM_REGISTRY parity (P1 task)

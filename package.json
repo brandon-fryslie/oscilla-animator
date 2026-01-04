@@ -42,6 +42,7 @@
     "@typescript-eslint/parser": "^8.50.1",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/ui": "^4.0.15",
+    "chrome-remote-interface": "^0.33.3",
     "eslint": "^9.39.1",
     "eslint-plugin-functional": "^9.0.2",
     "eslint-plugin-mobx": "^0.0.13",

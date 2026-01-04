@@ -22,6 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Backup files
+*.orig
+*.backup
+*.bak
+*~
 repomix-output.md
 repomix.config.jsonc
 

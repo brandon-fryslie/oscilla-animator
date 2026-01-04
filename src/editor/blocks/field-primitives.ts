@@ -26,17 +26,17 @@ export const FieldAddVec2 = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('a', 'A', parseTypeDesc('Field<vec2>'), {
+    input('a', 'A', parseTypeDesc('Field:vec2'), {
       tier: 'primary',
       defaultSource: { value: [0, 0], world: 'field' },
     }),
-    input('b', 'B', parseTypeDesc('Field<vec2>'), {
+    input('b', 'B', parseTypeDesc('Field:vec2'), {
       tier: 'primary',
       defaultSource: { value: [0, 0], world: 'field' },
     }),
   ],
   outputs: [
-    output('out', 'Result', parseTypeDesc('Field<vec2>')),
+    output('out', 'Result', parseTypeDesc('Field:vec2')),
   ],
   color: '#A855F7',
   priority: 31,});
@@ -63,11 +63,11 @@ export const FieldColorize = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('values', 'Values', parseTypeDesc('Field<float>'), {
+    input('values', 'Values', parseTypeDesc('Field:float'), {
       tier: 'primary',
       defaultSource: { value: 0, world: 'field' },
     }),
-    input('colorA', 'Color A', parseTypeDesc('Signal<color>'), {
+    input('colorA', 'Color A', parseTypeDesc('Signal:color'), {
       tier: 'primary',
       defaultSource: {
         value: '#3B82F6',
@@ -75,7 +75,7 @@ export const FieldColorize = createBlock({
         uiHint: { kind: 'color' },
       },
     }),
-    input('colorB', 'Color B', parseTypeDesc('Signal<color>'), {
+    input('colorB', 'Color B', parseTypeDesc('Signal:color'), {
       tier: 'primary',
       defaultSource: {
         value: '#EF4444',
@@ -83,7 +83,7 @@ export const FieldColorize = createBlock({
         uiHint: { kind: 'color' },
       },
     }),
-    input('mode', 'Mode', parseTypeDesc('Signal<string>'), {
+    input('mode', 'Mode', parseTypeDesc('Signal:string'), {
       tier: 'primary',
       defaultSource: {
         value: 'lerp',
@@ -99,7 +99,7 @@ export const FieldColorize = createBlock({
     }),
   ],
   outputs: [
-    output('colors', 'Colors', parseTypeDesc('Field<color>')),
+    output('colors', 'Colors', parseTypeDesc('Field:color')),
   ],
   color: '#F59E0B',
   priority: 40,});
@@ -122,11 +122,11 @@ export const FieldOpacity = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('values', 'Values', parseTypeDesc('Field<float>'), {
+    input('values', 'Values', parseTypeDesc('Field:float'), {
       tier: 'primary',
       defaultSource: { value: 0, world: 'field' },
     }),
-    input('min', 'Min Opacity', parseTypeDesc('Signal<float>'), {
+    input('min', 'Min Opacity', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -134,7 +134,7 @@ export const FieldOpacity = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 },
       },
     }),
-    input('max', 'Max Opacity', parseTypeDesc('Signal<float>'), {
+    input('max', 'Max Opacity', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -142,7 +142,7 @@ export const FieldOpacity = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 },
       },
     }),
-    input('curve', 'Curve', parseTypeDesc('Signal<string>'), {
+    input('curve', 'Curve', parseTypeDesc('Signal:string'), {
       tier: 'secondary',
       defaultSource: {
         value: 'linear',
@@ -160,7 +160,7 @@ export const FieldOpacity = createBlock({
     }),
   ],
   outputs: [
-    output('opacity', 'Opacity', parseTypeDesc('Field<float>')),
+    output('opacity', 'Opacity', parseTypeDesc('Field:float')),
   ],
   color: '#F59E0B',
   priority: 41,});
@@ -194,7 +194,7 @@ export const FieldHueGradient = createBlock({
       tier: 'primary',
       defaultSource: { value: 100, world: 'field' },
     }),
-    input('hueOffset', 'Hue Offset', parseTypeDesc('Signal<float>'), {
+    input('hueOffset', 'Hue Offset', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -202,7 +202,7 @@ export const FieldHueGradient = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 360, step: 1 },
       },
     }),
-    input('hueSpread', 'Hue Spread', parseTypeDesc('Signal<float>'), {
+    input('hueSpread', 'Hue Spread', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -210,7 +210,7 @@ export const FieldHueGradient = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.1 },
       },
     }),
-    input('saturation', 'Saturation', parseTypeDesc('Signal<float>'), {
+    input('saturation', 'Saturation', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 80,
@@ -218,7 +218,7 @@ export const FieldHueGradient = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 100, step: 1 },
       },
     }),
-    input('lightness', 'Lightness', parseTypeDesc('Signal<float>'), {
+    input('lightness', 'Lightness', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 60,
@@ -226,7 +226,7 @@ export const FieldHueGradient = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 100, step: 1 },
       },
     }),
-    input('phase', 'Phase', parseTypeDesc('Signal<phase>'), {
+    input('phase', 'Phase', parseTypeDesc('Signal:phase'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -236,7 +236,7 @@ export const FieldHueGradient = createBlock({
     }),
   ],
   outputs: [
-    output('colors', 'Colors', parseTypeDesc('Field<color>')),
+    output('colors', 'Colors', parseTypeDesc('Field:color')),
   ],
   color: '#F472B6', // Pink for color blocks
   priority: 42,});
@@ -272,7 +272,7 @@ export const FieldFromExpression = createBlock({
       tier: 'primary',
       defaultSource: { value: 100, world: 'field' },
     }),
-    input('signal', 'Signal', parseTypeDesc('Signal<phase>'), {
+    input('signal', 'Signal', parseTypeDesc('Signal:phase'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -280,7 +280,7 @@ export const FieldFromExpression = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
       },
     }),
-    input('expression', 'Expression', parseTypeDesc('Signal<string>'), {
+    input('expression', 'Expression', parseTypeDesc('Signal:string'), {
       tier: 'primary',
       defaultSource: {
         value: 'hsl(i / n * 360 + signal * 360, 80, 60)',
@@ -290,7 +290,7 @@ export const FieldFromExpression = createBlock({
     }),
   ],
   outputs: [
-    output('field', 'Field', parseTypeDesc('Field<string>')),
+    output('field', 'Field', parseTypeDesc('Field:string')),
   ],
   color: '#10B981', // Emerald for adapter blocks
   priority: 43,});
@@ -309,13 +309,13 @@ export const FieldStringToColor = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('strings', 'Strings', parseTypeDesc('Field<string>'), {
+    input('strings', 'Strings', parseTypeDesc('Field:string'), {
       tier: 'primary',
       defaultSource: { value: '', world: 'field' },
     }),
   ],
   outputs: [
-    output('colors', 'Colors', parseTypeDesc('Field<color>')),
+    output('colors', 'Colors', parseTypeDesc('Field:color')),
   ],
   color: '#F472B6',
   priority: 44,});

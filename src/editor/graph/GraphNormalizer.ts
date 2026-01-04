@@ -59,6 +59,9 @@ function selectProviderType(world: SlotWorld, domain: string): string {
     'signal:int': 'DSConstSignalInt',
     'signal:color': 'DSConstSignalColor',
     'signal:vec2': 'DSConstSignalPoint',
+    'signal:point': 'DSConstSignalPoint',
+    'signal:phase': 'DSConstSignalPhase',
+    'signal:time': 'DSConstSignalTime',
 
     // Field providers
     'field:float': 'DSConstFieldFloat',

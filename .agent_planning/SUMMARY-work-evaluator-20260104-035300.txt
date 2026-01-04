@@ -1,0 +1,6 @@
+Agent: work-evaluator | 2026-01-04 03:53:00
+Scope: work/ir-compiler-to-rendering-wireup
+Verdict: INCOMPLETE
+Criteria: 4/5 working | Breaks found: 1 critical | Ambiguities: 0
+Missing checks: 3 specified
+Cache updated: No updates needed (fresh evaluation)
