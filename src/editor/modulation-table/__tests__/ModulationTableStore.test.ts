@@ -5,7 +5,7 @@
  * TODO: Update to use new TypeDesc object interface.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe } from "vitest"; // TODO: Re-enable tests
 
 describe.skip("ModulationTableStore", () => {
   // Tests disabled - need to update for TypeDesc object interface

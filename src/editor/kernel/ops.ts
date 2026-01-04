@@ -12,7 +12,6 @@ import type {
   BlockId,
   BlockType,
   Edge,
-  Patch,
   PortRef,
 } from '../types';
 

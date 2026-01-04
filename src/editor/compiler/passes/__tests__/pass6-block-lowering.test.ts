@@ -5,7 +5,7 @@
  * TODO: Rewrite for new compiler architecture.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe } from "vitest"; // TODO: Re-enable tests
 
 describe.skip("Pass 6: Block Lowering", () => {
   // Tests disabled - need architecture updates

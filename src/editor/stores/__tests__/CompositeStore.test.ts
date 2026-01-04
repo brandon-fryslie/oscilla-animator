@@ -5,7 +5,7 @@
  * TODO: Update to new block and composite format.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe } from "vitest"; // TODO: Re-enable tests
 
 describe.skip("CompositeStore", () => {
   // Tests disabled - need to update fixtures

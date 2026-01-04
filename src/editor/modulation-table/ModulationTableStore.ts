@@ -12,7 +12,7 @@
 import { makeObservable, observable, computed, action } from 'mobx';
 import type { RootStore } from '../stores/RootStore';
 import { isDirectlyCompatible } from '../semantic';
-import type { TypeDesc, SlotDef, LensDefinition, AdapterStep, CombineMode } from '../types';
+import type { TypeDesc, SlotDef, LensDefinition, AdapterStep } from '../types';
 import { findAdapterPath } from '../adapters/autoAdapter';
 import { getBlockDefinition } from '../blocks/registry';
 import { convertBlockToBus } from '../bus-block/conversion';
