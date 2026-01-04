@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
 import { getEdgesForPort, findCompatiblePorts } from './portUtils';
+import { getBlockDefinition } from './blocks/registry';
 import './ContextMenu.css';
 
 /**
@@ -26,7 +27,8 @@ export const ContextMenu = observer(() => {
 
   // Get block/slot info for display (needed for useMemo dependency)
   const block = isOpen && portRef !== null ? store.patchStore.blocks.find((b) => b.id === portRef.blockId) : null;
-  const slots = isOpen && portRef !== null ? (portRef.direction === 'input' ? block?.inputs : block?.outputs) : null;
+  const blockDef = block ? getBlockDefinition(block.type) : null;
+  const slots = isOpen && portRef !== null ? (portRef.direction === 'input' ? blockDef?.inputs : blockDef?.outputs) : null;
   const slot = (slots !== null && slots !== undefined && portRef !== null) ? slots.find((s) => s.id === portRef.slotId) : null;
 
   // Find compatible ports that can be connected - MUST be before early return
@@ -191,8 +193,9 @@ export const ContextMenu = observer(() => {
                 const otherSlotId =
                   portRef.direction === 'output' ? edge.to.slotId : edge.from.slotId;
                 const otherBlock = store.patchStore.blocks.find((b) => b.id === otherBlockId);
+                const otherBlockDef = otherBlock ? getBlockDefinition(otherBlock.type) : null;
                 const otherSlots =
-                  portRef.direction === 'output' ? otherBlock?.inputs : otherBlock?.outputs;
+                  portRef.direction === 'output' ? otherBlockDef?.inputs : otherBlockDef?.outputs;
                 const otherSlot = otherSlots?.find((s) => s.id === otherSlotId);
 
                 const isConfirming = showConfirm === edge.id;

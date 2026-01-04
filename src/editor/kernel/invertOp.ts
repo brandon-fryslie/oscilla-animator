@@ -204,36 +204,10 @@ export function invertOp(doc: Patch, op: Op): Op | null {
     // =========================================================================
     // Time/Settings Ops
     // =========================================================================
-    case 'TimeRootSet': {
-      // Inverse is set back to previous time root
-      // Note: We need to track what the previous time root was
-      // For now, capture it from settings if it exists
-      const oldTimeRootId = (doc.settings as Record<string, unknown>).timeRootId;
-
-      if (typeof oldTimeRootId !== 'string') {
-        // No previous time root set - this is not perfectly invertible
-        // We'd need a special "unset" operation or null support
-        return null;
-      }
-
-      return {
-        op: 'TimeRootSet',
-        blockId: oldTimeRootId,
-      };
-    }
-
-    case 'PatchSettingsUpdate': {
-      // Inverse is patch back to original values
-      const oldValues: Record<string, unknown> = {};
-      for (const key of Object.keys(op.patch)) {
-        oldValues[key] = (doc.settings as Record<string, unknown>)[key];
-      }
-
-      return {
-        op: 'PatchSettingsUpdate',
-        patch: oldValues,
-      };
-    }
+    case 'TimeRootSet':
+    case 'PatchSettingsUpdate':
+      // Settings not yet implemented - can't invert
+      return null;
 
     // =========================================================================
     // Asset Ops

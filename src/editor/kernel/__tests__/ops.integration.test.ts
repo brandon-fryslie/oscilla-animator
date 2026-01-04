@@ -12,14 +12,11 @@ import type { BlockAdd, BlockRemove, WireAdd, WireRemove } from '../ops';
 
 function createTestPatch(): Patch {
   return {
-    version: 2,
+    id: 'patch-test',
     blocks: [],
     edges: [],
-    defaultSources: [],
-    settings: {
-      seed: 42,
-      speed: 1,
-    },
+    buses: [],
+    defaultSources: {},
   };
 }
 
@@ -28,10 +25,10 @@ function createTestBlock(id: string, label?: string): Block {
     id,
     type: 'TestBlock',
     label: label ?? `Block ${id}`,
+    position: { x: 0, y: 0 },
     params: { value: 10 },
-    inputs: [{ id: 'in', type: 'Signal<float>', label: 'Input', direction: 'input' }],
-    outputs: [{ id: 'out', type: 'Signal<float>', label: 'Output', direction: 'output' }],
-    category: 'Other',
+    form: 'primitive',
+    role: { kind: 'user' },
   };
 }
 

@@ -263,7 +263,7 @@ class TransactionBuilder implements TxBuilder {
 
   updatePatchSettings(patch: Record<string, unknown>): void {
     const undoPatch: Record<string, unknown> = {};
-    const settings = this.stagedDoc.settings as Record<string, unknown> | undefined;
+    const settings = (this.stagedDoc as any).settings as Record<string, unknown> | undefined;
     for (const key of Object.keys(patch)) {
       undoPatch[key] = settings?.[key];
     }

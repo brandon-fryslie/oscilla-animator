@@ -10,14 +10,11 @@ import type { BlockAdd, BlockRemove, BlockRetype, BlockSetLabel, BlockPatchParam
 
 function createTestPatch(): Patch {
   return {
-    version: 1,
+    id: 'patch-test',
     blocks: [],
     edges: [],
-    defaultSources: [],
-    settings: {
-      seed: 42,
-      speed: 1,
-    },
+    buses: [],
+    defaultSources: {},
   };
 }
 
@@ -26,10 +23,10 @@ function createTestBlock(id: string = 'block1'): Block {
     id,
     type: 'TestBlock',
     label: 'Test Block',
+    position: { x: 0, y: 0 },
     params: { value: 10 },
-    inputs: [],
-    outputs: [],
-    category: 'Other',
+    form: 'primitive',
+    role: { kind: 'user' },
   };
 }
 

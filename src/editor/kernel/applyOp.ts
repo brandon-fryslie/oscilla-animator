@@ -214,21 +214,9 @@ export function applyOp(doc: Patch, op: Op): OpResult {
     // =========================================================================
     // Time/Settings Ops
     // =========================================================================
-    case 'TimeRootSet': {
-      const block = doc.blocks.find(b => b.id === op.blockId);
-      if (block === undefined) {
-        return { ok: false, error: `Block '${op.blockId}' not found` };
-      }
-
-      // Type assertion since timeRootId isn't in the settings type yet
-      (doc.settings as Record<string, unknown>).timeRootId = op.blockId;
-      return { ok: true };
-    }
-
-    case 'PatchSettingsUpdate': {
-      Object.assign(doc.settings, op.patch);
-      return { ok: true };
-    }
+    case 'TimeRootSet':
+    case 'PatchSettingsUpdate':
+      return { ok: false, error: 'Settings operations not yet implemented (settings not in Patch type)' };
 
     // =========================================================================
     // Asset Ops

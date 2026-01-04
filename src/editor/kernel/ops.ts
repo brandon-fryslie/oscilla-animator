@@ -113,7 +113,8 @@ export type TimeRootSet = {
 
 export type PatchSettingsUpdate = {
   op: 'PatchSettingsUpdate';
-  patch: Partial<Patch['settings']>;
+  // Note: settings not yet in Patch type, using Record as placeholder
+  patch: Record<string, unknown>;
 };
 
 // =============================================================================
