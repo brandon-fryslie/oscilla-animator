@@ -9,7 +9,8 @@
  * Cells = Lens chains binding sources to targets
  */
 
-import type { BlockId, TypeDesc, CombineMode, LensDefinition } from '../types';
+import type { BlockId, CombineMode, LensDefinition } from '../types';
+import type { TypeDesc } from '../ir/types/TypeDesc';
 import type { BlockDefinition } from '../blocks/types';
 
 // =============================================================================

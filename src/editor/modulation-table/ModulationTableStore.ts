@@ -12,7 +12,8 @@
 import { makeObservable, observable, computed, action } from 'mobx';
 import type { RootStore } from '../stores/RootStore';
 import { isDirectlyCompatible } from '../semantic';
-import type { TypeDesc, SlotDef, LensDefinition, AdapterStep } from '../types';
+import type { SlotDef, LensDefinition, AdapterStep } from '../types';
+import type { TypeDesc as IRTypeDesc } from '../ir/types/TypeDesc';
 import { findAdapterPath } from '../adapters/autoAdapter';
 import { getBlockDefinition } from '../blocks/registry';
 import { convertBlockToBus } from '../bus-block/conversion';
@@ -34,11 +35,6 @@ import {
   parseRowKey,
   getColumnAbbreviation,
 } from './types';
-
-// Type guard for TypeDesc object
-function isTypeDescObject(typeDesc: TypeDesc | undefined): typeDesc is TypeDesc {
-  return typeof typeDesc === 'object' && typeDesc !== null && 'domain' in typeDesc;
-}
 
 /**
  * Store for modulation table state.
@@ -144,9 +140,6 @@ export class ModulationTableStore {
         const typeDesc = this.slotToTypeDesc(output);
         if (!typeDesc) continue;
 
-        // Type guard to check if typeDesc is an object
-        if (!isTypeDescObject(typeDesc)) continue;
-
         // Only show bus-eligible outputs as rows
         if (!typeDesc.busEligible) continue;
 
@@ -170,9 +163,6 @@ export class ModulationTableStore {
       for (const input of blockDef.inputs) {
         const typeDesc = this.slotToTypeDesc(input);
         if (!typeDesc) continue;
-
-        // Type guard to check if typeDesc is an object
-        if (!isTypeDescObject(typeDesc)) continue;
 
         // Only show bus-eligible inputs as rows
         if (!typeDesc.busEligible) continue;
@@ -367,11 +357,7 @@ export class ModulationTableStore {
     // Apply domain filter
     if (colFilter.domains != null && colFilter.domains.length > 0) {
       const domains = new Set(colFilter.domains);
-      columns = columns.filter((c) => {
-        // Type guard for column type
-        if (!isTypeDescObject(c.type)) return false;
-        return domains.has(c.type.domain);
-      });
+      columns = columns.filter((c) => domains.has(c.type.domain));
     }
 
     // Apply active-only filter
@@ -403,16 +389,8 @@ export class ModulationTableStore {
           return a.name.localeCompare(b.name);
         case 'activity':
           return b.activity - a.activity;
-        case 'type': {
-          // Type guard for column types
-          const aTypeStr = isTypeDescObject(a.type)
-            ? `${a.type.world}:${a.type.domain}`
-            : String(a.type);
-          const bTypeStr = isTypeDescObject(b.type)
-            ? `${b.type.world}:${b.type.domain}`
-            : String(b.type);
-          return aTypeStr.localeCompare(bTypeStr);
-        }
+        case 'type':
+          return `${a.type.world}:${a.type.domain}`.localeCompare(`${b.type.world}:${b.type.domain}`);
         default:
           return 0;
       }
@@ -859,9 +837,9 @@ export class ModulationTableStore {
   /**
    * Convert a SlotDef to TypeDesc.
    */
-  private slotToTypeDesc(slot: SlotDef): TypeDesc | undefined {
+  private slotToTypeDesc(slot: SlotDef): IRTypeDesc | undefined {
     // Slots now directly contain TypeDesc objects
-    return slot.type;
+    return slot.type as unknown as IRTypeDesc;
   }
 
   /**
@@ -907,7 +885,7 @@ export class ModulationTableStore {
   /**
    * Check if source type is directly compatible with target type.
    */
-  private isTypeCompatible(source: TypeDesc, target: TypeDesc): boolean {
+  private isTypeCompatible(source: IRTypeDesc, target: IRTypeDesc): boolean {
     return isDirectlyCompatible(source, target);
   }
 

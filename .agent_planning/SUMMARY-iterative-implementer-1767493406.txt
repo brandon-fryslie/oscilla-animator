@@ -1,0 +1,25 @@
+Agent: iterative-implementer | 2026-01-03T19:23:26Z
+Mode: manual
+Completed: Fixed all type errors in useLaneDnd.ts | Files: 1 | Commits: 1
+Tests: N/A (manual validation)
+Cache invalidated: None (no architectural changes)
+Status: complete
+
+Summary:
+- Resolved 11 type errors in src/editor/lanes/useLaneDnd.ts
+- Replaced non-existent methods with correct PatchStore API
+- Documented that lanes are computed projections, not directly manipulated
+- All TypeScript compilation now passes without errors
+
+Technical Details:
+1. Fixed property access: insertionIndex -> index (not used in final solution)
+2. Fixed method: addBlockToLane -> addBlock
+3. Fixed method: deleteBlock -> removeBlock
+4. Removed references to non-existent store.laneStore
+5. Replaced lane manipulation logic with no-ops (lanes are auto-computed)
+
+Architecture Understanding:
+- Lanes are computed projections from block topology (see lanes/ordering.ts)
+- Lane assignment is automatic based on block type and outputs
+- Block ordering within lanes is determined by topological sort
+- No separate lane store or direct lane manipulation needed

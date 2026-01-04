@@ -44,11 +44,11 @@ export type Phase = number;
 /**
  * TypeDesc - describes the domain/world of a value.
  *
- * This is a placeholder for the eventual type system.
- * Phase 1: String-based, loose.
- * Phase 3: Branded types, static verification.
+ * Re-exported from ir/types/TypeDesc.ts for the canonical type system.
+ * This interface provides world (signal/field/scalar/config) and domain
+ * (float/vec2/color/etc) classification for values in the animation graph.
  */
-export type { TypeDesc } from "./ir/types/TypeDesc";
+export type { TypeDesc } from './ir/types/TypeDesc';
 
 /**
  * TypeWorld - world classification for values (signal, field, scalar, config).
@@ -525,7 +525,7 @@ export type SlotType = TypeDesc;
  * SLOT_TYPE_TO_TYPE_DESC - mapping from SlotType to TypeDesc.
  * @deprecated This is a stub for backward compatibility. Use TypeDesc directly.
  */
-export const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc | undefined> = {} as any;
+export const SLOT_TYPE_TO_TYPE_DESC: Record<string, TypeDesc | undefined> = {} as any;
 
 // =============================================================================
 // Type Compatibility Functions

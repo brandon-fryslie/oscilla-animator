@@ -22,8 +22,8 @@ import type {
   Slot,
   Block,
 } from '../../types';
-import { SLOT_TYPE_TO_TYPE_DESC } from '../../types';
-import type { TypeDesc } from '../../../core/types';
+import type { TypeDesc } from '../../ir/types/TypeDesc';
+import { slotTypeToTypeDesc } from '../../ir/types/typeConversion';
 import { getBlockDefinition } from '../../blocks/registry';
 import type { CombinePolicy } from './combine-utils';
 
@@ -166,12 +166,7 @@ export function enumerateWriters(
   // If no writers, inject default source
   if (writers.length === 0 && inputSlot.defaultSource !== undefined) {
     const defaultId = `default:${endpoint.blockId}:${endpoint.slotId}`;
-    const slotTypeDesc = SLOT_TYPE_TO_TYPE_DESC[inputSlot.type];
-
-    // Handle case where SLOT_TYPE_TO_TYPE_DESC returns undefined
-    if (slotTypeDesc === undefined) {
-      throw new Error(`No TypeDesc mapping found for SlotType: ${inputSlot.type}`);
-    }
+    const slotTypeDesc = slotTypeToTypeDesc(inputSlot.type);
 
     writers.push({
       kind: 'default',
@@ -256,11 +251,8 @@ export function resolveBlockInputs(
     // Resolve combine policy
     const combine = resolveCombinePolicy(inputSlot);
 
-    // Get port type
-    const portType = SLOT_TYPE_TO_TYPE_DESC[inputSlot.type];
-    if (portType === undefined) {
-      throw new Error(`No TypeDesc mapping found for SlotType: ${inputSlot.type}`);
-    }
+    // Get port type - convert string TypeDesc to TypeDesc object
+    const portType = slotTypeToTypeDesc(inputSlot.type);
 
     // Build resolved spec
     resolved.set(inputSlot.id, {
@@ -298,11 +290,8 @@ export function resolveInput(
   // Resolve combine policy
   const combine = resolveCombinePolicy(inputSlot);
 
-  // Get port type
-  const portType = SLOT_TYPE_TO_TYPE_DESC[inputSlot.type];
-  if (portType === undefined) {
-    throw new Error(`No TypeDesc mapping found for SlotType: ${inputSlot.type}`);
-  }
+  // Get port type - convert string TypeDesc to TypeDesc object
+  const portType = slotTypeToTypeDesc(inputSlot.type);
 
   return {
     endpoint,
