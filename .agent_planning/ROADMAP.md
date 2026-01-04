@@ -1,6 +1,6 @@
 # Project Roadmap: IR Compiler Migration
 
-Last updated: 2026-01-03
+Last updated: 2026-01-04
 
 > **Migration Strategy:** "Strangle Pattern" - New IR wraps existing closures, gradually replacing them while keeping the app running at every step.
 
@@ -167,57 +167,42 @@ interface TransformDef {
 
 ---
 
-#### graph-normalization [PROPOSED]
+#### graph-normalization [COMPLETED - Default Sources]
 **Description:** Create canonical RawGraph → NormalizedGraph architecture. The compiler consumes only the NormalizedGraph - it never sees "bus UI", "wire sidecar state", "default-source badge". Everything is explicit blocks + edges + roles (for debug only).
 
-**Current state (problem):**
-- Compiler sees mix of UI concepts and backend concepts
-- Default sources as "attachments" rather than explicit blocks
-- Wire-state (slew/delay markers) as edge metadata rather than blocks
-- Bus taps as UI affordances rather than explicit junction nodes
-- Multiple "writers" of structural artifacts → guaranteed drift
+**Completed (2026-01-04):**
+- **GraphNormalizer.normalize()** is now the SINGLE SOURCE OF TRUTH for default source materialization
+- Deleted 3 files (pass0-materialize.ts, constProviders.ts, ir/defaultSources.ts)
+- Simplified 5 files (pass1-normalize.ts, DefaultSourceStore.ts, allowlist.ts, compile.ts, validate.ts)
+- Provider ID format: `${blockId}_default_${slotId}` (canonical, deterministic)
+- Provider type selection: world:domain → block type mapping
+- All tests pass, architecture documented in `design-docs/implementation/compiler/06-Default-Sources.md`
 
-**Target state:**
-- **RawGraph** (UI graph): User intent + layout. May have "attached" concepts not yet represented as explicit nodes
-- **NormalizedGraph** (compiler graph): Fully explicit - every default-source is BlockInstance + Edge, every bus tap is explicit block + edges, every wire-state is explicit state block + edges
-- **GraphNormalizer**: Pure, deterministic rewrite: `normalize(raw, previousNormalized?) → NormalizedGraph + Mapping`
-- **StructuralManager**: Policy engine deciding what structural objects must exist
+**Remaining work (deferred):**
+- Bus junctions → Create explicit junction blocks for bus connections
+- Wire-state → Create infrastructure blocks for slew/delay on wires
 
-**Key properties:**
-1. **Id-stable**: Structural nodes/wires get IDs derived from anchors (not creation order)
-2. **Deterministic**: Same raw input → same normalized output
-3. **Incremental**: Can reuse previous mapping to avoid churn
-
-**Anchor system:**
-- Default source: `defaultSource:<blockId>:<portName>:<in|out>`
-- Wire-state: `wireState:<wireId>`
-- Bus junction: `bus:<busId>:<pub|sub>:<typeKey>`
-- Structural IDs: `hash("structNode", anchor)`, `hash("structEdge", anchor, localEdgeName)`
-
-**Architecture:**
+**Architecture (implemented):**
 ```
 src/editor/graph/
-├── RawGraphStore.ts       # Authoritative, undoable user intent
-├── GraphNormalizer.ts     # Pure function: RawGraph → NormalizedGraph + Mapping
-├── StructuralManager.ts   # Policy engine for structural object requirements
-└── StructuralMapping.ts   # Anchor ↔ IDs, for UI selection + incremental stability
+├── GraphNormalizer.ts     # SINGLE SOURCE OF TRUTH: RawGraph → NormalizedGraph
+└── types.ts               # RawGraph, NormalizedGraph types
 ```
 
-**Store flow:**
+**Store flow (implemented):**
 ```
-user edits → mutate RawGraph → run normalization → produce NormalizedGraph → compile
+user edits → mutate RawGraph → PatchStore.getNormalizedGraph() → compile
 ```
 
-**Normalization passes (strict order):**
-1. Default sources → Create structural blocks + edges for unconnected inputs
-2. Bus junctions → Create explicit junction blocks for bus connections
-3. Wire-state → Create infrastructure blocks for slew/delay on wires
-4. Final validation → Type-check, cycle-check, role consistency
+**Key properties (achieved):**
+1. **Id-stable**: Provider IDs derived from block+slot (not creation order)
+2. **Deterministic**: Same raw input → same normalized output
+3. **Single writer**: GraphNormalizer is the ONLY system creating structural blocks
 
-**Spec:** `design-docs/final-System-Invariants/16-Graph-Normalization.md`
-**Dependencies:** unify-connections-edge, block-edge-roles (§15)
+**Spec:** `design-docs/implementation/compiler/06-Default-Sources.md`
+**Dependencies:** unify-connections-edge (COMPLETED)
 **Labels:** architecture, normalization, foundation, compiler-boundary
-**Test Strategy:** RawGraph with attachments normalizes to explicit NormalizedGraph; same raw input always produces same normalized output; anchor-based IDs stable across edits
+**Test Strategy:** All tests pass; no duplicate providers; type mismatches eliminated
 
 ---
 
@@ -266,11 +251,11 @@ Before moving to Phase 6 completion or other work:
 - [x] All inputs connected via edges (no special default source handling)
 - [x] V2 adapter compiles legacy bridge blocks
 - [ ] Block/Edge roles implemented with discriminated unions (deferred - not blocking)
-- [ ] Graph normalization layer separates RawGraph from NormalizedGraph (deferred - not blocking)
-- [ ] Compiler consumes only NormalizedGraph (no UI concepts leak through) (deferred - not blocking)
+- [x] Graph normalization layer separates RawGraph from NormalizedGraph (default sources COMPLETE 2026-01-04)
+- [x] Compiler consumes only NormalizedGraph (GraphNormalizer is single source of truth)
 - [x] Golden patch compiles and runs with new structure
 
-**Note:** graph-normalization and block-edge-roles were deferred as they are not blocking for Phase 6 work. The core unifications (edges, default sources, V2 adapter, transforms) are complete.
+**Note:** block-edge-roles deferred as not blocking. Graph normalization for default sources is COMPLETE - GraphNormalizer.normalize() is the single source of truth. Bus junctions and wire-state normalization deferred.
 
 ---
 
