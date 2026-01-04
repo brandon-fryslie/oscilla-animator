@@ -8,7 +8,7 @@
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
-import { createTypeDesc } from '../../../editor/ir/types/TypeDesc';
+import { createTypeDescCompat } from '../../ir/types';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
@@ -32,10 +32,10 @@ registerBlockType({
   type: 'Print',
   capability: 'io',
   inputs: [
-    { portId: 'value', label: 'Value', dir: 'in', type: createTypeDesc({ world: 'signal', domain: 'float' }) },
+    { portId: 'value', label: 'Value', dir: 'in', type: createTypeDescCompat('signal', 'float') },
   ],
   outputs: [
-    { portId: 'out', label: 'Output', dir: 'out', type: createTypeDesc({ world: 'signal', domain: 'float' }) },
+    { portId: 'out', label: 'Output', dir: 'out', type: createTypeDescCompat('signal', 'float') },
   ],
   lower: lowerPrint,
 });
