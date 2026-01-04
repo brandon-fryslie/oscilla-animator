@@ -33,7 +33,15 @@ type SlotWorld = 'signal' | 'field' | 'scalar' | 'config';
  * Map world + domain to provider block type.
  * Returns the appropriate provider block type for a given input's type.
  *
+ * This is the CANONICAL provider type selection logic.
+ * All provider type mappings must be defined here.
+ *
  * Workstream 03: Domain defaults use DomainN, not DSConstSignalFloat.
+ *
+ * Missing provider blocks (not yet implemented):
+ * - DSConstScalarBool, DSConstScalarColor, DSConstScalarVec2, DSConstScalarVec3, DSConstScalarCameraRef
+ * - DSConstSignalBool, DSConstSignalVec3
+ * - DSConstFieldVec3
  */
 function selectProviderType(world: SlotWorld, domain: string): string {
   // Normalize world: 'config' becomes 'scalar' at compile time
@@ -65,8 +73,8 @@ function selectProviderType(world: SlotWorld, domain: string): string {
 
     // Field providers
     'field:float': 'DSConstFieldFloat',
-    'field:color': 'DSConstFieldColor',
     'field:vec2': 'DSConstFieldVec2',
+    'field:color': 'DSConstFieldColor',
   };
 
   const providerType = mapping[key];
@@ -99,7 +107,11 @@ function isInputDriven(
 
 /**
  * Generate a deterministic ID for a structural provider block.
- * Simple string concatenation as per user specification.
+ *
+ * Format: `${blockId}_default_${slotId}`
+ *
+ * This format is CANONICAL. All provider block IDs must follow this pattern.
+ * Moving blocks doesn't change their provider IDs.
  */
 function generateProviderId(blockId: string, slotId: string): string {
   return `${blockId}_default_${slotId}`;
