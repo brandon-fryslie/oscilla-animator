@@ -1,0 +1,32 @@
+Agent: iterative-implementer | 2026-01-03T16:45:00-07:00
+Mode: manual
+Completed: Verified missing type exports resolved | Files: 1 | Commits: 0
+Tests: N/A (manual validation via typecheck)
+Cache invalidated: N/A (types were already added in previous commits)
+Status: complete
+
+TASK: Add missing type exports to src/editor/types.ts
+
+RESULT: Types were already added in previous commits. Verified resolution.
+
+VERIFICATION:
+- Before this session: 30+ "has no exported member" errors
+- After verification: 0 "has no exported member" errors  
+- Fixed: BusCombineMode → CombineMode rename in modulation-table/types.ts
+
+TYPES CONFIRMED EXPORTED:
+✓ Slot, SlotWorld, SlotTier, SlotType, DefaultSource
+✓ BlockSubcategory, BlockCategory, ALL_SUBCATEGORIES
+✓ KernelId, KernelCapability, Capability, PureCompileKind
+✓ CombinePolicy (deprecated), ExposedParam
+✓ TypeWorld, Domain (re-exports)
+✓ createTypeDesc, isDirectlyCompatible (re-exports)
+✓ SLOT_TYPE_TO_TYPE_DESC (stub)
+
+INTENTIONALLY NOT ADDED (per user instructions):
+✗ Publisher, Listener - removed in bus-block unification
+
+NOTES:
+- Main work done in commits 3e3b612 and 3a34cee
+- Remaining TypeScript errors are unrelated to missing exports
+- UIControlHint type definition doesn't match usage (separate issue)

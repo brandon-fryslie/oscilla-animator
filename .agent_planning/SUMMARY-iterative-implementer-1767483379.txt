@@ -1,0 +1,54 @@
+Agent: iterative-implementer | 2026-01-03
+Mode: manual
+Completed: Fixed type errors in 2 of 4 compiler pass files | Files: 2 | Commits: 0
+Status: in_progress
+
+## Completed Work
+
+1. **combine-utils.ts** - FIXED ✓
+   - Added CombinePolicy, SlotWorld type definitions (moved from deleted editor/types.ts)
+   - Fixed all type imports to use core/types.ts for TypeDesc
+   - Removed unused TypeWorld import
+   - Status: Compiles cleanly with 0 errors
+
+2. **pass7-bus-lowering.ts** - STUBBED ✓
+   - Removed Publisher, BusIndex imports (types deleted)
+   - Added local BusIndex type definition
+   - Stubbed out pass logic (deprecated - buses are now BusBlocks)
+   - Fixed TypeDesc conversion
+   - Status: Compiles with 3 minor unused import warnings
+
+3. **pass8-link-resolution.ts** - ALREADY WORKING ✓
+   - No errors found
+   - Status: Compiles cleanly
+
+## Remaining Work
+
+4. **pass6-block-lowering.ts** - BLOCKED
+   - Issues:
+     a. Block.inputs/outputs don't exist (need BlockDefinition lookup)
+     b. resolveWriters.ts imports missing types (CombinePolicy, Slot, SLOT_TYPE_TO_TYPE_DESC)
+   - Requires: Fix resolveWriters.ts first, then update pass6
+   - Est. 30-50 lines of changes
+
+5. **resolveWriters.ts** - NEEDS FIX (blocking pass6)
+   - Import CombinePolicy from ./combine-utils instead of ../../types
+   - Define Slot type locally or get from BlockDefinition
+   - Handle SLOT_TYPE_TO_TYPE_DESC removal
+
+## Architecture Notes
+
+The type system has undergone significant refactoring:
+- TypeDesc is now an object {world, domain, category, busEligible} from core/types.ts
+- Editor types.ts uses string TypeDesc (legacy)
+- CombinePolicy, Slot, SlotWorld removed from editor/types.ts
+- Block interface doesn't have inputs/outputs arrays (get from BlockDefinition)
+
+## Next Steps
+
+1. Fix resolveWriters.ts imports
+2. Fix pass6-block-lowering.ts to use BlockDefinition for inputs/outputs
+3. Run full typecheck
+4. Commit all fixes together
+
+Cache invalidated: None (no files fully working yet, will invalidate after commit)

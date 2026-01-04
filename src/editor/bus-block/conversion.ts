@@ -44,10 +44,10 @@ export function convertBusToBlock(bus: Bus): Block {
       // Bus-specific metadata (no redundant busId/busName - use block.id and block.label)
       name: bus.name, // Programmatic name for lookups
       busType: bus.type,
-      combine: bus.combine,
+      combineMode: bus.combineMode, // Updated from combine
       defaultValue: bus.defaultValue,
-      sortKey: bus.sortKey,
-      origin: bus.origin,
+      sortKey: 0, // sortKey is not on Bus interface
+      origin: 'user', // origin is not on Bus interface - default to 'user'
     },
     hidden: true,
     role: {
@@ -81,10 +81,8 @@ export function convertBlockToBus(block: Block): Bus {
   const {
     name,
     busType,
-    combine,
+    combineMode,
     defaultValue,
-    sortKey,
-    origin,
   } = block.params;
 
   // Use block.id as bus ID (unified model)
@@ -96,17 +94,15 @@ export function convertBlockToBus(block: Block): Bus {
   if (typeof busType !== 'object' || busType === null) {
     throw new Error('BusBlock params.busType must be a TypeDesc object');
   }
-  if (typeof combine !== 'object' || combine === null) {
-    throw new Error('BusBlock params.combine must be a CombinePolicy object');
+  if (typeof combineMode !== 'string') {
+    throw new Error('BusBlock params.combineMode must be a CombineMode string');
   }
 
   return {
     id: busId,
     name: busName,
     type: busType as TypeDesc,
-    combine: combine as Bus['combine'],
+    combineMode: combineMode as Bus['combineMode'],
     defaultValue,
-    sortKey: (typeof sortKey === 'number') ? sortKey : 0,
-    origin: (origin === 'built-in' || origin === 'user') ? origin : 'user',
   };
 }

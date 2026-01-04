@@ -67,17 +67,61 @@ export type { Domain } from './compiler/unified/Domain';
 // =============================================================================
 
 /**
- * UI control hint for parameter inputs.
- * Suggests how to render a parameter in the UI.
+ * UI control hints for the editor.
+ * These are editor-only metadata, not used by runtime.
+ *
+ * This is a discriminated union matching the IR definition.
  */
 export type UIControlHint =
-  | 'number'
-  | 'slider'
-  | 'toggle'
-  | 'color'
-  | 'text'
-  | 'select'
-  | 'hidden';
+  | UIControlHintSlider
+  | UIControlHintNumber
+  | UIControlHintSelect
+  | UIControlHintColor
+  | UIControlHintBoolean
+  | UIControlHintText
+  | UIControlHintXY;
+
+/** Slider control */
+export interface UIControlHintSlider {
+  kind: "slider";
+  min: number;
+  max: number;
+  step: number;
+}
+
+/** Number input control */
+export interface UIControlHintNumber {
+  kind: "number";
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+/** Select/dropdown control */
+export interface UIControlHintSelect {
+  kind: "select";
+  options: { value: string; label: string }[];
+}
+
+/** Color picker control */
+export interface UIControlHintColor {
+  kind: "color";
+}
+
+/** Boolean toggle control */
+export interface UIControlHintBoolean {
+  kind: "boolean";
+}
+
+/** Text input control */
+export interface UIControlHintText {
+  kind: "text";
+}
+
+/** XY pad control */
+export interface UIControlHintXY {
+  kind: "xy";
+}
 
 // =============================================================================
 // Lens System Types

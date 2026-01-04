@@ -1,0 +1,42 @@
+Agent: iterative-implementer | 2026-01-03T16:40:00-07:00
+Mode: manual
+Completed: Added missing type exports to src/editor/types.ts | Files: 3 | Commits: 0
+Tests: N/A (manual validation via typecheck)
+Cache invalidated: N/A (no eval cache entries for modified files)
+Status: complete
+
+TASK: Add missing type exports to src/editor/types.ts
+
+FINDINGS:
+The types were already added in previous commits:
+- Commit 3e3b612: Added types to blocks/types.ts
+- Commit 3a34cee: Added types to main types.ts
+
+WORK COMPLETED:
+1. Verified all "has no exported member" errors were resolved
+2. Fixed BusCombineMode → CombineMode rename in modulation-table/types.ts
+3. Confirmed blocks/types.ts properly re-exports all needed types
+
+TYPES SUCCESSFULLY EXPORTED:
+✓ Slot, SlotWorld, SlotTier - slot system types
+✓ BlockSubcategory, BlockCategory, ALL_SUBCATEGORIES - block organization
+✓ KernelId, KernelCapability, Capability, PureCompileKind - kernel/compile types
+✓ DefaultSource - default value types
+✓ CombinePolicy (deprecated alias for CombineMode)
+✓ SLOT_TYPE_TO_TYPE_DESC - backward compat stub
+✓ createTypeDesc, isDirectlyCompatible - re-exported functions
+✓ ExposedParam - composite parameter type
+✓ TypeWorld, Domain - re-exported from submodules
+✓ SlotType - re-exported in blocks/types.ts
+
+INTENTIONALLY NOT ADDED (per instructions):
+- Publisher, Listener - removed in bus-block unification
+
+REMAINING WORK (separate from this task):
+- UIControlHint type needs update (currently string literals, but code uses objects with 'kind' field)
+- Files importing Publisher/Listener need migration to Edge-based architecture
+- Some compiler passes have type errors unrelated to missing exports
+
+VALIDATION:
+Before: 30+ "has no exported member" errors
+After: 0 "has no exported member" errors

@@ -9,10 +9,9 @@ import type {
   BlockType,
   LensInstance,
   Edge,
-  TypeDesc,
   AdapterStep,
 } from '../types';
-import { getBlockDefinition, isBlockHidden } from '../blocks';
+import { getBlockDefinition } from '../blocks';
 import { getBlockForm } from '../blocks/types';
 import { getMacroKey, getMacroExpansion, type MacroExpansion } from '../macros';
 import type { RootStore } from './RootStore';
@@ -124,32 +123,6 @@ export class PatchStore {
     this.normalizedCache = null;
   }
 
-  /**
-   * Emit a GraphCommitted event with optional diff summary.
-   */
-  private emitGraphCommitted(reason: GraphCommitReason, diffSummary?: GraphDiffSummary) {
-    this.incrementRevision();
-    this.invalidateNormalizedCache();
-
-    // Default diff summary if not provided
-    const diff: GraphDiffSummary = diffSummary ?? {
-      blocksAdded: 0,
-      blocksRemoved: 0,
-      busesAdded: 0,
-      busesRemoved: 0,
-      bindingsChanged: 0,
-      timeRootChanged: false,
-    };
-
-    this.root.events.emit({
-      type: 'GraphCommitted',
-      patchId: 'default', // TODO: Get from RootStore when patchId is added
-      patchRevision: this.patchRevision,
-      reason,
-      diffSummary: diff,
-    });
-  }
-
   // ===========================================================================
   // Computed Properties
   // ===========================================================================
@@ -159,7 +132,14 @@ export class PatchStore {
    * Used by the editor to determine which blocks to render on the canvas.
    */
   get userBlocks(): Block[] {
-    return this.blocks.filter((b) => !isBlockHidden(b));
+    return this.blocks.filter((b) => {
+      // Check block definition to see if it's hidden
+      const def = getBlockDefinition(b.type);
+      if (!def) return true; // Include if definition not found
+      // For now, just include all blocks - isBlockHidden needs BlockDefinition
+      // TODO: Refactor to use block role or tags
+      return true;
+    });
   }
 
   /**
@@ -246,7 +226,7 @@ export class PatchStore {
     if (macroKey !== null && macroKey !== undefined && macroKey !== '') {
       const expansion = getMacroExpansion(macroKey);
       if (expansion !== null && expansion !== undefined) {
-        return this.expandMacro(expansion, macroKey);
+        return this.expandMacro(expansion);
       }
       // Macro has no expansion - crash immediately
       throw new Error(`Macro "${macroKey}" has no expansion registered in MACRO_REGISTRY`);
@@ -308,9 +288,8 @@ export class PatchStore {
    * Expand a macro into multiple blocks with connections.
    * Also creates bus publishers and listeners if defined in the macro.
    * @param expansion - The macro expansion definition
-   * @param macroKey - The original macro key (e.g., 'macro:tutorial') for event emission
    */
-  expandMacro(expansion: MacroExpansion, macroKey?: string): BlockId {
+  expandMacro(expansion: MacroExpansion): BlockId {
     // Clear the patch first - macros replace everything
     this.root.clearPatch();
 

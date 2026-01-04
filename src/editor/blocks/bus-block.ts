@@ -29,7 +29,7 @@ import type { PureBlockDefinition } from './types';
  * - busId: Original bus ID (matches block.id)
  * - busName: Human-readable bus name
  * - busType: Type descriptor for the bus
- * - combine: Combine policy for multiple publishers
+ * - combineMode: Combine policy for multiple publishers
  * - defaultValue: Fallback value when no publishers
  * - sortKey: Publisher ordering
  * - origin: 'built-in' or 'user'
@@ -60,9 +60,8 @@ export const BusBlock: PureBlockDefinition = {
       label: 'Publishers',
       type: 'Signal<float>', // Placeholder - actual type set dynamically from params
       direction: 'input',
-      // Combine policy set dynamically from params.combine
-      // This allows multi-input behavior
-      combine: { when: 'multi', mode: 'last' }, // Default - overridden by params
+      // Multi-input behavior is handled by the compiler based on params.combineMode
+      // NOTE: Slot no longer has 'combine' property - combine logic moved to Bus interface
     },
   ],
 
@@ -79,7 +78,7 @@ export const BusBlock: PureBlockDefinition = {
     busId: '',
     busName: 'Unnamed Bus',
     busType: { domain: 'float', world: 'signal', category: 'core', busEligible: true },
-    combine: { when: 'multi', mode: 'last' },
+    combineMode: 'last', // Updated from combine: { when: 'multi', mode: 'last' }
     defaultValue: 0,
     sortKey: 0,
     origin: 'user',

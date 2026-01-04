@@ -14,10 +14,10 @@ describe('computeInverse', () => {
         id: 'block-1',
         type: 'test',
         label: 'Test Block',
-        inputs: [],
-        outputs: [],
+        position: { x: 0, y: 0 },
         params: {},
-        category: 'Other',
+        form: 'primitive',
+        role: { kind: 'user' },
       };
 
       const op: Op = {
@@ -69,21 +69,15 @@ describe('computeInverse', () => {
       const prevBus: Bus = {
         id: 'bus-1',
         name: 'Test Bus',
-        type: {
-          world: 'signal',
-          domain: 'float',
-          category: 'core',
-          busEligible: true,
-        },
-        combine: { when: 'multi', mode: 'sum' },
+        type: 'Signal<float>',
+        combineMode: 'sum',
         defaultValue: 0,
-        sortKey: 0,
       };
 
       const nextBus: Bus = {
         ...prevBus,
         name: 'Updated Bus',
-        combine: { when: 'multi', mode: 'average' },
+        combineMode: 'average',
       };
 
       const op: Op = {
@@ -184,20 +178,20 @@ describe('computeInverse', () => {
         id: 'block-1',
         type: 'test',
         label: 'Block 1',
-        inputs: [],
-        outputs: [],
+        position: { x: 0, y: 0 },
         params: {},
-        category: 'Other',
+        form: 'primitive',
+        role: { kind: 'user' },
       };
 
       const block2: Block = {
         id: 'block-2',
         type: 'test',
         label: 'Block 2',
-        inputs: [],
-        outputs: [],
+        position: { x: 0, y: 0 },
         params: {},
-        category: 'Other',
+        form: 'primitive',
+        role: { kind: 'user' },
       };
 
       const op: Op = {
@@ -226,10 +220,10 @@ describe('computeInverse', () => {
         id: 'block-1',
         type: 'test',
         label: 'Block',
-        inputs: [],
-        outputs: [],
+        position: { x: 0, y: 0 },
         params: {},
-        category: 'Other',
+        form: 'primitive',
+        role: { kind: 'user' },
       };
 
       const op: Op = {
@@ -268,10 +262,10 @@ describe('computeInverse', () => {
         id: 'block-1',
         type: 'test',
         label: 'Test',
-        inputs: [],
-        outputs: [],
+        position: { x: 0, y: 0 },
         params: {},
-        category: 'Other',
+        form: 'primitive',
+        role: { kind: 'user' },
       };
 
       const op: Op = { type: 'Add', table: 'blocks', entity: block };
@@ -282,16 +276,15 @@ describe('computeInverse', () => {
     });
 
     it('double inversion equals original for Update', () => {
-      const prev: Entity = {
+      const prev: Bus = {
         id: 'bus-1',
         name: 'Old',
-        type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-        combine: { when: 'multi', mode: 'sum' },
+        type: 'Signal<float>',
+        combineMode: 'sum',
         defaultValue: 0,
-        sortKey: 0,
-      } as Bus;
+      };
 
-      const next: Entity = { ...prev, name: 'New' } as Bus;
+      const next: Bus = { ...prev, name: 'New' };
 
       const op: Op = { type: 'Update', table: 'buses', id: 'bus-1', prev, next };
       const inverse = computeInverse(op);
@@ -311,10 +304,10 @@ describe('validateOp', () => {
         id: 'block-1',
         type: 'test',
         label: 'Test',
-        inputs: [],
-        outputs: [],
+        position: { x: 0, y: 0 },
         params: {},
-        category: 'Other',
+        form: 'primitive',
+        role: { kind: 'user' },
       },
     };
 
@@ -325,10 +318,10 @@ describe('validateOp', () => {
     const invalidEntity = {
       type: 'test',
       label: 'Test',
-      inputs: [],
-      outputs: [],
+      position: { x: 0, y: 0 },
       params: {},
-      category: 'Other',
+      form: 'primitive',
+      role: { kind: 'user' },
     } as unknown as Block;
 
     const op: Op = {
@@ -349,10 +342,10 @@ describe('validateOp', () => {
         id: 'block-1',
         type: 'test',
         label: 'Test',
-        inputs: [],
-        outputs: [],
+        position: { x: 0, y: 0 },
         params: {},
-        category: 'Other',
+        form: 'primitive',
+        role: { kind: 'user' },
       },
     };
 
@@ -374,10 +367,9 @@ describe('validateOp', () => {
     const entity: Bus = {
       id: 'bus-1',
       name: 'Test',
-      type: { world: 'signal', domain: 'float', category: 'core', busEligible: true },
-      combine: { when: 'multi', mode: 'sum' },
+      type: 'Signal<float>',
+      combineMode: 'sum',
       defaultValue: 0,
-      sortKey: 0,
     };
 
     const op: Op = {
@@ -419,10 +411,10 @@ describe('validateOp', () => {
       id: 'block-1',
       type: 'test',
       label: 'Test',
-      inputs: [],
-      outputs: [],
+      position: { x: 0, y: 0 },
       params: {},
-      category: 'Other',
+      form: 'primitive',
+      role: { kind: 'user' },
     };
 
     const op: Op = {

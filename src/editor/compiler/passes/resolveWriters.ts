@@ -19,12 +19,12 @@
 
 import type {
   Edge,
-  CombinePolicy,
   Slot,
   Block,
 } from '../../types';
 import { SLOT_TYPE_TO_TYPE_DESC } from '../../types';
 import type { TypeDesc } from '../../../core/types';
+import type { CombinePolicy } from './combine-utils';
 
 // =============================================================================
 // Types
@@ -195,13 +195,16 @@ export function getDefaultCombinePolicy(): CombinePolicy {
 /**
  * Resolve combine policy for an input slot.
  *
- * Returns the slot's combine policy, or the default if not specified.
+ * NOTE: Slot no longer has a 'combine' property after Bus interface simplification.
+ * All slots now use the default combine policy.
  *
- * @param inputSlot - The input slot definition
- * @returns Combine policy (never undefined)
+ * @param _inputSlot - The input slot definition (unused after Slot.combine removal)
+ * @returns Combine policy (always default)
  */
-export function resolveCombinePolicy(inputSlot: Slot): CombinePolicy {
-  return inputSlot.combine ?? getDefaultCombinePolicy();
+export function resolveCombinePolicy(_inputSlot: Slot): CombinePolicy {
+  // Slot.combine was removed - all regular slots use default policy
+  // Bus-specific combine logic is handled separately in bus lowering
+  return getDefaultCombinePolicy();
 }
 
 // =============================================================================

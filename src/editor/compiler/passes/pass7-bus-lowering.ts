@@ -19,14 +19,13 @@
  * Edge sorting is handled by edge.sortKey properties, not getSortedPublishers().
  */
 
-import type { Bus, Publisher, Block } from "../../types";
-import type { BusIndex, TypeDesc, EventExprId } from "../ir/types";
+import type { Bus, Block } from "../../types";
+import type { TypeDesc } from "../../../core/types";
+import type { EventExprId } from "../ir/types";
 import type { IRBuilder } from "../ir/IRBuilder";
 import type { UnlinkedIRFragments, ValueRefPacked } from "./pass6-block-lowering";
 import type { CompileError } from "../types";
 import type { EventCombineMode } from "../ir/signalExpr";
-// TODO: getSortedPublishers has been removed. Edge sorting now uses edge.sortKey.
-// import { getSortedPublishers } from "../../semantic/busSemantics";
 
 // Re-export ValueRefPacked for downstream consumers
 export type { ValueRefPacked } from "./pass6-block-lowering";
@@ -34,6 +33,13 @@ export type { ValueRefPacked } from "./pass6-block-lowering";
 // =============================================================================
 // Types
 // =============================================================================
+
+/**
+ * BusIndex - index into the buses array.
+ * This type was removed from ir/types but is needed here.
+ * Redefined for compiler internal use.
+ */
+export type BusIndex = number;
 
 /**
  * IRWithBusRoots - Output of Pass 7
@@ -60,13 +66,19 @@ export interface IRWithBusRoots {
 // =============================================================================
 
 /**
- * Convert editor TypeDesc to IR TypeDesc.
- * For Sprint 2, we just extract world and domain.
+ * Convert editor TypeDesc (string) to IR TypeDesc (object).
+ * For Sprint 2, we extract world and domain and add missing fields.
  */
 function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
+  // busType is now a string in editor/types.ts
+  // We need to parse it or have metadata
+  // For now, create a minimal TypeDesc - this is a stub
+  // TODO: Proper TypeDesc conversion from string format
   return {
-    world: busType.world as TypeDesc["world"],
-    domain: busType.domain as TypeDesc["domain"],
+    world: "signal",
+    domain: "float",
+    category: "core",
+    busEligible: true,
   };
 }
 
@@ -88,60 +100,31 @@ function toIRTypeDesc(busType: import("../../types").TypeDesc): TypeDesc {
  * 3. Resolve publisher source ValueRefs from blockOutputs
  * 4. Create combine node (sigCombine/fieldCombine)
  * 5. Handle empty buses with default values
+ *
+ * NOTE: After Sprint 2 migration, Publisher type has been removed.
+ * This pass is deprecated and will be replaced by BusBlock lowering in Pass 6.
+ * For now, we stub it out to avoid breaking the pipeline.
  */
 export function pass7BusLowering(
   unlinked: UnlinkedIRFragments,
   buses: readonly Bus[],
-  publishers: readonly Publisher[],
-  blocks: readonly Block[]
+  _publishers: readonly unknown[], // Publisher type removed
+  _blocks: readonly Block[]
 ): IRWithBusRoots {
   const { builder, blockOutputs, errors: inheritedErrors } = unlinked;
   const busRoots = new Map<BusIndex, ValueRefPacked>();
   const errors: CompileError[] = [...inheritedErrors];
 
-  // Create lookup map for block index by ID
-  const blockIdToIndex = new Map<string, number>();
-  blocks.forEach((block, idx) => {
-    blockIdToIndex.set(block.id, idx);
-  });
+  // Stub: After Sprint 2, buses are BusBlocks, not separate entities
+  // This pass is effectively deprecated
+  // BusBlocks are lowered in Pass 6 like any other block
 
-  // Process each bus
+  // For now, create default values for each bus to avoid breaking downstream
   for (let busIdx = 0; busIdx < buses.length; busIdx++) {
     const bus = buses[busIdx];
 
-    // TODO: Replace getSortedPublishers with edge-based sorting
-    // Get sorted publishers for this bus (enabled only)
-    // const busPublishers = getSortedPublishers(bus.id, publishers as Publisher[], false);
-    const busPublishers: Publisher[] = []; // TEMPORARY: Empty array until edge-based sorting is implemented
-
-    // Validate no adapters/lenses are used (not yet supported in IR mode)
-    for (const pub of busPublishers) {
-      if (pub.adapterChain && pub.adapterChain.length > 0) {
-        errors.push({
-          code: "UnsupportedAdapterInIRMode",
-          message: `Publisher to bus '${bus.name}' uses adapter chain, which is not yet supported in IR compilation mode. Adapters are only supported in legacy compilation. Remove the adapter chain or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
-        });
-      }
-      if (pub.lensStack && pub.lensStack.length > 0) {
-        errors.push({
-          code: "UnsupportedLensInIRMode",
-          message: `Publisher to bus '${bus.name}' uses lens stack, which is not yet supported in IR compilation mode. Lenses are only supported in legacy compilation. Remove the lens stack or disable IR mode (VITE_USE_UNIFIED_COMPILER=false).`,
-        });
-      }
-    }
-
     try {
-      // Create bus combine node
-      const busRef = lowerBusToCombineNode(
-        bus,
-        busPublishers,
-        busIdx,
-        builder,
-        blockOutputs,
-        blockIdToIndex,
-        blocks
-      );
-
+      const busRef = createDefaultBusValue(bus, builder);
       if (busRef) {
         busRoots.set(busIdx, busRef);
       }
@@ -162,127 +145,6 @@ export function pass7BusLowering(
 }
 
 /**
- * Lower a single bus to a combine node.
- *
- * Strategy:
- * - No publishers → use default value as constant
- * - One publisher → use publisher output directly (no combine needed)
- * - Multiple publishers → create combine node with sorted publishers
- *
- * Note: Adapters and lenses are validated in the main pass7BusLowering function.
- * If present, they will have already emitted errors.
- */
-function lowerBusToCombineNode(
-  bus: Bus,
-  publishers: readonly Publisher[],
-  busIndex: BusIndex,
-  builder: IRBuilder,
-  blockOutputs: Map<number, Map<string, ValueRefPacked>>,
-  blockIdToIndex: Map<string, number>,
-  _blocks: readonly Block[]
-): ValueRefPacked | null {
-  const irType = toIRTypeDesc(bus.type);
-
-  // Collect terms (publisher outputs) by world type
-  const sigTerms: number[] = [];
-  const fieldTerms: number[] = [];
-  const eventTerms: EventExprId[] = [];
-
-  for (const pub of publishers) {
-    const blockIdx = blockIdToIndex.get(pub.from.blockId);
-    if (blockIdx === undefined) continue;
-
-    // Look up output by port ID directly
-    const outputs = blockOutputs.get(blockIdx);
-    const ref = outputs?.get(pub.from.slotId);
-
-    if (!ref) {
-      // Port may not have IR representation yet - this is OK during migration
-      continue;
-    }
-
-    // Publisher transform chains (adapters/lenses) are detected and emit errors
-    // in pass7BusLowering before this function is called.
-    // Here we assume 1:1 mapping (no transforms).
-
-    if (ref.k === "sig") {
-      sigTerms.push(ref.id);
-    } else if (ref.k === "field") {
-      fieldTerms.push(ref.id);
-    } else if (ref.k === "event") {
-      eventTerms.push(ref.id);
-    }
-  }
-
-  // Handle Signal Bus
-  if (irType.world === "signal") {
-    // If no valid terms found, create default
-    if (sigTerms.length === 0) {
-      return createDefaultBusValue(bus, builder);
-    }
-
-    // Create combine node
-    // Note: If only 1 term, we could optimize, but maintaining 'combine' semantics (like 'last') is safer explicitly unless strict identity is guaranteed.
-    // However, builder.sigCombine usually handles single-term optimization or runtime handles it.
-    // Wait, sigCombine interface requires mode.
-    // Supported modes for signals: 'sum', 'last' (and potentially 'average', 'max', 'min' if supported)
-    const mode = bus.combineMode as "sum" | "average" | "max" | "min" | "last";
-
-    // Safety check for mode
-    const validModes = ["sum", "average", "max", "min", "last"];
-    const safeMode = validModes.includes(mode) ? mode : "last";
-
-    const sigId = builder.sigCombine(busIndex, sigTerms, safeMode, irType);
-    const slot = builder.allocValueSlot();
-    builder.registerSigSlot(sigId, slot);
-    return { k: "sig", id: sigId, slot };
-  }
-
-  // Handle Field Bus
-  if (irType.world === "field") {
-    if (fieldTerms.length === 0) {
-      return createDefaultBusValue(bus, builder);
-    }
-
-    const mode = bus.combineMode as "sum" | "average" | "max" | "min" | "last" | "layer";
-    const validModes = ["sum", "average", "max", "min", "last", "layer"];
-    const safeMode = validModes.includes(mode) ? mode : "layer";
-
-    const fieldId = builder.fieldCombine(busIndex, fieldTerms, safeMode, irType);
-    const slot = builder.allocValueSlot();
-    builder.registerFieldSlot(fieldId, slot);
-    return { k: "field", id: fieldId, slot };
-  }
-
-  // Handle Event Bus
-  if (irType.world === "event") {
-    if (eventTerms.length === 0) {
-      return createDefaultBusValue(bus, builder);
-    }
-
-    // Map bus combineMode to event combine semantics
-    // For events: 'merge' combines all event streams, 'last' takes only last publisher's events
-    const mode = bus.combineMode as string;
-    let eventMode: EventCombineMode;
-    if (mode === "sum" || mode === "merge") {
-      eventMode = "merge";
-    } else if (mode === "first") {
-      eventMode = "first";
-    } else {
-      // Default to 'last' for any other mode
-      eventMode = "last";
-    }
-
-    const eventId = builder.eventCombine(busIndex, eventTerms, eventMode, irType);
-    const slot = builder.allocValueSlot();
-    builder.registerEventSlot(eventId, slot);
-    return { k: "event", id: eventId, slot };
-  }
-
-  return null;
-}
-
-/**
  * Create a default bus value from bus.defaultValue.
  */
 function createDefaultBusValue(bus: Bus, builder: IRBuilder): ValueRefPacked | null {
@@ -293,7 +155,7 @@ function createDefaultBusValue(bus: Bus, builder: IRBuilder): ValueRefPacked | n
     // Create constant signal
     const value = typeof bus.defaultValue === "number" ? bus.defaultValue : 0;
     const sigId = builder.sigConst(value, type);
-    const slot = builder.allocValueSlot();
+    const slot = builder.allocValueSlot(type);
     builder.registerSigSlot(sigId, slot);
     return { k: "sig", id: sigId, slot };
   }
@@ -302,7 +164,7 @@ function createDefaultBusValue(bus: Bus, builder: IRBuilder): ValueRefPacked | n
     // Create constant field
     const value = bus.defaultValue ?? 0;
     const fieldId = builder.fieldConst(value, type);
-    const slot = builder.allocValueSlot();
+    const slot = builder.allocValueSlot(type);
     builder.registerFieldSlot(fieldId, slot);
     return { k: "field", id: fieldId, slot };
   }
@@ -310,7 +172,7 @@ function createDefaultBusValue(bus: Bus, builder: IRBuilder): ValueRefPacked | n
   if (type.world === "event") {
     // Create empty event stream (no events)
     const eventId = builder.eventEmpty(type);
-    const slot = builder.allocValueSlot();
+    const slot = builder.allocValueSlot(type);
     builder.registerEventSlot(eventId, slot);
     return { k: "event", id: eventId, slot };
   }

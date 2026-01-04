@@ -650,7 +650,7 @@ export class ModulationTableStore {
     const column = this.columns.find((candidate) => candidate.busId === busId);
     let adapterChain: AdapterStep[] | undefined;
 
-    if (row && column && !isDirectlyCompatible(column.type as any, row.type as any)) {
+    if (row && column && !isDirectlyCompatible(column.type, row.type)) {
       const result = findAdapterPath(column.type, row.type, 'listener');
       if (!result.ok) {
         console.warn(`Cannot bind ${rowKey} to ${busId}: ${result.reason ?? 'no adapter path'}`);
@@ -875,7 +875,7 @@ export class ModulationTableStore {
    * Check if source type is directly compatible with target type.
    */
   private isTypeCompatible(source: TypeDesc, target: TypeDesc): boolean {
-    return isDirectlyCompatible(source as any, target as any);
+    return isDirectlyCompatible(source, target);
   }
 
   /**
