@@ -82,7 +82,8 @@ export type UIControlHint =
   | UIControlHintColor
   | UIControlHintBoolean
   | UIControlHintText
-  | UIControlHintXY;
+  | UIControlHintXY
+  | UIControlHintVec3;
 
 /** Slider control */
 export interface UIControlHintSlider {
@@ -124,6 +125,11 @@ export interface UIControlHintText {
 /** XY pad control */
 export interface UIControlHintXY {
   kind: "xy";
+}
+
+/** Vec3 control (x, y, z inputs) */
+export interface UIControlHintVec3 {
+  kind: "vec3";
 }
 
 // =============================================================================
