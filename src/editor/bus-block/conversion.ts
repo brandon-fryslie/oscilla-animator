@@ -8,7 +8,7 @@
  * Critical: Block ID MUST equal Bus ID for stable references during migration.
  */
 
-import type { Bus, Block, TypeDesc, SlotType } from '../types';
+import type { Bus, Block, TypeDesc } from '../types';
 
 /**
  * Convert TypeDesc to SlotType string.
@@ -17,11 +17,12 @@ import type { Bus, Block, TypeDesc, SlotType } from '../types';
  * For now, we use 'Signal<float>' as a generic placeholder since the actual
  * type will be resolved during compilation from params.busType.
  */
-function typeDescToSlotType(_typeDesc: TypeDesc): SlotType {
-  // TODO: Proper TypeDesc -> SlotType mapping
-  // For now, use placeholder since BusBlock type is dynamic
-  return 'Signal<float>';
-}
+// UNUSED: Commented out to avoid TS6133 error
+// function typeDescToSlotType(_typeDesc: TypeDesc): SlotType {
+//   // TODO: Proper TypeDesc -> SlotType mapping
+//   // For now, use placeholder since BusBlock type is dynamic
+//   return 'Signal<float>';
+// }
 
 /**
  * Convert a Bus to a BusBlock instance.

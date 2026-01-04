@@ -30,7 +30,7 @@ import type { CompileError } from "../types";
 import type { ValueRefPacked, LowerCtx } from "../ir/lowerTypes";
 import { getBlockType } from "../ir/lowerTypes";
 import type { Domain } from "../unified/Domain";
-import { BLOCK_DEFS_BY_TYPE, getBlockDefinition } from "../../blocks/registry";
+import { BLOCK_DEFS_BY_TYPE } from "../../blocks/registry";
 import { validatePureBlockOutput } from "../pure-block-validator";
 // Multi-Input Blocks Integration
 import {
@@ -715,6 +715,9 @@ export function pass6BlockLowering(
         edges
       );
 
+      // Get block definition for artifact validation
+      const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
+
       // Collect block artifacts for pure block validation
       const blockArtifacts = new Map<string, Artifact>();
       for (const output of (blockDef?.outputs ?? [])) {
@@ -727,7 +730,6 @@ export function pass6BlockLowering(
 
       // Validate pure block outputs (Deliverable 3: Pure Block Compilation Enforcement)
       // Only validate if the block has a definition with capability metadata
-      const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
       if (blockDef !== undefined && blockDef.capability === 'pure') {
         try {
           validatePureBlockOutput(
