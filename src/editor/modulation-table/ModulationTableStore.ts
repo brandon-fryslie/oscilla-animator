@@ -714,29 +714,39 @@ export class ModulationTableStore {
       }
     }
 
-    // Generate unique edge ID
-    const edgeId = `edge-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
+    // Create the edge using connect(), then add transforms if needed
     if (direction === 'input') {
       // Listening: BusBlock output → block input
-      patchStore.connect(
-        edgeId,
-        { kind: 'port', blockId: busBlock.id, slotId: 'out' },
-        { kind: 'port', blockId, slotId: portId },
-        transforms.length > 0 ? transforms : undefined,
-        true,
-        { kind: 'user' }
-      );
+      patchStore.connect(busBlock.id, 'out', blockId, portId);
+
+      // If we have transforms, find the edge and update it
+      if (transforms.length > 0) {
+        const edge = patchStore.edges.find(e =>
+          e.from.blockId === busBlock.id &&
+          e.from.slotId === 'out' &&
+          e.to.blockId === blockId &&
+          e.to.slotId === portId
+        );
+        if (edge) {
+          patchStore.updateEdge(edge.id, { transforms });
+        }
+      }
     } else {
       // Publishing: block output → BusBlock input
-      patchStore.connect(
-        edgeId,
-        { kind: 'port', blockId, slotId: portId },
-        { kind: 'port', blockId: busBlock.id, slotId: 'in' },
-        transforms.length > 0 ? transforms : undefined,
-        true,
-        { kind: 'user' }
-      );
+      patchStore.connect(blockId, portId, busBlock.id, 'in');
+
+      // If we have transforms, find the edge and update it
+      if (transforms.length > 0) {
+        const edge = patchStore.edges.find(e =>
+          e.from.blockId === blockId &&
+          e.from.slotId === portId &&
+          e.to.blockId === busBlock.id &&
+          e.to.slotId === 'in'
+        );
+        if (edge) {
+          patchStore.updateEdge(edge.id, { transforms });
+        }
+      }
     }
   }
 
