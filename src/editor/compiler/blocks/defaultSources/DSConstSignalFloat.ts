@@ -33,7 +33,7 @@ const lowerDSConstSignalFloat: BlockLowerFn = ({ ctx, inputs, inputsById, config
     };
   }
 
-  // Provider mode: use config.value (set by pass0-materialize or user params)
+  // Provider mode: use config.value (set by GraphNormalizer or user params)
   const params = config as { value?: number } | undefined;
   const rawValue = params?.value ?? 0;
   const type = ctx.outTypes[0];
