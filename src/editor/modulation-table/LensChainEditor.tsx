@@ -607,7 +607,6 @@ function LensParamsEditor({
               </div>
             );
 
-          case 'toggle':
           case 'boolean':
             return (
               <div key={key} className="lens-param-row">
@@ -661,9 +660,7 @@ function LensParamsEditor({
               </div>
             );
 
-          case 'hidden':
-            // Don't render hidden params
-            return null;
+          // hidden params should be filtered out before rendering
 
           default:
             return (
