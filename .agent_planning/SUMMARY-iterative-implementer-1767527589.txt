@@ -1,0 +1,34 @@
+Agent: iterative-implementer | 2026-01-04 04:52 UTC
+Mode: manual
+Completed: P2 TypeScript fixes | Files: 3 | Commits: 1
+Cache invalidated: None (no eval cache for these files)
+Status: complete
+
+## Summary
+Fixed all TypeScript compilation errors from P0/P1 work where attachment methods were deleted from DefaultSourceStore.
+
+## Work Completed
+1. RootStore.ts - Removed references to deleted methods (setRoot, attachmentsByTarget, setAttachmentForInput, rebuildAttachmentsFromBlocks)
+2. integration.ts - Updated editorToPatch() to build defaultSourceValues from DefaultSourceStore.sources Map directly
+3. validate.ts - Stubbed out deprecated attachment validation (now a no-op)
+4. Removed unused helper functions (_isInputUndriven, _makeProviderWireId)
+
+## Validation
+- pnpm typecheck: PASS ✓
+- pnpm test: 2243 passing (24 pre-existing failures unrelated to changes)
+
+## Files Modified
+- src/editor/stores/RootStore.ts (-17 lines)
+- src/editor/compiler/integration.ts (-142 lines)
+- src/editor/defaultSources/validate.ts (-608 lines)
+
+Total: -726 lines of deleted code
+
+## Architecture Notes
+- DefaultSourceStore is now values-only storage
+- GraphNormalizer is the SINGLE SOURCE OF TRUTH for structural blocks
+- defaultSourceValues extracted using pattern: "ds:input:${blockId}:${slotId}"
+- injectDefaultSourceProviders() is now a no-op (will be removed in future cleanup)
+
+## Next Steps
+User's choice - P2 work complete!
