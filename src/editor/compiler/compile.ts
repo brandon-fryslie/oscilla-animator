@@ -3,13 +3,17 @@
  *
  * Compiles a visual patch graph into a runnable V4 Program<RenderTree>.
  *
- * Architecture:
- * 1. Validate block types exist in registry
- * 2. Build connection indices, detect multiple writers
- * 3. Type-check connections against declared port types
- * 4. Topological sort blocks by dependency
- * 5. Compile blocks in order, producing Artifacts per output port
- * 6. Resolve and return final RenderTreeProgram output
+ * Architecture (Pass-Based Pipeline):
+ * 1. Pass 0: Materialize - Add default source provider blocks
+ * 2. Pass 1: Normalize - Freeze block IDs, canonicalize edges
+ * 3. Pass 2: Type Graph - Build type system, validate bus eligibility
+ * 4. Pass 3: Time Topology - Find TimeRoot, establish time model
+ * 5. Pass 4: Dependency Graph - Build dependency graph
+ * 6. Pass 5: SCC Validation - Detect illegal cycles
+ * 7. Pass 6: Block Lowering - Lower blocks to IR fragments
+ * 8. Pass 8: Link Resolution - Resolve all port references (Pass 7 removed - buses are blocks)
+ * 9. Build Schedule - Generate execution schedule from IR
+ * 10. Create Program - Wrap in IRRuntimeAdapter for Player
  */
 
 import type {
@@ -22,20 +26,213 @@ import type {
   CompilerPatch,
   Seed,
 } from './types';
-import { compileBusAwarePatch } from './compileBusAware';
 import { getBlockDefinition } from '../blocks';
+import { pass0Materialize } from './passes/pass0-materialize';
+import { pass1Normalize } from './passes/pass1-normalize';
+import { pass2TypeGraph } from './passes/pass2-types';
+import { pass3TimeTopology } from './passes/pass3-time';
+import { pass4DepGraph } from './passes/pass4-depgraph';
+import { pass5CycleValidation } from './passes/pass5-scc';
+import { pass6BlockLowering } from './passes/pass6-block-lowering';
+import { pass8LinkResolution } from './passes/pass8-link-resolution';
+import { buildCompiledProgram } from './ir/buildSchedule';
+import { IRRuntimeAdapter } from '../runtime/executor/IRRuntimeAdapter';
+import type { Block, Patch, Vec2, BlockRole } from '../types';
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * Convert CompilerPatch to Patch.
+ * CompilerPatch is the minimal format used during integration phase.
+ * Patch is the full format expected by the pass pipeline.
+ */
+function compilerPatchToPatch(compilerPatch: CompilerPatch): Patch {
+  // Convert BlockInstance to Block by adding required fields
+  const blocks: Block[] = compilerPatch.blocks.map(b => {
+    // position can be number (CompilerPatch) or Vec2 (Patch)
+    let position: Vec2;
+    if (typeof b.position === 'number') {
+      position = { x: 0, y: 0 } as Vec2;
+    } else if (b.position && typeof b.position === 'object' && 'x' in b.position && 'y' in b.position) {
+      position = b.position as Vec2;
+    } else {
+      position = { x: 0, y: 0 } as Vec2;
+    }
+
+    const role: BlockRole = { kind: 'user' };
+
+    return {
+      id: b.id,
+      type: b.type,
+      label: b.type, // Use type as label for compiler-generated blocks
+      params: b.params ?? {},
+      position,
+      form: 'primitive' as const, // All blocks from compiler are primitives
+      role,
+    };
+  });
+
+  return {
+    id: 'patch', // TODO: Get from compilerPatch when available
+    blocks,
+    edges: [...compilerPatch.edges],
+    buses: [...compilerPatch.buses],
+    composites: [],
+  };
+}
+
 // =============================================================================
 // Main Compiler Entry Point
 // =============================================================================
 
+/**
+ * Compile a patch using the pass-based compiler pipeline.
+ *
+ * This replaces the deprecated compileBusAwarePatch stub with the actual
+ * IR compiler implementation (passes 0-8).
+ *
+ * Error Handling:
+ * - Passes 2, 3, 4 THROW on errors (wrapped in try-catch)
+ * - Passes 5, 6, 8 ACCUMULATE errors in result object
+ * - Early return if any pass fails
+ *
+ * @param patch - Input patch from editor
+ * @param _registry - Block registry for compiling blocks (unused - blocks self-register)
+ * @param seed - Random seed for deterministic compilation
+ * @param _ctx - Compilation context (unused in current implementation)
+ * @param options - Compilation options (emitIR flag)
+ * @returns CompileResult with Program or errors
+ */
 export function compilePatch(
   patch: CompilerPatch,
-  registry: BlockRegistry,
+  _registry: BlockRegistry,
   seed: Seed,
-  ctx: CompileCtx,
+  _ctx: CompileCtx,
   options?: { emitIR?: boolean }
 ): CompileResult {
- return compileBusAwarePatch(patch, registry, seed, ctx, options);
+  try {
+    // Pass 0: Materialize default sources
+    // Adds hidden provider blocks for unconnected inputs with defaultSource
+    const materialized = pass0Materialize(patch);
+
+    // Convert CompilerPatch to Patch for pass pipeline
+    const patchForPasses = compilerPatchToPatch(materialized);
+
+    // Pass 1: Normalize
+    // Freezes block IDs to indices, canonicalizes edges
+    const normalized = pass1Normalize(patchForPasses);
+
+    // Pass 2: Type Graph (THROWS on error)
+    // Builds type system, validates bus eligibility
+    const typed = pass2TypeGraph(normalized);
+
+    // Pass 3: Time Topology (THROWS on error)
+    // Finds TimeRoot, establishes time model
+    const timeResolved = pass3TimeTopology(typed);
+
+    // Pass 4: Dependency Graph (THROWS on error)
+    // Builds dependency graph with time model
+    const depGraphWithTime = pass4DepGraph(timeResolved);
+
+    // Pass 5: SCC Validation (accumulates errors)
+    // Detects illegal cycles (cycles without state boundaries)
+    const validated = pass5CycleValidation(depGraphWithTime, patchForPasses.blocks);
+
+    // Check for errors from pass 5
+    if (validated.errors.length > 0) {
+      // Convert IllegalCycleError to CompileError
+      const cycleErrors: CompileError[] = validated.errors.map(err => ({
+        code: 'CycleDetected',
+        message: `Illegal cycle detected: blocks ${err.nodes.join(', ')} form a cycle without state boundary`,
+        where: { blockId: String(err.nodes[0]) }, // Use first block as error location
+      }));
+      return {
+        ok: false,
+        errors: cycleErrors,
+      };
+    }
+
+    // Pass 6: Block Lowering (accumulates errors)
+    // Lowers blocks to IR fragments
+    // compiledPortMap should be empty - blocks register their own outputs
+    const compiledPortMap = new Map();
+    const fragments = pass6BlockLowering(
+      validated,
+      patchForPasses.blocks,
+      compiledPortMap,
+      patchForPasses.edges
+    );
+
+    // Check for errors from pass 6
+    if (fragments.errors.length > 0) {
+      return {
+        ok: false,
+        errors: fragments.errors,
+      };
+    }
+
+    // Pass 8: Link Resolution (accumulates errors)
+    // Resolves all port references to concrete values
+    // Note: Pass 7 (bus lowering) removed - buses are BusBlocks handled in pass 6
+    const linked = pass8LinkResolution(fragments, patchForPasses.blocks, patchForPasses.edges);
+
+    // Check for errors from pass 8
+    if (linked.errors.length > 0) {
+      return {
+        ok: false,
+        errors: linked.errors,
+      };
+    }
+
+    // Build final program from linked IR
+    // 1. Get BuilderProgramIR from IRBuilder
+    const builderProgram = linked.builder.build();
+
+    // 2. Build schedule and compiled program IR
+    const patchId = 'patch'; // TODO: Get from patch metadata when available
+    const patchRevision = 0; // Legacy param, not used in canonical schema
+    const compiledProgram = buildCompiledProgram(
+      builderProgram,
+      patchId,
+      patchRevision,
+      seed
+    );
+
+    // 3. Create IR runtime adapter and program
+    const adapter = new IRRuntimeAdapter(compiledProgram);
+    const program = adapter.createProgram();
+
+    // Extract time model from compiled program
+    const timeModel = compiledProgram.timeModel;
+
+    // Return successful compilation result
+    return {
+      ok: true,
+      errors: [],
+      program,
+      timeModel,
+      // Include IR if requested (note: this is the CompiledProgramIR, not LinkedGraphIR)
+      // The CompileResult.ir field expects LinkedGraphIR, but we're using CompiledProgramIR
+      // This is acceptable as it's more complete - contains full schedule
+      ir: options?.emitIR ? (compiledProgram as any) : undefined,
+    };
+
+  } catch (error) {
+    // Passes 2, 3, 4 throw on errors
+    // Convert thrown errors to CompileError format
+    const err = error as Error;
+    const compileError: CompileError = {
+      code: 'NotImplemented', // Use existing error code for thrown errors
+      message: err.message,
+    };
+
+    return {
+      ok: false,
+      errors: [compileError],
+    };
+  }
 }
 
 
