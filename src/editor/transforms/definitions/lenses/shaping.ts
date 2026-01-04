@@ -7,6 +7,7 @@
 
 import { TRANSFORM_REGISTRY } from '../../TransformRegistry';
 import type { Artifact, RuntimeCtx } from '../../../compiler/types';
+import { parseTypeDesc } from '../../../ir/types/TypeDesc';
 
 type SignalFloatFn = (t: number, ctx: RuntimeCtx) => number;
 
@@ -23,7 +24,7 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     threshold: {
-      type: 'Scalar:float',
+      type: parseTypeDesc('Scalar:float'),
       default: 0.05,
       uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
       rangeHint: { min: 0, max: 1, step: 0.01 },
@@ -62,7 +63,7 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     steps: {
-      type: 'Scalar:int',
+      type: parseTypeDesc('Scalar:int'),
       default: 4,
       uiHint: { kind: 'slider', min: 2, max: 32, step: 1 },
       rangeHint: { min: 2, max: 32, step: 1 },
@@ -101,25 +102,25 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     inMin: {
-      type: 'Scalar:float',
+      type: parseTypeDesc('Scalar:float'),
       default: 0,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       rangeHint: { min: -10, max: 10, step: 0.1 },
     },
     inMax: {
-      type: 'Scalar:float',
+      type: parseTypeDesc('Scalar:float'),
       default: 1,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       rangeHint: { min: -10, max: 10, step: 0.1 },
     },
     outMin: {
-      type: 'Scalar:float',
+      type: parseTypeDesc('Scalar:float'),
       default: 0,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       rangeHint: { min: -10, max: 10, step: 0.1 },
     },
     outMax: {
-      type: 'Scalar:float',
+      type: parseTypeDesc('Scalar:float'),
       default: 1,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       rangeHint: { min: -10, max: 10, step: 0.1 },
@@ -162,7 +163,7 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     invert: {
-      type: 'Scalar:boolean',
+      type: parseTypeDesc('Scalar:boolean'),
       default: false,
       uiHint: { kind: 'boolean' },
     },

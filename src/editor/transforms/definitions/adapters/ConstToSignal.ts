@@ -9,6 +9,7 @@ import { TRANSFORM_REGISTRY } from '../../TransformRegistry';
 import type { Artifact, CompileCtx } from '../../../compiler/types';
 import type { ValueRefPacked } from '../../../compiler/ir/lowerTypes';
 import type { IRBuilder } from '../../../compiler/ir/IRBuilder';
+import { parseTypeDesc } from '../../../ir/types/TypeDesc';
 
 // =============================================================================
 // ConstToSignal:float
@@ -17,8 +18,8 @@ import type { IRBuilder } from '../../../compiler/ir/IRBuilder';
 TRANSFORM_REGISTRY.registerAdapter({
   id: 'ConstToSignal:float',
   label: 'Const to Signal (float)',
-  inputType: 'Scalar:float',
-  outputType: 'Signal:float',
+  inputType: parseTypeDesc('Scalar:float'),
+  outputType: parseTypeDesc('Signal:float'),
   policy: 'AUTO',
   cost: 0.1,
   apply: (artifact: Artifact, _params: Record<string, unknown>, _ctx: CompileCtx): Artifact => {
@@ -63,8 +64,8 @@ TRANSFORM_REGISTRY.registerAdapter({
 TRANSFORM_REGISTRY.registerAdapter({
   id: 'ConstToSignal:int',
   label: 'Const to Signal (int)',
-  inputType: 'Scalar:int',
-  outputType: 'Signal:int',
+  inputType: parseTypeDesc('Scalar:int'),
+  outputType: parseTypeDesc('Signal:int'),
   policy: 'AUTO',
   cost: 0.1,
   apply: (artifact: Artifact, _params: Record<string, unknown>, _ctx: CompileCtx): Artifact => {
@@ -109,8 +110,8 @@ TRANSFORM_REGISTRY.registerAdapter({
 TRANSFORM_REGISTRY.registerAdapter({
   id: 'ConstToSignal:bool',
   label: 'Const to Signal (bool)',
-  inputType: 'Scalar:boolean',
-  outputType: 'Signal:boolean',
+  inputType: parseTypeDesc('Scalar:boolean'),
+  outputType: parseTypeDesc('Signal:boolean'),
   policy: 'AUTO',
   cost: 0.1,
   apply: (artifact: Artifact, _params: Record<string, unknown>, _ctx: CompileCtx): Artifact => {
@@ -136,8 +137,8 @@ TRANSFORM_REGISTRY.registerAdapter({
 TRANSFORM_REGISTRY.registerAdapter({
   id: 'ConstToSignal:color',
   label: 'Const to Signal (color)',
-  inputType: 'Scalar:color',
-  outputType: 'Signal:color',
+  inputType: parseTypeDesc('Scalar:color'),
+  outputType: parseTypeDesc('Signal:color'),
   policy: 'AUTO',
   cost: 0.1,
   apply: (artifact: Artifact, _params: Record<string, unknown>, _ctx: CompileCtx): Artifact => {

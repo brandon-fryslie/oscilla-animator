@@ -7,6 +7,7 @@
 
 import { TRANSFORM_REGISTRY } from '../../TransformRegistry';
 import type { Artifact, RuntimeCtx } from '../../../compiler/types';
+import { parseTypeDesc } from '../../../ir/types/TypeDesc';
 
 type SignalFloatFn = (t: number, ctx: RuntimeCtx) => number;
 
@@ -23,13 +24,13 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     scale: {
-      type: 'Scalar:float',
+      type: parseTypeDesc('Scalar:float'),
       default: 1,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       rangeHint: { min: -10, max: 10, step: 0.1 },
     },
     offset: {
-      type: 'Scalar:float',
+      type: parseTypeDesc('Scalar:float'),
       default: 0,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       rangeHint: { min: -10, max: 10, step: 0.1 },
@@ -66,7 +67,7 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     amount: {
-      type: 'Scalar:float',
+      type: parseTypeDesc('Scalar:float'),
       default: 0,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       rangeHint: { min: -10, max: 10, step: 0.1 },
@@ -102,13 +103,13 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     min: {
-      type: 'Scalar:float',
+      type: parseTypeDesc('Scalar:float'),
       default: 0,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       rangeHint: { min: -10, max: 10, step: 0.1 },
     },
     max: {
-      type: 'Scalar:float',
+      type: parseTypeDesc('Scalar:float'),
       default: 1,
       uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       rangeHint: { min: -10, max: 10, step: 0.1 },

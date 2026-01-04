@@ -14,6 +14,7 @@ import type { CompileCtx } from '../compiler/types';
 import type { ValueRefPacked } from '../compiler/passes/pass6-block-lowering';
 import type { IRBuilder } from '../compiler/ir/IRBuilder';
 import { TRANSFORM_REGISTRY, isAdapterTransform, isLensTransform, type TransformDef, type LensParamSpec } from './TransformRegistry';
+import { typeDescToString } from '../ir/types/TypeDesc';
 
 // =============================================================================
 // Backward Compatibility Types
@@ -60,12 +61,10 @@ export interface LensDef {
 // =============================================================================
 
 /**
- * Extract domain from TypeDesc string.
- * TypeDesc format: "World:Domain" (e.g., "Signal:float", "Scalar:vec2")
+ * Extract domain from TypeDesc object.
  */
 function extractDomain(typeDesc: TypeDesc): string {
-  const parts = typeDesc.split(':');
-  return parts.length > 1 ? parts[1] : typeDesc;
+  return typeDesc.domain;
 }
 
 // =============================================================================

@@ -8,6 +8,7 @@
 import { TRANSFORM_REGISTRY } from '../../TransformRegistry';
 import type { Artifact, RuntimeCtx } from '../../../compiler/types';
 import { getEasingFunction } from '../../../lenses/easing';
+import { parseTypeDesc } from '../../../ir/types/TypeDesc';
 
 type SignalFloatFn = (t: number, ctx: RuntimeCtx) => number;
 
@@ -28,7 +29,7 @@ TRANSFORM_REGISTRY.registerLens({
   allowedScopes: ['wire', 'publisher', 'listener', 'lensParam'],
   params: {
     easing: {
-      type: 'Scalar:string',
+      type: parseTypeDesc('Scalar:string'),
       default: 'easeInOutSine',
       uiHint: {
         kind: 'select',

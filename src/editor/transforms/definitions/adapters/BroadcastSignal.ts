@@ -12,6 +12,7 @@
 import { TRANSFORM_REGISTRY } from '../../TransformRegistry';
 import type { Artifact, CompileCtx, RuntimeCtx, Field } from '../../../compiler/types';
 import type { ValueRefPacked } from '../../../compiler/ir/lowerTypes';
+import { parseTypeDesc } from '../../../ir/types/TypeDesc';
 
 /**
  * Extended context for field evaluation at runtime.
@@ -28,8 +29,8 @@ interface FieldEvalCtx extends CompileCtx {
 TRANSFORM_REGISTRY.registerAdapter({
   id: 'BroadcastSignal:float',
   label: 'Broadcast Signal (float)',
-  inputType: 'Signal:float',
-  outputType: 'Field:float',
+  inputType: parseTypeDesc('Signal:float'),
+  outputType: parseTypeDesc('Field:float'),
   policy: 'AUTO',
   cost: 1.0,
   apply: (artifact: Artifact, _params: Record<string, unknown>, _ctx: CompileCtx): Artifact => {
@@ -63,8 +64,8 @@ TRANSFORM_REGISTRY.registerAdapter({
 TRANSFORM_REGISTRY.registerAdapter({
   id: 'BroadcastSignal:color',
   label: 'Broadcast Signal (color)',
-  inputType: 'Signal:color',
-  outputType: 'Field:color',
+  inputType: parseTypeDesc('Signal:color'),
+  outputType: parseTypeDesc('Field:color'),
   policy: 'AUTO',
   cost: 1.0,
   apply: (artifact: Artifact, _params: Record<string, unknown>, _ctx: CompileCtx): Artifact => {
