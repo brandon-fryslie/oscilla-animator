@@ -268,9 +268,38 @@ export class ActionExecutor {
 
   /**
    * Create a TimeRoot block.
+   * Maps UI-friendly timeRootKind names to actual block types.
+   * Removes any existing TimeRoot blocks before creating the new one.
    */
   createTimeRoot(timeRootKind: string): boolean {
-    const blockId = this.patchStore.addBlock(timeRootKind);
+    // Map UI-friendly kind to actual block type
+    let blockType: string;
+    switch (timeRootKind) {
+      case 'Cycle':
+        blockType = 'InfiniteTimeRoot';
+        break;
+      case 'Finite':
+        blockType = 'FiniteTimeRoot';
+        break;
+      case 'Infinite':
+        blockType = 'InfiniteTimeRoot';
+        break;
+      default:
+        // If already a full block type, use it directly
+        blockType = timeRootKind;
+        break;
+    }
+
+    // Remove existing TimeRoot blocks (only one TimeRoot allowed per patch)
+    const existingTimeRoots = this.patchStore.blocks.filter(
+      (b) => b.type === 'InfiniteTimeRoot' || b.type === 'FiniteTimeRoot'
+    );
+    for (const timeRoot of existingTimeRoots) {
+      this.patchStore.removeBlock(timeRoot.id);
+    }
+
+    // Create the new TimeRoot
+    const blockId = this.patchStore.addBlock(blockType);
     this.uiStore.selectBlock(blockId);
     return true;
   }

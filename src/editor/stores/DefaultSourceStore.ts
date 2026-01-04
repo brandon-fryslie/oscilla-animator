@@ -11,12 +11,13 @@
  * @see design-docs/10-Refactor-for-UI-prep/14-RemoveParams.md
  */
 import { makeObservable, observable, action, makeAutoObservable } from 'mobx';
-import type { DefaultSourceState, TypeDesc, UIControlHint, Slot, BlockId, SlotWorld, SLOT_TYPE_TO_TYPE_DESC } from '../types';
+import type { DefaultSourceState, TypeDesc, UIControlHint, Slot, BlockId, SLOT_TYPE_TO_TYPE_DESC } from '../types';
 import type { RootStore } from './RootStore';
 import type { DefaultSourceAttachment } from '../defaultSources/types';
 import { CONST_PROVIDER_MAPPING } from '../defaultSources/constProviders';
 import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from '../defaultSources/allowlist';
 import { getBlockDefinition } from '../blocks/registry';
+import { typeDescToString } from '../ir/types/TypeDesc';
 
 // =============================================================================
 // DefaultSourceState Class (Observable)
@@ -61,13 +62,6 @@ export class ObservableDefaultSource implements DefaultSourceState {
 // Helper Functions
 // =============================================================================
 
-/**
- * Map from SlotWorld to TypeDesc world.
- * Used when creating DefaultSource from Slot defaultSource.
- */
-function slotWorldToTypeWorld(world: SlotWorld): 'signal' | 'field' | 'scalar' | 'config' {
-  return world;
-}
 
 /**
  * Check if ID matches deterministic pattern for input defaults.
@@ -281,17 +275,8 @@ export class DefaultSourceStore {
       // Create the DefaultSource for this provider input if it doesn't exist
       const existingSource = this.sources.get(providerInputDefaultId);
       if (existingSource == null) {
-        // Derive TypeDesc from input slot
-        const baseTypeDesc = inputSlot.type as unknown as TypeDesc;
-        const typeDesc: TypeDesc =
-          typeof baseTypeDesc === 'object' && 'world' in baseTypeDesc
-            ? baseTypeDesc
-            : ({
-                world: slotWorldToTypeWorld(inputSlot.defaultSource.world ?? 'signal'),
-                domain: 'float', // fallback
-                category: 'core',
-                busEligible: false,
-              } as unknown as TypeDesc);
+        // Slot.type is now a TypeDesc object directly
+        const typeDesc = inputSlot.type;
 
         const newSource = new ObservableDefaultSource({
           id: providerInputDefaultId,
@@ -353,7 +338,8 @@ export class DefaultSourceStore {
         }
 
         // Create attachment with appropriate Const provider
-        const attachment = this.createDefaultAttachmentForSlot(block.id, input.id, input.type);
+        // Convert TypeDesc to string for createDefaultAttachmentForSlot
+        const attachment = this.createDefaultAttachmentForSlot(block.id, input.id, typeDescToString(input.type));
 
         // Get existing default source value if it exists
         const existingSource = this.getDefaultSourceForInput(block.id, input.id);
@@ -451,13 +437,13 @@ export class DefaultSourceStore {
    *
    * @param blockId - The block's unique ID
    * @param inputs - The block's input slots
-   * @param slotTypeToTypeDesc - Mapping from SlotType to TypeDesc
+   * @param slotTypeToTypeDesc - Mapping from SlotType to TypeDesc (deprecated, unused)
    * @param params - Optional params to override default values (e.g., from macros)
    */
   createDefaultSourcesForBlock(
     blockId: BlockId,
     inputs: readonly Slot[],
-    slotTypeToTypeDesc: typeof SLOT_TYPE_TO_TYPE_DESC,
+    _slotTypeToTypeDesc: typeof SLOT_TYPE_TO_TYPE_DESC,
     params?: Record<string, unknown>
   ): void {
     const slotMap = new Map<string, string>();
@@ -468,14 +454,8 @@ export class DefaultSourceStore {
       // Generate deterministic ID for input default: ds:input:${blockId}:${slotId}
       const dsId = `ds:input:${blockId}:${slot.id}`;
 
-      // Derive TypeDesc from slot type and defaultSource world
-      const baseTypeDesc = slotTypeToTypeDesc[slot.type];
-      const typeDesc: TypeDesc = baseTypeDesc ?? ({
-        world: slotWorldToTypeWorld(slot.defaultSource.world ?? 'signal'),
-        domain: 'float', // fallback
-        category: 'core',
-        busEligible: false,
-      } as unknown as TypeDesc);
+      // Slot.type is now a TypeDesc object directly
+      const typeDesc = slot.type;
 
       // Use param value if provided (e.g., from macro), otherwise use slot default
       const value = params?.[slot.id] !== undefined ? params[slot.id] : slot.defaultSource.value;
@@ -492,7 +472,8 @@ export class DefaultSourceStore {
       slotMap.set(slot.id, dsId);
 
       // Create DefaultSourceAttachment with Const provider
-      const attachment = this.createDefaultAttachmentForSlot(blockId, slot.id, slot.type);
+      // Convert TypeDesc to string for createDefaultAttachmentForSlot
+      const attachment = this.createDefaultAttachmentForSlot(blockId, slot.id, typeDescToString(slot.type));
 
       // Create DefaultSource for provider's 'value' input
       const providerInputDefaultId = attachment.provider.editableInputSourceIds.value;

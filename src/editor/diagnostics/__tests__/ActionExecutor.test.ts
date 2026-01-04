@@ -362,12 +362,10 @@ describe('ActionExecutor', () => {
 
       expect(result).toBe(false);
 
-      // Verify warning was logged
+      // Verify warning was logged (BadAdapter is not registered, so it fails at definition lookup)
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        '[ActionExecutor] Adapter block missing expected ports:',
-        expect.objectContaining({
-          adapterType: 'BadAdapter',
-        })
+        '[ActionExecutor] Block definition not found:',
+        'BadAdapter'
       );
 
       // Verify original connection was restored

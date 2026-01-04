@@ -18,7 +18,6 @@
 
 import type { SlotType } from '../types';
 import type { TypeDesc } from '../ir/types/TypeDesc';
-import { parseTypeDesc, typeDescToString } from '../ir/types/TypeDesc';
 import type { ValueKind, PortType } from '../compiler/types';
 
 // =============================================================================
@@ -167,22 +166,11 @@ export function isAssignable(from: TypeDesc, to: TypeDesc): boolean {
 // SlotType Integration
 // =============================================================================
 
-// TODO: SLOT_TYPE_TO_TYPE_DESC was removed from types.ts.
-// This mapping needs to be rebuilt or SlotType usage needs to be migrated to TypeDesc.
-// For now, create a minimal implementation using a string-keyed map:
-const SLOT_TYPE_TO_TYPE_DESC: Record<string, TypeDesc | undefined> = {} as any;
-
-/**
- * Get the TypeDesc for a SlotType.
- * Returns undefined if the SlotType is not recognized.
- */
-export function getTypeDesc(slotType: SlotType): TypeDesc | undefined {
-  return SLOT_TYPE_TO_TYPE_DESC[slotType];
-}
-
 /**
  * Check if two SlotTypes are compatible.
  * This is the function that should be called by the UI for wire compatibility.
+ *
+ * NOTE: SlotType is now TypeDesc, so this is just a direct call to isAssignable.
  *
  * @param fromSlot The source SlotType (output port)
  * @param toSlot The target SlotType (input port)
@@ -192,20 +180,8 @@ export function areSlotTypesCompatible(
   fromSlot: SlotType,
   toSlot: SlotType
 ): boolean {
-  // Exact match shortcut
-  if (fromSlot === toSlot) {
-    return true;
-  }
-
-  const fromDesc = getTypeDesc(fromSlot);
-  const toDesc = getTypeDesc(toSlot);
-
-  // If either type is unknown, fall back to exact match only
-  if (!fromDesc || !toDesc) {
-    return false;
-  }
-
-  return isAssignable(fromDesc, toDesc);
+  // Since SlotType is now TypeDesc, we can directly compare them
+  return isAssignable(fromSlot, toSlot);
 }
 
 
@@ -254,10 +230,10 @@ export function isBusEligible(typeDesc: TypeDesc): boolean {
 
 /**
  * Check if a SlotType is eligible for bus routing.
+ * NOTE: SlotType is now TypeDesc, so this is just a direct call to isBusEligible.
  */
 export function isSlotBusEligible(slotType: SlotType): boolean {
-  const desc = getTypeDesc(slotType);
-  return desc ? isBusEligible(desc) : false;
+  return isBusEligible(slotType);
 }
 
 // =============================================================================
@@ -277,28 +253,24 @@ export function formatTypeDesc(typeDesc: TypeDesc): string {
 
 /**
  * Get a human-readable compatibility hint for a slot type.
+ * NOTE: SlotType is now TypeDesc.
  */
 export function getCompatibilityHint(slotType: SlotType): string {
-  const desc = getTypeDesc(slotType);
-  if (!desc) {
-    return `Requires exact match: ${slotType}`;
-  }
-
   // Find all compatible domains
-  const compatibleDomains = new Set<string>([desc.domain]);
+  const compatibleDomains = new Set<string>([slotType.domain]);
   for (const set of COMPATIBLE_DOMAIN_SETS) {
-    if (set.includes(desc.domain)) {
+    if (set.includes(slotType.domain)) {
       for (const d of set) compatibleDomains.add(d);
     }
   }
 
   if (compatibleDomains.size === 1) {
-    const semanticHint = desc.semantics != null ? ` (${desc.semantics})` : '';
-    return `Requires ${desc.world}:${desc.domain}${semanticHint}`;
+    const semanticHint = slotType.semantics != null ? ` (${slotType.semantics})` : '';
+    return `Requires ${slotType.world}:${slotType.domain}${semanticHint}`;
   }
 
   const domainList = Array.from(compatibleDomains).join(', ');
-  return `Requires ${desc.world} type (${domainList})`;
+  return `Requires ${slotType.world} type (${domainList})`;
 }
 
 // =============================================================================

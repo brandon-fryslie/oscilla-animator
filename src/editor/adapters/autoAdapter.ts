@@ -10,7 +10,7 @@
 
 import type { TypeDesc, AdapterStep, AdapterPolicy } from '../types';
 import { TRANSFORM_REGISTRY } from '../transforms/TransformRegistry';
-import { typeDescToString } from '../compiler/ir/types/TypeDesc';
+import { typeDescToString } from '../ir/types/TypeDesc';
 
 /**
  * Check if two types are directly compatible (no adapter needed).

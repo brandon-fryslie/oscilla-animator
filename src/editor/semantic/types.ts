@@ -17,7 +17,7 @@
  * the new Edge-based architecture where buses are BusBlocks.
  */
 
-import type { BlockId, Edge } from '../types';
+import type { BlockId, Edge, SlotType } from '../types';
 import type { Diagnostic } from '../diagnostics/types';
 
 // =============================================================================
@@ -85,7 +85,7 @@ export interface PortKey {
 export interface PortNode {
   kind: 'port';
   key: PortKey;
-  slotType: string;
+  slotType: SlotType;
 }
 
 /**
@@ -136,13 +136,16 @@ export type GraphEdge = WireEdge;
  * UPDATED: After Bus-Block unification (2026-01-02)
  * - connections → edges
  * - buses/publishers/listeners removed (now just blocks + edges)
+ *
+ * UPDATED: After TypeDesc refactor (2026-01-03)
+ * - slot type field now uses SlotType (which is TypeDesc)
  */
 export interface PatchDocument {
   blocks: ReadonlyArray<{
     readonly id: BlockId;
     readonly type: string;
-    readonly inputs: ReadonlyArray<{ readonly id: string; readonly type: string }>;
-    readonly outputs: ReadonlyArray<{ readonly id: string; readonly type: string }>;
+    readonly inputs: ReadonlyArray<{ readonly id: string; readonly type: SlotType }>;
+    readonly outputs: ReadonlyArray<{ readonly id: string; readonly type: SlotType }>;
   }>;
   edges: readonly Edge[];
 }
@@ -186,4 +189,3 @@ export function portKeyFromEdge(
     direction: end === 'from' ? 'output' : 'input',
   };
 }
-

@@ -19,8 +19,7 @@
 import type { PatchDocument, PortKey, ValidationResult } from './types';
 import { SemanticGraph } from './graph';
 import { createDiagnostic, type Diagnostic } from '../diagnostics/types';
-import { areSlotTypesCompatible } from './index';
-import type { SlotType } from '../types';
+import { areSlotTypesCompatible, formatTypeDesc } from './index';
 // NOTE: After bus-block unification (2026-01-02), bus contract validation is
 // handled by BusBlock definitions. The following imports are no longer needed:
 // import { RESERVED_BUS_CONTRACTS, validateReservedBus, validateCombineModeCompatibility, validateBusIRSupport } from './busContracts';
@@ -232,7 +231,7 @@ export class Validator {
       }
 
       // Check type compatibility using canonical semantic check
-      // Note: fromSlot.type and toSlot.type are already SlotType (string)
+      // Note: fromSlot.type and toSlot.type are SlotType (which is TypeDesc)
       const compatible = areSlotTypesCompatible(
         fromSlot.type,
         toSlot.type
@@ -263,12 +262,12 @@ export class Validator {
               },
             ],
             title: 'Type mismatch',
-            message: `Cannot connect ${fromBlock.id}.${fromSlot.id} (${fromSlot.type}) to ${toBlock.id}.${toSlot.id} (${toSlot.type})`,
+            message: `Cannot connect ${fromBlock.id}.${fromSlot.id} (${formatTypeDesc(fromSlot.type)}) to ${toBlock.id}.${toSlot.id} (${formatTypeDesc(toSlot.type)})`,
             patchRevision: this.patchRevision,
             payload: {
               kind: 'typeMismatch',
-              expected: toSlot.type,
-              actual: fromSlot.type,
+              expected: formatTypeDesc(toSlot.type),
+              actual: formatTypeDesc(fromSlot.type),
             },
           })
         );
@@ -572,7 +571,7 @@ export class Validator {
     }
 
     // Check type compatibility
-    // Note: fromSlot.type and toSlot.type are already SlotType (string)
+    // Note: fromSlot.type and toSlot.type are SlotType (which is TypeDesc)
     const compatible = areSlotTypesCompatible(
       fromSlot.type,
       toSlot.type
@@ -593,12 +592,12 @@ export class Validator {
             },
           },
           title: 'Type mismatch',
-          message: `Cannot connect ${fromBlock.id}.${fromSlot.id} (${fromSlot.type}) to ${toBlock.id}.${toSlot.id} (${toSlot.type})`,
+          message: `Cannot connect ${fromBlock.id}.${fromSlot.id} (${formatTypeDesc(fromSlot.type)}) to ${toBlock.id}.${toSlot.id} (${formatTypeDesc(toSlot.type)})`,
           patchRevision: this.patchRevision,
           payload: {
             kind: 'typeMismatch',
-            expected: toSlot.type,
-            actual: fromSlot.type,
+            expected: formatTypeDesc(toSlot.type),
+            actual: formatTypeDesc(fromSlot.type),
           },
         })
       );

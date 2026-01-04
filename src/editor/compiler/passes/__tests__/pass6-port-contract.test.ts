@@ -11,7 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { registerBlockType, type BlockTypeDecl } from "../../ir/lowerTypes";
 import type { TypeDesc } from "../../ir/types";
-import { parseTypeDesc } from "../../ir/types/TypeDesc";
+import { parseTypeDesc } from "../../../ir/types/TypeDesc";
 import { BLOCK_DEFS_BY_TYPE } from "../../../blocks/registry";
 import type { BlockDefinition } from "../../../blocks/types";
 

@@ -12,10 +12,8 @@
  */
 
 import type { RawGraph, NormalizedGraph } from './types';
-import type { Block, Edge, PortRef, BlockRole, EdgeRole } from '../types';
-import type { TypeDesc } from '../compiler/ir/types';
+import type { Block, Edge, PortRef, BlockRole, EdgeRole, TypeDesc } from '../types';
 import { getBlockDefinition } from '../blocks';
-import { typeDescToString } from '../ir/types/typeConversion';
 
 // =============================================================================
 // Local Type Definitions
@@ -127,7 +125,7 @@ function buildProviderParams(providerType: string, defaultValue: unknown): Recor
 
 /**
  * Extract domain from a type descriptor.
- * Handles both string formats ("Signal<float>", "Scalar:float") and TypeDesc objects.
+ * Works with both core TypeDesc (from types.ts) and IR TypeDesc (from compiler/ir/types).
  */
 function extractDomain(inputType: TypeDesc): string {
   // TypeDesc format: just extract the domain

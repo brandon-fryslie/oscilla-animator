@@ -15,6 +15,7 @@ import {
 } from '../replaceUtils';
 import type { Block, Edge } from '../types';
 import type { BlockDefinition } from '../blocks/types';
+import { getBlockDefinition } from '../blocks/registry';
 
 // =============================================================================
 // Test Helpers
@@ -70,37 +71,36 @@ function createMockEdge(
 
 describe('findCompatibleReplacements', () => {
   it('finds blocks with matching outputs', () => {
+    // Use a real block type that exists in the registry
     const sourceBlock = createMockBlock({
-      type: 'Add',
+      type: 'AddSignal',
     });
 
     const edges: Edge[] = [];
 
+    // Get real block definitions from registry
+    const mulSignalDef = getBlockDefinition('MulSignal');
+    const minSignalDef = getBlockDefinition('MinSignal');
+
     const candidates = [
-      createMockDefinition({
-        type: 'Multiply',
-      }),
-      createMockDefinition({
-        type: 'Subtract',
-      }),
-    ];
+      mulSignalDef,
+      minSignalDef,
+    ].filter((d): d is BlockDefinition => d !== undefined);
 
     const result = findCompatibleReplacements(sourceBlock, edges, candidates);
+    // Both MulSignal and MinSignal should be compatible with AddSignal (same I/O structure)
     expect(result).toHaveLength(2);
   });
 
   it('finds blocks with matching inputs', () => {
     const sourceBlock = createMockBlock({
-      type: 'Add',
+      type: 'AddSignal',
     });
 
     const edges: Edge[] = [];
 
-    const candidates = [
-      createMockDefinition({
-        type: 'Multiply',
-      }),
-    ];
+    const mulSignalDef = getBlockDefinition('MulSignal');
+    const candidates = mulSignalDef ? [mulSignalDef] : [];
 
     const result = findCompatibleReplacements(sourceBlock, edges, candidates);
     expect(result.length).toBeGreaterThanOrEqual(0);
@@ -108,39 +108,32 @@ describe('findCompatibleReplacements', () => {
 
   it('excludes blocks with incompatible I/O', () => {
     const sourceBlock = createMockBlock({
-      type: 'Add',
+      type: 'AddSignal',
     });
 
     const edges: Edge[] = [];
 
-    const candidates = [
-      createMockDefinition({
-        type: 'TimeRoot',
-      }),
-    ];
+    const timeRootDef = getBlockDefinition('FiniteTimeRoot');
+    const candidates = timeRootDef ? [timeRootDef] : [];
 
     const result = findCompatibleReplacements(sourceBlock, edges, candidates);
-    // Result depends on actual compatibility logic
+    // TimeRoot has different I/O than AddSignal
     expect(Array.isArray(result)).toBe(true);
   });
 
   it('filters by capability', () => {
     const sourceBlock = createMockBlock({
-      type: 'Add',
+      type: 'AddSignal',
     });
 
     const edges: Edge[] = [];
 
+    const mulSignalDef = getBlockDefinition('MulSignal');
+    const timeRootDef = getBlockDefinition('FiniteTimeRoot');
     const candidates = [
-      createMockDefinition({
-        type: 'Multiply',
-        capability: 'pure',
-      }),
-      createMockDefinition({
-        type: 'TimeRoot',
-        capability: 'state',
-      }),
-    ];
+      mulSignalDef,
+      timeRootDef,
+    ].filter((d): d is BlockDefinition => d !== undefined);
 
     const result = findCompatibleReplacements(sourceBlock, edges, candidates);
     // Should filter based on capability
