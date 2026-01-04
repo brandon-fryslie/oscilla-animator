@@ -8,6 +8,7 @@
 
 import type { BlockCompiler, RuntimeCtx } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import { createTypeDesc } from '../../ir/types';
 
 type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
@@ -31,10 +32,10 @@ registerBlockType({
   type: 'Print',
   capability: 'io',
   inputs: [
-    { portId: 'value', label: 'Value', dir: 'in', type: { world: 'signal', domain: 'number' } },
+    { portId: 'value', label: 'Value', dir: 'in', type: createTypeDesc({ world: 'signal', domain: 'float' }) },
   ],
   outputs: [
-    { portId: 'out', label: 'Output', dir: 'out', type: { world: 'signal', domain: 'number' } },
+    { portId: 'out', label: 'Output', dir: 'out', type: createTypeDesc({ world: 'signal', domain: 'float' }) },
   ],
   lower: lowerPrint,
 });
@@ -47,12 +48,12 @@ export const PrintBlock: BlockCompiler = {
   type: 'Print',
 
   inputs: [
-    { name: 'value', type: { kind: 'Signal:number' }, required: false },
+    { name: 'value', type: { kind: 'Signal:float' }, required: false },
     { name: 'label', type: { kind: 'Scalar:string' }, required: false },
   ],
 
   outputs: [
-    { name: 'out', type: { kind: 'Signal:number' } },
+    { name: 'out', type: { kind: 'Signal:float' } },
   ],
 
   compile({ id, inputs }) {
@@ -62,37 +63,40 @@ export const PrintBlock: BlockCompiler = {
 
     if (valueArtifact === undefined) {
       inputFn = () => 0;
-    } else if (valueArtifact.kind === 'Signal:number' || valueArtifact.kind === 'Signal:phase') {
+    } else if (valueArtifact.kind === 'Signal:float' || valueArtifact.kind === 'Signal:phase') {
       inputFn = valueArtifact.value as Signal<number>;
-    } else if (valueArtifact.kind === 'Scalar:number') {
+    } else if (valueArtifact.kind === 'Scalar:float') {
       const constVal = valueArtifact.value as number;
       inputFn = () => constVal;
     } else {
+      console.warn(`[Print] Unsupported input type: ${valueArtifact.kind}`);
       inputFn = () => 0;
     }
 
-    // Get label
+    // Get label (optional)
     const labelArtifact = inputs.label;
-    const label = labelArtifact !== undefined
-      ? String((labelArtifact as { value?: unknown }).value ?? 'value')
-      : 'value';
+    const label =
+      labelArtifact !== undefined && labelArtifact.kind === 'Scalar:string'
+        ? (labelArtifact.value as string)
+        : id;
 
-    // Create passthrough signal that logs when evaluated
-    const outputFn: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
+    // Create throttled print signal
+    const printSignal: Signal<number> = (t, ctx) => {
       const value = inputFn(t, ctx);
 
-      // Throttle console output
+      const now = Date.now();
       const lastTime = lastPrintTime.get(id) ?? 0;
-      if (t - lastTime >= THROTTLE_MS) {
-        lastPrintTime.set(id, t);
-        console.log(`[Print:${label}]`, value);
+
+      if (now - lastTime > THROTTLE_MS) {
+        console.log(`[${label}] ${value}`);
+        lastPrintTime.set(id, now);
       }
 
       return value;
     };
 
     return {
-      out: { kind: 'Signal:number', value: outputFn },
+      out: { kind: 'Signal:float', value: printSignal },
     };
   },
 };
