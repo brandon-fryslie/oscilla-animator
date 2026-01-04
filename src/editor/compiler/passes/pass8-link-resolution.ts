@@ -282,7 +282,7 @@ function buildBlockOutputRoots(
   const refs: ValueRefPacked[] = [];
 
   // Calculate max outputs for indexing
-  const maxOutputs = Math.max(...blocks.map((b) => b.outputs.length), 0);
+  const maxOutputs = Math.max(...blocks.map((b) => getBlockDefinition(b.type)?.outputs.length ?? 0), 0);
 
   // Create flat array indexed by (blockIdx * maxOutputs + portIdx)
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
@@ -501,7 +501,7 @@ function buildBlockInputRoots(
   const refs: ValueRefPacked[] = [];
 
   // Calculate max inputs for indexing
-  const maxInputs = Math.max(...blocks.map((b) => b.inputs.length), 0);
+  const maxInputs = Math.max(...blocks.map((b) => getBlockDefinition(b.type)?.inputs.length ?? 0), 0);
 
   // Create a map from blockId to blockIndex for lookups
   const blockIdToIndex = new Map<string, number>();

@@ -473,14 +473,15 @@ function lowerBlockInstance(
   edges?: readonly Edge[]
 ): Map<string, ValueRefPacked> {
   const outputRefs = new Map<string, ValueRefPacked>();
+  const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
 
   // Check if block has registered lowering function
   const blockType = getBlockType(block.type);
 
   if (blockType !== undefined) {
     // Use registered lowering function
+
     try {
-      const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
       const enforcePortContract = blockDef?.tags?.irPortContract !== 'relaxed';
       if (enforcePortContract && blockDef !== undefined) {
         const defInputIds = blockDef.inputs.map((input) => input.id);

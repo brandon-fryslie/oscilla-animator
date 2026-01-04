@@ -234,7 +234,7 @@ export function resolveBlockInputs(
   const blockDef = getBlockDefinition(block.type);
   if (!blockDef) return resolved;
 
-  for (const inputSlot of block.inputs) {
+  for (const inputSlot of blockDef.inputs) {
     const endpoint: InputEndpoint = {
       blockId: block.id,
       slotId: inputSlot.id,
