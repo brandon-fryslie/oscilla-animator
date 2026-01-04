@@ -1,0 +1,46 @@
+Agent: iterative-implementer | 2026-01-04 22:49:00
+Mode: manual
+Completed: Fixed 17 TypeScript errors (from 108 to 91) | Files: 10 | Commits: 3
+Status: in_progress
+
+## Completed Work
+
+1. Fixed Observable import (types.ts) - changed from non-existent './core/Observable' to 'mobx' IObservableArray
+2. Removed unused imports in PatchStore (GraphCommitReason, GraphDiffSummary) 
+3. Removed unused methods in PatchStore (incrementRevision, invalidateNormalizedCache)
+4. Fixed unused imports in 6 test files (diagnostic-emission, pass6-block-lowering, pass8-link-resolution, GraphCommitted, ModulationTableStore, CompositeStore tests)
+5. Removed unused Patch import in kernel/ops.ts
+6. Removed unused CombineMode import in ModulationTableStore.ts
+
+## Remaining Work (91 errors)
+
+### Major Categories:
+1. **TypeDesc type mismatch** (~25 errors) - Code treats TypeDesc as object with {world, domain, category, busEligible} but types.ts defines it as string. This is a fundamental mismatch between editor types (string) and IR types (object).
+   - DefaultSourceStore.ts: lines 286, 290, 473, 474
+   - ModulationTableStore.ts: lines 143, 157, 167, 181, 359, 392, 699, 709
+   - LensChainEditor.tsx: lines 568, 584, 603, 615, 628, 643, 656, 867, 871
+   - ModulationTable.tsx: lines 145, 301, 322
+   - ModulationTableGrid.tsx: lines 151, 234
+   - RecipeView.tsx: lines 171, 184
+
+2. **ExposedParam interface changed** (~6 errors) - Code expects {id, blockId, paramKey} but type has {name, blockId, paramName}
+   - SaveCompositeDialog.tsx: lines 143, 158
+   - composite-bridge.ts: lines 116, 118, 125, 126, 159, 160
+
+3. **Missing exports** (~6 errors) - types.ts missing exports for EditorUIState, Template, LaneTemplate, LaneKind, LaneLayout
+
+4. **Block interface missing properties** (~3 errors) - Block missing category, inputs, outputs properties
+
+5. **Other scattered errors** (~50 errors) - Various type mismatches, missing properties, etc.
+
+## Recommended Approach
+
+The TypeDesc mismatch is the root cause of many errors. Two possible strategies:
+
+**Strategy A (Minimal)**: Cast to `as unknown as TypeDesc` where objects are created. This acknowledges runtime has IR TypeDesc objects even though type says string.
+
+**Strategy B (Proper)**: Update types.ts to allow `TypeDesc = string | IRTypeDesc` or create a union type. BUT user said "DO NOT REWRITE types.ts".
+
+Recommend Strategy A with type guards to handle both string and object TypeDesc values at runtime.
+
+Cache: No files modified in this session that affect eval cache

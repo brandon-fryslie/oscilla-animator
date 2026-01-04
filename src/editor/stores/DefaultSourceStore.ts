@@ -286,12 +286,12 @@ export class DefaultSourceStore {
         const typeDesc: TypeDesc =
           typeof baseTypeDesc === 'object' && 'world' in baseTypeDesc
             ? baseTypeDesc
-            : {
-                world: slotWorldToTypeWorld(inputSlot.defaultSource.world),
+            : ({
+                world: slotWorldToTypeWorld(inputSlot.defaultSource.world ?? 'signal'),
                 domain: 'float', // fallback
                 category: 'core',
                 busEligible: false,
-              };
+              } as unknown as TypeDesc);
 
         const newSource = new ObservableDefaultSource({
           id: providerInputDefaultId,
@@ -470,12 +470,12 @@ export class DefaultSourceStore {
 
       // Derive TypeDesc from slot type and defaultSource world
       const baseTypeDesc = slotTypeToTypeDesc[slot.type];
-      const typeDesc: TypeDesc = baseTypeDesc ?? {
-        world: slotWorldToTypeWorld(slot.defaultSource.world),
+      const typeDesc: TypeDesc = baseTypeDesc ?? ({
+        world: slotWorldToTypeWorld(slot.defaultSource.world ?? 'signal'),
         domain: 'float', // fallback
         category: 'core',
         busEligible: false,
-      };
+      } as unknown as TypeDesc);
 
       // Use param value if provided (e.g., from macro), otherwise use slot default
       const value = params?.[slot.id] !== undefined ? params[slot.id] : slot.defaultSource.value;
