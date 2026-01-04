@@ -25,6 +25,7 @@ import type { TypeDesc, TypeDomain } from "../ir/types";
 import type { NormalizedPatch, TypedPatch } from "../ir";
 import { domainFromString } from "../../ir/types/typeConversion";
 import { asTypeDesc } from "../ir/types";
+import { getBlockDefinition } from "../../blocks/registry";
 
 /**
  * Error types emitted by Pass 2.
@@ -296,7 +297,10 @@ function getEndpointType(
   if (blockData === null || blockData === undefined) return null;
 
   const block = blockData as Block;
-  const slot = [...block.inputs, ...block.outputs].find(s => s.id === endpoint.slotId);
+  const blockDef = getBlockDefinition(block.type);
+  if (!blockDef) return null;
+
+  const slot = [...blockDef.inputs, ...blockDef.outputs].find(s => s.id === endpoint.slotId);
   if (slot === null || slot === undefined) return null;
 
   try {
@@ -370,10 +374,13 @@ export function pass2TypeGraph(
   // Use Array.from() to avoid downlevelIteration issues
   for (const blockData of Array.from(normalized.blocks.values())) {
     const block = blockData as Block;
+    const blockDef = getBlockDefinition(block.type);
+    if (!blockDef) continue;
+
     const outputTypes = new Map<string, TypeDesc>();
 
     // Parse input types (for validation)
-    for (const slot of block.inputs) {
+    for (const slot of blockDef.inputs) {
       try {
         slotTypeToTypeDesc(slot.type);
       } catch (error) {
@@ -388,7 +395,7 @@ export function pass2TypeGraph(
     }
 
     // Parse and store output types
-    for (const slot of block.outputs) {
+    for (const slot of blockDef.outputs) {
       try {
         const typeDesc = slotTypeToTypeDesc(slot.type);
         outputTypes.set(slot.id, typeDesc);

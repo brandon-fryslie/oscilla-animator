@@ -1,0 +1,29 @@
+Agent: iterative-implementer | 1767487298
+Mode: manual
+Completed: UIControlHint discriminated union (103 errors), Bus.combine → combineMode (25 errors), Block test fixtures (1 error) | Files: 6 | Commits: 2
+Cache invalidated: None required (type-only changes)
+Status: in_progress
+
+Summary of work:
+1. Updated UIControlHint from string union to discriminated union with kind property
+   - Matches IR definition in compiler/ir/defaultSources.ts
+   - Fixed 103 type errors across block definitions
+   
+2. Fixed Bus interface changes:
+   - Changed Bus.combine → Bus.combineMode (simplified interface)
+   - Updated bus-block.ts, conversion.ts, resolveWriters.ts
+   - Fixed test fixtures in ops.test.ts
+   - Removed legacy sortKey and origin fields
+   - Fixed 25 type errors
+   
+3. Started fixing Block.inputs/outputs removal:
+   - Fixed pass3-time.test.ts Block fixtures
+   - Need to fix remaining test files and compiler passes
+   - Remaining: ~40-50 errors
+
+Progress: 478 → 349 type errors (129 fixed, 27% complete)
+
+Next work: Continue fixing Block.inputs/outputs errors in:
+- Test files: pass5-scc.test.ts, pass6-block-lowering.test.ts, pass8-link-resolution.test.ts
+- Compiler passes: pass1-normalize.ts, pass2-types.ts
+- Other files with block.inputs/outputs access

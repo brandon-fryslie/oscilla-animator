@@ -27,6 +27,7 @@ import type {
   ConstId,
   DefaultSourceAttachment,
 } from "../ir/patches";
+import { getBlockDefinition } from "../../blocks/registry";
 
 /**
  * Canonicalize edges: filter enabled, sort uniformly by sortKey.
@@ -92,7 +93,10 @@ export function pass1Normalize(
   let constIdCounter = 0;
 
   for (const block of patch.blocks) {
-    for (const input of block.inputs) {
+    const blockDef = getBlockDefinition(block.type);
+    if (!blockDef) continue;
+
+    for (const input of blockDef.inputs) {
       // Check if input is connected via edges
       const isConnected = hasEdgeToInput(edges, block.id, input.id);
 
