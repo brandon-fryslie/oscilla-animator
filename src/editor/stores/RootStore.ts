@@ -81,7 +81,6 @@ export class RootStore {
     this.viewStore = new ViewStateStore(this);
     this.compositeStore = new CompositeStore(this);
     this.defaultSourceStore = new DefaultSourceStore();
-    this.defaultSourceStore.setRoot(this);
 
     // Create history store (after domain stores, before transaction usage)
     this.historyStore = new HistoryStore(this);
@@ -255,7 +254,6 @@ export class RootStore {
       defaultSources: this.defaultSourceStore.sources.size > 0
         ? Object.fromEntries(this.defaultSourceStore.sources)
         : {},
-      defaultSourceAttachments: Array.from(this.defaultSourceStore.attachmentsByTarget.values()),
       settings: {
         ...this.uiStore.settings,
       },
@@ -288,19 +286,8 @@ export class RootStore {
       this.defaultSourceStore.load(patch.defaultSources);
     }
 
-    // Load default source attachments if present, otherwise rebuild from blocks
-    if (patch.defaultSourceAttachments != null) {
-      for (const attachment of patch.defaultSourceAttachments) {
-        this.defaultSourceStore.setAttachmentForInput(
-          attachment.target.blockId,
-          attachment.target.slotId,
-          attachment
-        );
-      }
-    } else {
-      // Backward compatibility - rebuild attachments from blocks
-      this.defaultSourceStore.rebuildAttachmentsFromBlocks();
-    }
+    // Note: defaultSourceAttachments removed - structural blocks now created by GraphNormalizer
+    // Old patches with attachments will have their structural blocks regenerated on first compile
 
     this.historyStore.reset();
     // Load legacy composites if present

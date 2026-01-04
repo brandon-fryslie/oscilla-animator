@@ -353,46 +353,11 @@ export interface CompositeExpansionResult {
 }
 
 // =============================================================================
+// NOTE: Helper functions removed - no longer needed since GraphNormalizer handles structural blocks
+//
 // Default Source Provider Injection (Sprint 9-11)
 // =============================================================================
 
-/**
- * Helper: Check if an input is undriven (no wire AND no active listener).
- * Only undriven inputs should get provider injection.
- */
-function _isInputUndriven(
-  blockId: string,
-  slotId: string,
-  patch: CompilerPatch
-): boolean {
-  // Check for wire: any edge to this input
-  const hasWire = patch.edges.some(
-    e => e.to.blockId === blockId && e.to.slotId === slotId
-  );
-
-  // Bus-Block Unification: Check for edge from any BusBlock to this input
-  const busBlockIds = new Set(patch.blocks.filter(b => b.type === 'BusBlock').map(b => b.id));
-  const hasListener = patch.edges.some(
-    e => busBlockIds.has(e.from.blockId) && e.to.blockId === blockId && e.to.slotId === slotId
-  );
-
-  // Returns true only if BOTH checks are false (no wire AND no listener)
-  return !hasWire && !hasListener;
-}
-
-/**
- * Helper: Generate stable ID for provider wire.
- * Format: wire:ds:${providerId}->${targetBlockId}:${targetSlotId}
- */
-function _makeProviderWireId(
-  providerId: string,
-  targetBlockId: string,
-  targetSlotId: string
-): string {
-  return `wire:ds:${providerId}->${targetBlockId}:${targetSlotId}`;
-}
-
-// _makeProviderListenerId removed - bus listeners replaced by connections to BusBlocks
 
 /**
  * Inject default source provider blocks into CompilerPatch.
@@ -407,87 +372,21 @@ function _makeProviderWireId(
  *
  * Sprint 10: Inject provider blocks and wires
  * Sprint 11: Inject bus listeners for providers
+ *
+ * NOTE: This function is deprecated. GraphNormalizer now handles all structural
+ * block creation. This remains for advanced providers (System 1) but will be
+ * removed once System 1 is migrated to GraphNormalizer.
  */
 export function injectDefaultSourceProviders(
   store: RootStore,
   patch: CompilerPatch,
   registry: BlockRegistry
 ): CompilerPatch {
-  const defaultSourceStore = store.defaultSourceStore;
-
-  // Track which providers we've already added (for deduplication)
-  const addedProviders = new Set<string>();
-
-  // Collect injected blocks, edges, and default source values
-  const injectedBlocks: BlockInstance[] = [];
-  const injectedEdges: Edge[] = [];
-  const extendedDefaultSourceValues: Record<string, unknown> = { ...patch.defaultSourceValues };
-
-  // Iterate through all attachments
-  for (const [_key, attachment] of defaultSourceStore.attachmentsByTarget) {
-    const { target, provider } = attachment;
-
-    // Check if this input is undriven
-    if (!_isInputUndriven(target.blockId, target.slotId, patch)) {
-      // Input is driven by wire or listener - skip injection
-      continue;
-    }
-
-    // Check if BOTH compiler AND block definition exist
-    // Provider blocks need:
-    // 1. A compiler (for lowering to IR)
-    // 2. A block definition (for resolving defaultSource on provider's own inputs)
-    const hasCompiler = registry[provider.blockType] != null;
-    const hasBlockDef = getBlockDefinition(provider.blockType) != null;
-
-    if (!hasCompiler || !hasBlockDef) {
-      // No complete implementation - skip injection
-      // The target input will fall back to using its slot.defaultSource value directly
-      continue;
-    }
-
-    // 1. Inject provider block (if not already added)
-    if (!addedProviders.has(provider.providerId)) {
-      const providerBlock: BlockInstance = {
-        id: provider.providerId,
-        type: provider.blockType,
-        params: {},
-        position: 0, // Hidden blocks have no position
-      };
-
-      injectedBlocks.push(providerBlock);
-      addedProviders.add(provider.providerId);
-
-      // 3. Extend defaultSourceValues with provider internal defaults
-      for (const [inputId, sourceId] of Object.entries(provider.editableInputSourceIds)) {
-        const defaultSource = defaultSourceStore.getDefaultSource(sourceId);
-        if (defaultSource != null) {
-          const key = `${provider.providerId}:${inputId}`;
-          extendedDefaultSourceValues[key] = defaultSource.value;
-        }
-      }
-
-    }
-
-    // 2. Inject edge from provider output to target input
-    const edge: Edge = {
-      id: _makeProviderWireId(provider.providerId, target.blockId, target.slotId),
-      from: { kind: 'port', blockId: provider.providerId, slotId: provider.outputPortId },
-      to: { kind: 'port', blockId: target.blockId, slotId: target.slotId },
-      enabled: true,
-    role: { kind: 'user' },
-    };
-
-    injectedEdges.push(edge);
-  }
-
-  // Return new patch with injected primitives (pure function - no mutation)
-  return {
-    ...patch,
-    blocks: [...patch.blocks, ...injectedBlocks],
-    edges: [...patch.edges, ...injectedEdges],
-    defaultSourceValues: extendedDefaultSourceValues,
-  };
+  // NOTE: This function is now a no-op since GraphNormalizer handles all
+  // structural blocks. Advanced providers (System 1) will be migrated later.
+  void store;
+  void registry;
+  return patch;
 }
 
 
@@ -521,15 +420,19 @@ export function editorToPatch(store: RootStore): CompilerPatch {
 
   // Build a lookup map for default sources: blockId:slotId -> value
   // This allows the compiler to look up runtime-edited values
+  // Format: "blockId:slotId" -> value (extracted from DefaultSourceStore)
   const defaultSourceValues: Record<string, unknown> = {};
 
-  // Iterate through all default source attachments to build the values map
-  for (const [targetKey, attachment] of store.defaultSourceStore.attachmentsByTarget) {
-    // targetKey is already in "blockId:slotId" format
-    const sourceId = attachment.provider.editableInputSourceIds.value;
-    const source = store.defaultSourceStore.getDefaultSource(sourceId);
-    if (source != null) {
-      defaultSourceValues[targetKey] = source.value;
+  // Iterate through DefaultSourceStore sources to build the values map
+  // Default sources for inputs have IDs in the format "ds:input:${blockId}:${slotId}"
+  for (const [sourceId, source] of store.defaultSourceStore.sources.entries()) {
+    // Extract blockId and slotId from default source ID
+    const match = sourceId.match(/^ds:input:(.+):(.+)$/);
+    if (match) {
+      const blockId = match[1];
+      const slotId = match[2];
+      const key = `${blockId}:${slotId}`;
+      defaultSourceValues[key] = source.value;
     }
   }
 
@@ -928,6 +831,7 @@ export function createCompilerService(store: RootStore): CompilerService {
         // Graph normalization already materialized structural blocks (DSConst* providers)
         // This step only injects advanced providers (e.g., Oscillator) based on user configuration
         // System 1 skips inputs that already have connections (from normalization or user wires)
+        // NOTE: injectDefaultSourceProviders is now a no-op - all structural blocks handled by GraphNormalizer
         patch = injectDefaultSourceProviders(store, patch, registry);
 
         store.logStore.debug(
