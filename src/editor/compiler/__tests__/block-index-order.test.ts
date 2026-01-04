@@ -1,14 +1,12 @@
 /**
  * Block Index Ordering Tests
  *
- * Tests that verify blocks are passed to pass6 in the correct order
- * matching the blockIndexMap from pass1.
+ * Tests that verify blocks are assigned indices in their original array order.
  *
- * Bug: Blocks were being passed in original array order, but blockIndex
- * references expect sorted alphabetical order. This caused wrong blocks
- * to be processed when resolving inputs.
- *
- * Reference: Fix for "Unmaterialized input" compiler errors
+ * Design decision: Block indices use original array order (not sorted) because:
+ * - All blocks are identical (no priority classes)
+ * - Cycles will be supported (no valid topological order exists)
+ * - Index assignment just needs to be consistent within a single compile
  */
 
 import { describe, it, expect } from "vitest";
@@ -35,8 +33,8 @@ describe("Block Index Ordering", () => {
     };
   }
 
-  it("should assign block indices in alphabetical order by ID", () => {
-    // Create blocks with IDs that would sort differently than insertion order
+  it("should assign block indices in original array order", () => {
+    // Create blocks with IDs in non-alphabetical order
     const patch: Patch = {
       id: "test",
       blocks: [
@@ -50,13 +48,13 @@ describe("Block Index Ordering", () => {
 
     const normalized = pass1Normalize(patch);
 
-    // Block indices should be assigned alphabetically
-    expect(normalized.blockIndexMap.get("a-block")).toBe(0);
-    expect(normalized.blockIndexMap.get("m-block")).toBe(1);
-    expect(normalized.blockIndexMap.get("z-block")).toBe(2);
+    // Block indices should match original array order
+    expect(normalized.blockIndexMap.get("z-block")).toBe(0);
+    expect(normalized.blockIndexMap.get("a-block")).toBe(1);
+    expect(normalized.blockIndexMap.get("m-block")).toBe(2);
   });
 
-  it("should be able to look up blocks by index using sorted array", () => {
+  it("should be able to look up blocks by index using original array", () => {
     const patch: Patch = {
       id: "test",
       blocks: [
@@ -70,43 +68,40 @@ describe("Block Index Ordering", () => {
 
     const normalized = pass1Normalize(patch);
 
-    // Sort blocks by ID to match blockIndexMap order
-    const sortedBlocks = [...patch.blocks].sort((a, b) =>
-      a.id.localeCompare(b.id)
-    );
-
-    // Now block[index] should match what blockIndexMap says
+    // blocks[index] should work correctly with original array
+    const zIndex = normalized.blockIndexMap.get("z-block")!;
     const aIndex = normalized.blockIndexMap.get("a-block")!;
     const mIndex = normalized.blockIndexMap.get("m-block")!;
-    const zIndex = normalized.blockIndexMap.get("z-block")!;
 
-    expect(sortedBlocks[aIndex].id).toBe("a-block");
-    expect(sortedBlocks[mIndex].id).toBe("m-block");
-    expect(sortedBlocks[zIndex].id).toBe("z-block");
+    expect(patch.blocks[zIndex].id).toBe("z-block");
+    expect(patch.blocks[aIndex].id).toBe("a-block");
+    expect(patch.blocks[mIndex].id).toBe("m-block");
   });
 
-  it("should fail if blocks are accessed by index without sorting (demonstrating the bug)", () => {
+  it("should handle single block correctly", () => {
     const patch: Patch = {
       id: "test",
-      blocks: [
-        createBlock("z-block"),
-        createBlock("a-block"),
-        createBlock("m-block"),
-      ],
+      blocks: [createBlock("only-block")],
       edges: [],
       buses: [],
     };
 
     const normalized = pass1Normalize(patch);
 
-    // Using unsorted array (the bug)
-    const unsortedBlocks = patch.blocks;
+    expect(normalized.blockIndexMap.get("only-block")).toBe(0);
+    expect(normalized.blockIndexMap.size).toBe(1);
+  });
 
-    const aIndex = normalized.blockIndexMap.get("a-block")!;
+  it("should handle empty blocks array", () => {
+    const patch: Patch = {
+      id: "test",
+      blocks: [],
+      edges: [],
+      buses: [],
+    };
 
-    // This demonstrates the bug: blocks[0] should be "a-block" but is "z-block"
-    // The bug is that we're using unsorted array but sorted indices
-    expect(unsortedBlocks[aIndex].id).not.toBe("a-block"); // The bug!
-    expect(unsortedBlocks[aIndex].id).toBe("z-block"); // Wrong block!
+    const normalized = pass1Normalize(patch);
+
+    expect(normalized.blockIndexMap.size).toBe(0);
   });
 });

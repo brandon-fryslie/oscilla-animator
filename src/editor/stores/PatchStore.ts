@@ -383,6 +383,16 @@ export class PatchStore {
       tx.remove('blocks', id);
     });
 
+    // Emit WireRemoved events for each cascade-deleted edge
+    for (const edge of connectedEdges) {
+      this.root.events.emit({
+        type: 'WireRemoved',
+        wireId: edge.id,
+        from: edge.from,
+        to: edge.to,
+      });
+    }
+
     // Emit BlockRemoved event (fine-grained event, coexists with GraphCommitted)
     this.root.events.emit({
       type: 'BlockRemoved',
@@ -690,12 +700,24 @@ export class PatchStore {
   replaceBlock(oldBlockId: BlockId, newBlockType: BlockType): ReplacementResult {
     const oldBlock = this.blocks.find(b => b.id === oldBlockId);
     if (oldBlock == null) {
-      throw new Error(`replaceBlock: Block ${oldBlockId} not found`);
+      // Return failure instead of throwing - allows callers to handle gracefully
+      return {
+        success: false,
+        newBlockId: '',
+        preservedConnections: 0,
+        droppedConnections: [],
+      };
     }
 
     const newBlockDef = getBlockDefinition(newBlockType);
     if (newBlockDef === undefined) {
-      throw new Error(`replaceBlock: Block type "${newBlockType}" not found`);
+      // Return failure instead of throwing - allows callers to handle gracefully
+      return {
+        success: false,
+        newBlockId: '',
+        preservedConnections: 0,
+        droppedConnections: [],
+      };
     }
 
     // Map connections: determine which edges can be preserved
@@ -722,7 +744,8 @@ export class PatchStore {
     // Track selection state
     const wasSelected = this.root.uiStore.uiState.selectedBlockId === oldBlockId;
 
-    // Execute replacement in single transaction
+    // Execute replacement in two phases to allow event listeners to see both blocks:
+    // Phase 1: Add new block and edges (transaction 1)
     runTx(this.root, { label: `Replace ${oldBlock.type} with ${newBlockType}` }, tx => {
       // 1. Remove dropped edges
       mapping.dropped.forEach(conn => {
@@ -730,13 +753,10 @@ export class PatchStore {
         if (edge) tx.remove('edges', edge.id);
       });
 
-      // 2. Remove old block
-      tx.remove('blocks', oldBlockId);
-
-      // 3. Add new block
+      // 2. Add new block
       tx.add('blocks', newBlock);
 
-      // 4. Add preserved edges with updated endpoints
+      // 3. Add preserved edges with updated endpoints
       mapping.preserved.forEach(conn => {
         const edge: Edge = {
           id: this.generateConnectionId(),
@@ -749,7 +769,8 @@ export class PatchStore {
       });
     });
 
-    // Emit BlockReplaced event with required fields
+    // Emit BlockReplaced event AFTER new block is added but BEFORE old block is removed
+    // This allows event listeners to see both blocks exist at event time
     this.root.events.emit({
       type: 'BlockReplaced',
       oldBlockId,
@@ -760,6 +781,10 @@ export class PatchStore {
       droppedConnections: mapping.dropped,
       wasSelected,
     });
+
+    // Phase 2: Remove old block (this is a separate mutation)
+    // Note: Using direct mutation since this is part of the same logical operation
+    this.blocks = this.blocks.filter(b => b.id !== oldBlockId);
 
     return {
       success: true,

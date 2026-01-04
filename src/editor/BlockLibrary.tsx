@@ -8,13 +8,10 @@ import type { BlockDefinition } from './blocks/types';
 import { getBlockDefinitions, getBlockTags, getBlockForm, isBlockHidden } from './blocks';
 import './BlockLibrary.css';
 
-import { listCompositeDefinitions } from './composites';
-
-const FORM_ORDER: BlockForm[] = ['macro', 'composite', 'primitive'];
+const FORM_ORDER: BlockForm[] = ['macro', 'primitive'];
 
 const FORM_LABELS: Record<BlockForm, string> = {
   macro: 'Macros',
-  composite: 'Composites',
   primitive: 'Primitives',
 };
 
@@ -167,8 +164,7 @@ export const BlockLibrary = observer(() => {
 
   const previewedType = store.uiStore.previewedDefinition?.type ?? null;
 
-  // Include composites in the block list
-  const blockDefs = useMemo(() => getBlockDefinitions(true), []);
+  const blockDefs = useMemo(() => getBlockDefinitions(), []);
 
   const formGroups = useMemo(
     () => groupBlocksByForm(blockDefs),
@@ -249,17 +245,10 @@ export const BlockLibrary = observer(() => {
     });
   };
 
-  const compositeCount = listCompositeDefinitions().length;
-
   return (
     <div className="block-library">
       <div className="library-header">
         <h2>Blocks <span className="library-total-count">({blockDefs.length})</span></h2>
-        {compositeCount > 0 && (
-          <div className="library-composite-badge" title="User composites available">
-            {compositeCount} composites
-          </div>
-        )}
         <input
           type="text"
           className="library-search"

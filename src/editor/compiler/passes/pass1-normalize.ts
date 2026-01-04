@@ -59,13 +59,14 @@ export function pass1Normalize(
   const canonicalEdges = canonicalizeEdges(patch.edges);
   const edges = [...canonicalEdges];
 
-  // Step 1: Freeze block IDs to indices (stable sorted order)
+  // Step 1: Freeze block IDs to indices (original array order)
+  // Note: We use original order, not sorted order, because:
+  // - All blocks are identical (no priority classes)
+  // - Cycles will be supported (no valid topological order exists)
+  // - Index assignment just needs to be consistent within a single compile
   const blockIndexMap = new Map<string, BlockIndex>();
-  const sortedBlockIds = patch.blocks.map((b) => b.id).sort();
-
-  let nextBlockIndex = 0;
-  for (const blockId of sortedBlockIds) {
-    blockIndexMap.set(blockId, nextBlockIndex++ as BlockIndex);
+  for (let i = 0; i < patch.blocks.length; i++) {
+    blockIndexMap.set(patch.blocks[i].id, i as BlockIndex);
   }
 
   // Step 2: Create blocks Map (keyed by block id)

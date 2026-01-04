@@ -78,43 +78,12 @@ describe('registry-validation', () => {
         expect(() => validateBlockDefinition(def)).not.toThrow();
       });
 
-      it('accepts valid pure composite', () => {
-        const def: PureBlockDefinition = {
-          type: 'composite:TestComposite',
-          label: 'Test Composite',
-          capability: 'pure',
-          compileKind: 'composite',
-          description: 'Test',
-          inputs: [],
-          outputs: [],
-          defaultParams: {},
-          paramSchema: [],
-          color: '#000',
-          compositeDefinition: {
-            id: 'test',
-            label: 'Test',
-            description: 'Test composite',
-            subcategory: 'Other',
-            graph: {
-              nodes: {},
-              edges: [],
-              inputMap: {},
-              outputMap: {},
-            },
-            exposedInputs: [],
-            exposedOutputs: [],
-          },
-        };
-
-        expect(() => validateBlockDefinition(def)).not.toThrow();
-      });
-
       it('accepts valid pure macro', () => {
         const def: PureBlockDefinition = {
           type: 'macro:TestMacro',
           label: 'Test Macro',
           capability: 'pure',
-          compileKind: 'composite',
+          compileKind: 'spec',
           description: 'Test',
           inputs: [],
           outputs: [],
@@ -128,46 +97,12 @@ describe('registry-validation', () => {
     });
 
     describe('invalid definitions', () => {
-      it('rejects composite claiming non-pure capability', () => {
-        const def = {
-          type: 'composite:BadComposite',
-          label: 'Bad Composite',
-          capability: 'time',
-          compileKind: 'composite',
-          description: 'Test',
-          inputs: [],
-          outputs: [],
-          defaultParams: {},
-          paramSchema: [],
-          color: '#000',
-          compositeDefinition: {
-            id: 'test',
-            label: 'Test',
-            description: 'Test composite',
-            subcategory: 'Other',
-            graph: {
-              nodes: {},
-              edges: [],
-              inputMap: {},
-              outputMap: {},
-            },
-            exposedInputs: [],
-            exposedOutputs: [],
-          },
-        } as unknown as BlockDefinition;
-
-        expect(() => validateBlockDefinition(def)).toThrow(BlockDefinitionValidationError);
-        expect(() => validateBlockDefinition(def)).toThrow(
-          /composite blocks must have capability: 'pure'/
-        );
-      });
-
       it('rejects macro claiming non-pure capability', () => {
         const def = {
           type: 'macro:BadMacro',
           label: 'Bad Macro',
           capability: 'render',
-          compileKind: 'composite',
+          compileKind: 'spec',
           description: 'Test',
           inputs: [],
           outputs: [],

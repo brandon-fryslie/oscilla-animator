@@ -39,7 +39,7 @@ export function validateBlockDefinition(def: BlockDefinition): void {
   const form = getBlockForm(def);
 
   // Rule 1: Composites and macros must always be pure
-  if (form === 'composite' || form === 'macro') {
+  if (form === 'macro') {
     if (capability !== 'pure') {
       throw new BlockDefinitionValidationError(
         type,

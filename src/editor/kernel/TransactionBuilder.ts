@@ -100,8 +100,7 @@ class TransactionBuilder implements TxBuilder {
     const id = spec.id ?? randomUUID();
 
     // Look up block definition to get the form
-    const blockDef = getBlockDefinition(spec.type);
-    const form = blockDef?.compositeDefinition ? 'composite' :
+    const form =
                  spec.type.startsWith('macro:') ? 'macro' :
                  'primitive';
 

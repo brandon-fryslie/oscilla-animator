@@ -25,9 +25,6 @@ import * as DefaultSourceProviders from './default-source-providers';
 // Import BusBlock (hidden bus representation)
 import * as BusBlockModule from './bus-block';
 
-// Import composite bridge for optional composite support
-import { getCompositeBlockDefinitions } from '../composite-bridge';
-
 // Import validation for primitive closure enforcement
 import { validateBlockDefinitions } from './registry-validation';
 
@@ -82,15 +79,8 @@ export function isBlockHidden(definition: BlockDefinition): boolean {
   return getBlockTags(definition).hidden === true;
 }
 
-export function getBlockDefinitions(includeComposites: boolean = false): readonly BlockDefinition[] {
-  const coreBlocks = ALL_INDIVIDUAL_BLOCKS.map(normalizeDefinition);
-
-  if (includeComposites) {
-    const composites = getCompositeBlockDefinitions();
-    return [...coreBlocks, ...composites.map(normalizeDefinition)];
-  }
-
-  return coreBlocks;
+export function getBlockDefinitions(): readonly BlockDefinition[] {
+  return ALL_INDIVIDUAL_BLOCKS.map(normalizeDefinition);
 }
 
 // ============================================================================
@@ -99,7 +89,7 @@ export function getBlockDefinitions(includeComposites: boolean = false): readonl
 // Validate all block definitions on module load (fail-fast).
 // This ensures the registry complies with KERNEL_PRIMITIVES allowlist.
 try {
-  const allDefinitions = getBlockDefinitions(true);
+  const allDefinitions = getBlockDefinitions();
   validateBlockDefinitions(allDefinitions);
 } catch (error) {
   // Re-throw with context about where the error occurred
@@ -110,43 +100,20 @@ try {
 }
 
 export const BLOCK_DEFS_BY_TYPE = new Map<string, BlockDefinition>(
-  getBlockDefinitions(true).map((def) => [def.type, def])
+  getBlockDefinitions().map((def) => [def.type, def])
 );
 
 /**
  * Lane-aware filtering
  */
 export function getBlocksForPalette(): { matched: readonly BlockDefinition[]; other: readonly BlockDefinition[] } {
-  const allBlocks = getBlockDefinitions(true);
+  const allBlocks = getBlockDefinitions();
   return { matched: allBlocks, other: [] };
 }
 
 /**
  * Get block definition by type.
- *
- * First checks the static map (which is built at module load time).
- * If not found and the type is a composite, dynamically checks the
- * composite registry. This handles cases where composites are registered
- * after the static map is created (e.g., in test environments with module
- * isolation).
  */
 export function getBlockDefinition(type: string): BlockDefinition | undefined {
-  // First, check static map
-  const fromMap = BLOCK_DEFS_BY_TYPE.get(type);
-  if (fromMap !== undefined) {
-    return fromMap;
-  }
-
-  // If it's a composite type and not in map, check dynamically
-  if (type.startsWith('composite:')) {
-    const composites = getCompositeBlockDefinitions();
-    const found = composites.find(def => def.type === type);
-    if (found !== undefined) {
-      // Cache it for future lookups
-      BLOCK_DEFS_BY_TYPE.set(type, normalizeDefinition(found));
-      return BLOCK_DEFS_BY_TYPE.get(type);
-    }
-  }
-
-  return undefined;
+  return BLOCK_DEFS_BY_TYPE.get(type);
 }

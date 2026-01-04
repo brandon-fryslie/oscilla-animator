@@ -23,7 +23,7 @@ describe("Block Lowering Coverage", () => {
   describe("IR Block Registry", () => {
     it("should have IR lowering registered for all migrated blocks", () => {
       // Get all block definitions from the block registry
-      const allBlocks = getBlockDefinitions(true); // Include composites
+      const allBlocks = getBlockDefinitions(); // Include composites
 
       // Track statistics
       const irReadyBlocks: string[] = [];

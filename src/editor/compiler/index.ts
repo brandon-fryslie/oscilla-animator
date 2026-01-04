@@ -87,8 +87,6 @@ export {
   type CompilerService,
   type AutoCompileOptions,
   type Viewport,
-  type PortRefRewriteMap,
-  type CompositeExpansionResult,
 } from './integration';
 
 // Error decorations (Slice 2.5)

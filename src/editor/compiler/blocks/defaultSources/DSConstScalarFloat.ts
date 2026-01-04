@@ -63,34 +63,39 @@ registerBlockType({
 
 /**
  * Legacy compiler implementation (will be removed in Phase 4).
- * Pass-through: outputs.out = inputs.value
+ *
+ * Works in two modes:
+ * 1. Pass-through mode: If value input is connected, pass it through
+ * 2. Provider mode: If value input is not connected, emit constant from params
  */
 export const DSConstScalarFloatBlock: BlockCompiler = {
   type: 'DSConstScalarFloat',
 
   inputs: [
-    { name: 'value', type: { kind: 'Scalar:float' }, required: true },
+    { name: 'value', type: { kind: 'Scalar:float' }, required: false }, // Optional for provider mode
   ],
 
   outputs: [
     { name: 'out', type: { kind: 'Scalar:float' } },
   ],
 
-  compile({ inputs }) {
+  compile({ inputs, params }) {
     const valueArtifact = inputs.value;
 
-    if (valueArtifact === undefined || valueArtifact.kind !== 'Scalar:float') {
+    // Pass-through mode: if we have a valid input, forward it
+    if (valueArtifact !== undefined && valueArtifact.kind === 'Scalar:float') {
       return {
-        out: {
-          kind: 'Error',
-          message: 'DSConstScalarFloat requires Scalar:float for value input',
-        },
+        out: valueArtifact,
       };
     }
 
-    // Trivial pass-through
+    // Provider mode: emit constant from params
+    const constValue = (params?.value as number) ?? 0;
     return {
-      out: valueArtifact,
+      out: {
+        kind: 'Scalar:float',
+        value: constValue,
+      },
     };
   },
 };

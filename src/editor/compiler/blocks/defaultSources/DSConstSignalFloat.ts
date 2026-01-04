@@ -67,34 +67,39 @@ registerBlockType({
 
 /**
  * Legacy compiler implementation (will be removed in Phase 4).
- * Pass-through: outputs.out = inputs.value
+ *
+ * Works in two modes:
+ * 1. Pass-through mode: If value input is connected, pass it through
+ * 2. Provider mode: If value input is not connected, emit constant from params
  */
 export const DSConstSignalFloatBlock: BlockCompiler = {
   type: 'DSConstSignalFloat',
 
   inputs: [
-    { name: 'value', type: { kind: 'Signal:float' }, required: true },
+    { name: 'value', type: { kind: 'Signal:float' }, required: false }, // Optional for provider mode
   ],
 
   outputs: [
     { name: 'out', type: { kind: 'Signal:float' } },
   ],
 
-  compile({ inputs }) {
+  compile({ inputs, params }) {
     const valueArtifact = inputs.value;
 
-    if (valueArtifact === undefined || valueArtifact.kind !== 'Signal:float') {
+    // Pass-through mode: if we have a valid input, forward it
+    if (valueArtifact !== undefined && valueArtifact.kind === 'Signal:float') {
       return {
-        out: {
-          kind: 'Error',
-          message: 'DSConstSignalFloat requires Signal<float> for value input',
-        },
+        out: valueArtifact,
       };
     }
 
-    // Trivial pass-through
+    // Provider mode: emit constant from params
+    const constValue = (params?.value as number) ?? 0;
     return {
-      out: valueArtifact,
+      out: {
+        kind: 'Signal:float',
+        value: () => constValue,
+      },
     };
   },
 };

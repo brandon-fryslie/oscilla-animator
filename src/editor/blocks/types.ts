@@ -13,7 +13,6 @@ import type {
   DefaultSource,
   Capability,
 } from '../types';
-import type { CompositeDefinition } from '../composites';
 import type { KERNEL_PRIMITIVES } from './kernel-primitives';
 
 // =============================================================================
@@ -54,17 +53,16 @@ export type BlockTagValue =
 export type BlockTags = Record<string, BlockTagValue>;
 
 // =============================================================================
-// Parameter Schema Types (for composites and exposed params)
+// Parameter Schema Types (for exposed params)
 // =============================================================================
 
 /**
  * Parameter types for UI generation.
- * Used by composites to expose internal block parameters.
  */
 export type ParamType = 'number' | 'string' | 'boolean' | 'select' | 'color';
 
 /**
- * Parameter schema for exposed composite parameters.
+ * Parameter schema for exposed parameters.
  * Defines the type and constraints for a user-editable parameter.
  */
 export interface ParamSchema {
@@ -113,7 +111,7 @@ interface BlockDefinitionBase {
   readonly defaultParams: BlockParams;
 
   /**
-   * Parameter schema for exposed params (used by composites).
+   * Parameter schema for exposed params.
    * For primitive blocks, params are typically derived from input slots with defaultSource.
    */
   readonly paramSchema?: readonly ParamSchema[];
@@ -123,20 +121,6 @@ interface BlockDefinitionBase {
 
   /** Priority for palette ordering (lower = higher priority, shown first) */
   readonly priority?: number;
-
-  // === Compound-specific fields ===
-
-  /**
-   * For composites: the primitive graph that defines this block.
-   * For primitives: undefined.
-   */
-  readonly primitiveGraph?: CompoundGraph;
-
-  /**
-   * For composite blocks: store the original composite definition.
-   * This is used for compiler integration and parameter resolution.
-   */
-  readonly compositeDefinition?: CompositeDefinition;
 
   /**
    * Auto-bus subscriptions: map of input port IDs to bus names.
@@ -185,36 +169,6 @@ export interface PureBlockDefinition extends BlockDefinitionBase {
  */
 export type BlockDefinition = KernelBlockDefinition | PureBlockDefinition;
 
-/**
- * Defines the internal primitive graph of a compound block.
- * This is how compounds are expressed in terms of primitives.
- */
-export interface CompoundGraph {
-  /** Internal nodes (primitives) */
-  readonly nodes: Record<string, CompoundNode>;
-
-  /** Connections between internal nodes */
-  readonly edges: readonly CompoundEdge[];
-
-  /** Maps external inputs to internal nodes */
-  readonly inputMap: Record<string, string>;
-
-  /** Maps internal nodes to external outputs */
-  readonly outputMap: Record<string, string>;
-}
-
-export interface CompoundNode {
-  /** Primitive block type */
-  readonly type: string;
-  /** Parameter overrides */
-  readonly params?: Record<string, unknown>;
-}
-
-export interface CompoundEdge {
-  readonly from: string;  // "nodeId.outputSlot"
-  readonly to: string;    // "nodeId.inputSlot"
-}
-
 // =============================================================================
 // Block Form Derivation
 // =============================================================================
@@ -224,18 +178,12 @@ export interface CompoundEdge {
  *
  * Form is NOT stored as metadata - it's derived from how the block is defined:
  * - Macros: type starts with 'macro:' (expand into visible blocks)
- * - Composites: have compositeDefinition (internal graph, single unit in UI)
  * - Primitives: everything else (atomic operations)
  */
 export function getBlockForm(def: BlockDefinition): BlockForm {
   // Macros have a 'macro:' prefix by convention
   if (def.type.startsWith('macro:')) {
     return 'macro';
-  }
-
-  // Composites have a compositeDefinition
-  if (def.compositeDefinition) {
-    return 'composite';
   }
 
   // Everything else is a primitive

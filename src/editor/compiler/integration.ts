@@ -1,8 +1,8 @@
 import type { RootStore } from '../stores/RootStore';
-import type { Block, Edge, PortRef } from '../types';
+import type { Block, Edge } from '../types';
 import { compilePatch } from './compile';
 import { createCompileCtx } from './context';
-import { createBlockRegistry, registerDynamicBlock } from './blocks';
+import { createBlockRegistry } from './blocks';
 import type {
   BlockInstance,
   BlockRegistry,
@@ -14,7 +14,6 @@ import type {
 } from './types';
 import { buildDecorations, emptyDecorations, type DecorationSet } from './error-decorations';
 import { getBlockDefinition } from '../blocks';
-import { registerAllComposites, getCompositeCompilers } from '../composite-bridge';
 import { createDiagnostic, type Diagnostic, type DiagnosticCode, type TargetRef } from '../diagnostics/types';
 import { getFeatureFlags } from './featureFlags';
 
@@ -257,104 +256,6 @@ function generateBusDiagnostics(
 }
 
 // =============================================================================
-// PortRef Rewrite Map (per Design Doc Section 7)
-// =============================================================================
-
-/**
- * PortRefRewriteMap rewrites port references from composite boundary ports
- * to their internal primitive ports after composite expansion.
- *
- * Design: CompositeTransparencyDesign.md Section 7
- */
-export interface PortRefRewriteMap {
-  /**
-   * Rewrite a port reference. Returns:
-   * - The rewritten PortRef if the input targets a composite boundary
-   * - The same PortRef unchanged if it targets a primitive
-   * - null if the port reference is invalid (e.g., unmapped port)
-   */
-  rewrite(ref: PortRef): PortRef | null;
-
-  /**
-   * Check if a block ID was a composite that was expanded
-   */
-  wasComposite(blockId: string): boolean;
-
-  /**
-   * Get all mappings for debugging/testing
-   */
-  getAllMappings(): ReadonlyMap<string, PortRef>;
-}
-
-/**
- * Create a mutable builder for PortRefRewriteMap.
- */
-function createRewriteMapBuilder(): {
-  addMapping(compositeId: string, boundaryPort: string, internalRef: PortRef): void;
-  markComposite(compositeId: string): void;
-  build(): PortRefRewriteMap;
-} {
-  const mappings = new Map<string, PortRef>();
-  const expandedComposites = new Set<string>();
-
-  return {
-    addMapping(compositeId: string, boundaryPort: string, internalRef: PortRef) {
-      const key = `${compositeId}.${boundaryPort}`;
-      mappings.set(key, internalRef);
-    },
-
-    markComposite(compositeId: string) {
-      expandedComposites.add(compositeId);
-    },
-
-    build(): PortRefRewriteMap {
-      // Freeze the maps
-      const frozenMappings = new Map(mappings);
-      const frozenComposites = new Set(expandedComposites);
-
-      return {
-        rewrite(ref: PortRef): PortRef | null {
-          // If the block was not a composite, return ref unchanged
-          if (!frozenComposites.has(ref.blockId)) {
-            return ref;
-          }
-
-          // Look up the mapping
-          const key = `${ref.blockId}.${ref.slotId}`;
-          const mapped = frozenMappings.get(key);
-
-          if (mapped == null) {
-            // Composite exists but port not mapped - this is an error
-            return null;
-          }
-
-          return mapped;
-        },
-
-        wasComposite(blockId: string): boolean {
-          return frozenComposites.has(blockId);
-        },
-
-        getAllMappings(): ReadonlyMap<string, PortRef> {
-          return frozenMappings;
-        },
-      };
-    },
-  };
-}
-
-/**
- * Result of composite expansion including the rewrite map.
- */
-export interface CompositeExpansionResult {
-  expandedPatch: CompilerPatch;
-  rewriteMap: PortRefRewriteMap;
-  // Bus-Block Unification: publishers/listeners removed - bus bindings are now connections
-}
-
-// =============================================================================
-// NOTE: Helper functions removed - no longer needed since GraphNormalizer handles structural blocks
-//
 // Default Source Provider Injection (Sprint 9-11)
 // =============================================================================
 
@@ -446,267 +347,6 @@ export function editorToPatch(store: RootStore): CompilerPatch {
 }
 
 // =============================================================================
-// Composite Expansion (per Design Doc Section 7)
-// =============================================================================
-
-function resolveParamValue(value: unknown, parentParams: Record<string, unknown>): unknown {
-  if (value != null && typeof value === 'object' && !Array.isArray(value)) {
-    const marker = (value as { __fromParam?: string }).__fromParam;
-    if (typeof marker === 'string') {
-      return parentParams[marker];
-    }
-  }
-  return value;
-}
-
-/** Generate unique ID for auto-created bus publishers/listeners */
-let busBindingIdCounter = 0;
-function generateBusBindingId(compositeId: string, type: 'pub' | 'sub', port: string): string {
-  return `${compositeId}::${type}::${port}::${busBindingIdCounter++}`;
-}
-
-/**
- * Expand blocks that declare primitiveGraph into their internal nodes/edges.
- * External connections are rewired to exposed input/output maps.
- *
- * Additionally handles bus subscriptions/publications defined in composite graphs.
- *
- * Returns both the expanded patch and a PortRefRewriteMap that can be used
- * to remap bus publishers/listeners that target composite boundary ports.
- *
- * Design: CompositeTransparencyDesign.md Section 7
- */
-function expandComposites(patch: CompilerPatch): CompositeExpansionResult {
-  const queue: Array<[string, BlockInstance]> = patch.blocks.map(b => [b.id, b]);
-  let edges = [...patch.edges];
-  const newBlocks = new Map<string, BlockInstance>();
-  const newEdges: Edge[] = [];
-
-  // Build the rewrite map as we expand composites
-  const rewriteBuilder = createRewriteMapBuilder();
-
-  while (queue.length > 0) {
-    const [blockId, block] = queue.shift()!;
-    const definition = getBlockDefinition(block.type);
-    let graph = definition?.primitiveGraph ?? null;
-    let compositeDef = definition?.compositeDefinition ?? null;
-
-    // Handle composite blocks (composite: prefix)
-    if (block.type.startsWith('composite:') && definition?.compositeDefinition != null) {
-      // Convert composite definition to primitive graph - use the stored primitiveGraph
-      graph = definition.primitiveGraph ?? null;
-      compositeDef = definition.compositeDefinition ?? null;
-    }
-
-    if (graph != null) {
-      // Mark this block as a composite that was expanded
-      rewriteBuilder.markComposite(blockId);
-
-      const idMap = new Map<string, string>();
-
-      // Create internal blocks
-      for (const [nodeId, nodeDef] of Object.entries(graph.nodes)) {
-        const newId = `${blockId}::${nodeId}`;
-        idMap.set(nodeId, newId);
-        const resolvedParams: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(nodeDef.params ?? {})) {
-          resolvedParams[k] = resolveParamValue(v, block.params);
-        }
-        const internalBlock: BlockInstance = {
-          id: newId,
-          type: nodeDef.type,
-          params: resolvedParams,
-        };
-        queue.push([newId, internalBlock]);
-      }
-
-      // Build rewrite mappings for INPUT ports (listeners target these)
-      for (const [boundaryPort, internalRef] of Object.entries(graph.inputMap)) {
-        const [node, slotId] = internalRef.split('.');
-        const internalBlockId = idMap.get(node);
-        if (internalBlockId != null) {
-          rewriteBuilder.addMapping(blockId, boundaryPort, {
-            blockId: internalBlockId,
-            slotId,
-            direction: 'input',
-          });
-        }
-      }
-
-      // Build rewrite mappings for OUTPUT ports (publishers target these)
-      for (const [boundaryPort, internalRef] of Object.entries(graph.outputMap)) {
-        const [node, slotId] = internalRef.split('.');
-        const internalBlockId = idMap.get(node);
-        if (internalBlockId != null) {
-          rewriteBuilder.addMapping(blockId, boundaryPort, {
-            blockId: internalBlockId,
-            slotId,
-            direction: 'output',
-          });
-        }
-      }
-
-      // Bus-Block Unification: Convert bus subscriptions to edges FROM BusBlock TO internal block
-      if (compositeDef?.graph.busSubscriptions != null) {
-        for (const [inputPort, busNameValue] of Object.entries(compositeDef.graph.busSubscriptions)) {
-          const busName = busNameValue;
-          const internalRef = graph.inputMap[inputPort];
-          if (internalRef != null && internalRef !== '') {
-            const [node, port] = internalRef.split('.');
-            const internalBlockId = idMap.get(node);
-            if (internalBlockId != null) {
-              // Find the BusBlock by name
-              const busBlock = patch.blocks.find(b =>
-                b.type === 'BusBlock' && (b.params?.name === busName || b.id === busName)
-              );
-              if (busBlock != null) {
-                newEdges.push({
-                  id: generateBusBindingId(blockId, 'sub', inputPort),
-                  from: { kind: 'port', blockId: busBlock.id, slotId: 'out' },
-                  to: { kind: 'port', blockId: internalBlockId, slotId: port },
-                  enabled: true,
-                role: { kind: 'user' },
-                });
-              }
-            }
-          }
-        }
-      }
-
-      // Bus-Block Unification: Convert bus publications to edges FROM internal block TO BusBlock
-      if (compositeDef?.graph.busPublications != null) {
-        for (const [outputPort, busNameValue] of Object.entries(compositeDef.graph.busPublications)) {
-          const busName = busNameValue;
-          const internalRef = graph.outputMap[outputPort];
-          if (internalRef != null && internalRef !== '') {
-            const [node, port] = internalRef.split('.');
-            const internalBlockId = idMap.get(node);
-            if (internalBlockId != null) {
-              // Find the BusBlock by name
-              const busBlock = patch.blocks.find(b =>
-                b.type === 'BusBlock' && (b.params?.name === busName || b.id === busName)
-              );
-              if (busBlock != null) {
-                newEdges.push({
-                  id: generateBusBindingId(blockId, 'pub', outputPort),
-                  from: { kind: 'port', blockId: internalBlockId, slotId: port },
-                  to: { kind: 'port', blockId: busBlock.id, slotId: 'in' },
-                  enabled: true,
-                role: { kind: 'user' },
-                });
-              }
-            }
-          }
-        }
-      }
-
-      // Internal edges
-      for (const graphEdge of graph.edges) {
-        const [fromNode, fromPort] = graphEdge.from.split('.');
-        const [toNode, toPort] = graphEdge.to.split('.');
-        const fromId = idMap.get(fromNode);
-        const toId = idMap.get(toNode);
-        if (fromId != null && toId != null) {
-          newEdges.push({
-            id: `${blockId}::${fromNode}.${fromPort}->${toNode}.${toPort}`,
-            from: { kind: 'port', blockId: fromId, slotId: fromPort },
-            to: { kind: 'port', blockId: toId, slotId: toPort },
-            enabled: true,
-          role: { kind: 'user' },
-          });
-        }
-      }
-
-      // Rewire incoming edges - check both original edges and already-rewired ones
-      const incoming = edges.filter((e) => e.to.blockId === blockId);
-      const incomingFromNew = newEdges.filter((e) => e.to.blockId === blockId);
-      const outgoing = edges.filter((e) => e.from.blockId === blockId);
-      const outgoingFromNew = newEdges.filter((e) => e.from.blockId === blockId);
-
-      edges = edges.filter(
-        (e) => e.to.blockId !== blockId && e.from.blockId !== blockId
-      );
-
-      // Remove edges targeting this composite from newEdges (will be rewired)
-      const edgesToRemove = new Set<Edge>();
-      incomingFromNew.forEach((e) => edgesToRemove.add(e));
-      outgoingFromNew.forEach((e) => edgesToRemove.add(e));
-
-      for (const edge of [...incoming, ...incomingFromNew]) {
-        const internalRef = graph.inputMap[edge.to.slotId];
-        if (internalRef == null || internalRef === '') continue;
-        const [node, port] = internalRef.split('.');
-        const toId = idMap.get(node);
-        if (toId != null) {
-          newEdges.push({
-            id: `${edge.id}::rewired`,
-            from: edge.from,
-            to: { kind: 'port', blockId: toId, slotId: port },
-            enabled: edge.enabled,
-            role: { kind: 'user' },
-          });
-        }
-      }
-
-      for (const edge of [...outgoing, ...outgoingFromNew]) {
-        const internalRef = graph.outputMap[edge.from.slotId];
-        if (internalRef == null || internalRef === '') continue;
-        const [node, port] = internalRef.split('.');
-        const fromId = idMap.get(node);
-        if (fromId != null) {
-          newEdges.push({
-            id: `${edge.id}::rewired`,
-            from: { kind: 'port', blockId: fromId, slotId: port },
-            to: edge.to,
-            enabled: edge.enabled,
-            role: { kind: 'user' },
-          });
-        }
-      }
-
-      // Remove the edges that were rewired from newEdges
-      for (let i = newEdges.length - 1; i >= 0; i--) {
-        if (edgesToRemove.has(newEdges[i])) {
-          newEdges.splice(i, 1);
-        }
-      }
-    } else {
-      newBlocks.set(blockId, block);
-    }
-  }
-
-  // Add any untouched edges
-  for (const edge of edges) {
-    newEdges.push(edge);
-  }
-
-  return {
-    expandedPatch: {
-      blocks: Array.from(newBlocks.values()),
-      edges: newEdges,
-      buses: patch.buses,
-    },
-    rewriteMap: rewriteBuilder.build(),
-  };
-}
-
-/**
- * Apply the rewrite map to bus bindings.
- * Bus-Block Unification: Publishers/listeners removed. Connections to BusBlocks
- * are now created directly in expandComposites, so this is a pass-through.
- *
- * Design: CompositeTransparencyDesign.md Section 8
- */
-function rewriteBusBindings(
-  patch: CompilerPatch,
-  _rewriteMap: PortRefRewriteMap
-): { patch: CompilerPatch; errors: CompileError[] } {
-  // Bus-Block Unification: Publishers/listeners removed - nothing to rewrite
-  // Bus connections are now regular connections created in expandComposites
-  return { patch, errors: [] };
-}
-
-// =============================================================================
 // Compiler Service
 // =============================================================================
 
@@ -743,15 +383,6 @@ export interface CompilerService {
  * Create a compiler service for an EditorStore.
  */
 export function createCompilerService(store: RootStore): CompilerService {
-  // Register all composite compilers from domain-composites.ts
-  // This must be called before getCompositeCompilers() to populate the registry
-  registerAllComposites();
-
-  const compositeCompilers = getCompositeCompilers();
-  for (const [blockType, compiler] of Object.entries(compositeCompilers)) {
-    registerDynamicBlock(blockType, compiler);
-  }
-
   const registry = createBlockRegistry();
   const ctx = createCompileCtx();
 
@@ -779,75 +410,12 @@ export function createCompilerService(store: RootStore): CompilerService {
               store.logStore.debug('compiler', 'Starting compilation...');
 
               try {
-                let patch = editorToPatch(store);
-
-                // Step 1: Expand composites and build rewrite map
-                // Bus-Block Unification: publishers/listeners removed - bus bindings are now connections
-                const { expandedPatch, rewriteMap } = expandComposites(patch);
-
-        // Step 2: Apply rewrite map (now a no-op, kept for structure)
-        const { patch: rewrittenPatch, errors: rewriteErrors } = rewriteBusBindings(
-          {
-            ...expandedPatch,
-            buses: patch.buses,
-          },
-          rewriteMap
-        );
-
-        // If there were rewrite errors, fail early
-        if (rewriteErrors.length > 0) {
-          lastResult = {
-            ok: false,
-            errors: rewriteErrors.map((e) => ({
-              code: e.code,
-              message: e.message,
-              where: e.where,
-            })),
-          };
-          lastDecorations = buildDecorations(lastResult.errors);
-
-          // Convert errors to diagnostics and emit CompileFinished
-          const diagnostics = lastResult.errors.map((err) =>
-            compileErrorToDiagnostic(err, patchRevision)
-          );
-          const durationMs = performance.now() - startTime;
-
-          store.events.emit({
-            type: 'CompileFinished',
-            compileId,
-            patchId: 'patch', // Temporary
-            patchRevision,
-            status: 'failed',
-            durationMs,
-            diagnostics,
-          });
-
-          return lastResult;
-        }
-
-        patch = rewrittenPatch;
-
-        // Step 3: Inject advanced default source providers from allowlist (System 1)
-        // Graph normalization already materialized structural blocks (DSConst* providers)
-        // This step only injects advanced providers (e.g., Oscillator) based on user configuration
-        // System 1 skips inputs that already have connections (from normalization or user wires)
-        // NOTE: injectDefaultSourceProviders is now a no-op - all structural blocks handled by GraphNormalizer
-        patch = injectDefaultSourceProviders(store, patch, registry);
+                const patch = editorToPatch(store);
 
         store.logStore.debug(
           'compiler',
           `Patch has ${patch.blocks.length} blocks and ${patch.edges.length} edges`
         );
-        // Log rewrite map stats for debugging
-        const mappingCount = rewriteMap.getAllMappings().size;
-        if (mappingCount > 0) {
-          store.logStore.debug(
-            'compiler',
-            `RewriteMap: ${mappingCount} port mappings from composite expansion`
-          );
-        }
-
-        // Bus-Block Unification: publishers/listeners removed - bus bindings are now connections
 
         const seed: Seed = store.uiStore.settings.seed;
         // Use feature flag to control IR emission (legacy mode when emitIR=false)

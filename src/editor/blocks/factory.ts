@@ -19,7 +19,7 @@ export function createBlock(
   // Auto-infer capability from KERNEL_PRIMITIVES if not explicitly provided
   let capability: BlockDefinition['capability'];
   let kernelId: KernelId | undefined;
-  let compileKind: 'operator' | 'composite' | 'spec' = 'operator';
+  let compileKind: 'operator' | 'spec' = 'operator';
 
   if ('capability' in definition && definition.capability !== undefined) {
     // Explicit capability provided - use it
@@ -29,7 +29,7 @@ export function createBlock(
     } else {
       // For pure blocks, use provided compileKind or default to 'operator'
       compileKind = ('compileKind' in definition && definition.compileKind)
-        ? definition.compileKind as 'operator' | 'composite' | 'spec'
+        ? definition.compileKind as 'operator' | 'spec'
         : 'operator';
     }
   } else {
@@ -41,10 +41,7 @@ export function createBlock(
     } else {
       // Not in kernel primitives - mark as pure
       capability = 'pure';
-      // Infer compileKind: composites have primitiveGraph, others are operators
-      compileKind = ('primitiveGraph' in definition && definition.primitiveGraph)
-        ? 'composite'
-        : 'operator';
+      compileKind = 'operator';
     }
   }
 

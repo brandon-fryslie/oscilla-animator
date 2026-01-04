@@ -3,7 +3,7 @@ import { getBlockDefinitions, getBlockTags, getBlockForm } from '../blocks';
 
 describe('block registry tags', () => {
   it('populates tags for every block definition', () => {
-    const definitions = getBlockDefinitions(true);
+    const definitions = getBlockDefinitions();
     expect(definitions.length).toBeGreaterThan(0);
 
     for (const definition of definitions) {
@@ -19,7 +19,7 @@ describe('block registry tags', () => {
 
   it('supports scalar and array tag values', () => {
     const sample = {
-      ...getBlockDefinitions(true)[0],
+      ...getBlockDefinitions()[0],
       tags: { custom: ['a', 'b', true, 3], flag: true, weight: 2 },
     };
 

@@ -586,7 +586,7 @@ export interface Vec2 {
  *
  * Sprint: Phase 0 - Sprint 1: Block Form Cleanup
  */
-export type BlockForm = 'primitive' | 'composite' | 'macro';
+export type BlockForm = 'primitive' | 'macro';
 
 // =============================================================================
 // Block and Edge Roles (Structural Entity Tracking)
