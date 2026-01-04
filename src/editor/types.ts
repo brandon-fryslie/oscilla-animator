@@ -3,7 +3,7 @@
 // =============================================================================
 
 import type { Observable } from './core/Observable';
-import type { CoreDomain } from '../core/types';
+import type { CoreDomain, Domain } from '../core/types';
 
 /**
  * Unique identifier for a patch.
@@ -57,10 +57,13 @@ export type TypeDesc = string; // e.g., 'Number', 'Vec2', 'Field<Number>', 'Sign
 export type { TypeWorld } from './ir/types/TypeDesc';
 
 /**
- * Domain - type domain classification.
- * Re-exported from compiler types for convenience.
+ * Domain - type domain classification (float, vec2, color, etc.).
+ * Re-exported from core/types.ts for convenience.
  */
-export type { Domain } from './compiler/unified/Domain';
+export type { Domain };
+
+// Re-export CoreDomain for convenience
+export type { CoreDomain };
 
 // =============================================================================
 // UI Hints (for block configuration)
@@ -161,9 +164,6 @@ export interface LensInstance {
   /** Sort key for ordering in lens chains */
   readonly sortKey?: number;
 }
-
-// Re-export CoreDomain for convenience
-export type { CoreDomain };
 
 // =============================================================================
 // Adapter System Types

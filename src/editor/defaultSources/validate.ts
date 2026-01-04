@@ -307,7 +307,7 @@ function validateRequiredBusesExist(
   if (spec.busInputs) {
     for (const [inputId, busName] of Object.entries(spec.busInputs)) {
       // Bus-Block Unification: Look up BusBlock by name in params
-      const busBlock = rootStore.patchStore.busBlocks.find((b) => b.params.name === busName);
+      const busBlock = rootStore.patchStore.blocks.filter(b => b.type === "BusBlock").find((b) => b.params.name === busName);
 
       if (!busBlock) {
         // Bus doesn't exist - emit error
@@ -398,7 +398,7 @@ function validateNoCycles(
   const providerReadsBuses = new Set<string>();
   for (const busName of Object.values(spec.busInputs)) {
     // Find BusBlock by name (stored in params.name)
-    const busBlock = rootStore.patchStore.busBlocks.find((b) => b.params.name === busName);
+    const busBlock = rootStore.patchStore.blocks.filter(b => b.type === "BusBlock").find((b) => b.params.name === busName);
     if (busBlock) {
       providerReadsBuses.add(busBlock.id); // block ID = bus ID
     }
@@ -407,7 +407,7 @@ function validateNoCycles(
   // Bus-Block Unification: Get all buses that the target block "publishes" to
   // (i.e., edges FROM target block TO BusBlocks)
   const edges = rootStore.patchStore.edges;
-  const busBlocks = rootStore.patchStore.busBlocks;
+  const busBlocks = rootStore.patchStore.blocks.filter(b => b.type === "BusBlock");
   const busBlockIds = new Set(busBlocks.map(b => b.id));
 
   const targetPublisherBuses = edges
@@ -418,7 +418,7 @@ function validateNoCycles(
   for (const busId of targetPublisherBuses) {
     if (providerReadsBuses.has(busId)) {
       // Cycle detected - emit WARNING (not error, may be intentional)
-      const busBlock = rootStore.patchStore.busBlocks.find((b) => b.id === busId);
+      const busBlock = rootStore.patchStore.blocks.filter(b => b.type === "BusBlock").find((b) => b.id === busId);
       const busName = (busBlock?.params.name as string) ?? busId;
 
       // Get target block info for friendly warning message

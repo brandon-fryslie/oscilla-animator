@@ -32,7 +32,8 @@ export const BusInspector = observer(({ busId: propBusId }: BusInspectorProps) =
     );
   }
 
-  const busBlock = store.patchStore.busBlocks.find(b => b.id === busId);
+  // Find bus block among all blocks
+  const busBlock = store.patchStore.blocks.find(b => b.type === 'BusBlock' && b.id === busId);
 
   return (
     <InspectorContainer
