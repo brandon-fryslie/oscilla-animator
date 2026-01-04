@@ -763,17 +763,16 @@ Reference: `design-docs/12-Compiler-Final/`
 
 ---
 
-## Phase 6: Full Scheduled Runtime [ON HOLD - Pending Phase 0]
+## Phase 6: Full Scheduled Runtime [COMPLETED]
 
 **Goal:** Complete IR-driven runtime with explicit schedule, ValueStore, state management, and hot-swap.
 
 **Migration Safety:** Parallel execution - run both old and new runtime, compare results.
 
-**Status:** ON HOLD until Phase 0 (Architecture Refactoring) is complete.
+**Status:** COMPLETED 2026-01-04
 
 **Started:** 2025-12-26
-**Sprint 1 Complete:** 2025-12-26
-**Sprint 2 Complete:** 2025-12-26
+**Completed:** 2026-01-04
 
 ### Topics
 
@@ -801,13 +800,16 @@ Reference: `design-docs/12-Compiler-Final/`
 **Test Strategy:** RuntimeState uses real stores, not stubs
 **Implementation:** `src/editor/runtime/executor/RuntimeState.ts` - extractSlotMeta(), real store integration (17 tests)
 
-#### schedule-executor [PARTIAL]
+#### schedule-executor [COMPLETED]
 **Description:** Implement schedule execution: iterate `StepIR[]` in order, execute each step kind. Replace closure-tree traversal.
 **Spec:** 17-Scheduler-Full (§3)
 **Dependencies:** value-store, state-buffer-system
 **Labels:** runtime, schedule, execution
 **Test Strategy:** Scheduled execution matches closure execution
-**Status:** Frame loop works, executeTimeDerive + executeBusEval + executeMaterialize implemented. Remaining: executeNodeEval, executeRenderAssemble (Sprint 3)
+**Status:** COMPLETED - Frame loop dispatches to all step executors (timeDerive, signalEval, materialize*, renderAssemble, debugProbe, 3D steps)
+**Implementation:** `src/editor/runtime/executor/ScheduleExecutor.ts` - Complete step dispatch
+
+**Note:** The implementation uses `signalEval` steps, not `nodeEval`. The planning docs referenced `nodeEval` but the actual IR compiler emits `signalEval` steps which are fully implemented.
 
 #### frame-cache-system [COMPLETED]
 **Description:** Implement `FrameCache` with per-frame memo for signals/fields. Cache key validation from `CacheKeySpec`.
@@ -817,12 +819,13 @@ Reference: `design-docs/12-Compiler-Final/`
 **Test Strategy:** Cache hits/misses are correct
 **Implementation:** `src/editor/runtime/executor/RuntimeState.ts` - createFrameCache() with stamp-based invalidation (41 tests)
 
-#### execute-bus-eval [COMPLETED]
-**Spec:** 17-Scheduler-Full (§3.3)
+#### execute-signal-eval [COMPLETED]
+**Description:** Implement executeSignalEval step executor - the actual signal evaluation step used by the IR compiler.
+**Spec:** 17-Scheduler-Full (§3.2)
 **Dependencies:** frame-cache-system
-**Labels:** runtime, buses, step-executor
-**Test Strategy:** All combine modes (sum, avg, min, max, last, product) work correctly
-**Implementation:** `src/editor/runtime/executor/steps/executeBusEval.ts` (10 tests)
+**Labels:** runtime, signals, step-executor
+**Test Strategy:** Signal evaluation produces correct values
+**Implementation:** `src/editor/runtime/executor/steps/executeSignalEval.ts` - Evaluates SignalExpr DAG via SigEvaluator
 
 #### execute-materialize [COMPLETED]
 **Description:** Implement executeMaterialize step executor with FieldMaterializer integration, buffer caching.
@@ -832,25 +835,36 @@ Reference: `design-docs/12-Compiler-Final/`
 **Test Strategy:** Field buffers materialized correctly, buffer pool caching works
 **Implementation:** `src/editor/runtime/executor/steps/executeMaterialize.ts` (20 tests)
 
-#### hot-swap-semantics [PROPOSED]
+#### execute-render-assemble [COMPLETED]
+**Description:** Implement executeRenderAssemble step executor - assembles final RenderFrameIR from materialized buffers.
+**Spec:** 17-Scheduler-Full (§3.5)
+**Dependencies:** execute-materialize
+**Labels:** runtime, rendering, step-executor
+**Test Strategy:** RenderFrameIR assembled correctly from batch descriptors
+**Implementation:** `src/editor/runtime/executor/steps/executeRenderAssemble.ts` - Handles Instance2D and Path batches
+
+#### legacy-runtime-removal [COMPLETED]
+**Description:** Remove closure-based runtime and dual-emit code paths. IR-only compiler.
+**Spec:** 01.1-CompilerMigration-Roadmap (Phase 10)
+**Dependencies:** All Phase 6 topics
+**Labels:** cleanup, migration, final
+**Test Strategy:** All tests pass with IR-only runtime
+**Completion:** 2026-01-04 - Removed deprecated step executors (executeNodeEval, executeBusEval, executeEventBusEval) and backup files. Compiler is IR-only, no closure execution paths remain.
+
+#### hot-swap-semantics [DEFERRED]
 **Description:** Implement no-jank hot swap: state preservation via layout-hash matching, cache discard policy, time continuity.
 **Spec:** 17-Scheduler-Full (§9), 02-IR-Schema (§22)
 **Dependencies:** state-buffer-system, frame-cache-system
 **Labels:** runtime, hot-swap, live-editing
 **Test Strategy:** Hot swap preserves compatible state
+**Status:** Deferred per user direction
 
-#### determinism-enforcement [PROPOSED]
+#### determinism-enforcement [DEFERRED]
 **Spec:** 02-IR-Schema (§21, determinism), 10-Schedule-Semantics (§12.3)
 **Dependencies:** schedule-executor
 **Labels:** runtime, determinism, correctness
 **Test Strategy:** Same inputs → bitwise-identical outputs
-
-#### legacy-runtime-removal [PROPOSED]
-**Description:** Remove closure-based runtime after IR runtime is validated. Clean up dual-emit code paths.
-**Spec:** 01.1-CompilerMigration-Roadmap (Phase 10)
-**Dependencies:** All Phase 6 topics
-**Labels:** cleanup, migration, final
-**Test Strategy:** All tests pass with IR-only runtime
+**Status:** Deferred per user direction
 
 ---
 
