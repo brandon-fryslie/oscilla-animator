@@ -3,6 +3,9 @@
  *
  * Extensions to the base compiler types to support buses as first-class
  * graph nodes in Phase 2 compilation.
+ *
+ * NOTE: This file is currently unused and contains references to legacy types.
+ * Imports are commented out to fix type errors. Re-enable when implementing bus compilation.
  */
 
 import type {
@@ -10,13 +13,19 @@ import type {
   BlockId,
   PortType,
   BlockInstance,
-  CompilerConnection,
+  // CompilerConnection, // TODO: Re-enable when implementing bus compilation
   CompileError,
   CompileCtx,
   Program,
   RenderTree,
 } from './types';
-import type { Bus, Publisher, Listener } from '../types';
+// import type { Bus, Publisher, Listener } from '../types'; // TODO: Re-enable when implementing bus compilation
+
+// Placeholder types until bus compilation is implemented
+type CompilerConnection = unknown;
+type Bus = unknown;
+type Publisher = unknown;
+type Listener = unknown;
 
 // =============================================================================
 // Bus-Aware Patch Data Model
@@ -245,16 +254,16 @@ export interface BusCompileResult {
 
 /**
  * Element Domain: authoritative set of elements that a Field refers to.
- * 
+ *
  * Key concepts from ELEMENT-DOMAIN-CONTRACT.md:
  * - ID: stable identity for deterministic per-element variation and state
  * - Index: 0..N-1 evaluation slot in current frame (where to write output)
  * - These are NOT the same
- * 
+ *
  * @see ELEMENT-DOMAIN-CONTRACT.md for full specification
  */
 export interface ElementDomain {
-  /** 
+  /**
    * Domain identifier for type checking.
    * Format: "type:instanceId" (e.g., "svg-path:abc123")
    */
@@ -269,7 +278,7 @@ export interface ElementDomain {
    * - Deterministic per-element variation (seeding)
    * - State lookup (delays, integrators)
    * - Per-element configuration
-   * 
+   *
    * NOT used for output buffer position (use index for that).
    */
   getIds(): Uint32Array;
