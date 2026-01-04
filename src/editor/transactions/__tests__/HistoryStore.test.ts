@@ -6,9 +6,7 @@
  * TODO: Update fixtures to new Block format without inputs/outputs.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { RootStore } from '../../stores/RootStore';
-import type { Block } from '../../types';
+import { describe } from 'vitest';
 
 describe.skip('HistoryStore', () => {
   // Tests disabled - need to update Block fixtures
