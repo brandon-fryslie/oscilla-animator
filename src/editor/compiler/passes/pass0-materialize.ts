@@ -38,95 +38,72 @@ function selectProviderType(world: SlotWorld, domain: string): string {
     // Scalar providers
     'scalar:float': 'DSConstScalarFloat',
     'scalar:int': 'DSConstScalarInt',
+    'scalar:bool': 'DSConstScalarBool',
+    'scalar:color': 'DSConstScalarColor',
+    'scalar:vec2': 'DSConstScalarVec2',
     'scalar:string': 'DSConstScalarString',
-    'scalar:waveform': 'DSConstScalarWaveform',
 
     // Signal providers
     'signal:float': 'DSConstSignalFloat',
     'signal:int': 'DSConstSignalInt',
+    'signal:bool': 'DSConstSignalBool',
     'signal:color': 'DSConstSignalColor',
-    'signal:vec2': 'DSConstSignalPoint',
+    'signal:vec2': 'DSConstSignalVec2',
+    'signal:vec3': 'DSConstSignalVec3',
+    'signal:phase': 'DSConstSignalPhase',
+    'signal:time': 'DSConstSignalTime',
 
     // Field providers
     'field:float': 'DSConstFieldFloat',
-    'field:color': 'DSConstFieldColor',
     'field:vec2': 'DSConstFieldVec2',
+    'field:vec3': 'DSConstFieldVec3',
+    'field:color': 'DSConstFieldColor',
   };
 
-  const providerType = mapping[key];
+  return mapping[key] || 'DSConstSignalFloat'; // Fallback
+}
 
-  if (providerType === '' || providerType == null) {
-    // Fallback for unmapped types - try to use a sensible default
-    console.warn(`No provider block type for ${key}, falling back to DSConstSignalFloat`);
-    return 'DSConstSignalFloat';
+/**
+ * Generate unique ID for provider block.
+ * Format: `ds_${blockId}_${inputId}`
+ */
+function generateProviderId(blockId: string, inputId: string): string {
+  return `ds_${blockId}_${inputId}`;
+}
+
+/**
+ * Check if a block input is already driven by a connection.
+ * Returns true if there's a wire or bus listener connected to this input.
+ */
+function isInputDriven(patch: CompilerPatch, blockId: string, inputId: string): boolean {
+  // Check for direct wire connections
+  for (const edge of patch.edges) {
+    if (edge.to.kind === 'port' && edge.to.blockId === blockId && edge.to.slotId === inputId) {
+      return true;
+    }
   }
 
-  return providerType;
+  // No wire found
+  return false;
 }
 
 /**
- * Check if an input is driven (has a wire OR an enabled bus listener).
- * Returns true if the input is already driven, false if it needs a default provider.
+ * Pass 0: Materialize Default Sources
+ *
+ * For each unconnected input with a default source:
+ * 1. Create hidden provider block with matching world and domain
+ * 2. Create edge from provider output to block input
+ * 3. Mark blocks as hidden and with structural role
+ *
+ * Returns: CompilerPatch with augmented blocks and edges
  */
-function isInputDriven(
-  patch: CompilerPatch,
-  blockId: string,
-  slotId: string
-): boolean {
-  // Check for edge: any edge to this input
-  const hasEdge = patch.edges.some(
-    e => e.to.blockId === blockId && e.to.slotId === slotId
-  );
-
-  // Bus-Block Unification: Check for edge from any BusBlock to this input
-  const busBlockIds = new Set(patch.blocks.filter(b => b.type === 'BusBlock').map(b => b.id));
-  const hasListener = patch.edges.some(
-    e => busBlockIds.has(e.from.blockId) && e.to.blockId === blockId && e.to.slotId === slotId
-  );
-
-  // Returns true if EITHER check is true (has edge OR has listener)
-  return hasEdge || hasListener;
-}
-
-/**
- * Generate a deterministic ID for a hidden provider block.
- */
-function generateProviderId(blockId: string, slotId: string): string {
-  return `${blockId}_default_${slotId}`;
-}
-
-/**
- * Materialize default sources as hidden provider blocks.
- *
- * This is System 2 of the dual default source system:
- * - System 1 (injectDefaultSourceProviders): Advanced providers from allowlist (e.g., Oscillator)
- * - System 2 (materializeDefaultSources): Simple DSConst* defaults from block metadata
- *
- * This function runs FIRST in the pipeline. It scans all blocks for inputs that:
- * 1. Have a defaultSource defined in block metadata
- * 2. Are not connected via any Edge
- * 3. Are not connected via any enabled bus Listener
- *
- * For each such input, it:
- * 1. Creates a hidden provider block (DSConst* or DomainN) with the default value
- * 2. Creates an Edge from the provider to the input
- *
- * The result is a patch where simple defaults are materialized as blocks.
- * Advanced defaults (from System 1) will be injected later and will skip inputs
- * that already have connections from System 2.
- *
- * Workstream 03 (P0): Domain defaults create DomainN blocks, not DSConst* blocks.
- * This fixes render sinks that expect structural domain providers.
- *
- * @param patch - The CompilerPatch from editorToPatch
- * @returns A new CompilerPatch with materialized default sources as hidden blocks
- */
-export function materializeDefaultSources(patch: CompilerPatch): CompilerPatch {
+export function pass0Materialize(patch: CompilerPatch): CompilerPatch {
   const newBlocks: BlockInstance[] = [];
   const newEdges: Edge[] = [];
 
-  // Scan all blocks for unconnected inputs with defaults
+  // Process each block
   for (const block of patch.blocks) {
+    // Look up block definition to get input defaults
     const blockDef = getBlockDefinition(block.type);
 
     if (blockDef == null) {
@@ -169,7 +146,9 @@ export function materializeDefaultSources(patch: CompilerPatch): CompilerPatch {
         domain = (inputType as TypeDesc).domain;
       }
 
-      const providerType = selectProviderType(defaultSource.world, domain);
+      // Provide default 'signal' world if not specified
+      const world: SlotWorld = defaultSource.world ?? 'signal';
+      const providerType = selectProviderType(world, domain);
 
       // Get the provider block definition
       const providerDef = getBlockDefinition(providerType);
@@ -213,6 +192,7 @@ export function materializeDefaultSources(patch: CompilerPatch): CompilerPatch {
         from: { kind: 'port', blockId: providerId, slotId: providerOutputPort },
         to: { kind: 'port', blockId: block.id, slotId: inputDef.id },
         enabled: true,
+        role: { kind: 'default', meta: { defaultSourceBlockId: providerId } },
       };
 
       newBlocks.push(provider);
@@ -222,7 +202,6 @@ export function materializeDefaultSources(patch: CompilerPatch): CompilerPatch {
 
   // Return new patch with augmented blocks and edges
   return {
-    ...patch,
     blocks: [...patch.blocks, ...newBlocks],
     edges: [...patch.edges, ...newEdges],
   };
