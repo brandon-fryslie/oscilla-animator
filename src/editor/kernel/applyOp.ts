@@ -197,9 +197,9 @@ export function applyOp(doc: Patch, op: Op): OpResult {
       interface DefWithGraph {
         graph: {
           blocks: unknown[];
-          connections: unknown[];
+          edges: unknown[];
         };
-        exposedPorts: unknown;
+        exposedParams: unknown;
       }
 
       const defWithGraph = def as unknown as DefWithGraph;
@@ -207,7 +207,7 @@ export function applyOp(doc: Patch, op: Op): OpResult {
         blocks: op.nextGraph.blocks,
         edges: op.nextGraph.edges,
       };
-      defWithGraph.exposedPorts = op.nextExposedParams;
+      defWithGraph.exposedParams = op.nextExposedParams;
       return { ok: true };
     }
 

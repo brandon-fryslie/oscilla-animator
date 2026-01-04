@@ -1,0 +1,51 @@
+Agent: iterative-implementer | 2026-01-03T12:00:00Z
+Mode: manual
+Completed: Fixed type errors in Block/Patch types | Files: 5 | Commits: 1
+Cache invalidated: 0 entries (no cache exists yet)
+Status: complete
+
+## Summary
+
+Fixed TypeScript type errors related to Block and Patch types across multiple files.
+
+## Root Cause
+
+The codebase has two distinct types:
+- **Block**: Runtime instance in a patch (has: id, type, label, position, params, form, role)
+- **BlockDefinition**: Static definition from registry (has: inputs, outputs, subcategory, etc.)
+
+Several files were incorrectly trying to access `inputs`, `outputs`, and `category` directly on Block instances, when these fields only exist on BlockDefinition.
+
+## Files Modified
+
+1. **src/editor/semantic/patchAdapter.ts**
+   - Implemented proper Block → PatchDocument conversion
+   - Added `getBlockDefinition()` lookup to extract inputs/outputs
+
+2. **src/editor/portUtils.ts**
+   - Fixed `findCompatiblePorts()` to look up block definition
+   - Removed direct access to `block.inputs` and `block.outputs`
+
+3. **src/editor/lanes/ordering.ts**
+   - Updated `isOutputLike()` to accept subcategory parameter
+   - Pass `def.subcategory` instead of `block.category`
+
+4. **src/editor/lanes/useLaneDnd.ts**
+   - Fixed `getBlockColor()` to look up block definition
+   - Use `blockDef.subcategory` instead of `block.category`
+
+5. **src/editor/kernel/TransactionBuilder.ts**
+   - Added `patchToPatchDocument()` helper function
+   - Fixed `addBlock()` to create valid Block objects with correct fields
+   - Removed invalid `inputs`, `outputs`, `category` fields from Block creation
+
+## Verification
+
+Ran `just typecheck` and confirmed:
+- No more errors about `block.category`, `block.inputs`, or `block.outputs`
+- No more errors about incompatible Patch/PatchDocument types
+- Other unrelated type errors exist but were not part of this fix
+
+## Commit
+
+85d123b - "fix(types): resolve Block and Patch type errors"

@@ -36,7 +36,6 @@ describe.skip("Pass 7: Bus Lowering", () => {
       type: `${world === 'signal' ? 'Signal' : 'Field'}<${domain}>` as any,
       combineMode: combineMode as any,
       defaultValue,
-      sortKey: 0,
     };
   }
 

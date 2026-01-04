@@ -912,7 +912,7 @@ export interface Patch {
  * Used in editor stores for reactive UI updates.
  */
 export interface ObservablePatch extends Patch {
-  blocks: IObservableArray<Block[]>;
-  edges: IObservableArray<Edge[]>;
-  buses: IObservableArray<Bus[]>;
+  blocks: IObservableArray<Block>;
+  edges: IObservableArray<Edge>;
+  buses: IObservableArray<Bus>;
 }

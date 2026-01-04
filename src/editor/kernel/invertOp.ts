@@ -181,23 +181,23 @@ export function invertOp(doc: Patch, op: Op): Op | null {
       interface DefWithGraph {
         graph?: {
           blocks?: Block[];
-          connections?: Edge[];
+          edges?: Edge[];
         };
-        exposedPorts?: { inputs: unknown[]; outputs: unknown[] };
+        exposedParams?: Record<string, { blockId: string; paramName: string }>;
       }
 
       const defWithGraph = def as unknown as DefWithGraph;
       const oldGraph = defWithGraph.graph;
-      const oldExposed = defWithGraph.exposedPorts;
+      const oldExposed = defWithGraph.exposedParams;
 
       return {
         op: 'CompositeDefReplaceGraph',
         defId: op.defId,
         nextGraph: {
-          nodes: oldGraph?.blocks ?? [],
-          edges: oldGraph?.connections ?? [],
+          blocks: oldGraph?.blocks ?? [],
+          edges: oldGraph?.edges ?? [],
         },
-        nextExposed: oldExposed ?? { inputs: [], outputs: [] },
+        nextExposedParams: oldExposed ?? {},
       };
     }
 

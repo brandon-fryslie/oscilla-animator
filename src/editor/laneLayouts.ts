@@ -5,7 +5,42 @@
  * Per lane-mode.md and lane-mode-2.md specs.
  */
 
-import type { LaneTemplate, LaneKind, LaneLayout } from './types';
+// =============================================================================
+// Local Type Definitions
+// =============================================================================
+
+/**
+ * Lane kind classification.
+ */
+export type LaneKind = 'Scene' | 'Phase' | 'Fields' | 'Spec' | 'Program' | 'Output';
+
+/**
+ * Flow style for a lane.
+ */
+export type FlowStyle = 'patchbay' | 'chain';
+
+/**
+ * Lane template - defines a lane's structure.
+ */
+export interface LaneTemplate {
+  id: string;
+  kind: LaneKind;
+  label: string;
+  description: string;
+  flowStyle: FlowStyle;
+  flavor?: string; // Optional flavor for subdividing lanes (e.g., 'Motion', 'Timing', 'Style')
+}
+
+/**
+ * Lane layout - a complete set of lanes.
+ */
+export interface LaneLayout {
+  id: string;
+  name: string;
+  description: string;
+  lanes: readonly LaneTemplate[];
+  isPreset: boolean;
+}
 
 // =============================================================================
 // Simple Layout (5 lanes) - from lane-mode.md
@@ -153,7 +188,7 @@ export const DEFAULT_LAYOUT = SIMPLE_LAYOUT;
  * Get a preset layout by ID.
  */
 export function getLayoutById(id: string): LaneLayout | undefined {
-  return PRESET_LAYOUTS.find((l) => l.id === id);
+  return PRESET_LAYOUTS.find((l: LaneLayout) => l.id === id);
 }
 
 /**
@@ -168,13 +203,13 @@ export function findLaneForKind(
   // First try to match both kind and flavor
   if (flavor !== undefined && flavor !== null && flavor !== '') {
     const flavorMatch = layout.lanes.find(
-      (l) => l.kind === kind && l.flavor === flavor
+      (l: LaneTemplate) => l.kind === kind && l.flavor === flavor
     );
     if (flavorMatch !== undefined && flavorMatch !== null) return flavorMatch;
   }
 
   // Fall back to just kind match
-  return layout.lanes.find((l) => l.kind === kind);
+  return layout.lanes.find((l: LaneTemplate) => l.kind === kind);
 }
 
 /**
@@ -187,14 +222,14 @@ export function mapLaneToLayout(
   targetLayout: LaneLayout
 ): string {
   // Find source lane
-  const sourceLane = sourceLayout.lanes.find((l) => l.id === sourceLaneId);
+  const sourceLane = sourceLayout.lanes.find((l: LaneTemplate) => l.id === sourceLaneId);
   if (!sourceLane) {
     // Unknown lane, put in first lane
     return targetLayout.lanes[0]?.id ?? 'unknown';
   }
 
   // Try exact ID match first
-  const exactMatch = targetLayout.lanes.find((l) => l.id === sourceLaneId);
+  const exactMatch = targetLayout.lanes.find((l: LaneTemplate) => l.id === sourceLaneId);
   if (exactMatch) return exactMatch.id;
 
   // Try kind + flavor match
@@ -205,4 +240,3 @@ export function mapLaneToLayout(
   return targetLayout.lanes[0]?.id ?? 'unknown';
 }
 
-export type { LaneLayout };

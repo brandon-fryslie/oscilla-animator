@@ -22,8 +22,6 @@ export type {
   Slot,
   SlotType,
   Patch,
-  EditorUIState,
-  Template,
 } from './types';
 export type {
   LogEntry,

@@ -2,11 +2,17 @@
  * LayoutSelector Component
  *
  * Dropdown to switch between lane layouts.
+ *
+ * NOTE: This component is currently unused and disabled.
+ * The ViewStateStore does not implement layout switching yet.
+ * The lane system uses LaneViewTemplate/LaneViewLane from lanes/types.ts,
+ * not the LaneLayout system from laneLayouts.ts.
  */
 
+/*
 import { observer } from 'mobx-react-lite';
 import { useStore } from './stores';
-import type { LaneLayout } from './types'; // Assuming LaneLayout is in types
+import type { LaneLayout } from './laneLayouts';
 import './LayoutSelector.css';
 
 export const LayoutSelector = observer(() => {
@@ -34,3 +40,7 @@ export const LayoutSelector = observer(() => {
     </div>
   );
 });
+*/
+
+// Placeholder export to avoid module errors
+export const LayoutSelector = () => null;
