@@ -30,7 +30,7 @@ import type { CompileError } from "../types";
 import type { ValueRefPacked, LowerCtx } from "../ir/lowerTypes";
 import { getBlockType } from "../ir/lowerTypes";
 import type { Domain } from "../unified/Domain";
-import { BLOCK_DEFS_BY_TYPE, getBlockDefinition } from "../../blocks/registry";
+import { BLOCK_DEFS_BY_TYPE } from "../../blocks/registry";
 import { validatePureBlockOutput } from "../pure-block-validator";
 // Multi-Input Blocks Integration
 import {
@@ -510,7 +510,7 @@ function lowerBlockInstance(
         ? Object.fromEntries(resolveInputsWithMultiInput(block, edges, compiledPortMap, builder, errors).entries())
         : {};
 
-      const inputs: ValueRefPacked[] = (blockDef?.inputs ?? []).map((inputPort) => {
+      const inputs: ValueRefPacked[] = block.inputs.map((inputPort) => {
         // If multi-input resolution succeeded, use it
         if (inputsById[inputPort.id] !== undefined) {
           return inputsById[inputPort.id];
@@ -579,14 +579,14 @@ function lowerBlockInstance(
       } else {
         // Legacy path: Use positional outputs array
         result.outputs.forEach((ref, index) => {
-          if (blockDef && index < blockDef.outputs.length) {
+          if (index < block.outputs.length) {
             // Register slot for signal/field outputs (required for pass8 validation)
             if (ref.k === 'sig') {
               builder.registerSigSlot(ref.id, ref.slot);
             } else if (ref.k === 'field') {
               builder.registerFieldSlot(ref.id, ref.slot);
             }
-            outputRefs.set(blockDef.outputs[index].id, ref);
+            outputRefs.set(block.outputs[index].id, ref);
           }
         });
       }
@@ -600,7 +600,7 @@ function lowerBlockInstance(
       });
 
       // Fall back to artifact lowering
-      for (const output of (blockDef?.outputs ?? [])) {
+      for (const output of block.outputs) {
         const portKey = `${block.id}:${output.id}`;
         const artifact = compiledPortMap.get(portKey);
 
@@ -622,7 +622,7 @@ function lowerBlockInstance(
     }
   } else {
     // No lowering function - fall back to artifact-based lowering
-    for (const output of (blockDef?.outputs ?? [])) {
+    for (const output of block.outputs) {
       const portKey = `${block.id}:${output.id}`;
       const artifact = compiledPortMap.get(portKey);
 
@@ -716,7 +716,7 @@ export function pass6BlockLowering(
 
       // Collect block artifacts for pure block validation
       const blockArtifacts = new Map<string, Artifact>();
-      for (const output of (blockDef?.outputs ?? [])) {
+      for (const output of block.outputs) {
         const portKey = `${block.id}:${output.id}`;
         const artifact = compiledPortMap.get(portKey);
         if (artifact !== undefined) {

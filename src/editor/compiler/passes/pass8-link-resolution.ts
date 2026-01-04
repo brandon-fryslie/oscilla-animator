@@ -35,6 +35,7 @@ import { getBlockType } from "../ir/lowerTypes";
 import type { LowerCtx } from "../ir/lowerTypes";
 import { TRANSFORM_REGISTRY } from "../../transforms";
 import type { TransformIRCtx } from "../../transforms";
+import { getBlockDefinition } from "../../blocks/registry";
 
 // =============================================================================
 // Types
@@ -187,7 +188,9 @@ function applyCameraLowering(
     let missingInput = false;
 
     for (const inputDecl of decl.inputs) {
-      const portIdx = block.inputs.findIndex((p) => p.id === inputDecl.portId);
+      const blockDef = getBlockDefinition(block.type);
+      if (!blockDef) continue;
+      const portIdx = blockDef.inputs.findIndex((p) => p.id === inputDecl.portId);
       if (portIdx < 0) {
         // Check if port is optional
         if (inputDecl.optional === true) {
@@ -286,8 +289,10 @@ function buildBlockOutputRoots(
     const block = blocks[blockIdx];
     const outputs = blockOutputs.get(blockIdx);
 
-    for (let portIdx = 0; portIdx < block.outputs.length; portIdx++) {
-      const portId = block.outputs[portIdx].id;
+    const blockDef = getBlockDefinition(block.type);
+    if (!blockDef) continue;
+    for (let portIdx = 0; portIdx < blockDef.outputs.length; portIdx++) {
+      const portId = blockDef.outputs[portIdx].id;
       const ref = outputs?.get(portId);
       if (ref !== undefined) {
         refs[blockIdx * maxOutputs + portIdx] = ref;
@@ -508,8 +513,10 @@ function buildBlockInputRoots(
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx];
 
-    for (let portIdx = 0; portIdx < block.inputs.length; portIdx++) {
-      const input = block.inputs[portIdx];
+    const blockDef = getBlockDefinition(block.type);
+    if (!blockDef) continue;
+    for (let portIdx = 0; portIdx < blockDef.inputs.length; portIdx++) {
+      const input = blockDef.inputs[portIdx];
       const flatIdx = blockIdx * maxInputs + portIdx;
 
       let resolved = false;
@@ -621,8 +628,10 @@ function validateOutputSlots(
   for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
     const block = blocks[blockIdx];
 
-    for (let portIdx = 0; portIdx < block.outputs.length; portIdx++) {
-      const output = block.outputs[portIdx];
+    const blockDef = getBlockDefinition(block.type);
+    if (!blockDef) continue;
+    for (let portIdx = 0; portIdx < blockDef.outputs.length; portIdx++) {
+      const output = blockDef.outputs[portIdx];
       const idx = blockOutputRoots.indexOf(blockIdx as BlockIndex, portIdx);
       const ref = blockOutputRoots.refs[idx];
 

@@ -24,6 +24,7 @@ import type {
 } from '../../types';
 import { SLOT_TYPE_TO_TYPE_DESC } from '../../types';
 import type { TypeDesc } from '../../../core/types';
+import { getBlockDefinition } from '../../blocks/registry';
 import type { CombinePolicy } from './combine-utils';
 
 // =============================================================================
@@ -229,6 +230,9 @@ export function resolveBlockInputs(
   edges: readonly Edge[]
 ): Map<string, ResolvedInputSpec> {
   const resolved = new Map<string, ResolvedInputSpec>();
+
+  const blockDef = getBlockDefinition(block.type);
+  if (!blockDef) return resolved;
 
   for (const inputSlot of block.inputs) {
     const endpoint: InputEndpoint = {
