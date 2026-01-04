@@ -12,9 +12,10 @@
 import { makeObservable, observable, computed, action } from 'mobx';
 import type { RootStore } from '../stores/RootStore';
 import { isDirectlyCompatible } from '../semantic';
-import type { SlotDef, LensDefinition, AdapterStep } from '../types';
+import type { SlotDef, LensDefinition, AdapterStep, AdapterPolicy, TypeDesc } from '../types';
 import type { TypeDesc as IRTypeDesc } from '../ir/types/TypeDesc';
-import { findAdapterPath } from '../adapters/autoAdapter';
+import { TRANSFORM_REGISTRY } from '../transforms/TransformRegistry';
+import { typeDescToString } from '../ir/types/TypeDesc';
 import { getBlockDefinition } from '../blocks/registry';
 import { convertBlockToBus } from '../bus-block/conversion';
 import {
@@ -35,6 +36,15 @@ import {
   parseRowKey,
   getColumnAbbreviation,
 } from './types';
+
+/**
+ * Result of adapter pathfinding.
+ */
+interface AdapterPathResult {
+  ok: boolean;
+  chain?: AdapterStep[];
+  reason?: string;
+}
 
 /**
  * Store for modulation table state.
@@ -652,7 +662,7 @@ export class ModulationTableStore {
     let adapterChain: AdapterStep[] | undefined;
 
     if (row && column && !isDirectlyCompatible(column.type, row.type)) {
-      const result = findAdapterPath(column.type, row.type, 'listener');
+      const result = this.findAdapterPath(column.type, row.type, 'listener');
       if (!result.ok) {
         console.warn(`Cannot bind ${rowKey} to ${busId}: ${result.reason ?? 'no adapter path'}`);
         return;
@@ -831,7 +841,146 @@ export class ModulationTableStore {
   }
 
   // =============================================================================
-  // Helper Methods
+  // Helper Methods: Adapter Pathfinding
+  // =============================================================================
+
+  /**
+   * Find an adapter path from one type to another using TRANSFORM_REGISTRY.
+   * Supports multi-hop pathfinding (up to 2 adapters).
+   *
+   * Migrated from deprecated src/editor/adapters/autoAdapter.ts
+   */
+  private findAdapterPath(
+    from: TypeDesc,
+    to: TypeDesc,
+    context: 'wire' | 'publisher' | 'listener' | 'lensParam' = 'listener'
+  ): AdapterPathResult {
+    // Check if types are already compatible
+    if (isDirectlyCompatible(from, to)) {
+      return { ok: true, chain: [] };
+    }
+
+    // Get all available adapters from TRANSFORM_REGISTRY
+    const allAdapters = TRANSFORM_REGISTRY.getAllAdapters().map(transform => ({
+      id: transform.id,
+      policy: (transform.policy ?? 'EXPLICIT') as AdapterPolicy,
+      cost: transform.cost ?? 0,
+      from: transform.inputType === 'same' ? from : (transform.inputType as TypeDesc),
+      to: transform.outputType === 'same' ? to : (transform.outputType as TypeDesc),
+    }));
+
+    // Find all candidate paths (1-hop and 2-hop)
+    const paths = this.findCandidatePaths(from, to, allAdapters);
+
+    // Filter paths that can be automatically applied (AUTO policy, low cost)
+    const autoPaths = paths.filter((path) =>
+      path.every((step) => this.isAutoAllowed(step.policy, step.cost, context))
+    );
+
+    if (autoPaths.length > 0) {
+      const best = this.chooseBestPath(autoPaths);
+      return {
+        ok: true,
+        chain: best.map((step) => ({
+          kind: 'adapter' as const,
+          adapterId: step.id,
+          params: {},
+          from,
+          to,
+          adapter: step.id,
+        })),
+      };
+    }
+
+    // No auto paths - cannot bind automatically
+    return {
+      ok: false,
+      reason: `No automatic adapter found from ${typeDescToString(from)} to ${typeDescToString(to)}`,
+    };
+  }
+
+  /**
+   * Find candidate adapter paths (both 1-hop and 2-hop).
+   */
+  private findCandidatePaths(
+    from: TypeDesc,
+    to: TypeDesc,
+    adapters: Array<{ from: TypeDesc; to: TypeDesc; id: string; policy: AdapterPolicy; cost: number }>
+  ): Array<Array<{ id: string; policy: AdapterPolicy; cost: number; from: TypeDesc; to: TypeDesc }>> {
+    const paths: Array<Array<{ id: string; policy: AdapterPolicy; cost: number; from: TypeDesc; to: TypeDesc }>> = [];
+    const MAX_CHAIN_LENGTH = 2;
+
+    const typeKey = (desc: TypeDesc): string => typeDescToString(desc);
+
+    // Find 1-hop paths (direct adapters)
+    for (const adapter of adapters) {
+      if (typeKey(adapter.from) === typeKey(from) && typeKey(adapter.to) === typeKey(to)) {
+        paths.push([adapter]);
+      }
+    }
+
+    // Find 2-hop paths (chained adapters)
+    if (MAX_CHAIN_LENGTH > 1) {
+      for (const first of adapters) {
+        if (typeKey(first.from) !== typeKey(from)) continue;
+        for (const second of adapters) {
+          if (typeKey(first.to) !== typeKey(second.from)) continue;
+          if (typeKey(second.to) !== typeKey(to)) continue;
+          paths.push([first, second]);
+        }
+      }
+    }
+
+    return paths;
+  }
+
+  /**
+   * Check if adapter can be automatically applied based on policy and cost.
+   */
+  private isAutoAllowed(policy: AdapterPolicy, cost: number, context: string): boolean {
+    const COST_HEAVY_THRESHOLD = 100;
+
+    if (policy !== 'AUTO') return false;
+    if (cost >= COST_HEAVY_THRESHOLD) return false;
+    if (context === 'publisher' && cost >= COST_HEAVY_THRESHOLD) return false;
+    if (context === 'listener' && cost >= COST_HEAVY_THRESHOLD) return false;
+    if (context === 'wire' && cost >= COST_HEAVY_THRESHOLD) return false;
+    return true;
+  }
+
+  /**
+   * Choose the best path from a list of candidate paths.
+   * Sorts by total cost, hop count, and stability.
+   */
+  private chooseBestPath(
+    paths: Array<Array<{ id: string; policy: AdapterPolicy; cost: number; from: TypeDesc; to: TypeDesc }>>
+  ): Array<{ id: string; policy: AdapterPolicy; cost: number; from: TypeDesc; to: TypeDesc }> {
+    const sorted = [...paths].sort((a, b) => {
+      const scoreA = this.scorePath(a);
+      const scoreB = this.scorePath(b);
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      if (a.length !== b.length) return a.length - b.length;
+      const idsA = a.map((step) => step.id).join(',');
+      const idsB = b.map((step) => step.id).join(',');
+      return idsA.localeCompare(idsB);
+    });
+    return sorted[0];
+  }
+
+  /**
+   * Score a path (lower is better).
+   */
+  private scorePath(path: Array<{ cost: number; from: TypeDesc; to: TypeDesc }>): number {
+    const costScore = path.reduce((sum, step) => sum + step.cost, 0);
+    const hopPenalty = path.length * 0.5;
+    const worldPenalty = path.reduce((sum, step) => {
+      return sum + (step.from.world !== step.to.world ? 1 : 0);
+    }, 0);
+    return costScore + hopPenalty + worldPenalty;
+  }
+
+  // =============================================================================
+  // Helper Methods: Other
   // =============================================================================
 
   /**
@@ -893,8 +1042,8 @@ export class ModulationTableStore {
    * Check if source type can be converted to target type.
    */
 //   private isTypeConvertible(source: TypeDesc, target: TypeDesc): boolean {
-//     const result = findAdapterPath(source, target, 'listener');
-//     return !!result.ok || !!(result.suggestions && result.suggestions.length > 0);
+//     const result = this.findAdapterPath(source, target, 'listener');
+//     return result.ok;
 //   }
 //
   /**
