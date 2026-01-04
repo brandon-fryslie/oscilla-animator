@@ -37,10 +37,10 @@ function createBlock(
     id,
     type,
     label: `Block ${id}`,
-    inputs: [],
-    outputs: [],
+    position: { x: 0, y: 0 },
     params: params ?? {},
-    category: "Other",
+    form: 'primitive',
+    role: { kind: 'user' },
   };
 }
 
