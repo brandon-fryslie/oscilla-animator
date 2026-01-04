@@ -21,16 +21,10 @@ function createBlock(
     id,
     type,
     label: `Block ${id}`,
-    inputs: [],
-    outputs: outputs.map((name) => ({
-      id: name,
-      name,
-      label: name,
-      type: "Signal<float>" as SlotType,
-      direction: "output" as const,
-    })),
+    position: { x: 0, y: 0 },
     params: {},
-    category: "Other",
+    form: "primitive",
+    role: { kind: "user" },
   };
 }
 

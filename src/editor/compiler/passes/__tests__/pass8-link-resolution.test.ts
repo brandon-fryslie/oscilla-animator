@@ -34,20 +34,10 @@ describe("Pass 8: Link Resolution", () => {
       id,
       label: `Block ${id}`,
       type: "TestBlock",
+      position: { x: 0, y: 0 },
       params: {},
-      category: "Other" as const,
-      inputs: Array.from({ length: inputCount }, (_, i) => ({
-        id: `in${i}`,
-        label: `Input ${i}`,
-        direction: "input" as const,
-        type: "Signal<float>" as const,
-      })),
-      outputs: Array.from({ length: outputCount }, (_, i) => ({
-        id: `out${i}`,
-        label: `Output ${i}`,
-        direction: "output" as const,
-        type: "Signal<float>" as const,
-      })),
+      form: "primitive",
+      role: { kind: "user" },
     };
   }
 
@@ -58,7 +48,7 @@ describe("Pass 8: Link Resolution", () => {
       from: { kind: 'port', blockId: from.block, slotId: from.port },
       to: { kind: 'port', blockId: to.block, slotId: to.port },
       enabled: true,
-    role: { kind: 'user' },
+      role: { kind: 'user' },
     };
   }
 
