@@ -6,9 +6,7 @@
  * TODO: Update fixtures to new Block format without inputs/outputs.
  */
 
-import { describe, it, expect } from 'vitest';
-import { computeInverse, validateOp, type Op, type Entity } from '../ops';
-import type { Block, Edge, Bus } from '../../types';
+import { describe } from 'vitest';
 
 describe.skip('computeInverse', () => {
   // Tests disabled - need to update Block fixtures
