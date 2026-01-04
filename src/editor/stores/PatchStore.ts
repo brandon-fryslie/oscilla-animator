@@ -16,7 +16,6 @@ import { getBlockForm } from '../blocks/types';
 import { getMacroKey, getMacroExpansion, type MacroExpansion } from '../macros';
 import type { RootStore } from './RootStore';
 import { mapConnections, copyCompatibleParams, type ReplacementResult } from '../replaceUtils';
-import type { GraphCommitReason, GraphDiffSummary } from '../events/types';
 import { Validator } from '../semantic';
 import { storeToPatchDocument } from '../semantic/patchAdapter';
 import { randomUUID } from "../crypto";
@@ -111,24 +110,6 @@ export class PatchStore {
       // Computed
       userBlocks: computed,
     });
-  }
-
-  /**
-   * Increment patch revision counter.
-   * Called after any structural change to the patch.
-   */
-  private incrementRevision() {
-    this.patchRevision += 1;
-  }
-
-  /**
-   * Invalidate the normalized graph cache.
-   * Called after any structural change to the patch.
-   *
-   * Sprint: Graph Normalization Layer (2026-01-03)
-   */
-  private invalidateNormalizedCache() {
-    this.normalizedCache = null;
   }
 
   // ===========================================================================
