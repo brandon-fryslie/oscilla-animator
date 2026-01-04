@@ -37,8 +37,9 @@
  * - field: Per-element values (lazy, evaluated at render sinks)
  * - scalar: Compile-time constants
  * - config: Configuration values (not runtime)
+ * - special: Resource references (not values, but typed IDs/handles)
  */
-export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config';
+export type TypeWorld = 'signal' | 'event' | 'field' | 'scalar' | 'config' | 'special';
 
 // =============================================================================
 // Type Domains
@@ -89,6 +90,8 @@ export type InternalDomain =
   | 'waveform'     // Waveform shape selection for oscillators (sine, cosine, triangle, saw)
   | 'phaseSample'  // Phase machine sample payload
   | 'phaseMachine' // Phase machine instance
+  | 'cameraRef'    // Camera resource reference
+  | 'vec3'         // 3D vector
   | 'unknown';     // Unknown/fallback type
 
 /**
@@ -144,7 +147,7 @@ const INTERNAL_DOMAINS: ReadonlySet<TypeDomain> = new Set<TypeDomain>([
   'program', 'renderTree', 'renderNode', 'filterDef', 'strokeStyle',
   'elementCount', 'scene', 'sceneTargets', 'sceneStrokes', 'event',
   'string', 'bounds', 'spec', 'domain', 'render', 'expression', 'waveform',
-  'phaseSample', 'phaseMachine', 'unknown'
+  'phaseSample', 'phaseMachine', 'cameraRef', 'vec3', 'unknown'
 ]);
 
 // =============================================================================
@@ -328,6 +331,9 @@ export function parseTypeDesc(typeStr: string): TypeDesc {
         break;
       case 'config':
         world = 'config';
+        break;
+      case 'special':
+        world = 'special';
         break;
       default:
         throw new Error(`Unknown type world: ${worldStr} in "${typeStr}"`);
