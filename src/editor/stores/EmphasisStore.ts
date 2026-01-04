@@ -240,7 +240,7 @@ export class EmphasisStore {
     const related = new Set<string>();
 
     // Find the BusBlock for this bus (block ID = bus ID)
-    const busBlock = this.root.patchStore.busBlocks.find(b => b.id === busId);
+    const busBlock = this.root.patchStore.blocks.find(b => b.type === 'BusBlock' && b.id === busId);
     if (busBlock === undefined) return [];
 
     const patchEdges = this.root.patchStore.edges;
@@ -275,7 +275,7 @@ export class EmphasisStore {
     const edgeIds: EdgeId[] = [];
 
     // Find the BusBlock for this bus (block ID = bus ID)
-    const busBlock = this.root.patchStore.busBlocks.find(b => b.id === busId);
+    const busBlock = this.root.patchStore.blocks.find(b => b.type === 'BusBlock' && b.id === busId);
     if (busBlock === undefined) return { ports, edges: edgeIds };
 
     const patchEdges = this.root.patchStore.edges;

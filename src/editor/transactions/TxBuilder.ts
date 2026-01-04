@@ -246,7 +246,7 @@ export class TxBuilder {
       case 'connections':
         return this.root.patchStore.edges.find(c => c.id === id);
       case 'buses':
-        return this.root.patchStore.busBlocks.find(b => b.id === id);
+        return this.root.patchStore.blocks.find(b => b.type === 'BusBlock' && b.id === id);
       case 'composites':
         return this.root.compositeStore.composites.find(c => c.id === id);
       case 'edges':

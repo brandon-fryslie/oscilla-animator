@@ -69,6 +69,12 @@ export class PatchStore {
   metadata = { name: 'Untitled Patch', description: '' };
 
   /**
+   * Stable patch ID.
+   * Used by CompiledProgramIR and events.
+   */
+  patchId: string;
+
+  /**
    * Patch revision counter.
    * Incremented on every structural change (block added, edge added, etc.).
    * Used to detect stale validation results.
@@ -87,11 +93,13 @@ export class PatchStore {
 
   constructor(root: RootStore) {
     this.root = root;
+    this.patchId = randomUUID(); // Generate a stable patch ID
 
     makeObservable(this, {
       blocks: observable,
       edges: observable,
       metadata: observable,
+      patchId: observable,
       patchRevision: observable,
       addBlock: action,
       removeBlock: action,

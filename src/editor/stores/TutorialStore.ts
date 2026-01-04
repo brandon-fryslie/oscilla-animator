@@ -310,7 +310,7 @@ export class TutorialStore {
 
     // Bus-Block Unification: Find BusBlock by ID (block ID = bus ID)
     if (criteria.type === 'busListener' && event.direction === 'subscribe') {
-      const busBlock = this.root.patchStore.busBlocks.find(b => b.id === event.busId);
+      const busBlock = this.root.patchStore.blocks.find(b => b.type === 'BusBlock' && b.id === event.busId);
       const blockLabel = this.blockIdToLabel.get(event.blockId);
 
       if (
@@ -324,7 +324,7 @@ export class TutorialStore {
     }
 
     if (criteria.type === 'busPublisher' && event.direction === 'publish') {
-      const busBlock = this.root.patchStore.busBlocks.find(b => b.id === event.busId);
+      const busBlock = this.root.patchStore.blocks.find(b => b.type === 'BusBlock' && b.id === event.busId);
       const blockLabel = this.blockIdToLabel.get(event.blockId);
 
       if (
