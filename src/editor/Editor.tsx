@@ -22,7 +22,7 @@ import {
 import { useStore } from './stores';
 import { BlockLibrary } from './BlockLibrary';
 import { PatchBay } from './PatchBay';
-import { BusBoard } from './BusBoard';
+// import { BusBoard } from './BusBoard';
 import { ModulationTable, ModulationTableStore, RecipeView } from './modulation-table';
 import { Inspector } from './Inspector';
 import { LogWindow } from './LogWindow';
@@ -889,7 +889,7 @@ export const Editor = observer(() => {
                       </div>
                     </div>
                     <div className="busboard-body">
-                      <BusBoard />
+                      {/* BusBoard removed during bus migration */}
                     </div>
                   </div>
                 )
