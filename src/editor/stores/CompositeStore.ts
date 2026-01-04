@@ -120,18 +120,18 @@ export class CompositeStore {
       idMap.set(block.id, newId);
     }
 
-    // Create new connections with updated IDs
-    for (const conn of composite.connections) {
-      const fromId = idMap.get(conn.from.blockId);
-      const toId = idMap.get(conn.to.blockId);
+    // Create new connections with updated IDs (composite.edges, not composite.connections)
+    for (const edge of composite.edges) {
+      const fromId = idMap.get(edge.from.blockId);
+      const toId = idMap.get(edge.to.blockId);
       if (fromId === undefined) {
-        throw new Error(`Composite connection references unknown source block "${conn.from.blockId}"`);
+        throw new Error(`Composite edge references unknown source block "${edge.from.blockId}"`);
       }
       if (toId === undefined) {
-        throw new Error(`Composite connection references unknown target block "${conn.to.blockId}"`);
+        throw new Error(`Composite edge references unknown target block "${edge.to.blockId}"`);
       }
 
-      this.root.patchStore.connect(fromId, conn.from.slotId, toId, conn.to.slotId);
+      this.root.patchStore.connect(fromId, edge.from.slotId, toId, edge.to.slotId);
     }
   }
 }

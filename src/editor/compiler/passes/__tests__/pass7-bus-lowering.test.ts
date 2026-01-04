@@ -32,12 +32,8 @@ describe.skip("Pass 7: Bus Lowering", () => {
     return {
       id,
       name: `Bus ${id}`,
-      type: {
-        world,
-        domain: domain as Domain,
-        category: "core",
-        busEligible: true,
-      },
+      // Bus.type is a string TypeDesc (legacy format)
+      type: `${world === 'signal' ? 'Signal' : 'Field'}<${domain}>` as any,
       combineMode: combineMode as any,
       defaultValue,
       sortKey: 0,

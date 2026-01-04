@@ -13,9 +13,8 @@ import type {
   BlockType,
   Edge,
   PortRef,
+  Composite,
 } from '../types';
-
-import type { CompositeDefinition } from '../composites';
 
 // =============================================================================
 // Block Ops
@@ -76,7 +75,7 @@ export type WireRetarget = {
 
 export type CompositeDefAdd = {
   op: 'CompositeDefAdd';
-  def: CompositeDefinition;
+  def: Composite;
 };
 
 export type CompositeDefRemove = {
@@ -87,18 +86,17 @@ export type CompositeDefRemove = {
 export type CompositeDefUpdate = {
   op: 'CompositeDefUpdate';
   defId: string;
-  patch: Partial<CompositeDefinition>;
+  patch: Partial<Composite>;
 };
 
 export type CompositeDefReplaceGraph = {
   op: 'CompositeDefReplaceGraph';
   defId: string;
   nextGraph: {
-    nodes: Block[];
+    blocks: Block[];
     edges: Edge[];
   };
-  // TODO: Define ExposedPort type if not in imports
-  nextExposed: { inputs: unknown[]; outputs: unknown[] };
+  nextExposedParams?: Record<string, { blockId: string; paramName: string }>;
 };
 
 // =============================================================================

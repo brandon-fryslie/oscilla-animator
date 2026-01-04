@@ -36,13 +36,7 @@ import {
 } from './types';
 
 // Type guard for TypeDesc object
-function isTypeDescObject(typeDesc: TypeDesc): typeDesc is {
-  world: string;
-  domain: string;
-  category?: string;
-  busEligible?: boolean;
-  semantics?: string;
-} {
+function isTypeDescObject(typeDesc: TypeDesc | undefined): typeDesc is TypeDesc {
   return typeof typeDesc === 'object' && typeDesc !== null && 'domain' in typeDesc;
 }
 
@@ -679,7 +673,7 @@ export class ModulationTableStore {
     const column = this.columns.find((candidate) => candidate.busId === busId);
     let adapterChain: AdapterStep[] | undefined;
 
-    if (row && column && !isDirectlyCompatible(column.type as any, row.type as any)) {
+    if (row && column && !isDirectlyCompatible(column.type, row.type)) {
       const result = findAdapterPath(column.type, row.type, 'listener');
       if (!result.ok) {
         console.warn(`Cannot bind ${rowKey} to ${busId}: ${result.reason ?? 'no adapter path'}`);
@@ -725,24 +719,24 @@ export class ModulationTableStore {
 
     if (direction === 'input') {
       // Listening: BusBlock output → block input
-      patchStore.connect({
-        id: edgeId,
-        from: { kind: 'port', blockId: busBlock.id, slotId: 'out' },
-        to: { kind: 'port', blockId, slotId: portId },
-        transforms: transforms.length > 0 ? transforms : undefined,
-        enabled: true,
-        role: { kind: 'user' },
-      });
+      patchStore.connect(
+        edgeId,
+        { kind: 'port', blockId: busBlock.id, slotId: 'out' },
+        { kind: 'port', blockId, slotId: portId },
+        transforms.length > 0 ? transforms : undefined,
+        true,
+        { kind: 'user' }
+      );
     } else {
       // Publishing: block output → BusBlock input
-      patchStore.connect({
-        id: edgeId,
-        from: { kind: 'port', blockId, slotId: portId },
-        to: { kind: 'port', blockId: busBlock.id, slotId: 'in' },
-        transforms: transforms.length > 0 ? transforms : undefined,
-        enabled: true,
-        role: { kind: 'user' },
-      });
+      patchStore.connect(
+        edgeId,
+        { kind: 'port', blockId, slotId: portId },
+        { kind: 'port', blockId: busBlock.id, slotId: 'in' },
+        transforms.length > 0 ? transforms : undefined,
+        true,
+        { kind: 'user' }
+      );
     }
   }
 
@@ -904,7 +898,7 @@ export class ModulationTableStore {
    * Check if source type is directly compatible with target type.
    */
   private isTypeCompatible(source: TypeDesc, target: TypeDesc): boolean {
-    return isDirectlyCompatible(source as any, target as any);
+    return isDirectlyCompatible(source, target);
   }
 
   /**

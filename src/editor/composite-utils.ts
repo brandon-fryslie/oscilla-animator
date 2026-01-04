@@ -6,7 +6,7 @@
 import type { Block, Edge, Composite, ExposedParam } from './types';
 import type { ExposedPort } from './composites';
 import { getBlockDefinition } from './blocks';
-import type { ParamSchema } from './blocks/types';
+import type { ParamSchema, Slot } from './blocks/types';
 
 /**
  * Auto-detect exposed ports from a selection of blocks.
@@ -53,9 +53,9 @@ export function detectExposedPorts(
     const definition = getBlockDefinition(block.type);
     if (!definition) continue;
 
-    // Get slots from definition
-    const inputSlots = definition.slots.filter(s => s.direction === 'input');
-    const outputSlots = definition.slots.filter(s => s.direction === 'output');
+    // Get slots from definition (BlockDefinition has inputs and outputs arrays)
+    const inputSlots: readonly Slot[] = definition.inputs;
+    const outputSlots: readonly Slot[] = definition.outputs;
 
     // Check input slots
     for (const slot of inputSlots) {
@@ -187,7 +187,7 @@ export function createCompositeFromSelection(
     // Store complete Edge instances (not converted to CompositeConnection)
     edges: internalEdges,
     exposedParams: exposedParams.length > 0 ?
-      Object.fromEntries(exposedParams.map(p => [p.name, { blockId: p.blockId, paramName: p.paramName }])) :
+      Object.fromEntries(exposedParams.map(p => [p.id, { blockId: p.blockId, paramName: p.paramKey }])) :
       undefined,
   };
 

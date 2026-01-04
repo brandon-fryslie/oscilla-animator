@@ -31,8 +31,8 @@ export function executeNodeEval(
   program: CompiledProgramIR,
   runtime: RuntimeState,
 ): void {
-  // 1. Get NodeIR
-  const node = program.nodes.nodes[step.nodeIndex];
+  // 1. Get NodeIR from signalExprs table
+  const node = program.signalExprs.nodes[step.nodeIndex];
   if (!node) {
     throw new Error(`executeNodeEval: Invalid nodeIndex ${step.nodeIndex}`);
   }

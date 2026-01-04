@@ -21,10 +21,30 @@ import { applyOp } from './applyOp';
 import type { Op } from './ops';
 import { generateDiff } from './diff';
 import { randomUUID } from '../crypto';
+import { getBlockDefinition } from '../blocks/registry';
 
 // Helper to deep clone patch
 function clonePatch(patch: Patch): Patch {
   return JSON.parse(JSON.stringify(patch)) as Patch;
+}
+
+/**
+ * Convert a Patch to PatchDocument format for validation.
+ * Similar to patchAdapter.ts but works with a Patch object directly.
+ */
+function patchToPatchDocument(patch: Patch): PatchDocument {
+  return {
+    blocks: patch.blocks.map(block => {
+      const blockDef = getBlockDefinition(block.type);
+      return {
+        id: block.id,
+        type: block.type,
+        inputs: blockDef?.inputs.map(slot => ({ id: slot.id, type: slot.type })) ?? [],
+        outputs: blockDef?.outputs.map(slot => ({ id: slot.id, type: slot.type })) ?? [],
+      };
+    }),
+    edges: patch.edges,
+  };
 }
 
 class TransactionBuilder implements TxBuilder {
@@ -48,7 +68,7 @@ class TransactionBuilder implements TxBuilder {
 
   get view(): TxView {
     return {
-      doc: this.stagedDoc as PatchDocument,
+      doc: patchToPatchDocument(this.stagedDoc),
       // TODO: SemanticGraph incremental update not yet implemented.
       // For now, we return the base graph. Validation will rebuild graph from stagedDoc at commit time.
       graph: this.kernel.graph,
@@ -78,14 +98,21 @@ class TransactionBuilder implements TxBuilder {
 
   addBlock(spec: { type: string; label?: string; params?: Record<string, unknown>; id?: string }): string {
     const id = spec.id ?? randomUUID();
+
+    // Look up block definition to get the form
+    const blockDef = getBlockDefinition(spec.type);
+    const form = blockDef?.compositeDefinition ? 'composite' :
+                 spec.type.startsWith('macro:') ? 'macro' :
+                 'primitive';
+
     const block: Block = {
       id,
       type: spec.type,
       label: spec.label ?? spec.type,
       params: spec.params ?? {},
-      inputs: [], // Should be populated from registry
-      outputs: [], // Should be populated from registry
-      category: 'Other', // Should be populated from registry
+      position: { x: 0, y: 0 }, // Default position
+      form,
+      role: { kind: 'user' },
     };
 
     const op: Op = { op: 'BlockAdd', block };
@@ -298,9 +325,10 @@ class TransactionBuilder implements TxBuilder {
       return { ok: false, error: { kind: 'internal', message: 'Transaction aborted' }, report: { ok: false, errors: [], warnings: [] } };
     }
 
-    // Validate stagedDoc
-    const validator = new Validator(this.stagedDoc as PatchDocument);
-    const report = validator.validateAll(this.stagedDoc as PatchDocument);
+    // Validate stagedDoc - convert to PatchDocument format first
+    const patchDoc = patchToPatchDocument(this.stagedDoc);
+    const validator = new Validator(patchDoc);
+    const report = validator.validateAll(patchDoc);
 
     if (this.committed && !report.ok) {
       return {

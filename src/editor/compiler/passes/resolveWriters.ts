@@ -166,10 +166,17 @@ export function enumerateWriters(
   // If no writers, inject default source
   if (writers.length === 0 && inputSlot.defaultSource !== undefined) {
     const defaultId = `default:${endpoint.blockId}:${endpoint.slotId}`;
+    const slotTypeDesc = SLOT_TYPE_TO_TYPE_DESC[inputSlot.type];
+
+    // Handle case where SLOT_TYPE_TO_TYPE_DESC returns undefined
+    if (slotTypeDesc === undefined) {
+      throw new Error(`No TypeDesc mapping found for SlotType: ${inputSlot.type}`);
+    }
+
     writers.push({
       kind: 'default',
       defaultId,
-      type: SLOT_TYPE_TO_TYPE_DESC[inputSlot.type], // Use the TypeDesc from slot
+      type: slotTypeDesc,
     });
   }
 
@@ -249,10 +256,16 @@ export function resolveBlockInputs(
     // Resolve combine policy
     const combine = resolveCombinePolicy(inputSlot);
 
+    // Get port type
+    const portType = SLOT_TYPE_TO_TYPE_DESC[inputSlot.type];
+    if (portType === undefined) {
+      throw new Error(`No TypeDesc mapping found for SlotType: ${inputSlot.type}`);
+    }
+
     // Build resolved spec
     resolved.set(inputSlot.id, {
       endpoint,
-      portType: SLOT_TYPE_TO_TYPE_DESC[inputSlot.type],
+      portType,
       writers: sortedWriters,
       combine,
     });
@@ -285,9 +298,15 @@ export function resolveInput(
   // Resolve combine policy
   const combine = resolveCombinePolicy(inputSlot);
 
+  // Get port type
+  const portType = SLOT_TYPE_TO_TYPE_DESC[inputSlot.type];
+  if (portType === undefined) {
+    throw new Error(`No TypeDesc mapping found for SlotType: ${inputSlot.type}`);
+  }
+
   return {
     endpoint,
-    portType: SLOT_TYPE_TO_TYPE_DESC[inputSlot.type],
+    portType,
     writers: sortedWriters,
     combine,
   };

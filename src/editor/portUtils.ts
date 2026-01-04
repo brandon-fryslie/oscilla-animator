@@ -10,6 +10,7 @@
 
 import type { SlotType, Edge, Block, Slot, PortRef } from './types';
 import { areSlotTypesCompatible, getCompatibilityHint } from './semantic';
+import { getBlockDefinition } from './blocks/registry';
 
 // =============================================================================
 // Slot Type Descriptors
@@ -194,7 +195,14 @@ export function findCompatiblePorts(
     // Skip same block
     if (block.id === port.blockId) continue;
 
-    const slotsToCheck = lookingForDirection === 'input' ? block.inputs : block.outputs;
+    // Look up block definition to get inputs/outputs
+    const blockDef = getBlockDefinition(block.type);
+    if (!blockDef) {
+      console.warn(`[portUtils] Unknown block type: ${block.type}`);
+      continue;
+    }
+
+    const slotsToCheck = lookingForDirection === 'input' ? blockDef.inputs : blockDef.outputs;
 
     for (const slot of slotsToCheck) {
       // Check type compatibility

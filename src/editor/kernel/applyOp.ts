@@ -204,10 +204,10 @@ export function applyOp(doc: Patch, op: Op): OpResult {
 
       const defWithGraph = def as unknown as DefWithGraph;
       defWithGraph.graph = {
-        blocks: op.nextGraph.nodes,
-        connections: op.nextGraph.edges,
+        blocks: op.nextGraph.blocks,
+        edges: op.nextGraph.edges,
       };
-      defWithGraph.exposedPorts = op.nextExposed;
+      defWithGraph.exposedPorts = op.nextExposedParams;
       return { ok: true };
     }
 

@@ -204,5 +204,6 @@ export function pass0Materialize(patch: CompilerPatch): CompilerPatch {
   return {
     blocks: [...patch.blocks, ...newBlocks],
     edges: [...patch.edges, ...newEdges],
+    buses: patch.buses, // Preserve buses from original patch
   };
 }

@@ -30,9 +30,13 @@ function inferLaneKindFromSlots(slots: readonly { type: SlotType }[]): LaneViewK
   return null;
 }
 
-function isOutputLike(block: Block, outputs: readonly { type: SlotType }[]): boolean {
+function isOutputLike(
+  block: Block,
+  outputs: readonly { type: SlotType }[],
+  subcategory?: string
+): boolean {
   if (outputs.length > 0) return false;
-  if (block.category === 'Render' || block.category === 'Output') return true;
+  if (subcategory === 'Render' || subcategory === 'Output') return true;
   return block.type.toLowerCase().includes('render');
 }
 
@@ -43,7 +47,7 @@ function inferLaneKindForBlock(block: Block): LaneViewKind {
   const outputKind = inferLaneKindFromSlots(def.outputs);
   if (outputKind !== null) return outputKind;
 
-  if (isOutputLike(block, def.outputs)) return 'Output';
+  if (isOutputLike(block, def.outputs, def.subcategory)) return 'Output';
 
   const inputKind = inferLaneKindFromSlots(def.inputs);
   if (inputKind !== null) return inputKind;

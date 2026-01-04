@@ -8,6 +8,7 @@
 import type { Block } from '../types';
 import type { PatchDocument } from './types';
 import type { RootStore } from '../stores/RootStore';
+import { getBlockDefinition } from '../blocks/registry';
 
 /**
  * Convert RootStore state to PatchDocument format for validation.
@@ -23,18 +24,26 @@ export function storeToPatchDocument(root: RootStore): PatchDocument {
 
 /**
  * Convert a Block to the minimal shape needed by PatchDocument.
- * TODO: Block doesn't have inputs/outputs; we need to get them from BlockDef.
- * For now, return empty arrays to fix type errors.
+ * Looks up the block definition from the registry to extract inputs/outputs.
  */
 function blockToDocumentBlock(block: Block): PatchDocument['blocks'][number] {
-  // TODO: Get BlockDef from registry to extract inputs/outputs
-  // const blockDef = registry.getBlockDef(block.type);
-  // if (!blockDef) { return minimal block }
+  const blockDef = getBlockDefinition(block.type);
+
+  if (!blockDef) {
+    // Unknown block type - return minimal block with empty slots
+    console.warn(`[patchAdapter] Unknown block type: ${block.type}`);
+    return {
+      id: block.id,
+      type: block.type,
+      inputs: [],
+      outputs: [],
+    };
+  }
 
   return {
     id: block.id,
     type: block.type,
-    inputs: [],  // TODO: Get from BlockDef
-    outputs: [], // TODO: Get from BlockDef
+    inputs: blockDef.inputs.map(slot => ({ id: slot.id, type: slot.type })),
+    outputs: blockDef.outputs.map(slot => ({ id: slot.id, type: slot.type })),
   };
 }

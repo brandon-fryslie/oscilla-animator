@@ -102,7 +102,7 @@ export function convertBlockToBus(block: Block): Bus {
   return {
     id: busId,
     name: busName,
-    type: busType as TypeDesc,
+    type: busType as unknown as TypeDesc,
     combineMode: combineMode as Bus['combineMode'],
     defaultValue,
   };
