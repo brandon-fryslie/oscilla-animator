@@ -2,7 +2,7 @@
 // Core Animation Types
 // =============================================================================
 
-import type { Observable } from './core/Observable';
+import type { IObservableArray } from 'mobx';
 import type { CoreDomain, Domain } from '../core/types';
 
 /**
@@ -908,7 +908,7 @@ export interface Patch {
  * Used in editor stores for reactive UI updates.
  */
 export interface ObservablePatch extends Patch {
-  blocks: Observable<Block[]>;
-  edges: Observable<Edge[]>;
-  buses: Observable<Bus[]>;
+  blocks: IObservableArray<Block[]>;
+  edges: IObservableArray<Edge[]>;
+  buses: IObservableArray<Bus[]>;
 }
