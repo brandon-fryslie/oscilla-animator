@@ -4,6 +4,11 @@
 
 import type { IObservableArray } from 'mobx';
 import type { CoreDomain, Domain } from '../core/types';
+import type { TypeDesc as IRTypeDesc, TypeWorld as IRTypeWorld } from './ir/types/TypeDesc';
+
+// Re-export TypeDesc and TypeWorld from IR
+export type TypeDesc = IRTypeDesc;
+export type TypeWorld = IRTypeWorld;
 
 /**
  * Unique identifier for a patch.
@@ -40,21 +45,6 @@ export type Phase = number;
 // =============================================================================
 // Type System (Slot Types)
 // =============================================================================
-
-/**
- * TypeDesc - describes the domain/world of a value.
- *
- * Re-exported from ir/types/TypeDesc.ts for the canonical type system.
- * This interface provides world (signal/field/scalar/config) and domain
- * (float/vec2/color/etc) classification for values in the animation graph.
- */
-export type { TypeDesc } from './ir/types/TypeDesc';
-
-/**
- * TypeWorld - world classification for values (signal, field, scalar, config).
- * Re-exported from ir/types/TypeDesc.ts for convenience.
- */
-export type { TypeWorld } from './ir/types/TypeDesc';
 
 /**
  * Domain - type domain classification (float, vec2, color, etc.).
@@ -535,7 +525,7 @@ export const SLOT_TYPE_TO_TYPE_DESC: Record<string, TypeDesc | undefined> = {} a
  * createTypeDesc - create a TypeDesc from partial information.
  * Re-exported from ir/types/TypeDesc.ts for convenience.
  */
-export { createTypeDesc } from './ir/types/TypeDesc';
+export { createTypeDesc, parseTypeDesc, typeDescToString } from './ir/types/TypeDesc';
 
 /**
  * isDirectlyCompatible - check if two TypeDescs are directly compatible.

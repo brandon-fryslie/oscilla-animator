@@ -13,6 +13,7 @@
 
 import { createBlock } from './factory';
 import { input, output } from './utils';
+import { parseTypeDesc } from '../ir/types/TypeDesc';
 
 /**
  * DSConstSignalFloat - Constant provider for Signal<float> inputs
@@ -39,7 +40,7 @@ export const DSConstSignalFloat = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Signal<float>', {
+    input('value', 'Value', parseTypeDesc('Signal<float>'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -50,7 +51,7 @@ export const DSConstSignalFloat = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Signal<float>'),
+    output('out', 'Output', parseTypeDesc('Signal<float>')),
   ],
 
   tags: {
@@ -74,7 +75,7 @@ export const DSConstSignalInt = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Signal<int>', {
+    input('value', 'Value', parseTypeDesc('Signal<int>'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -85,7 +86,7 @@ export const DSConstSignalInt = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Signal<int>'),
+    output('out', 'Output', parseTypeDesc('Signal<int>')),
   ],
 
   tags: {
@@ -108,7 +109,7 @@ export const DSConstSignalColor = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Signal<color>', {
+    input('value', 'Value', parseTypeDesc('Signal<color>'), {
       tier: 'primary',
       defaultSource: {
         value: '#ffffff',
@@ -119,7 +120,7 @@ export const DSConstSignalColor = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Signal<color>'),
+    output('out', 'Output', parseTypeDesc('Signal<color>')),
   ],
 
   tags: {
@@ -142,7 +143,7 @@ export const DSConstSignalPoint = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Signal<Point>', {
+    input('value', 'Value', parseTypeDesc('Signal<point>'), {
       tier: 'primary',
       defaultSource: {
         value: { x: 0, y: 0 },
@@ -153,7 +154,7 @@ export const DSConstSignalPoint = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Signal<Point>'),
+    output('out', 'Output', parseTypeDesc('Signal<point>')),
   ],
 
   tags: {
@@ -176,7 +177,7 @@ export const DSConstFieldFloat = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Field<float>', {
+    input('value', 'Value', parseTypeDesc('Field<float>'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -187,7 +188,7 @@ export const DSConstFieldFloat = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Field<float>'),
+    output('out', 'Output', parseTypeDesc('Field<float>')),
   ],
 
   tags: {
@@ -210,7 +211,7 @@ export const DSConstFieldVec2 = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Field<vec2>', {
+    input('value', 'Value', parseTypeDesc('Field<vec2>'), {
       tier: 'primary',
       defaultSource: {
         value: { x: 0, y: 0 },
@@ -221,7 +222,7 @@ export const DSConstFieldVec2 = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Field<vec2>'),
+    output('out', 'Output', parseTypeDesc('Field<vec2>')),
   ],
 
   tags: {
@@ -244,7 +245,7 @@ export const DSConstFieldColor = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Field<color>', {
+    input('value', 'Value', parseTypeDesc('Field<color>'), {
       tier: 'primary',
       defaultSource: {
         value: '#ffffff',
@@ -255,7 +256,7 @@ export const DSConstFieldColor = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Field<color>'),
+    output('out', 'Output', parseTypeDesc('Field<color>')),
   ],
 
   tags: {
@@ -278,7 +279,7 @@ export const DSConstScalarFloat = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Scalar:float', {
+    input('value', 'Value', parseTypeDesc('Scalar:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -289,7 +290,7 @@ export const DSConstScalarFloat = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Scalar:float'),
+    output('out', 'Output', parseTypeDesc('Scalar:float')),
   ],
 
   tags: {
@@ -312,7 +313,7 @@ export const DSConstScalarInt = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Scalar:int', {
+    input('value', 'Value', parseTypeDesc('Scalar:int'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -323,7 +324,7 @@ export const DSConstScalarInt = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Scalar:int'),
+    output('out', 'Output', parseTypeDesc('Scalar:int')),
   ],
 
   tags: {
@@ -346,7 +347,7 @@ export const DSConstScalarString = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Scalar:string', {
+    input('value', 'Value', parseTypeDesc('Scalar:string'), {
       tier: 'primary',
       defaultSource: {
         value: '',
@@ -357,7 +358,7 @@ export const DSConstScalarString = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Scalar:string'),
+    output('out', 'Output', parseTypeDesc('Scalar:string')),
   ],
 
   tags: {
@@ -380,7 +381,7 @@ export const DSConstScalarWaveform = createBlock({
   compileKind: 'operator',
 
   inputs: [
-    input('value', 'Value', 'Scalar:waveform', {
+    input('value', 'Value', parseTypeDesc('Scalar:waveform'), {
       tier: 'primary',
       defaultSource: {
         value: 'sine',
@@ -399,7 +400,7 @@ export const DSConstScalarWaveform = createBlock({
   ],
 
   outputs: [
-    output('out', 'Output', 'Scalar:waveform'),
+    output('out', 'Output', parseTypeDesc('Scalar:waveform')),
   ],
 
   tags: {

@@ -7,6 +7,7 @@
 import { createBlock } from './factory';
 import { input, output } from './utils';
 import { Oscillator } from './oscillatorSpec';
+import { parseTypeDesc } from '../ir/types/TypeDesc';
 
 /**
  * Oscillator - Generate waveforms from phase
@@ -38,7 +39,7 @@ export const Shaper = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('in', 'Input', 'Signal<float>', {
+    input('in', 'Input', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -46,7 +47,7 @@ export const Shaper = createBlock({
         uiHint: { kind: 'slider', min: -1, max: 1, step: 0.01 },
       },
     }),
-    input('kind', 'Shape', 'Signal<string>', {
+    input('kind', 'Shape', parseTypeDesc('Signal:string'), {
       tier: 'primary',
       defaultSource: {
         value: 'smoothstep',
@@ -63,7 +64,7 @@ export const Shaper = createBlock({
         },
       },
     }),
-    input('amount', 'Amount', 'Signal<float>', {
+    input('amount', 'Amount', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -73,7 +74,7 @@ export const Shaper = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Output', 'Signal<float>'),
+    output('out', 'Output', parseTypeDesc('Signal:float')),
   ],
   color: '#3B82F6',
   priority: 11,});
@@ -94,7 +95,7 @@ export const ColorLFO = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('phase', 'Phase', 'Signal<phase>', {
+    input('phase', 'Phase', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -102,7 +103,7 @@ export const ColorLFO = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
       },
     }),
-    input('base', 'Base Color', 'Signal<color>', {
+    input('base', 'Base Color', parseTypeDesc('Signal:color'), {
       tier: 'primary',
       defaultSource: {
         value: '#3B82F6',
@@ -110,7 +111,7 @@ export const ColorLFO = createBlock({
         uiHint: { kind: 'color' },
       },
     }),
-    input('hueSpan', 'Hue Span', 'Signal<float>', {
+    input('hueSpan', 'Hue Span', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 180,
@@ -118,7 +119,7 @@ export const ColorLFO = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 360, step: 1 },
       },
     }),
-    input('sat', 'Saturation', 'Signal<float>', {
+    input('sat', 'Saturation', parseTypeDesc('Signal:float'), {
       tier: 'secondary',
       defaultSource: {
         value: 0.8,
@@ -126,7 +127,7 @@ export const ColorLFO = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
       },
     }),
-    input('light', 'Lightness', 'Signal<float>', {
+    input('light', 'Lightness', parseTypeDesc('Signal:float'), {
       tier: 'secondary',
       defaultSource: {
         value: 0.5,
@@ -136,7 +137,7 @@ export const ColorLFO = createBlock({
     }),
   ],
   outputs: [
-    output('color', 'Color', 'Signal<color>'),
+    output('color', 'Color', parseTypeDesc('Signal:color')),
   ],
   color: '#F59E0B',
   priority: 12,
@@ -158,7 +159,7 @@ export const AddSignal = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('a', 'A', 'Signal<float>', {
+    input('a', 'A', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -166,7 +167,7 @@ export const AddSignal = createBlock({
         uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       },
     }),
-    input('b', 'B', 'Signal<float>', {
+    input('b', 'B', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -176,7 +177,7 @@ export const AddSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Sum', 'Signal<float>'),
+    output('out', 'Sum', parseTypeDesc('Signal:float')),
   ],
   color: '#8B5CF6',
   priority: 20,});
@@ -194,7 +195,7 @@ export const MulSignal = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('a', 'A', 'Signal<float>', {
+    input('a', 'A', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -202,7 +203,7 @@ export const MulSignal = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 10, step: 0.1 },
       },
     }),
-    input('b', 'B', 'Signal<float>', {
+    input('b', 'B', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -212,7 +213,7 @@ export const MulSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Product', 'Signal<float>'),
+    output('out', 'Product', parseTypeDesc('Signal:float')),
   ],
   color: '#8B5CF6',
   priority: 21,});
@@ -228,7 +229,7 @@ export const MinSignal = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('a', 'A', 'Signal<float>', {
+    input('a', 'A', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: Infinity, // Identity: min(x, ∞) = x
@@ -236,7 +237,7 @@ export const MinSignal = createBlock({
         uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       },
     }),
-    input('b', 'B', 'Signal<float>', {
+    input('b', 'B', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: Infinity, // Identity: min(x, ∞) = x
@@ -246,7 +247,7 @@ export const MinSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Min', 'Signal<float>'),
+    output('out', 'Min', parseTypeDesc('Signal:float')),
   ],
   color: '#8B5CF6',
   priority: 22,});
@@ -262,7 +263,7 @@ export const MaxSignal = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('a', 'A', 'Signal<float>', {
+    input('a', 'A', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: -Infinity, // Identity: max(x, -∞) = x
@@ -270,7 +271,7 @@ export const MaxSignal = createBlock({
         uiHint: { kind: 'slider', min: -10, max: 10, step: 0.1 },
       },
     }),
-    input('b', 'B', 'Signal<float>', {
+    input('b', 'B', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: -Infinity, // Identity: max(x, -∞) = x
@@ -280,7 +281,7 @@ export const MaxSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Max', 'Signal<float>'),
+    output('out', 'Max', parseTypeDesc('Signal:float')),
   ],
   color: '#8B5CF6',
   priority: 23,});
@@ -298,7 +299,7 @@ export const ClampSignal = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('in', 'Input', 'Signal<float>', {
+    input('in', 'Input', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -306,7 +307,7 @@ export const ClampSignal = createBlock({
         uiHint: { kind: 'slider', min: -1, max: 1, step: 0.01 },
       },
     }),
-    input('min', 'Min', 'Signal<float>', {
+    input('min', 'Min', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -314,7 +315,7 @@ export const ClampSignal = createBlock({
         uiHint: { kind: 'slider', min: -100, max: 100, step: 0.1 },
       },
     }),
-    input('max', 'Max', 'Signal<float>', {
+    input('max', 'Max', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 1,
@@ -324,7 +325,7 @@ export const ClampSignal = createBlock({
     }),
   ],
   outputs: [
-    output('out', 'Output', 'Signal<float>'),
+    output('out', 'Output', parseTypeDesc('Signal:float')),
   ],
   color: '#8B5CF6',
   priority: 24,});

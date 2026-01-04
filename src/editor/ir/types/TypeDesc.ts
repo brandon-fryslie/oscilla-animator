@@ -277,3 +277,81 @@ export function createTypeDesc(partial: {
     unit: partial.unit,
   };
 }
+
+/**
+ * Parse a string type descriptor into a TypeDesc object.
+ *
+ * Supported formats:
+ * - "World:domain" (e.g., "Signal:float", "Field:color", "Scalar:int")
+ * - "domain" (defaults to signal world, e.g., "float" → Signal:float)
+ *
+ * World names are case-insensitive and normalized to lowercase.
+ *
+ * @param typeStr - String type descriptor
+ * @returns TypeDesc object
+ * @throws Error if the format is invalid
+ *
+ * @example
+ * parseTypeDesc("Signal:float") // { world: 'signal', domain: 'float', ... }
+ * parseTypeDesc("Field:color")  // { world: 'field', domain: 'color', ... }
+ * parseTypeDesc("float")        // { world: 'signal', domain: 'float', ... }
+ */
+export function parseTypeDesc(typeStr: string): TypeDesc {
+  const parts = typeStr.split(':');
+
+  if (parts.length === 1) {
+    // Just domain, default to signal world
+    return createTypeDesc({
+      world: 'signal',
+      domain: parts[0].toLowerCase() as TypeDomain,
+    });
+  }
+
+  if (parts.length === 2) {
+    const worldStr = parts[0].toLowerCase();
+    const domainStr = parts[1].toLowerCase();
+
+    // Validate and map world
+    let world: TypeWorld;
+    switch (worldStr) {
+      case 'signal':
+        world = 'signal';
+        break;
+      case 'field':
+        world = 'field';
+        break;
+      case 'scalar':
+        world = 'scalar';
+        break;
+      case 'event':
+        world = 'event';
+        break;
+      case 'config':
+        world = 'config';
+        break;
+      default:
+        throw new Error(`Unknown type world: ${worldStr} in "${typeStr}"`);
+    }
+
+    return createTypeDesc({
+      world,
+      domain: domainStr as TypeDomain,
+    });
+  }
+
+  throw new Error(`Invalid type descriptor format: "${typeStr}". Expected "World:domain" or "domain".`);
+}
+
+/**
+ * Convert a TypeDesc to its string representation.
+ *
+ * @param type - TypeDesc object
+ * @returns String in "World:domain" format with capitalized world
+ *
+ * @example
+ * typeDescToString({ world: 'signal', domain: 'float' }) // "Signal:float"
+ */
+export function typeDescToString(type: TypeDesc): string {
+  const worldCapitalized = type.world.charAt(0).toUpperCase() + type.world.slice(1);
+  return `${worldCapitalized}:${type.domain}`;
+}
