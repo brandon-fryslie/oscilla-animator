@@ -8,7 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { pass7BusLowering } from "../pass7-bus-lowering";
 import { IRBuilderImpl } from "../../ir/IRBuilderImpl";
-import type { Bus, Domain } from "../../../types";
+import type { Bus } from "../../../types";
 import type { UnlinkedIRFragments } from "../pass6-block-lowering";
 
 describe.skip("Pass 7: Bus Lowering", () => {
