@@ -12,8 +12,6 @@
  * Any block type NOT in this allowlist will be rejected by validation.
  */
 
-import { DEFAULT_CONST_PROVIDER_BLOCKS } from './constProviders';
-
 /**
  * Complete specification for a default source provider block.
  *
@@ -44,21 +42,107 @@ export type DefaultSourceProviderBlockSpec = Readonly<{
  * Master allowlist of default source provider blocks.
  *
  * Currently includes:
- * - All const providers (9 types for Signal/Field/Scalar)
+ * - All const providers (13 types for Signal/Field/Scalar)
  * - Oscillator (Sprint 15)
  */
 export const DEFAULT_SOURCE_PROVIDER_BLOCKS: readonly DefaultSourceProviderBlockSpec[] =
   [
-    // Spread all const providers
-    ...DEFAULT_CONST_PROVIDER_BLOCKS.map(
-      (spec): DefaultSourceProviderBlockSpec => ({
-        blockType: spec.blockType,
-        label: spec.label,
-        outputPortId: spec.outputPortId,
-        editableInputs: spec.editableInputs,
-        busInputs: {}, // Const providers have no bus inputs
-      })
-    ),
+    // Signal const providers
+    {
+      blockType: 'DSConstSignalFloat',
+      label: 'Constant (Signal<float>)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+    {
+      blockType: 'DSConstSignalInt',
+      label: 'Constant (Signal<int>)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+    {
+      blockType: 'DSConstSignalColor',
+      label: 'Constant (Signal<color>)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+    {
+      blockType: 'DSConstSignalPoint',
+      label: 'Constant (Signal<vec2>)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+    {
+      blockType: 'DSConstSignalPhase',
+      label: 'Constant (Signal<phase>)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+    {
+      blockType: 'DSConstSignalTime',
+      label: 'Constant (Signal<time>)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+
+    // Field const providers
+    {
+      blockType: 'DSConstFieldFloat',
+      label: 'Constant (Field<float>)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+    {
+      blockType: 'DSConstFieldVec2',
+      label: 'Constant (Field<vec2>)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+    {
+      blockType: 'DSConstFieldColor',
+      label: 'Constant (Field<color>)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+
+    // Scalar const providers
+    {
+      blockType: 'DSConstScalarInt',
+      label: 'Constant (Scalar:int)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+    {
+      blockType: 'DSConstScalarFloat',
+      label: 'Constant (Scalar:float)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+    {
+      blockType: 'DSConstScalarString',
+      label: 'Constant (Scalar:string)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
+    {
+      blockType: 'DSConstScalarWaveform',
+      label: 'Constant (Scalar:waveform)',
+      outputPortId: 'out',
+      editableInputs: ['value'],
+      busInputs: {},
+    },
 
     // Advanced providers (Sprint 15: Oscillator)
     {
