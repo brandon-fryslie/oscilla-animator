@@ -3,14 +3,16 @@
  *
  * Transforms a raw Patch into a NormalizedPatch by:
  * 1. Freezing block IDs to dense numeric indices (stable, sorted)
- * 2. Attaching default sources for unwired inputs
- * 3. Canonicalizing edges (sort by sortKey, filter enabled)
+ * 2. Canonicalizing edges (sort by sortKey, filter enabled)
  *
  * This is the entry point of the 11-pass compilation pipeline.
  * The normalized patch has a stable structure that later passes can rely on.
  *
  * Sprint: Bus-Block Unification
  * Status: Edges-only mode (legacy Connection/Publisher/Listener deprecated)
+ *
+ * Note: Default source materialization removed from this pass.
+ * Default sources are now materialized by GraphNormalizer before compilation.
  *
  * References:
  * - HANDOFF.md Topic 2: Pass 1 - Normalize Patch
@@ -24,10 +26,7 @@ import type {
 import type {
   NormalizedPatch,
   BlockIndex,
-  ConstId,
-  DefaultSourceAttachment,
 } from "../ir/patches";
-import { getBlockDefinition } from "../../blocks/registry";
 
 /**
  * Canonicalize edges: filter enabled, sort uniformly by sortKey.
@@ -48,21 +47,9 @@ function canonicalizeEdges(edges: readonly Edge[]): readonly Edge[] {
 }
 
 /**
- * Check if an input is connected via an edge.
- */
-function hasEdgeToInput(edges: readonly Edge[], blockId: string, slotId: string): boolean {
-  return edges.some(e =>
-    e.to.kind === 'port' &&
-    e.to.blockId === blockId &&
-    e.to.slotId === slotId &&
-    e.enabled
-  );
-}
-
-/**
  * Normalize a patch for compilation.
  *
- * @param patch - The raw patch from the editor
+ * @param patch - The raw patch from the editor (already includes structural blocks from GraphNormalizer)
  * @returns A normalized patch with frozen IDs and canonical structure
  */
 export function pass1Normalize(
@@ -87,39 +74,12 @@ export function pass1Normalize(
     blocksMap.set(block.id, block);
   }
 
-  // Step 3: Identify unwired inputs and create default sources
-  const defaults: DefaultSourceAttachment[] = [];
-  const constPool = new Map<ConstId, unknown>();
-  let constIdCounter = 0;
-
-  for (const block of patch.blocks) {
-    const blockDef = getBlockDefinition(block.type);
-    if (!blockDef) continue;
-
-    for (const input of blockDef.inputs) {
-      // Check if input is connected via edges
-      const isConnected = hasEdgeToInput(edges, block.id, input.id);
-
-      // If unconnected and has default source, attach it
-      if (!isConnected && input.defaultSource != null) {
-        const constId = constIdCounter++ as ConstId;
-        defaults.push({
-          blockId: block.id,
-          slotId: input.id,
-          constId,
-        });
-        // Store the default value in the const pool
-        constPool.set(constId, input.defaultSource);
-      }
-    }
-  }
-
   // Return normalized patch matching canonical schema
+  // Note: defaults and constPool removed - default sources are now
+  // materialized as structural blocks by GraphNormalizer
   return {
     blockIndexMap,
     blocks: blocksMap,
     edges,
-    defaults,
-    constPool,
   };
 }

@@ -28,6 +28,7 @@ export type BlockIndex = number & { readonly __brand: "BlockIndex" };
 
 /**
  * Constant ID in the constant pool (for default sources).
+ * @deprecated No longer used - default sources are now materialized as blocks
  */
 export type ConstId = number & { readonly __brand: "ConstId" };
 
@@ -37,7 +38,7 @@ export type ConstId = number & { readonly __brand: "ConstId" };
 
 /**
  * Default source attachment for an unwired input.
- * Created during Pass 1 (Normalize) for inputs without wires or bus listeners.
+ * @deprecated No longer used - default sources are now materialized as structural blocks by GraphNormalizer
  */
 export interface DefaultSourceAttachment {
   /** Block containing the input */
@@ -59,8 +60,10 @@ export interface DefaultSourceAttachment {
  *
  * Normalization establishes:
  * 1. Stable BlockIndex assignments (frozen block ordering)
- * 2. Const pool with default source values
- * 3. Default source attachments for unwired inputs
+ * 2. Canonical edge ordering
+ *
+ * Note: Default source materialization has been moved to GraphNormalizer.
+ * Default sources are now structural blocks in the patch before compilation.
  */
 export interface NormalizedPatch {
   /** Stable block indexing (frozen) */
@@ -68,12 +71,6 @@ export interface NormalizedPatch {
 
   /** Edges from the original patch (includes wires + bus connections) */
   readonly edges: readonly Edge[];
-
-  /** Default source attachments for unwired inputs */
-  readonly defaults: readonly DefaultSourceAttachment[];
-
-  /** Const pool entries */
-  readonly constPool: ReadonlyMap<ConstId, unknown>;
 
   // Forward the full patch for later passes
   readonly blocks: ReadonlyMap<string, unknown>; // opaque block data
