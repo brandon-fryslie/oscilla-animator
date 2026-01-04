@@ -119,6 +119,13 @@ export function compilePatch(
     // Freezes block IDs to indices, canonicalizes edges
     const normalized = pass1Normalize(patchForPasses);
 
+    // Sort blocks to match canonical order from pass 1 (blockIndexMap)
+    // CRITICAL: Block indices reference sorted order, so blocks array must match.
+    // The compiler uses canonical sorted order and data is passed TO it, not fetched.
+    const sortedBlocks = [...patchForPasses.blocks].sort((a, b) =>
+      a.id.localeCompare(b.id)
+    );
+
     // Pass 2: Type Graph (THROWS on error)
     // Builds type system, validates bus eligibility
     const typed = pass2TypeGraph(normalized);
@@ -133,7 +140,7 @@ export function compilePatch(
 
     // Pass 5: SCC Validation (accumulates errors)
     // Detects illegal cycles (cycles without state boundaries)
-    const validated = pass5CycleValidation(depGraphWithTime, patchForPasses.blocks);
+    const validated = pass5CycleValidation(depGraphWithTime, sortedBlocks);
 
     // Check for errors from pass 5
     if (validated.errors.length > 0) {
@@ -155,7 +162,7 @@ export function compilePatch(
     const compiledPortMap = new Map();
     const fragments = pass6BlockLowering(
       validated,
-      patchForPasses.blocks,
+      sortedBlocks,
       compiledPortMap,
       patchForPasses.edges
     );
@@ -171,7 +178,7 @@ export function compilePatch(
     // Pass 8: Link Resolution (accumulates errors)
     // Resolves all port references to concrete values
     // Note: Pass 7 (bus lowering) removed - buses are BusBlocks handled in pass 6
-    const linked = pass8LinkResolution(fragments, patchForPasses.blocks, patchForPasses.edges);
+    const linked = pass8LinkResolution(fragments, sortedBlocks, patchForPasses.edges);
 
     // Check for errors from pass 8
     if (linked.errors.length > 0) {
