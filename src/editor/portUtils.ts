@@ -9,6 +9,7 @@
  */
 
 import type { SlotType, Edge, Block, Slot, PortRef } from './types';
+import { typeDescToString } from './types';
 import { areSlotTypesCompatible, getCompatibilityHint } from './semantic';
 import { getBlockDefinition } from './blocks/registry';
 
@@ -99,8 +100,11 @@ function normalizeDomain(domain: string): string {
  * Parse a SlotType into a world + domain descriptor for compatibility checks and badges.
  */
 export function describeSlotType(type: SlotType): TypeDescriptor {
+  // TypeDesc is now an object with world and domain properties
+  const typeString = typeDescToString(type);
+
   // Field<T>
-  const fieldMatch = /^Field<(.*)>$/.exec(type);
+  const fieldMatch = /^Field<(.*)>$/.exec(typeString);
   if (fieldMatch) {
     return {
       raw: type,
@@ -110,7 +114,7 @@ export function describeSlotType(type: SlotType): TypeDescriptor {
   }
 
   // Signal<T>
-  const signalMatch = /^Signal<(.*)>$/.exec(type);
+  const signalMatch = /^Signal<(.*)>$/.exec(typeString);
   if (signalMatch) {
     return {
       raw: type,
@@ -120,7 +124,7 @@ export function describeSlotType(type: SlotType): TypeDescriptor {
   }
 
   // Scalar:*
-  const scalarMatch = /^Scalar:(.*)$/.exec(type);
+  const scalarMatch = /^Scalar:(.*)$/.exec(typeString);
   if (scalarMatch) {
     return {
       raw: type,
@@ -130,27 +134,27 @@ export function describeSlotType(type: SlotType): TypeDescriptor {
   }
 
   // Events
-  if (type.startsWith('Event<')) {
+  if (typeString.startsWith('Event<')) {
     return { raw: type, world: 'event', domain: 'event' };
   }
 
-  // Scene-ish
-  if (type === 'Scene' || type === 'SceneTargets' || type === 'SceneStrokes') {
-    return { raw: type, world: 'scene', domain: normalizeDomain(type) };
+  // Scene-ish - check domain property for scene types
+  if (type.domain === 'scene' || type.domain === 'sceneTargets' || type.domain === 'sceneStrokes') {
+    return { raw: type, world: 'scene', domain: normalizeDomain(type.domain) };
   }
 
   // Program / Render
-  if (type === 'Program') return { raw: type, world: 'program', domain: 'program' };
-  if (type === 'RenderTree' || type === 'RenderNode' || type === 'RenderNode[]') {
-    return { raw: type, world: 'render', domain: normalizeDomain(type) };
+  if (type.domain === 'program') return { raw: type, world: 'program', domain: 'program' };
+  if (type.domain === 'renderTree' || type.domain === 'renderNode' || type.domain === 'render') {
+    return { raw: type, world: 'render', domain: normalizeDomain(type.domain) };
   }
 
   // Filters / Stroke styles
-  if (type === 'FilterDef') return { raw: type, world: 'filter', domain: 'filter' };
-  if (type === 'StrokeStyle') return { raw: type, world: 'stroke', domain: 'stroke' };
+  if (type.domain === 'filterDef') return { raw: type, world: 'filter', domain: 'filter' };
+  if (type.domain === 'strokeStyle') return { raw: type, world: 'stroke', domain: 'stroke' };
 
   // Element count (treated like numeric scalar)
-  if (type === 'ElementCount') {
+  if (type.domain === 'elementCount') {
     return { raw: type, world: 'scalar', domain: 'num' };
   }
 

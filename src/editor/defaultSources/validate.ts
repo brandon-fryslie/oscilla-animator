@@ -17,6 +17,7 @@ import type { Diagnostic } from '../diagnostics/types';
 import { createDiagnostic } from '../diagnostics/types';
 import { getBlockDefinition } from '../blocks/registry';
 import { areSlotTypesCompatible } from '../semantic';
+import { typeDescToString } from '../types';
 import type { DefaultSourceAttachment } from './types';
 import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from './allowlist';
 
@@ -177,6 +178,10 @@ function validateTypeCompatibility(
         (spec) => spec.blockType === provider.blockType
       )?.label ?? provider.blockType;
 
+    // Convert TypeDesc to string for display
+    const providerOutputTypeString = typeDescToString(providerOutputType);
+    const targetInputTypeString = typeDescToString(targetInputType);
+
     diagnostics.push(
       createDiagnostic({
         code: 'E_TYPE_MISMATCH',
@@ -197,11 +202,11 @@ function validateTypeCompatibility(
           },
         ],
         title: 'Default source type mismatch',
-        message: `Default source provider "${providerLabel}" output type "${providerOutputType}" is incompatible with ${targetBlockName}.${targetInputName} type "${targetInputType}". Select a different provider or change the block configuration.`,
+        message: `Default source provider "${providerLabel}" output type "${providerOutputTypeString}" is incompatible with ${targetBlockName}.${targetInputName} type "${targetInputTypeString}". Select a different provider or change the block configuration.`,
         payload: {
           kind: 'typeMismatch',
-          expected: targetInputType,
-          actual: providerOutputType,
+          expected: targetInputTypeString,
+          actual: providerOutputTypeString,
         },
         patchRevision,
       })

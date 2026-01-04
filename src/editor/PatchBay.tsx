@@ -18,6 +18,7 @@ import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import { useStore } from './stores';
 import type { Block, PortRef, TypeDesc, UIControlHint } from './types';
+import { typeDescToString } from './types';
 import type { LaneViewLane as Lane, LaneViewKind as LaneKind } from './lanes/types';
 import { getBlockDefinition } from './blocks';
 import { BlockContextMenu } from './BlockContextMenu';
@@ -50,10 +51,8 @@ function getBusDomainColorFromType(typeDesc: TypeDesc | undefined): string {
   };
   if (!typeDesc) return '#666';
 
-  // TypeDesc is a string like "Signal<float>" or "float"
-  // Extract domain from type string
-  const match = typeDesc.match(/<([^>]+)>$/);
-  const domain = match ? match[1] : typeDesc;
+  // TypeDesc is now an object with domain property
+  const domain = typeDesc.domain;
 
   return domainColors[domain] ?? '#666';
 }
@@ -400,7 +399,7 @@ function Port({
       <div className="port-tooltip-details">
         <div className="port-tooltip-row">
           <span className="port-tooltip-key">Type</span>
-          <span className="port-tooltip-value">{slot.type}</span>
+          <span className="port-tooltip-value">{typeDescToString(slot.type)}</span>
         </div>
         <div className="port-tooltip-row">
           <span className="port-tooltip-key">World</span>
