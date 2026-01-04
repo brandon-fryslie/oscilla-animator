@@ -11,6 +11,10 @@
 import { describe, it, expect } from 'vitest';
 import { SemanticGraph } from '../graph';
 import type { PatchDocument } from '../types';
+import { parseTypeDesc } from '../../ir/types/TypeDesc';
+
+// Helper to create TypeDesc objects from string notation
+const T = (s: string) => parseTypeDesc(s);
 
 describe('SemanticGraph', () => {
   describe('graph construction', () => {
@@ -21,13 +25,13 @@ describe('SemanticGraph', () => {
             id: 'block1',
             type: 'FiniteTimeRoot',
             inputs: [],
-            outputs: [{ id: 'progress', type: 'Signal<Unit>' }],
+            outputs: [{ id: 'progress', type: T('Signal:float') }],
           },
           {
             id: 'block2',
             type: 'RenderInstances2D',
-            inputs: [{ id: 'progress', type: 'Signal<float>' }],
-            outputs: [{ id: 'render', type: 'Render' }],
+            inputs: [{ id: 'progress', type: T('Signal:float') }],
+            outputs: [{ id: 'render', type: T('Signal:render') }],
           },
         ],
         edges: [],
@@ -48,13 +52,13 @@ describe('SemanticGraph', () => {
             id: 'block1',
             type: 'FiniteTimeRoot',
             inputs: [],
-            outputs: [{ id: 'progress', type: 'Signal<Unit>' }],
+            outputs: [{ id: 'progress', type: T('Signal:float') }],
           },
           {
             id: 'block2',
             type: 'RenderInstances2D',
-            inputs: [{ id: 'progress', type: 'Signal<float>' }],
-            outputs: [{ id: 'render', type: 'Render' }],
+            inputs: [{ id: 'progress', type: T('Signal:float') }],
+            outputs: [{ id: 'render', type: T('Signal:render') }],
           },
         ],
         edges: [
@@ -94,9 +98,9 @@ describe('SemanticGraph', () => {
     it('should detect no cycles in acyclic graph', () => {
       const patch: PatchDocument = {
         blocks: [
-          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: 'Signal<float>' }] },
-          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
-          { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
+          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: T('Signal:float') }] },
+          { id: 'b', type: 'B', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [{ id: 'out', type: T('Signal:float') }] },
+          { id: 'c', type: 'C', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [{ id: 'out', type: T('Signal:float') }] },
         ],
         edges: [
           { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
@@ -112,8 +116,8 @@ describe('SemanticGraph', () => {
     it('should detect simple cycle', () => {
       const patch: PatchDocument = {
         blocks: [
-          { id: 'a', type: 'A', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
-          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
+          { id: 'a', type: 'A', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [{ id: 'out', type: T('Signal:float') }] },
+          { id: 'b', type: 'B', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [{ id: 'out', type: T('Signal:float') }] },
         ],
         edges: [
           { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
@@ -131,9 +135,9 @@ describe('SemanticGraph', () => {
     it('should detect if adding edge would create cycle', () => {
       const patch: PatchDocument = {
         blocks: [
-          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: 'Signal<float>' }] },
-          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
-          { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
+          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: T('Signal:float') }] },
+          { id: 'b', type: 'B', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [{ id: 'out', type: T('Signal:float') }] },
+          { id: 'c', type: 'C', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [{ id: 'out', type: T('Signal:float') }] },
         ],
         edges: [
           { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
@@ -158,10 +162,10 @@ describe('SemanticGraph', () => {
     it('should return downstream blocks correctly', () => {
       const patch: PatchDocument = {
         blocks: [
-          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: 'Signal<float>' }] },
-          { id: 'b', type: 'B', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [{ id: 'out', type: 'Signal<float>' }] },
-          { id: 'c', type: 'C', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [] },
-          { id: 'd', type: 'D', inputs: [{ id: 'in', type: 'Signal<float>' }], outputs: [] },
+          { id: 'a', type: 'A', inputs: [], outputs: [{ id: 'out', type: T('Signal:float') }] },
+          { id: 'b', type: 'B', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [{ id: 'out', type: T('Signal:float') }] },
+          { id: 'c', type: 'C', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [] },
+          { id: 'd', type: 'D', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [] },
         ],
         edges: [
           { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user' } },

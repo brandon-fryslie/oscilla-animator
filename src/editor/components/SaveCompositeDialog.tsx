@@ -9,7 +9,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Block, Edge, Composite, ExposedParam } from '../types';
 import type { ExposedPort } from '../composites';
-import { getTypeDesc } from '../semantic';
 import {
   detectExposedPorts,
   detectExposableParameters,
@@ -268,7 +267,8 @@ export function SaveCompositeDialog({
                   <label>Exposed Inputs</label>
                   <div className="save-composite-dialog__port-list">
                     {detectedPorts.inputs.map(port => {
-                      const typeDesc = getTypeDesc(port.slotType);
+                      // SlotType is already TypeDesc, no conversion needed
+                      const typeDesc = port.slotType;
                       return (
                         <label key={port.id} className="save-composite-dialog__port-item">
                           <input
@@ -278,7 +278,7 @@ export function SaveCompositeDialog({
                           />
                           <span>{port.label}</span>
                           <span className="save-composite-dialog__port-type">
-                            {typeDesc !== null && typeDesc !== undefined ? `${typeDesc.world}.${typeDesc.domain}` : String(port.slotType)}
+                            {typeDesc.world}:{typeDesc.domain}
                           </span>
                         </label>
                       );
@@ -293,7 +293,8 @@ export function SaveCompositeDialog({
                   <label>Exposed Outputs</label>
                   <div className="save-composite-dialog__port-list">
                     {detectedPorts.outputs.map(port => {
-                      const typeDesc = getTypeDesc(port.slotType);
+                      // SlotType is already TypeDesc, no conversion needed
+                      const typeDesc = port.slotType;
                       return (
                         <label key={port.id} className="save-composite-dialog__port-item">
                           <input
@@ -303,7 +304,7 @@ export function SaveCompositeDialog({
                           />
                           <span>{port.label}</span>
                           <span className="save-composite-dialog__port-type">
-                            {typeDesc !== null && typeDesc !== undefined ? `${typeDesc.world}.${typeDesc.domain}` : String(port.slotType)}
+                            {typeDesc.world}:{typeDesc.domain}
                           </span>
                         </label>
                       );

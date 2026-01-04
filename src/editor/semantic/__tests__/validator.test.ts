@@ -12,6 +12,10 @@
 import { describe, it, expect } from 'vitest';
 import { Validator } from '../validator';
 import type { PatchDocument } from '../types';
+import { parseTypeDesc } from '../../ir/types/TypeDesc';
+
+// Helper to create TypeDesc objects from string notation
+const T = (s: string) => parseTypeDesc(s);
 
 describe('Validator', () => {
   describe('TimeRoot constraint validation', () => {
@@ -22,7 +26,7 @@ describe('Validator', () => {
             id: 'block1',
             type: 'GridDomain',
             inputs: [],
-            outputs: [{ id: 'domain', type: 'Domain' }],
+            outputs: [{ id: 'domain', type: T('Field:domain') }],
           },
         ],
         edges: [],
@@ -43,13 +47,13 @@ describe('Validator', () => {
             id: 'time1',
             type: 'InfiniteTimeRoot',
             inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
+            outputs: [{ id: 'phase', type: T('Signal:float') }],
           },
           {
             id: 'time2',
             type: 'FiniteTimeRoot',
             inputs: [],
-            outputs: [{ id: 'progress', type: 'Signal<Unit>' }],
+            outputs: [{ id: 'progress', type: T('Signal:float') }],
           },
         ],
         edges: [],
@@ -70,13 +74,13 @@ describe('Validator', () => {
             id: 'time1',
             type: 'InfiniteTimeRoot',
             inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
+            outputs: [{ id: 'phase', type: T('Signal:float') }],
           },
           {
             id: 'render',
             type: 'RenderInstances2D',
             inputs: [],
-            outputs: [{ id: 'render', type: 'Render' }],
+            outputs: [{ id: 'render', type: T('Signal:render') }],
           },
         ],
         edges: [],
@@ -101,25 +105,25 @@ describe('Validator', () => {
             id: 'time',
             type: 'InfiniteTimeRoot',
             inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
+            outputs: [{ id: 'phase', type: T('Signal:float') }],
           },
           {
             id: 'source1',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'value', type: T('Signal:float') }],
           },
           {
             id: 'source2',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'value', type: T('Signal:float') }],
           },
           {
             id: 'target',
             type: 'Scale',
-            inputs: [{ id: 'value', type: 'Signal<float>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
+            inputs: [{ id: 'value', type: T('Signal:float') }],
+            outputs: [{ id: 'scaled', type: T('Signal:float') }],
           },
         ],
         edges: [
@@ -160,13 +164,13 @@ describe('Validator', () => {
             type: 'NumberSource',
             inputs: [],
             // Signal<float> is incompatible with Signal<Point> (vec2 domain)
-            outputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'value', type: T('Signal:float') }],
           },
           {
             id: 'target',
             type: 'Scale',
-            inputs: [{ id: 'position', type: 'Signal<Point>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<Point>' }],
+            inputs: [{ id: 'position', type: T('Signal:point') }],
+            outputs: [{ id: 'scaled', type: T('Signal:point') }],
           },
         ],
         edges: [
@@ -198,13 +202,13 @@ describe('Validator', () => {
             id: 'source',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'value', type: T('Signal:float') }],
           },
           {
             id: 'target',
             type: 'Scale',
-            inputs: [{ id: 'value', type: 'Signal<float>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
+            inputs: [{ id: 'value', type: T('Signal:float') }],
+            outputs: [{ id: 'scaled', type: T('Signal:float') }],
           },
         ],
         edges: [
@@ -234,19 +238,19 @@ describe('Validator', () => {
             id: 'time',
             type: 'InfiniteTimeRoot',
             inputs: [],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
+            outputs: [{ id: 'phase', type: T('Signal:float') }],
           },
           {
             id: 'a',
             type: 'Scale',
-            inputs: [{ id: 'value', type: 'Signal<float>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
+            inputs: [{ id: 'value', type: T('Signal:float') }],
+            outputs: [{ id: 'scaled', type: T('Signal:float') }],
           },
           {
             id: 'b',
             type: 'Scale',
-            inputs: [{ id: 'value', type: 'Signal<float>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
+            inputs: [{ id: 'value', type: T('Signal:float') }],
+            outputs: [{ id: 'scaled', type: T('Signal:float') }],
           },
         ],
         edges: [
@@ -291,7 +295,7 @@ describe('Validator', () => {
             id: 'source',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'value', type: T('Signal:float') }],
           },
         ],
         edges: [
@@ -323,8 +327,8 @@ describe('Validator', () => {
           {
             id: 'time',
             type: 'InfiniteTimeRoot',
-            inputs: [{ id: 'period', type: 'Scalar<float>' }],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
+            inputs: [{ id: 'period', type: T('Scalar:float') }],
+            outputs: [{ id: 'phase', type: T('Signal:float') }],
           },
         ],
         edges: [],
@@ -345,14 +349,14 @@ describe('Validator', () => {
           {
             id: 'time',
             type: 'InfiniteTimeRoot',
-            inputs: [{ id: 'period', type: 'Scalar<float>' }],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
+            inputs: [{ id: 'period', type: T('Scalar:float') }],
+            outputs: [{ id: 'phase', type: T('Signal:float') }],
           },
           {
             id: 'default',
             type: 'DefaultSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Scalar<float>' }],
+            outputs: [{ id: 'value', type: T('Scalar:float') }],
           },
         ],
         edges: [
@@ -381,14 +385,14 @@ describe('Validator', () => {
           {
             id: 'time',
             type: 'InfiniteTimeRoot',
-            inputs: [{ id: 'period', type: 'Scalar<float>' }],
-            outputs: [{ id: 'phase', type: 'Signal<phase>' }],
+            inputs: [{ id: 'period', type: T('Scalar:float') }],
+            outputs: [{ id: 'phase', type: T('Signal:float') }],
           },
           {
             id: 'source',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'value', type: T('Signal:float') }],
           },
         ],
         edges: [
@@ -423,13 +427,13 @@ describe('Validator', () => {
             id: 'source',
             type: 'NumberSource',
             inputs: [],
-            outputs: [{ id: 'value', type: 'Signal<float>' }],
+            outputs: [{ id: 'value', type: T('Signal:float') }],
           },
           {
             id: 'target',
             type: 'Scale',
-            inputs: [{ id: 'value', type: 'Signal<float>' }],
-            outputs: [{ id: 'scaled', type: 'Signal<float>' }],
+            inputs: [{ id: 'value', type: T('Signal:float') }],
+            outputs: [{ id: 'scaled', type: T('Signal:float') }],
           },
         ],
         edges: [],
