@@ -60,6 +60,7 @@ function migrateBlockParams(blockType: BlockType, params: Record<string, unknown
  * Sprint: Graph Normalization Layer (2026-01-03)
  * - Added getNormalizedGraph() for compiler integration
  * - Eager normalization with caching and invalidation
+ * - Cache invalidates on any block/edge mutation
  */
 export class PatchStore {
   // Reactive state
@@ -148,14 +149,26 @@ export class PatchStore {
       // For now, we assume all current blocks/edges are user-created
       // (structural blocks from old system will be filtered out in future migration)
       const rawGraph = {
-        blocks: this.blocks.filter(b => b.role.kind === 'user'),
-        edges: this.edges.filter(e => e.role.kind === 'user'),
+        blocks: this.blocks.filter(b => b.role?.kind === 'user'),
+        edges: this.edges.filter(e => e.role?.kind === 'user'),
       };
 
       this.normalizedCache = normalize(rawGraph);
     }
 
     return this.normalizedCache;
+  }
+
+  /**
+   * Invalidate the normalized graph cache.
+   * Called by applyOps after any block/edge mutation.
+   *
+   * Sprint: Graph Normalization Layer (2026-01-03)
+   *
+   * @internal - Only called by transaction system
+   */
+  invalidateNormalizedCache(): void {
+    this.normalizedCache = null;
   }
 
   // ===========================================================================

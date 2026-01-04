@@ -20,6 +20,9 @@
  * - 'connections' table is an alias for 'edges' (backward compatibility)
  * - All new code uses 'edges' table
  *
+ * Sprint: Graph Normalization Layer (2026-01-03)
+ * - Added cache invalidation for blocks/edges table mutations
+ *
  * @see design-docs/6-Transactions/2-Ops.md
  */
 
@@ -100,22 +103,28 @@ function applyOp(op: Op, store: RootStore): void {
  * Phase 0.5: Connection → Edge Migration Complete
  * - 'connections' table: Legacy alias for 'edges' table (backward compatibility)
  * - Entity is always Edge type (Connection type is deprecated)
+ *
+ * Sprint: Graph Normalization Layer (2026-01-03)
+ * - Invalidates normalized graph cache after blocks/edges mutations
  */
 function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
   switch (table) {
     case 'blocks':
       store.patchStore.blocks.push(entity as Block);
+      store.patchStore.invalidateNormalizedCache();
       break;
     case 'connections':
       // Legacy compatibility: 'connections' table is an alias for 'edges'
       // All connection entities are now stored in patchStore.edges
       store.patchStore.edges.push(entity as Edge);
+      store.patchStore.invalidateNormalizedCache();
       break;
     case 'buses': {
       // Convert Bus → BusBlock and add to patchStore.blocks
       const bus = entity as Bus;
       const busBlock = convertBusToBlock(bus);
       store.patchStore.blocks.push(busBlock);
+      store.patchStore.invalidateNormalizedCache();
       break;
     }
     case 'composites':
@@ -126,6 +135,7 @@ function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
       break;
     case 'edges':
       store.patchStore.edges.push(entity as Edge);
+      store.patchStore.invalidateNormalizedCache();
       break;
     default: {
       const _exhaustive: never = table;
@@ -142,21 +152,27 @@ function applyAdd(table: TableName, entity: Entity, store: RootStore): void {
  *
  * Phase 0.5: Connection → Edge Migration Complete
  * - 'connections' table: Legacy alias for 'edges' table (backward compatibility)
+ *
+ * Sprint: Graph Normalization Layer (2026-01-03)
+ * - Invalidates normalized graph cache after blocks/edges mutations
  */
 function applyRemove(table: TableName, id: string, store: RootStore): void {
   switch (table) {
     case 'blocks':
       store.patchStore.blocks = store.patchStore.blocks.filter(b => b.id !== id);
+      store.patchStore.invalidateNormalizedCache();
       break;
     case 'connections':
       // Legacy compatibility: 'connections' table is an alias for 'edges'
       store.patchStore.edges = store.patchStore.edges.filter(c => c.id !== id);
+      store.patchStore.invalidateNormalizedCache();
       break;
     case 'buses': {
       // Remove BusBlock from patchStore.blocks (block ID = bus ID)
       store.patchStore.blocks = store.patchStore.blocks.filter(b =>
         !(b.type === 'BusBlock' && b.id === id)
       );
+      store.patchStore.invalidateNormalizedCache();
       break;
     }
     case 'composites':
@@ -167,6 +183,7 @@ function applyRemove(table: TableName, id: string, store: RootStore): void {
       break;
     case 'edges':
       store.patchStore.edges = store.patchStore.edges.filter(e => e.id !== id);
+      store.patchStore.invalidateNormalizedCache();
       break;
     default: {
       const _exhaustive: never = table;
@@ -184,6 +201,9 @@ function applyRemove(table: TableName, id: string, store: RootStore): void {
  *
  * Phase 0.5: Connection → Edge Migration Complete
  * - 'connections' table: Legacy alias for 'edges' table (backward compatibility)
+ *
+ * Sprint: Graph Normalization Layer (2026-01-03)
+ * - Invalidates normalized graph cache after blocks/edges mutations
  */
 function applyUpdate(table: TableName, id: string, next: Entity, store: RootStore): void {
   switch (table) {
@@ -191,6 +211,7 @@ function applyUpdate(table: TableName, id: string, next: Entity, store: RootStor
       const block = store.patchStore.blocks.find(b => b.id === id);
       if (block) {
         Object.assign(block, next);
+        store.patchStore.invalidateNormalizedCache();
       }
       break;
     }
@@ -199,6 +220,7 @@ function applyUpdate(table: TableName, id: string, next: Entity, store: RootStor
       const conn = store.patchStore.edges.find(c => c.id === id);
       if (conn) {
         Object.assign(conn, next);
+        store.patchStore.invalidateNormalizedCache();
       }
       break;
     }
@@ -216,6 +238,7 @@ function applyUpdate(table: TableName, id: string, next: Entity, store: RootStor
         const updatedBusBlock = convertBusToBlock(updatedBus);
         // Update the BusBlock in place
         Object.assign(busBlock, updatedBusBlock);
+        store.patchStore.invalidateNormalizedCache();
       }
       break;
     }
@@ -237,6 +260,7 @@ function applyUpdate(table: TableName, id: string, next: Entity, store: RootStor
       const edge = store.patchStore.edges.find(e => e.id === id);
       if (edge) {
         Object.assign(edge, next);
+        store.patchStore.invalidateNormalizedCache();
       }
       break;
     }

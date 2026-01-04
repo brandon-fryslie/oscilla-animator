@@ -511,11 +511,13 @@ function convertBlocks(blocks: Block[]): BlockInstance[] {
  *
  * Sprint: Graph Normalization Layer (2026-01-03)
  * - Uses getNormalizedGraph() to get blocks with structural artifacts already materialized
+ * - NOTE: toCompilerGraph() not used yet - CompilerPatch still expects Edge with role field
  * - Default source providers are injected by GraphNormalizer, not by pass0-materialize
  */
 export function editorToPatch(store: RootStore): CompilerPatch {
   // Get normalized graph with structural blocks already materialized
   const normalizedGraph = store.patchStore.getNormalizedGraph();
+
 
   // Build a lookup map for default sources: blockId:slotId -> value
   // This allows the compiler to look up runtime-edited values
@@ -533,7 +535,7 @@ export function editorToPatch(store: RootStore): CompilerPatch {
 
   return {
     blocks: convertBlocks(normalizedGraph.blocks),
-    edges: normalizedGraph.edges,
+    edges: normalizedGraph.edges, // TODO: Use toCompilerGraph() when CompilerPatch is updated to accept CompilerEdge[]
     buses: [], // Buses derived from BusBlocks in patchStore.blocks during compilation
     defaultSources: Object.fromEntries(store.defaultSourceStore.sources.entries()),
     defaultSourceValues,
