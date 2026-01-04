@@ -11,6 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { registerBlockType, type BlockTypeDecl } from "../../ir/lowerTypes";
 import type { TypeDesc } from "../../ir/types";
+import { parseTypeDesc } from "../../ir/types/TypeDesc";
 import { BLOCK_DEFS_BY_TYPE } from "../../../blocks/registry";
 import type { BlockDefinition } from "../../../blocks/types";
 
@@ -49,11 +50,11 @@ describe("Pass 6: Port Contract Enforcement", () => {
         capability: "pure",
         compileKind: "operator",
         inputs: [
-          { id: "a", label: "A", type: "Signal<float>", direction: "input" as const },
-          { id: "b", label: "B", type: "Signal<float>", direction: "input" as const },
+          { id: "a", label: "A", type: parseTypeDesc("Signal:float"), direction: "input" as const },
+          { id: "b", label: "B", type: parseTypeDesc("Signal:float"), direction: "input" as const },
         ],
         outputs: [
-          { id: "out", label: "Out", type: "Signal<float>", direction: "output" as const },
+          { id: "out", label: "Out", type: parseTypeDesc("Signal:float"), direction: "output" as const },
         ],
         defaultParams: {},
         color: "#000000",
@@ -108,11 +109,11 @@ describe("Pass 6: Port Contract Enforcement", () => {
         capability: "pure",
         compileKind: "operator",
         inputs: [
-          { id: "b", label: "B", type: "Signal<float>", direction: "input" as const }, // WRONG ORDER
-          { id: "a", label: "A", type: "Signal<float>", direction: "input" as const }, // WRONG ORDER
+          { id: "b", label: "B", type: parseTypeDesc("Signal:float"), direction: "input" as const }, // WRONG ORDER
+          { id: "a", label: "A", type: parseTypeDesc("Signal:float"), direction: "input" as const }, // WRONG ORDER
         ],
         outputs: [
-          { id: "out", label: "Out", type: "Signal<float>", direction: "output" as const },
+          { id: "out", label: "Out", type: parseTypeDesc("Signal:float"), direction: "output" as const },
         ],
         defaultParams: {},
         color: "#000000",
@@ -175,8 +176,8 @@ describe("Pass 6: Port Contract Enforcement", () => {
         compileKind: "operator",
         inputs: [],
         outputs: [
-          { id: "x", label: "X", type: "Signal<float>", direction: "output" as const },
-          { id: "y", label: "Y", type: "Signal<float>", direction: "output" as const },
+          { id: "x", label: "X", type: parseTypeDesc("Signal:float"), direction: "output" as const },
+          { id: "y", label: "Y", type: parseTypeDesc("Signal:float"), direction: "output" as const },
         ],
         defaultParams: {},
         color: "#000000",
@@ -235,8 +236,8 @@ describe("Pass 6: Port Contract Enforcement", () => {
         compileKind: "operator",
         inputs: [],
         outputs: [
-          { id: "y", label: "Y", type: "Signal<float>", direction: "output" as const }, // WRONG ORDER
-          { id: "x", label: "X", type: "Signal<float>", direction: "output" as const }, // WRONG ORDER
+          { id: "y", label: "Y", type: parseTypeDesc("Signal:float"), direction: "output" as const }, // WRONG ORDER
+          { id: "x", label: "X", type: parseTypeDesc("Signal:float"), direction: "output" as const }, // WRONG ORDER
         ],
         defaultParams: {},
         color: "#000000",
@@ -295,11 +296,11 @@ describe("Pass 6: Port Contract Enforcement", () => {
         capability: "pure",
         compileKind: "operator",
         inputs: [
-          { id: "b", label: "B", type: "Signal<float>", direction: "input" as const }, // WRONG ORDER
-          { id: "a", label: "A", type: "Signal<float>", direction: "input" as const }, // WRONG ORDER
+          { id: "b", label: "B", type: parseTypeDesc("Signal:float"), direction: "input" as const }, // WRONG ORDER
+          { id: "a", label: "A", type: parseTypeDesc("Signal:float"), direction: "input" as const }, // WRONG ORDER
         ],
         outputs: [
-          { id: "out", label: "Out", type: "Signal<float>", direction: "output" as const },
+          { id: "out", label: "Out", type: parseTypeDesc("Signal:float"), direction: "output" as const },
         ],
         defaultParams: {},
         color: "#000000",
@@ -348,11 +349,11 @@ describe("Pass 6: Port Contract Enforcement", () => {
         capability: "pure",
         compileKind: "operator",
         inputs: [
-          { id: "b", label: "B", type: "Signal<float>", direction: "input" as const }, // WRONG ORDER
-          { id: "a", label: "A", type: "Signal<float>", direction: "input" as const }, // WRONG ORDER
+          { id: "b", label: "B", type: parseTypeDesc("Signal:float"), direction: "input" as const }, // WRONG ORDER
+          { id: "a", label: "A", type: parseTypeDesc("Signal:float"), direction: "input" as const }, // WRONG ORDER
         ],
         outputs: [
-          { id: "out", label: "Out", type: "Signal<float>", direction: "output" as const },
+          { id: "out", label: "Out", type: parseTypeDesc("Signal:float"), direction: "output" as const },
         ],
         defaultParams: {},
         color: "#000000",
@@ -411,11 +412,11 @@ describe("Pass 6: Port Contract Enforcement", () => {
         capability: "pure",
         compileKind: "operator",
         inputs: [
-          { id: "b", label: "B", type: "Signal<float>", direction: "input" as const }, // WRONG ORDER
-          { id: "a", label: "A", type: "Signal<float>", direction: "input" as const }, // WRONG ORDER
+          { id: "b", label: "B", type: parseTypeDesc("Signal:float"), direction: "input" as const }, // WRONG ORDER
+          { id: "a", label: "A", type: parseTypeDesc("Signal:float"), direction: "input" as const }, // WRONG ORDER
         ],
         outputs: [
-          { id: "out", label: "Out", type: "Signal<float>", direction: "output" as const },
+          { id: "out", label: "Out", type: parseTypeDesc("Signal:float"), direction: "output" as const },
         ],
         defaultParams: {},
         color: "#000000",

@@ -22,6 +22,7 @@ import { Validator } from '../semantic/validator';
 import TransactionBuilder from './TransactionBuilder';
 import { applyOp } from './applyOp';
 import { getBlockDefinition } from '../blocks/registry';
+import { typeDescToString } from '../ir/types/typeConversion';
 
 /**
  * Convert a Patch to PatchDocument format expected by semantic layer.
@@ -34,8 +35,8 @@ function toPatchDocument(patch: Patch): PatchDocument {
       return {
         id: block.id,
         type: block.type,
-        inputs: def?.inputs.map((slot: SlotDef) => ({ id: slot.id, type: slot.type })) ?? [],
-        outputs: def?.outputs.map((slot: SlotDef) => ({ id: slot.id, type: slot.type })) ?? [],
+        inputs: def?.inputs.map((slot: SlotDef) => ({ id: slot.id, type: typeDescToString(slot.type) })) ?? [],
+        outputs: def?.outputs.map((slot: SlotDef) => ({ id: slot.id, type: typeDescToString(slot.type) })) ?? [],
       };
     }),
     edges: patch.edges,

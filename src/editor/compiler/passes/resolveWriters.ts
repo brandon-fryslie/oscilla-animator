@@ -21,9 +21,8 @@ import type {
   Edge,
   Slot,
   Block,
+  TypeDesc,
 } from '../../types';
-import type { TypeDesc } from '../../ir/types/TypeDesc';
-import { slotTypeToTypeDesc } from '../../ir/types/typeConversion';
 import { getBlockDefinition } from '../../blocks/registry';
 import type { CombinePolicy } from './combine-utils';
 
@@ -166,7 +165,8 @@ export function enumerateWriters(
   // If no writers, inject default source
   if (writers.length === 0 && inputSlot.defaultSource !== undefined) {
     const defaultId = `default:${endpoint.blockId}:${endpoint.slotId}`;
-    const slotTypeDesc = slotTypeToTypeDesc(inputSlot.type);
+    // inputSlot.type is now TypeDesc object
+    const slotTypeDesc = inputSlot.type;
 
     writers.push({
       kind: 'default',
@@ -251,8 +251,8 @@ export function resolveBlockInputs(
     // Resolve combine policy
     const combine = resolveCombinePolicy(inputSlot);
 
-    // Get port type - convert string TypeDesc to TypeDesc object
-    const portType = slotTypeToTypeDesc(inputSlot.type);
+    // Get port type - inputSlot.type is now TypeDesc object
+    const portType = inputSlot.type;
 
     // Build resolved spec
     resolved.set(inputSlot.id, {
@@ -290,8 +290,8 @@ export function resolveInput(
   // Resolve combine policy
   const combine = resolveCombinePolicy(inputSlot);
 
-  // Get port type - convert string TypeDesc to TypeDesc object
-  const portType = slotTypeToTypeDesc(inputSlot.type);
+  // Get port type - inputSlot.type is now TypeDesc object
+  const portType = inputSlot.type;
 
   return {
     endpoint,

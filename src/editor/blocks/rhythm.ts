@@ -5,6 +5,7 @@
  */
 import { createBlock } from './factory';
 import { input, output } from './utils';
+import { slotTypeToTypeDesc } from '../ir/types/typeConversion';
 
 /**
  * PulseDivider - Subdivide phase into tick events
@@ -23,7 +24,7 @@ export const PulseDivider = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('phase', 'Phase', 'Signal<phase>', {
+    input('phase', 'Phase', slotTypeToTypeDesc('Signal<phase>'), {
       tier: 'primary',
       defaultSource: {
         value: 0,
@@ -31,7 +32,7 @@ export const PulseDivider = createBlock({
         uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 },
       },
     }),
-    input('divisions', 'Divisions', 'Scalar:int', {
+    input('divisions', 'Divisions', slotTypeToTypeDesc('Scalar:int'), {
       tier: 'primary',
       defaultSource: {
         value: 4,
@@ -41,7 +42,7 @@ export const PulseDivider = createBlock({
     }),
   ],
   outputs: [
-    output('tick', 'Tick', 'Signal<Unit>'),
+    output('tick', 'Tick', slotTypeToTypeDesc('Signal<Unit>')),
   ],
   color: '#F59E0B',
   priority: 15,
@@ -67,14 +68,14 @@ export const EnvelopeAD = createBlock({
   capability: 'pure',
   compileKind: 'operator',
   inputs: [
-    input('trigger', 'Trigger', 'Signal<Unit>', {
+    input('trigger', 'Trigger', slotTypeToTypeDesc('Signal<Unit>'), {
       tier: 'primary',
       defaultSource: {
         value: false,
         world: 'signal',
       },
     }),
-    input('attack', 'Attack (s)', 'Signal<float>', {
+    input('attack', 'Attack (s)', slotTypeToTypeDesc('Signal<float>'), {
       tier: 'primary',
       defaultSource: {
         value: 0.05,
@@ -82,7 +83,7 @@ export const EnvelopeAD = createBlock({
         uiHint: { kind: 'slider', min: 0.001, max: 2.0, step: 0.01 },
       },
     }),
-    input('decay', 'Decay (s)', 'Signal<float>', {
+    input('decay', 'Decay (s)', slotTypeToTypeDesc('Signal<float>'), {
       tier: 'primary',
       defaultSource: {
         value: 0.5,
@@ -90,7 +91,7 @@ export const EnvelopeAD = createBlock({
         uiHint: { kind: 'slider', min: 0.001, max: 5.0, step: 0.01 },
       },
     }),
-    input('peak', 'Peak Value', 'Signal<float>', {
+    input('peak', 'Peak Value', slotTypeToTypeDesc('Signal<float>'), {
       tier: 'secondary',
       defaultSource: {
         value: 1.0,
@@ -100,7 +101,7 @@ export const EnvelopeAD = createBlock({
     }),
   ],
   outputs: [
-    output('env', 'Envelope', 'Signal<float>'),
+    output('env', 'Envelope', slotTypeToTypeDesc('Signal<float>')),
   ],
   color: '#F59E0B',
   priority: 16,

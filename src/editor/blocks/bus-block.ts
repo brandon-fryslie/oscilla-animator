@@ -15,6 +15,7 @@
  */
 
 import type { PureBlockDefinition } from './types';
+import { parseTypeDesc } from '../ir/types/TypeDesc';
 
 /**
  * BusBlock - represents a bus as a hidden pass-through block.
@@ -58,7 +59,7 @@ export const BusBlock: PureBlockDefinition = {
     {
       id: 'in',
       label: 'Publishers',
-      type: 'Signal<float>', // Placeholder - actual type set dynamically from params
+      type: parseTypeDesc('Signal:float'), // Placeholder - actual type set dynamically from params
       direction: 'input',
       // Multi-input behavior is handled by the compiler based on params.combineMode
       // NOTE: Slot no longer has 'combine' property - combine logic moved to Bus interface
@@ -69,7 +70,7 @@ export const BusBlock: PureBlockDefinition = {
     {
       id: 'out',
       label: 'Bus Output',
-      type: 'Signal<float>', // Placeholder - actual type set dynamically from params
+      type: parseTypeDesc('Signal:float'), // Placeholder - actual type set dynamically from params
       direction: 'output',
     },
   ],

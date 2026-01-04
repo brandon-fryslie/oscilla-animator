@@ -128,23 +128,9 @@ export function pass0Materialize(patch: CompilerPatch): CompilerPatch {
       const defaultSource = inputDef.defaultSource;
 
       // Determine provider block type based on input world and domain
-      // Extract domain from the input type
+      // Extract domain from the input type (now TypeDesc object)
       const inputType = inputDef.type;
-
-      // Parse domain from SlotType string (e.g., "Signal<float>" -> "float")
-      let domain = 'float'; // default
-      if (typeof inputType === 'string') {
-        const match = inputType.match(/<([^>]+)>/);
-        if (match != null) {
-          domain = match[1];
-        } else if (inputType.includes(':')) {
-          // Handle "Scalar:float" format
-          domain = inputType.split(':')[1];
-        }
-      } else if (typeof inputType === 'object' && (inputType != null) && ('domain' in inputType)) {
-        // TypeDesc format
-        domain = (inputType as TypeDesc).domain;
-      }
+      const domain = inputType.domain;
 
       // Provide default 'signal' world if not specified
       const world: SlotWorld = defaultSource.world ?? 'signal';

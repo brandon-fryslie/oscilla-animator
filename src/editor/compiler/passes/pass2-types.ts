@@ -34,7 +34,7 @@ export interface PortTypeUnknownError {
   kind: "PortTypeUnknown";
   blockId: string;
   slotId: string;
-  slotType: string;
+  slotType: TypeDesc;
   message: string;
 }
 
@@ -70,65 +70,19 @@ export type Pass2Error =
   | NoConversionPathError;
 
 /**
- * Convert editor SlotType string to IR TypeDesc.
- * Parses patterns like "Signal<float>", "Field<vec2>", "Scalar:float".
+ * Convert editor SlotType (TypeDesc) to IR TypeDesc.
  *
- * Uses canonical domain mapping from typeConversion.ts.
+ * Note: After TypeDesc unification, SlotType is already a TypeDesc object,
+ * so this function primarily validates and normalizes the type.
  *
- * @param slotType - The slot type string from the editor
+ * @param slotType - The slot type (now a TypeDesc object)
  * @returns A TypeDesc for the IR
  * @throws Error if the slot type cannot be parsed
  */
-function slotTypeToTypeDesc(slotType: string): TypeDesc {
-  // Pattern: Signal<domain>, Field<domain>, Event<domain>
-  const worldMatch = slotType.match(/^(Signal|Field|Event)<(.+)>$/);
-  if (worldMatch !== null) {
-    const world = worldMatch[1].toLowerCase();
-    const domainStr = worldMatch[2];
-
-    // Use canonical domain mapping from typeConversion.ts
-    const domain = domainFromString(domainStr);
-
-    return asTypeDesc({
-      world: world as "signal" | "field" | "event",
-      domain: domain as TypeDomain,
-    });
-  }
-
-  // Pattern: Scalar:domain
-  const scalarMatch = slotType.match(/^Scalar:(.+)$/);
-  if (scalarMatch !== null) {
-    const domainStr = scalarMatch[1];
-    const domain = domainFromString(domainStr);
-    return asTypeDesc({
-      world: "scalar",
-      domain: domain as TypeDomain,
-    });
-  }
-
-  // Special types without generic syntax
-  // Use 'config' world for compile-time types
-  const specialTypes: Record<string, TypeDesc> = {
-    Scene: { world: "config", domain: "scene", category: "internal", busEligible: false },
-    SceneTargets: { world: "config", domain: "sceneTargets", category: "internal", busEligible: false },
-    SceneStrokes: { world: "config", domain: "sceneStrokes", category: "internal", busEligible: false },
-    Domain: { world: "config", domain: "domain", category: "internal", busEligible: false },
-    Program: { world: "config", domain: "program", category: "internal", busEligible: false },
-    Render: { world: "config", domain: "renderTree", category: "internal", busEligible: false },
-    RenderTree: { world: "config", domain: "renderTree", category: "internal", busEligible: false },
-    CanvasRender: { world: "config", domain: "canvasRender", category: "internal", busEligible: false },
-    RenderNode: { world: "config", domain: "renderNode", category: "internal", busEligible: false },
-    "RenderNode[]": { world: "config", domain: "renderNode", category: "internal", busEligible: false },
-    FilterDef: { world: "config", domain: "filterDef", category: "internal", busEligible: false },
-    StrokeStyle: { world: "config", domain: "strokeStyle", category: "internal", busEligible: false },
-    ElementCount: { world: "scalar", domain: "int", category: "core", busEligible: true },
-  };
-
-  if (slotType in specialTypes) {
-    return specialTypes[slotType];
-  }
-
-  throw new Error(`Unknown slot type: ${slotType}`);
+function slotTypeToTypeDesc(slotType: TypeDesc): TypeDesc {
+  // SlotType is now TypeDesc, so just return it
+  // We may need to normalize or validate in the future
+  return slotType;
 }
 
 /**
@@ -303,11 +257,8 @@ function getEndpointType(
   const slot = [...blockDef.inputs, ...blockDef.outputs].find(s => s.id === endpoint.slotId);
   if (slot === null || slot === undefined) return null;
 
-  try {
-    return slotTypeToTypeDesc(slot.type);
-  } catch {
-    return null;
-  }
+  // slot.type is now TypeDesc, not string
+  return slotTypeToTypeDesc(slot.type);
 }
 
 /**
@@ -389,7 +340,7 @@ export function pass2TypeGraph(
           blockId: block.id,
           slotId: slot.id,
           slotType: slot.type,
-          message: `Cannot parse slot type '${slot.type}' on block ${block.id}.${slot.id}: ${error instanceof Error ? error.message : String(error)}`,
+          message: `Cannot parse slot type on block ${block.id}.${slot.id}: ${error instanceof Error ? error.message : String(error)}`,
         });
       }
     }
@@ -405,7 +356,7 @@ export function pass2TypeGraph(
           blockId: block.id,
           slotId: slot.id,
           slotType: slot.type,
-          message: `Cannot parse slot type '${slot.type}' on block ${block.id}.${slot.id}: ${error instanceof Error ? error.message : String(error)}`,
+          message: `Cannot parse slot type on block ${block.id}.${slot.id}: ${error instanceof Error ? error.message : String(error)}`,
         });
       }
     }

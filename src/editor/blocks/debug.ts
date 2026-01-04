@@ -7,6 +7,7 @@
 
 import { createBlock } from './factory';
 import { input, output } from './utils';
+import { slotTypeToTypeDesc } from '../ir/types/typeConversion';
 
 /**
  * DebugDisplay - Shows input values on a canvas overlay.
@@ -20,23 +21,23 @@ export const DebugDisplay = createBlock({
   description: 'Display input values on canvas overlay for debugging',
   subcategory: 'Other',
   inputs: [
-    input('signal', 'Signal Value', 'Signal<float>', {
+    input('signal', 'Signal Value', slotTypeToTypeDesc('Signal<float>'), {
       tier: 'primary',
       defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'number' } },
     }),
-    input('phase', 'Phase Value', 'Signal<phase>', {
+    input('phase', 'Phase Value', slotTypeToTypeDesc('Signal<phase>'), {
       tier: 'secondary',
       defaultSource: { value: 0, world: 'signal', uiHint: { kind: 'slider', min: 0, max: 1, step: 0.01 } },
     }),
-    input('domain', 'Domain', 'Domain', {
+    input('domain', 'Domain', slotTypeToTypeDesc('Domain'), {
       tier: 'secondary',
     }),
-    input('field', 'Field Value', 'Field<float>', {
+    input('field', 'Field Value', slotTypeToTypeDesc('Field<float>'), {
       tier: 'secondary',
     }),
   ],
   outputs: [
-    output('debug', 'Debug Info', 'RenderTree'),
+    output('debug', 'Debug Info', slotTypeToTypeDesc('RenderTree')),
   ],
   defaultParams: {
     label: '',  // Empty = auto-generate from block ID

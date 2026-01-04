@@ -76,7 +76,6 @@ export function useLaneDnd(): {
     // Handle library block drag
     if (isLibraryBlockDragData(activeData)) {
       if (isLaneDropData(overData)) {
-        const laneId = overData.laneId;
         // Lanes are computed projections - just add the block
         // The lane assignment is determined by the block's type/outputs
         store.patchStore.addBlock(activeData.definition.type);

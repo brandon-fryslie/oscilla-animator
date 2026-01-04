@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { registerComposite, listCompositeDefinitions } from '../composites';
 import { getBlockDefinitions } from '../blocks';
+import { parseTypeDesc } from '../ir/types/TypeDesc';
 
 describe('composite registry', () => {
   it('registers and exposes composite definitions as block definitions', () => {
@@ -20,10 +21,10 @@ describe('composite registry', () => {
         outputMap: { out: 'n1.out' },
       },
       exposedInputs: [
-        { id: 'in', label: 'In', direction: 'input', slotType: 'Scalar:float', nodeId: 'n1', nodePort: 'in' },
+        { id: 'in', label: 'In', direction: 'input', slotType: parseTypeDesc('Scalar:float'), nodeId: 'n1', nodePort: 'in' },
       ],
       exposedOutputs: [
-        { id: 'out', label: 'Out', direction: 'output', slotType: 'Scalar:float', nodeId: 'n1', nodePort: 'out' },
+        { id: 'out', label: 'Out', direction: 'output', slotType: parseTypeDesc('Scalar:float'), nodeId: 'n1', nodePort: 'out' },
       ],
     });
 

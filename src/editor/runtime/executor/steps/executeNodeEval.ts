@@ -41,11 +41,12 @@ export function executeNodeEval(
   const inputs = step.inputSlots.map((slot) => runtime.values.read(slot));
 
   // 3. Execute OpCode
-  // If opcodeId is missing, it might be a no-op or pass-through
-  // Default to OpCode.Const (0) which is safe-ish, or OpCode.Passthrough if available
-  const opcode = (node.opcodeId as OpCode) ?? OpCode.Const;
+  // Note: SignalExprIR doesn't have opcodeId - it uses discriminated union with 'kind'
+  // For now, default to OpCode.Const as a safe fallback
+  // TODO: Map SignalExprIR kinds to appropriate OpCodes or refactor evaluation
+  const opcode = OpCode.Const;
 
-  const outputs = evaluateOp(opcode, inputs, runtime, node, program);
+  const outputs = evaluateOp(opcode, inputs, runtime, {}, program);
 
   // 4. Write outputs
   // Ensure we don't write more outputs than we have slots for

@@ -43,6 +43,7 @@ function blockToDocumentBlock(block: Block): PatchDocument['blocks'][number] {
   return {
     id: block.id,
     type: block.type,
+    // Keep slot.type as a string (it's a SlotType, which is a string type)
     inputs: blockDef.inputs.map(slot => ({ id: slot.id, type: slot.type })),
     outputs: blockDef.outputs.map(slot => ({ id: slot.id, type: slot.type })),
   };

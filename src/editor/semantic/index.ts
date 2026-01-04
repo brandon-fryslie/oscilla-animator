@@ -18,6 +18,7 @@
 
 import type { SlotType } from '../types';
 import type { TypeDesc } from '../ir/types/TypeDesc';
+import { parseTypeDesc, typeDescToString } from '../ir/types/TypeDesc';
 import type { ValueKind, PortType } from '../compiler/types';
 
 // =============================================================================
@@ -168,8 +169,8 @@ export function isAssignable(from: TypeDesc, to: TypeDesc): boolean {
 
 // TODO: SLOT_TYPE_TO_TYPE_DESC was removed from types.ts.
 // This mapping needs to be rebuilt or SlotType usage needs to be migrated to TypeDesc.
-// For now, create a minimal implementation:
-const SLOT_TYPE_TO_TYPE_DESC: Record<SlotType, TypeDesc | undefined> = {} as any;
+// For now, create a minimal implementation using a string-keyed map:
+const SLOT_TYPE_TO_TYPE_DESC: Record<string, TypeDesc | undefined> = {} as any;
 
 /**
  * Get the TypeDesc for a SlotType.

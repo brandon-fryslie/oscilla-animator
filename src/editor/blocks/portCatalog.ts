@@ -1,5 +1,6 @@
 import type { DefaultSource, SlotTier, SlotType } from './types';
 import type { TypeDomain } from '../compiler/ir/types';
+import { parseTypeDesc } from '../ir/types/TypeDesc';
 
 export type IRTypeDesc = {
   world: 'signal' | 'field' | 'scalar' | 'event' | 'special';
@@ -65,7 +66,7 @@ export const OSCILLATOR_PORTS = definePortCatalog({
     phase: {
       id: 'phase',
       label: 'Phase',
-      slotType: 'Signal<phase>',
+      slotType: parseTypeDesc('Signal:phase'),
       irType: { world: 'signal', domain: 'float', semantics: 'phase(0..1)' },
       tier: 'primary',
       defaultSource: {
@@ -77,7 +78,7 @@ export const OSCILLATOR_PORTS = definePortCatalog({
     shape: {
       id: 'shape',
       label: 'Waveform',
-      slotType: 'Scalar:waveform',
+      slotType: parseTypeDesc('Scalar:waveform'),
       irType: { world: 'scalar', domain: 'waveform' },
       tier: 'primary',
       defaultSource: {
@@ -97,7 +98,7 @@ export const OSCILLATOR_PORTS = definePortCatalog({
     amplitude: {
       id: 'amplitude',
       label: 'Amplitude',
-      slotType: 'Signal<float>',
+      slotType: parseTypeDesc('Signal:float'),
       irType: { world: 'signal', domain: 'float' },
       tier: 'primary',
       optional: true,
@@ -110,7 +111,7 @@ export const OSCILLATOR_PORTS = definePortCatalog({
     bias: {
       id: 'bias',
       label: 'Bias',
-      slotType: 'Signal<float>',
+      slotType: parseTypeDesc('Signal:float'),
       irType: { world: 'signal', domain: 'float' },
       tier: 'secondary',
       optional: true,
@@ -126,7 +127,7 @@ export const OSCILLATOR_PORTS = definePortCatalog({
     out: {
       id: 'out',
       label: 'Output',
-      slotType: 'Signal<float>',
+      slotType: parseTypeDesc('Signal:float'),
       irType: { world: 'signal', domain: 'float' },
     } as const,
   },

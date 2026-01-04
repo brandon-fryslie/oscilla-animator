@@ -10,13 +10,14 @@
 
 import type { TypeDesc, AdapterStep, AdapterPolicy } from '../types';
 import { TRANSFORM_REGISTRY } from '../transforms/TransformRegistry';
+import { typeDescToString } from '../compiler/ir/types/TypeDesc';
 
 /**
  * Check if two types are directly compatible (no adapter needed).
- * With string-based TypeDesc, this is just string equality.
+ * With structured TypeDesc, compare using string representation.
  */
 function isDirectlyCompatible(from: TypeDesc, to: TypeDesc): boolean {
-  return from === to;
+  return typeDescToString(from) === typeDescToString(to);
 }
 
 export interface AutoAdapterResult {
@@ -41,7 +42,7 @@ export function findAdapterPath(
     return { ok: true, chain: [] };
   }
 
-  const cacheKey = `${context}|${from}->${to}`;
+  const cacheKey = `${context}|${typeDescToString(from)}->${typeDescToString(to)}`;
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
@@ -113,7 +114,7 @@ export function findAdapterPath(
 
   const result = {
     ok: false,
-    reason: `No adapter found from ${from} to ${to}`,
+    reason: `No adapter found from ${typeDescToString(from)} to ${typeDescToString(to)}`,
   };
   cache.set(cacheKey, result);
   return result;
@@ -124,8 +125,8 @@ const MAX_CHAIN_LENGTH = 2;
 const COST_HEAVY_THRESHOLD = 100;
 
 function typeKey(desc: TypeDesc): string {
-  // With string-based TypeDesc, the key is just the string itself
-  return desc;
+  // Convert TypeDesc object to string for comparison
+  return typeDescToString(desc);
 }
 
 function findCandidatePaths(from: TypeDesc, to: TypeDesc, adapters: Array<{ from: TypeDesc; to: TypeDesc; id: string; policy: AdapterPolicy; cost: number }>) {
@@ -186,8 +187,9 @@ function chooseBestPaths(paths: Array<Array<{ id: string; policy: AdapterPolicy;
 function scorePath(path: Array<{ cost: number; from: TypeDesc; to: TypeDesc }>): number {
   const costScore = path.reduce((sum, step) => sum + step.cost, 0);
   const hopPenalty = path.length * 0.5;
-  // With string-based TypeDesc, we can't check world differences
-  // Just use a simple heuristic
-  const worldPenalty = 0;
+  // With structured TypeDesc, we can check world differences
+  const worldPenalty = path.reduce((sum, step) => {
+    return sum + (step.from.world !== step.to.world ? 1 : 0);
+  }, 0);
   return costScore + hopPenalty + worldPenalty;
 }

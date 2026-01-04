@@ -12,6 +12,7 @@
  */
 import { createBlock } from '../factory';
 import { input, output } from '../utils';
+import { parseTypeDesc } from '../../ir/types/TypeDesc';
 
 /**
  * Camera - 3D camera with lookAt pose and projection parameters.
@@ -29,7 +30,7 @@ export const Camera = createBlock({
 
   inputs: [
     // Pose inputs (lookAt pattern - converted to quat during lowering)
-    input('position', 'Position', 'Signal<vec3>', {
+    input('position', 'Position', parseTypeDesc('Signal:vec3'), {
       tier: 'primary',
       defaultSource: {
         value: { x: 0, y: 0, z: 100 },
@@ -38,7 +39,7 @@ export const Camera = createBlock({
       },
     }),
 
-    input('target', 'Target', 'Signal<vec3>', {
+    input('target', 'Target', parseTypeDesc('Signal:vec3'), {
       tier: 'primary',
       defaultSource: {
         value: { x: 0, y: 0, z: 0 },
@@ -47,7 +48,7 @@ export const Camera = createBlock({
       },
     }),
 
-    input('up', 'Up', 'Signal<vec3>', {
+    input('up', 'Up', parseTypeDesc('Signal:vec3'), {
       tier: 'secondary',
       defaultSource: {
         value: { x: 0, y: 1, z: 0 },
@@ -57,7 +58,7 @@ export const Camera = createBlock({
     }),
 
     // Projection parameters
-    input('projectionKind', 'Projection', 'Scalar:string', {
+    input('projectionKind', 'Projection', parseTypeDesc('Scalar:string'), {
       tier: 'primary',
       defaultSource: {
         value: 'perspective',
@@ -72,7 +73,7 @@ export const Camera = createBlock({
       },
     }),
 
-    input('fovYDeg', 'FOV (deg)', 'Signal<float>', {
+    input('fovYDeg', 'FOV (deg)', parseTypeDesc('Signal:float'), {
       tier: 'primary',
       defaultSource: {
         value: 60,
@@ -81,7 +82,7 @@ export const Camera = createBlock({
       },
     }),
 
-    input('orthoHeight', 'Ortho Height', 'Signal<float>', {
+    input('orthoHeight', 'Ortho Height', parseTypeDesc('Signal:float'), {
       tier: 'secondary',
       defaultSource: {
         value: 10,
@@ -90,7 +91,7 @@ export const Camera = createBlock({
       },
     }),
 
-    input('near', 'Near Plane', 'Signal<float>', {
+    input('near', 'Near Plane', parseTypeDesc('Signal:float'), {
       tier: 'secondary',
       defaultSource: {
         value: 0.1,
@@ -99,7 +100,7 @@ export const Camera = createBlock({
       },
     }),
 
-    input('far', 'Far Plane', 'Signal<float>', {
+    input('far', 'Far Plane', parseTypeDesc('Signal:float'), {
       tier: 'secondary',
       defaultSource: {
         value: 1000,
@@ -112,7 +113,7 @@ export const Camera = createBlock({
   outputs: [
     // CameraRef output - resource reference (not signal/field)
     // This is a typed ID that routes which camera to use
-    output('camera', 'Camera', 'Special:cameraRef'),
+    output('camera', 'Camera', parseTypeDesc('Special:cameraRef')),
   ],
 
   color: '#6366F1', // Indigo for 3D scene blocks

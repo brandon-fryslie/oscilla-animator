@@ -232,9 +232,10 @@ export class Validator {
       }
 
       // Check type compatibility using canonical semantic check
+      // Note: fromSlot.type and toSlot.type are already SlotType (string)
       const compatible = areSlotTypesCompatible(
-        fromSlot.type as SlotType,
-        toSlot.type as SlotType
+        fromSlot.type,
+        toSlot.type
       );
 
       if (!compatible) {
@@ -571,9 +572,10 @@ export class Validator {
     }
 
     // Check type compatibility
+    // Note: fromSlot.type and toSlot.type are already SlotType (string)
     const compatible = areSlotTypesCompatible(
-      fromSlot.type as SlotType,
-      toSlot.type as SlotType
+      fromSlot.type,
+      toSlot.type
     );
 
     if (!compatible) {

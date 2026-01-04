@@ -1,4 +1,5 @@
 import type { Block, BlockId, SlotType } from '../types';
+import { typeDescToString } from '../ir/types/TypeDesc';
 import { SemanticGraph } from '../semantic';
 import { storeToPatchDocument } from '../semantic/patchAdapter';
 import { getBlockDefinition } from '../blocks';
@@ -15,9 +16,10 @@ const SLOT_LANE_KIND_MAP: Array<{ prefix: string; kind: LaneViewKind }> = [
 const DOMAIN_LANE_KIND: LaneViewKind = 'Fields';
 
 function slotTypeToLaneKind(slotType: SlotType): LaneViewKind | null {
-  if (slotType === 'Domain') return DOMAIN_LANE_KIND;
+  const typeString = typeDescToString(slotType);
+  if (slotType.domain === 'domain') return DOMAIN_LANE_KIND;
   for (const { prefix, kind } of SLOT_LANE_KIND_MAP) {
-    if (slotType.startsWith(prefix)) return kind;
+    if (typeString.startsWith(prefix)) return kind;
   }
   return null;
 }

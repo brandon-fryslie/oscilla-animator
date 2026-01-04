@@ -15,6 +15,7 @@ import type { RawGraph, NormalizedGraph } from './types';
 import type { Block, Edge, PortRef, BlockRole, EdgeRole } from '../types';
 import type { TypeDesc } from '../compiler/ir/types';
 import { getBlockDefinition } from '../blocks';
+import { typeDescToString } from '../ir/types/typeConversion';
 
 // =============================================================================
 // Local Type Definitions
@@ -128,23 +129,9 @@ function buildProviderParams(providerType: string, defaultValue: unknown): Recor
  * Extract domain from a type descriptor.
  * Handles both string formats ("Signal<float>", "Scalar:float") and TypeDesc objects.
  */
-function extractDomain(inputType: string | TypeDesc): string {
-  // Parse domain from SlotType string (e.g., "Signal<float>" -> "float")
-  let domain = 'float'; // default
-  if (typeof inputType === 'string') {
-    const match = inputType.match(/<([^>]+)>/);
-    if (match != null) {
-      domain = match[1];
-    } else if (inputType.includes(':')) {
-      // Handle "Scalar:float" format
-      domain = inputType.split(':')[1];
-    }
-  } else if (typeof inputType === 'object' && (inputType != null) && ('domain' in inputType)) {
-    // TypeDesc format
-    domain = (inputType as TypeDesc).domain;
-  }
-
-  return domain;
+function extractDomain(inputType: TypeDesc): string {
+  // TypeDesc format: just extract the domain
+  return inputType.domain;
 }
 
 // =============================================================================
