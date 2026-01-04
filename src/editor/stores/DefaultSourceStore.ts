@@ -1,6 +1,6 @@
 /**
  * @file Default Source Store
- * @description Manages implicit default sources for block inputs and lens parameters.
+ * @description Manages default source values for block inputs.
  *
  * Default Sources provide fallback values for inputs when no wire or bus listener
  * is connected. They are:
@@ -8,16 +8,13 @@
  * - Kept in storage even when the input is driven (for restoration when disconnected)
  * - Removed when the block is deleted
  *
+ * Note: This store ONLY manages values. Structural blocks and edges are created
+ * by GraphNormalizer. This separation ensures single source of truth for structure.
+ *
  * @see design-docs/10-Refactor-for-UI-prep/14-RemoveParams.md
  */
 import { makeObservable, observable, action, makeAutoObservable } from 'mobx';
 import type { DefaultSourceState, TypeDesc, UIControlHint, Slot, BlockId, SLOT_TYPE_TO_TYPE_DESC } from '../types';
-import type { RootStore } from './RootStore';
-import type { DefaultSourceAttachment } from '../defaultSources/types';
-import { CONST_PROVIDER_MAPPING } from '../defaultSources/constProviders';
-import { DEFAULT_SOURCE_PROVIDER_BLOCKS } from '../defaultSources/allowlist';
-import { getBlockDefinition } from '../blocks/registry';
-import { typeDescToString } from '../ir/types/TypeDesc';
 
 // =============================================================================
 // DefaultSourceState Class (Observable)
@@ -62,7 +59,6 @@ export class ObservableDefaultSource implements DefaultSourceState {
 // Helper Functions
 // =============================================================================
 
-
 /**
  * Check if ID matches deterministic pattern for input defaults.
  * Pattern: ds:input:${blockId}:${slotId}
@@ -82,20 +78,6 @@ export class DefaultSourceStore {
    */
   private blockSlotIndex: Map<string, Map<string, string>> = new Map();
 
-  /**
-   * Maps target inputs to their provider attachments.
-   * Key format: `${blockId}:${slotId}`
-   *
-   * Attachments define which hidden provider block (e.g., Const, Oscillator)
-   * feeds a default value to an undriven input.
-   */
-  attachmentsByTarget: Map<string, DefaultSourceAttachment> = new Map();
-
-  /**
-   * Root store reference - used for attachment creation (Sprint 7+)
-   */
-  private root: RootStore | null = null;
-
   // Revision counter to force updates even when structural equality checks might fail
   valueRevision = 0;
 
@@ -103,7 +85,6 @@ export class DefaultSourceStore {
     makeObservable(this, {
       // observable.shallow: track Map add/delete, but entries are self-observable
       sources: observable.shallow,
-      attachmentsByTarget: observable.shallow,
       valueRevision: observable,
       ensureDefaultSource: action,
       setDefaultValue: action,
@@ -112,258 +93,7 @@ export class DefaultSourceStore {
       removeDefaultSourcesForBlock: action,
       load: action,
       clear: action,
-      getAttachmentForInput: action,
-      setAttachmentForInput: action,
-      removeAttachmentForInput: action,
-      createDefaultAttachmentForSlot: action,
-      createAttachmentWithProvider: action,
-      rebuildAttachmentsFromBlocks: action,
     });
-  }
-
-  /**
-   * Set the root store reference.
-   * Called after RootStore is constructed to avoid circular dependency.
-   * Used for attachment creation in Sprint 7+.
-   */
-  setRoot(root: RootStore): void {
-    this.root = root;
-  }
-
-  /**
-   * Get root store reference (used in Sprint 7+).
-   */
-  get rootStore(): RootStore | null {
-    return this.root;
-  }
-
-  /**
-   * Generate deterministic key for target input.
-   * Format: `${blockId}:${slotId}`
-   */
-  private targetKey(blockId: string, slotId: string): string {
-    return `${blockId}:${slotId}`;
-  }
-
-  /**
-   * Get the attachment for a specific block input.
-   * Returns undefined if no attachment exists for this input.
-   */
-  getAttachmentForInput(blockId: string, slotId: string): DefaultSourceAttachment | undefined {
-    const key = this.targetKey(blockId, slotId);
-    return this.attachmentsByTarget.get(key);
-  }
-
-  /**
-   * Set or update the attachment for a specific block input.
-   */
-  setAttachmentForInput(blockId: string, slotId: string, attachment: DefaultSourceAttachment): void {
-    const key = this.targetKey(blockId, slotId);
-    this.attachmentsByTarget.set(key, attachment);
-  }
-
-  /**
-   * Remove the attachment for a specific block input.
-   */
-  removeAttachmentForInput(blockId: string, slotId: string): void {
-    const key = this.targetKey(blockId, slotId);
-    this.attachmentsByTarget.delete(key);
-  }
-
-  /**
-   * Create a default attachment for a slot with appropriate Const provider.
-   *
-   * Selects the Const provider block type based on the slot type and creates
-   * a complete attachment with deterministic IDs.
-   *
-   * @param blockId - The target block ID
-   * @param slotId - The target input slot ID
-   * @param slotType - The slot type signature (e.g., 'Signal<float>')
-   * @returns Complete DefaultSourceAttachment with Const provider
-   */
-  createDefaultAttachmentForSlot(blockId: string, slotId: string, slotType: string): DefaultSourceAttachment {
-    // Generate deterministic provider ID
-    const providerId = `dsprov:${blockId}:${slotId}`;
-
-    // Select appropriate Const provider based on slot type
-    const blockType = CONST_PROVIDER_MAPPING[slotType] ?? 'DSConstSignalFloat';
-
-    if (CONST_PROVIDER_MAPPING[slotType] === undefined) {
-      console.warn(`No const provider mapping for slot type '${slotType}', falling back to DSConstSignalFloat`);
-    }
-
-    // Create default source for provider's 'value' input
-    const providerInputDefaultId = `ds:prov:${providerId}:value`;
-
-    // Build attachment
-    const attachment: DefaultSourceAttachment = {
-      target: {
-        blockId,
-        slotId,
-      },
-      provider: {
-        providerId,
-        blockType,
-        outputPortId: 'out',
-        editableInputSourceIds: {
-          value: providerInputDefaultId,
-        },
-      },
-    };
-
-    return attachment;
-  }
-
-  /**
-   * Create an attachment with a specific provider type.
-   *
-   * Sprint 15: Allows creating attachments for any allowlisted provider (not just Const).
-   * Used by UI to create attachments when user selects a provider type.
-   *
-   * @param blockId - The target block ID
-   * @param slotId - The target input slot ID
-   * @param providerBlockType - The provider block type (e.g., 'Oscillator', 'DSConstSignalFloat')
-   * @param slotType - The target slot type (for type checking and default values)
-   * @returns Complete DefaultSourceAttachment with specified provider
-   */
-  createAttachmentWithProvider(
-    blockId: string,
-    slotId: string,
-    providerBlockType: string,
-    slotType: string
-  ): DefaultSourceAttachment {
-    // Generate deterministic provider ID
-    const providerId = `dsprov:${blockId}:${slotId}`;
-
-    // Find provider spec from allowlist
-    const providerSpec = DEFAULT_SOURCE_PROVIDER_BLOCKS.find(
-      (spec) => spec.blockType === providerBlockType
-    );
-
-    if (providerSpec == null) {
-      console.warn(
-        `Provider block type '${providerBlockType}' not found in allowlist, falling back to Const provider`
-      );
-      return this.createDefaultAttachmentForSlot(blockId, slotId, slotType);
-    }
-
-    // Get provider block definition to access default values for editable inputs
-    const providerDefinition = getBlockDefinition(providerBlockType);
-    if (providerDefinition == null) {
-      console.warn(
-        `Provider block definition not found for '${providerBlockType}', falling back to Const provider`
-      );
-      return this.createDefaultAttachmentForSlot(blockId, slotId, slotType);
-    }
-
-    // Create default sources for all editable inputs
-    const editableInputSourceIds: Record<string, string> = {};
-
-    for (const inputId of providerSpec.editableInputs) {
-      const inputSlot = providerDefinition.inputs.find((s) => s.id === inputId);
-      if (inputSlot == null || inputSlot.defaultSource == null) {
-        console.warn(
-          `Provider '${providerBlockType}' input '${inputId}' not found or has no defaultSource, skipping`
-        );
-        continue;
-      }
-
-      // Generate deterministic ID for this provider input's default source
-      const providerInputDefaultId = `ds:prov:${providerId}:${inputId}`;
-      editableInputSourceIds[inputId] = providerInputDefaultId;
-
-      // Create the DefaultSource for this provider input if it doesn't exist
-      const existingSource = this.sources.get(providerInputDefaultId);
-      if (existingSource == null) {
-        // Slot.type is now a TypeDesc object directly
-        const typeDesc = inputSlot.type;
-
-        const newSource = new ObservableDefaultSource({
-          id: providerInputDefaultId,
-          type: typeDesc,
-          value: inputSlot.defaultSource.value,
-          uiHint: inputSlot.defaultSource.uiHint,
-        });
-
-        this.sources.set(providerInputDefaultId, newSource);
-      }
-    }
-
-    // Build attachment
-    const attachment: DefaultSourceAttachment = {
-      target: {
-        blockId,
-        slotId,
-      },
-      provider: {
-        providerId,
-        blockType: providerBlockType,
-        outputPortId: providerSpec.outputPortId,
-        editableInputSourceIds,
-      },
-    };
-
-    return attachment;
-  }
-
-  /**
-   * Rebuild attachments from existing blocks.
-   *
-   * Used for backward compatibility when loading old patches that don't have
-   * defaultSourceAttachments field. Iterates through all blocks and creates
-   * Const provider attachments for any inputs with defaultSource metadata.
-   *
-   * This preserves existing default values from the defaultSources map.
-   */
-  rebuildAttachmentsFromBlocks(): void {
-    if (this.root == null) {
-      console.warn('Cannot rebuild attachments: root store not set');
-      return;
-    }
-
-    console.info('Rebuilding default source attachments from blocks (backward compatibility)');
-
-    let attachmentsCreated = 0;
-
-    for (const block of this.root.patchStore.blocks) {
-      const definition = getBlockDefinition(block.type);
-      if (definition == null) {
-        continue;
-      }
-
-      // Check each input slot for defaultSource metadata
-      for (const input of definition.inputs) {
-        if (input.defaultSource == null) {
-          continue;
-        }
-
-        // Create attachment with appropriate Const provider
-        // Convert TypeDesc to string for createDefaultAttachmentForSlot
-        const attachment = this.createDefaultAttachmentForSlot(block.id, input.id, typeDescToString(input.type));
-
-        // Get existing default source value if it exists
-        const existingSource = this.getDefaultSourceForInput(block.id, input.id);
-        if (existingSource != null) {
-          // Create provider input default with existing value
-          const providerInputDefaultId = attachment.provider.editableInputSourceIds.value;
-          const providerInputDefault = new ObservableDefaultSource({
-            id: providerInputDefaultId,
-            type: existingSource.type,
-            value: existingSource.value,
-            uiHint: existingSource.uiHint,
-            rangeHint: existingSource.rangeHint,
-          });
-
-          this.sources.set(providerInputDefaultId, providerInputDefault);
-        }
-
-        // Store attachment
-        this.setAttachmentForInput(block.id, input.id, attachment);
-        attachmentsCreated++;
-      }
-    }
-
-    console.info(`Rebuilt ${attachmentsCreated} default source attachments`);
   }
 
   /**
@@ -433,11 +163,12 @@ export class DefaultSourceStore {
    * Create default sources for all inputs of a block that have defaultSource metadata.
    * Called when a block is added to the patch.
    *
-   * Now also creates DefaultSourceAttachments with appropriate Const providers.
+   * Note: This only creates value storage. Structural blocks and edges are created
+   * by GraphNormalizer.
    *
    * @param blockId - The block's unique ID
    * @param inputs - The block's input slots
-   * @param slotTypeToTypeDesc - Mapping from SlotType to TypeDesc (deprecated, unused)
+   * @param _slotTypeToTypeDesc - Mapping from SlotType to TypeDesc (deprecated, unused)
    * @param params - Optional params to override default values (e.g., from macros)
    */
   createDefaultSourcesForBlock(
@@ -470,24 +201,6 @@ export class DefaultSourceStore {
 
       this.sources.set(dsId, ds);
       slotMap.set(slot.id, dsId);
-
-      // Create DefaultSourceAttachment with Const provider
-      // Convert TypeDesc to string for createDefaultAttachmentForSlot
-      const attachment = this.createDefaultAttachmentForSlot(blockId, slot.id, typeDescToString(slot.type));
-
-      // Create DefaultSource for provider's 'value' input
-      const providerInputDefaultId = attachment.provider.editableInputSourceIds.value;
-      const providerInputDefault = new ObservableDefaultSource({
-        id: providerInputDefaultId,
-        type: typeDesc,
-        value,
-        uiHint: slot.defaultSource.uiHint,
-      });
-
-      this.sources.set(providerInputDefaultId, providerInputDefault);
-
-      // Store attachment
-      this.setAttachmentForInput(blockId, slot.id, attachment);
     }
 
     if (slotMap.size > 0) {
@@ -498,28 +211,13 @@ export class DefaultSourceStore {
   /**
    * Remove all default sources associated with a block.
    * Called when a block is removed from the patch.
-   *
-   * Now also removes associated attachments and provider input defaults.
    */
   removeDefaultSourcesForBlock(blockId: BlockId): void {
     const slotMap = this.blockSlotIndex.get(blockId);
     if (slotMap === null || slotMap === undefined) return;
 
-    for (const [slotId, dsId] of slotMap.entries()) {
-      // Remove input default source
+    for (const dsId of slotMap.values()) {
       this.sources.delete(dsId);
-
-      // Remove attachment and provider input defaults
-      const attachment = this.getAttachmentForInput(blockId, slotId);
-      if (attachment != null) {
-        // Remove provider input defaults
-        for (const providerInputDefaultId of Object.values(attachment.provider.editableInputSourceIds)) {
-          this.sources.delete(providerInputDefaultId);
-        }
-
-        // Remove attachment
-        this.removeAttachmentForInput(blockId, slotId);
-      }
     }
     this.blockSlotIndex.delete(blockId);
   }
@@ -590,11 +288,10 @@ export class DefaultSourceStore {
   }
 
   /**
-   * Clear all default sources and attachments.
+   * Clear all default sources.
    */
   clear(): void {
     this.sources.clear();
     this.blockSlotIndex.clear();
-    this.attachmentsByTarget.clear();
   }
 }
