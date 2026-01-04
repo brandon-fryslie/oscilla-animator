@@ -65,23 +65,19 @@ class AdapterRegistry {
     */
   }
 
-  /**
-   * Check if a type description matches a target type.
-   *
-   * NOTE: Commented out because TypeDesc is now a string, not an object
-   */
+  /* COMMENTED OUT - unused method, needs update for string-based TypeDesc
   private _matchesType(source: TypeDesc, target: TypeDesc): boolean {
     // TODO: Update for string-based TypeDesc or remove entirely
     return source === target;
 
-    /* COMMENTED OUT - requires object-based TypeDesc
-    return (
-      source.world === target.world &&
-      source.domain === target.domain &&
-      source.category === target.category
-    );
-    */
+    // COMMENTED OUT - requires object-based TypeDesc
+    // return (
+    //   source.world === target.world &&
+    //   source.domain === target.domain &&
+    //   source.category === target.category
+    // );
   }
+  */
 
   /**
    * List all registered adapters.
