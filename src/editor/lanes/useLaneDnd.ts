@@ -77,8 +77,9 @@ export function useLaneDnd(): {
     if (isLibraryBlockDragData(activeData)) {
       if (isLaneDropData(overData)) {
         const laneId = overData.laneId;
-        const insertionIndex = overData.insertionIndex ?? undefined;
-        store.patchStore.addBlockToLane(activeData.definition.type, laneId, insertionIndex);
+        // Lanes are computed projections - just add the block
+        // The lane assignment is determined by the block's type/outputs
+        store.patchStore.addBlock(activeData.definition.type);
         return;
       }
     }
@@ -87,38 +88,27 @@ export function useLaneDnd(): {
     if (isPatchBlockDragData(activeData)) {
       // Delete if dropped on trash
       if (isTrashDropData(overData)) {
-        store.patchStore.deleteBlock(activeData.blockId);
+        store.patchStore.removeBlock(activeData.blockId);
         return;
       }
 
-      // Move to lane
+      // Move to lane - lanes are computed, so this is a no-op for now
+      // In the future, this could update block metadata or position
       if (isLaneDropData(overData)) {
-        const laneId = overData.laneId;
-        const insertionIndex = overData.insertionIndex ?? undefined;
-        store.laneStore.moveBlockToLane(activeData.blockId, laneId, insertionIndex);
+        // No action needed - lanes are automatically computed from block topology
         return;
       }
 
-      // Reorder within lane
+      // Reorder within lane - lanes are computed, so this is a no-op for now
+      // Block ordering is determined by topological sort
       if (isPatchBlockDropData(overData)) {
-        const sourceLaneId = store.laneStore.findLaneForBlock(activeData.blockId);
-        const targetLaneId = store.laneStore.findLaneForBlock(overData.blockId);
-
-        if (sourceLaneId === targetLaneId && sourceLaneId !== null) {
-          store.laneStore.reorderBlocksInLane(
-            sourceLaneId,
-            activeData.blockId,
-            overData.blockId
-          );
-        }
+        // No action needed - ordering is automatic based on connections
         return;
       }
 
-      // Insert at specific position
+      // Insert at specific position - lanes are computed, so this is a no-op for now
       if (isInsertionPointDropData(overData)) {
-        const laneId = overData.laneId;
-        const insertionIndex = overData.insertionIndex;
-        store.laneStore.moveBlockToLane(activeData.blockId, laneId, insertionIndex);
+        // No action needed - lanes are automatically computed
         return;
       }
     }
