@@ -364,8 +364,10 @@ export class ControlSurfaceStore {
       return;
     }
 
-    // Update the block param
-    this.rootStore.patchStore.updateBlockParams(blockId, { [paramKey]: value });
+    // Update the block param using updateBlock instead of non-existent updateBlockParams
+    this.rootStore.patchStore.updateBlock(blockId, {
+      params: { ...block.params, [paramKey]: value }
+    });
   }
 
   // ===========================================================================

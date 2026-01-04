@@ -5,6 +5,7 @@
  * - Debug Drawer (open/closed, active tab)
  * - Probe Mode (active, target, cursor position)
  * - Health snapshot caching for UI
+ * - Print logs from Print lenses
  *
  * This store is the single source of truth for all debug UI state.
  */
@@ -24,7 +25,7 @@ export type ProbeTarget =
 /**
  * Debug drawer tab IDs
  */
-export type DebugDrawerTab = 'overview' | 'buses' | 'ir' | 'schedule' | 'signal-history' | 'runtime-state';
+export type DebugDrawerTab = 'overview' | 'buses' | 'ir' | 'schedule' | 'signal-history' | 'runtime-state' | 'prints';
 
 /**
  * Cursor position for probe card
@@ -35,6 +36,16 @@ export interface CursorPosition {
 }
 
 /**
+ * Print log entry from Print lens
+ */
+export interface PrintLogEntry {
+  id: string;
+  label: string;
+  value: unknown;
+  timestamp: number;
+}
+
+/**
  * DebugUIStore - State management for debug UI
  *
  * Responsibilities:
@@ -42,6 +53,7 @@ export interface CursorPosition {
  * - Probe mode activation and target tracking
  * - Latest health snapshot caching
  * - Cursor position tracking for probe card
+ * - Print log entries from Print lenses
  */
 export class DebugUIStore {
   /** Drawer open/closed state */
@@ -65,6 +77,9 @@ export class DebugUIStore {
   /** Time model kind from compiled IR program */
   timeModelKind: 'finite' | 'cyclic' | 'infinite' = 'infinite';
 
+  /** Print log entries from Print lenses */
+  printLogs: PrintLogEntry[] = [];
+
   /** Reference to root store */
   private readonly root: RootStore;
 
@@ -85,6 +100,7 @@ export class DebugUIStore {
       cursorPosition: observable,
       latestHealthSnapshot: observable,
       timeModelKind: observable,
+      printLogs: observable,
 
       // Actions
       openDrawer: action,
@@ -94,6 +110,8 @@ export class DebugUIStore {
       setProbeTarget: action,
       updateCursorPosition: action,
       updateHealthSnapshot: action,
+      addPrintLog: action,
+      clearPrintLogs: action,
 
       // Computed
       healthStatus: computed,
@@ -190,6 +208,35 @@ export class DebugUIStore {
    */
   updateHealthSnapshot(snapshot: RuntimeHealthSnapshotEvent): void {
     this.latestHealthSnapshot = snapshot;
+  }
+
+  // =============================================================================
+  // Print Logs
+  // =============================================================================
+
+  /**
+   * Add a print log entry.
+   */
+  addPrintLog(label: string, value: unknown): void {
+    const entry: PrintLogEntry = {
+      id: `${Date.now()}-${Math.random()}`,
+      label,
+      value,
+      timestamp: Date.now(),
+    };
+    this.printLogs.push(entry);
+
+    // Keep only last 1000 entries to prevent memory issues
+    if (this.printLogs.length > 1000) {
+      this.printLogs.shift();
+    }
+  }
+
+  /**
+   * Clear all print logs.
+   */
+  clearPrintLogs(): void {
+    this.printLogs = [];
   }
 
   // =============================================================================

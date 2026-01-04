@@ -8,6 +8,7 @@
 import { observer } from 'mobx-react-lite';
 import { useStore } from '../stores';
 import { useRef, useEffect } from 'react';
+import type { PrintLogEntry } from '../stores/DebugUIStore';
 
 /**
  * Format a value for display
@@ -80,7 +81,7 @@ export const PrintsTab = observer(function PrintsTab() {
         </button>
       </div>
       <div className="prints-list" ref={scrollRef}>
-        {printLogs.map((entry) => (
+        {printLogs.map((entry: PrintLogEntry) => (
           <div key={entry.id} className="print-entry">
             <span className="print-label">{entry.label}</span>
             <span className="print-value">{formatValue(entry.value)}</span>

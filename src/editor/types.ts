@@ -48,7 +48,7 @@ export type Phase = number;
  * Phase 1: String-based, loose.
  * Phase 3: Branded types, static verification.
  */
-export type TypeDesc = string; // e.g., 'Number', 'Vec2', 'Field<Number>', 'Signal<Vec2>'
+export type { TypeDesc } from "./ir/types/TypeDesc";
 
 /**
  * TypeWorld - world classification for values (signal, field, scalar, config).
@@ -833,14 +833,14 @@ export interface DefaultSourceState {
  * Maps a composite's external parameter to an internal block parameter.
  */
 export interface ExposedParam {
-  /** External parameter name */
-  readonly name: string;
+  /** External parameter ID (unique identifier) */
+  readonly id: string;
   /** Internal block ID */
   readonly blockId: string;
-  /** Internal parameter name */
-  readonly paramName: string;
+  /** Internal parameter key */
+  readonly paramKey: string;
   /** UI label */
-  readonly label?: string;
+  readonly label: string;
   /** UI control hint */
   readonly uiHint?: UIControlHint;
   /** Default value */
@@ -879,6 +879,10 @@ export interface Composite {
 export interface Patch {
   /** Unique identifier */
   readonly id: PatchId;
+
+
+  /** Patch format version for serialization/migration */
+  readonly version?: number;
 
   /** Blocks in the patch */
   blocks: Block[];

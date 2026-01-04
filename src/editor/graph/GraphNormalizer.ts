@@ -197,9 +197,12 @@ export function normalize(raw: RawGraph): NormalizedGraph {
       const providerId = generateProviderId(block.id, inputDef.id);
       const defaultSource = inputDef.defaultSource;
 
+      // Handle undefined world - default to 'signal' if not specified
+      const world: SlotWorld = defaultSource.world ?? 'signal';
+
       // Determine provider block type based on input world and domain
       const domain = extractDomain(inputDef.type);
-      const providerType = selectProviderType(defaultSource.world, domain);
+      const providerType = selectProviderType(world, domain);
 
       // Get the provider block definition
       const providerDef = getBlockDefinition(providerType);
