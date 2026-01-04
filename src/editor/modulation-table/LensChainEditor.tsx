@@ -564,7 +564,14 @@ function LensParamsEditor({
         const hint = spec.uiHint;
         const rangeHint = spec.rangeHint;
 
-        switch (hint) {
+        // Get hint kind - handle both object and legacy string format
+        const hintKind = typeof hint === 'object' && hint !== null && 'kind' in hint
+          ? hint.kind
+          : typeof hint === 'string'
+            ? hint
+            : 'text';
+
+        switch (hintKind) {
           case 'number':
             return (
               <div key={key} className="lens-param-row">
@@ -573,9 +580,9 @@ function LensParamsEditor({
                   type="number"
                   className="lens-param-input"
                   value={value as number}
-                  step={rangeHint?.step ?? 1}
-                  min={rangeHint?.min}
-                  max={rangeHint?.max}
+                  step={(typeof hint === 'object' && 'step' in hint ? hint.step : undefined) ?? rangeHint?.step ?? 1}
+                  min={(typeof hint === 'object' && 'min' in hint ? hint.min : undefined) ?? rangeHint?.min}
+                  max={(typeof hint === 'object' && 'max' in hint ? hint.max : undefined) ?? rangeHint?.max}
                   onChange={(e) => onChange(key, parseFloat(e.target.value) || spec.default as number)}
                 />
               </div>
@@ -589,9 +596,9 @@ function LensParamsEditor({
                   type="range"
                   className="lens-param-slider"
                   value={value as number}
-                  min={rangeHint?.min ?? 0}
-                  max={rangeHint?.max ?? 1}
-                  step={rangeHint?.step ?? 0.01}
+                  min={(typeof hint === 'object' && 'min' in hint ? hint.min : undefined) ?? rangeHint?.min ?? 0}
+                  max={(typeof hint === 'object' && 'max' in hint ? hint.max : undefined) ?? rangeHint?.max ?? 1}
+                  step={(typeof hint === 'object' && 'step' in hint ? hint.step : undefined) ?? rangeHint?.step ?? 0.01}
                   onChange={(e) => onChange(key, parseFloat(e.target.value))}
                 />
                 <span className="lens-param-value">
@@ -601,6 +608,7 @@ function LensParamsEditor({
             );
 
           case 'toggle':
+          case 'boolean':
             return (
               <div key={key} className="lens-param-row">
                 <label className="lens-param-label">{key}</label>
@@ -864,11 +872,15 @@ export function LensChainEditor({
           {sourceType && targetType && (
             <div className="lens-chain-types">
               <span className="type-badge source">
-                {sourceType.world}:{sourceType.domain}
+                {typeof sourceType === 'object' && 'world' in sourceType ? sourceType.world : 'unknown'}
+                :
+                {typeof sourceType === 'object' && 'domain' in sourceType ? sourceType.domain : 'unknown'}
               </span>
               <span className="type-arrow">→</span>
               <span className="type-badge target">
-                {targetType.world}:{targetType.domain}
+                {typeof targetType === 'object' && 'world' in targetType ? targetType.world : 'unknown'}
+                :
+                {typeof targetType === 'object' && 'domain' in targetType ? targetType.domain : 'unknown'}
               </span>
             </div>
           )}
