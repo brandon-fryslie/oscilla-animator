@@ -790,6 +790,12 @@ export function pass6BlockLowering(
   const errors: CompileError[] = [];
   const strictIR = options?.strictIR ?? false;
 
+  // Create blockId → blockIndex lookup for input resolution
+  const blockIdToIndex = new Map<string, BlockIndex>();
+  for (let i = 0; i < blocks.length; i++) {
+    blockIdToIndex.set(blocks[i].id, i as BlockIndex);
+  }
+
   // Set time model from Pass 3 (threaded through Pass 4 and 5)
   builder.setTimeModel(validated.timeModel);
 
@@ -823,7 +829,9 @@ export function pass6BlockLowering(
         builder,
         errors,
         edges,
-        strictIR
+        strictIR,
+        blockOutputs,
+        blockIdToIndex
       );
 
       // Get block definition for artifact validation
