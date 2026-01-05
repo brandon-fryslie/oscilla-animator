@@ -48,6 +48,38 @@ import {
 export type { ValueRefPacked } from "../ir/lowerTypes";
 
 // =============================================================================
+// IR-Only Mode Verification (Deliverable 3)
+// =============================================================================
+
+/**
+ * VERIFIED_IR_BLOCKS - Set of block types with verified IR lowering
+ *
+ * Blocks in this set are guaranteed to have complete IR lowering functions
+ * and can be compiled in IR-only mode (strictIR=true).
+ *
+ * When adding a new block to this set:
+ * 1. Ensure the block has a registered lowering function via registerBlockType()
+ * 2. Add IR-specific tests verifying the lowering produces correct IR nodes
+ * 3. Test the block in IR-only mode (strictIR=true) to catch fallback bugs
+ *
+ * Initial set: 12 core blocks from Sprint 1 (block-ir-lowering)
+ */
+const VERIFIED_IR_BLOCKS = new Set([
+  'FiniteTimeRoot',
+  'InfiniteTimeRoot',
+  'GridDomain',
+  'DomainN',
+  'Oscillator',
+  'AddSignal',
+  'MulSignal',
+  'SubSignal',
+  'FieldConstNumber',
+  'FieldMapNumber',
+  'RenderInstances2D',
+  'FieldColorize',
+]);
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -67,6 +99,19 @@ export interface UnlinkedIRFragments {
 
   /** Compilation errors encountered during lowering */
   errors: CompileError[];
+}
+
+/**
+ * Options for pass6BlockLowering
+ */
+export interface Pass6Options {
+  /**
+   * When true, blocks in VERIFIED_IR_BLOCKS MUST use IR lowering.
+   * Fallback to closure artifacts will throw an error.
+   *
+   * Use this mode for testing to ensure IR lowering is actually used.
+   */
+  strictIR?: boolean;
 }
 
 // =============================================================================
@@ -474,6 +519,10 @@ function getWriterValueRef(
  * - If edges are provided, use resolveInputsWithMultiInput for input resolution
  * - Otherwise, fall back to legacy compiled port map lookup
  *
+ * IR-Only Mode (Deliverable 3):
+ * - If strictIR=true and block is in VERIFIED_IR_BLOCKS, throw error if IR lowering fails
+ * - Logs IR lowering usage vs fallback for debugging
+ *
  * If the block has a registered lowering function, use it.
  * Otherwise, fall back to artifactToValueRef for each output.
  */
@@ -483,7 +532,8 @@ function lowerBlockInstance(
   compiledPortMap: Map<string, Artifact>,
   builder: IRBuilder,
   errors: CompileError[],
-  edges?: readonly Edge[]
+  edges?: readonly Edge[],
+  strictIR?: boolean
 ): Map<string, ValueRefPacked> {
   const outputRefs = new Map<string, ValueRefPacked>();
   const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
@@ -493,6 +543,7 @@ function lowerBlockInstance(
 
   if (blockType !== undefined) {
     // Use registered lowering function
+    console.debug(`[IR] Using IR lowering for ${block.type} (${block.id})`);
 
     try {
       const enforcePortContract = blockDef?.tags?.irPortContract !== 'relaxed';
@@ -613,6 +664,16 @@ function lowerBlockInstance(
         where: { blockId: block.id },
       });
 
+      // IR-Only Mode: If this is a verified block in strict mode, fail hard
+      if (strictIR && VERIFIED_IR_BLOCKS.has(block.type)) {
+        throw new Error(
+          `[IR-ONLY] Block "${block.type}" is in VERIFIED_IR_BLOCKS but IR lowering failed. ` +
+          `Error: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+
+      console.warn(`[IR] Falling back to closure for ${block.type} (${block.id}) - IR lowering failed`);
+
       // Fall back to artifact lowering
       for (const output of (blockDef?.outputs ?? [])) {
         const portKey = `${block.id}:${output.id}`;
@@ -636,6 +697,16 @@ function lowerBlockInstance(
     }
   } else {
     // No lowering function - fall back to artifact-based lowering
+
+    // IR-Only Mode: If this is a verified block in strict mode, fail hard
+    if (strictIR && VERIFIED_IR_BLOCKS.has(block.type)) {
+      throw new Error(
+        `[IR-ONLY] Block "${block.type}" is in VERIFIED_IR_BLOCKS but has no registered IR lowering function`
+      );
+    }
+
+    console.warn(`[IR] Falling back to closure for ${block.type} (${block.id}) - no IR lowering registered`);
+
     for (const output of (blockDef?.outputs ?? [])) {
       const portKey = `${block.id}:${output.id}`;
       const artifact = compiledPortMap.get(portKey);
@@ -677,6 +748,10 @@ function lowerBlockInstance(
  * - When edges provided, uses resolveWriters + combine logic
  * - Otherwise falls back to legacy single-input path
  *
+ * IR-Only Mode (Deliverable 3):
+ * - When options.strictIR=true, blocks in VERIFIED_IR_BLOCKS must use IR lowering
+ * - Fallback to closures throws an error in strict mode
+ *
  * Input: Validated dependency graph + compiled port map (closures) + blocks array
  * Output: UnlinkedIRFragments with skeleton IR nodes
  *
@@ -687,11 +762,13 @@ export function pass6BlockLowering(
   validated: AcyclicOrLegalGraph,
   blocks: readonly Block[],
   compiledPortMap: Map<string, Artifact>,
-  edges?: readonly Edge[]
+  edges?: readonly Edge[],
+  options?: Pass6Options
 ): UnlinkedIRFragments {
   const builder = new IRBuilderImpl();
   const blockOutputs = new Map<BlockIndex, Map<string, ValueRefPacked>>();
   const errors: CompileError[] = [];
+  const strictIR = options?.strictIR ?? false;
 
   // Set time model from Pass 3 (threaded through Pass 4 and 5)
   builder.setTimeModel(validated.timeModel);
@@ -725,7 +802,8 @@ export function pass6BlockLowering(
         compiledPortMap,
         builder,
         errors,
-        edges
+        edges,
+        strictIR
       );
 
       // Get block definition for artifact validation
