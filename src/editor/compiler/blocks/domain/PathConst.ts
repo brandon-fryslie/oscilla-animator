@@ -37,7 +37,10 @@ const lowerPathConst: BlockLowerFn = ({ ctx, inputs, config }) => {
   const fieldId = ctx.b.fieldConst(pathExpr, outType);
 
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'PathConst_out');
-  return { outputs: [{ k: 'field', id: fieldId, slot }] };
+  return {
+    outputs: [],
+    outputsById: { out: { k: 'field', id: fieldId, slot } },
+  };
 };
 
 // Register block type for IR lowering

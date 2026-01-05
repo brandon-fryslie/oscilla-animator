@@ -29,7 +29,10 @@ const lowerFieldConstColor: BlockLowerFn = ({ ctx, inputs, config }) => {
   const fieldId = ctx.b.fieldConst(color, outType);
 
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldConstColor_out');
-  return { outputs: [{ k: 'field', id: fieldId, slot }] };
+  return {
+    outputs: [],
+    outputsById: { out: { k: 'field', id: fieldId, slot } },
+  };
 };
 
 // Register block type for IR lowering

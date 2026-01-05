@@ -60,7 +60,8 @@ const lowerStableIdHash: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'StableIdHash_out');
   return {
-    outputs: [{ k: 'field', id: hashField, slot }],
+    outputs: [],
+    outputsById: { out: { k: 'field', id: hashField, slot } },
   };
 };
 

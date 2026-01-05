@@ -70,7 +70,8 @@ const lowerPositionMapCircle: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'PositionMapCircle_out');
   return {
-    outputs: [{ k: 'field', id: posField, slot }],
+    outputs: [],
+    outputsById: { out: { k: 'field', id: posField, slot } },
   };
 };
 

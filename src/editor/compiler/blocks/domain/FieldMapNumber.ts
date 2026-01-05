@@ -101,7 +101,10 @@ const lowerFieldMapNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
   const fieldId = ctx.b.fieldMap(x.id, fnRef, outType, { k, a, b });
 
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldMapNumber_out');
-  return { outputs: [{ k: 'field', id: fieldId, slot }] };
+  return {
+    outputs: [],
+    outputsById: { out: { k: 'field', id: fieldId, slot } },
+  };
 };
 
 // Register block type for IR lowering

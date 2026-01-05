@@ -54,7 +54,8 @@ const lowerPositionMapLine: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'PositionMapLine_out');
   return {
-    outputs: [{ k: 'field', id: posField, slot }],
+    outputs: [],
+    outputsById: { out: { k: 'field', id: posField, slot } },
   };
 };
 

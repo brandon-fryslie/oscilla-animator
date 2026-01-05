@@ -75,7 +75,8 @@ const lowerDomainN: BlockLowerFn = ({ ctx, inputs }) => {
   const domainSlot = ctx.b.domainFromN(safeN, elementIds);
 
   return {
-    outputs: [{ k: 'special', tag: 'domain', id: domainSlot }],
+    outputs: [],
+    outputsById: { out: { k: 'special', tag: 'domain', id: domainSlot } },
     declares: {
       domainOut: { outPortIndex: 0, domainKind: 'domain' },
     },
