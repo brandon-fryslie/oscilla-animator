@@ -340,7 +340,9 @@ function resolveInputsWithMultiInput(
   edges: readonly Edge[],
   compiledPortMap: Map<string, Artifact>,
   builder: IRBuilder,
-  errors: CompileError[]
+  errors: CompileError[],
+  blockOutputs?: Map<BlockIndex, Map<string, ValueRefPacked>>,
+  blockIdToIndex?: Map<string, BlockIndex>
 ): Map<string, ValueRefPacked> {
   const resolved = resolveBlockInputs(block, edges);
   const inputRefs = new Map<string, ValueRefPacked>();
@@ -381,7 +383,7 @@ function resolveInputsWithMultiInput(
     // Convert writers to ValueRefs
     const writerRefs: ValueRefPacked[] = [];
     for (const writer of writers) {
-      const writerRef = getWriterValueRef(writer, compiledPortMap, builder, errors);
+      const writerRef = getWriterValueRef(writer, compiledPortMap, builder, errors, blockOutputs, blockIdToIndex);
       if (writerRef !== null) {
         writerRefs.push(writerRef);
       }
@@ -456,10 +458,26 @@ function getWriterValueRef(
   writer: Writer,
   compiledPortMap: Map<string, Artifact>,
   builder: IRBuilder,
-  errors: CompileError[]
+  errors: CompileError[],
+  blockOutputs?: Map<BlockIndex, Map<string, ValueRefPacked>>,
+  blockIdToIndex?: Map<string, BlockIndex>
 ): ValueRefPacked | null {
   if (writer.kind === 'wire') {
-    // Wire: blockId:slotId in compiledPortMap
+    // First try: Look in blockOutputs (IR-lowered blocks)
+    if (blockOutputs !== undefined && blockIdToIndex !== undefined) {
+      const writerBlockIndex = blockIdToIndex.get(writer.from.blockId);
+      if (writerBlockIndex !== undefined) {
+        const writerOutputs = blockOutputs.get(writerBlockIndex);
+        if (writerOutputs !== undefined) {
+          const ref = writerOutputs.get(writer.from.slotId);
+          if (ref !== undefined) {
+            return ref;
+          }
+        }
+      }
+    }
+
+    // Fallback: Wire blockId:slotId in compiledPortMap (legacy closure artifacts)
     const portKey = `${writer.from.blockId}:${writer.from.slotId}`;
     const artifact = compiledPortMap.get(portKey);
     if (artifact === undefined) {
@@ -533,7 +551,9 @@ function lowerBlockInstance(
   builder: IRBuilder,
   errors: CompileError[],
   edges?: readonly Edge[],
-  strictIR?: boolean
+  strictIR?: boolean,
+  blockOutputs?: Map<BlockIndex, Map<string, ValueRefPacked>>,
+  blockIdToIndex?: Map<string, BlockIndex>
 ): Map<string, ValueRefPacked> {
   const outputRefs = new Map<string, ValueRefPacked>();
   const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
@@ -572,7 +592,7 @@ function lowerBlockInstance(
       // Collect input ValueRefs
       // Multi-Input Integration: Use resolveInputsWithMultiInput if edges available
       const inputsById: Record<string, ValueRefPacked> = edges !== undefined
-        ? Object.fromEntries(resolveInputsWithMultiInput(block, edges, compiledPortMap, builder, errors).entries())
+        ? Object.fromEntries(resolveInputsWithMultiInput(block, edges, compiledPortMap, builder, errors, blockOutputs, blockIdToIndex).entries())
         : {};
 
       const inputs: ValueRefPacked[] = (blockDef?.inputs ?? []).map((inputPort) => {

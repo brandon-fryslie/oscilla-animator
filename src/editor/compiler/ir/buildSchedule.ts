@@ -503,9 +503,22 @@ function buildSchedule(
   }
 
   // Step 1b: Signal Eval (write signal outputs to slots)
+  // Exclude slots already written by timeDerive to avoid double-writes
+  const timeDeriveSlots = new Set<ValueSlot>(
+    [
+      SLOT_T_ABS_MS,
+      SLOT_T_MODEL_MS,
+      SLOT_PROGRESS_01,
+      timeSlots.phase01,
+      timeSlots.wrapEvent,
+    ].filter((s): s is ValueSlot => s !== undefined)
+  );
+
   const signalOutputs = builderIR.sigValueSlots
     .map((slot, sigId) => (slot !== undefined ? { sigId, slot } : null))
-    .filter((entry): entry is { sigId: number; slot: ValueSlot } => entry !== null);
+    .filter((entry): entry is { sigId: number; slot: ValueSlot } =>
+      entry !== null && !timeDeriveSlots.has(entry.slot)
+    );
 
   if (signalOutputs.length > 0) {
     steps.push({

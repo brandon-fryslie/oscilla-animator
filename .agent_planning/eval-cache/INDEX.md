@@ -21,8 +21,9 @@
 - signal-expr-runtime.md (NEEDS EVAL - SignalExprBuilder + golden tests added 2025-12-26)
 - runtime-integration.md (INVALIDATED 2025-12-26 - CompilerRuntime added, select/transform nodes added)
 - compiler-integration.md (INVALIDATED 2025-12-26 - CompiledProgram type extended with SignalExpr IR)
+- ir-runtime-infrastructure.md (INVALIDATED 2026-01-04 - pass6-block-lowering.ts modified: IR-only mode infrastructure added)
 
-## Removed in This Session (2026-01-03)
+## Removed in This Session (2026-01-04)
 - bus-semantics.md (INVALIDATED 2026-01-03 - BusStore deleted, Publisher/Listener removed)
 - findings-buses-init.md (INVALIDATED 2026-01-03 - Bus system refactored to BusBlocks)
 - architecture.md (INVALIDATED 2025-12-26 04:14 - Compiler pipeline modified: SignalExprTable extraction added to compileBusAware)
@@ -30,3 +31,5 @@
 - bus-compiler-architecture.md (INVALIDATED 2025-12-26 - removed as stale)
 - block-compiler-migration.md (INVALIDATED 2025-12-26 05:55 - Signal blocks 8-13 migrated to IR lowering)
 - rendering-architecture.md (INVALIDATED 2025-12-26 11:25 - Player.setIRProgram added, IRRuntimeAdapter created, ScheduleExecutor rendering integration)
+- layout-architecture.md (INVALIDATED 2026-01-04 - Composite system removed, BlockLibrary simplified)
+- time-architecture.md (INVALIDATED 2026-01-04 - Composite expansion removed from compiler pipeline)

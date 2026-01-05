@@ -1,0 +1,59 @@
+Agent: iterative-implementer | 2026-01-04T16:XX:XX
+Mode: manual
+Completed: Removed composite block system | Files: 29 | Commits: 1
+Cache invalidated: layout-architecture.md, time-architecture.md
+Status: complete
+
+Task: Remove composites from application
+
+Successfully removed the entire composite block system:
+
+Phase 1: Compiler Pipeline
+- Removed expandComposites() function from integration.ts
+- Removed createRewriteMapBuilder() and related functions
+- Removed composite expansion step from compile() method
+- Removed registerAllComposites() call
+- Simplified compiler pipeline: editorToPatch() → compilePatch()
+
+Phase 2: Definition Files
+- Deleted domain-composites.ts
+- Deleted signal-composites.ts  
+- Deleted golden-patch-composites.ts
+- Deleted composites.ts
+- Deleted composite-bridge.ts
+- Deleted composite-utils.ts
+
+Phase 3: Block Types
+- Removed primitiveGraph field from BlockDefinition
+- Removed compositeDefinition field from BlockDefinition
+- Removed 'composite' from BlockForm type (now 'primitive' | 'macro')
+- Updated getBlockForm() to not check for composites
+- Updated factory.ts to remove composite detection
+- Updated registry.ts to remove composite handling
+
+Phase 4: UI Components
+- Deleted SaveCompositeDialog.tsx
+- Updated BlockContextMenu.tsx to remove "Save as Composite" option
+- Updated BlockLibrary.tsx to remove composite display/count
+
+Phase 5: Tests
+- Deleted composites.test.ts
+- Deleted composite-library.test.ts
+- Updated blocks.tags.test.ts to not pass composite flag
+- Updated block-lowering.test.ts to not pass composite flag
+- Fixed registry-validation.test.ts to remove composite test cases
+
+Phase 6: Remaining Fixes
+- Updated types.ts BlockForm type
+- Fixed registry-validation.ts composite checks
+- Fixed TransactionBuilder.ts form detection
+- Fixed TransactionBuilder.ts patchToPatchDocument
+
+Results:
+- Removed 4,087 lines of code
+- Added 204 lines (mostly removals, some simplifications)
+- All tests passing
+- TypeScript compilation successful
+- Macro system (macro:*) remains intact
+
+The application is now significantly simpler without the composite system complexity.
