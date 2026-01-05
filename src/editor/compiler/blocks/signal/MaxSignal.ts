@@ -25,7 +25,10 @@ const lowerMaxSignal: BlockLowerFn = ({ ctx, inputs }) => {
   const sigId = ctx.b.sigZip(a.id, b.id, { kind: 'opcode', opcode: OpCode.Max }, outType,);
 
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'MaxSignal_out');
-  return { outputs: [{ k: 'sig', id: sigId, slot }] };
+  return {
+    outputs: [],
+    outputsById: { out: { k: 'sig', id: sigId, slot } },
+  };
 };
 
 // Register block type for IR lowering

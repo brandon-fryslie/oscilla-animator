@@ -148,7 +148,10 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
   const colorSig = ctx.b.sigZip(baseColorSig, hueShiftSig, { kind: 'opcode', opcode: OpCode.ColorShiftHue }, colorType,);
 
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'ColorLFO_out');
-  return { outputs: [{ k: 'sig', id: colorSig, slot }] };
+  return {
+    outputs: [],
+    outputsById: { out: { k: 'sig', id: colorSig, slot } },
+  };
 };
 
 // Register block type

@@ -163,7 +163,8 @@ const lowerShaper: BlockLowerFn = ({ ctx, inputs, config }) => {
 
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'Shaper_out');
   return {
-    outputs: [{ k: 'sig', id: outputId, slot }],
+    outputs: [],
+    outputsById: { out: { k: 'sig', id: outputId, slot } },
   };
 };
 

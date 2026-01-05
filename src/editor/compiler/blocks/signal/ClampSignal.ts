@@ -39,7 +39,10 @@ const lowerClampSignal: BlockLowerFn = ({ ctx, inputs, config }) => {
   const clamped = ctx.b.sigZip(maxed, maxConstId, { kind: 'opcode', opcode: OpCode.Min }, outType,);
 
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'ClampSignal_out');
-  return { outputs: [{ k: 'sig', id: clamped, slot }] };
+  return {
+    outputs: [],
+    outputsById: { out: { k: 'sig', id: clamped, slot } },
+  };
 };
 
 // Register block type for IR lowering
