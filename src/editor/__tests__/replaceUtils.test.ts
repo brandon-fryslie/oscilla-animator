@@ -29,7 +29,7 @@ function createMockBlock(overrides: Partial<Block>): Block {
     position: { x: 0, y: 0 },
     params: {},
     form: 'primitive',
-    role: { kind: 'user' },
+    role: { kind: 'user', meta: {} },
     ...overrides,
   };
 }
@@ -61,7 +61,7 @@ function createMockEdge(
     from: { kind: 'port', blockId: fromBlockId, slotId: fromSlot },
     to: { kind: 'port', blockId: toBlockId, slotId: toSlot },
     enabled: true,
-    role: { kind: 'user' },
+    role: { kind: 'user', meta: {} },
   };
 }
 

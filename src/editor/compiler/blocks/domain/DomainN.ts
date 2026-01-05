@@ -7,14 +7,7 @@
  * Element IDs are stable across frames and recompiles for the same (n, seed) pair.
  */
 
-import type { BlockCompiler, Artifact } from '../../types';
-import { createSimpleDomain } from '../../unified/Domain';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
-
-interface DomainNParams {
-  n?: int;
-  seed?: int;
-}
 
 // =============================================================================
 // IR Lowering (Phase 3 Migration)
@@ -108,52 +101,3 @@ registerBlockType({
   ],
   lower: lowerDomainN,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const DomainNBlock: BlockCompiler = {
-  type: 'DomainN',
-
-  inputs: [
-    { name: 'n', type: { kind: 'Scalar:int' }, required: false },
-    { name: 'seed', type: { kind: 'Scalar:int' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'domain', type: { kind: 'Domain' } },
-  ],
-
-  compile({ id, inputs, params }) {
-    // Helper to extract numeric value from artifact with default fallback
-    const extractNumber = (artifact: Artifact | undefined, defaultValue: int): int => {
-      if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:int' || artifact.kind === 'Scalar:float') {
-        return Number(artifact.value);
-      }
-      // Generic fallback for other artifact types
-      if ('value' in artifact && artifact.value !== undefined) {
-        return typeof artifact.value === 'function'
-          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
-          : Number(artifact.value);
-      }
-      return defaultValue;
-    };
-
-    // Support both new (inputs) and old (params) parameter systems
-    const paramsObj = params as DomainNParams | undefined;
-    const n: int = extractNumber(inputs.n, paramsObj?.n ?? 100);
-    const seed: int = extractNumber(inputs.seed, paramsObj?.seed ?? 0);
-
-    // Create a stable domain ID based on block id, n, and seed
-    const domainId = `domain-${id}-${n}-${seed}`;
-
-    // Create the domain with simple sequential element IDs
-    const domain = createSimpleDomain(domainId, Math.max(1, Math.floor(n)));
-
-    return {
-      domain: { kind: 'Domain', value: domain },
-    };
-  },
-};

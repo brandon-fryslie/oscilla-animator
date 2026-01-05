@@ -5,7 +5,6 @@
  * This block exists to enable "all defaults are blocks" architecture.
  */
 
-import type { BlockCompiler } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -45,40 +44,3 @@ registerBlockType({
   lower: lowerDSConstSignalColor,
 });
 
-// =============================================================================
-// Legacy Compiler
-// =============================================================================
-
-/**
- * Legacy compiler implementation (will be removed in Phase 4).
- * Pass-through: outputs.out = inputs.value
- */
-export const DSConstSignalColorBlock: BlockCompiler = {
-  type: 'DSConstSignalColor',
-
-  inputs: [
-    { name: 'value', type: { kind: 'Signal:color' }, required: true },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Signal:color' } },
-  ],
-
-  compile({ inputs }) {
-    const valueArtifact = inputs.value;
-
-    if (valueArtifact === undefined || valueArtifact.kind !== 'Signal:color') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'DSConstSignalColor requires Signal<color> for value input',
-        },
-      };
-    }
-
-    // Trivial pass-through
-    return {
-      out: valueArtifact,
-    };
-  },
-};

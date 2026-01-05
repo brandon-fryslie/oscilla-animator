@@ -630,7 +630,16 @@ export type StructuralMeta =
   | { kind: "lens";          target: { kind: "node"; node: NodeRef; port?: string } };
 
 /**
+ * UserBlockMeta - metadata for user-created blocks.
+ * Empty record for now, but provides consistent structure with structural blocks.
+ *
+ * Sprint: Block & Edge Roles Type System (2026-01-04)
+ */
+export type UserBlockMeta = Record<string, never>;
+
+/**
  * BlockRole - discriminated union identifying block purpose.
+ * ALL variants have a `meta` field for consistent access patterns.
  *
  * - user: Created by user in the editor (default for all user actions)
  * - structural: System-generated block with metadata about what it targets
@@ -641,7 +650,7 @@ export type StructuralMeta =
  * Spec: design-docs/final-System-Invariants/15-Block-Edge-Roles.md (Invariant 2)
  */
 export type BlockRole =
-  | { kind: "user" }
+  | { kind: "user"; meta: UserBlockMeta }
   | { kind: "structural"; meta: StructuralMeta };
 
 /**
@@ -654,7 +663,16 @@ export type BlockRole =
 export type LegacyBlockRole = 'defaultSourceProvider' | 'internal';
 
 /**
+ * UserEdgeMeta - metadata for user-created edges.
+ * Empty record for now, but provides consistent structure with other edge roles.
+ *
+ * Sprint: Block & Edge Roles Type System (2026-01-04)
+ */
+export type UserEdgeMeta = Record<string, never>;
+
+/**
  * EdgeRole - discriminated union identifying edge purpose.
+ * ALL variants have a `meta` field for consistent access patterns.
  *
  * - user: Created by user in the editor (default for all user actions)
  * - default: Edge from default source block to target port
@@ -665,7 +683,7 @@ export type LegacyBlockRole = 'defaultSourceProvider' | 'internal';
  * Spec: design-docs/final-System-Invariants/15-Block-Edge-Roles.md (Invariant 2)
  */
 export type EdgeRole =
-  | { kind: "user" }
+  | { kind: "user"; meta: UserEdgeMeta }
   | { kind: "default"; meta: { defaultSourceBlockId: BlockId } }
   | { kind: "busTap";  meta: { busId: BusId } }
   | { kind: "auto";    meta: { reason: "portMoved" | "rehydrate" | "migrate" } };
@@ -690,7 +708,7 @@ export function migrateLegacyBlockRole(
   legacyRole: LegacyBlockRole | string | undefined
 ): BlockRole {
   if (!legacyRole) {
-    return { kind: "user" };
+    return { kind: "user", meta: {} };
   }
 
   switch (legacyRole) {
@@ -721,21 +739,21 @@ export function migrateLegacyBlockRole(
     default:
       // Unknown legacy role defaults to user
       console.warn(`Unknown legacy block role: ${legacyRole}, defaulting to 'user'`);
-      return { kind: "user" };
+      return { kind: "user", meta: {} };
   }
 }
 
 /**
  * Migrates legacy edge (without role) to discriminated union.
  *
- * Migration rule: undefined → { kind: 'user' }
+ * Migration rule: undefined → { kind: 'user', meta: {} }
  *
  * @returns Default user edge role
  *
  * Sprint: Block & Edge Roles Type System (2026-01-03)
  */
 export function migrateLegacyEdgeRole(): EdgeRole {
-  return { kind: "user" };
+  return { kind: "user", meta: {} };
 }
 
 // =============================================================================
@@ -782,20 +800,22 @@ export interface Block {
   form: BlockForm;
 
   /**
-   * Hidden blocks are not rendered on the canvas.
-   * Used for system-generated blocks like default source providers.
-   *
-   * Sprint: Phase 0 - Sprint 2: Unify Default Sources with Blocks
-   */
-  hidden?: boolean;
-
-  /**
    * Block role identifies the purpose of this block.
    * Required field tracking whether block is user-created or system-generated.
    *
    * Sprint: Block & Edge Roles Type System (2026-01-03)
    */
   role: BlockRole;
+
+  /**
+   * Per-input override of default source provider block type.
+   * Maps slotId → provider block type (e.g., 'Oscillator').
+   * Empty object {} means use defaults. If a slotId is present, use that provider.
+   *
+   * Example: { radius: 'Oscillator' } means this block's radius input
+   * will use an Oscillator as its default source instead of DSConstSignalFloat.
+   */
+  defaultSourceProviders: Readonly<Record<string, string>>;
 }
 
 // =============================================================================

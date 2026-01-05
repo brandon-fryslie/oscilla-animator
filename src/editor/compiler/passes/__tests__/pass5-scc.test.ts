@@ -20,7 +20,7 @@ function createBlock(id: string, type: string = "TestBlock"): Block {
     position: { x: 0, y: 0 },
     params: {},
     form: "primitive",
-    role: { kind: "user" },
+    role: { kind: "user", meta: {} },
   };
 }
 

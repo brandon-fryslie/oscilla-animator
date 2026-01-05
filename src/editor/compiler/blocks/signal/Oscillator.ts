@@ -5,25 +5,11 @@
  * Supports sine, cosine, triangle, and sawtooth shapes.
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
 import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
 import { OSCILLATOR_IR_INPUTS, OSCILLATOR_IR_OUTPUTS } from '../../../blocks/oscillatorSpec';
 import { OpCode } from '../../ir/opcodes';
-
-type Signal<A> = (t: number, ctx: Readonly<RuntimeCtx>) => A;
-
-/**
- * Waveform shape functions
- * All take phase in [0,1] and return value in [-1,1] (before amplitude/bias)
- */
-const SHAPES: Record<string, (p: number) => number> = {
-  sine: (p: number) => Math.sin(p * 2 * Math.PI),
-  cosine: (p: number) => Math.cos(p * 2 * Math.PI),
-  triangle: (p: number) => 1 - 4 * Math.abs((p % 1) - 0.5),
-  saw: (p: number) => 2 * (p % 1) - 1,
-};
 
 // =============================================================================
 // IR Lowering
@@ -152,67 +138,3 @@ registerBlockType({
   outputs: OSCILLATOR_IR_OUTPUTS,
   lower: lowerOscillator,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const OscillatorBlock: BlockCompiler = {
-  type: 'Oscillator',
-
-  inputs: [
-    { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
-    { name: 'amplitude', type: { kind: 'Signal:float' }, required: false },
-    { name: 'bias', type: { kind: 'Signal:float' }, required: false },
-    { name: 'shape', type: { kind: 'Scalar:string' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Signal:float' } },
-  ],
-
-  compile({ inputs }) {
-    const phaseArtifact = inputs.phase;
-    if (phaseArtifact === undefined || phaseArtifact.kind !== 'Signal:phase') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'Oscillator requires a Signal<phase> input',
-        },
-      };
-    }
-
-    const phaseSignal = phaseArtifact.value as Signal<float>;
-
-    // Read from inputs - values come from defaultSource or explicit connections
-    const shapeArtifact = inputs.shape;
-    const shapeValue = shapeArtifact !== undefined && 'value' in shapeArtifact ? shapeArtifact.value : 'sine';
-    const shape = typeof shapeValue === 'string' ? shapeValue : 'sine';
-    const shapeFn: (phase: number) => number = SHAPES[shape] ?? SHAPES.sine;
-
-    const amplitudeArtifact = inputs.amplitude;
-    const amplitudeSignal = amplitudeArtifact?.kind === 'Signal:float'
-      ? (amplitudeArtifact.value as Signal<float>)
-      : (): number => {
-          const val = amplitudeArtifact !== undefined && 'value' in amplitudeArtifact ? amplitudeArtifact.value : 1;
-          return Number(val);
-        };
-    const biasArtifact = inputs.bias;
-    const biasSignal = biasArtifact?.kind === 'Signal:float'
-      ? (biasArtifact.value as Signal<float>)
-      : (): number => {
-          const val = biasArtifact !== undefined && 'value' in biasArtifact ? biasArtifact.value : 0;
-          return Number(val);
-        };
-
-    // Create output signal
-    const signal: Signal<float> = (t: number, ctx: Readonly<RuntimeCtx>): number => {
-      const phase = phaseSignal(t, ctx);
-      return shapeFn(phase) * amplitudeSignal(t, ctx) + biasSignal(t, ctx);
-    };
-
-    return {
-      out: { kind: 'Signal:float', value: signal },
-    };
-  },
-};

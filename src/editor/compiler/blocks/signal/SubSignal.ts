@@ -5,11 +5,9 @@
  * Useful for offset modulation, differential signals, etc.
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 import { OpCode } from '../../ir/opcodes';
 
-type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
 // =============================================================================
 // IR Lowering (Phase 3 Migration)
@@ -46,55 +44,3 @@ registerBlockType({
   ],
   lower: lowerSubSignal,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const SubSignalBlock: BlockCompiler = {
-  type: 'SubSignal',
-
-  inputs: [
-    { name: 'a', type: { kind: 'Signal:float' }, required: true },
-    { name: 'b', type: { kind: 'Signal:float' }, required: true },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Signal:float' } },
-  ],
-
-  compile({ inputs }) {
-    const aArtifact = inputs.a;
-    const bArtifact = inputs.b;
-
-    if (aArtifact === undefined || aArtifact.kind !== 'Signal:float') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'SubSignal requires Signal<float> for input A',
-        },
-      };
-    }
-
-    if (bArtifact === undefined || bArtifact.kind !== 'Signal:float') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'SubSignal requires Signal<float> for input B',
-        },
-      };
-    }
-
-    const aSignal = aArtifact.value as Signal<float>;
-    const bSignal = bArtifact.value as Signal<float>;
-
-    // Create subtracted signal
-    const signal: Signal<float> = (t: number, ctx: RuntimeCtx): number => {
-      return aSignal(t, ctx) - bSignal(t, ctx);
-    };
-
-    return {
-      out: { kind: 'Signal:float', value: signal },
-    };
-  },
-};

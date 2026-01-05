@@ -391,10 +391,7 @@ function applyTransformStepIR(
       code: errorCode,
       message: `${expectedKind.charAt(0).toUpperCase() + expectedKind.slice(1)} '${transformDef.label}' used in ${context} is not yet supported in IR compilation mode. ` +
                `${helpText} ` +
-               `To use this ${expectedKind}, either:\n` +
-               `  - Switch to legacy closure compilation mode (set VITE_USE_UNIFIED_COMPILER=false)\n` +
-               `  - Remove this ${expectedKind} from your connection\n` +
-               `  - Use an alternative ${expectedKind} if available`,
+               `Remove this ${expectedKind} from your connection or use an alternative if available.`,
     });
     return valueRef; // Continue with original value
   }

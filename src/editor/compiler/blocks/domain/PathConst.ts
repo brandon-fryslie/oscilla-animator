@@ -5,8 +5,6 @@
  * Takes a Domain and produces Field<path>.
  */
 
-import type { BlockCompiler, Field } from '../../types';
-import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -55,54 +53,3 @@ registerBlockType({
   ],
   lower: lowerPathConst,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const PathConstBlock: BlockCompiler = {
-  type: 'PathConst',
-
-  inputs: [
-    { name: 'domain', type: { kind: 'Domain' }, required: true },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Field:Path' } },
-  ],
-
-  compile({ inputs }) {
-    const domainArtifact = inputs.domain;
-    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'PathConst requires a Domain input',
-        },
-      };
-    }
-
-    const domain = domainArtifact.value;
-
-    // Use default path expression - in future this could come from params
-    const pathExpr = {
-      commands: [
-        { kind: 'M', x: 0, y: 0 },
-        { kind: 'L', x: 100, y: 0 },
-        { kind: 'L', x: 100, y: 100 },
-        { kind: 'L', x: 0, y: 100 },
-        { kind: 'Z' },
-      ],
-    };
-
-    // Create constant field that returns the same path for all elements
-    const field: Field<unknown> = (_seed, n) => {
-      const count = Math.min(n, domain.elements.length);
-      return new Array(count).fill(pathExpr);
-    };
-
-    return {
-      out: { kind: 'Field:Path', value: field },
-    };
-  },
-};

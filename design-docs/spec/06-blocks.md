@@ -1,135 +1,103 @@
-# Blocks
+# Blocks (Unified Spec)
 
-## Block Structure
+## Block Definition
 
-```typescript
+```ts
 interface BlockDefinition {
   type: string
   category: BlockCategory
+  form: 'primitive' | 'composite'
   inputs: PortDefinition[]
   outputs: PortDefinition[]
   params: ParamDefinition[]
-  compile: (ctx: CompileContext) => CompiledBlock
+  compile?: (ctx: CompileContext) => CompiledBlock
 }
 ```
 
-## Categories
+Blocks are the only compute units. Every operation that reaches the compiler is a block.
 
-### Time Topology
-Declare the time contract for the patch.
+## Canonical Block Features
 
-| Block | TimeModel | Outputs |
-|-------|-----------|---------|
-| **FiniteTimeRoot** | `finite` | time, progress |
-| **InfiniteTimeRoot** | `infinite` | time |
+Every block (user or derived) shares these properties:
 
-**Constraints:**
-- Exactly one TimeRoot per patch
-- TimeRoot has no upstream dependencies
-- No TimeRoot inside composites
+- **Stable identity**: `blockId` is stable across edits and is used for state mapping.
+- **Typed ports**: inputs/outputs have TypeDesc and inputs declare CombinePolicy.
+- **Explicit parameters**: params are part of the block instance, not implicit inputs.
+- **Deterministic evaluation**: compilation treats all blocks uniformly.
+- **Optional state**: stateful behavior is owned by the block itself.
+- **Transforms are blocks**: lens/adapter UI normalizes into explicit derived blocks.
 
-**Note:** CycleTimeRoot and PhaseClock do NOT exist. Phase comes from Time Console.
+Some blocks are **globally addressable** in the UI (BusBlocks); that is a UI affordance, not a different runtime type.
 
-### Domain Generators
-Produce stable element identity.
+## Derived Blocks
 
-| Block | Outputs |
-|-------|---------|
-| **GridDomain** | domain, pos0: Field<vec2> |
-| **PathDomain** | domain, pos0: Field<vec2>, tangent: Field<vec2> |
+Derived blocks are blocks that exist in the patch but have UI-specific semantics or affordances to make them easier to use. They are still real blocks in the graph.
 
-### Field Transforms
-Per-element operations.
+Examples:
+- Bus blocks (globally addressable wiring UI)
+- DefaultSource blocks (input fallback UI)
+- Lens/Adapter blocks (transform UI on connections)
+- Stateful infrastructure blocks created by graph surgery
 
-| Block | Type |
-|-------|------|
-| **StableIdHash** | Domain → Field<number> |
-| **FieldMap** | Field<A> → Field<B> |
-| **FieldZip** | (Field<A>, Field<B>) → Field<C> |
-| **Broadcast** | Signal<A> → Field<A> |
+Derived blocks are created by GraphNormalization, not by the compiler.
 
-### Signal Generators
-Time-varying values.
+## Primitive vs Composite Validation
 
-| Block | Outputs |
-|-------|---------|
-| **WaveShaper** | Signal<number> from phase |
-| **ColorLFO** | Signal<color> from phase |
-| **Envelope** | Signal<number> from event |
+Validation must enforce:
 
-### Reducers
-Collapse fields to signals.
+- **Primitive blocks** have a compiler implementation and no composite graph.
+- **Composite blocks** have a graph definition and no compiler implementation.
 
-| Block | Type |
-|-------|------|
-| **FieldSum** | Field<number> → Signal<number> |
-| **FieldMean** | Field<number> → Signal<number> |
-| **FieldMax** | Field<number> → Signal<number> |
+Any mismatch is a compile-time error (not a runtime fallback).
 
-### Render Sinks
-Materialize fields and produce render output.
+## Port Definition (Combine Policy)
 
-| Block | Inputs |
-|-------|--------|
-| **RenderInstances2D** | domain, position, radius, fill, opacity |
-| **RenderPath2D** | domain, position, stroke, strokeWidth |
-
-### Memory (Stateful)
-Enable feedback loops.
-
-| Block | Purpose |
-|-------|---------|
-| **DelayLine** | Sample delay |
-| **SampleHold** | Latch on event |
-| **Integrate** | Accumulation |
-
-## Port Types
-
-```typescript
+```ts
 interface PortDefinition {
   id: string
   type: TypeDesc
   direction: 'input' | 'output'
-  defaultSource?: DefaultSourceSpec
+  combine?: CombinePolicy
 }
 ```
+
+All inputs support multiple writers and must define combine behavior (defaults to `last` when multi-writer).
+
+## Block Categories (minimum)
+
+- **TimeRoot**: FiniteTimeRoot, InfiniteTimeRoot
+- **Domain**: GridDomain, PathDomain, SVGSampleDomain, etc.
+- **Signal**: Oscillator, WaveShaper, ColorLFO, etc.
+- **Field**: FieldMap, FieldZip, Broadcast, etc.
+- **Reducers**: FieldSum, FieldMean, FieldMax, etc.
+- **Render**: RenderInstances2D, RenderPath2D, etc.
+- **Type/Domain Conversions**: PhaseToNumber, NumberToPhase, UnitToNumber, etc.
+- **Transforms (Lens/Adapter)**: See `spec/07-transforms.md`
+- **Infrastructure (Stateful)**: UnitDelay, Lag, Phasor, SampleAndHold
+
+See `spec/08-primitives-composites.md` for the recommended primitive set and starter composite library.
+
+## Bus Blocks
+
+A bus is represented as a derived BusBlock:
+
+- Input: `in` (multi-writer, CombineMode set by bus configuration)
+- Output: `out`
+
+Bus UI interactions create edges to/from the BusBlock in GraphNormalization.
+BusBlocks are user-creatable; rails are immutable system-provided BusBlocks.
 
 ## Default Sources
 
-Inputs can declare default bus subscriptions:
+Default sources are derived blocks that provide a fallback value for an input with zero writers. They are disconnected when any explicit writer exists.
 
-```typescript
-interface DefaultSourceSpec {
-  busId: BusId
-  adapters?: AdapterId[]
-}
-```
+## Stateful Primitives (Canonical)
 
-## Composites
+These blocks are the minimal, explicit stateful primitives:
 
-Composites are reusable block graphs:
+- **UnitDelay**: one-frame delay, used to break feedback loops
+- **Lag**: smoothing (linear/exponential)
+- **Phasor**: phase accumulator (0..1 ramp)
+- **SampleAndHold**: latch on trigger
 
-```typescript
-interface CompositeDefinition {
-  type: string
-  blocks: BlockInstance[]
-  connections: Connection[]
-  exposedInputs: PortMapping[]
-  exposedOutputs: PortMapping[]
-}
-```
-
-**Constraints:**
-- No TimeRoot inside composites
-- Bus bindings preserved through expansion
-- State keys derived from composite context
-
-## Block Compiler Contract
-
-```typescript
-interface CompiledBlock {
-  outputs: Map<PortId, Artifact>
-  autoPublications?: AutoPublication[]
-  stateRequirements?: StateRequirement[]
-}
-```
+Stateful operations must be blocks. All transforms are blocks; edges are pure connections.

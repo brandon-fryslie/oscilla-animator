@@ -47,104 +47,104 @@ export type DefaultSourceProviderBlockSpec = Readonly<{
  */
 export const DEFAULT_SOURCE_PROVIDER_BLOCKS: readonly DefaultSourceProviderBlockSpec[] =
   [
-    // Signal const providers
+    // Signal const providers (no inputs - value comes from params)
     {
       blockType: 'DSConstSignalFloat',
       label: 'Constant (Signal<float>)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
     {
       blockType: 'DSConstSignalInt',
       label: 'Constant (Signal<int>)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
     {
       blockType: 'DSConstSignalColor',
       label: 'Constant (Signal<color>)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
     {
       blockType: 'DSConstSignalPoint',
       label: 'Constant (Signal<vec2>)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
     {
       blockType: 'DSConstSignalPhase',
       label: 'Constant (Signal<phase>)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
     {
       blockType: 'DSConstSignalTime',
       label: 'Constant (Signal<time>)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
 
-    // Field const providers
+    // Field const providers (no inputs - value comes from params)
     {
       blockType: 'DSConstFieldFloat',
       label: 'Constant (Field<float>)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
     {
       blockType: 'DSConstFieldVec2',
       label: 'Constant (Field<vec2>)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
     {
       blockType: 'DSConstFieldColor',
       label: 'Constant (Field<color>)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
 
-    // Scalar const providers
+    // Scalar const providers (no inputs - value comes from params)
     {
       blockType: 'DSConstScalarInt',
       label: 'Constant (Scalar:int)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
     {
       blockType: 'DSConstScalarFloat',
       label: 'Constant (Scalar:float)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
     {
       blockType: 'DSConstScalarString',
       label: 'Constant (Scalar:string)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
     {
       blockType: 'DSConstScalarWaveform',
       label: 'Constant (Scalar:waveform)',
       outputPortId: 'out',
-      editableInputs: ['value'],
+      editableInputs: [],
       busInputs: {},
     },
 
-    // Advanced providers (Sprint 15: Oscillator)
+    // Advanced providers with real inputs
     {
       blockType: 'Oscillator',
       label: 'Oscillator (Sine/LFO)',

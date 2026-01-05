@@ -13,7 +13,7 @@
  *   - opacity: Signal<float> (required)
  */
 
-import type { BlockCompiler } from '../../types';
+
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -96,26 +96,3 @@ registerBlockType({
   outputs: [],
   lower: lowerRenderPaths2D,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const RenderPaths2DBlock: BlockCompiler = {
-  type: 'RenderPaths2D',
-
-  inputs: [
-    { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'paths', type: { kind: 'Field:Path' }, required: true },
-    { name: 'fillColor', type: { kind: 'Field:color' }, required: true },
-    { name: 'strokeColor', type: { kind: 'Field:color' }, required: true },
-    { name: 'strokeWidth', type: { kind: 'Field:float' }, required: true },
-    { name: 'opacity', type: { kind: 'Signal:float' }, required: true },
-  ],
-
-  outputs: [],
-
-  compile() {
-    throw new Error('RenderPaths2D is only supported by the IR compiler.');
-  },
-};

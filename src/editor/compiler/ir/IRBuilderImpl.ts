@@ -825,7 +825,7 @@ export class IRBuilderImpl implements IRBuilder {
       eventValueSlots: this.eventValueSlots,
       nextValueSlot: this.nextValueSlot,
       timeSlots: this.timeSlots,
-      busRoots: [], // Populated by pass7BusLowering, not the builder
+      busRoots: [], // Unused in IR-only mode; buses are lowered as blocks
     };
   }
 }

@@ -5,30 +5,8 @@
  * Supports add, sub, mul, min, max operations.
  */
 
-import type { BlockCompiler, Field } from '../../types';
-import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 import { OpCode } from '../../ir/opcodes';
-
-/**
- * Get the binary operation by name
- */
-function getZipOperation(op: string): (a: number, b: number) => number {
-  switch (op) {
-    case 'add':
-      return (a, b) => a + b;
-    case 'sub':
-      return (a, b) => a - b;
-    case 'mul':
-      return (a, b) => a * b;
-    case 'min':
-      return (a, b) => Math.min(a, b);
-    case 'max':
-      return (a, b) => Math.max(a, b);
-    default:
-      return (a, _b) => a; // default to first
-  }
-}
 
 /**
  * Map operation name to OpCode
@@ -92,67 +70,3 @@ registerBlockType({
   ],
   lower: lowerFieldZipNumber,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const FieldZipNumberBlock: BlockCompiler = {
-  type: 'FieldZipNumber',
-
-  inputs: [
-    { name: 'a', type: { kind: 'Field:float' }, required: true },
-    { name: 'b', type: { kind: 'Field:float' }, required: true },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Field:float' } },
-  ],
-
-  compile({ params, inputs }) {
-    const fieldA = inputs.a;
-    const fieldB = inputs.b;
-
-    if (!isDefined(fieldA) || fieldA.kind !== 'Field:float') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'FieldZipNumber requires a Field<float> for input A',
-        },
-      };
-    }
-
-    if (!isDefined(fieldB) || fieldB.kind !== 'Field:float') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'FieldZipNumber requires a Field<float> for input B',
-        },
-      };
-    }
-
-    const op = typeof params.op === 'string' ? params.op : 'add';
-
-    const fieldAFn = fieldA.value;
-    const fieldBFn = fieldB.value;
-    const zipOp = getZipOperation(op);
-
-    // Create zipped field
-    const field: Field<float> = (seed, n, ctx) => {
-      const valuesA = fieldAFn(seed, n, ctx);
-      const valuesB = fieldBFn(seed, n, ctx);
-      const count = Math.min(valuesA.length, valuesB.length);
-
-      const out = new Array<number>(count);
-      for (let i = 0; i < count; i++) {
-        out[i] = zipOp(valuesA[i], valuesB[i]);
-      }
-
-      return out;
-    };
-
-    return {
-      out: { kind: 'Field:float', value: field },
-    };
-  },
-};

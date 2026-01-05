@@ -2,10 +2,9 @@ import type { RootStore } from '../stores/RootStore';
 import type { Block, Edge } from '../types';
 import { compilePatch } from './compile';
 import { createCompileCtx } from './context';
-import { createBlockRegistry } from './blocks';
+import { registerCompilerBlocks } from './blocks';
 import type {
   BlockInstance,
-  BlockRegistry,
   CompileResult,
   CompiledProgram,
   CompilerPatch,
@@ -15,7 +14,6 @@ import type {
 import { buildDecorations, emptyDecorations, type DecorationSet } from './error-decorations';
 import { getBlockDefinition } from '../blocks';
 import { createDiagnostic, type Diagnostic, type DiagnosticCode, type TargetRef } from '../diagnostics/types';
-import { getFeatureFlags } from './featureFlags';
 
 // =============================================================================
 // Diagnostic Conversion
@@ -280,13 +278,11 @@ function generateBusDiagnostics(
  */
 export function injectDefaultSourceProviders(
   store: RootStore,
-  patch: CompilerPatch,
-  registry: BlockRegistry
+  patch: CompilerPatch
 ): CompilerPatch {
   // NOTE: This function is now a no-op since GraphNormalizer handles all
   // structural blocks. Advanced providers (System 1) will be migrated later.
   void store;
-  void registry;
   return patch;
 }
 
@@ -369,9 +365,6 @@ export interface CompilerService {
   /** Get the latest full compile result */
   getLatestResult(): CompileResult | null;
 
-  /** Get the block registry */
-  getRegistry(): BlockRegistry;
-
   /** Get error decorations for UI display */
   getDecorations(): DecorationSet;
 
@@ -383,7 +376,7 @@ export interface CompilerService {
  * Create a compiler service for an EditorStore.
  */
 export function createCompilerService(store: RootStore): CompilerService {
-  const registry = createBlockRegistry();
+  registerCompilerBlocks();
   const ctx = createCompileCtx();
 
   let lastResult: CompileResult | null = null;
@@ -418,8 +411,7 @@ export function createCompilerService(store: RootStore): CompilerService {
         );
 
         const seed: Seed = store.uiStore.settings.seed;
-        // Use feature flag to control IR emission (legacy mode when emitIR=false)
-        const result = compilePatch(patch, registry, seed, ctx, { emitIR: getFeatureFlags().emitIR });
+        const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
         const durationMs = performance.now() - startTime;
 
@@ -545,10 +537,6 @@ export function createCompilerService(store: RootStore): CompilerService {
 
     getLatestResult(): CompileResult | null {
       return lastResult;
-    },
-
-    getRegistry(): BlockRegistry {
-      return registry;
     },
 
     getDecorations(): DecorationSet {

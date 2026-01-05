@@ -6,7 +6,6 @@
  * Provides Signal:time values (absolute time in milliseconds).
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -71,46 +70,3 @@ registerBlockType({
   ],
   lower: lowerDSConstSignalTime,
 });
-
-// =============================================================================
-// Legacy Compiler
-// =============================================================================
-
-/**
- * Legacy compiler implementation (will be removed in Phase 4).
- *
- * Works in two modes:
- * 1. Pass-through mode: If value input is connected, pass it through
- * 2. Provider mode: If value input is not connected, emit absolute time signal
- */
-export const DSConstSignalTimeBlock: BlockCompiler = {
-  type: 'DSConstSignalTime',
-
-  inputs: [
-    { name: 'value', type: { kind: 'Signal:Time' }, required: false }, // Optional for provider mode
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Signal:Time' } },
-  ],
-
-  compile({ inputs }) {
-    const valueArtifact = inputs.value;
-
-    // Pass-through mode: if we have a valid input, forward it
-    if (valueArtifact !== undefined && valueArtifact.kind === 'Signal:Time') {
-      return {
-        out: valueArtifact,
-      };
-    }
-
-    // Provider mode: emit time signal (absolute time in ms)
-    // This gets the current time from RuntimeCtx
-    return {
-      out: {
-        kind: 'Signal:Time',
-        value: (_t: number, ctx: RuntimeCtx) => ctx.tMs ?? 0,
-      },
-    };
-  },
-};

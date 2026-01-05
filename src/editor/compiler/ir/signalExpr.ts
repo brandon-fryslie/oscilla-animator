@@ -2,7 +2,7 @@
  * SignalExpr Schema
  *
  * Signal expressions as data - the canonical representation of time-varying values.
- * NO closures, NO hidden state - everything is explicit and inspectable.
+ * No hidden state; closureBridge is the only temporary legacy escape hatch.
  *
  * Philosophy: Signals as data, not closures - enables inspection and serialization.
  *
@@ -100,10 +100,7 @@ export type SignalExprIR =
   | SignalExprStateful
 
   // TEMPORARY: Closure bridge for migration (Sprint 6)
-  | SignalExprClosureBridge
-
-  // TEMPORARY: V1 closure wrapper for V2 adapter (Phase 0, Sprint 3)
-  | SignalExprClosure;
+  | SignalExprClosureBridge;
 
 // -----------------------------------------------------------------------------
 // Individual Signal Expression Kinds
@@ -226,52 +223,6 @@ export interface SignalExprClosureBridge {
   closureId: string;
   /** Optional evaluated signal inputs to pass to closure (reserved for future) */
   inputSlots: SigExprId[];
-}
-
-/**
- * TEMPORARY: V1 closure wrapper for V2 adapter (Phase 0, Sprint 3).
- *
- * Embeds a V1 closure function directly as a leaf node in V2 expression trees.
- * This enables the V2 adapter to convert V1 Artifact closures into IR nodes
- * that can be used as inputs to V2 block compilers.
- *
- * Key difference from closureBridge:
- * - closureBridge: Uses closureId to look up closure in registry
- * - closure: Directly embeds closureFn in the node
- *
- * Philosophy:
- * - Enables V1→V2→V1 block chains during migration
- * - Closure is called with (t, ctx) at evaluation time using same signature as closureBridge
- * - Result is cached like any other node
- * - Will be REMOVED once V1 adapter is no longer needed
- *
- * References:
- * - .agent_planning/phase0-architecture-refactoring/PLAN-2025-12-31-170000-sprint3-v2-adapter.md §1
- * - compiler-final/ARCHITECTURE-RECOMMENDATIONS.md lines 462-484
- */
-export interface SignalExprClosure {
-  kind: "closure";
-  type: TypeDesc;
-  /**
-   * V1 closure function - matches LegacyClosure signature from closureBridge.
-   * Takes (tAbsMs, ctx) where ctx has {deltaSec, deltaMs, frameIndex}.
-   */
-  closureFn: (tAbsMs: number, ctx: LegacyClosureContext) => number;
-}
-
-// =============================================================================
-
-/**
- * Legacy closure context - runtime information for V1 closures.
- *
- * This is a minimal interface matching what V1 closures actually use.
- * Note: V1 Artifacts are typed to accept compiler RuntimeCtx (with viewport),
- * but in practice closures are called with this minimal context.
- */
-export interface LegacyClosureContext {
-  deltaSec: number;
-  deltaMs: number;
-  frameIndex: number;
 }
 
 // =============================================================================

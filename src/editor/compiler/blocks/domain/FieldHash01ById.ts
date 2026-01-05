@@ -7,27 +7,8 @@
  * Uses a simple hash function based on element ID and seed.
  */
 
-import type { BlockCompiler, Field, Artifact } from '../../types';
-import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 import { OpCode } from '../../ir/opcodes';
-
-/**
- * Simple hash function that produces a number in [0, 1)
- */
-function hash01(elementId: string, seed: number): number {
-  // Simple hash combining element ID char codes with seed
-  let h = seed;
-  for (let i = 0; i < elementId.length; i++) {
-    h = ((h << 5) - h + elementId.charCodeAt(i)) | 0;
-    h = Math.imul(h, 0x5bd1e995);
-    h ^= h >>> 15;
-  }
-
-  // Normalize to [0, 1)
-  const t = (h * 12.9898 + 78.233) * 43758.5453;
-  return t - Math.floor(t);
-}
 
 // =============================================================================
 // IR Lowering (Phase 3 Migration)
@@ -76,69 +57,3 @@ registerBlockType({
   ],
   lower: lowerFieldHash01ById,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const FieldHash01ByIdBlock: BlockCompiler = {
-  type: 'FieldHash01ById',
-
-  inputs: [
-    { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'seed', type: { kind: 'Scalar:float' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'u', type: { kind: 'Field:float' } },
-  ],
-
-  compile({ inputs, params }) {
-    const domainArtifact = inputs.domain;
-    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
-      return {
-        u: {
-          kind: 'Error',
-          message: 'FieldHash01ById requires a Domain input',
-        },
-      };
-    }
-
-    const domain = domainArtifact.value;
-
-    // Extract seed with params fallback (for tests using old params system)
-    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
-      if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:float' || artifact.kind === 'Signal:float') {
-        return Number(artifact.value);
-      }
-      if ('value' in artifact && artifact.value !== undefined) {
-        return typeof artifact.value === 'function'
-          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
-          : Number(artifact.value);
-      }
-      return defaultValue;
-    };
-
-    const paramsObj = params as { seed?: number } | undefined;
-    const blockSeed = extractNumber(inputs.seed, paramsObj?.seed ?? 0);
-
-    // Create field that produces deterministic random per element
-    const field: Field<float> = (seed, n) => {
-      const count = Math.min(n, domain.elements.length);
-      const out = new Array<number>(count);
-      const combinedSeed = seed + blockSeed;
-
-      for (let i = 0; i < count; i++) {
-        const elementId = domain.elements[i];
-        out[i] = hash01(elementId, combinedSeed);
-      }
-
-      return out;
-    };
-
-    return {
-      u: { kind: 'Field:float', value: field },
-    };
-  },
-};

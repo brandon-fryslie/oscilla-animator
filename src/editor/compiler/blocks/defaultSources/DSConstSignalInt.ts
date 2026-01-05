@@ -5,7 +5,6 @@
  * This block exists to enable "all defaults are blocks" architecture.
  */
 
-import type { BlockCompiler } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -45,40 +44,3 @@ registerBlockType({
   lower: lowerDSConstSignalInt,
 });
 
-// =============================================================================
-// Legacy Compiler
-// =============================================================================
-
-/**
- * Legacy compiler implementation (will be removed in Phase 4).
- * Pass-through: outputs.out = inputs.value
- */
-export const DSConstSignalIntBlock: BlockCompiler = {
-  type: 'DSConstSignalInt',
-
-  inputs: [
-    { name: 'value', type: { kind: 'Signal:int' }, required: true },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Signal:int' } },
-  ],
-
-  compile({ inputs }) {
-    const valueArtifact = inputs.value;
-
-    if (valueArtifact === undefined || valueArtifact.kind !== 'Signal:int') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'DSConstSignalInt requires Signal<int> for value input',
-        },
-      };
-    }
-
-    // Trivial pass-through
-    return {
-      out: valueArtifact,
-    };
-  },
-};

@@ -6,7 +6,6 @@
  * Provides Signal:phase values (0..1 normalized phase).
  */
 
-import type { BlockCompiler } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -73,45 +72,3 @@ registerBlockType({
   lower: lowerDSConstSignalPhase,
 });
 
-// =============================================================================
-// Legacy Compiler
-// =============================================================================
-
-/**
- * Legacy compiler implementation (will be removed in Phase 4).
- *
- * Works in two modes:
- * 1. Pass-through mode: If value input is connected, pass it through
- * 2. Provider mode: If value input is not connected, emit constant from params
- */
-export const DSConstSignalPhaseBlock: BlockCompiler = {
-  type: 'DSConstSignalPhase',
-
-  inputs: [
-    { name: 'value', type: { kind: 'Signal:phase' }, required: false }, // Optional for provider mode
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Signal:phase' } },
-  ],
-
-  compile({ inputs, params }) {
-    const valueArtifact = inputs.value;
-
-    // Pass-through mode: if we have a valid input, forward it
-    if (valueArtifact !== undefined && valueArtifact.kind === 'Signal:phase') {
-      return {
-        out: valueArtifact,
-      };
-    }
-
-    // Provider mode: emit constant from params
-    const constValue = (params?.value as number) ?? 0;
-    return {
-      out: {
-        kind: 'Signal:phase',
-        value: () => constValue,
-      },
-    };
-  },
-};

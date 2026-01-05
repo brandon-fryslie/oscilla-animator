@@ -5,13 +5,9 @@
  * Detects when (phase * divisions) crosses integer boundaries.
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
 import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
-import { isDefined } from '../../../types/helpers';
-
-type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
 // =============================================================================
 // IR Lowering
@@ -106,60 +102,3 @@ registerBlockType({
   ],
   lower: lowerPulseDivider,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const PulseDividerBlock: BlockCompiler = {
-  type: 'PulseDivider',
-
-  inputs: [
-    { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
-    { name: 'divisions', type: { kind: 'Scalar:int' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'tick', type: { kind: 'Signal:Unit' } },
-  ],
-
-  compile({ inputs }) {
-    const phaseArtifact = inputs.phase;
-    if (!isDefined(phaseArtifact) || phaseArtifact.kind !== 'Signal:phase') {
-      return {
-        tick: {
-          kind: 'Error',
-          message: 'PulseDivider requires a Signal<phase> input',
-        },
-      };
-    }
-
-    const phaseSignal = phaseArtifact.value as Signal<float>;
-    // Read from inputs - values come from defaultSource or explicit connections
-    const divisionsArtifact = inputs.divisions;
-    const divisions: int = divisionsArtifact !== undefined && 'value' in divisionsArtifact
-      ? Number(divisionsArtifact.value)
-      : 4;
-
-    // State for edge detection
-    let lastSubPhase: int = -1;
-
-    // Event signal: returns 1 on tick frame, 0 otherwise
-    const eventSignal: Signal<float> = (t: number, ctx: RuntimeCtx): number => {
-      const phase = phaseSignal(t, ctx);
-      const subPhase: int = Math.floor(phase * divisions);
-
-      // Detect crossing
-      if (subPhase !== lastSubPhase) {
-        lastSubPhase = subPhase;
-        return 1;
-      }
-
-      return 0;
-    };
-
-    return {
-      tick: { kind: 'Signal:Unit', value: eventSignal },
-    };
-  },
-};

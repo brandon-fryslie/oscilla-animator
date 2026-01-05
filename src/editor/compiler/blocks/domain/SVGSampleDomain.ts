@@ -8,12 +8,9 @@
  * Sampled positions (pos0) are deterministic based on the SVG path and sample count.
  */
 
-import type { BlockCompiler, Vec2, Domain, Artifact } from '../../types';
-import { createDomain } from '../../unified/Domain';
+import type { Vec2 } from '../../types';
 import { isDefined, isNonEmptyString } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
-
-type PositionField = (seed: number, n: number) => readonly Vec2[];
 
 /**
  * Simple SVG path parser and sampler.
@@ -337,75 +334,3 @@ registerBlockType({
   ],
   lower: lowerSVGSampleDomain,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const SVGSampleDomainBlock: BlockCompiler = {
-  type: 'SVGSampleDomain',
-
-  inputs: [
-    { name: 'asset', type: { kind: 'Scalar:string' }, required: false },
-    { name: 'sampleCount', type: { kind: 'Scalar:int' }, required: false },
-    { name: 'seed', type: { kind: 'Scalar:int' }, required: false },
-    { name: 'distribution', type: { kind: 'Scalar:string' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'domain', type: { kind: 'Domain' } },
-    { name: 'pos0', type: { kind: 'Field:vec2' } },
-  ],
-
-  compile({ id, inputs }) {
-    // Read from inputs - values come from defaultSource or explicit connections
-    const assetArtifact = inputs.asset as Artifact | undefined;
-    const asset = assetArtifact?.kind === 'Scalar:string' ? String(assetArtifact.value) : '';
-
-    const sampleCountArtifact = inputs.sampleCount as Artifact | undefined;
-    const sampleCount: int = Math.max(
-      1,
-      Math.floor(
-        Number(
-          sampleCountArtifact?.kind === 'Scalar:int' || sampleCountArtifact?.kind === 'Scalar:float'
-            ? sampleCountArtifact.value
-            : 100
-        )
-      )
-    );
-
-    const seedArtifact = inputs.seed as Artifact | undefined;
-    const seed: int = Number(
-      seedArtifact?.kind === 'Scalar:int' || seedArtifact?.kind === 'Scalar:float'
-        ? seedArtifact.value
-        : 0
-    );
-
-    const distributionArtifact = inputs.distribution as Artifact | undefined;
-    const distribution = String(distributionArtifact?.kind === 'Scalar:string' ? distributionArtifact.value : 'even') as 'even' | 'parametric';
-
-    // Create stable element IDs: "sample-N"
-    const elementIds: string[] = [];
-    for (let i = 0; i < sampleCount; i++) {
-      elementIds.push(`sample-${i}`);
-    }
-
-    // Create domain with stable IDs
-    const domainId = `svg-domain-${id}-${sampleCount}-${seed}`;
-    const domain: Domain = createDomain(domainId, elementIds);
-
-    // Sample the SVG path to get positions
-    const sampledPoints = sampleSVGPath(asset, sampleCount, distribution);
-
-    // Create position field (sampled positions)
-    const positionField: PositionField = (_seed, n) => {
-      const count: int = Math.min(n, sampleCount);
-      return sampledPoints.slice(0, count);
-    };
-
-    return {
-      domain: { kind: 'Domain', value: domain },
-      pos0: { kind: 'Field:vec2', value: positionField },
-    };
-  },
-};

@@ -1,0 +1,95 @@
+Agent: iterative-implementer | 2026-01-05T04:50:00Z
+Mode: manual
+Completed: v2 Runtime Layer Implementation | Files: 11 | Commits: 0 (v2 not yet in git)
+Tests: 15 passing (11 compiler + 4 runtime integration)
+Status: complete
+
+## Work Completed
+
+### Phase 1: Architecture Docs
+- Copied design-docs/final-System-Invariants/ from v1 to v2
+- 18 files copied for reference
+
+### Phase 2: Runtime Foundation
+- BufferPool.ts: Pool for typed array allocation (f32, vec2f32, rgba8)
+- timeResolution.ts: Time model resolution (finite/cyclic/infinite)
+
+### Phase 3: Runtime Core
+- RuntimeState.ts: ValueStore, FrameCache, TimeState
+- Materializer.ts: Field expression to buffer conversion (IR only, no legacy)
+- ScheduleExecutor.ts: Step-by-step frame execution
+
+### Phase 4: Renderer
+- render/types.ts: RenderFrameIR, RenderPassIR types
+- render/Canvas2DRenderer.ts: renderFrame() for 2D canvas
+- render/index.ts: Public exports
+
+### Phase 5: Integration Tests
+- runtime/__tests__/integration.test.ts: 4 end-to-end tests
+  - Executes simple animated grid
+  - Evaluates constant signals with caching
+  - Resolves time for finite models (clamping)
+  - Resolves time for infinite models (unbounded)
+
+## Key Patterns Established
+
+### ONE Path Only
+- NO signalBridge fallback
+- NO legacy RenderTree path
+- NO outputs array (only outputsById exists in compiler)
+- NO feature flags or dual modes
+
+### IR-Only Evaluation
+- Materializer works directly with FieldExpr IR types
+- ScheduleExecutor dispatches Step IR types
+- OpCode-based function application
+
+### Stamp-Based Caching
+- FrameCache uses frameId stamps for validation
+- No array clearing between frames
+- Cache valid when stamp === frameId
+
+## Validation
+
+```bash
+cd ~/code/oscilla-animator-v2
+npm run typecheck  # ✓ PASS
+npm test           # ✓ 15/15 tests passing
+```
+
+## Files Created
+
+Runtime:
+- src/runtime/BufferPool.ts
+- src/runtime/timeResolution.ts
+- src/runtime/RuntimeState.ts
+- src/runtime/Materializer.ts
+- src/runtime/ScheduleExecutor.ts
+- src/runtime/index.ts
+
+Renderer:
+- src/render/types.ts
+- src/render/Canvas2DRenderer.ts
+- src/render/index.ts
+
+Tests:
+- src/runtime/__tests__/integration.test.ts
+
+Docs:
+- design-docs/final-System-Invariants/*.md (18 files)
+
+## Next Steps
+
+v2 runtime layer is complete and working. Ready for:
+1. UI layer (rebuild against clean runtime)
+2. Additional blocks (port from v1 as needed)
+3. Visual testing (actual canvas rendering)
+4. Performance optimization
+5. Hot-swap support (if needed)
+
+## Notes
+
+- v2 project not yet in git (is in ~/code/oscilla-animator-v2)
+- All v1 legacy patterns successfully avoided
+- Tests verify behavior, not implementation patterns
+- Runtime simplified vs v1 (no hot-swap complexity initially)

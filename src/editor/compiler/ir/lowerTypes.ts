@@ -245,8 +245,7 @@ export interface BlockTypeDecl {
 /**
  * Global registry of BlockTypeDecl declarations.
  *
- * Runs parallel to the existing BlockCompiler registry to support dual-emit mode.
- * Blocks can register BOTH a BlockCompiler (closures) AND a BlockTypeDecl (IR).
+ * Global registry of BlockTypeDecl declarations for IR lowering.
  */
 const blockTypeRegistry = new Map<string, BlockTypeDecl>();
 

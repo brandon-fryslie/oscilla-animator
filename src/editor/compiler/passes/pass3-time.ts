@@ -28,10 +28,10 @@ import { IRBuilderImpl } from "../ir/IRBuilderImpl";
  * There must be exactly one TimeRoot block (FiniteTimeRoot or InfiniteTimeRoot).
  *
  * @param blocks - All blocks in the patch
- * @returns The TimeRoot block
- * @throws Error if no TimeRoot or multiple TimeRoots found
+ * @param errors - Error accumulator
+ * @returns The TimeRoot block (first one if multiple found for continued validation)
  */
-function findTimeRoot(blocks: ReadonlyMap<string, unknown>): Block {
+function findTimeRoot(blocks: ReadonlyMap<string, unknown>, errors: string[]): Block {
   const timeRoots: Block[] = [];
 
   // Use Array.from() to avoid downlevelIteration issues
@@ -44,16 +44,13 @@ function findTimeRoot(blocks: ReadonlyMap<string, unknown>): Block {
   }
 
   if (timeRoots.length === 0) {
-    throw new Error(
-      "Compiler error: No TimeRoot block found. Every patch must have exactly one TimeRoot."
-    );
+    errors.push("No TimeRoot block found. Every patch must have exactly one TimeRoot.");
+    // Return a dummy block to allow continued validation - errors will be thrown at end
+    return { id: '__missing__', type: 'FiniteTimeRoot', label: '', params: {}, position: { x: 0, y: 0 }, form: 'primitive' } as Block;
   }
 
   if (timeRoots.length > 1) {
-    throw new Error(
-      `Compiler error: Multiple TimeRoot blocks found (${timeRoots.length}). ` +
-      "Every patch must have exactly one TimeRoot."
-    );
+    errors.push(`Multiple TimeRoot blocks found (${timeRoots.length}). Every patch must have exactly one TimeRoot. Block IDs: ${timeRoots.map(b => b.id).join(', ')}`);
   }
 
   return timeRoots[0];
@@ -65,21 +62,22 @@ function findTimeRoot(blocks: ReadonlyMap<string, unknown>): Block {
  * Reads the TimeRoot's parameters and creates the canonical TimeModelIR.
  *
  * @param timeRoot - The TimeRoot block
+ * @param errors - Error accumulator
  * @returns TimeModelIR specification
  */
-function extractTimeModel(timeRoot: Block): TimeModelIR {
+function extractTimeModel(timeRoot: Block, errors: string[]): TimeModelIR {
   // For FiniteTimeRoot blocks
   if (timeRoot.type === "FiniteTimeRoot") {
     const durationMs = timeRoot.params?.durationMs as number | undefined;
     const duration = durationMs ?? 10000; // Default 10s duration
 
     if (duration <= 0) {
-      throw new Error(`Invalid TimeRoot duration: ${duration}ms. Duration must be > 0.`);
+      errors.push(`Invalid TimeRoot duration: ${duration}ms. Duration must be > 0. (block: ${timeRoot.id})`);
     }
 
     return {
       kind: "finite",
-      durationMs: duration,
+      durationMs: Math.max(1, duration), // Use valid value to continue validation
     };
   }
 
@@ -90,12 +88,12 @@ function extractTimeModel(timeRoot: Block): TimeModelIR {
     const mode = (timeRoot.params?.mode as "loop" | "pingpong") ?? "loop";
 
     if (period <= 0) {
-      throw new Error(`Invalid TimeRoot period: ${period}ms. Period must be > 0.`);
+      errors.push(`Invalid TimeRoot period: ${period}ms. Period must be > 0. (block: ${timeRoot.id})`);
     }
 
     return {
       kind: "cyclic",
-      periodMs: period,
+      periodMs: Math.max(1, period), // Use valid value to continue validation
       mode,
       phaseDomain: "0..1",
     };
@@ -113,12 +111,12 @@ function extractTimeModel(timeRoot: Block): TimeModelIR {
     const mode = (timeRoot.params?.mode as "loop" | "pingpong") ?? "loop";
 
     if (period <= 0) {
-      throw new Error(`Invalid TimeRoot period: ${period}ms. Period must be > 0.`);
+      errors.push(`Invalid TimeRoot period: ${period}ms. Period must be > 0. (block: ${timeRoot.id})`);
     }
 
     return {
       kind: "cyclic",
-      periodMs: period,
+      periodMs: Math.max(1, period),
       mode,
       phaseDomain: "0..1",
     };
@@ -129,12 +127,12 @@ function extractTimeModel(timeRoot: Block): TimeModelIR {
     const dur = duration ?? 10000; // Default 10s duration
 
     if (dur <= 0) {
-      throw new Error(`Invalid TimeRoot duration: ${dur}ms. Duration must be > 0.`);
+      errors.push(`Invalid TimeRoot duration: ${dur}ms. Duration must be > 0. (block: ${timeRoot.id})`);
     }
 
     return {
       kind: "finite",
-      durationMs: dur,
+      durationMs: Math.max(1, dur),
     };
   }
 
@@ -199,6 +197,8 @@ function generateTimeSignals(timeModel: TimeModelIR): TimeSignals {
  *
  * Infers time model from TimeRoot block and generates canonical time signals.
  *
+ * Accumulates all errors before throwing, so users see all problems at once.
+ *
  * Algorithm:
  * 1. Find TimeRoot block (exactly one required)
  * 2. Extract TimeModel IR from TimeRoot parameters
@@ -207,18 +207,29 @@ function generateTimeSignals(timeModel: TimeModelIR): TimeSignals {
  *
  * @param typedPatch - TypedPatch from Pass 2
  * @returns TimeResolvedPatch with TimeModelIR + TimeSignals
+ * @throws Error with all accumulated errors if validation fails
  */
 export function pass3TimeTopology(
   typedPatch: TypedPatch
 ): TimeResolvedPatch {
+  const errors: string[] = [];
+
   // Step 1: Find TimeRoot block
-  const timeRoot = findTimeRoot(typedPatch.blocks);
+  const timeRoot = findTimeRoot(typedPatch.blocks, errors);
 
   // Step 2: Extract TimeModel IR
-  const timeModel = extractTimeModel(timeRoot);
+  const timeModel = extractTimeModel(timeRoot, errors);
 
   // Step 3: Generate canonical time signals
   const timeSignals = generateTimeSignals(timeModel);
+
+  // Throw all accumulated errors at once
+  if (errors.length > 0) {
+    const errorSummary = errors.map((e) => `  - ${e}`).join("\n");
+    throw new Error(
+      `Pass 3 (Time Topology) failed with ${errors.length} error(s):\n${errorSummary}`
+    );
+  }
 
   // Step 4: Return TimeResolvedPatch
   return {

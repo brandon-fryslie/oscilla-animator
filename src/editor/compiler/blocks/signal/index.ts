@@ -1,17 +1,18 @@
 /**
- * Signal Block Compilers
+ * Signal Block Registration
  *
- * Compilers for signal processing primitives.
+ * Imports all signal-related IR block lowerings for registration.
  */
 
-export { OscillatorBlock } from './Oscillator';
-export { ShaperBlock } from './Shaper';
-export { ColorLFOBlock } from './ColorLFO';
-export { AddSignalBlock } from './AddSignal';
-export { SubSignalBlock } from './SubSignal';
-export { MulSignalBlock } from './MulSignal';
-export { DivSignalBlock } from './DivSignal';
-export { MinSignalBlock } from './MinSignal';
-export { MaxSignalBlock } from './MaxSignal';
-export { ClampSignalBlock } from './ClampSignal';
-export { BroadcastSignalColorBlock } from './BroadcastSignalColor';
+import './Oscillator';
+import './Shaper';
+import './ColorLFO';
+import './AddSignal';
+import './MulSignal';
+import './SubSignal';
+import './DivSignal';
+import './ClampSignal';
+import './MaxSignal';
+import './MinSignal';
+import './SignalExpression';
+import './BroadcastSignalColor';

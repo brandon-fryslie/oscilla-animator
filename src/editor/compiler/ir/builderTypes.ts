@@ -354,7 +354,7 @@ export interface BuilderProgramIR {
   /**
    * Bus roots created during Pass7 lowering.
    * Maps bus indices to their root value references.
-   * Note: This is populated by pass7BusLowering, not by the builder itself.
+   * Note: This remains empty in IR-only mode; buses are lowered as blocks.
    */
   busRoots: readonly BusRootEntry[];
 }

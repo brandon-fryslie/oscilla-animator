@@ -4,11 +4,9 @@
  * Clamps signal values to a specified range.
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 import { OpCode } from '../../ir/opcodes';
 
-type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
 // =============================================================================
 // IR Lowering (Phase 3 Migration)
@@ -57,50 +55,3 @@ registerBlockType({
   ],
   lower: lowerClampSignal,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const ClampSignalBlock: BlockCompiler = {
-  type: 'ClampSignal',
-
-  inputs: [
-    { name: 'in', type: { kind: 'Signal:float' }, required: true },
-    { name: 'min', type: { kind: 'Scalar:float' }, required: false },
-    { name: 'max', type: { kind: 'Scalar:float' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Signal:float' } },
-  ],
-
-  compile({ inputs }) {
-    const inputArtifact = inputs.in;
-    if (inputArtifact === undefined || inputArtifact.kind !== 'Signal:float') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'ClampSignal requires a Signal<float> input',
-        },
-      };
-    }
-
-    const inputSignal = inputArtifact.value as Signal<float>;
-    // Read from inputs - values come from defaultSource or explicit connections
-    const minArtifact = inputs.min;
-    const min = Number(minArtifact !== undefined && 'value' in minArtifact ? minArtifact.value : 0);
-    const maxArtifact = inputs.max;
-    const max = Number(maxArtifact !== undefined && 'value' in maxArtifact ? maxArtifact.value : 1);
-
-    // Create clamped signal
-    const signal: Signal<float> = (t: number, ctx: RuntimeCtx): number => {
-      const value = inputSignal(t, ctx);
-      return Math.max(min, Math.min(max, value));
-    };
-
-    return {
-      out: { kind: 'Signal:float', value: signal },
-    };
-  },
-};

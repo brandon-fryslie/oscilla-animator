@@ -4,8 +4,7 @@
  * Core types for the patch → program compiler.
  * Based on the typed "Option A" architecture:
  * - Patch graph is made of blocks with typed ports
- * - Compilation is a topo-ordered reduction producing typed Artifacts per output port
- * - Final Artifact must be a RenderTreeProgram
+ * - Compilation produces IR and a runnable program with TimeModel
  * - Phase 2: Buses as first-class graph nodes
  */
 
@@ -320,8 +319,8 @@ import type { LensInstance, AdapterStep } from '../types';
 // Re-export for consumers
 export type { Bus, LensInstance, AdapterStep };
 
-// Import Domain from unified compiler
-import type { Domain } from './unified/Domain';
+// Import Domain from core types
+import type { Domain } from '../../core/types';
 // Re-export Domain for consumers
 export type { Domain };
 
@@ -396,44 +395,6 @@ export type Artifact =
 
   // Error artifact (returned by block compilers on validation failure)
   | { kind: 'Error'; message: string; value?: undefined; where?: { blockId?: string; port?: string } };
-
-export type CompiledOutputs = Record<string, Artifact>;
-
-export interface BlockCompiler {
-  type: string;
-
-  /** Declared input ports */
-  inputs: readonly PortDef[];
-
-  /** Declared output ports */
-  outputs: readonly PortDef[];
-
-  /**
-   * Compile a block instance using already-compiled upstream Artifacts.
-   * Must be pure. May construct Fields/Specs/Programs that are pure given inputs.
-   */
-  compile(args: {
-    id: BlockId;
-    params: Record<string, unknown>;
-    inputs: Record<string, Artifact>;
-    ctx: CompileCtx;
-  }): CompiledOutputs;
-}
-
-/**
- * Registry mapping block type names to their compilers.
- */
-export type BlockRegistry = Record<string, BlockCompiler>;
-
-/**
- * Auto-publication from TimeRoot blocks.
- * Used to automatically inject system bus publishers.
- */
-export interface AutoPublication {
-  busName: string;
-  artifactKey: string;
-  sortKey: number;
-}
 
 // =============================================================================
 // Compile Errors
@@ -519,14 +480,6 @@ export interface CompileResult {
   programIR?: CompiledProgramIR;
   /** Debug index mapping IR nodes to source blocks */
   debugIndex?: DebugIndex;
-
-  // Legacy bus-aware compiler compatibility
-  /** Warnings from IR generation (legacy) */
-  irWarnings?: CompileError[];
-  /** Compiled IR (legacy - use programIR instead) */
-  compiledIR?: unknown;
-  /** Compiled port map (legacy) */
-  compiledPortMap?: Map<string, Artifact>;
 }
 
 /**

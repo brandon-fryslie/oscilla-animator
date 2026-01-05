@@ -67,7 +67,7 @@ describe('SemanticGraph', () => {
             from: { kind: 'port', blockId: 'block1', slotId: 'progress' },
             to: { kind: 'port', blockId: 'block2', slotId: 'progress' },
             enabled: true,
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
         ],
       };
@@ -103,8 +103,8 @@ describe('SemanticGraph', () => {
           { id: 'c', type: 'C', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [{ id: 'out', type: T('Signal:float') }] },
         ],
         edges: [
-          { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
-          { id: 'conn2', from: { kind: 'port', blockId: 'b', slotId: 'out' }, to: { kind: 'port', blockId: 'c', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
+          { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user', meta: {} } },
+          { id: 'conn2', from: { kind: 'port', blockId: 'b', slotId: 'out' }, to: { kind: 'port', blockId: 'c', slotId: 'in' }, enabled: true, role: { kind: 'user', meta: {} } },
         ],
       };
 
@@ -120,8 +120,8 @@ describe('SemanticGraph', () => {
           { id: 'b', type: 'B', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [{ id: 'out', type: T('Signal:float') }] },
         ],
         edges: [
-          { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
-          { id: 'conn2', from: { kind: 'port', blockId: 'b', slotId: 'out' }, to: { kind: 'port', blockId: 'a', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
+          { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user', meta: {} } },
+          { id: 'conn2', from: { kind: 'port', blockId: 'b', slotId: 'out' }, to: { kind: 'port', blockId: 'a', slotId: 'in' }, enabled: true, role: { kind: 'user', meta: {} } },
         ],
       };
 
@@ -140,8 +140,8 @@ describe('SemanticGraph', () => {
           { id: 'c', type: 'C', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [{ id: 'out', type: T('Signal:float') }] },
         ],
         edges: [
-          { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
-          { id: 'conn2', from: { kind: 'port', blockId: 'b', slotId: 'out' }, to: { kind: 'port', blockId: 'c', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
+          { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user', meta: {} } },
+          { id: 'conn2', from: { kind: 'port', blockId: 'b', slotId: 'out' }, to: { kind: 'port', blockId: 'c', slotId: 'in' }, enabled: true, role: { kind: 'user', meta: {} } },
         ],
       };
 
@@ -168,9 +168,9 @@ describe('SemanticGraph', () => {
           { id: 'd', type: 'D', inputs: [{ id: 'in', type: T('Signal:float') }], outputs: [] },
         ],
         edges: [
-          { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
-          { id: 'conn2', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'c', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
-          { id: 'conn3', from: { kind: 'port', blockId: 'b', slotId: 'out' }, to: { kind: 'port', blockId: 'd', slotId: 'in' }, enabled: true, role: { kind: 'user' } },
+          { id: 'conn1', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'b', slotId: 'in' }, enabled: true, role: { kind: 'user', meta: {} } },
+          { id: 'conn2', from: { kind: 'port', blockId: 'a', slotId: 'out' }, to: { kind: 'port', blockId: 'c', slotId: 'in' }, enabled: true, role: { kind: 'user', meta: {} } },
+          { id: 'conn3', from: { kind: 'port', blockId: 'b', slotId: 'out' }, to: { kind: 'port', blockId: 'd', slotId: 'in' }, enabled: true, role: { kind: 'user', meta: {} } },
         ],
       };
 

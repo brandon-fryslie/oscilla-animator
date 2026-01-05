@@ -5,8 +5,6 @@
  * Takes a Domain and produces Field<color>.
  */
 
-import type { BlockCompiler, Field } from '../../types';
-import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -47,49 +45,3 @@ registerBlockType({
   ],
   lower: lowerFieldConstColor,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const FieldConstColorBlock: BlockCompiler = {
-  type: 'FieldConstColor',
-
-  inputs: [
-    { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'color', type: { kind: 'Signal:color' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Field:color' } },
-  ],
-
-  compile({ inputs }) {
-    const domainArtifact = inputs.domain;
-    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'FieldConstColor requires a Domain input',
-        },
-      };
-    }
-
-    const domain = domainArtifact.value;
-
-    // Read from inputs - values come from defaultSource or explicit connections
-    const colorArtifact = inputs.color;
-    const colorValue = colorArtifact !== undefined && 'value' in colorArtifact ? colorArtifact.value : '#000000';
-    const color = typeof colorValue === 'string' ? colorValue : String(colorValue);
-
-    // Create constant field that returns the same color for all elements
-    const field: Field<unknown> = (_seed, n) => {
-      const count = Math.min(n, domain.elements.length);
-      return new Array(count).fill(color);
-    };
-
-    return {
-      out: { kind: 'Field:color', value: field },
-    };
-  },
-};

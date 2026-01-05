@@ -1,17 +1,15 @@
 /**
  * Pass 6: Block Lowering to IR
  *
- * Translates compiled Artifacts into IR nodes. This pass creates
- * "skeleton" IR nodes that represent the structure of block outputs without
- * full semantic equivalence (that's deferred to Phase 4).
+ * Translates blocks into IR nodes using registered lowering functions.
+ * This pass emits IR nodes for each block output and defers linking to Pass 8.
  *
  * Multi-Input Blocks Integration (2026-01-01):
  * - Use resolveWriters to enumerate all writers to each input
  * - Insert combine nodes when N > 1 writers
  * - Validate combine policies and type compatibility
  *
- * Key insight: Block compilers still emit Artifacts (closures). This pass
- * infers IR structure from those Artifacts rather than modifying block compilers.
+ * Key requirement: All blocks must register IR lowering via registerBlockType().
  *
  * References:
  * - HANDOFF.md Topic 4: Pass 6 - Block Lowering
@@ -44,105 +42,6 @@ import {
 export type { ValueRefPacked } from "../ir/lowerTypes";
 
 // =============================================================================
-// IR-Only Mode Verification (Deliverable 3)
-// =============================================================================
-
-/**
- * VERIFIED_IR_BLOCKS - Set of block types with verified IR lowering
- *
- * ALL registered blocks have complete IR lowering functions and can be
- * compiled in IR-only mode (strictIR=true).
- *
- * This set includes all 63 blocks registered via registerBlockType().
- */
-const VERIFIED_IR_BLOCKS = new Set([
-  // TimeRoot blocks
-  'FiniteTimeRoot',
-  'InfiniteTimeRoot',
-
-  // Domain blocks
-  'GridDomain',
-  'DomainN',
-  'PositionMapGrid',
-  'PositionMapCircle',
-  'PositionMapLine',
-  'PathConst',
-  'StableIdHash',
-  'TriggerOnWrap',
-  'SVGSampleDomain',
-  'JitterFieldVec2',
-  'PhaseClock',
-  'ViewportInfo',
-
-  // Field blocks
-  'FieldConstNumber',
-  'FieldConstColor',
-  'FieldMapNumber',
-  'FieldMapVec2',
-  'FieldAddVec2',
-  'FieldFromSignalBroadcast',
-  'FieldFromExpression',
-  'FieldHash01ById',
-  'FieldReduce',
-  'FieldZipNumber',
-  'FieldZipSignal',
-  'FieldColorize',
-  'FieldHueGradient',
-  'FieldOpacity',
-  'FieldStringToColor',
-
-  // Render blocks
-  'RenderInstances2D',
-  'RenderInstances3D',
-  'RenderPaths2D',
-  'Render2dCanvas',
-
-  // Signal blocks
-  'Oscillator',
-  'AddSignal',
-  'MulSignal',
-  'SubSignal',
-  'DivSignal',
-  'ClampSignal',
-  'ColorLFO',
-  'MaxSignal',
-  'MinSignal',
-  'Shaper',
-  'SignalExpression',
-  'BroadcastSignalColor',
-
-  // Rhythm blocks
-  'EnvelopeAD',
-  'PulseDivider',
-
-  // Scene blocks
-  'Camera',
-
-  // Debug blocks
-  'Print',
-  'DebugDisplay',
-
-  // Default source blocks - Signal
-  'DSConstSignalPhase',
-  'DSConstSignalTime',
-  'DSConstSignalFloat',
-  'DSConstSignalInt',
-  'DSConstSignalColor',
-  'DSConstSignalPoint',
-
-  // Default source blocks - Field
-  'DSConstFieldFloat',
-  'DSConstFieldVec2',
-  'DSConstFieldColor',
-
-  // Default source blocks - Scalar
-  'DSConstScalarInt',
-  'DSConstScalarFloat',
-  'DSConstScalarString',
-  'DSConstScalarWaveform',
-]);
-
-// =============================================================================
 // Types
 // =============================================================================
 
@@ -167,16 +66,6 @@ export interface UnlinkedIRFragments {
 /**
  * Options for pass6BlockLowering
  */
-export interface Pass6Options {
-  /**
-   * When true, blocks in VERIFIED_IR_BLOCKS MUST use IR lowering.
-   * Fallback to closure artifacts will throw an error.
-   *
-   * Default: true (IR-only mode enabled by default)
-   */
-  strictIR?: boolean;
-}
-
 // =============================================================================
 // Helper Functions
 // =============================================================================
@@ -258,7 +147,7 @@ function resolveInputsWithMultiInput(
     // Convert writers to ValueRefs
     const writerRefs: ValueRefPacked[] = [];
     for (const writer of writers) {
-      const writerRef = getWriterValueRef(writer, builder, errors, blockOutputs, blockIdToIndex);
+      const writerRef = getWriterValueRef(writer, errors, blockOutputs, blockIdToIndex);
       if (writerRef !== null) {
         writerRefs.push(writerRef);
       }
@@ -321,7 +210,6 @@ function resolveInputsWithMultiInput(
  * in blockOutputs (IR-lowered blocks).
  *
  * @param writer - Writer specification
- * @param builder - IRBuilder
  * @param errors - Error accumulator
  * @param blockOutputs - Map of block outputs for wire resolution
  * @param blockIdToIndex - Map from block ID to block index
@@ -329,7 +217,6 @@ function resolveInputsWithMultiInput(
  */
 function getWriterValueRef(
   writer: Writer,
-  builder: IRBuilder,
   errors: CompileError[],
   blockOutputs?: Map<BlockIndex, Map<string, ValueRefPacked>>,
   blockIdToIndex?: Map<string, BlockIndex>
@@ -358,36 +245,10 @@ function getWriterValueRef(
     return null;
   }
 
-  // Note: After Sprint 2 migration, all edges are port→port. BusBlock.out edges
-  // are 'wire' writers, not 'bus' writers. Bus value resolution happens in Pass 7.
-
-  if (writer.kind === 'default') {
-    // Default: Create constant node from default type
-    const type = writer.type;
-
-    if (type.world === 'scalar' || type.world === 'config') {
-      // Scalar/config defaults: use const pool
-      const constId = builder.allocConstId(0); // Placeholder value - actual value from defaultSource
-      return { k: 'scalarConst', constId };
-    }
-
-    if (type.world === 'signal') {
-      const sigId = builder.sigConst(0, type as any);
-      const slot = builder.allocValueSlot(type as any);
-      builder.registerSigSlot(sigId, slot);
-      return { k: 'sig', id: sigId, slot };
-    }
-
-    if (type.world === 'field') {
-      const fieldId = builder.fieldConst(0, type as any);
-      const slot = builder.allocValueSlot(type as any);
-      builder.registerFieldSlot(fieldId, slot);
-      return { k: 'field', id: fieldId, slot };
-    }
-
-    // Unsupported world for default
-    return null;
-  }
+  // NOTE: writer.kind === 'default' was removed.
+  // Default sources are now materialized as DSConst blocks by GraphNormalizer.normalize()
+  // before compilation. Those blocks connect via regular wire edges.
+  // If we reach here with an unresolved wire, it's a real error.
 
   return null;
 }
@@ -401,14 +262,13 @@ function getWriterValueRef(
  *
  * All blocks MUST have registered IR lowering functions.
  * All blocks MUST use outputsById pattern.
- * No fallback to legacy artifact-based lowering.
+ * No fallback to non-IR lowering.
  *
  * @param block - Block instance
  * @param blockIndex - Block index
  * @param builder - IRBuilder for emitting IR nodes
  * @param errors - Error accumulator
  * @param edges - Unified edges for multi-input resolution
- * @param strictIR - If true, enforce IR-only mode for VERIFIED_IR_BLOCKS
  * @param blockOutputs - Map of block outputs for wire resolution
  * @param blockIdToIndex - Map from block ID to block index
  * @returns Map of port ID to ValueRefPacked
@@ -419,7 +279,6 @@ function lowerBlockInstance(
   builder: IRBuilder,
   errors: CompileError[],
   edges?: readonly Edge[],
-  strictIR?: boolean,
   blockOutputs?: Map<BlockIndex, Map<string, ValueRefPacked>>,
   blockIdToIndex?: Map<string, BlockIndex>
 ): Map<string, ValueRefPacked> {
@@ -431,16 +290,9 @@ function lowerBlockInstance(
 
   if (blockType === undefined) {
     // No lowering function registered
-    const errorMsg = `Block type "${block.type}" has no registered IR lowering function`;
-
-    if (strictIR && VERIFIED_IR_BLOCKS.has(block.type)) {
-      // Strict mode: verified blocks MUST have IR lowering
-      throw new Error(`[IR-ONLY] ${errorMsg}`);
-    }
-
     errors.push({
       code: "NotImplemented",
-      message: errorMsg,
+      message: `Block type "${block.type}" has no registered IR lowering function`,
       where: { blockId: block.id },
     });
 
@@ -480,18 +332,27 @@ function lowerBlockInstance(
       ? Object.fromEntries(resolveInputsWithMultiInput(block, edges, builder, errors, blockOutputs, blockIdToIndex).entries())
       : {};
 
-    const inputs: ValueRefPacked[] = (blockDef?.inputs ?? []).map((inputPort) => {
+    const inputs: ValueRefPacked[] = [];
+    let hasUnresolvedInputs = false;
+    for (const inputPort of (blockDef?.inputs ?? [])) {
       const resolved = inputsById[inputPort.id];
       if (resolved !== undefined) {
-        return resolved;
+        inputs.push(resolved);
+      } else {
+        // Accumulate error for unresolved input
+        errors.push({
+          code: "NotImplemented",
+          message: `Unresolved input "${inputPort.id}" for block "${block.type}" (${block.id}). All inputs should be resolved by multi-input resolution.`,
+          where: { blockId: block.id },
+        });
+        hasUnresolvedInputs = true;
       }
+    }
 
-      // All inputs should have been resolved by resolveInputsWithMultiInput
-      throw new Error(
-        `Internal compiler error: Unresolved input "${inputPort.id}" for block "${block.type}" (${block.id}). ` +
-        `All inputs should be resolved by multi-input resolution.`
-      );
-    });
+    // Can't call lowering function with incomplete inputs - errors already recorded
+    if (hasUnresolvedInputs) {
+      return outputRefs;
+    }
 
     // Build lowering context
     const ctx: LowerCtx = {
@@ -513,9 +374,12 @@ function lowerBlockInstance(
 
     // All blocks MUST use outputsById pattern
     if (result.outputsById === undefined || Object.keys(result.outputsById).length === 0) {
-      throw new Error(
-        `Block ${ctx.blockType}#${ctx.instanceId} must use outputsById pattern (outputs array is deprecated)`
-      );
+      errors.push({
+        code: "IRValidationFailed",
+        message: `Block ${ctx.blockType}#${ctx.instanceId} must use outputsById pattern (outputs array is deprecated)`,
+        where: { blockId: block.id },
+      });
+      return outputRefs;
     }
 
     // Map outputs to port IDs using outputsById
@@ -542,7 +406,7 @@ function lowerBlockInstance(
     }
 
   } catch (error) {
-    // Lowering failed - record error
+    // Lowering failed - record error (will be thrown at end of pass with all other errors)
     const errorMsg = `Block lowering failed for "${block.type}": ${error instanceof Error ? error.message : String(error)}`;
 
     errors.push({
@@ -550,16 +414,6 @@ function lowerBlockInstance(
       message: errorMsg,
       where: { blockId: block.id },
     });
-
-    // IR-Only Mode: If this is a verified block in strict mode, fail hard
-    if (strictIR && VERIFIED_IR_BLOCKS.has(block.type)) {
-      throw new Error(
-        `[IR-ONLY] Block "${block.type}" is in VERIFIED_IR_BLOCKS but IR lowering failed. ` +
-        `Error: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-
-    console.error(`[IR] Lowering failed for ${block.type} (${block.id}): ${errorMsg}`);
   }
 
   return outputRefs;
@@ -575,16 +429,12 @@ function lowerBlockInstance(
  * Translates blocks into IR nodes using registered lowering functions.
  *
  * All blocks MUST have IR lowering registered via registerBlockType().
- * All blocks MUST use outputsById pattern (no legacy outputs array).
- * No fallback to closure artifacts.
+ * All blocks MUST use outputsById pattern (outputs array deprecated).
+ * No fallback to non-IR outputs.
  *
  * Multi-Input Blocks Integration:
  * - Uses resolveInputsWithMultiInput for all input resolution
  * - Supports combine nodes for multi-writer inputs
- *
- * IR-Only Mode (Default):
- * - strictIR defaults to true
- * - Blocks in VERIFIED_IR_BLOCKS must have working IR lowering
  *
  * Input: Validated dependency graph + blocks array + edges
  * Output: UnlinkedIRFragments with IR nodes
@@ -592,13 +442,11 @@ function lowerBlockInstance(
 export function pass6BlockLowering(
   validated: AcyclicOrLegalGraph,
   blocks: readonly Block[],
-  edges?: readonly Edge[],
-  options?: Pass6Options
+  edges?: readonly Edge[]
 ): UnlinkedIRFragments {
   const builder = new IRBuilderImpl();
   const blockOutputs = new Map<BlockIndex, Map<string, ValueRefPacked>>();
   const errors: CompileError[] = [];
-  const strictIR = options?.strictIR ?? true; // Default to strict IR-only mode
 
   // Create blockId → blockIndex lookup for input resolution
   const blockIdToIndex = new Map<string, BlockIndex>();
@@ -614,7 +462,7 @@ export function pass6BlockLowering(
   for (const scc of validated.sccs) {
     for (const node of scc.nodes) {
       if (node.kind !== "BlockEval") {
-        continue; // Skip bus nodes (handled in Pass 7)
+        continue; // Skip non-block nodes
       }
 
       const blockIndex = node.blockIndex;
@@ -638,23 +486,10 @@ export function pass6BlockLowering(
         builder,
         errors,
         edges,
-        strictIR,
         blockOutputs,
         blockIdToIndex
       );
 
-      // Get block definition for artifact validation
-      const blockDef = BLOCK_DEFS_BY_TYPE.get(block.type);
-
-      // Validate pure block outputs (Deliverable 3: Pure Block Compilation Enforcement)
-      // Note: This validation is for legacy closure artifacts, which will be removed in Phase 4
-      // For now, we skip this validation since we're in IR-only mode
-      if (blockDef !== undefined && blockDef.capability === 'pure') {
-        // Pure block validation skipped in IR-only mode
-        // Legacy artifact validation will be removed in Phase 4
-      }
-
-      // Store output refs for this block
       if (outputRefs.size > 0) {
         blockOutputs.set(blockIndex, outputRefs);
       }

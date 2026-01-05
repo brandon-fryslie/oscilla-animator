@@ -18,7 +18,6 @@
 import type {
   BlockId,
   BlockInstance,
-  BlockRegistry,
   CompileCtx,
   CompileError,
   CompileResult,
@@ -59,7 +58,7 @@ function compilerPatchToPatch(compilerPatch: CompilerPatch): Patch {
       position = { x: 0, y: 0 } as Vec2;
     }
 
-    const role: BlockRole = { kind: 'user' };
+    const role: BlockRole = { kind: 'user', meta: {} };
 
     return {
       id: b.id,
@@ -88,28 +87,26 @@ function compilerPatchToPatch(compilerPatch: CompilerPatch): Patch {
 /**
  * Compile a patch using the pass-based compiler pipeline.
  *
- * This replaces the deprecated compileBusAwarePatch stub with the actual
- * IR compiler implementation (passes 1-8).
+ * Runs the canonical IR compiler implementation (passes 1-8).
  *
  * Error Handling:
- * - Passes 2, 3, 4 THROW on errors (wrapped in try-catch)
+ * - Passes 2, 3, 4 accumulate all errors then THROW (wrapped in try-catch)
  * - Passes 5, 6, 8 ACCUMULATE errors in result object
  * - Early return if any pass fails
  *
  * @param patch - Input patch from editor (already normalized by GraphNormalizer)
- * @param _registry - Block registry for compiling blocks (unused - blocks self-register)
  * @param seed - Random seed for deterministic compilation
  * @param _ctx - Compilation context (unused in current implementation)
- * @param options - Compilation options (emitIR flag)
+ * @param options - Compilation options (emitIR flag, defaults to true)
  * @returns CompileResult with Program or errors
  */
 export function compilePatch(
   patch: CompilerPatch,
-  _registry: BlockRegistry,
   seed: Seed,
   _ctx: CompileCtx,
   options?: { emitIR?: boolean }
 ): CompileResult {
+  const emitIR = options?.emitIR ?? true;
   try {
     // Convert CompilerPatch to Patch for pass pipeline
     // Note: Default source provider blocks are already in the patch from GraphNormalizer
@@ -210,7 +207,7 @@ export function compilePatch(
       // Include IR if requested (note: this is the CompiledProgramIR, not LinkedGraphIR)
       // The CompileResult.ir field expects LinkedGraphIR, but we're using CompiledProgramIR
       // This is acceptable as it's more complete - contains full schedule
-      ir: options?.emitIR ? (compiledProgram as any) : undefined,
+      ir: emitIR ? (compiledProgram as any) : undefined,
     };
 
   } catch (error) {

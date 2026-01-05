@@ -21,7 +21,7 @@ describe("Block Index Ordering", () => {
    * Helper to create a minimal block
    */
   function createBlock(id: string, type: string = "InfiniteTimeRoot"): Block {
-    const role: BlockRole = { kind: "user" };
+    const role: BlockRole = { kind: "user", meta: {} };
     return {
       id,
       type,

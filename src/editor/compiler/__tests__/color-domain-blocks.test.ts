@@ -52,8 +52,9 @@ describe("Color Domain Blocks", () => {
 
       const result = irDecl!.lower({ ctx, inputs, config });
 
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.color).toBeDefined();
+      expect(result.outputsById!.color.k).toBe("sig");
 
       // Verify signal expression was created
       const program = builder.build();
@@ -93,8 +94,9 @@ describe("Color Domain Blocks", () => {
 
       const result = irDecl!.lower({ ctx, inputs, config });
 
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.color).toBeDefined();
+      expect(result.outputsById!.color.k).toBe("sig");
     });
 
     it("should handle zero hue span (static color)", () => {
@@ -130,8 +132,9 @@ describe("Color Domain Blocks", () => {
 
       const result = irDecl!.lower({ ctx, inputs, config });
 
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.color).toBeDefined();
+      expect(result.outputsById!.color.k).toBe("sig");
     });
   });
 
@@ -160,10 +163,11 @@ describe("Color Domain Blocks", () => {
 
       const result = irDecl!.lower({ ctx, inputs });
 
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("special");
-      if (result.outputs[0].k === "special") {
-        expect(result.outputs[0].tag).toBe("domain");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.domain).toBeDefined();
+      expect(result.outputsById!.domain.k).toBe("special");
+      if (result.outputsById!.domain.k === "special") {
+        expect(result.outputsById!.domain.tag).toBe("domain");
       }
 
       // Verify domain was created
@@ -195,7 +199,8 @@ describe("Color Domain Blocks", () => {
 
       const result = irDecl!.lower({ ctx, inputs });
 
-      expect(result.outputs).toHaveLength(1);
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.domain).toBeDefined();
       const program = builder.build();
       expect(program.domains[0].count).toBe(1);
     });
@@ -223,7 +228,8 @@ describe("Color Domain Blocks", () => {
 
       const result = irDecl!.lower({ ctx, inputs });
 
-      expect(result.outputs).toHaveLength(1);
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.domain).toBeDefined();
       const program = builder.build();
       expect(program.domains[0].count).toBe(1000);
     });
@@ -258,12 +264,14 @@ describe("Color Domain Blocks", () => {
 
       const result = irDecl!.lower({ ctx, inputs: [], config });
 
-      expect(result.outputs).toHaveLength(2);
-      expect(result.outputs[0].k).toBe("special"); // Domain output
-      if (result.outputs[0].k === "special") {
-        expect(result.outputs[0].tag).toBe("domain");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.domain).toBeDefined();
+      expect(result.outputsById!.domain.k).toBe("special"); // Domain output
+      if (result.outputsById!.domain.k === "special") {
+        expect(result.outputsById!.domain.tag).toBe("domain");
       }
-      expect(result.outputs[1].k).toBe("field"); // Position field output
+      expect(result.outputsById!.pos0).toBeDefined();
+      expect(result.outputsById!.pos0.k).toBe("field"); // Position field output
 
       // Verify domain was created with correct element count
       const program = builder.build();
@@ -302,7 +310,9 @@ describe("Color Domain Blocks", () => {
 
       const result = irDecl!.lower({ ctx, inputs: [], config });
 
-      expect(result.outputs).toHaveLength(2);
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.domain).toBeDefined();
+      expect(result.outputsById!.pos0).toBeDefined();
       const program = builder.build();
       expect(program.domains[0].count).toBe(30); // 10x3 grid
     });
@@ -335,7 +345,9 @@ describe("Color Domain Blocks", () => {
 
       const result = irDecl!.lower({ ctx, inputs: [], config });
 
-      expect(result.outputs).toHaveLength(2);
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.domain).toBeDefined();
+      expect(result.outputsById!.pos0).toBeDefined();
       const program = builder.build();
       expect(program.domains[0].count).toBe(4); // 2x2 grid
     });
@@ -408,7 +420,8 @@ describe("Color Domain Blocks", () => {
       };
 
       const domainResult = domainDecl!.lower({ ctx: domainCtx, inputs: domainInputs });
-      expect(domainResult.outputs).toHaveLength(1);
+      expect(domainResult.outputsById).toBeDefined();
+      expect(domainResult.outputsById!.domain).toBeDefined();
 
       // Create a color signal
       const colorDecl = getBlockType("ColorLFO");
@@ -439,7 +452,8 @@ describe("Color Domain Blocks", () => {
       };
 
       const colorResult = colorDecl!.lower({ ctx: colorCtx, inputs: colorInputs, config: colorConfig });
-      expect(colorResult.outputs).toHaveLength(1);
+      expect(colorResult.outputsById).toBeDefined();
+      expect(colorResult.outputsById!.color).toBeDefined();
 
       // Verify both were created
       const program = builder.build();

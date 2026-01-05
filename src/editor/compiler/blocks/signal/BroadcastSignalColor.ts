@@ -5,9 +5,7 @@
  * This is an adapter block for bridging signal-world to field-world.
  */
 
-import type { BlockCompiler, RuntimeCtx, Field, Seed, CompileCtx } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
-import { isDefined } from '../../../types/helpers';
 
 // =============================================================================
 // IR Lowering
@@ -67,55 +65,3 @@ registerBlockType({
   ],
   lower: lowerBroadcastSignalColor,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const BroadcastSignalColorBlock: BlockCompiler = {
-  type: 'BroadcastSignalColor',
-
-  inputs: [
-    { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'signal', type: { kind: 'Signal:color' }, required: true },
-  ],
-
-  outputs: [
-    { name: 'field', type: { kind: 'Field:color' } },
-  ],
-
-  compile({ inputs }) {
-    const domainArtifact = inputs.domain;
-    const signalArtifact = inputs.signal;
-
-    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
-      return {
-        field: {
-          kind: 'Error',
-          message: 'BroadcastSignalColor requires a Domain input',
-        },
-      };
-    }
-
-    if (!isDefined(signalArtifact) || signalArtifact.kind !== 'Signal:color') {
-      return {
-        field: {
-          kind: 'Error',
-          message: 'BroadcastSignalColor requires a Signal<color> input',
-        },
-      };
-    }
-
-    const signal = signalArtifact.value as (t: number, ctx: RuntimeCtx) => string;
-
-    // Create field that broadcasts signal value to all elements
-    const field: Field<string> = (_seed: Seed, n: number, ctx: CompileCtx) => {
-      const value = signal(0, ctx as any);
-      return Array(n).fill(value);
-    };
-
-    return {
-      field: { kind: 'Field:color', value: field },
-    };
-  },
-};

@@ -1,93 +1,49 @@
-# Runtime & Hot Swap
+# Runtime & Hot Swap (Unified Spec)
 
 ## Evaluation Loop
 
 ```
 while running:
-    t += dt * speed
-    ctx = { t, seed, dt, runState }
-    output = program.run(ctx)
-    render(output)
+  tMs += dtMs * speed
+  ctx = { tMs, dtMs, seed }
+  frame = program.run(ctx)
+  render(frame)
 ```
 
-**Properties:**
-- `t` is monotonic and unbounded
-- No wrapping or clamping
-- Phase wrapping happens inside phase generators
-- State preserved across frames
+**Rules:**
+- `tMs` is monotonic and unbounded.
+- No time wrapping or clamping.
+- Any phase/cycle behavior is produced by blocks, not the player.
+
+## Stateful Blocks
+
+Stateful behavior is owned by explicit blocks (e.g., UnitDelay, Lag, SampleAndHold). The runtime only manages state for blocks that declare it.
+
+## Feedback
+
+Cycles are legal only if a stateful block exists in the loop. UnitDelay is the minimal feedback gate.
 
 ## Hot Swap
 
-Hot swap is a deterministic two-phase process:
+Hot swap is deterministic and two-phase:
 
-### Phase 1: Compile in Background
-- Old program continues rendering
-- New program compiles on the side
+1. Compile new program in the background while the old program continues rendering.
+2. Swap programs at a safe boundary (frame or user-gated boundary).
 
-### Phase 2: Swap at Boundary
-- Swap at a deterministic Swap Boundary
-- Atomic on frame boundary
-- Exactly one program drives preview
+**Never** reset `tMs` during swap.
 
-## Change Classification
-
-### Class A: Param-Only
-Examples: scalar value, color constant, lens mapping
-
-**Guarantee:**
-- No state reset
-- Apply immediately (next frame)
-- No UI warning
-
-### Class B: Structural but State-Preserving
-Examples: add/remove stateless block, rewire, add Time Console lane
-
-**Guarantee:**
-- Preserve eligible state
-- Swap at safe boundary
-- UI shows "Scheduled change"
-
-### Class C: Topology / Identity / State-Resetting
-Examples: change TimeRoot kind, change domain count, modify SCC structure
-
-**Guarantee:**
-- Explicit user acknowledgement
-- Swap is gated
-- State reset may be unavoidable
-- UI presents choices
-
-**No silent resets. Ever.**
-
-## Swap Boundaries
-
-| Boundary | Availability | Use |
-|----------|--------------|-----|
-| Frame | Always | Class A, safe Class B |
-| Pulse | If pulse rail exists | Phase-sensitive changes |
-| Freeze | Always | Class C, user-gated |
+Optional continuity strategies:
+- Crossfade render output when outputs are incompatible but a smooth transition is desired.
+- Surface any unavoidable state resets as diagnostics; no silent resets.
 
 ## State Preservation
 
-### Stateful Nodes
-- DelayLine, Integrate, SampleHold
-- Explicit State blocks
-- Renderers with per-instance caches
+State continuity is keyed by stable block IDs (and optional internal keys). Migration rules:
 
-### StateKey
-```typescript
-StateKey = { blockId: string, internalKey?: string }
-```
+- Same block ID + compatible state schema: copy
+- Same block ID + incompatible schema: reset + diagnostic
+- Missing block ID: initialize
 
-### Migration Rules
-1. New program requests state by StateKey
-2. Copy if keys and types match
-3. Missing/mismatched keys → initialize to default
+## Deterministic Replay
 
-## No-Jank Definition
-
-A swap is "no-jank" if:
-- No blank frame
-- No flicker
-- Phase continuity when claimed
-- State continuity when claimed
-- No hard reset unless confirmed
+Given the same patch revision, seed, and inputs, runtime output must be identical.

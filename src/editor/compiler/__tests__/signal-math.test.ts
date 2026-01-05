@@ -9,8 +9,6 @@
 
 import { describe, it, expect } from "vitest";
 import { IRBuilderImpl } from "../ir/IRBuilderImpl";
-import { AddSignalBlock } from "../blocks/signal/AddSignal";
-import { OscillatorBlock } from "../blocks/signal/Oscillator";
 import { getBlockType } from "../ir/lowerTypes";
 import type { ValueRefPacked } from "../ir/lowerTypes";
 import type { TypeDesc } from "../ir/types";
@@ -163,8 +161,9 @@ describe("Signal Math Operations", () => {
       };
 
       const result = irDecl!.lower({ ctx, inputs });
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.out).toBeDefined();
+      expect(result.outputsById!.out.k).toBe("sig");
     });
 
     it("should lower MinSignal to IR", () => {
@@ -197,8 +196,9 @@ describe("Signal Math Operations", () => {
       };
 
       const result = irDecl!.lower({ ctx, inputs });
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.out).toBeDefined();
+      expect(result.outputsById!.out.k).toBe("sig");
     });
 
     it("should lower MaxSignal to IR", () => {
@@ -231,8 +231,9 @@ describe("Signal Math Operations", () => {
       };
 
       const result = irDecl!.lower({ ctx, inputs });
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.out).toBeDefined();
+      expect(result.outputsById!.out.k).toBe("sig");
     });
 
     it("should lower ClampSignal to IR", () => {
@@ -269,8 +270,9 @@ describe("Signal Math Operations", () => {
       };
 
       const result = irDecl!.lower({ ctx, inputs });
-      expect(result.outputs).toHaveLength(1);
-      expect(result.outputs[0].k).toBe("sig");
+      expect(result.outputsById).toBeDefined();
+      expect(result.outputsById!.out).toBeDefined();
+      expect(result.outputsById!.out.k).toBe("sig");
     });
   });
 
@@ -415,23 +417,4 @@ describe("Signal Math Operations", () => {
     });
   });
 
-  describe("Legacy Closure Compilation (Dual-Emit Validation)", () => {
-    it("should have both IR lowering and legacy closure compilation for AddSignal", () => {
-      // Verify IR path exists
-      const irDecl = getBlockType("AddSignal");
-      expect(irDecl).toBeDefined();
-
-      // Verify legacy path exists
-      expect(AddSignalBlock).toBeDefined();
-      expect(typeof AddSignalBlock.compile).toBe("function");
-    });
-
-    it("should have both paths for Oscillator", () => {
-      const irDecl = getBlockType("Oscillator");
-      expect(irDecl).toBeDefined();
-
-      expect(OscillatorBlock).toBeDefined();
-      expect(typeof OscillatorBlock.compile).toBe("function");
-    });
-  });
 });

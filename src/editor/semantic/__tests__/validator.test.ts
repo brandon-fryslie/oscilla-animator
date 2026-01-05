@@ -132,14 +132,14 @@ describe('Validator', () => {
             from: { kind: 'port', blockId: 'source1', slotId: 'value' },
             enabled: true,
             to: { kind: 'port', blockId: 'target', slotId: 'value' },
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
           {
             id: 'conn2',
             from: { kind: 'port', blockId: 'source2', slotId: 'value' },
             enabled: true,
             to: { kind: 'port', blockId: 'target', slotId: 'value' },
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
         ],
       };
@@ -179,7 +179,7 @@ describe('Validator', () => {
             from: { kind: 'port', blockId: 'source', slotId: 'value' },
             enabled: true,
             to: { kind: 'port', blockId: 'target', slotId: 'position' },
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
         ],
       };
@@ -217,7 +217,7 @@ describe('Validator', () => {
             from: { kind: 'port', blockId: 'source', slotId: 'value' },
             enabled: true,
             to: { kind: 'port', blockId: 'target', slotId: 'value' },
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
         ],
       };
@@ -259,21 +259,21 @@ describe('Validator', () => {
             from: { kind: 'port', blockId: 'time', slotId: 'phase' },
             enabled: true,
             to: { kind: 'port', blockId: 'a', slotId: 'value' },
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
           {
             id: 'conn2',
             from: { kind: 'port', blockId: 'a', slotId: 'scaled' },
             enabled: true,
             to: { kind: 'port', blockId: 'b', slotId: 'value' },
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
           {
             id: 'conn3',
             from: { kind: 'port', blockId: 'b', slotId: 'scaled' },
             enabled: true,
             to: { kind: 'port', blockId: 'a', slotId: 'value' },
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
         ],
       };
@@ -304,7 +304,7 @@ describe('Validator', () => {
             from: { kind: 'port', blockId: 'source', slotId: 'value' },
             enabled: true,
             to: { kind: 'port', blockId: 'missing', slotId: 'value' },
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
         ],
       };
@@ -365,7 +365,7 @@ describe('Validator', () => {
             from: { kind: 'port', blockId: 'default', slotId: 'value' },
             enabled: true,
             to: { kind: 'port', blockId: 'time', slotId: 'period' },
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
         ],
       };
@@ -401,7 +401,7 @@ describe('Validator', () => {
             from: { kind: 'port', blockId: 'source', slotId: 'value' },
             enabled: true,
             to: { kind: 'port', blockId: 'time', slotId: 'period' },
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
           },
         ],
       };

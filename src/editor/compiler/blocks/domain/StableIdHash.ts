@@ -8,8 +8,6 @@
  * into a uniformly distributed number in [0, 1).
  */
 
-import type { BlockCompiler, Field, Artifact } from '../../types';
-import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 /**
@@ -77,66 +75,3 @@ registerBlockType({
   ],
   lower: lowerStableIdHash,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const StableIdHashBlock: BlockCompiler = {
-  type: 'StableIdHash',
-
-  inputs: [
-    { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'salt', type: { kind: 'Scalar:int' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'u01', type: { kind: 'Field:float' } },
-  ],
-
-  compile({ inputs, params }) {
-    const domainArtifact = inputs.domain;
-    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
-      return {
-        u01: {
-          kind: 'Error',
-          message: 'StableIdHash requires a Domain input',
-        },
-      };
-    }
-
-    const domain = domainArtifact.value;
-
-    // Helper to extract numeric value from artifact with default fallback
-    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
-      if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:int' || artifact.kind === 'Scalar:float') {
-        return Number(artifact.value);
-      }
-      // Generic fallback for other artifact types
-      return typeof artifact.value === 'function' ? Number((artifact.value as (t: number, ctx: unknown) => unknown)(0, {})) : Number(artifact.value);
-    };
-
-    // Support both new (inputs) and old (params) parameter systems
-    const salt: int = extractNumber(inputs.salt, (params as Record<string, unknown> | undefined)?.salt as number | undefined ?? 0);
-
-    // Create field that produces stable hash per element
-    const field: Field<float> = (_seed, n) => {
-      const count: int = Math.min(n, domain.elements.length);
-      const out = new Array<float>(count);
-
-      for (let i = 0; i < count; i++) {
-        const elementId = domain.elements[i];
-        // Combine element ID with salt for hashing
-        const hashInput = `${elementId}-${salt}`;
-        out[i] = stableHash(hashInput);
-      }
-
-      return out;
-    };
-
-    return {
-      u01: { kind: 'Field:float', value: field },
-    };
-  },
-};

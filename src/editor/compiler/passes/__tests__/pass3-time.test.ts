@@ -38,7 +38,7 @@ function createBlock(
     position: { x: 0, y: 0 },
     params: params ?? {},
     form: 'primitive',
-    role: { kind: 'user' },
+    role: { kind: 'user', meta: {} },
   };
 }
 

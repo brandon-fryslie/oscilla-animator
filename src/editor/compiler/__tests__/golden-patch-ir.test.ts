@@ -13,15 +13,14 @@
 
 import { describe, it, expect } from 'vitest';
 import { compilePatch } from '../compile';
-import { createBlockRegistry } from '../blocks';
+import { registerCompilerBlocks } from '../blocks';
 import { createCompileCtx } from '../context';
 import { ScheduleExecutor } from '../../runtime/executor/ScheduleExecutor';
 import { createRuntimeState } from '../../runtime/executor/RuntimeState';
 import type { CompilerPatch, BlockInstance } from '../types';
 import type { CompiledProgramIR } from '../ir';
 
-// Import block compilers to trigger registration
-import '../blocks/index';
+registerCompilerBlocks();
 
 /**
  * Create a minimal viable IR-only patch for testing.
@@ -54,11 +53,10 @@ describe('Golden Patch IR Compilation', () => {
   describe('Compilation', () => {
     it('compiles minimal viable IR-only patch successfully', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       // Compilation should succeed
       expect(result.ok).toBe(true);
@@ -68,11 +66,10 @@ describe('Golden Patch IR Compilation', () => {
 
     it('produces valid IR structure', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
       expect(result.ir).toBeDefined();
@@ -95,11 +92,10 @@ describe('Golden Patch IR Compilation', () => {
 
     it('contains expected IR nodes from blocks', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
       const ir = result.ir as unknown as CompiledProgramIR;
@@ -114,11 +110,10 @@ describe('Golden Patch IR Compilation', () => {
 
     it('has no IR lowering warnings for verified blocks', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
 
@@ -131,11 +126,10 @@ describe('Golden Patch IR Compilation', () => {
   describe('Execution', () => {
     it('executes compiled IR at multiple time points', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
       const ir = result.ir as unknown as CompiledProgramIR;
@@ -162,11 +156,10 @@ describe('Golden Patch IR Compilation', () => {
 
     it('produces valid program output', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
       expect(result.program).toBeDefined();
@@ -185,11 +178,10 @@ describe('Golden Patch IR Compilation', () => {
 
     it('executes consistently at same time point', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
       const program = result.program!;
@@ -208,11 +200,10 @@ describe('Golden Patch IR Compilation', () => {
 
     it('produces different outputs at different time points', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
       const program = result.program!;
@@ -239,11 +230,10 @@ describe('Golden Patch IR Compilation', () => {
   describe('IR-Only Mode Verification', () => {
     it('uses only IR-lowered blocks (no closure fallback)', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
 
@@ -262,11 +252,10 @@ describe('Golden Patch IR Compilation', () => {
 
     it('produces executable schedule from IR', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
       const ir = result.ir as unknown as CompiledProgramIR;
@@ -290,11 +279,10 @@ describe('Golden Patch IR Compilation', () => {
   describe('Time Model Integration', () => {
     it('respects time model from InfiniteTimeRoot', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
       expect(result.timeModel).toBeDefined();
@@ -305,11 +293,10 @@ describe('Golden Patch IR Compilation', () => {
 
     it('includes time model in IR', () => {
       const patch = createGoldenPatch();
-      const registry = createBlockRegistry();
       const ctx = createCompileCtx();
       const seed = 42;
 
-      const result = compilePatch(patch, registry, seed, ctx, { emitIR: true });
+      const result = compilePatch(patch, seed, ctx, { emitIR: true });
 
       expect(result.ok).toBe(true);
       const ir = result.ir as unknown as CompiledProgramIR;

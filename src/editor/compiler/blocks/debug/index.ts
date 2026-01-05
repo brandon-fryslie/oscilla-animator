@@ -1,5 +1,8 @@
 /**
- * Debug Block Compilers
+ * Debug Block Registration
+ *
+ * Imports debug IR block lowerings for registration.
  */
 
-export { DebugDisplayBlock } from './DebugDisplay';
+import './Print';
+import './DebugDisplay';

@@ -9,16 +9,16 @@
  * Current: Added DSConstSignalPhase and DSConstSignalTime
  */
 
-export { DSConstSignalFloatBlock } from './DSConstSignalFloat';
-export { DSConstSignalIntBlock } from './DSConstSignalInt';
-export { DSConstSignalColorBlock } from './DSConstSignalColor';
-export { DSConstSignalPointBlock } from './DSConstSignalPoint';
-export { DSConstSignalPhaseBlock } from './DSConstSignalPhase';
-export { DSConstSignalTimeBlock } from './DSConstSignalTime';
-export { DSConstFieldFloatBlock } from './DSConstFieldFloat';
-export { DSConstFieldVec2Block } from './DSConstFieldVec2';
-export { DSConstFieldColorBlock } from './DSConstFieldColor';
-export { DSConstScalarStringBlock } from './DSConstScalarString';
-export { DSConstScalarWaveformBlock } from './DSConstScalarWaveform';
-export { DSConstScalarIntBlock } from './DSConstScalarInt';
-export { DSConstScalarFloatBlock } from './DSConstScalarFloat';
+import './DSConstSignalFloat';
+import './DSConstSignalInt';
+import './DSConstSignalColor';
+import './DSConstSignalPoint';
+import './DSConstSignalPhase';
+import './DSConstSignalTime';
+import './DSConstFieldFloat';
+import './DSConstFieldVec2';
+import './DSConstFieldColor';
+import './DSConstScalarString';
+import './DSConstScalarWaveform';
+import './DSConstScalarInt';
+import './DSConstScalarFloat';

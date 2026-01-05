@@ -5,48 +5,16 @@
  * Useful for softening edges, creating breathing curves, etc.
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
 import { registerBlockType } from '../../ir/lowerTypes';
 import { OpCode } from '../../ir/opcodes';
 import type { TypeDesc } from '../../ir/types';
-
-type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
 interface ShaperConfig {
   kind?: string;
   amount?: number;
 }
 
-/**
- * Waveshaping functions
- */
-function getShaper(kind: string, amount: number): (x: number) => number {
-  switch (kind) {
-    case 'tanh':
-      return (x: number): number => Math.tanh(x * amount);
-
-    case 'softclip':
-      return (x: number): number => x / (1 + Math.abs(x * amount));
-
-    case 'sigmoid':
-      return (x: number): number => 1 / (1 + Math.exp(-x * amount));
-
-    case 'smoothstep': {
-      // Smoothstep expects input in [0,1], so normalize first
-      return (x: number): number => {
-        const t = Math.max(0, Math.min(1, x));
-        return t * t * (3 - 2 * t);
-      };
-    }
-
-    case 'pow':
-      return (x: number): number => Math.sign(x) * Math.pow(Math.abs(x), amount);
-
-    default:
-      return (x: number): number => x; // identity
-  }
-}
 
 // =============================================================================
 // IR Lowering
@@ -191,52 +159,3 @@ registerBlockType({
   ],
   lower: lowerShaper,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const ShaperBlock: BlockCompiler = {
-  type: 'Shaper',
-
-  inputs: [
-    { name: 'in', type: { kind: 'Signal:float' }, required: true },
-    { name: 'kind', type: { kind: 'Scalar:string' }, required: false },
-    { name: 'amount', type: { kind: 'Scalar:float' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Signal:float' } },
-  ],
-
-  compile({ inputs }) {
-    const inputArtifact = inputs.in;
-    if (inputArtifact === undefined || inputArtifact.kind !== 'Signal:float') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'Shaper requires a Signal<float> input',
-        },
-      };
-    }
-
-    const inputSignal = inputArtifact.value as Signal<float>;
-    // Read from inputs - values come from defaultSource or explicit connections
-    const kindInput = inputs.kind;
-    const amountInput = inputs.amount;
-    const kind = (kindInput !== undefined && kindInput.kind === 'Scalar:string') ? String(kindInput.value) : 'smoothstep';
-    const amount = (amountInput !== undefined && amountInput.kind === 'Scalar:float') ? Number(amountInput.value) : 1;
-
-    const shapeFn = getShaper(kind, amount);
-
-    // Create shaped signal
-    const signal: Signal<float> = (t: number, ctx: RuntimeCtx): number => {
-      const value = inputSignal(t, ctx);
-      return shapeFn(value);
-    };
-
-    return {
-      out: { kind: 'Signal:float', value: signal },
-    };
-  },
-};

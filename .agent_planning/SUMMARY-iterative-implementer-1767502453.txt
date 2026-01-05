@@ -1,6 +1,0 @@
-Agent: iterative-implementer | 1767502453
-Mode: manual
-Completed: Fixed TypeDesc type errors in SaveCompositeDialog and semantic tests | Files: 3 | Commits: 1
-Tests: 18 passing (6 graph.test.ts + 12 validator.test.ts)
-Cache invalidated: None (no eval-cache exists yet)
-Status: complete

@@ -5,22 +5,13 @@
  * These blocks produce the primary time signals that other blocks consume.
  */
 
-import type {
-  BlockCompiler,
-  RuntimeCtx,
-  CompiledOutputs,
-  AutoPublication,
-  TimeModel,
-} from '../../types';
+import type { TimeModel } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
-type SignalNumber = (tMs: number, ctx: RuntimeCtx) => float;
-type Event = (tMs: number, lastTMs: number, ctx: RuntimeCtx) => boolean;
-
-/**
- * Helper to extract auto-publications from a TimeRoot compilation.
- * This is used by the main compiler to inject system bus publishers.
- */
+// TODO: Reinstate TimeRoot auto-publication wiring once bus auto-pubs are finalized.
+// The legacy closure compiler exposed an extract helper; reintroduce with IR-aware
+// artifacts and a deterministic bus publish order when the bus pipeline is ready.
+/*
 export function extractTimeRootAutoPublications(
   blockType: string,
   _artifacts: CompiledOutputs
@@ -49,6 +40,7 @@ export function extractTimeRootAutoPublications(
       return [];
   }
 }
+*/
 
 // =============================================================================
 // IR Lowering (Phase 3 Migration)
@@ -103,14 +95,18 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
     durationMs,
   };
 
+  // Allocate energy slot
+  const energySlot = ctx.b.allocValueSlot({ world: "signal", domain: "float", category: "core", busEligible: true }, 'energy');
+
   return {
-    outputs: [
-      { k: 'sig', id: systemTimeId, slot: tAbsMsSlot },       // systemTime
-      { k: 'sig', id: progressId, slot: tModelMsSlot },       // progress
-      { k: 'sig', id: phaseId, slot: phase01Slot },           // phase
-      { k: 'sig', id: endId, slot: wrapEventSlot },           // end
-      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot({ world: "signal", domain: "float", category: "core", busEligible: true }, 'energy') },
-    ],
+    outputs: [],  // Legacy array - empty for migrated blocks
+    outputsById: {
+      systemTime: { k: 'sig', id: systemTimeId, slot: tAbsMsSlot },
+      progress: { k: 'sig', id: progressId, slot: tModelMsSlot },
+      phase: { k: 'sig', id: phaseId, slot: phase01Slot },
+      end: { k: 'sig', id: endId, slot: wrapEventSlot },
+      energy: { k: 'sig', id: energyId, slot: energySlot },
+    },
     declares: { timeModel },
   };
 };
@@ -128,8 +124,6 @@ const lowerFiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
  */
 const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   const configData = (config != null && typeof config === 'object') ? config : {};
-  // windowMs is for UI preview window, not used in IR directly (stored in TimeModel)
-  const windowMs = 'windowMs' in configData ? Number(configData.windowMs) : 10000;
   const periodMs = 'periodMs' in configData ? Number(configData.periodMs) : 10000;
 
   // Allocate time-related slots upfront
@@ -160,10 +154,7 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
   // Energy: constant 1.0
   const energyId = ctx.b.sigConst(1.0, { world: "signal", domain: "float", category: "core", busEligible: true });
 
-  // Declare TimeModel - cyclic with period from periodMs
-  // Note: windowMs is a UI preview hint, not part of the time topology
-  // The CyclicTimeModel doesn't store windowMs, that's only for InfiniteTimeModel
-  void windowMs; // Used for editor config, not in TimeModel
+  // Declare TimeModel - cyclic with period from periodMs (read from block.params)
   const timeModel: TimeModel = {
     kind: 'cyclic',
     periodMs,
@@ -171,13 +162,17 @@ const lowerInfiniteTimeRoot: BlockLowerFn = ({ ctx, config }) => {
     mode: 'loop',
   };
 
+  // Allocate energy slot
+  const energySlot = ctx.b.allocValueSlot(numberType, 'energy');
+
   return {
-    outputs: [
-      { k: 'sig', id: systemTimeId, slot: tAbsMsSlot },           // systemTime
-      { k: 'sig', id: phaseId, slot: phase01Slot },               // phase
-      { k: 'sig', id: wrapId, slot: wrapEventSlot },              // pulse
-      { k: 'sig', id: energyId, slot: ctx.b.allocValueSlot(numberType, 'energy') },
-    ],
+    outputs: [],  // Legacy array - empty for migrated blocks
+    outputsById: {
+      systemTime: { k: 'sig', id: systemTimeId, slot: tAbsMsSlot },
+      phase: { k: 'sig', id: phaseId, slot: phase01Slot },
+      pulse: { k: 'sig', id: wrapId, slot: wrapEventSlot },
+      energy: { k: 'sig', id: energyId, slot: energySlot },
+    },
     declares: { timeModel },
   };
 };
@@ -201,22 +196,7 @@ registerBlockType({
 registerBlockType({
   type: 'InfiniteTimeRoot',
   capability: 'time',
-  inputs: [
-    {
-      portId: 'windowMs',
-      label: 'Preview Window (ms)',
-      dir: 'in',
-      type: { world: "scalar", domain: "float", category: "core", busEligible: true },
-      defaultSource: { value: 10000 },
-    },
-    {
-      portId: 'periodMs',
-      label: 'Ambient Period (ms)',
-      dir: 'in',
-      type: { world: "scalar", domain: "float", category: "core", busEligible: true },
-      defaultSource: { value: 10000 },
-    },
-  ],
+  inputs: [],  // TimeRoot has NO inputs - it's the source of time. Config comes from block.params.
   outputs: [
     { portId: 'systemTime', label: 'System Time', dir: 'out', type: { world: "signal", domain: "timeMs", category: "internal", busEligible: false } },
     { portId: 'phase', label: 'Phase', dir: 'out', type: { world: "signal", domain: "float", semantics: 'phase(0..1)', category: "core", busEligible: true } },
@@ -226,130 +206,3 @@ registerBlockType({
   ],
   lower: lowerInfiniteTimeRoot,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-/**
- * FiniteTimeRoot - Finite performance with known duration.
- *
- * Outputs:
- * - systemTime: Monotonic time in milliseconds
- * - progress: 0..1 clamped (reaches 1 at durationMs and stays there)
- * - end: Event that fires once when progress reaches 1
- * - energy: Constant 1.0 while animating, 0 when complete
- */
-export const FiniteTimeRootBlock: BlockCompiler = {
-  type: 'FiniteTimeRoot',
-
-  inputs: [],
-
-  outputs: [
-    { name: 'systemTime', type: { kind: 'Signal:Time' } },
-    { name: 'progress', type: { kind: 'Signal:float' } },
-    { name: 'phase', type: { kind: 'Signal:phase' } },
-    { name: 'end', type: { kind: 'Event' } },
-    { name: 'energy', type: { kind: 'Signal:float' } },
-  ],
-
-  compile({ params }): CompiledOutputs {
-    // Read from params - block configuration values
-    const durationMs = Number(params.durationMs ?? 5000);
-
-    // System time is identity (tMs passed in is the raw time)
-    const systemTime: SignalNumber = (tMs) => tMs;
-
-    // Progress clamps at 1 after duration
-    const progress: SignalNumber = (tMs) => {
-      if (tMs <= 0) return 0;
-      if (tMs >= durationMs) return 1;
-      return tMs / durationMs;
-    };
-
-    // Phase is same as progress for FiniteTimeRoot (0..1 clamped)
-    const phase: SignalNumber = (tMs) => {
-      if (tMs <= 0) return 0;
-      if (tMs >= durationMs) return 1;
-      return tMs / durationMs;
-    };
-
-    // End event fires exactly once when progress reaches 1
-    const end: Event = (tMs, lastTMs) => {
-      const currProgress = Math.min(tMs / durationMs, 1);
-      const lastProgress = Math.min(lastTMs / durationMs, 1);
-      return currProgress >= 1 && lastProgress < 1;
-    };
-
-    // Energy is 1.0 while animating, 0 when complete
-    const energy: SignalNumber = (tMs) => {
-      return tMs < durationMs ? 1.0 : 0.0;
-    };
-
-    return {
-      systemTime: { kind: 'Signal:Time', value: systemTime },
-      progress: { kind: 'Signal:float', value: progress },
-      phase: { kind: 'Signal:phase', value: phase },
-      end: { kind: 'Event', value: end },
-      energy: { kind: 'Signal:float', value: energy },
-    };
-  },
-};
-
-/**
- * InfiniteTimeRoot - Ambient, unbounded time (no primary cycle).
- * NEEDS REVIEW - DEPRECATED: currently uses cyclic phase/pulse behavior.
- *
- * Outputs:
- * - systemTime: Monotonic time in milliseconds
- * - energy: Constant 1.0 for ambient content
- */
-export const InfiniteTimeRootBlock: BlockCompiler = {
-  type: 'InfiniteTimeRoot',
-
-  inputs: [
-    { name: 'windowMs', type: { kind: 'Scalar:float' } },
-    { name: 'periodMs', type: { kind: 'Scalar:float' } },
-  ],
-
-  outputs: [
-    { name: 'systemTime', type: { kind: 'Signal:Time' } },
-    { name: 'phase', type: { kind: 'Signal:phase' } },
-    { name: 'pulse', type: { kind: 'Event' } },
-    { name: 'energy', type: { kind: 'Signal:float' } },
-  ],
-
-  compile({ params }): CompiledOutputs {
-    // Read from params - block configuration values
-    // NEEDS REVIEW - DEPRECATED: InfiniteTimeRoot uses periodMs to synthesize phase/pulse.
-    const periodMs = Number(params.periodMs ?? 8000);
-
-    // System time is identity - just passes through the raw time
-    const systemTime: SignalNumber = (tMs) => tMs;
-
-    // Ambient phase: simple 0..1 loop based on periodMs
-    const phase: SignalNumber = (tMs) => {
-      if (tMs < 0) return 0;
-      const cycles = tMs / periodMs;
-      return cycles - Math.floor(cycles);
-    };
-
-    // Ambient pulse: fires on cycle boundary
-    const pulse: Event = (tMs, lastTMs) => {
-      if (tMs < 0 || lastTMs < 0) return false;
-      const currCycle = Math.floor(tMs / periodMs);
-      const lastCycle = Math.floor(lastTMs / periodMs);
-      return currCycle > lastCycle;
-    };
-
-    // Energy is constant 1.0 for ambient content
-    const energy: SignalNumber = (_tMs) => 1.0;
-
-    return {
-      systemTime: { kind: 'Signal:Time', value: systemTime },
-      phase: { kind: 'Signal:phase', value: phase },
-      pulse: { kind: 'Event', value: pulse },
-      energy: { kind: 'Signal:float', value: energy },
-    };
-  },
-};

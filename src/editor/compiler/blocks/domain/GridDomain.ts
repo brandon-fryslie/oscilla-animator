@@ -8,11 +8,8 @@
  * Base positions (pos0) are deterministic based on grid parameters.
  */
 
-import type { BlockCompiler, Vec2, Domain, Artifact, RuntimeCtx } from '../../types';
-import { createDomain } from '../../unified/Domain';
+import type { Vec2 } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
-
-type PositionField = (seed: number, n: number) => readonly Vec2[];
 
 // =============================================================================
 // IR Lowering (Phase 3 Migration)
@@ -33,8 +30,45 @@ function seededId(seed: number): string {
   return hash.toString(36).padStart(8, '0').slice(-8);
 }
 
-const lowerGridDomain: BlockLowerFn = ({ ctx, config }) => {
-  // GridDomain uses config for grid parameters (compile-time constants)
+const lowerGridDomain: BlockLowerFn = ({ ctx, inputs, inputsById, config }) => {
+  // GridDomain uses inputs for grid parameters
+  // Inputs are: rows (Scalar:int), cols (Scalar:int), spacing (Signal:float), originX (Signal:float), originY (Signal:float)
+
+  // Get const pool for looking up scalar values
+  const constPool = ctx.b.getConstPool();
+
+  // Helper to extract scalar constant value from ValueRefPacked
+  const extractScalarInt = (ref: typeof inputs[0] | undefined, defaultValue: int): int => {
+    if (!ref) return defaultValue;
+    if (ref.k === 'scalarConst') {
+      // Scalar constant - look up value in const pool
+      const value = constPool[ref.constId];
+      return Math.max(1, Math.floor(Number(value)));
+    }
+    // Fallback for config
+    return defaultValue;
+  };
+
+  // Helper to extract numeric value from signal or scalar
+  const extractFloat = (ref: typeof inputs[0] | undefined, defaultValue: float): float => {
+    if (!ref) return defaultValue;
+    if (ref.k === 'scalarConst') {
+      const value = constPool[ref.constId];
+      return Number(value);
+    }
+    // For signals, use default - grid layout is computed at compile time
+    // A more advanced impl could evaluate signal at t=0
+    return defaultValue;
+  };
+
+  // Get input values using inputsById with fallback to positional inputs
+  const rowsInput = inputsById?.rows ?? inputs[0];
+  const colsInput = inputsById?.cols ?? inputs[1];
+  const spacingInput = inputsById?.spacing ?? inputs[2];
+  const originXInput = inputsById?.originX ?? inputs[3];
+  const originYInput = inputsById?.originY ?? inputs[4];
+
+  // Fallback to config if inputs are not available
   const configData = config as {
     rows?: int;
     cols?: int;
@@ -43,11 +77,11 @@ const lowerGridDomain: BlockLowerFn = ({ ctx, config }) => {
     originY?: float;
   } | undefined;
 
-  const rows: int = Math.max(1, Math.floor(Number(configData?.rows)));
-  const cols: int = Math.max(1, Math.floor(Number(configData?.cols)));
-  const spacing: float = Number(configData?.spacing);
-  const originX: float = Number(configData?.originX);
-  const originY: float = Number(configData?.originY);
+  const rows: int = extractScalarInt(rowsInput, configData?.rows ?? 10);
+  const cols: int = extractScalarInt(colsInput, configData?.cols ?? 10);
+  const spacing: float = extractFloat(spacingInput, configData?.spacing ?? 20);
+  const originX: float = extractFloat(originXInput, configData?.originX ?? 100);
+  const originY: float = extractFloat(originYInput, configData?.originY ?? 100);
 
   const elementCount: int = rows * cols;
 
@@ -72,12 +106,14 @@ const lowerGridDomain: BlockLowerFn = ({ ctx, config }) => {
   // Create position field as const
   const posField = ctx.b.fieldConst(positions, { world: "field", domain: "vec2", category: "core", busEligible: true });
 
-  const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'GridDomain_out');
+  const posSlot = ctx.b.allocValueSlot({ world: "field", domain: "vec2", category: "core", busEligible: true }, 'GridDomain_pos0');
+
   return {
-    outputs: [
-      { k: 'special', tag: 'domain', id: domainSlot },
-      { k: 'field', id: posField, slot },
-    ],
+    outputs: [],  // Legacy array - empty for migrated blocks
+    outputsById: {
+      domain: { k: 'special', tag: 'domain', id: domainSlot },
+      pos0: { k: 'field', id: posField, slot: posSlot },
+    },
     declares: {
       domainOut: { outPortIndex: 0, domainKind: 'domain' },
     },
@@ -131,96 +167,3 @@ registerBlockType({
   ],
   lower: lowerGridDomain,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const GridDomainBlock: BlockCompiler = {
-  type: 'GridDomain',
-
-  inputs: [
-    { name: 'rows', type: { kind: 'Scalar:int' }, required: true },
-    { name: 'cols', type: { kind: 'Scalar:int' }, required: true },
-    { name: 'spacing', type: { kind: 'Signal:float' }, required: true },
-    { name: 'originX', type: { kind: 'Signal:float' }, required: true },
-    { name: 'originY', type: { kind: 'Signal:float' }, required: true },
-  ],
-
-  outputs: [
-    { name: 'domain', type: { kind: 'Domain' } },
-    { name: 'pos0', type: { kind: 'Field:vec2' } },
-  ],
-
-  compile({ id, inputs, params }) {
-    // Helper to extract numeric value from Scalar or Signal artifacts, with default fallback
-    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
-      console.log("#$####### etract ahndler")
-      console.log(artifact)
-      if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:int' || artifact.kind === 'Scalar:float') {
-        return Number(artifact.value);
-      }
-      if (artifact.kind === 'Signal:float') {
-        // Signal artifacts have .value as a function - call with t=0 for compile-time value
-        const runtimeCtx: RuntimeCtx = { viewport: { w: 1920, h: 1080, dpr: 1 } };
-        return Number(artifact.value(0, runtimeCtx));
-      }
-      // Generic fallback for other artifact types that might have callable or direct values
-      if ('value' in artifact && artifact.value !== undefined) {
-        const runtimeCtx: RuntimeCtx = { viewport: { w: 1920, h: 1080, dpr: 1 } };
-        return typeof artifact.value === 'function'
-          ? Number((artifact.value as (t: number, ctx: RuntimeCtx) => number)(0, runtimeCtx))
-          : Number(artifact.value);
-      }
-      return defaultValue;
-    };
-
-    // Read from inputs with defaults matching IR lowering
-    // Support both new (inputs) and old (params) parameter systems
-    const paramsObj = params as { rows: int; cols?: int; spacing: float; originX: float; originY: float };
-    const rows: int = Math.max(1, Math.floor(extractNumber(inputs.rows, paramsObj.rows)));
-    // cols is optional in params, default to rows to make grid square if not specified
-    const cols: int = Math.max(1, Math.floor(extractNumber(inputs.cols, paramsObj.cols ?? rows)));
-    const spacing: float = extractNumber(inputs.spacing, paramsObj.spacing);
-    const originX: float = extractNumber(inputs.originX, paramsObj.originX);
-    const originY: float = extractNumber(inputs.originY, paramsObj.originY);
-
-    const elementCount: int = rows * cols;
-
-    // Create stable element IDs: "row-R-col-C"
-    const elementIds: string[] = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        elementIds.push(`row-${r}-col-${c}`);
-      }
-    }
-
-    // Create domain with stable IDs
-    const domainId = `grid-domain-${id}-${rows}x${cols}`;
-    const domain: Domain = createDomain(domainId, elementIds);
-
-    // Create position field (base positions)
-    const positionField: PositionField = (_seed, n) => {
-      const count: int = Math.min(n, elementCount);
-      const out = new Array<Vec2>(count);
-
-      for (let i = 0; i < count; i++) {
-        const row: int = Math.floor(i / cols);
-        const col: int = i % cols;
-
-        out[i] = {
-          x: originX + col * spacing,
-          y: originY + row * spacing,
-        };
-      }
-
-      return out;
-    };
-
-    return {
-      domain: { kind: 'Domain', value: domain },
-      pos0: { kind: 'Field:vec2', value: positionField },
-    };
-  },
-};

@@ -72,24 +72,8 @@ export const InfiniteTimeRoot: KernelBlockDefinition = createBlock({
   description: 'Ambient, unbounded time (no primary cycle)',
   capability: 'time',
   kernelId: 'InfiniteTimeRoot',
-  inputs: [
-    input('windowMs', 'Preview Window (ms)', parseTypeDesc('Signal:float'), {
-      tier: 'primary',
-      defaultSource: {
-        value: 10000,
-        world: 'config', // UI-only, but still config for consistency
-        uiHint: { kind: 'slider', min: 1000, max: 60000, step: 1000 },
-      },
-    }),
-    input('periodMs', 'Ambient Period (ms)', parseTypeDesc('Signal:float'), {
-      tier: 'secondary',
-      defaultSource: {
-        value: 10000,
-        world: 'config',
-        uiHint: { kind: 'slider', min: 1000, max: 60000, step: 1000 },
-      },
-    }),
-  ],
+  // TimeRoot has NO inputs - it's the source of time. Config (periodMs) comes from block.params.
+  inputs: [],
   outputs: [
     output('systemTime', 'System Time', parseTypeDesc('Signal:time')),
     output('phase', 'Ambient Phase', parseTypeDesc('Signal:float')),

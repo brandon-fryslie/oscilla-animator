@@ -266,8 +266,11 @@ function getEndpointType(
  * Establishes types for every slot and bus, validates bus eligibility,
  * and builds block output types map.
  *
+ * Accumulates all errors before throwing, so users see all problems at once.
+ *
  * @param normalized - The normalized patch from Pass 1
- * @returns A typed patch with type information, or throws on error
+ * @returns A typed patch with type information
+ * @throws Error with all accumulated errors if validation fails
  */
 export function pass2TypeGraph(
   normalized: NormalizedPatch

@@ -111,7 +111,7 @@ class TransactionBuilder implements TxBuilder {
       params: spec.params ?? {},
       position: { x: 0, y: 0 }, // Default position
       form,
-      role: { kind: 'user' },
+      role: { kind: 'user', meta: {} },
     };
 
     const op: Op = { op: 'BlockAdd', block };
@@ -190,7 +190,7 @@ class TransactionBuilder implements TxBuilder {
       from: { kind: 'port', blockId: from.blockId, slotId: from.slotId },
       to: { kind: 'port', blockId: to.blockId, slotId: to.slotId },
       enabled: true,
-    role: { kind: 'user' },
+    role: { kind: 'user', meta: {} },
     };
 
     const op: Op = { op: 'WireAdd', edge };
@@ -252,7 +252,7 @@ class TransactionBuilder implements TxBuilder {
       enabled: spec.enabled ?? true,
       transforms: spec.transforms,
       sortKey: spec.sortKey,
-      role: { kind: 'user' },
+      role: { kind: 'user', meta: {} },
     };
 
     const op: Op = { op: 'WireAdd', edge };

@@ -5,7 +5,6 @@
  * This block exists to enable "all defaults are blocks" architecture.
  */
 
-import type { BlockCompiler } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -45,40 +44,3 @@ registerBlockType({
   lower: lowerDSConstScalarWaveform,
 });
 
-// =============================================================================
-// Legacy Compiler
-// =============================================================================
-
-/**
- * Legacy compiler implementation (will be removed in Phase 4).
- * Pass-through: outputs.out = inputs.value
- */
-export const DSConstScalarWaveformBlock: BlockCompiler = {
-  type: 'DSConstScalarWaveform',
-
-  inputs: [
-    { name: 'value', type: { kind: 'Scalar:string' }, required: true },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Scalar:string' } },
-  ],
-
-  compile({ inputs }) {
-    const valueArtifact = inputs.value;
-
-    if (valueArtifact === undefined || valueArtifact.kind !== 'Scalar:string') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'DSConstScalarWaveform requires Scalar:string for value input',
-        },
-      };
-    }
-
-    // Trivial pass-through
-    return {
-      out: valueArtifact,
-    };
-  },
-};

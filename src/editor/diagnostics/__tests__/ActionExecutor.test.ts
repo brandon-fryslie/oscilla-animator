@@ -18,7 +18,7 @@ const createMockPatchStore = (): Partial<PatchStore> => {
     edges: [],
     addBlock: vi.fn((_type: string, _params?: Record<string, unknown>) => {
       const newBlockId = `block-${Date.now()}`;
-      blocks.push({ id: newBlockId, type: _type, label: _type, params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const } });
+      blocks.push({ id: newBlockId, type: _type, label: _type, params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const, meta: {} } });
       return newBlockId;
     }),
     removeBlock: vi.fn(),
@@ -144,7 +144,7 @@ describe('ActionExecutor', () => {
   describe('removeBlock', () => {
     it('should remove a block', () => {
       mockPatchStore.blocks = [
-        { id: 'block-1' as BlockId, type: 'SineWave', label: 'Sine', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const } },
+        { id: 'block-1' as BlockId, type: 'SineWave', label: 'Sine', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const, meta: {} } },
       ];
 
       const result = actionExecutor.execute({
@@ -202,8 +202,8 @@ describe('ActionExecutor', () => {
 
     it('should remove existing TimeRoots before creating new one', () => {
       mockPatchStore.blocks = [
-        { id: 'block-1' as BlockId, type: 'InfiniteTimeRoot', label: 'Cycle', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const } },
-        { id: 'block-2' as BlockId, type: 'FiniteTimeRoot', label: 'Finite', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const } },
+        { id: 'block-1' as BlockId, type: 'InfiniteTimeRoot', label: 'Cycle', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const, meta: {} } },
+        { id: 'block-2' as BlockId, type: 'FiniteTimeRoot', label: 'Finite', params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const, meta: {} } },
       ];
 
       const result = actionExecutor.execute({
@@ -256,21 +256,21 @@ describe('ActionExecutor', () => {
         id: 'source-block' as BlockId,
         type: 'Oscillator',
         label: 'Source',
-        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const },
+        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const, meta: {} },
       };
 
       const targetBlock: Block = {
         id: 'target-block' as BlockId,
         type: 'ClampSignal',
         label: 'Target',
-        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const },
+        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const, meta: {} },
       };
 
       const adapterBlock: Block = {
         id: 'adapter-block' as BlockId,
         type: 'ClampSignal',
         label: 'Clamp',
-        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const },
+        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const, meta: {} },
       };
 
       const edge: Edge = {
@@ -278,7 +278,7 @@ describe('ActionExecutor', () => {
         from: { kind: 'port', blockId: 'source-block', slotId: 'out' },
         to: { kind: 'port', blockId: 'target-block', slotId: 'in' },
         enabled: true,
-      role: { kind: 'user' },
+      role: { kind: 'user', meta: {} },
       };
 
       mockPatchStore.blocks = [sourceBlock, targetBlock];
@@ -342,7 +342,7 @@ describe('ActionExecutor', () => {
         id: 'adapter-block' as BlockId,
         type: 'BadAdapter',
         label: 'Bad Adapter',
-        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const },
+        params: {}, position: { x: 0, y: 0 }, form: 'primitive' as const, role: { kind: 'user' as const, meta: {} },
       };
 
       // Override addBlock to add bad adapter

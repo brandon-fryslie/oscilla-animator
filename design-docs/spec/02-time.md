@@ -1,141 +1,57 @@
-# Time Architecture
+# Time Architecture (Unified Spec)
 
 ## Core Principle
 
-**Time is monotonic and unbounded. Cycles are derived, not roots.**
-
-The player observes time; it does not control topology.
+**Time is monotonic and unbounded.** Cycles are derived by blocks, not by the player.
 
 ## TimeRoot
 
-A patch declares exactly one TimeRoot. It declares the *time contract*, not time itself.
+Exactly one TimeRoot exists per patch. It defines the time contract.
 
-### TimeRoot Types
+### Allowed TimeRoot Types
 
-| Type | TimeModel | Use Case |
-|------|-----------|----------|
-| **FiniteTimeRoot** | `{ kind: 'finite', durationMs }` | One-shot animations |
-| **InfiniteTimeRoot** | `{ kind: 'infinite' }` | Generative, endless |
+| Block | TimeModel | Outputs |
+| --- | --- | --- |
+| FiniteTimeRoot | `{ kind: 'finite', durationMs }` | `time`, `progress` |
+| InfiniteTimeRoot | `{ kind: 'infinite' }` | `time` |
 
-**Note:** There is NO CycleTimeRoot. Cycles are produced by the Time Console.
+No other TimeRoot types exist.
 
 ### TimeRoot Outputs
 
-**FiniteTimeRoot:**
-- `time` — monotonic system time (publishes to `time` bus)
-- `progress` — 0→1 over duration (publishes to `progress` bus)
-
-**InfiniteTimeRoot:**
-- `time` — monotonic system time (publishes to `time` bus)
+- `time`: Signal<time> (monotonic, unbounded)
+- `progress`: Signal<unit> (0..1 over duration, finite only)
 
 ## TimeModel
 
-Compile-time declaration of what kind of time the patch uses:
-
-```typescript
+```ts
 type TimeModel =
   | { kind: 'finite'; durationMs: number }
   | { kind: 'infinite' }
 ```
 
-**Properties:**
-- Immutable during execution
-- Changing TimeModel recompiles the patch
-- Derived from TimeRoot at compile time
+TimeModel is inferred from the TimeRoot and is immutable during execution.
 
 ## TimeCtx
 
-Runtime input flowing into the program every frame:
-
-```typescript
+```ts
 interface TimeCtx {
-  t: number      // Unbounded, monotonic (ms)
-  dt: number     // Delta time (ms)
-  seed: number   // Deterministic seed
+  tMs: number
+  dtMs: number
+  seed: number
 }
 ```
 
-**Rules:**
-- `t` never wraps
-- `t` never resets when looping playback
-- `t` is never clamped by TimeModel
+The runtime never wraps or clamps `tMs`.
 
-## Time Console (Modulation Rack)
+## Derived Cycles
 
-The Time Console produces Global Rails via its Modulation Rack lanes:
+There is no CycleTimeRoot. Cycles are produced by ordinary blocks (e.g., Phasor + WaveShaper).
 
-### Cycle Lanes
-- **Cycle A** — period, mode (loop/pingpong), phase offset → `phaseA`, `pulse`
-- **Cycle B** — period, mode, phase offset → `phaseB`
+The UI may present a "Time Console" that instantiates these blocks, but it is not a special runtime system.
 
-### Other Lanes
-- **Energy** — envelope generator → `energy` rail
-- **Palette** — palette modulator → `palette` rail
+## Rails (Global Bus Blocks)
 
-### Rail Drive Policy
-For each rail:
-- **Internal** — Modulation Rack drives the rail (default)
-- **Bus** — External bus drives the rail
-- **Both** — Combined with rail combine rule
+Rails are immutable BusBlocks that exist in every patch. They are globally addressable in the UI but compile as normal blocks.
 
-## Global Rails
-
-Reserved buses with system semantics:
-
-| Rail | Type | Combine | Source |
-|------|------|---------|--------|
-| `time` | Signal<time> | last | TimeRoot |
-| `phaseA` | Signal<phase> | last | Time Console Cycle A |
-| `phaseB` | Signal<phase> | last | Time Console Cycle B |
-| `pulse` | Event | last | Time Console wrap events |
-| `energy` | Signal<number> | sum | Time Console + blocks |
-| `palette` | Signal<color> | last | Time Console |
-| `progress` | Signal<unit> | last | FiniteTimeRoot only |
-
-**Properties:**
-- Frame-latched reads (see previous frame values)
-- Origin: `built-in` (system-managed)
-
-## Player Responsibility
-
-The Player never alters `t`. It may:
-- Loop the *view* (for finite patches)
-- Ping-pong the *view*
-- Window the *view*
-- Scale dt (speed control)
-- Freeze (pause evaluation)
-
-The program always sees the same absolute time axis.
-
-## Scrubbing
-
-**Scrubbing is REQUIRED (not deferred).**
-
-Scrubbing changes view transforms only:
-- Finite: local time mapping
-- Infinite: time offset mapping
-
-Scrubbing never:
-- Resets system time
-- Reinitializes state
-
-## View Playback Modes (Finite Only)
-
-For finite patches, transport supports:
-- **Once** — play from 0 to duration
-- **Loop** — repeat playback continuously
-- **Ping-pong** — play forward then backward
-
-These affect view-time mapping only, never underlying monotonic time.
-
-## Phase Derivation
-
-Phase is derived from unbounded `t`:
-
-```typescript
-// In Time Console Cycle lane
-phase = ((t / periodMs) + phaseOffset) % 1.0
-// Pingpong mode: triangle wave instead of sawtooth
-```
-
-Phase wrapping happens in the Time Console, NOT in the player.
+TimeRoot outputs are expected to drive the `time` rail (and `progress` for finite patches) via explicit graph edges (derived during GraphNormalization or present in the base patch template).

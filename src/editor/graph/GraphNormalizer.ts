@@ -4,51 +4,59 @@
  * Pure function that transforms RawGraph (user intent) into NormalizedGraph (compiler input).
  * Materializes default sources as structural blocks with edges.
  *
- * Sprint: Graph Normalization Layer (2026-01-03)
- * References:
- * - .agent_planning/graph-normalization/PLAN-2026-01-03-121815.md
- * - .agent_planning/graph-normalization/USER-RESPONSE-2026-01-03.md
- * - Migrated from: src/editor/compiler/passes/pass0-materialize.ts
+ * NOW USES THE ALLOWLIST SYSTEM:
+ * - Provider blocks can be any type from DEFAULT_SOURCE_PROVIDER_BLOCKS
+ * - Provider blocks can have bus inputs (auto-wired to buses)
+ * - Provider blocks can have editable inputs (recursively normalized)
  */
 
 import type { RawGraph, NormalizedGraph } from './types';
-import type { Block, Edge, PortRef, BlockRole, EdgeRole, TypeDesc } from '../types';
+import type { Block, Edge, PortRef, BlockRole, EdgeRole, TypeDesc, DefaultSource } from '../types';
 import { getBlockDefinition } from '../blocks';
+import { DEFAULT_SOURCE_PROVIDER_BLOCKS, type DefaultSourceProviderBlockSpec } from '../defaultSources/allowlist';
 
 // =============================================================================
-// Local Type Definitions
+// Types
 // =============================================================================
 
-/**
- * SlotWorld - type of value domain (scalar, signal, field, config).
- * Local definition since it's not exported from types.ts yet.
- */
 type SlotWorld = 'signal' | 'field' | 'scalar' | 'config';
 
+interface ProviderCreationResult {
+  blocks: Block[];
+  edges: Edge[];
+}
+
 // =============================================================================
-// Helper Functions (migrated from pass0-materialize.ts)
+// Allowlist Lookup
 // =============================================================================
 
 /**
- * Map world + domain to provider block type.
- * Returns the appropriate provider block type for a given input's type.
- *
- * This is the CANONICAL provider type selection logic.
- * All provider type mappings must be defined here.
- *
- * Workstream 03: Domain defaults use DomainN, not DSConstSignalFloat.
- *
- * Missing provider blocks (not yet implemented):
- * - DSConstScalarBool, DSConstScalarColor, DSConstScalarVec2, DSConstScalarVec3, DSConstScalarCameraRef
- * - DSConstSignalBool, DSConstSignalVec3
- * - DSConstFieldVec3
+ * Build a lookup map from the allowlist.
  */
-function selectProviderType(world: SlotWorld, domain: string): string {
-  // Normalize world: 'config' becomes 'scalar' at compile time
+const PROVIDER_SPECS_BY_TYPE = new Map<string, DefaultSourceProviderBlockSpec>(
+  DEFAULT_SOURCE_PROVIDER_BLOCKS.map(spec => [spec.blockType, spec])
+);
+
+/**
+ * Get provider spec from allowlist.
+ */
+function getProviderSpec(blockType: string): DefaultSourceProviderBlockSpec | undefined {
+  return PROVIDER_SPECS_BY_TYPE.get(blockType);
+}
+
+// =============================================================================
+// Provider Type Selection
+// =============================================================================
+
+/**
+ * Select the default provider block type for a given world + domain.
+ * This selects DSConst* blocks by default. Users can override to use
+ * other providers like Oscillator via DefaultSourceAttachment.
+ */
+function selectDefaultProviderType(world: SlotWorld, domain: string): string {
   const normalizedWorld = world === 'config' ? 'scalar' : world;
 
-  // Special case: config/domain uses DomainN structural block
-  // Workstream 03: Domain inputs get structural defaults (DomainN) instead of signal constants
+  // Special case: domain inputs get DomainN
   if (world === 'config' && domain === 'domain') {
     return 'DomainN';
   }
@@ -77,74 +85,192 @@ function selectProviderType(world: SlotWorld, domain: string): string {
     'field:color': 'DSConstFieldColor',
   };
 
-  const providerType = mapping[key];
-
-  if (providerType === '' || providerType == null) {
-    // Fallback for unmapped types - try to use a sensible default
-    console.warn(`No provider block type for ${key}, falling back to DSConstSignalFloat`);
-    return 'DSConstSignalFloat';
-  }
-
-  return providerType;
+  return mapping[key] ?? 'DSConstSignalFloat';
 }
 
-/**
- * Check if an input is driven (has a wire).
- * Returns true if the input is already driven, false if it needs a default provider.
- *
- * Note: Bus normalization is deferred, so we only check for direct edges.
- */
-function isInputDriven(
-  raw: RawGraph,
-  blockId: string,
-  slotId: string
-): boolean {
-  // Check for edge: any edge to this input
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+function isInputDriven(raw: RawGraph, blockId: string, slotId: string): boolean {
   return raw.edges.some(
     e => e.to.kind === 'port' && e.to.blockId === blockId && e.to.slotId === slotId
   );
 }
 
-/**
- * Generate a deterministic ID for a structural provider block.
- *
- * Format: `${blockId}_default_${slotId}`
- *
- * This format is CANONICAL. All provider block IDs must follow this pattern.
- * Moving blocks doesn't change their provider IDs.
- */
 function generateProviderId(blockId: string, slotId: string): string {
   return `${blockId}_default_${slotId}`;
 }
 
-/**
- * Build params for a provider block based on its type.
- * DomainN expects { n, seed }, DSConst* expects { value }.
- */
-function buildProviderParams(providerType: string, defaultValue: unknown): Record<string, unknown> {
-  if (providerType === 'DomainN') {
-    // Domain default: wire defaultValue to DomainN.n
-    const count = typeof defaultValue === 'number'
-      ? Math.max(1, Math.floor(defaultValue))
-      : 30; // Safe default if value is invalid
-
-    return {
-      n: count,
-      seed: 0, // Default seed
-    };
-  }
-
-  // Standard DSConst* block: { value: T }
-  return { value: defaultValue };
+function extractDomain(inputType: TypeDesc): string {
+  return inputType.domain;
 }
 
+// =============================================================================
+// Provider Block Creation
+// =============================================================================
+
 /**
- * Extract domain from a type descriptor.
- * Works with both core TypeDesc (from types.ts) and IR TypeDesc (from compiler/ir/types).
+ * Create a provider block and all its structural edges.
+ *
+ * This is the core of the normalization logic:
+ * 1. Creates the provider block itself
+ * 2. Creates edge from provider output to target input
+ * 3. For bus inputs: creates edges from buses to provider inputs
+ * 4. For editable inputs: recursively creates their default providers
  */
-function extractDomain(inputType: TypeDesc): string {
-  // TypeDesc format: just extract the domain
-  return inputType.domain;
+function createProviderForInput(
+  targetBlock: Block,
+  targetSlotId: string,
+  defaultSource: DefaultSource,
+  inputType: TypeDesc,
+  raw: RawGraph,
+  depth: number = 0
+): ProviderCreationResult {
+  // Prevent infinite recursion
+  if (depth > 10) {
+    console.warn(`Max recursion depth reached for ${targetBlock.id}.${targetSlotId}`);
+    return { blocks: [], edges: [] };
+  }
+
+  const blocks: Block[] = [];
+  const edges: Edge[] = [];
+
+  const world: SlotWorld = defaultSource.world ?? 'signal';
+  const domain = extractDomain(inputType);
+
+  // Check for per-block provider override first
+  const overrideProviderType = targetBlock.defaultSourceProviders[targetSlotId];
+
+  // Use override if specified and valid, otherwise fall back to default
+  let providerType: string;
+  if (overrideProviderType && getProviderSpec(overrideProviderType)) {
+    providerType = overrideProviderType;
+  } else {
+    providerType = selectDefaultProviderType(world, domain);
+  }
+
+  // Get provider spec from allowlist
+  const providerSpec = getProviderSpec(providerType);
+  if (!providerSpec) {
+    console.warn(`Provider type ${providerType} not in allowlist`);
+    return { blocks: [], edges: [] };
+  }
+
+  // Get provider block definition
+  const providerDef = getBlockDefinition(providerType);
+  if (!providerDef) {
+    console.warn(`Provider block definition not found: ${providerType}`);
+    return { blocks: [], edges: [] };
+  }
+
+  const providerId = generateProviderId(targetBlock.id, targetSlotId);
+
+  // Build params for the provider
+  // DSConst* blocks get { value: X }, DomainN gets { n, seed }
+  let providerParams: Record<string, unknown>;
+  if (providerType === 'DomainN') {
+    const count = typeof defaultSource.value === 'number'
+      ? Math.max(1, Math.floor(defaultSource.value))
+      : 30;
+    providerParams = { n: count, seed: 0 };
+  } else if (providerDef.inputs.length === 0) {
+    // DSConst* blocks have no inputs - value goes in params
+    providerParams = { value: defaultSource.value };
+  } else {
+    // Blocks with inputs (like Oscillator) - params are for non-input config
+    providerParams = {};
+  }
+
+  // Create the provider block
+  const targetPort: PortRef = {
+    blockId: targetBlock.id,
+    slotId: targetSlotId,
+    direction: 'input',
+  };
+
+  const blockRole: BlockRole = {
+    kind: 'structural',
+    meta: {
+      kind: 'defaultSource',
+      target: { kind: 'port', port: targetPort }
+    }
+  };
+
+  const provider: Block = {
+    id: providerId,
+    type: providerType,
+    label: `Default ${targetSlotId}`,
+    position: { x: 0, y: 0 },
+    params: providerParams,
+    form: 'primitive',
+    role: blockRole,
+    defaultSourceProviders: {},  // Structural blocks use defaults
+  };
+  blocks.push(provider);
+
+  // Create edge from provider output to target input
+  const edgeRole: EdgeRole = {
+    kind: 'default',
+    meta: { defaultSourceBlockId: providerId }
+  };
+
+  const mainEdge: Edge = {
+    id: `${providerId}_edge`,
+    from: { kind: 'port', blockId: providerId, slotId: providerSpec.outputPortId },
+    to: { kind: 'port', blockId: targetBlock.id, slotId: targetSlotId },
+    enabled: true,
+    role: edgeRole,
+  };
+  edges.push(mainEdge);
+
+  // Handle bus inputs - create edges from buses to provider inputs
+  for (const [inputId, busName] of Object.entries(providerSpec.busInputs)) {
+    const busEdge: Edge = {
+      id: `${providerId}_bus_${inputId}`,
+      from: { kind: 'bus', busId: busName },
+      to: { kind: 'port', blockId: providerId, slotId: inputId },
+      enabled: true,
+      role: { kind: 'bus', meta: { busId: busName } },
+    };
+    edges.push(busEdge);
+  }
+
+  // Handle editable inputs - recursively create their default providers
+  for (const editableInputId of providerSpec.editableInputs) {
+    // Find this input in the provider's definition
+    const inputDef = providerDef.inputs.find(i => i.id === editableInputId);
+    if (!inputDef) {
+      console.warn(`Editable input ${editableInputId} not found on ${providerType}`);
+      continue;
+    }
+
+    // Skip if no default source defined
+    if (!inputDef.defaultSource) {
+      continue;
+    }
+
+    // Check if this input is already driven (by a bus input)
+    if (providerSpec.busInputs[editableInputId]) {
+      // This input is fed by a bus, not a default provider
+      continue;
+    }
+
+    // Recursively create provider for this input
+    // Provider blocks are structural and don't have custom overrides
+    const nestedResult = createProviderForInput(
+      provider,  // Use the provider block we just created
+      editableInputId,
+      inputDef.defaultSource,
+      inputDef.type,
+      raw,
+      depth + 1
+    );
+    blocks.push(...nestedResult.blocks);
+    edges.push(...nestedResult.edges);
+  }
+
+  return { blocks, edges };
 }
 
 // =============================================================================
@@ -154,118 +280,38 @@ function extractDomain(inputType: TypeDesc): string {
 /**
  * Normalize a RawGraph into a NormalizedGraph.
  *
- * This is a pure transformation that:
- * 1. Scans RawGraph for unconnected inputs with default sources
- * 2. Creates structural provider blocks (DSConst*, DomainN)
- * 3. Creates structural edges from providers to inputs
- * 4. Tags all structural artifacts with appropriate role metadata
- *
- * Eager normalization: Recomputes on every RawGraph mutation, cached until next edit.
- *
- * Anchor-based IDs: Deterministic from structure, not creation order.
- * Moving blocks doesn't change their provider IDs.
- *
- * @param raw - The RawGraph (user blocks + edges only)
- * @returns A NormalizedGraph (user + structural blocks + edges)
+ * For each undriven input with a defaultSource:
+ * 1. Creates a provider block from the allowlist
+ * 2. Wires provider output to target input
+ * 3. Wires provider's bus inputs to buses
+ * 4. Recursively creates providers for provider's editable inputs
  */
 export function normalize(raw: RawGraph): NormalizedGraph {
   const structuralBlocks: Block[] = [];
   const structuralEdges: Edge[] = [];
 
-  // For each user block
   for (const block of raw.blocks) {
     const blockDef = getBlockDefinition(block.type);
+    if (!blockDef) continue;
 
-    if (blockDef == null) {
-      // Block type not found - skip (will be caught by validation later)
-      continue;
-    }
-
-    // Check each input
     for (const inputDef of blockDef.inputs) {
-      // Does this input have a default source?
-      if (inputDef.defaultSource == null) {
-        continue;
-      }
+      if (!inputDef.defaultSource) continue;
+      if (isInputDriven(raw, block.id, inputDef.id)) continue;
 
-      // Is this input already driven (by wire)?
-      if (isInputDriven(raw, block.id, inputDef.id)) {
-        continue;
-      }
+      const result = createProviderForInput(
+        block,  // Pass the full block for per-instance override lookup
+        inputDef.id,
+        inputDef.defaultSource,
+        inputDef.type,
+        raw,
+        0
+      );
 
-      // Create structural provider block
-      const providerId = generateProviderId(block.id, inputDef.id);
-      const defaultSource = inputDef.defaultSource;
-
-      // Handle undefined world - default to 'signal' if not specified
-      const world: SlotWorld = defaultSource.world ?? 'signal';
-
-      // Determine provider block type based on input world and domain
-      const domain = extractDomain(inputDef.type);
-      const providerType = selectProviderType(world, domain);
-
-      // Get the provider block definition
-      const providerDef = getBlockDefinition(providerType);
-      if (providerDef == null) {
-        console.warn(`Provider block type not found: ${providerType}`);
-        continue;
-      }
-
-      // Build provider params (DomainN vs DSConst*)
-      const providerParams = buildProviderParams(providerType, defaultSource.value);
-
-      // Create the port reference for role metadata
-      const targetPort: PortRef = {
-        blockId: block.id,
-        slotId: inputDef.id,
-        direction: 'input',
-      };
-
-      // Create role metadata for structural block
-      const blockRole: BlockRole = {
-        kind: 'structural',
-        meta: {
-          kind: 'defaultSource',
-          target: { kind: 'port', port: targetPort }
-        }
-      };
-
-      // Create the structural provider Block
-      const provider: Block = {
-        id: providerId,
-        type: providerType,
-        label: `Default ${inputDef.id}`,
-        position: { x: 0, y: 0 },  // Hidden blocks have no meaningful position
-        params: providerParams,
-        form: 'primitive',
-        hidden: true,  // Structural blocks are hidden
-        role: blockRole,
-      };
-
-      // Create Edge from provider output to block input
-      // DomainN output port is 'domain', DSConst* output port is 'out'
-      const providerOutputPort = providerType === 'DomainN' ? 'domain' : 'out';
-
-      // Create role metadata for structural edge
-      const edgeRole: EdgeRole = {
-        kind: 'default',
-        meta: { defaultSourceBlockId: providerId }
-      };
-
-      const edge: Edge = {
-        id: `${providerId}_edge`,
-        from: { kind: 'port', blockId: providerId, slotId: providerOutputPort },
-        to: { kind: 'port', blockId: block.id, slotId: inputDef.id },
-        enabled: true,
-        role: edgeRole,
-      };
-
-      structuralBlocks.push(provider);
-      structuralEdges.push(edge);
+      structuralBlocks.push(...result.blocks);
+      structuralEdges.push(...result.edges);
     }
   }
 
-  // Return normalized graph with user + structural artifacts
   return {
     blocks: [...raw.blocks, ...structuralBlocks],
     edges: [...raw.edges, ...structuralEdges],

@@ -257,7 +257,7 @@ export class PatchStore {
       position: { x: 0, y: 0 }, // Default position - caller should update if needed
       params: migratedParams,
       form: getBlockForm(definition),
-      role: { kind: 'user' }, // User-created blocks get user role
+      role: { kind: 'user', meta: {} }, // User-created blocks get user role
     };
 
     // Use transaction system for undo/redo
@@ -498,7 +498,7 @@ export class PatchStore {
       from: { kind: 'port', blockId: fromBlockId, slotId: fromSlotId },
       to: { kind: 'port', blockId: toBlockId, slotId: toSlotId },
       enabled: true,
-      role: { kind: 'user' }, // User-created edges get user role
+      role: { kind: 'user', meta: {} }, // User-created edges get user role
     };
 
     // Conservative migration: check if this is an internal call
@@ -738,7 +738,7 @@ export class PatchStore {
       position: oldBlock.position,
       params: newParams,
       form: getBlockForm(newBlockDef),
-      role: { kind: 'user' }, // Replacement blocks are user blocks
+      role: { kind: 'user', meta: {} }, // Replacement blocks are user blocks
     };
 
     // Track selection state
@@ -763,7 +763,7 @@ export class PatchStore {
           from: { kind: 'port', blockId: conn.fromBlockId === oldBlockId ? newBlockId : conn.fromBlockId, slotId: conn.fromSlot },
           to: { kind: 'port', blockId: conn.toBlockId === oldBlockId ? newBlockId : conn.toBlockId, slotId: conn.toSlot },
           enabled: true,
-          role: { kind: 'user' },
+          role: { kind: 'user', meta: {} },
         };
         tx.add('edges', edge);
       });

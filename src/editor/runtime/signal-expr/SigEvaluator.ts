@@ -7,7 +7,7 @@
  * Algorithm:
  * 1. Check cache: if stamp[sigId] === frameId, return cached value
  * 2. Get node from IR table
- * 3. Evaluate based on node kind (const, timeAbsMs, timeModelMs, phase01, wrapEvent, map, zip, select, inputSlot, busCombine, transform, stateful, closureBridge, closure)
+ * 3. Evaluate based on node kind (const, timeAbsMs, timeModelMs, phase01, wrapEvent, map, zip, select, inputSlot, busCombine, transform, stateful, closureBridge)
  * 4. Write result to cache with current frameId stamp
  * 5. Return result
  *
@@ -142,11 +142,6 @@ export function evalSig(
 
     case "closureBridge":
       result = evalClosureBridge(node, env, nodes);
-      break;
-
-    case "closure":
-      // V2 adapter: invoke embedded V1 closure
-      result = node.closureFn(env.tAbsMs, createLegacyContext(env));
       break;
 
     default: {

@@ -8,7 +8,7 @@
  * but for now we use hardcoded defaults matching typical canvas size.
  */
 
-import type { BlockCompiler, Vec2 } from '../../types';
+import type { Vec2 } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // Default viewport size (matches typical canvas dimensions)
@@ -53,35 +53,3 @@ registerBlockType({
   ],
   lower: lowerViewportInfo,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const ViewportInfoBlock: BlockCompiler = {
-  type: 'ViewportInfo',
-
-  inputs: [],
-
-  outputs: [
-    { name: 'size', type: { kind: 'Scalar:vec2' } },
-    { name: 'center', type: { kind: 'Scalar:vec2' } },
-  ],
-
-  compile() {
-    const size: Vec2 = {
-      x: DEFAULT_VIEWPORT_WIDTH,
-      y: DEFAULT_VIEWPORT_HEIGHT,
-    };
-
-    const center: Vec2 = {
-      x: DEFAULT_VIEWPORT_WIDTH / 2,
-      y: DEFAULT_VIEWPORT_HEIGHT / 2,
-    };
-
-    return {
-      size: { kind: 'Scalar:vec2', value: size },
-      center: { kind: 'Scalar:vec2', value: center },
-    };
-  },
-};

@@ -1,5 +1,7 @@
 /**
  * Shared helpers for block compilers.
+ *
+ * TODO: maybe unused; needs verification.
  */
 
 import type { Artifact } from '../types';

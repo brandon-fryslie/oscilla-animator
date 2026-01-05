@@ -1,103 +1,90 @@
-# Compilation
+# Compilation (Unified Spec)
 
 ## Pipeline
 
 ```
-Patch JSON
-    ↓
-Graph Build (blocks, connections, bus bindings)
-    ↓
-Validation (types, topology, constraints)
-    ↓
-TimeRoot Analysis → TimeModel
-    ↓
-Bus Resolution (publishers, listeners, combine)
-    ↓
-SCC Detection (feedback analysis)
-    ↓
-Artifact Compilation
-    ↓
-CompiledProgram { program, timeModel }
+RawGraph
+  -> GraphNormalization (expand derived blocks/edges)
+  -> Validation
+  -> Compilation (lower to IR/program)
+  -> CompiledProgram { program, timeModel }
 ```
+
+**GraphNormalization is mandatory.** The compiler consumes NormalizedGraph and never inserts blocks or edges.
+
+## GraphNormalization Responsibilities
+
+- Expand composites/macros into blocks + edges.
+- Materialize DefaultSource blocks for inputs with zero writers.
+- Materialize BusBlocks for bus UI wiring.
+- Ensure global rail BusBlocks exist in every patch.
+- Expand lens/adapter UI transforms into explicit derived blocks.
+- Convert any stateful "wire operations" into explicit stateful blocks.
+- Assign stable IDs using anchor-based rules.
+
+## Validation Passes
+
+1. **Type checking**
+   - Port compatibility
+   - CombineMode validity for TypeDesc
+   - Transform compatibility
+
+2. **Topology checks**
+   - Exactly one TimeRoot
+   - TimeRoot has no upstream dependencies
+   - No TimeRoot inside composites
+
+3. **Cycle checks**
+   - Detect SCCs
+   - Every cycle must cross a stateful block (UnitDelay or equivalent)
+
+4. **Primitive/Composite checks**
+   - Primitive blocks must have compiler implementations
+   - Composite blocks must have graph definitions
+   - Mismatches are compile errors (no fallback)
+
+5. **Determinism checks**
+   - Order-dependent combine uses stable writer ordering
+
+## Input Resolution
+
+For every input port:
+
+1. Gather inbound edges.
+2. Combine writers using the port CombinePolicy.
+3. If no writers exist, use DefaultSource (already inserted in NormalizedGraph).
+
+This is a compile-time resolution step. It does not mutate the graph.
 
 ## Output
 
-```typescript
+```ts
 interface CompiledProgram {
-  program: Program<RenderTree>
+  program: Program<RenderFrame>
   timeModel: TimeModel
 }
 ```
 
-## TimeModel Inference
+The compiler is a pure transform from NormalizedGraph to executable artifacts.
 
-| Condition | Result |
-|-----------|--------|
-| FiniteTimeRoot exists | `{ kind: 'finite', durationMs }` |
-| InfiniteTimeRoot exists | `{ kind: 'infinite' }` |
-| >1 TimeRoot | Error |
-| 0 TimeRoots | Error |
+## Diagnostics (Compile Errors)
 
-**No fallback. No inference from other blocks.**
+Compilation failures must return structured errors with locations for UI focus.
 
-## Validation Passes
-
-### 1. Type Checking
-- Port type compatibility
-- Bus type matching
-- Adapter validity
-- World/domain agreement
-
-### 2. Topology Validation
-- Exactly one TimeRoot
-- TimeRoot has no upstream dependencies
-- No TimeRoot in composites
-- Time-derived blocks connect to TimeRoot
-
-### 3. Bus Validation
-- Reserved bus type enforcement
-- Required buses present
-- Publisher ordering deterministic
-
-### 4. SCC Analysis
-- Detect strongly connected components
-- Verify memory boundaries on cycles
-- Flag illegal feedback loops
-
-## Error Structure
-
-```typescript
+```ts
 interface CompileError {
-  code: string              // e.g., "TR-001"
+  code: string
   severity: 'error' | 'warning'
   title: string
   message: string
   details?: string[]
   locations?: ErrorLocation[]
-  help?: { label: string, action: FixAction }[]
 }
+
+type ErrorLocation =
+  | { kind: 'Block'; blockId: string }
+  | { kind: 'Port'; blockId: string; portId: string }
+  | { kind: 'Bus'; busId: string }
+  | { kind: 'Edge'; from: PortRef; to: PortRef }
+  | { kind: 'Cycle'; nodes: string[] }
 ```
-
-## Error Codes
-
-### TimeRoot Errors (TR-xxx)
-| Code | Title | Condition |
-|------|-------|-----------|
-| TR-001 | No Time Topology | 0 TimeRoot blocks |
-| TR-002 | Conflicting Topology | >1 TimeRoot blocks |
-| TR-003 | TimeRoot Driven | Inputs connected to TimeRoot |
-| TR-004 | TimeRoot in Composite | TimeRoot inside composite |
-
-### Feedback Errors (FB-xxx)
-| Code | Title | Condition |
-|------|-------|-----------|
-| FB-301 | Illegal Feedback | SCC with no memory boundary |
-| FB-302 | Partial Buffering | Some paths bypass memory |
-| FB-303 | Finite Conflict | Unbounded feedback in finite |
-
-## Compile-Time Assertions
-
-Enforced at compile time (not runtime):
-- World mismatches (signal vs field)
-- Domain mismatches (phase vs number)
-- Illegal cycles (feedback without memory)

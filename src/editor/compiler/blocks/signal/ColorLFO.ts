@@ -5,13 +5,10 @@
  * Takes phase [0,1] and produces Signal<color> as hex strings.
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
 import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
 import { OpCode } from '../../ir/opcodes';
-
-type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
 
 /**
  * Convert hex color string to packed RGBA u32 number.
@@ -28,82 +25,6 @@ function hexToPackedRGBA(hex: string): number {
   return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
 }
 
-/**
- * Parse hex color to HSL
- */
-function hexToHSL(hex: string): { h: number; s: number; l: number } {
-  const cleaned = hex.replace(/^#/, '');
-  const num = parseInt(cleaned, 16);
-  const r = ((num >> 16) & 255) / 255;
-  const g = ((num >> 8) & 255) / 255;
-  const b = (num & 255) / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-
-  if (max === min) {
-    return { h: 0, s: 0, l };
-  }
-
-  const d = max - min;
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-  let h: number;
-  if (max === r) {
-    h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-  } else if (max === g) {
-    h = ((b - r) / d + 2) / 6;
-  } else {
-    h = ((r - g) / d + 4) / 6;
-  }
-
-  return { h: h * 360, s, l };
-}
-
-/**
- * Convert HSL to hex string
- */
-function hslToHex(h: number, s: number, l: number): string {
-  h = h % 360;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l - c / 2;
-
-  let r: number, g: number, b: number;
-  if (h < 60) {
-    r = c;
-    g = x;
-    b = 0;
-  } else if (h < 120) {
-    r = x;
-    g = c;
-    b = 0;
-  } else if (h < 180) {
-    r = 0;
-    g = c;
-    b = x;
-  } else if (h < 240) {
-    r = 0;
-    g = x;
-    b = c;
-  } else if (h < 300) {
-    r = x;
-    g = 0;
-    b = c;
-  } else {
-    r = c;
-    g = 0;
-    b = x;
-  }
-
-  const toHex = (n: number): string =>
-    Math.round((n + m) * 255)
-      .toString(16)
-      .padStart(2, '0');
-
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
 
 // =============================================================================
 // IR Lowering
@@ -177,61 +98,3 @@ registerBlockType({
   ],
   lower: lowerColorLFO,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const ColorLFOBlock: BlockCompiler = {
-  type: 'ColorLFO',
-
-  inputs: [
-    { name: 'phase', type: { kind: 'Signal:phase' }, required: true },
-    { name: 'base', type: { kind: 'Scalar:color' }, required: false },
-    { name: 'hueSpan', type: { kind: 'Scalar:float' }, required: false },
-    { name: 'sat', type: { kind: 'Scalar:float' }, required: false },
-    { name: 'light', type: { kind: 'Scalar:float' }, required: false },
-  ],
-
-  outputs: [{ name: 'color', type: { kind: 'Signal:color' } }],
-
-  compile({ inputs }) {
-    const phaseArtifact = inputs.phase;
-    if (phaseArtifact === undefined || phaseArtifact.kind !== 'Signal:phase') {
-      return {
-        color: {
-          kind: 'Error',
-          message: 'ColorLFO requires a Signal<phase> input',
-        },
-      };
-    }
-
-    const phaseSignal = phaseArtifact.value as Signal<float>;
-    // Read from inputs - values come from defaultSource or explicit connections
-    const baseArtifact = inputs.base;
-    const base = baseArtifact !== undefined && 'value' in baseArtifact && typeof baseArtifact.value === 'string'
-      ? baseArtifact.value
-      : '#3B82F6';
-    const hueSpanArtifact = inputs.hueSpan;
-    const hueSpan = Number(hueSpanArtifact !== undefined && 'value' in hueSpanArtifact ? hueSpanArtifact.value : 180);
-    const satArtifact = inputs.sat;
-    const sat = Number(satArtifact !== undefined && 'value' in satArtifact ? satArtifact.value : 80);
-    const lightArtifact = inputs.light;
-    const light = Number(lightArtifact !== undefined && 'value' in lightArtifact ? lightArtifact.value : 60);
-
-    // Extract base hue from base color
-    const baseHSL = hexToHSL(base);
-    const baseHue = baseHSL.h;
-
-    // Create color signal
-    const signal: Signal<string> = (t: number, ctx: RuntimeCtx): string => {
-      const phase = phaseSignal(t, ctx);
-      const hue = baseHue + phase * hueSpan;
-      return hslToHex(hue, sat, light);
-    };
-
-    return {
-      color: { kind: 'Signal:color', value: signal },
-    };
-  },
-};

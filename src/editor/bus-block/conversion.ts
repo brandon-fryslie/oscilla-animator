@@ -50,7 +50,6 @@ export function convertBusToBlock(bus: Bus): Block {
       sortKey: 0, // sortKey is not on Bus interface
       origin: 'user', // origin is not on Bus interface - default to 'user'
     },
-    hidden: true,
     role: {
       kind: 'structural',
       meta: {

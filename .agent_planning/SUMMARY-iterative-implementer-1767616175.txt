@@ -1,0 +1,57 @@
+Agent: iterative-implementer | 1767616175
+Mode: manual (with tests)
+Completed: Steel Thread - Animated Particles implementation | Files: 5 | Commits: 0 (v2 not a git repo)
+Tests: 16 passing
+Cache invalidated: none (no cache in v2 project)
+Status: complete
+
+IMPLEMENTATION SUMMARY
+======================
+
+Successfully implemented the "Steel Thread" - a minimal viable pipeline for Oscilla v2 that demonstrates
+the complete animation flow: time → domain → fields → render → canvas.
+
+NEW BLOCKS IMPLEMENTED
+----------------------
+1. FieldFromDomainId - Extracts normalized index (0..1) from domain
+2. PositionSwirl - Animates particles in a swirling circle pattern
+3. HueRainbow - Generates rainbow colors based on phase and element ID
+4. RenderInstances2D - Sink block that emits StepRender in schedule
+
+RUNTIME UPDATES
+---------------
+- Enhanced Materializer.ts to lazily evaluate signals when needed by fields
+- Added support for kernel functions: makeVec2, hsvToRgb, applyOpacity
+- Updated ScheduleExecutor.ts to pass signals map to materialize()
+
+VALIDATION
+----------
+- All 16 tests passing (11 compiler + 4 runtime + 1 steel thread)
+- Steel thread test verifies:
+  * 100 particles with swirling animation
+  * Rainbow colors cycling with phase
+  * Proper buffer materialization (positions as Float32Array, colors as Uint8ClampedArray)
+  * Animation over time (positions change between frames)
+
+FILES MODIFIED
+--------------
+/Users/bmf/code/oscilla-animator-v2/src/compiler/blocks/render.ts (NEW)
+/Users/bmf/code/oscilla-animator-v2/src/compiler/blocks/index.ts
+/Users/bmf/code/oscilla-animator-v2/src/runtime/Materializer.ts
+/Users/bmf/code/oscilla-animator-v2/src/runtime/ScheduleExecutor.ts
+/Users/bmf/code/oscilla-animator-v2/src/compiler/__tests__/steel-thread.test.ts (NEW)
+
+KEY ARCHITECTURAL DECISIONS
+----------------------------
+1. Signals are lazily evaluated in Materializer - no need for explicit StepEvalSig
+2. Size is a signal (not field) - broadcast at runtime if needed
+3. Kernel functions handle complex operations (HSV→RGB, vec2 construction)
+4. RenderInstances2D is a proper block that emits StepRender (not a special case)
+
+NEXT STEPS
+----------
+The steel thread is complete and tested. To make it visual:
+1. Create minimal HTML UI (canvas element)
+2. Create src/main.ts that builds the patch programmatically
+3. Add dev server (vite or similar)
+4. Wire up animation loop using executeFrame() and renderFrame()

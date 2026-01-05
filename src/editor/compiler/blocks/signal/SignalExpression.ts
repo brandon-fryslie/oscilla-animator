@@ -15,38 +15,7 @@
  * - "(value + t) % 1" - phase offset by time
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
-
-type Signal<A> = (t: number, ctx: RuntimeCtx) => A;
-
-/**
- * Create a function from an expression string.
- * Returns number (coerced if expression returns other type).
- */
-function createExpressionEvaluator(
-  expression: string
-): (value: number, t: number) => number {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const fn = new Function(
-      'value',
-      't',
-      'Math',
-      `"use strict"; return (${expression});`
-    );
-    return (value: number, t: number) => {
-      try {
-        const result = fn(value, t, Math);
-        return Number(result);
-      } catch {
-        return 0;
-      }
-    };
-  } catch {
-    return () => 0;
-  }
-}
 
 // =============================================================================
 // IR Lowering
@@ -60,15 +29,13 @@ const lowerSignalExpression: BlockLowerFn = ({ config }) => {
   // 3. Rust/WASM compilation requires static, analyzable code
   // 4. Security: user expressions cannot be trusted in compiled code
   //
-  // This block MUST remain in closure mode permanently.
-  // For IR, users should use primitive blocks composed together instead of expressions.
+  // This block is not supported in IR. Use primitive blocks composed together instead.
 
   const expression = (config as any)?.expression ?? 'value';
 
   throw new Error(
     `SignalExpression cannot be lowered to IR (expression: "${expression}"). ` +
     'This block uses dynamic JavaScript evaluation which is fundamentally incompatible with static IR. ' +
-    'It must remain in closure mode permanently. ' +
     'For IR-compatible patches, compose primitive blocks instead of using custom expressions.'
   );
 };
@@ -84,72 +51,3 @@ registerBlockType({
   ],
   lower: lowerSignalExpression,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const SignalExpressionBlock: BlockCompiler = {
-  type: 'SignalExpression',
-
-  inputs: [
-    { name: 'value', type: { kind: 'Signal:float' }, required: false },
-    { name: 'expression', type: { kind: 'Scalar:string' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Signal:float' } },
-  ],
-
-  compile({ inputs }) {
-    // Get input signal - fall back to constant 0 if not connected
-    const valueArtifact = inputs.value;
-    let inputSignal: Signal<number>;
-
-    if (valueArtifact === undefined) {
-      // No input connected - use constant 0
-      inputSignal = () => 0;
-    } else if (valueArtifact.kind === 'Signal:float') {
-      inputSignal = valueArtifact.value as Signal<number>;
-    } else if (valueArtifact.kind === 'Signal:int') {
-      // Also accept int signals
-      inputSignal = valueArtifact.value as Signal<number>;
-    } else if (valueArtifact.kind === 'Signal:phase' || valueArtifact.kind === 'Signal:phase01') {
-      // Also accept phase signals (they're just numbers 0-1)
-      inputSignal = valueArtifact.value as Signal<number>;
-    } else if (valueArtifact.kind === 'Scalar:float') {
-      // Lift scalar to constant signal
-      const constVal = valueArtifact.value as number;
-      inputSignal = () => constVal;
-    } else if (valueArtifact.kind === 'Scalar:int') {
-      // Lift int scalar to constant signal
-      const constVal = valueArtifact.value as number;
-      inputSignal = () => constVal;
-    } else {
-      return {
-        out: {
-          kind: 'Error',
-          message: `SignalExpression: expected Signal<number> input, got ${valueArtifact.kind}`,
-        },
-      };
-    }
-
-    // Get expression from config input
-    const expressionArtifact = inputs.expression;
-    const expression = expressionArtifact !== undefined
-      ? String((expressionArtifact as any).value ?? 'value')
-      : 'value';
-
-    const evaluator = createExpressionEvaluator(expression);
-
-    // Create output signal that evaluates the expression
-    const signal: Signal<number> = (t: number, ctx: RuntimeCtx): number => {
-      const value = inputSignal(t, ctx);
-      return evaluator(value, t);
-    };
-
-    return {
-      out: { kind: 'Signal:float', value: signal },
-    };
-  },
-};

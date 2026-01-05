@@ -1,8 +1,8 @@
 /**
- * Rhythm Block Compilers
+ * Rhythm Block Registration
  *
- * Compilers for rhythmic event and envelope primitives.
+ * Imports all rhythm-related IR block lowerings for registration.
  */
 
-export { PulseDividerBlock } from './PulseDivider';
-export { EnvelopeADBlock } from './EnvelopeAD';
+import './PulseDivider';
+import './EnvelopeAD';

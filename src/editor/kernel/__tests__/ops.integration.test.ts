@@ -28,7 +28,7 @@ function createTestBlock(id: string, label?: string): Block {
     position: { x: 0, y: 0 },
     params: { value: 10 },
     form: 'primitive',
-    role: { kind: 'user' },
+    role: { kind: 'user', meta: {} },
   };
 }
 
@@ -72,7 +72,7 @@ describe('Kernel Ops Integration', () => {
         from: { kind: 'port', blockId: 'b1', slotId: 'out' },
         to: { kind: 'port', blockId: 'b2', slotId: 'in' },
         enabled: true,
-      role: { kind: 'user' },
+      role: { kind: 'user', meta: {} },
       },
     };
 
@@ -109,7 +109,7 @@ describe('Kernel Ops Integration', () => {
         from: { kind: 'port', blockId: 'b1', slotId: 'out' },
         to: { kind: 'port', blockId: 'b2', slotId: 'in' },
         enabled: true,
-      role: { kind: 'user' },
+      role: { kind: 'user', meta: {} },
       },
     };
     const edge2: WireAdd = {
@@ -119,7 +119,7 @@ describe('Kernel Ops Integration', () => {
         from: { kind: 'port', blockId: 'b2', slotId: 'out' },
         to: { kind: 'port', blockId: 'b3', slotId: 'in' },
         enabled: true,
-      role: { kind: 'user' },
+      role: { kind: 'user', meta: {} },
       },
     };
     applyOp(patch, edge1);

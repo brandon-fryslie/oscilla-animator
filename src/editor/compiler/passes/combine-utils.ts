@@ -1,8 +1,7 @@
 /**
  * Combine Utilities - Shared logic for combining multiple value sources
  *
- * This module extracts the battle-tested combine logic from Pass 7 (bus lowering)
- * to be reusable by Pass 6 (multi-input port resolution).
+ * Combine logic reused by Pass 6 (multi-input port resolution).
  *
  * Key responsibilities:
  * - Create combine nodes for Signal/Field/Event worlds
@@ -11,7 +10,6 @@
  * - Support all combine modes (sum, average, max, min, last, layer, first, error)
  *
  * Sprint: Phase 0 - Sprint 3: Multi-Input Blocks
- * Extracted from: pass7-bus-lowering.ts (lines 230-330)
  * Updated: Multi-Input Blocks Integration (2026-01-01)
  */
 

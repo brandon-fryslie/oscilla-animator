@@ -40,16 +40,11 @@ export type {
 
   // Artifacts
   Artifact,
-  CompiledOutputs,
 
   // Phase machine + scene
   PhaseSample,
   PhaseMachine,
   TargetScene,
-
-  // Block compiler
-  BlockCompiler,
-  BlockRegistry,
 
   // Errors
   CompileErrorCode,
@@ -64,13 +59,8 @@ export type {
   CompiledProgram,
 } from './types';
 
-// Block implementations (domain blocks only)
-export {
-  // Registry
-  DEFAULT_BLOCK_REGISTRY,
-  createBlockRegistry,
-  registerDynamicBlock,
-} from './blocks';
+// IR block registration
+export { registerCompilerBlocks } from './blocks';
 
 // Context utilities
 export {
@@ -104,8 +94,3 @@ export {
   type WireDecoration,
   type DecorationSet,
 } from './error-decorations';
-
-// Export bus-aware compilation and runtime
-export {
-  compileBusAwarePatch,
-} from './compileBusAware';

@@ -26,7 +26,7 @@ function createTestBlock(id: string = 'block1'): Block {
     position: { x: 0, y: 0 },
     params: { value: 10 },
     form: 'primitive',
-    role: { kind: 'user' },
+    role: { kind: 'user', meta: {} },
   };
 }
 

@@ -1,112 +1,119 @@
-# Bus System
+# Multi-Writer Inputs, Bus Blocks, and Rails (Unified Spec)
 
-## Overview
+## Core Principle
 
-Buses are named shared channels that replace explicit wiring for common signals. They function like audio sends/returns in a DAW.
+Every input port on every block may have **0..N writers**. If N != 1, the result is defined by an explicit combine mode. There is no "MultipleWriters" error.
 
-## Architecture
+Buses are a UI affordance. At compile time they are ordinary blocks and edges. The rules in this document apply to all blocks; buses simply expose a globally addressable wiring surface.
 
-### Publishers
-Blocks that output to a bus. Multiple publishers can contribute.
+## CombineMode
 
-### Listeners
-Blocks that receive from a bus. Multiple listeners can subscribe.
-
-### Combine Modes
-
-When multiple publishers contribute, values are combined:
-
-| Mode | Behavior | Use Case |
-|------|----------|----------|
-| `sum` | Values are summed | energy |
-| `average` | Values are averaged | blended signals |
-| `max` | Maximum value wins | intensity peaks |
-| `min` | Minimum value wins | constraints |
-| `last` | Last publisher wins (by sortKey) | phaseA, palette, progress |
-| `layer` | Layered composition | visual stacking |
-
-**Note:** `or` and `mix` are NOT valid combine modes.
-
-### Publisher Ordering
-
-Every publisher has a stable `sortKey`. Combine operations use this ordering for deterministic results.
-
-## Reserved Buses (Global Rails)
-
-| Bus | Type | Combine | Default |
-|-----|------|---------|---------|
-| `time` | Signal<time> | last | 0 |
-| `phaseA` | Signal<phase> | last | 0 |
-| `phaseB` | Signal<phase> | last | 0 |
-| `pulse` | Event | last | never fires |
-| `energy` | Signal<number> | sum | 0 |
-| `palette` | Signal<color> | last | #0b1020 |
-| `progress` | Signal<unit> | last | 0 |
-
-**Properties:**
-- Pinned at top of Bus Board with "system" badge
-- Origin: `built-in`
-- Cannot be deleted
-
-## Frame Latching
-
-Rail reads are frame-latched: reads see the previous frame's value.
-
-This ensures:
-- No circular dependencies within a frame
-- Deterministic evaluation order
-- Predictable timing behavior
-
-## TimeRoot Publishing
-
-TimeRoot blocks publish only to the `time` bus:
-- **FiniteTimeRoot** — `time` + `progress`
-- **InfiniteTimeRoot** — `time` only
-
-Phase/pulse/energy/palette come from the Time Console, not TimeRoot.
-
-## Bus Binding
-
-Bindings connect bus values to block inputs:
-
-```typescript
-interface BusBinding {
-  busId: BusId
-  portRef: PortRef
-  adapters: AdapterId[]  // Applied in order
-}
+```ts
+type CombineMode =
+  | 'sum' | 'average' | 'min' | 'max' | 'mul'       // numeric, vec, color (componentwise)
+  | 'last' | 'first' | 'layer'                      // any type, order-dependent
+  | 'or' | 'and'                                    // boolean only
+  | { kind: 'custom'; id: string }                  // registered reducer
 ```
 
-## Adapters (Perception Stack)
+"layer" is an alias of "last" with a stable ordering contract.
 
-A listener can have multiple adapters chained:
+## CombinePolicy (per input port)
+
+```ts
+type CombinePolicy =
+  | { when: 'multi'; mode: CombineMode }
+  | { when: 'always'; mode: CombineMode }
+  | { when: 'multi'; mode: 'error' }                // optional strictness
+```
+
+Default if unspecified:
+```
+{ when: 'multi', mode: 'last' }
+```
+
+## Writers
+
+In the NormalizedGraph, writers are just inbound edges to an input port. There are no special cases.
+
+Default sources are derived blocks connected only when the input has zero writers.
+
+## Bus Blocks
+
+A bus is represented as a **BusBlock** with a globally addressable `busId`.
+
+- Inputs: `in` (multi-writer, CombineMode = bus combine policy)
+- Outputs: `out`
+
+Publish/subscribe UI interactions are rewritten into normal edges targeting the BusBlock.
+Bus blocks are user-creatable.
+
+## Rails (Global Bus Blocks)
+
+Rails are immutable, system-provided BusBlocks that exist in every patch. They provide a consistent foundation of shared signals and events.
+
+Canonical rails (reserved bus IDs):
+- `time`
+- `phaseA`
+- `phaseB`
+- `pulse`
+- `energy`
+- `palette`
+- `progress`
+
+Rails are present even if unused. They are normal blocks in the graph; the UI simply renders them differently.
+
+## Deterministic Ordering
+
+Order-dependent combine modes (`last`, `first`, `layer`, and most `custom`) must use a stable writer ordering that does not depend on UI order or JSON array order.
+
+Recommended ordering key per inbound edge:
 
 ```
-bus.energy -> [scale(0.5)] -> [smooth(0.1)] -> [clamp(0,1)] -> block.input
+(edge.priority, edge.rolePriority, from.blockId, from.portId, edge.id)
 ```
 
-This "perception stack" defines how this listener perceives the bus value.
+Where:
+- `edge.priority` is an optional integer ordering hint (default 0).
+- `edge.rolePriority` is stable (user edges before derived edges).
+- `edge.id` is stable across edits (anchor-derived if derived).
+
+## Type Rules
+
+Combine mode must be valid for the input TypeDesc:
+
+- sum/average/min/max/mul: number, unit, vec2, vec3, color (componentwise)
+- or/and: bool only
+- last/first/layer: any type
+- phase: only last/first/layer or a phase-specific custom reducer
+- custom: must be registered and type-compatible
+
+If invalid, compilation fails with a diagnostic.
+
+## Transforms (Lenses/Adapters)
+
+Transforms are blocks. The UI may present lens/adapter controls on a wire, but GraphNormalization replaces these with explicit derived blocks inserted into the graph.
+
+Edges remain pure connections; all transform behavior is expressed by blocks.
+
+See `spec/07-transforms.md` for the transform block catalog and normalization rules.
+
+## Default Sources
+
+Default sources are blocks, not parameters. GraphNormalization inserts a DefaultSource block and edge when an input has zero writers. If any writer exists, the DefaultSource is disconnected.
 
 ## UI Control Publishers
 
-UI controls (sliders, knobs) can publish to buses:
-- `sortKey = -1000` (high priority to override defaults)
-- `blockId = 'ui-control-{id}'`
-- No compilation required — runtime only
+UI controls (sliders, knobs) are represented as derived blocks that publish into BusBlocks. They use an explicit priority to override defaults without being special-cased.
 
-## Multiple Publisher Rules
+Recommended policy:
+- UI control publisher edges set `priority = -1000`.
+- UI control blocks use stable IDs derived from the control identity.
+- Ordering remains deterministic via the standard ordering key.
 
-**Control-plane signals** (`phaseA`, `progress`):
-- Must not have multiple publishers unless explicitly configured
-- Otherwise compile error
+## Bus Board UI (Summary)
 
-**Data-plane signals** (`energy`, `pulse`):
-- Multiple publishers expected and valid
-- Combine semantics apply
-
-## Bus Validation
-
-Compiler enforces:
-- Reserved bus type matching
-- Required buses present for TimeRoot kind
-- Publisher ordering deterministic
+The Bus Board UI is a visualization of BusBlocks. It should:
+- Pin rails at the top with a system badge.
+- Show type badges, publisher counts, listener counts.
+- Provide a simple live scope per bus (phase ring, numeric meter, color swatch).

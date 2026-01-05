@@ -13,58 +13,13 @@
  * Chain with FieldStringToColor to convert output to Field<color>.
  */
 
-import type { BlockCompiler, Field, CompileCtx, RuntimeCtx } from '../../types';
-import { isDefined } from '../../../types/helpers';
-import type { BlockLowerFn } from '../../ir/lowerTypes';
-
-interface FieldEvalCtx extends CompileCtx {
-  t: number;
-}
-
-// Helper functions available in expressions
-const hsl = (h: number, s: number, l: number): string =>
-  `hsl(${((h % 360) + 360) % 360}, ${Math.max(0, Math.min(100, s))}%, ${Math.max(0, Math.min(100, l))}%)`;
-
-const rgb = (r: number, g: number, b: number): string =>
-  `rgb(${Math.max(0, Math.min(255, Math.round(r)))}, ${Math.max(0, Math.min(255, Math.round(g)))}, ${Math.max(0, Math.min(255, Math.round(b)))})`;
-
-/**
- * Create a function from an expression string.
- * Returns string (coerced if expression returns number).
- */
-function createExpressionEvaluator(
-  expression: string
-): (i: number, n: number, signal: number) => string {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const fn = new Function(
-      'i',
-      'n',
-      'signal',
-      'Math',
-      'hsl',
-      'rgb',
-      `"use strict"; return (${expression});`
-    ) as (i: number, n: number, signal: number, mathObj: typeof Math, hslFn: (h: number, s: number, l: number) => string, rgbFn: (r: number, g: number, b: number) => string) => unknown;
-    return (i: number, n: number, signal: number) => {
-      try {
-        const result = fn(i, n, signal, Math, hsl, rgb);
-        return String(result);
-      } catch {
-        return '#000000';
-      }
-    };
-  } catch {
-    return () => '#000000';
-  }
-}
+import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
 // IR Lowering
 // =============================================================================
 
-// @ts-expect-error Intentionally unused - kept as template for DSL block
-const _lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
+const lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
   const domain = inputs[0];
 
   if (domain.k !== 'special' || domain.tag !== 'domain') {
@@ -85,8 +40,7 @@ const _lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
   // - Rust/WASM compilation requires static, analyzable code
   // - Security: user expressions cannot be trusted in compiled code
   //
-  // This block MUST remain in closure mode permanently.
-  // For IR, users should use primitive blocks composed together instead of expressions.
+  // This block is not supported in IR. Use primitive blocks composed together instead.
 
   const expression = (config != null && typeof config === 'object' && 'expression' in config)
     ? String(config.expression)
@@ -95,94 +49,26 @@ const _lowerFieldFromExpression: BlockLowerFn = ({ inputs, config }) => {
   throw new Error(
     `FieldFromExpression cannot be lowered to IR (expression: "${expression}"). ` +
     'This block uses dynamic JavaScript evaluation which is fundamentally incompatible with static IR. ' +
-    'It must remain in closure mode permanently. ' +
     'For IR-compatible patches, compose primitive blocks instead of using custom expressions.'
   );
 };
 
-// NOTE: IR registration intentionally disabled. Keep this as the template
-// for the DSL block until the compiler supports expression lowering.
-// registerBlockType({
-//   type: 'FieldFromExpression',
-//   capability: 'pure',
-//   inputs: [
-//     { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "special", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 100 } },
-//     { portId: 'signal', label: 'Signal', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, optional: true, defaultSource: { value: 0 } },
-//     {
-//       portId: 'expression',
-//       label: 'Expression',
-//       dir: 'in',
-//       type: { world: "scalar", domain: "string", category: "internal", busEligible: false },
-//       defaultSource: { value: 'hsl(i / n * 360 + signal * 360, 80, 60)' },
-//     },
-//   ],
-//   outputs: [
-//     { portId: 'field', label: 'Field', dir: 'out', type: { world: "field", domain: "string", category: "internal", busEligible: false } },
-//   ],
-//   lower: _lowerFieldFromExpression,
-// });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const FieldFromExpressionBlock: BlockCompiler = {
+registerBlockType({
   type: 'FieldFromExpression',
-
+  capability: 'pure',
   inputs: [
-    { name: 'domain', type: { kind: 'Domain' }, required: true },
-    // Accept Signal:phase (from phaseA bus) or Signal:float
-    { name: 'signal', type: { kind: 'Signal:phase' }, required: false },
-    { name: 'expression', type: { kind: 'Scalar:string' }, required: false },
+    { portId: 'domain', label: 'Domain', dir: 'in', type: { world: "special", domain: "domain", category: "internal", busEligible: false }, defaultSource: { value: 100 } },
+    { portId: 'signal', label: 'Signal', dir: 'in', type: { world: "signal", domain: "float", category: "core", busEligible: true }, optional: true, defaultSource: { value: 0 } },
+    {
+      portId: 'expression',
+      label: 'Expression',
+      dir: 'in',
+      type: { world: "scalar", domain: "string", category: "internal", busEligible: false },
+      defaultSource: { value: 'hsl(i / n * 360 + signal * 360, 80, 60)' },
+    },
   ],
-
   outputs: [
-    { name: 'field', type: { kind: 'Field:string' } },
+    { portId: 'field', label: 'Field', dir: 'out', type: { world: "field", domain: "string", category: "internal", busEligible: false } },
   ],
-
-  compile({ inputs }) {
-    const domainArtifact = inputs.domain;
-    const signalArtifact = inputs.signal;
-
-    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
-      return {
-        field: {
-          kind: 'Error',
-          message: 'FieldFromExpression requires a Domain input',
-        },
-      };
-    }
-
-    const domain = domainArtifact.value;
-    // Read from inputs - values come from defaultSource or explicit connections
-    const expressionArtifact = inputs.expression;
-    const expressionValue = expressionArtifact !== undefined && 'value' in expressionArtifact
-      ? expressionArtifact.value
-      : 'hsl(i / n * 360, 80, 60)';
-    const expression = typeof expressionValue === 'string' ? expressionValue : String(expressionValue);
-    const evaluator = createExpressionEvaluator(expression);
-
-    // Accept Signal:phase or Signal:float (both are numeric)
-    const signalFn = isDefined(signalArtifact) &&
-      (signalArtifact.kind === 'Signal:phase' || signalArtifact.kind === 'Signal:float')
-      ? signalArtifact.value
-      : () => 0;
-
-    const field: Field<string> = (_seed, n, ctx) => {
-      const count = Math.min(n, domain.elements.length);
-      const runtimeCtx = ctx as FieldEvalCtx;
-      const signalValue = signalFn(runtimeCtx.t, runtimeCtx as unknown as RuntimeCtx);
-
-      const result: string[] = new Array<string>(count);
-      for (let i = 0; i < count; i++) {
-        result[i] = evaluator(i, count, signalValue);
-      }
-
-      return result;
-    };
-
-    return {
-      field: { kind: 'Field:string', value: field },
-    };
-  },
-};
+  lower: lowerFieldFromExpression,
+});

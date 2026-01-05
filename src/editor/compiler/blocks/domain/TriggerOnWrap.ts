@@ -8,13 +8,9 @@
  * This is useful for converting continuous phase clocks into discrete rhythm events.
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
 import type { BlockLowerFn } from '../../ir/lowerTypes';
 import type { TypeDesc } from '../../ir/types';
 import { registerBlockType } from '../../ir/lowerTypes';
-import { isDefined } from '../../../types/helpers';
-
-type SignalNumber = (tMs: number, ctx: RuntimeCtx) => number;
 
 // =============================================================================
 // IR Lowering
@@ -100,61 +96,3 @@ registerBlockType({
   ],
   lower: lowerTriggerOnWrap,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const TriggerOnWrapBlock: BlockCompiler = {
-  type: 'TriggerOnWrap',
-
-  inputs: [
-    { name: 'phase', type: { kind: 'Signal:float' }, required: true },
-  ],
-
-  outputs: [
-    { name: 'trigger', type: { kind: 'Signal:Unit' } },
-  ],
-
-  compile({ inputs }) {
-    const phaseArtifact = inputs.phase;
-    if (!isDefined(phaseArtifact) || phaseArtifact.kind !== 'Signal:float') {
-      return {
-        trigger: {
-          kind: 'Error',
-          message: 'TriggerOnWrap requires a Signal<float> input',
-        },
-      };
-    }
-
-    const phaseSignal = phaseArtifact.value as SignalNumber;
-
-    // Track previous value to detect wraps
-    // Note: This uses closure state which may not be ideal for scrubbing
-    // A better approach would be to compute wrap based on time directly
-    let prevValue: number | null = null;
-    let prevTime: number | null = null;
-
-    const triggerSignal: SignalNumber = (tMs, ctx) => {
-      const currentValue = phaseSignal(tMs, ctx);
-
-      // Reset state if time jumps backwards (scrubbing)
-      if (prevTime !== null && tMs < prevTime) {
-        prevValue = null;
-      }
-
-      // Detect wrap: previous value was high (>0.8) and current is low (<0.2)
-      const didWrap =
-        prevValue !== null && prevValue > 0.8 && currentValue < 0.2;
-
-      prevValue = currentValue;
-      prevTime = tMs;
-
-      return didWrap ? 1 : 0;
-    };
-
-    return {
-      trigger: { kind: 'Signal:Unit', value: triggerSignal },
-    };
-  },
-};

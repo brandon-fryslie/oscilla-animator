@@ -5,7 +5,6 @@
  * This block exists to enable "all defaults are blocks" architecture.
  */
 
-import type { BlockCompiler } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -45,40 +44,3 @@ registerBlockType({
   lower: lowerDSConstFieldVec2,
 });
 
-// =============================================================================
-// Legacy Compiler
-// =============================================================================
-
-/**
- * Legacy compiler implementation (will be removed in Phase 4).
- * Pass-through: outputs.out = inputs.value
- */
-export const DSConstFieldVec2Block: BlockCompiler = {
-  type: 'DSConstFieldVec2',
-
-  inputs: [
-    { name: 'value', type: { kind: 'Field:vec2' }, required: true },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Field:vec2' } },
-  ],
-
-  compile({ inputs }) {
-    const valueArtifact = inputs.value;
-
-    if (valueArtifact === undefined || valueArtifact.kind !== 'Field:vec2') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'DSConstFieldVec2 requires Field<vec2> for value input',
-        },
-      };
-    }
-
-    // Trivial pass-through
-    return {
-      out: valueArtifact,
-    };
-  },
-};

@@ -9,7 +9,6 @@
  *
  * Used by:
  * - pass6-block-lowering.ts (IR compilation path)
- * - compileBusAware.ts (legacy path, to be deprecated)
  *
  * Sprint: Multi-Input Blocks Phase 1
  * References:
@@ -39,19 +38,16 @@ export interface InputEndpoint {
 }
 
 /**
- * Writer discriminated union.
+ * Writer: A source that writes to an input slot.
  *
- * Represents a single source that writes to an input endpoint.
- * Can be:
- * - Wire: Direct connection from another block's output (includes BusBlock.out edges)
- * - Default: Compiler-injected default source
+ * All writers are wires - direct connections from another block's output.
+ * This includes BusBlock.out edges and DSConst.out edges (for default sources).
  *
- * After Sprint 2 migration, all edges are port→port. BusBlock.out edges are
- * wire writers like any other port edge. The 'bus' kind is no longer needed.
+ * NOTE: The 'default' kind was removed. Default sources are now materialized
+ * as DSConst blocks by GraphNormalizer.normalize() before compilation.
+ * Those DSConst blocks connect via regular wire edges.
  */
-export type Writer =
-  | { kind: 'wire'; from: { blockId: string; slotId: string }; connId: string }
-  | { kind: 'default'; defaultId: string; type: TypeDesc };
+export type Writer = { kind: 'wire'; from: { blockId: string; slotId: string }; connId: string };
 
 /**
  * Resolved input specification.
@@ -92,13 +88,8 @@ export interface ResolvedInputSpec {
  * @see design-docs/now/01-MultiBlock-Input.md §3.1
  */
 export function writerSortKey(w: Writer): string {
-  switch (w.kind) {
-    case 'wire':
-      // Wire includes BusBlock.out edges after Sprint 2 migration
-      return `0:${w.from.blockId}:${w.from.slotId}:${w.connId}`;
-    case 'default':
-      return `1:${w.defaultId}`;
-  }
+  // All writers are wires (including DSConst.out edges)
+  return `0:${w.from.blockId}:${w.from.slotId}:${w.connId}`;
 }
 
 /**
@@ -123,21 +114,21 @@ export function sortWriters(writers: readonly Writer[]): Writer[] {
  * Enumerate all writers to an input endpoint.
  *
  * Collects writers from:
- * 1. Wires (direct port → port connections)
- * 2. Bus listeners (bus → port connections)
- * 3. Default sources (if N=0 writers, inject default)
+ * 1. Wires (direct port → port connections, including DSConst.out edges)
+ *
+ * NOTE: Default sources are now materialized as DSConst blocks by
+ * GraphNormalizer.normalize() before compilation. Those blocks connect
+ * via regular wire edges, so they appear as 'wire' writers here.
  *
  * Writers are NOT sorted here - call sortWriters() separately.
  *
  * @param endpoint - Target input endpoint
  * @param edges - All edges in the patch
- * @param inputSlot - The input slot definition (for default source)
  * @returns Array of writers (unsorted, may be empty)
  */
 export function enumerateWriters(
   endpoint: InputEndpoint,
-  edges: readonly Edge[],
-  inputSlot: Slot
+  edges: readonly Edge[]
 ): Writer[] {
   const writers: Writer[] = [];
 
@@ -162,18 +153,10 @@ export function enumerateWriters(
     // Note: edge.from.kind === 'bus' no longer exists after migration
   }
 
-  // If no writers, inject default source
-  if (writers.length === 0 && inputSlot.defaultSource !== undefined) {
-    const defaultId = `default:${endpoint.blockId}:${endpoint.slotId}`;
-    // inputSlot.type is now TypeDesc object
-    const slotTypeDesc = inputSlot.type;
-
-    writers.push({
-      kind: 'default',
-      defaultId,
-      type: slotTypeDesc,
-    });
-  }
+  // NOTE: No legacy defaultSource injection here.
+  // DSConst blocks are materialized by GraphNormalizer.normalize() before compilation.
+  // If writers.length === 0, it means the input has no connection AND no defaultSource,
+  // which should be caught as an error by the caller.
 
   return writers;
 }
@@ -242,8 +225,8 @@ export function resolveBlockInputs(
       slotId: inputSlot.id,
     };
 
-    // Enumerate writers
-    const writers = enumerateWriters(endpoint, edges, inputSlot);
+    // Enumerate writers (DSConst edges are included via GraphNormalizer)
+    const writers = enumerateWriters(endpoint, edges);
 
     // Sort deterministically
     const sortedWriters = sortWriters(writers);
@@ -281,8 +264,8 @@ export function resolveInput(
   edges: readonly Edge[],
   inputSlot: Slot
 ): ResolvedInputSpec {
-  // Enumerate writers
-  const writers = enumerateWriters(endpoint, edges, inputSlot);
+  // Enumerate writers (DSConst edges are included via GraphNormalizer)
+  const writers = enumerateWriters(endpoint, edges);
 
   // Sort deterministically
   const sortedWriters = sortWriters(writers);

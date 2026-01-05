@@ -11,9 +11,7 @@
  *   - render: CanvasRender - function that returns the RenderTree
  */
 
-import type { BlockCompiler, RuntimeCtx } from '../../types';
-import type { RenderTree } from '../../../runtime/renderCmd';
-import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import { registerBlockType, type BlockLowerFn } from '../../ir';
 
 // =============================================================================
 // IR Lowering (Phase 3 Migration)
@@ -65,38 +63,3 @@ registerBlockType({
   ],
   lower: lowerRender2dCanvas,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const Render2dCanvasBlock: BlockCompiler = {
-  type: 'Render2dCanvas',
-
-  inputs: [
-    // No inputs for now - will take RenderTree input when Instances2D is implemented
-  ],
-
-  compile() {
-    // Create a render function that returns a minimal RenderTree
-    const canvasRenderFn = (_tMs: number, _ctx: RuntimeCtx): RenderTree => {
-      // For now, just clear with black background
-      return {
-        cmds: [
-          {
-            kind: 'clear',
-            color: { r: 0, g: 0, b: 0, a: 1 },
-          },
-        ],
-      };
-    };
-
-    return {
-      render: { kind: 'CanvasRender', value: canvasRenderFn },
-    };
-  },
-
-  outputs: [
-    { name: 'render', type: { kind: 'CanvasRender' } },
-  ],
-};

@@ -5,8 +5,6 @@
  * Takes a Domain and produces Field<float>.
  */
 
-import type { BlockCompiler, Field, Artifact } from '../../types';
-import { isDefined } from '../../../types/helpers';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -53,62 +51,3 @@ registerBlockType({
   ],
   lower: lowerFieldConstNumber,
 });
-
-// =============================================================================
-// Legacy Closure Compiler (Dual-Emit Mode)
-// =============================================================================
-
-export const FieldConstNumberBlock: BlockCompiler = {
-  type: 'FieldConstNumber',
-
-  inputs: [
-    { name: 'domain', type: { kind: 'Domain' }, required: true },
-    { name: 'value', type: { kind: 'Signal:float' }, required: false },
-  ],
-
-  outputs: [
-    { name: 'out', type: { kind: 'Field:float' } },
-  ],
-
-  compile({ inputs, params }) {
-    const domainArtifact = inputs.domain;
-    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
-      return {
-        out: {
-          kind: 'Error',
-          message: 'FieldConstNumber requires a Domain input',
-        },
-      };
-    }
-
-    const domain = domainArtifact.value;
-
-    // Helper to extract numeric value from artifact with default fallback
-    const extractNumber = (artifact: Artifact | undefined, defaultValue: number): number => {
-      if (artifact === undefined) return defaultValue;
-      if (artifact.kind === 'Scalar:float' || artifact.kind === 'Signal:float') {
-        return Number(artifact.value);
-      }
-      if ('value' in artifact && artifact.value !== undefined) {
-        return typeof artifact.value === 'function'
-          ? Number((artifact.value as (t: number, ctx: object) => number)(0, {}))
-          : Number(artifact.value);
-      }
-      return defaultValue;
-    };
-
-    // Support both new (inputs) and old (params) parameter systems
-    const paramsObj = params as { value?: number } | undefined;
-    const value = extractNumber(inputs.value, paramsObj?.value ?? 0);
-
-    // Create constant field that returns the same value for all elements
-    const field: Field<float> = (_seed, n) => {
-      const count = Math.min(n, domain.elements.length);
-      return Array<number>(count).fill(value);
-    };
-
-    return {
-      out: { kind: 'Field:float', value: field },
-    };
-  },
-};

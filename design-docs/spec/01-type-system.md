@@ -1,149 +1,105 @@
-# Type System
+# Type System (Unified Spec)
 
-## World Hierarchy
+## Worlds
 
-The system distinguishes four computational "worlds":
+The system uses four computational worlds. Worlds are part of every TypeDesc and are enforced at compile time.
 
-| World | Description | Evaluation | Example |
-|-------|-------------|------------|---------|
-| **Scalar** | Compile-time constants | Once at compile | `periodMs: 8000` |
-| **Signal** | Time-indexed values | Once per frame | `phase: Signal<phase>` |
-| **Field** | Per-element expressions | At render sinks | `radius: Field<number>` |
-| **Event** | Discrete triggers | Edge detection | `pulse: Event` |
+| World | Meaning | Evaluation | Example |
+| --- | --- | --- | --- |
+| Scalar | Compile-time constant | Once at compile | `periodMs: 2000` |
+| Signal | Time-indexed value | Once per frame | `phase: Signal<phase>` |
+| Field | Per-element value | At render sinks | `radius: Field<number>` |
+| Event | Discrete trigger | Edge detection | `pulse: Event` |
+
+## TypeDesc
+
+```ts
+interface TypeDesc {
+  world: 'scalar' | 'signal' | 'field' | 'event'
+  domain: DomainTag
+  semantics?: string
+}
+
+type DomainTag =
+  | 'number'
+  | 'unit'
+  | 'time'
+  | 'phase'
+  | 'color'
+  | 'vec2'
+  | 'vec3'
+  | 'bool'
+  | 'event'
+  | 'domain'
+  | 'render'
+  | string
+```
+
+TypeDescs are attached to ports and are used for all compatibility checks and combine-mode validation.
 
 ## Signals
 
-A Signal is a continuous, time-indexed value:
-
-```typescript
-type Signal<A> = (t: Time, ctx: Context) => A
+```ts
+type Signal<T> = (tMs: number, ctx: RuntimeCtx) => T
 ```
 
-**Properties:**
-- Evaluated once per frame (not per element)
-- Receives unbounded `t` — signals never assume wrapping
-- Phase generators map `t` to phase internally
-
-**Common types:**
-- `Signal<number>` — numerical values
-- `Signal<phase>` — phase in [0,1)
-- `Signal<time>` — time in milliseconds
-- `Signal<color>` — color values
-- `Signal<vec2>` — 2D vectors
+Signals are evaluated once per frame and must treat `tMs` as monotonic and unbounded.
 
 ## Fields
 
-A Field is a per-element value computed lazily from a Domain:
+A Field is a lazy per-element computation that evaluates only at sinks:
 
-```typescript
-type Field<T> = FieldExpr<T>
+```ts
+type Field<T> = (seed: Seed, n: number, ctx: CompileCtx) => readonly T[]
 ```
 
-**Properties:**
-- Lazy evaluation — computed only when a sink requests elements
-- Supports partial evaluation (subset of elements)
-- Materialization is an optimization, not the contract
-- Deterministic via stable Domain identity
-
-**FieldExpr IR nodes:**
-- `const` — constant field
-- `source` — source field (pos0, idRand)
-- `broadcast` — Signal lifted to Field
-- `mapUnary` — per-element transform
-- `zipBinary` — combine two fields
-- `zipSignal` — combine field with signal
-
-**Materialization:**
-Render sinks *may* materialize fields into buffers (Float32Array) for GPU upload.
-This is a backend decision; the semantic contract is `get(i)` for each element.
+Fields may be represented as FieldExpr graphs internally, but the semantic contract is lazy evaluation.
 
 ## Domains
 
-A Domain represents stable element identity:
+Domains define stable element identity:
 
-```typescript
+```ts
 interface Domain {
   count: number
   getId(index: number): ElementId
 }
 ```
 
-**Properties:**
-- Stable element IDs (survive edits)
-- Deterministic ordering
-- Topology-aware (grid, path, etc.)
+Domains must provide stable IDs across edits to preserve state.
 
-**Contract:**
-- Elements have stable IDs for state mapping
-- Ordering is consistent across frames
-- Identity is opaque (e0…eN-1)
-- Structural semantics (row/col, u/v) are derived Fields
+Domain identity rules:
+- Identity is opaque and stable (e0…eN-1).
+- Structural semantics (row/col, u/v, arc-length) are derived Fields.
+- Identity does not encode meaning; meaning is carried by derived fields.
 
 ## Events
 
-An Event is a discrete trigger:
+Events are discrete triggers. The event world is distinct from signals and fields:
 
-```typescript
-type Event = { fired: boolean; value?: any }
-```
-
-**Properties:**
-- Edge-detected (rising edge triggers listeners)
-- Frame-latched (reads see previous frame)
-- Deterministic ordering via sortKey
-
-## TypeDesc
-
-Every port and bus has a type descriptor:
-
-```typescript
-interface TypeDesc {
-  world: 'scalar' | 'signal' | 'field' | 'special'
-  domain: 'time' | 'phase' | 'number' | 'unit' | 'color' | 'vec2' | 'event' | ...
-  semantics?: 'primary' | 'secondary' | 'energy' | 'progress' | ...
+```ts
+interface Event {
+  fired: boolean
+  value?: unknown
 }
 ```
 
-**Enables:**
-- Type-safe connections
-- Adapter inference
-- UI customization per type
+Event values are frame-latched and must be ordered deterministically.
 
-## Type Compatibility
+## Compatibility and Lifting
 
-### World Lifting
-Values can be lifted to higher worlds:
-- Scalar → Signal (via `constSignal`)
-- Signal → Field (via `broadcast`)
-- Scalar → Field (via `constField`)
+- Scalar -> Signal requires an explicit block (e.g., ConstSignal).
+- Signal -> Field requires an explicit block (e.g., Broadcast).
+- Field -> Signal requires an explicit reducer block (e.g., FieldSum).
+- Domain-specific rules are enforced (phase is not implicitly assignable to number).
 
-### World Reduction
-Reduction requires explicit operations:
-- Field → Signal (via `fieldSum`, `fieldMean`, `fieldMax`)
+### Phase as a Distinct Domain
 
-### Domain Compatibility
-- `phase` is a subtype of `number` (unwrap via `phaseToNumber`)
-- `unit` is a subtype of `number` (unwrap via `unitToNumber`)
-- `number` → `phase` requires explicit wrapping
+- Phase is treated as its own domain with wrap semantics.
+- Numeric math on phase requires explicit conversion:
+  - `PhaseToNumber` (unwrap to float in [0,1) or configured range)
+  - `NumberToPhase` (wrap/normalize into phase domain)
 
-## Programs
+## Combine-Mode Type Rules
 
-A complete animation program:
-
-```typescript
-interface Program<Out> {
-  run: Signal<Out>
-  events?: EventSpec[]
-}
-```
-
-## CompiledProgram
-
-The compiler output:
-
-```typescript
-interface CompiledProgram {
-  program: Program<RenderTree>
-  timeModel: TimeModel
-}
-```
+Combine modes are validated against TypeDesc and are specified in `spec/03-buses.md`.
