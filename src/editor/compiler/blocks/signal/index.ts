@@ -14,3 +14,4 @@ export { DivSignalBlock } from './DivSignal';
 export { MinSignalBlock } from './MinSignal';
 export { MaxSignalBlock } from './MaxSignal';
 export { ClampSignalBlock } from './ClampSignal';
+export { BroadcastSignalColorBlock } from './BroadcastSignalColor';
