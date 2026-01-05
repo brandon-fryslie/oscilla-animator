@@ -44,3 +44,4 @@ export { JitterFieldVec2Block } from './JitterFieldVec2';
 // Field-Signal combination blocks (Slice 5)
 export { FieldFromSignalBroadcastBlock } from './FieldFromSignalBroadcast';
 export { FieldZipSignalBlock } from './FieldZipSignal';
+export { FieldReduceBlock } from './FieldReduce';

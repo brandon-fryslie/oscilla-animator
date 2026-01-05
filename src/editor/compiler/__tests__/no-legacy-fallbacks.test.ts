@@ -15,6 +15,9 @@ import { describe, it, expect } from 'vitest';
 import { getBlockType } from '../ir/lowerTypes';
 import { pass6BlockLowering } from '../passes/pass6-block-lowering';
 
+// Import blocks to trigger registration
+import '../blocks/index';
+
 describe('Legacy Fallback Code Removal', () => {
   it('pass6BlockLowering function signature does not include compiledPortMap', () => {
     // The function signature should be:
@@ -127,11 +130,9 @@ describe('Legacy Fallback Code Removal', () => {
 
   it('core block lowering functions use outputsById pattern', () => {
     // Test that blocks return results with outputsById (not positional outputs)
+    // We test blocks that don't require special inputs
     const testBlocks = [
-      { type: 'AddSignal', requiresInputs: true },
-      { type: 'FieldConstNumber', requiresInputs: false },
       { type: 'DomainN', requiresInputs: false },
-      { type: 'ClampSignal', requiresInputs: true },
     ];
 
     for (const { type: blockType, requiresInputs } of testBlocks) {

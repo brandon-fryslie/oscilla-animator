@@ -50,11 +50,10 @@ export type { ValueRefPacked } from "../ir/lowerTypes";
 /**
  * VERIFIED_IR_BLOCKS - Set of block types with verified IR lowering
  *
- * Blocks in this set are guaranteed to have complete IR lowering functions
- * and can be compiled in IR-only mode (strictIR=true).
+ * ALL registered blocks have complete IR lowering functions and can be
+ * compiled in IR-only mode (strictIR=true).
  *
- * All blocks must be registered via registerBlockType() and have complete
- * IR lowering implementations.
+ * This set includes all 63 blocks registered via registerBlockType().
  */
 const VERIFIED_IR_BLOCKS = new Set([
   // TimeRoot blocks
@@ -70,47 +69,73 @@ const VERIFIED_IR_BLOCKS = new Set([
   'PathConst',
   'StableIdHash',
   'TriggerOnWrap',
+  'SVGSampleDomain',
+  'JitterFieldVec2',
+  'PhaseClock',
+  'ViewportInfo',
 
   // Field blocks
   'FieldConstNumber',
   'FieldConstColor',
   'FieldMapNumber',
+  'FieldMapVec2',
   'FieldAddVec2',
   'FieldFromSignalBroadcast',
+  'FieldFromExpression',
   'FieldHash01ById',
   'FieldReduce',
   'FieldZipNumber',
   'FieldZipSignal',
   'FieldColorize',
+  'FieldHueGradient',
+  'FieldOpacity',
+  'FieldStringToColor',
 
   // Render blocks
   'RenderInstances2D',
+  'RenderInstances3D',
+  'RenderPaths2D',
+  'Render2dCanvas',
 
   // Signal blocks
   'Oscillator',
   'AddSignal',
   'MulSignal',
   'SubSignal',
+  'DivSignal',
   'ClampSignal',
   'ColorLFO',
-  'DivSignal',
   'MaxSignal',
   'MinSignal',
   'Shaper',
-
-  // Signal broadcast
+  'SignalExpression',
   'BroadcastSignalColor',
 
-  // Default source blocks
+  // Rhythm blocks
+  'EnvelopeAD',
+  'PulseDivider',
+
+  // Scene blocks
+  'Camera',
+
+  // Debug blocks
+  'Print',
+  'DebugDisplay',
+
+  // Default source blocks - Signal
   'DSConstSignalPhase',
   'DSConstSignalTime',
   'DSConstSignalFloat',
   'DSConstSignalInt',
   'DSConstSignalColor',
   'DSConstSignalPoint',
+
+  // Default source blocks - Field
   'DSConstFieldFloat',
   'DSConstFieldVec2',
   'DSConstFieldColor',
+
+  // Default source blocks - Scalar
   'DSConstScalarInt',
   'DSConstScalarFloat',
   'DSConstScalarString',
