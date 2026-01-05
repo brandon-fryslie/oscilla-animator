@@ -151,13 +151,11 @@ export function compilePatch(
     }
 
     // Pass 6: Block Lowering (accumulates errors)
-    // Lowers blocks to IR fragments
-    // compiledPortMap should be empty - blocks register their own outputs
-    const compiledPortMap = new Map();
+    // Lowers blocks to IR fragments using registered lowering functions
+    // All blocks MUST have IR lowering via registerBlockType()
     const fragments = pass6BlockLowering(
       validated,
       patchForPasses.blocks,
-      compiledPortMap,
       patchForPasses.edges
     );
 

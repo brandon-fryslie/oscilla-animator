@@ -70,7 +70,7 @@ const lowerPositionMapGrid: BlockLowerFn = ({ ctx, inputs, config }) => {
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'PositionMapGrid_out');
   return {
     outputs: [],
-    outputsById: { out: { k: 'field', id: posField, slot } },
+    outputsById: { pos: { k: 'field', id: posField, slot } },
   };
 };
 

@@ -60,7 +60,7 @@ const lowerFieldReduce: BlockLowerFn = ({ ctx, inputs, config }) => {
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldReduce_out');
   return {
     outputs: [],
-    outputsById: { out: { k: 'sig', id: sigId, slot } },
+    outputsById: { signal: { k: 'sig', id: sigId, slot } },
   };
 };
 

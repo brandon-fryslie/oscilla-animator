@@ -1,0 +1,68 @@
+Agent: iterative-implementer | 2026-01-04T19:30:00
+Mode: manual
+Completed: Migrated 16 domain blocks to correct outputsById pattern | Files: 10 | Commits: 0
+Cache invalidated: None (no cache entries existed for these blocks)
+Status: complete
+
+TASK SUMMARY
+============
+Migrated 16 domain blocks in src/editor/compiler/blocks/domain/ to use the correct outputsById pattern with matching port IDs.
+
+WHAT WAS DONE
+=============
+1. Analyzed all 16 domain blocks to verify they use outputsById pattern
+2. Discovered all blocks already used outputsById pattern BUT 10 blocks had port ID mismatches
+3. Fixed port ID mismatches in 10 blocks to ensure outputsById keys match registered portIds exactly
+
+BLOCKS FIXED (Port ID Corrections)
+===================================
+1. DomainN: outputsById key changed from 'out' -> 'domain'
+2. FieldFromSignalBroadcast: outputsById key changed from 'out' -> 'field'
+3. FieldHash01ById: outputsById key changed from 'out' -> 'u'
+4. FieldMapNumber: outputsById key changed from 'out' -> 'y'
+5. FieldReduce: outputsById key changed from 'out' -> 'signal'
+6. PositionMapCircle: outputsById key changed from 'out' -> 'pos'
+7. PositionMapGrid: outputsById key changed from 'out' -> 'pos'
+8. PositionMapLine: outputsById key changed from 'out' -> 'pos'
+9. StableIdHash: outputsById key changed from 'out' -> 'u01'
+10. TriggerOnWrap: outputsById key changed from 'out' -> 'trigger'
+
+BLOCKS ALREADY CORRECT (No Changes Needed)
+==========================================
+1. FieldAddVec2: Already using correct portId 'out'
+2. FieldConstColor: Already using correct portId 'out'
+3. FieldConstNumber: Already using correct portId 'out'
+4. FieldZipNumber: Already using correct portId 'out'
+5. FieldZipSignal: Already using correct portId 'out'
+6. PathConst: Already using correct portId 'out'
+
+VERIFICATION
+============
+- All 16 blocks now use: outputs: [], outputsById: { [correctPortId]: valueRef }
+- Port IDs in outputsById match registered block type definitions exactly
+- TypeScript compilation passes with zero errors
+- Changes are minimal and surgical (single-line edits)
+
+FILES MODIFIED
+==============
+1. src/editor/compiler/blocks/domain/DomainN.ts
+2. src/editor/compiler/blocks/domain/FieldFromSignalBroadcast.ts
+3. src/editor/compiler/blocks/domain/FieldHash01ById.ts
+4. src/editor/compiler/blocks/domain/FieldMapNumber.ts
+5. src/editor/compiler/blocks/domain/FieldReduce.ts
+6. src/editor/compiler/blocks/domain/PositionMapCircle.ts
+7. src/editor/compiler/blocks/domain/PositionMapGrid.ts
+8. src/editor/compiler/blocks/domain/PositionMapLine.ts
+9. src/editor/compiler/blocks/domain/StableIdHash.ts
+10. src/editor/compiler/blocks/domain/TriggerOnWrap.ts
+
+VALIDATION
+==========
+- TypeScript typecheck: PASS (just typecheck returned exit code 0)
+- All 16 blocks verified to use correct pattern
+- Port IDs verified to match block registrations
+
+NEXT STEPS
+==========
+Work Item 1 is now complete for domain blocks. The plan called for migrating 16 domain blocks + 6 signal blocks.
+Next task: Migrate 6 signal blocks in src/editor/compiler/blocks/signal/

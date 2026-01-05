@@ -5,15 +5,21 @@
  * This is an adapter block for bridging signal-world to field-world.
  */
 
-import type { BlockCompiler, RuntimeCtx, Field } from '../../types';
+import type { BlockCompiler, RuntimeCtx, Field, Seed, CompileCtx } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
+import { isDefined } from '../../../types/helpers';
 
 // =============================================================================
 // IR Lowering
 // =============================================================================
 
 const lowerBroadcastSignalColor: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
-  const signal = inputsById?.signal ?? inputs[1]; // Second input is the signal
+  const domain = inputsById?.domain ?? inputs[0];
+  const signal = inputsById?.signal ?? inputs[1];
+
+  if (domain.k !== 'special' || domain.tag !== 'domain') {
+    throw new Error('BroadcastSignalColor requires domain input');
+  }
 
   if (signal.k !== 'sig') {
     throw new Error('BroadcastSignalColor requires signal input');
@@ -21,7 +27,7 @@ const lowerBroadcastSignalColor: BlockLowerFn = ({ ctx, inputs, inputsById }) =>
 
   // Create field that broadcasts the signal to all domain elements
   const outType = { world: "field" as const, domain: "color" as const, category: "core" as const, busEligible: true };
-  const fieldId = ctx.b.fieldFromSignal(signal.id, outType);
+  const fieldId = ctx.b.broadcastSigToField(signal.id, domain.id, outType);
   const slot = ctx.b.allocValueSlot(outType, 'BroadcastSignalColor_out');
   ctx.b.registerFieldSlot(fieldId, slot);
 
@@ -82,7 +88,7 @@ export const BroadcastSignalColorBlock: BlockCompiler = {
     const domainArtifact = inputs.domain;
     const signalArtifact = inputs.signal;
 
-    if (domainArtifact === undefined || domainArtifact.kind !== 'Domain') {
+    if (!isDefined(domainArtifact) || domainArtifact.kind !== 'Domain') {
       return {
         field: {
           kind: 'Error',
@@ -91,7 +97,7 @@ export const BroadcastSignalColorBlock: BlockCompiler = {
       };
     }
 
-    if (signalArtifact === undefined || signalArtifact.kind !== 'Signal:color') {
+    if (!isDefined(signalArtifact) || signalArtifact.kind !== 'Signal:color') {
       return {
         field: {
           kind: 'Error',
@@ -100,15 +106,12 @@ export const BroadcastSignalColorBlock: BlockCompiler = {
       };
     }
 
-    const domain = domainArtifact.value;
     const signal = signalArtifact.value as (t: number, ctx: RuntimeCtx) => string;
 
     // Create field that broadcasts signal value to all elements
-    const field: Field<string> = {
-      domain,
-      expr: (t: number, ctx: RuntimeCtx, _elementId: string) => {
-        return signal(t, ctx);
-      },
+    const field: Field<string> = (_seed: Seed, n: number, ctx: CompileCtx) => {
+      const value = signal(0, ctx as any);
+      return Array(n).fill(value);
     };
 
     return {

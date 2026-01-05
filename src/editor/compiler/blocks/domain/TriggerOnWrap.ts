@@ -72,7 +72,7 @@ const lowerTriggerOnWrap: BlockLowerFn = ({ ctx, inputs }) => {
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'TriggerOnWrap_out');
   return {
     outputs: [],
-    outputsById: { out: { k: 'sig', id: outputId, slot } },
+    outputsById: { trigger: { k: 'sig', id: outputId, slot } },
   };
 };
 

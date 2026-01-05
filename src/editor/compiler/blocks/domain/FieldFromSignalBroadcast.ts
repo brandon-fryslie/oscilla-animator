@@ -39,7 +39,7 @@ const lowerFieldFromSignalBroadcast: BlockLowerFn = ({ ctx, inputs }) => {
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldFromSignalBroadcast_out');
   return {
     outputs: [],
-    outputsById: { out: { k: 'field', id: fieldId, slot } },
+    outputsById: { field: { k: 'field', id: fieldId, slot } },
   };
 };
 

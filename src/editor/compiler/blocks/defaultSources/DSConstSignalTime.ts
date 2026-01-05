@@ -6,7 +6,7 @@
  * Provides Signal:time values (absolute time in milliseconds).
  */
 
-import type { BlockCompiler } from '../../types';
+import type { BlockCompiler, RuntimeCtx } from '../../types';
 import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
 
 // =============================================================================
@@ -22,7 +22,7 @@ import { registerBlockType, type BlockLowerFn } from '../../ir/lowerTypes';
  *
  * For Signal:time, in provider mode we emit the absolute time signal from the time model.
  */
-const lowerDSConstSignalTime: BlockLowerFn = ({ ctx, inputs, inputsById, config }) => {
+const lowerDSConstSignalTime: BlockLowerFn = ({ ctx, inputs, inputsById }) => {
   const inputValue = inputsById?.value ?? inputs[0];
 
   // If we have a valid input, pass it through
@@ -109,7 +109,7 @@ export const DSConstSignalTimeBlock: BlockCompiler = {
     return {
       out: {
         kind: 'Signal:Time',
-        value: (_t: number, ctx: { now?: number }) => ctx.now ?? 0,
+        value: (_t: number, ctx: RuntimeCtx) => ctx.tMs ?? 0,
       },
     };
   },

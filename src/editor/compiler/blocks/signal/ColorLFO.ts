@@ -150,7 +150,7 @@ const lowerColorLFO: BlockLowerFn = ({ ctx, inputs, config }) => {
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'ColorLFO_out');
   return {
     outputs: [],
-    outputsById: { out: { k: 'sig', id: colorSig, slot } },
+    outputsById: { color: { k: 'sig', id: colorSig, slot } },
   };
 };
 

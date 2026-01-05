@@ -103,7 +103,7 @@ const lowerFieldMapNumber: BlockLowerFn = ({ ctx, inputs, config }) => {
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldMapNumber_out');
   return {
     outputs: [],
-    outputsById: { out: { k: 'field', id: fieldId, slot } },
+    outputsById: { y: { k: 'field', id: fieldId, slot } },
   };
 };
 

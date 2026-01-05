@@ -60,7 +60,7 @@ const lowerFieldHash01ById: BlockLowerFn = ({ ctx, inputs, config }) => {
   const slot = ctx.b.allocValueSlot(ctx.outTypes[0], 'FieldHash01ById_out');
   return {
     outputs: [],
-    outputsById: { out: { k: 'field', id: fieldId, slot } },
+    outputsById: { u: { k: 'field', id: fieldId, slot } },
   };
 };
 
