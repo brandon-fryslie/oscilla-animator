@@ -1,0 +1,8 @@
+ - plans/ir-compiler-backlog-streams/00-master-index.md
+  - plans/ir-compiler-backlog-streams/01-type-contracts-ir-plumbing.md
+  - plans/ir-compiler-backlog-streams/02-time-event-semantics.md
+  - plans/ir-compiler-backlog-streams/03-field-runtime-primitives.md
+  - plans/ir-compiler-backlog-streams/04-signal-runtime-stateful.md
+  - plans/ir-compiler-backlog-streams/05-bus-system-execution.md
+  - plans/ir-compiler-backlog-streams/06-render-pipeline.md
+  - plans/ir-compiler-backlog-streams/07-debug-export-late.md
